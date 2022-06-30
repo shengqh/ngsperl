@@ -3,13 +3,12 @@ outFile=''
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2=''
-parFile3=''
-outputPdf<-TRUE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-TRUE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
+parFile2='/gpfs23/scratch/h_vangard_1/chenh19/exRNA/geo_se/result/GSE145767/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/GSE145767.Category.Table.csv'
+parFile3='/gpfs23/scratch/h_vangard_1/chenh19/exRNA/geo_se/result/GSE145767/preprocessing/fastqc_post_trim_summary/result/GSE145767.countInFastQcVis.Result.Reads.csv'
+useLeastGroups<-FALSE;showLabelInPCA<-FALSE;totalCountKey='Reads for Mapping';minMedian=0;minMedianInGroup=1;textSize=9;groupTextSize=10;
 
-setwd('/scratch/cqs/justin_balko_projects/20220209_rnaseq_7312_mm10/genetable/result')
+setwd('/scratch/cqs/shengq2/bugfix/orrelation')
 
 ### Parameter setting end ###
 
@@ -112,6 +111,8 @@ if(!exists("suffix")){
 
 task_suffix<-suffix
 
+outputDirectory<-"."
+output_include_folder_name<-1
 if(!exists("outputDirectory")){
   outputDirectory<-""
 }
@@ -232,9 +233,22 @@ if(colorFileList != ""){
 #start work:
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T,check.names=F)
 
+missed_count_tables = c()
+missed_count_tables_file<-"missed_count_tables.txt"
+
+succeed_file<-"correlation.succeed"
+if(file.exists(succeed_file)){
+  unlink(succeed_file)
+}
+
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]
+
+  if(!file.exists(countTableFile)){
+    missed_count_tables<-c(missed_count_tables, countTableFile)
+    next
+  }
   
   if(outputDirectory==""){
     outputFilePrefix=countTableFile
@@ -520,7 +534,8 @@ for (i in 1:nrow(countTableFileAll)) {
         }
         
         if(hasMultipleGroup){
-          curColSideColors<-conditionColors[,title]
+          gname = ifelse(title == "all", "Group", title)
+          curColSideColors<-conditionColors[,gname]
           heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=curColSideColors,cexCol=hcaOption$cexCol, ColSideLabs="")
         } else {
           heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
@@ -679,4 +694,13 @@ for (i in 1:nrow(countTableFileAll)) {
       print("Not enough samples or genes. Can't do correlation analysis.")
     }
   }
+}
+
+if(length(missed_count_tables) == 0){
+  writeLines("no count table missing", succeed_file)
+  if(file.exists(missed_count_tables_file)){
+    unlink(missed_count_tables_file)
+  }
+}else{
+  writeLines(missed_count_tables, "count_table_missing.txt")
 }

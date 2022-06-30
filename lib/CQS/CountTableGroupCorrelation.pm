@@ -124,6 +124,7 @@ sub result {
       }
     }
   }
+  push( @result_files, "$result_dir/correlation.succeed" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 
   #print(Dumper($result));
