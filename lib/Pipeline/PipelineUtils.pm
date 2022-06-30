@@ -417,15 +417,28 @@ sub addOutputOption {
 }
 
 sub getOutputFormat {
-  my ( $def, $rcode ) = @_;
+  my ( $def, $rcode, $is_DE ) = @_;
   my $result = $rcode;
+
+  if(!defined $is_DE){
+    $is_DE = 0;
+  }
 
   $result = addOutputOption( $def, $result, "DE_outputPdf",         0,                          "outputPdf" );
   $result = addOutputOption( $def, $result, "DE_outputPng",         1,                          "outputPng" );
   $result = addOutputOption( $def, $result, "DE_outputTIFF",        0,                          "outputTIFF" );
   $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 1,                          "showVolcanoLegend" );
   $result = addOutputOption( $def, $result, "use_pearson_in_hca",   $def->{use_pearson_in_hca}, "usePearsonInHCA" );
-  $result = addOutputOption( $def, $result, "show_label_PCA",       1, "showLabelInPCA" );
+
+  if($is_DE){
+    if (defined $def->{DE_show_label_PCA}){
+      $result = addOutputOption( $def, $result, "DE_show_label_PCA", 1, "showLabelInPCA" );
+    }else{
+      $result = addOutputOption( $def, $result, "show_label_PCA",       1, "showLabelInPCA" );
+    }
+  }else{
+    $result = addOutputOption( $def, $result, "show_label_PCA",       1, "showLabelInPCA" );
+  }
 
   return ($result);
 }
@@ -440,7 +453,7 @@ sub addDEseq2 {
     $libraryFileKey = "library_file_ref";
   }
 
-  my $rCode = getOutputFormat( $def, getValue($def, "DE_rCode", "") );
+  my $rCode = getOutputFormat( $def, getValue($def, "DE_rCode", ""), 1 );
   $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca", $def->{top25cv_in_hca}, "top25cvInHCA" );
 
   my $raw_rCode = $rCode;
