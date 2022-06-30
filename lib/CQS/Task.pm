@@ -625,9 +625,11 @@ $docker_init
 
 $docker_command bash $sh_file 
 
+exitcode=\$?
+
 echo ${module_name}_end=`date`
 
-exit 0
+exit \$exitcode
 
 ";
     close $pbs;
@@ -664,9 +666,11 @@ sub close_pbs {
     #print "not defined docker_command";
     print $pbs "
 
+exitcode=\$?
+
 echo ${module_name}_end=`date`
 
-exit 0
+exit \$exitcode
  
 ";
   }
