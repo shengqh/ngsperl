@@ -140,6 +140,7 @@ library("VennDiagram")
 library("RColorBrewer")
 #library("preprocessCore")
 library("BiocParallel")
+library("ggrepel")
 
 setwd(rootdir)  
 comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
@@ -296,7 +297,7 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
     
     if(showLabelInPCA){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-        geom_text(vjust=-0.6, size=4)
+        geom_text_repel(size=4)
     }else{
       g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
         labs(color = "Group")
@@ -871,6 +872,7 @@ for(countfile_index in c(1:length(countfiles))){
         coord_flip()+
         #     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
         scale_y_continuous(name=bquote(log[2]~Fold~Change))+
+        theme_bw2() +
         theme(axis.text = element_text(colour = "black"))
       
       filePrefix<-paste0(prefix,"_DESeq2_sig_barplot")
@@ -921,10 +923,15 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(!showVolcanoLegend){
       p<-p+ theme(legend.position = "none")
+      pdfWidth=10
+      otherWidth=3000
+    }else{
+      pdfWidth=15
+      otherWidth=4500
     }
     
     filePrefix<-paste0(prefix,"_DESeq2_volcanoPlot")
-    drawPlot(filePrefix, outputFormat, 10, 10, 3000, 3000, p, "Volcano")
+    drawPlot(filePrefix, outputFormat, pdfWidth, 10, otherWidth, 3000, p, "Volcano")
 
     if(require("EnhancedVolcano")){
       if(!("Feature_gene_name" %in% colnames(diffResult))){
