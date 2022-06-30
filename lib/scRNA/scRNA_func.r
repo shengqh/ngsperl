@@ -816,24 +816,26 @@ read_object<-function(obj_file, meta_rds=NULL, columns=NULL){
     obj<-obj$obj
   }
   
-  if(!is.null(meta_rds) & (meta_rds != "")){
-    if(file_ext(meta_rds) == "rds"){
-      meta.data=readRDS(meta_rds)
-      if(any(colnames(obj) != rownames(meta.data))){
-        obj=subset(obj, cells=rownames(meta.data))
+  if(!is.null(meta_rds)){
+    if (meta_rds != ""){
+      if(file_ext(meta_rds) == "rds"){
+        meta.data=readRDS(meta_rds)
+        if(any(colnames(obj) != rownames(meta.data))){
+          obj=subset(obj, cells=rownames(meta.data))
+        }
+        if(all(colnames(obj@meta.data) %in% colnames(meta.data))){
+          obj@meta.data = meta.data
+          return(obj)
+        }
+      }else{
+        meta.data=read.csv(meta_rds, stringsAsFactors = F, row.names=1)
       }
-      if(all(colnames(obj@meta.data) %in% colnames(meta.data))){
-        obj@meta.data = meta.data
-        return(obj)
+      if(is.null(columns)){
+        columns = colnames(meta.data)
       }
-    }else{
-      meta.data=read.csv(meta_rds, stringsAsFactors = F, row.names=1)
-    }
-    if(is.null(columns)){
-      columns = colnames(meta.data)
-    }
-    for(column in columns){
-      obj=AddMetaData(obj, meta.data[,column], col.name=column)
+      for(column in columns){
+        obj=AddMetaData(obj, meta.data[,column], col.name=column)
+      }
     }
   }
   return(obj)
@@ -882,6 +884,14 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   p<-p1+p2+plot_layout(ncol=1)
   print(p)
+  dev.off()
+
+  ct<-as.data.frame(table(rawobj[[ident_name]]))
+  colnames(ct)<-c("Sample","Cell")
+  write.table(ct, paste0(prefix, ".cell.txt"), sep="\t", row.names=F)
+  g<-ggplot(ct, aes(x=Sample, y=Cell)) + geom_bar(stat="identity") + theme_bw()
+  png(paste0(prefix, ".cell.bar.png"), width=3000, height=2000, res=300)
+  print(g)
   dev.off()
 }
 
