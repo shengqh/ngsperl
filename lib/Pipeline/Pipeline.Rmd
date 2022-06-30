@@ -6,6 +6,7 @@ display_webgestalt=function(files) {
   enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
   enrich_files$Comparisons<-gsub("WebGestalt_GO....", "", enrich_files$V2)
   enrich_files$Comparisons<-gsub("WebGestalt_KEGG_", "", enrich_files$Comparisons)
+  enrich_files<-enrich_files[order(enrich_files$Comparisons),]
   comparisons<-unique(enrich_files$Comparisons)
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
@@ -104,6 +105,7 @@ display_gsea=function(files) {
   cat(paste0("  \n## GSEA  \n"))
   gsea_files<-files[grepl("gsea_", rownames(files)),]
   gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
+  gsea_files<-gsea_files[order(gsea_files$Comparisons),]
   comparisons<-unique(gsea_files$Comparisons)
   j=1
   for (j in 1:length(comparisons)){
