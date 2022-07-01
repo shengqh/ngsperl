@@ -2141,37 +2141,39 @@ fi
 
   push @$summary_ref, ("count_table_correlation");
 
-  if($def->{perform_permanova}){
-    my $log_transform = getValue($def, "permanova_log_transform", 1);
-    my $log_prefix = $log_transform ? ".log2" : "";
+  if(defined $deseq2Task){
+    if($def->{perform_permanova}){
+      my $log_transform = getValue($def, "permanova_log_transform", 1);
+      my $log_prefix = $log_transform ? ".log2" : "";
 
-    $config->{count_table_permanova} = {
-      class                     => "CQS::UniqueR",
-      perform                   => 1,
-      target_dir                => $data_visualization_dir . "/count_table_permanova",
-      rtemplate                 => "../SmallRNA/permanova.r",
-      output_file               => "",
-      output_file_ext           => "$log_prefix.PCoA.pdf",
-      output_file_task_ext      => "$log_prefix.permanova.txt;$log_prefix.betadisper.txt",
-      parameterSampleFile1_ref  => \@table_for_correlation,
-      parameterSampleFile2      => $config->{count_table_correlation}{parameterSampleFile2},
-      parameterSampleFile2Order => $def->{groups_order},
-      parameterSampleFile3_ref  => [ $deseq2Task, ".design\$"],
-      parameterSampleFile4  => {
-        log_transform => getValue($def, "permanova_log_transform", 1)
-      },
-      parameterFile2_ref        => $config->{count_table_correlation}{parameterFile2_ref},
-      parameterFile3_ref        => $config->{count_table_correlation}{parameterFile3_ref},
-      rCode                     => $config->{count_table_correlation}{rCode},
-      sh_direct                 => 1,
-      pbs                       => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
-      },
-    };
+      $config->{count_table_permanova} = {
+        class                     => "CQS::UniqueR",
+        perform                   => 1,
+        target_dir                => $data_visualization_dir . "/count_table_permanova",
+        rtemplate                 => "../SmallRNA/permanova.r",
+        output_file               => "",
+        output_file_ext           => "$log_prefix.PCoA.pdf",
+        output_file_task_ext      => "$log_prefix.permanova.txt;$log_prefix.betadisper.txt",
+        parameterSampleFile1_ref  => \@table_for_correlation,
+        parameterSampleFile2      => $config->{count_table_correlation}{parameterSampleFile2},
+        parameterSampleFile2Order => $def->{groups_order},
+        parameterSampleFile3_ref  => [ $deseq2Task, ".design\$"],
+        parameterSampleFile4  => {
+          log_transform => getValue($def, "permanova_log_transform", 1)
+        },
+        parameterFile2_ref        => $config->{count_table_correlation}{parameterFile2_ref},
+        parameterFile3_ref        => $config->{count_table_correlation}{parameterFile3_ref},
+        rCode                     => $config->{count_table_correlation}{rCode},
+        sh_direct                 => 1,
+        pbs                       => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
 
-    push @$summary_ref, ("count_table_permanova");
+      push @$summary_ref, ("count_table_permanova");
+    }
   }
 
   my $paramFile = undef;
