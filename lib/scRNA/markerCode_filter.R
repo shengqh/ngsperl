@@ -298,10 +298,10 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
     counts<-counts[, colnames(counts) %in% rownames(hto)]
   }
 
-  cat("\n\n# Sample", sampleid,": Quality Check and Analysis\n\n")
-  cat("\n\n## ", sampleid,": Quality Check\n\n")
+  cat("\n\n#", sampleid, "\n\n")
+  cat("\n\n## Quality Check\n\n")
   
-  counts<-counts[,sample(ncol(counts), 2000)]
+  #counts<-counts[,sample(ncol(counts), 2000)]
 
   SCLC <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, project=sampleid)
   if(has_hto){
@@ -403,7 +403,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
       
       SCLC <- RunUMAP(SCLC, dims = 1:30)
       
-      cat("\n\n## ", sampleid,": Quality Check by cell clusters\n\n")
+      cat("\n\n## Cell clusters\n\n")
       cat("\n\n### ", "Fig.4 nGene,nUMI and mtRNA distribution in each cluster and PCA, UMAP results\n\n")
       if(has_hto){
         g1<-FeaturePlot(SCLC, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T, split.by = "sample")
@@ -432,7 +432,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
         SCLC<-subset(SCLC,idents=removeIdent, invert=T)
       }
       
-      cat("\n\n## ", sampleid,": Markers and annotations of cell clusters\n\n")
+      cat("\n\n## Markers and cell type annotation\n\n")
 
       ##predict method
       if (!is.null(celltype_predictmethod) & length(levels(SCLC@active.ident))>1 ) {
@@ -501,6 +501,8 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
           
           cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
           
+          SCLC<-myScaleData(SCLC, ugenes, "RNA")
+
           g<-DoHeatmap(SCLC, assay="RNA",features=ugenes)
           subchunkify(g, fig.height=15, fig.width=15)
           
