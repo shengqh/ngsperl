@@ -1,6 +1,6 @@
 ---
 title: "QC and Cell Type Annotation"
-author: Qi Liu, Quanhu Sheng
+author: Quanhu Sheng, Qi Liu
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
@@ -10,6 +10,13 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, results = 'hide', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #load the library and set the parameters and load our own function
 library(Seurat)
