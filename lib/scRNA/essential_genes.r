@@ -34,7 +34,7 @@ bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 if(has_bubblemap){
   genes_df <- read_bubble_genes(bubblemap_file, NA)
-  bubble_genes<-unique(genes_df$`Marker Gene`)
+  bubble_genes<-unique(genes_df$gene)
   genes<-c(genes, bubble_genes)
 }
 

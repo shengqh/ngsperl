@@ -655,15 +655,21 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file){
 
 read_bubble_genes<-function(bubble_file, allgenes=NA){
   library("readxl")
+  library("tidyr")
   
   genes <- read_xlsx(bubble_file, sheet = 1)
+  colnames(genes)[colnames(genes) == "Marker Gene"] = "gene"
+  colnames(genes)[colnames(genes) == "Cell Type"] = "cell_type"
+
   for(idx in c(2:nrow(genes))){
-    if(is.na(genes[idx,"Cell Type"])){
-      genes[idx,"Cell Type"]=genes[idx-1,"Cell Type"]
+    if(is.na(genes[idx,"cell_type"])){
+      genes[idx,"cell_type"]=genes[idx-1,"cell_type"]
     }
   }
   
-  gene_names=genes$`Marker Gene`
+  genes<-separate_rows(genes, gene)
+  
+  gene_names=genes$gene
   gene_names[gene_names=="PECAM"] = "PECAM1"
   gene_names[gene_names=="HGD1B"] = "HGD"
   gene_names[gene_names=="EpCAM"] = "EPCAM"
@@ -672,15 +678,15 @@ read_bubble_genes<-function(bubble_file, allgenes=NA){
   gene_names[gene_names=="MTND6"] = "MT-ND6"
   gene_names[gene_names=="FOXJ!"] = "FOXJ1"
   
-  genes$`Marker Gene`<-gene_names
+  genes$gene<-gene_names
   
-  miss_genes=genes$`Marker Gene`[!(genes$`Marker Gene` %in% allgenes)]
+  miss_genes=genes$gene[!(genes$gene %in% allgenes)]
   writeLines(miss_genes, con="miss_gene.csv")
   
   if(!is.na(allgenes)){
-    genes<-genes[genes$`Marker Gene` %in% allgenes,]
+    genes<-genes[genes$gene %in% allgenes,]
   }
-  genes$`Cell Type`=factor(genes$`Cell Type`, levels=unique(genes$`Cell Type`))
+  genes$cell_type=factor(genes$cell_type, levels=unique(genes$cell_type))
   
   return(genes)
 }
@@ -707,7 +713,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
 get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
-  gene_groups=split(genes_df$`Marker Gene`, genes_df$`Cell Type`)
+  gene_groups=split(genes_df$gene, genes_df$cell_type)
   
   cell_type=obj@meta.data
   cell_type$cell_type <- cell_type[,cur_celltype]

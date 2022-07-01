@@ -77,7 +77,7 @@ if(parSampleFile2 != ""){
 if(has_bubblemap){
   allgenes<-rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
-  bubble_genes<-unique(genes_df$`Marker Gene`)
+  bubble_genes<-unique(genes_df$gene)
 }
 
 resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.9, by = 0.1))

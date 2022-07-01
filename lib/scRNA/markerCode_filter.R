@@ -497,7 +497,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
         
         if(has_bubble_file){
           genes<-read_bubble_genes(bubble_file, rownames(SCLC))
-          ugenes<-unique(genes$`Marker Gene`)
+          ugenes<-unique(genes$gene)
           
           cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
           
@@ -506,7 +506,7 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
           g<-DoHeatmap(SCLC, assay="RNA",features=ugenes)
           subchunkify(g, fig.height=15, fig.width=15)
           
-          gene_groups=split(genes$`Marker Gene`, genes$`Cell Type`)
+          gene_groups=split(genes$gene, genes$cell_type)
           
           genes=unique(unlist(gene_groups))
           g<-DotPlot(SCLC, assay="RNA", features=genes)
