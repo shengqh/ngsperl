@@ -232,7 +232,11 @@ for(pct in previous_celltypes){
     top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
     top10genes<-unique(top10$gene)
     
-    data.norm=get_seurat_average_expression(subobj, cluster)
+    #using global normalized data for cell type annotation
+    subobj2<-subset(obj, cells=cells)
+    subobj2@meta.data <- subobj@meta.data
+
+    data.norm=get_seurat_average_expression(subobj2, cluster)
     predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
     layer_ids<-names(predict_celltype$max_cta)
     names(layer_ids) <- colnames(data.norm)
@@ -296,7 +300,10 @@ for(pct in previous_celltypes){
 
     width=10000
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-      gb<-get_bubble_plot(subobj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA") + theme(text = element_text(size=20))
+      #using global normalized data for bubblemap
+      subobj2@meta.data <- subobj@meta.data
+
+      gb<-get_bubble_plot(subobj2, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA") + theme(text = element_text(size=20))
       g<-g+gb
       if(bHasCurrentSignacX){
         layout="ABCD
@@ -323,6 +330,9 @@ EFGH"
       }
     }
     gu<-g+plot_layout(design=layout)
+
+    #remove subobj2
+    rm(subobj2)
     
     umap_file = paste0(cluster_prefix, ".umap.png")
     png(umap_file, width=width, height=height, res=300)
