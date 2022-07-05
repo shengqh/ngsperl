@@ -106,6 +106,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "remove_duplicate", 1 );
   initDefaultValue( $def, "perform_multiqc", 0 );
+  initDefaultValue( $def, "perform_report", 1 );
 
   my $default_onco_options = {
     "picture_width" => "0",
