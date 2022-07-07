@@ -1,3 +1,19 @@
+rm(list=ls()) 
+outFile='AG3669'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3='fileList3.txt'
+parFile1='C:/projects/data/h_gelbard_lab/projects/20220609_scRNA_3669_sct/seurat_sct_merge/result/AG3669.final.rds'
+parFile2=''
+parFile3='C:/projects/data/h_gelbard_lab/projects/20220609_scRNA_3669_sct/essential_genes/result/AG3669.txt'
+parFile4='C:/projects/data/h_gelbard_lab/projects/20220609_scRNA_3669_sct/seurat_sct_merge_SignacX/result/AG3669.meta.rds'
+
+
+setwd('C:/projects/data/h_gelbard_lab/projects/20220609_scRNA_3669_sct/seurat_sct_merge_01_dynamic_signacX/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -27,7 +43,7 @@ npcs<-as.numeric(myoptions$pca_dims)
 
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
-remove_subtype<-myoptions$remove_subtype
+remove_subtype_of<-myoptions$remove_subtype
 annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
@@ -53,10 +69,23 @@ pca_dims<-1:npcs
 
 tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
 
-remove_subtype_of=remove_subtype
 cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file, curated_markers_file=myoptions$curated_markers_file)
 cell_activity_database$cellType=cell_activity_database$cellType[names(cell_activity_database$cellType) %in% tiers$Celltype.name]
 tiers<-tiers[tiers$Celltype.name %in% names(cell_activity_database$cellType),]
+rownames(tiers)<-tiers$Celltype.name
+
+cmap<-data.frame("signacx"=c("B.memory", "B.naive",
+                             "DC", "Mon.Classical", "Mon.NonClassical", "Neutrophils", "Monocytes", "Macrophages", 
+                             "NK", "T.CD4.naive", "T.CD4.memory", "T.regs", "T.CD8.naive", "T.CD8.memory", "T.CD8.cm","T.CD8.em", 
+                             "Endothelial", "Fibroblasts", "Epithelial", "Unclassified"),
+                 "panglao"=c("B cells", "B cells", 
+                             "Dendritic cells", "Monocytes", "Monocytes", "Neutrophils","Monocytes", "Macrophages", 
+                             "NK cells", "T cells", "T cells", "T cells", "T cells", "T cells", "T cells", "T cells",
+                             "Endothelial cells", "Fibroblasts", "Epithelial cells", "Unclassified"))
+
+smap<-unlist(split(cmap$panglao, cmap$signacx))
+
+#write.csv(tiers, "tiers.csv")
 
 prefix<-outFile
 
@@ -82,6 +111,20 @@ if(parSampleFile3 != ""){
 }else{
   umap_min_dist_map = c("layer0" = 0.3,"layer1" = 0.3,"layer2" = 0.3,"layer3" = 0.3,"layer4" = 0.3)
 }
+
+signacx<-readRDS(parFile4)
+
+#write.csv(cmap, "cmap.csv")
+if(!all(signacx$signacx_CellStates %in% names(smap))){
+  cs<-signacx$signacx_CellStates[!(signacx$signacx_CellStates %in% names(smap))]
+  stop("not all signacx in map: ", paste0(unique(cs), collapse = ", "))
+}
+
+signacx$signacx <- unlist(lapply(signacx$signacx_CellStates, function(x){
+  smap[as.character(x)]
+}))
+
+obj$signacx<-signacx$signacx
 
 if(has_bubblemap){
   allgenes<-rownames(obj)
@@ -115,12 +158,12 @@ layer4map<-split(tiers$Layer4, tiers$Celltype.name)
 
 obj[["layer0"]]<-"Unassigned"
 
-cbind_celltype<-function(subobj, data.norm, cluster, new.cluster.ids, cur_layermap, cur_cts){
+cbind_celltype<-function(subobj, cluster, new.cluster.ids, cur_layermap, cur_cts){
   if(is.null(cur_layermap)){
     return(cur_cts)
   }
   layer_ids<-unlist(cur_layermap[new.cluster.ids])
-  names(layer_ids) <- colnames(data.norm)
+  names(layer_ids) <- names(new.cluster.ids)
   
   oldcluster<-subobj[[cluster]][[1]]
   newct<-layer_ids[oldcluster]
@@ -144,11 +187,12 @@ vote_celltype<-function(cts, assay){
   return(cts)
 }
 
-previous_layer<-"layer2"
-cur_layer="layer3"
-previous_layermap=layer2map
-cur_layermap=layer3map
+previous_layer<-"layer0"
+cur_layer="layer1"
+previous_layermap=NA
+cur_layermap=layer1map
 previous_celltypes<-unique(obj@meta.data[[previous_layer]])
+check_pre_layer=FALSE
 iter=1
 
 iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, iter, check_pre_layer, vars.to.regress, umap_min_dist_map){
@@ -227,16 +271,25 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     cluster = clusters[1]
     for(cluster in clusters){
       cat("  ", cluster, "\n")
-      data.norm=get_seurat_average_expression(subobj, cluster)
       
-      predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
+      predict_ct<-table(unlist(subobj[[cluster]]), subobj$signacx)
       
-      new.cluster.ids<-names(predict_celltype$max_cta)
+      new.cluster.ids<-colnames(predict_ct)[apply(predict_ct,1,which.max)]
+      names(new.cluster.ids) = rownames(predict_ct)
       
-      cur_cts<-cbind_celltype(subobj, data.norm, cluster, new.cluster.ids, cur_layermap, cur_cts)
+      is_unclassified <- which(new.cluster.ids == "Unclassified")
+      if(length(is_unclassified) > 0){
+        data.norm=get_seurat_average_expression(subobj, cluster)
+        predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
+        ora_cts<-names(predict_celltype$max_cta)
+        new.cluster.ids[is_unclassified] = ora_cts[is_unclassified] 
+      }
+      
+      
+      cur_cts<-cbind_celltype(subobj, cluster, new.cluster.ids, cur_layermap, cur_cts)
       
       if(check_pre_layer){
-        pre_cts<-cbind_celltype(subobj, data.norm, cluster, new.cluster.ids, previous_layermap, pre_cts)
+        pre_cts<-cbind_celltype(subobj, cluster, new.cluster.ids, previous_layermap, pre_cts)
       }
     }
     

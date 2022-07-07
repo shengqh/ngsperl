@@ -150,6 +150,8 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_dynamic_cluster", 1 );
 
+  initDefaultValue( $def, "perform_dynamic_cluster_signacX", getValue($def, "perform_SignacX", 0) );
+
   # initDefaultValue( $def, "dynamic_layer_umap_min_dist", {
   #   "layer0" => 0.3,
   #   "layer1" => 0.3,
@@ -776,6 +778,13 @@ sub getScRNASeqConfig {
       my $signacX_name = $seurat_task . "_SignacX";
       if (getValue( $def, "perform_SignacX", 0 ) ) {
         addSignac_only( $config, $def, $summary, $target_dir, $project_name, $signacX_name, $seurat_task, $reduction );
+
+        if(getValue($def, "perform_dynamic_cluster_signacX")){
+          my $dynamicKey = "dynamic_cluster_singnacX";
+          my $scDynamic_task = $seurat_task . get_next_index($def, $dynamicKey) . "_dynamic_signacX";
+
+          addDynamicClusterSignacX($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $signacX_name);
+        }
       }
 
       my $celltype_name = undef;
