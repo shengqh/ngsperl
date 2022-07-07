@@ -710,42 +710,12 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE){
-  allgenes=rownames(obj)
-  genes_df <- read_bubble_genes(bubblemap_file, allgenes)
-  gene_groups=split(genes_df$gene, genes_df$cell_type)
-  
-  cell_type=obj@meta.data
-  cell_type$cell_type <- cell_type[,cur_celltype]
-
-  ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Dendritic cells", "Monocytes", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
-  ct<-cell_type[!duplicated(cell_type$cell_type),]
-  missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
-  if(length(missed) > 0){
-    ct_levels = c(ct_levels, as.character(missed))
-  }
-  ct_levels = ct_levels[ct_levels %in% ct$cell_type]
-  cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
-  if(!is.na(cur_res)){
-    if(orderby_cluster){
-      cell_type<-cell_type[order(cell_type[,cur_res]),]
-    }else{
-      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
-    }
-    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], " : ", cell_type$cell_type)
-    cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
-    group.by="seurat_celltype_clusters"
-  }else{
-    group.by="cell_type"
-  }
-  
-  cell_type<-cell_type[colnames(obj),]
-  obj@meta.data<-cell_type
-  
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA" ){
   genes=unique(unlist(gene_groups))
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
+  
   gdata<-g$data
-
+  
   data.plot<-NULL
   gn=names(gene_groups)[1]
   for(gn in names(gene_groups)){
@@ -786,11 +756,88 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   return(g)
 }
 
-draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE){
+  allgenes=rownames(obj)
+  genes_df <- read_bubble_genes(bubblemap_file, allgenes)
+  gene_groups=split(genes_df$gene, genes_df$cell_type)
+  
+  cell_type=obj@meta.data
+  cell_type$cell_type <- cell_type[,cur_celltype]
+
+  ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Dendritic cells", "Monocytes", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
+  ct<-cell_type[!duplicated(cell_type$cell_type),]
+  missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
+  if(length(missed) > 0){
+    ct_levels = c(ct_levels, as.character(missed))
+  }
+  ct_levels = ct_levels[ct_levels %in% ct$cell_type]
+  cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
+  if(!is.na(cur_res)){
+    if(orderby_cluster){
+      cell_type<-cell_type[order(cell_type[,cur_res]),]
+    }else{
+      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+    }
+    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], " : ", cell_type$cell_type)
+    cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
+    group.by="seurat_celltype_clusters"
+  }else{
+    group.by="cell_type"
+  }
+  
+  cell_type<-cell_type[colnames(obj),]
+  obj@meta.data<-cell_type
+  
+  g<-get_dot_plot(obj, group.by, gene_groups, assay)
+  
+  return(g)
+}
+
+draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=5500, height=3000){
   g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file)
-  png(paste0(prefix, ".bubblemap.png"), width=5500, height=3000, res=300)
+  png(paste0(prefix, ".bubblemap.png"), width=width, height=height, res=300)
   print(g)
   dev.off()
+}
+
+get_celltype_markers<-function(medianexp,cellType,weight){
+  exp_z<-scale(medianexp)
+  genenames<-rownames(medianexp)   
+  ctnames<-colnames(medianexp)
+  j=1
+  
+  res<-list()
+  for (j in 1: dim(medianexp)[2]){
+    clusterexp<-medianexp[,j] 
+    clusterexp_z<-exp_z[,j]
+    
+    ctgenes<-cellType[[ctnames[j]]]
+    
+    weight_ss<-weight[names(weight)%in%ctgenes]
+    ind<-match(names(weight_ss),genenames)
+    exp_ss<-clusterexp_z[ind[!is.na(ind)]]
+    weight_ss<-weight_ss[!is.na(ind)]
+    
+    weighted_exp<-exp_ss*weight_ss
+    weighted_exp<-weighted_exp[order(weighted_exp, decreasing = T)]
+    res[ctnames[j]] = list(weighted_exp)
+  }
+  
+  return(res)
+}
+
+get_celltype_marker_bubble_plot<-function(obj, group.by, cellType, weight, n_markers=5) {
+  medianexp=get_seurat_average_expression(obj, group.by)
+  medianexp<-medianexp[rowSums(medianexp)>0,]
+  
+  markers<-get_celltype_markers(medianexp, cellType, weight)
+  
+  gene_groups<-lapply(markers, function(x){
+    names(x[1:n_markers])
+  })
+  
+  g<-get_dot_plot(obj, group.by, gene_groups)
+  return(g)
 }
 
 find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_markers) {  
