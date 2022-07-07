@@ -1,3 +1,16 @@
+rm(list=ls()) 
+outFile='mouse_8363'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_merge/result/mouse_8363.final.rds'
+parFile2='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_merge_01_dynamic/result/mouse_8363.scDynamic.meta.rds'
+parFile3='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
+
+
+setwd('C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_merge_02_subcluster.v2/result')
+
+### Parameter setting end ###
 
 source("scRNA_func.r")
 library(dplyr)
@@ -76,22 +89,24 @@ if(parSampleFile2 != ""){
 }
 
 bHasSignacX<-FALSE
-if(parFile4 != ""){
-  signacX<-readRDS(parFile4)
-  assert(rownames(signacX) == rownames(obj@meta.data))
-
-  ct_map=c('T.CD4.memory'='T.CD4', 
-    'T.CD4.naive'='T.CD4', 
-    'T.CD8.cm'='T.CD8',
-    'T.CD8.em'='T.CD8',
-    'T.CD8.naive'='T.CD8')
-  signacX$signacx_CellStates_slim<-as.character(signacX$signacx_CellStates)
-  for(ct_name in names(ct_map)){
-    signacX$signacx_CellStates_slim[signacX$signacx_CellStates_slim==ct_name]=ct_map[ct_name]
+if(exists("parFile4")){
+  if(parFile4 != ""){
+    signacX<-readRDS(parFile4)
+    assert(rownames(signacX) == rownames(obj@meta.data))
+  
+    ct_map=c('T.CD4.memory'='T.CD4', 
+      'T.CD4.naive'='T.CD4', 
+      'T.CD8.cm'='T.CD8',
+      'T.CD8.em'='T.CD8',
+      'T.CD8.naive'='T.CD8')
+    signacX$signacx_CellStates_slim<-as.character(signacX$signacx_CellStates)
+    for(ct_name in names(ct_map)){
+      signacX$signacx_CellStates_slim[signacX$signacx_CellStates_slim==ct_name]=ct_map[ct_name]
+    }
+  
+    obj<-AddMetaData(obj, signacX$signacx_CellStates_slim, col.name = "signacx_CellStates")
+    bHasSignacX<-TRUE
   }
-
-  obj<-AddMetaData(obj, signacX$signacx_CellStates_slim, col.name = "signacx_CellStates")
-  bHasSignacX<-TRUE
 }
 
 if(has_bubblemap){
