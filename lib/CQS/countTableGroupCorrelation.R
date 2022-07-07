@@ -111,7 +111,7 @@ if(!exists("suffix")){
 
 task_suffix<-suffix
 
-outputDirectory<-"."
+#outputDirectory<-"."
 output_include_folder_name<-1
 if(!exists("outputDirectory")){
   outputDirectory<-""
