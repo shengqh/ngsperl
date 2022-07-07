@@ -218,7 +218,7 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     if(previous_layer != "layer0") {
       cat(key, "RunUMAP\n")
       cur_min_dist = umap_min_dist_map[previous_layer]
-      subobj<-RunUMAP(object = subobj, min_dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE)
+      subobj<-RunUMAP(object = subobj, min.dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE)
     }
     
     cat(key, "Cell type annotation\n")
