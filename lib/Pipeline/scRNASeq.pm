@@ -89,7 +89,7 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_outputTIFF", getValue( $def, "outputTIFF", 0 ) );
   initDefaultValue( $def, "DE_showVolcanoLegend", 1 );
 
-  initDefaultValue( $def, "perform_clonotype_analysis", 1 );
+  initDefaultValue( $def, "perform_clonotype_analysis", 0 );
 
 
   initDefaultValue( $def, "perform_enclone_only",      0 );
