@@ -69,7 +69,7 @@ def convert(enclone_file, chain_file, output_file, logger):
   for row in rows:
     row['n'] = int(row['n'])
 
-  rows.sort(key=sortByCells, reverse=True)
+  #rows.sort(key=sortByCells, reverse=True)
 
   clone_sample_cell_map = {}
   samples = []
