@@ -1,5 +1,18 @@
-source("scRNA_func.r")
+rm(list=ls()) 
+outFile='AK6383'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge/result/AK6383.final.rds'
+parFile2=''
+parFile3=''
 
+
+setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(knitr)
@@ -52,11 +65,10 @@ cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subty
 prefix<-outFile
 
 if(!exists("obj")){
-  finalList<-readRDS(parFile1)
-  obj<-finalList$obj
+  obj<-read_object(parFile1)
 }
 
-resolutions=seq(from = 0.1, to = 1.5, by = 0.1)
+resolutions=c(0.5, 1.0, 1.5)
 
 curreduction=ifelse(by_harmony, "harmony", "pca")
 obj <- FindNeighbors(object=obj, reduction=curreduction, dims=c(1:npcs), verbose=FALSE)
@@ -84,6 +96,10 @@ multi_cts<-colnames(obj@meta.data)[grepl("_celltype", colnames(obj@meta.data))]
 res_df<-data.frame("resolution"=resolutions, "cluster"=multi_res, "celltype"=multi_cts)
 write.csv(res_df, file=paste0(outFile, ".resolutions.csv"), row.names=F)
 
+umaplist<-RunMultipleUMAP(obj, curreduction=curreduction, cur_pca_dims=c(1:npcs))
+obj<-umaplist$obj
+umap_names<-umaplist$umap_names
+
 meta<-obj@meta.data
 
 cur_celltype<-multi_cts[1]
@@ -99,15 +115,35 @@ for(cur_celltype in multi_cts){
   meta<-meta[colnames(obj),]
   obj@meta.data = meta
   
-  g1<-DimPlot(obj, group.by = cur_celltype, label=T) + guides(fill=guide_legend(ncol=1))
-  g2<-DimPlot(obj, group.by = sname, label=T) + guides(color=guide_legend(ncol=1))
+  placeholds="ABCDEFGHIGJLMNOPQRSTUVWXYZ"
+  placehold_index=0
+  placehold_r1=""
+  g<-NULL
+  for(umap_name in umap_names){
+    g1<-DimPlot(obj, group.by = cur_celltype, reduction=umap_name, label=T, repel=T) + ggtitle(umap_name) + guides(fill=guide_legend(ncol=1))
+    placehold_index = placehold_index + 1
+    placehold_r1 = paste0(placehold_r1, placeholds[placehold_index])
+    if(is.null(g)){
+      g<-g1
+    }else{
+      g<-g+g1
+    }
+  }
+
+  placehold_r2=""
+  for(umap_name in umap_names){
+    g2<-DimPlot(obj, group.by = sname, reduction=umap_name, label=T, repel=T) + guides(color=guide_legend(ncol=1))
+    placehold_index = placehold_index + 1
+    placehold_r2 = paste0(placehold_r2, placeholds[placehold_index])
+    g<-g+g2
+  }
+
+  placehold_r3=strrep(placeholds[placehold_index], length(umap_names))
   g3<-get_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA")
-  
-  layout <- "
-AABB
-CCCC
-"  
-  g<-g1+g2+g3+plot_layout(design = layout)
+  g<-g+g3
+
+  layout <- paste0("\n", placehold_r1, "\n", placehold_r2, "\n", placehold_r3, "\n")
+  g<-g+plot_layout(design = layout)
 
   png(paste0(prefix, ".", cur_celltype, ".png"), width=as.numeric(myoptions$plot_width), height=as.numeric(myoptions$plot_height), res=300)
   print(g)
@@ -116,6 +152,7 @@ CCCC
   #draw_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, paste0(prefix, ".", cur_celltype, assay))
 }
 
+saveRDS(obj@meta.data, paste0(prefix, "meta.rds"))
 write.csv(obj@meta.data, paste0(prefix, ".meta.csv"))
 
-saveRDS(obj, paste0(prefix, ".multires.rds"))
+#saveRDS(obj, paste0(prefix, ".multires.rds"))

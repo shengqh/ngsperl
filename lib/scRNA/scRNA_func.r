@@ -1004,11 +1004,12 @@ get_groups_dot<-function(subobj, group1, group2){
   return(g)
 }
 
-RunMultipleUMAP<-function(subobj, ops=data.frame("nn"=c(30,20,10), "min.dist"=c(0.3,0.1,0.05), curreduction="PCA", cur_pca_dims=c(1:30))){
+RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curreduction="PCA", cur_pca_dims=c(1:30)){
+  ops=data.frame("nn"=c(30,20,10), "min.dist"=c(0.3,0.1,0.05))
   umap_names<-c()
   for(idx in c(1:nrow(ops))){
     nn=ops[idx, 'nn']
-    nn<-min(nn, u_n_neighbors)
+    #nn<-min(nn, u_n_neighbors)
     min.dist=ops[idx, 'min.dist']
     umap_name = paste0("umap_nn", nn, "_dist", min.dist)
     cat(umap_name, "\n")

@@ -1,6 +1,18 @@
+rm(list=ls()) 
+outFile='AK6383'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_cluster_res0.5/result/AK6383.cluster.meanexp.csv'
+parFile2='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_cluster_res0.5/result/AK6383.cluster.csv'
+parFile3='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_cluster_res0.5/result/AK6383.final.rds'
+
+
+setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_cluster_res0.5_celltype/result')
+
+### Parameter setting end ###
 
 source("scRNA_func.r")
-
 library(data.table)
 library(Seurat)
 library(heatmap3)
@@ -177,9 +189,8 @@ draw_celltype_bar<-function(obj, seurat_clusters, celltypes, celltype_name, outF
 
 if(file.exists(parFile3)){
   library(ggplot2)
-  finalList=readRDS(parFile3)
-  obj=finalList$obj
-  
+  obj=read_object(parFile3)
+
   idmap = split(id_tbl$seurat_cellactivity_clusters, id_tbl$seurat_clusters)
   obj$seurat_cellactivity_clusters = unlist(idmap[as.character(obj$seurat_clusters)])
   

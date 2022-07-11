@@ -1131,7 +1131,6 @@ sub getScRNASeqConfig {
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $multires_task,
           rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_multires.r",
           parameterFile1_ref => [$seurat_task, ".rds"],
-          parameterFile2_ref => [$seurat_task, ".pca.txt"],
           parameterSampleFile1    => {
             Mtpattern             => getValue( $def, "Mtpattern" ),
             rRNApattern           => getValue( $def, "rRNApattern" ),
@@ -1150,7 +1149,7 @@ sub getScRNASeqConfig {
             summary_layer_file    => $def->{summary_layer_file},
             bubblemap_file        => $def->{bubblemap_file},
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
-            plot_width            => getValue($def, "multires_plot_width", 6600),
+            plot_width            => getValue($def, "multires_plot_width", 9900),
             plot_height           => getValue($def, "multires_plot_height", 6000),
           },
           output_file_ext      => ".multires.rds",
@@ -1213,7 +1212,6 @@ sub getScRNASeqConfig {
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $cluster_task,
           rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_cluster.r",
           parameterFile1_ref => [$seurat_task, ".rds"],
-          parameterFile2_ref => [$seurat_task, ".pca.txt"],
           parameterSampleFile1     => {
             Mtpattern             => getValue( $def, "Mtpattern" ),
             rRNApattern           => getValue( $def, "rRNApattern" ),
