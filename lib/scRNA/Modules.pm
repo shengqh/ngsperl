@@ -14,6 +14,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addEnclone 
   addClonotypeMerge 
   addEncloneToClonotype 
+  addEncloneToConsensus
+  addConsensusToImmunarch
   addArcasHLA 
   addScMRMA 
   addCHETAH
@@ -72,7 +74,11 @@ sub addEnclone {
     option                => "
 dn=`dirname __FILE__`
 
-enclone TCR=\${dn} POUT=__NAME__.csv > __NAME__.log",
+#enclone TCR=\${dn} POUT=__NAME__.pchain2.pcell.csv PCELL PCHAINS=2 PCOLS=barcode,group_id,group_ncells,clonotype_id,clonotype_ncells,nchains,cdr3_dna1,cdr3_aa1,const1,v_name1,d_name1,j_name1,u_cell1,r_cell1,const2,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,u_cell2,r_cell2    > __NAME__.pchain2.pcell.log
+enclone TCR=\${dn} POUT=__NAME__.pchain4.pcell.csv PCELL PCHAINS=4 PCOLS=barcode,group_id,group_ncells,clonotype_id,clonotype_ncells,nchains,cdr3_dna1,cdr3_aa1,const1,v_name1,d_name1,j_name1,u_cell1,r_cell1,cdr3_dna2,cdr3_aa2,const2,v_name2,d_name2,j_name2,u_cell2,r_cell2,cdr3_dna3,cdr3_aa3,const3,v_name3,d_name3,j_name3,u_cell3,r_cell3,cdr3_dna4,cdr3_aa4,const4,v_name4,d_name4,j_name4,u_cell4,r_cell4    > __NAME__.pchain4.pcell.log
+#enclone TCR=\${dn} POUT=__NAME__.pchain2.csv PCHAINS=2 PCOLS=group_id,group_ncells,clonotype_id,clonotype_ncells,cdr3_dna1,cdr3_aa1,v_name1,d_name1,j_name1,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,barcodes    > __NAME__.pchain2.log
+enclone TCR=\${dn} POUT=__NAME__.pchain4.csv PCHAINS=4 PCOLS=n,group_id,group_ncells,clonotype_id,clonotype_ncells,cdr3_dna1,cdr3_aa1,v_name1,d_name1,j_name1,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,cdr3_dna3,cdr3_aa3,v_name3,d_name3,j_name3,cdr3_dna4,cdr3_aa4,v_name4,d_name4,j_name4,barcodes    > __NAME__.pchain4.log
+",
     interpretor           => "",
     check_program         => 0,
     program               => "",
@@ -82,7 +88,7 @@ enclone TCR=\${dn} POUT=__NAME__.csv > __NAME__.log",
     output_to_same_folder => 1,
     output_to_folder      => 1,
     output_arg            => ">",
-    output_file_ext       => ".csv",
+    output_file_ext       => ".pchain4.pcell.csv,.pchain4.csv",
     no_docker             => 1,
     sh_direct             => 1,
     pbs                   => {
@@ -143,6 +149,59 @@ sub addEncloneToClonotype {
     output_file_ext          => ".csv",
     output_no_name           => 1,
     output_to_same_folder    => 1,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+  push(@$tasks, $taskname);
+  return($taskname);
+}
+
+sub addEncloneToConsensus {
+  my ( $config, $def, $tasks, $target_dir, $taskname, $source_ref, $cdr3_ref ) = @_;
+
+  $config->{$taskname} = {
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    target_dir               => "${target_dir}/$taskname",
+    option                   => "",
+    interpretor              => "python3",
+    program                  => "../scRNA/enclone_to_consensus_annotations.py",
+    parameterFile1_arg => "-i",
+    parameterFile1_ref => $source_ref,
+    parameterFile2_arg => "-c",
+    parameterFile2_ref => $cdr3_ref,
+    output_arg               => "-o",
+    output_file              => "metadata",
+    output_file_ext          => ".txt",
+    output_no_name           => 1,
+    output_to_same_folder    => 1,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+  push(@$tasks, $taskname);
+  return($taskname);
+}
+
+sub addConsensusToImmunarch {
+  my ( $config, $def, $tasks, $target_dir, $taskname, $source_ref ) = @_;
+
+  $config->{$taskname} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${target_dir}/$taskname",
+    docker_prefix            => "immunarch_",
+    option                   => "",
+    rtemplate                => "../CQS/Functions.Rmd;../scRNA/immunarch.Rmd;../scRNA/immunarch.r",
+    parameterFile1_ref => $source_ref,
+    output_file_ext          => ".html",
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",

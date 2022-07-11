@@ -1,0 +1,119 @@
+---
+title: "Immunarch"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+html_document:
+  toc: true
+  toc_depth: 4
+  number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+```{r, child="Functions.Rmd"} 
+```
+
+```{r setup, include=FALSE}
+library(kableExtra)
+library(tidyverse)
+
+knitr::opts_chunk$set(
+  tidy = TRUE,
+  tidy.opts = list(width.cutoff = 120),
+  message = FALSE,
+  warning = FALSE,
+  fig.width=8, 
+  fig.height=6, 
+  out.width="80%"
+)
+
+plots <- read.table("plot_files.txt", header=FALSE, as.is=TRUE)
+
+hasmetadata <- any(grepl("metadata", plots[,1]))
+hascd3dist <- any(grepl("CD3_distribution", plots[,1]))
+hasclonality <- any(grepl("clonotype_summary", plots[,1]))
+hasoverlap<- any(grepl("repertoire_overlap", plots[,1]))
+hasdiversity <- any(grepl("diversity", plots[,1]))
+hasgeneUsage <- any(grepl("geneUsage", plots[,1]))
+
+
+```
+
+<br>
+  
+# Sample metadata
+
+```{r metadata, echo=FALSE, results='asis', include = hasmetadata, eval = hasmetadata}
+table <- read.table(plots[grep("metadata", plots[,1]),1], header = T)
+print(kable(table, caption=tabRef("metadata", "Sample metadata"), row.names=F) %>%
+          kable_styling())
+```
+
+<br>
+  
+# Calculate and visualise basic statistics
+
+<br>
+  
+## CD3 distribution
+
+<br>
+  
+```{r cd3_dist,echo=FALSE,results='asis', include = hascd3dist, eval = hascd3dist, fig.align="center", fig.cap=figRef("cd3_dist", "Distribution of CD3 length", trunk.eval=file.exists(plots[grep("CD3_distribution", plots[,1]),1]))}
+check_and_include_graphics(plots[grep("CD3_distribution", plots[,1]),1])
+
+```
+
+<br>
+  
+## Clonotypes
+
+<br>
+  
+```{r clonality,echo=FALSE,results='asis', include = hasclonality, eval = hasclonality, fig.align="center", fig.cap=figRef("clonality", "Relative abundance of clonotypes", trunk.eval=file.exists(plots[grep("clonotype_summary", plots[,1]),1]))}
+check_and_include_graphics(plots[grep("clonotype_summary", plots[,1]),1])
+
+```
+
+<br>
+  
+# Explore and compare T-cell and B-cell repertoires
+
+<br>
+
+## Clonotype overlaps  
+```{r overlap,echo=FALSE,results='asis', include = hasoverlap, eval = hasoverlap, fig.align="center", fig.cap=figRef("overlap", "Heatmap of public clonotypes shared between repertoires", trunk.eval=file.exists(plots[grep("repertoire_overlap", plots[,1]),1]))}
+check_and_include_graphics(plots[grep("repertoire_overlap", plots[,1]),1])
+
+```
+
+<br>
+  
+  
+## Gene usage
+
+<br>
+  
+
+
+```{r geneUsage,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("geneUsage", "V-gene distribution"), fig.show="hold", out.width="50%"}
+geneUsage_plots <- plots[grep("geneUsage", plots[,1]),1]
+check_and_include_graphics(geneUsage_plots)
+```
+
+
+<br>
+  
+  
+## Diversity
+
+<br>
+  
+
+```{r diversity,echo=FALSE,results='asis', include = hasdiversity, eval = hasdiversity, fig.align="center", fig.cap=figRef("diversity", "Chao1 diversity of repertoires", trunk.eval=file.exists(plots[grep("diversity", plots[,1]),1]))}
+check_and_include_graphics(plots[grep("diversity", plots[,1]),1])
+
+```
+

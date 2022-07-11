@@ -89,6 +89,9 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_outputTIFF", getValue( $def, "outputTIFF", 0 ) );
   initDefaultValue( $def, "DE_showVolcanoLegend", 1 );
 
+  initDefaultValue( $def, "perform_clonotype_analysis", 1 );
+
+
   initDefaultValue( $def, "perform_enclone_only",      0 );
 
   initDefaultValue( $def, "perform_seurat",      1 );
@@ -205,12 +208,16 @@ sub getScRNASeqConfig {
   my $perform_clonotype_analysis = getValue($def, "perform_clonotype_analysis", 0);
 
   my $clonotype_4_convert = undef;
+  my $clonotype_5_consensus = undef;
   if ($perform_clonotype_analysis){
     if ((not defined $def->{files}) || (not $perform_split_hto_samples)) {
       $config->{vdj_json_files} = getValue($def, "vdj_json_files");
       addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_1_merge", ["vdj_json_files", "all_contig_annotations.json"]);
       addEnclone($config, $def, $summary, "clonotype_2_enclone", $target_dir, ["clonotype_1_merge", ".json\$"] );
-      $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_3_convert", "clonotype_2_enclone", ["clonotype_1_merge", ".cdr3\$"]);
+
+      $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_3_convert", ["clonotype_2_enclone", ".pchain4.csv"], ["clonotype_1_merge", ".cdr3\$"]);
+      $clonotype_5_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype_4_consensus", ["clonotype_2_enclone", ".pchain4.pcell.csv"], ["clonotype_1_merge", ".cdr3\$"]);
+      addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype_5_immunarch", $clonotype_5_consensus);
     }
   }
 
