@@ -1,3 +1,18 @@
+#rm(list=ls()) 
+outFile='mouse_8363'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3='fileList3.txt'
+parFile1='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
+parFile2=''
+parFile3='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
+
+
+setwd('C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_01_dynamic/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -170,6 +185,8 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
       next
     }
     
+    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+
     subobj<-subset(obj, cells=cells)
     
     stopifnot(all(subobj[[previous_layer]] == pct))
@@ -258,16 +275,17 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     DefaultAssay(subobj)<-"RNA"
 
     cls<-cur_cts[,grepl(paste0(assay, "_snn_res.+_ct$"), colnames(cur_cts)), drop=F]
+    
     g1<-DimPlot(subobj, group.by = previous_layer, label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": pre"))
     g2<-DimPlot(subobj, group.by = "layer", label=T) + ggtitle(paste0(pct, ": ", cur_layer))
 
     if(check_pre_layer){
       g3<-DimPlot(subobj, group.by = "pre_layer", label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": post"))
-      g<-g1+g3+g2
-      width=6900
+      g<-g0+g1+g3+g2
+      width=9000
     }else{
-      g<-g1+g2
-      width=4600
+      g<-g0+g1+g2
+      width=6750
     }
 
     #saveRDS(subobj, paste0(curprefix, "_", gsub(" ", "_", pct), ".rds"))
@@ -275,13 +293,13 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
       if(check_pre_layer){
         layout <- "
-ABC
-DDD
+ABCD
+EEEE
 "
       }else{
         layout <- "
-AB
-CC
+ABC
+DDD
 "
       }
       g4<-get_bubble_plot(subobj, NA, "layer", bubblemap_file, assay)
@@ -289,9 +307,9 @@ CC
       height=4000
     }else{
       if(check_pre_layer){
-        g<-g+plot_layout(ncol=3)
+        g<-g+plot_layout(ncol=4)
       }else{
-        g<-g+plot_layout(ncol=2)
+        g<-g+plot_layout(ncol=3)
       }
       height=2000
     }
@@ -478,6 +496,11 @@ output_barplot<-function(obj, sample_key, cell_key, filename){
 }
 
 output_barplot(obj, "orig.ident", "layer4", paste0(outFile, ".ident_cluster.png"))
+
+g<-get_celltype_marker_bubble_plot(obj, "layer4", cell_activity_database$cellType, cell_activity_database$weight, 5)
+png(paste0(outFile, ".layer4.ct_markers.bubbleplot.png"), width=5500, height=3000, res=300)
+print(g)
+dev.off()
 
 if("batch" %in% colnames(obj@meta.data)){
   output_barplot(obj, "batch", "layer4", paste0(outFile, ".batch_cluster.png"))
