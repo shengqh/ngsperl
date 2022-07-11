@@ -2527,6 +2527,29 @@ fi
       },
     };
     push @$summary_ref, "bacteria_count";
+
+    if(getValue($def, "search_refseq_bacteria")){
+      $config->{bacteria_count_summary} = {
+        'class'                    => 'CQS::UniqueR',
+        'parameterFile1_ref' => [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],
+        'parameterFile2_ref' => [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],
+        'parameterFile3_ref' => [ "refseq_bacteria_table", ".read.count\$" ],
+        'option'                   => "",
+        'rtemplate'                => 'countTableVisFunctions.R,../SmallRNA/bacteriaReadSummary.R',
+        'target_dir'               => $data_visualization_dir . "/bacteria_count_summary",
+        'output_file_ext'          => '.csv,.bar1.png,.bar2.png',
+        'sh_direct'                => 1,
+        'perform'                  => 1,
+        'pbs'                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, "bacteria_count_summary";
+    }
   }
 
   if (getValue($def, "perform_search_fasta", 0)){
