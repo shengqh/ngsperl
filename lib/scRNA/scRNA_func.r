@@ -3,6 +3,20 @@ library(cowplot)
 library(Seurat)
 library(tools)
 
+theme_bw3 <- function (axis.x.rotate=F) { 
+	result = theme_bw() +
+    theme(
+      strip.background = element_rect(fill = NA, colour = 'black'),
+      panel.border = element_rect(fill = NA, color = "black"),			
+      axis.line = element_line(colour = "black", size = 0.5)
+    )
+  if (axis.x.rotate){
+    result = result + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  }
+
+  return(result)
+}
+
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
 
@@ -942,7 +956,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   ct<-as.data.frame(table(rawobj[[ident_name]]))
   colnames(ct)<-c("Sample","Cell")
   write.table(ct, paste0(prefix, ".cell.txt"), sep="\t", row.names=F)
-  g<-ggplot(ct, aes(x=Sample, y=Cell)) + geom_bar(stat="identity") + theme_bw()
+  g<-ggplot(ct, aes(x=Sample, y=Cell)) + geom_bar(stat="identity") + theme_bw3(axis.x.rotate = T)
   png(paste0(prefix, ".cell.bar.png"), width=3000, height=2000, res=300)
   print(g)
   dev.off()
