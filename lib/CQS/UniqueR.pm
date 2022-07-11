@@ -137,10 +137,12 @@ sub perform {
       if ($index < $rnum-1){
         my $remote_r = $result_dir . "/" . basename($rtemplate);
         copy($rtemplate, $remote_r);
-        my $line = 'source("' . basename($rtemplate) . '")';
-        $ignore_lines->{$line} = 1;
-        $line =~ s/"/'/g;
+        if($rtemplate =~ '.R$' || $rtemplate =~ '.r$' ){
+          my $line = 'source("' . basename($rtemplate) . '")';
+          $ignore_lines->{$line} = 1;
+          $line =~ s/"/'/g;
         $ignore_lines->{$line} = 0;
+        }
         next;
       }else{
         for my $line (keys %$ignore_lines){
