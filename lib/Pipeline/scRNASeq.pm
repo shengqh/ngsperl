@@ -493,7 +493,9 @@ sub getScRNASeqConfig {
 
         addClonotypeMerge($config, $def, $summary, $target_dir, "hto_clonotype_2_merge", ["hto_clonotype_1_split", "all_contig_annotations.json"]);
         addEnclone($config, $def, $summary, "hto_clonotype_3_enclone", $target_dir, ["hto_clonotype_2_merge", ".json\$"] );
-        $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "hto_clonotype_4_convert", "hto_clonotype_3_enclone", ["hto_clonotype_2_merge", ".cdr3\$"]);
+        $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "hto_clonotype_4_convert", ["hto_clonotype_3_enclone", ".pchain4.csv"], ["hto_clonotype_2_merge", ".cdr3\$"]);
+        $clonotype_5_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype_5_consensus", ["clonotype_2_enclone", ".pchain4.pcell.csv"], ["clonotype_1_merge", ".cdr3\$"]);
+        addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype_6_immunarch", $clonotype_5_consensus);
       }
     }else{
       if(getValue($def, "perform_arcasHLA", 0)){
