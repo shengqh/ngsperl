@@ -99,6 +99,7 @@ write.csv(res_df, file=paste0(outFile, ".resolutions.csv"), row.names=F)
 umaplist<-RunMultipleUMAP(obj, curreduction=curreduction, cur_pca_dims=c(1:npcs))
 obj<-umaplist$obj
 umap_names<-umaplist$umap_names
+rm(umaplist)
 
 meta<-obj@meta.data
 
@@ -122,7 +123,7 @@ for(cur_celltype in multi_cts){
   for(umap_name in umap_names){
     g1<-DimPlot(obj, group.by = cur_celltype, reduction=umap_name, label=T, repel=T) + ggtitle(umap_name) + guides(fill=guide_legend(ncol=1))
     placehold_index = placehold_index + 1
-    placehold_r1 = paste0(placehold_r1, placeholds[placehold_index])
+    placehold_r1 = paste0(placehold_r1, substr(placeholds, placehold_index, placehold_index))
     if(is.null(g)){
       g<-g1
     }else{
@@ -134,11 +135,12 @@ for(cur_celltype in multi_cts){
   for(umap_name in umap_names){
     g2<-DimPlot(obj, group.by = sname, reduction=umap_name, label=T, repel=T) + guides(color=guide_legend(ncol=1))
     placehold_index = placehold_index + 1
-    placehold_r2 = paste0(placehold_r2, placeholds[placehold_index])
+    placehold_r2 = paste0(placehold_r2, substr(placeholds, placehold_index, placehold_index))
     g<-g+g2
   }
 
-  placehold_r3=strrep(placeholds[placehold_index], length(umap_names))
+  placehold_index = placehold_index + 1
+  placehold_r3=strrep(substr(placeholds, placehold_index, placehold_index), length(umap_names))
   g3<-get_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA")
   g<-g+g3
 
