@@ -189,6 +189,7 @@ sub getScRNASeqConfig {
     $summary = $individual;
   }
 
+  my $clono_key = "clono_index";
 
   my $target_dir      = $def->{target_dir};
   my $groups_ref      = defined $def->{groups} ? "groups" : undef;
@@ -206,20 +207,7 @@ sub getScRNASeqConfig {
   my $hto_file_names = $def->{hto_file_names};
 
   my $perform_clonotype_analysis = getValue($def, "perform_clonotype_analysis", 0);
-
-  my $clonotype_4_convert = undef;
-  my $clonotype_5_consensus = undef;
-  if ($perform_clonotype_analysis){
-    if ((not defined $def->{files}) || (not $perform_split_hto_samples)) {
-      $config->{vdj_json_files} = getValue($def, "vdj_json_files");
-      addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype_1_merge", ["vdj_json_files", "all_contig_annotations.json"]);
-      addEnclone($config, $def, $summary, "clonotype_2_enclone", $target_dir, ["clonotype_1_merge", ".json\$"] );
-
-      $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype_3_convert", ["clonotype_2_enclone", ".pchain4.csv"], ["clonotype_1_merge", ".cdr3\$"]);
-      $clonotype_5_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype_4_consensus", ["clonotype_2_enclone", ".pchain4.pcell.csv"], ["clonotype_1_merge", ".cdr3\$"]);
-      addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype_5_immunarch", $clonotype_5_consensus);
-    }
-  }
+  my $clonotype_ref = undef;
 
   my $hla_merge = undef;
   my $individual_qc_task = "individual_qc";
@@ -461,9 +449,12 @@ sub getScRNASeqConfig {
 
         $config->{HTO_samples} = $def->{HTO_samples};
         $config->{vdj_json_files} = getValue($def, "vdj_json_files");
-        $config->{"hto_clonotype_1_split"} = {
+
+        my $split_task = "clonotype". get_next_index($def, $clono_key) . "_split";
+
+        $config->{$split_task} = {
           class => "CQS::ProgramWrapperOneToManyFile",
-          target_dir => "${target_dir}/hto_clonotype_1_split",
+          target_dir => "${target_dir}/$split_task",
           interpretor => "python3",
           program => "../scRNA/clonotype_split.py",
           check_program => 1,
@@ -489,13 +480,9 @@ sub getScRNASeqConfig {
             "mem"       => "10gb"
           },
         };
-        push( @$individual, "hto_clonotype_1_split" );
+        push( @$individual, $split_task );
 
-        addClonotypeMerge($config, $def, $summary, $target_dir, "hto_clonotype_2_merge", ["hto_clonotype_1_split", "all_contig_annotations.json"]);
-        addEnclone($config, $def, $summary, "hto_clonotype_3_enclone", $target_dir, ["hto_clonotype_2_merge", ".json\$"] );
-        $clonotype_4_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "hto_clonotype_4_convert", ["hto_clonotype_3_enclone", ".pchain4.csv"], ["hto_clonotype_2_merge", ".cdr3\$"]);
-        $clonotype_5_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype_5_consensus", ["clonotype_2_enclone", ".pchain4.pcell.csv"], ["clonotype_1_merge", ".cdr3\$"]);
-        addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype_6_immunarch", $clonotype_5_consensus);
+        $clonotype_ref = [$split_task, "all_contig_annotations.json"];
       }
     }else{
       if(getValue($def, "perform_arcasHLA", 0)){
@@ -509,15 +496,22 @@ sub getScRNASeqConfig {
       }
     }
 
+    my $clonotype_convert = undef;
     my $clonotype_db = undef;
-
-    #die "clonotype_4_convert=$clonotype_4_convert";
-    #die "hla_merge=$hla_merge";
-
-    if(defined $clonotype_4_convert) {
-      $clonotype_db = $clonotype_4_convert . "_db";
-      addClonotypeDB($config, $def, $summary, $target_dir, $clonotype_db, $clonotype_4_convert);
+    if ($perform_clonotype_analysis){
+      if ((not defined $def->{files}) || (not $perform_split_hto_samples)) {
+        $config->{vdj_json_files} = getValue($def, "vdj_json_files");
+        $clonotype_ref = ["vdj_json_files", "all_contig_annotations.json"];
+      }
+      
+      my $merge_task = addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_merge", $clonotype_ref);
+      my $enclone_task = addEnclone($config, $def, $summary, "clonotype". get_next_index($def, $clono_key) . "_enclone", $target_dir, [$merge_task, ".json\$"] );
+      $clonotype_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_convert", [$enclone_task, ".pchain4.csv"], [$merge_task, ".cdr3\$"]);
+      $clonotype_db = addClonotypeDB($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_db", $clonotype_convert);
+      my $clonotype_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_consensus", [$enclone_task, ".pchain4.pcell.csv"], [$merge_task, ".cdr3\$"]);
+      my $immunarch_task = addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch", $clonotype_consensus);
     }
+
 
     if($def->{perform_individual_qc}){
       my $qc_files_ref;
@@ -857,7 +851,7 @@ sub getScRNASeqConfig {
             $subcluster_task = $choose_task;
             $can_check_doublet=1;
 
-            if(defined $clonotype_4_convert) {
+            if(defined $clonotype_convert) {
               if( getValue($def, "perform_gliph2", 0) ) {
                 my $prepare_task = (defined $hla_merge) ? "tcr_hla_data" : "tcr_data";
                 #die "gliph2_task=$gliph2_task";
@@ -867,7 +861,7 @@ sub getScRNASeqConfig {
                   target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $prepare_task,
                   rtemplate            => "../scRNA/gliph2_prepare.r",
                   parameterFile1_ref   => [ $choose_task, ".meta.rds"],
-                  parameterFile2_ref   => $clonotype_4_convert,
+                  parameterFile2_ref   => $clonotype_convert,
                   parameterSampleFile1 => getValue($def, "gliph2_config"),
                   parameterSampleFile2 => {
                     gliph2_hla_condition => getValue($def, "gliph2_hla_condition"),
@@ -939,12 +933,13 @@ sub getScRNASeqConfig {
               push( @$summary, $group_umap_task );
             }
 
-            if(defined $clonotype_4_convert){
-              addClonotypeVis($config, $def, $summary, $target_dir, $clonotype_4_convert . "_vis", [$choose_task, ".final.rds"], undef, $clonotype_4_convert);
+            if(defined $clonotype_convert){
+              addClonotypeCluster($config, $def, $summary, $target_dir, $clonotype_convert . "_cluster", $clonotype_convert, [$choose_task, ".meta.rds"], ".clonotype.cluster.csv,.clonotype.sub.cluster.csv");
+              addClonotypeVis($config, $def, $summary, $target_dir, $clonotype_convert . "_vis", [$choose_task, ".final.rds"], undef, $clonotype_convert);
             }
 
             if(defined $clonotype_db){
-              addClonotypeCluster($config, $def, $summary, $target_dir, $clonotype_db . "_cluster", $clonotype_db, [$choose_task, ".meta.rds"]);
+              addClonotypeCluster($config, $def, $summary, $target_dir, $clonotype_db . "_cluster", $clonotype_db, [$choose_task, ".meta.rds"], ".clonotype.db.cluster.csv,.clonotype.sub.db.cluster.csv");
             }
           }
         }else{
@@ -1489,8 +1484,8 @@ sub getScRNASeqConfig {
           addAntibody( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name );
         }
 
-        if(defined $clonotype_4_convert){
-          addClonotypeVis($config, $def, $summary, $target_dir, $clonotype_4_convert . "_vis", [ $cluster_task, ".final.rds" ], [ $celltype_task, $celltype_cluster_file ], $clonotype_4_convert);
+        if(defined $clonotype_convert){
+          addClonotypeVis($config, $def, $summary, $target_dir, $clonotype_convert . "_vis", [ $cluster_task, ".final.rds" ], [ $celltype_task, $celltype_cluster_file ], $clonotype_convert);
 
           if(defined $celltype_task){
             my $clonetype_cluster = $clonotype_db;
