@@ -43,6 +43,8 @@ sub perform {
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
+  my $use_vanilla = get_option( $config, $section, "use_vanilla", 1 );
+
   my $copy_template = get_option( $config, $section, "copy_template", 1 );
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
@@ -243,11 +245,13 @@ sub perform {
   }
 
   my $rscript = get_option_include_general($config, $section, "Rscript", "Rscript");
+
+  my $vanilla_option = $use_vanilla ? "--vanilla ":"";
   if ( defined($option) and $option ne "" ) {
-    print $pbs "$rscript --vanilla " . basename($rfile) . " $option";
+    print $pbs "$rscript $vanilla_option " . basename($rfile) . " $option";
   }
   else {
-    print $pbs "$rscript --vanilla " . basename($rfile);
+    print $pbs "$rscript $vanilla_option " . basename($rfile);
   }
   $self->close_pbs( $pbs, $pbs_file );
 }
