@@ -4,7 +4,7 @@ parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parFile1='/data/h_gelbard_lab/projects/20220508_scRNA_3669/seurat_merge_03_choose_res/result/AG3669.meta.rds'
-parFile2='/data/h_gelbard_lab/projects/20220508_scRNA_3669/clonotype_3_convert/result/clonotypes.csv'
+parFile2='/data/h_gelbard_lab/projects/20220508_scRNA_3669/clonotype_03_convert/result/clonotypes.csv'
 parFile3='/data/h_gelbard_lab/projects/20220508_scRNA_3669/arcasHLA_3_merge/result/AG3669.genotypes.tsv'
 
 
@@ -97,7 +97,7 @@ for (i in 1:length(clon_list)){
 }
 
 #Data frame
-gliph2 <- data.frame(clon_df[,2], clonotypes[, c("TRBV","TRBJ")], clon_df[,1], clonotypes[c(samples, "cell_type")])
+gliph2 <- data.frame(clon_df[,2], clonotypes[, c("v_names","j_names")], clon_df[,1], clonotypes[c(samples, "cell_type")])
 colnames(gliph2)[c(1, 4)] <- c("CDR3b", "CDR3a") 
 
 celltype="CD4"
@@ -105,7 +105,7 @@ for(celltype in c("CD4", "CD8", "Unknown")){
   ct_df<-gliph2[gliph2$cell_type == celltype, c(1:(ncol(gliph2)-1))]
 
   #Melt
-  gliph2_df <- reshape2::melt(ct_df, id = c("CDR3b", "TRBV", "TRBJ", "CDR3a"), variable.name = "subject", value.name = "count")
+  gliph2_df <- reshape2::melt(ct_df, id = c("CDR3b", "v_names", "j_names", "CDR3a"), variable.name = "subject", value.name = "count")
   gliph2_df$subject <- get_subject_condition(gliph2_df$subject, subject_tb)
 
   #Clean
