@@ -74,10 +74,10 @@ sub addEnclone {
     option                => "
 dn=`dirname __FILE__`
 
-#enclone TCR=\${dn} POUT=__NAME__.pchain2.pcell.csv PCELL PCHAINS=2 PCOLS=barcode,group_id,group_ncells,clonotype_id,clonotype_ncells,nchains,cdr3_dna1,cdr3_aa1,const1,v_name1,d_name1,j_name1,u_cell1,r_cell1,const2,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,u_cell2,r_cell2    > __NAME__.pchain2.pcell.log
-enclone TCR=\${dn} POUT=__NAME__.pchain4.pcell.csv PCELL PCHAINS=4 PCOLS=barcode,group_id,group_ncells,clonotype_id,clonotype_ncells,nchains,cdr3_dna1,cdr3_aa1,const1,v_name1,d_name1,j_name1,u_cell1,r_cell1,cdr3_dna2,cdr3_aa2,const2,v_name2,d_name2,j_name2,u_cell2,r_cell2,cdr3_dna3,cdr3_aa3,const3,v_name3,d_name3,j_name3,u_cell3,r_cell3,cdr3_dna4,cdr3_aa4,const4,v_name4,d_name4,j_name4,u_cell4,r_cell4    > __NAME__.pchain4.pcell.log
-#enclone TCR=\${dn} POUT=__NAME__.pchain2.csv PCHAINS=2 PCOLS=group_id,group_ncells,clonotype_id,clonotype_ncells,cdr3_dna1,cdr3_aa1,v_name1,d_name1,j_name1,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,barcodes    > __NAME__.pchain2.log
-enclone TCR=\${dn} POUT=__NAME__.pchain4.csv PCHAINS=4 PCOLS=n,group_id,group_ncells,clonotype_id,clonotype_ncells,cdr3_dna1,cdr3_aa1,v_name1,d_name1,j_name1,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,cdr3_dna3,cdr3_aa3,v_name3,d_name3,j_name3,cdr3_dna4,cdr3_aa4,v_name4,d_name4,j_name4,barcodes    > __NAME__.pchain4.log
+#enclone TCR=\${dn} POUT=__NAME__.pchain2.pcell.csv PCELL PCHAINS=2 PCOLS=barcode,group_id,group_ncells,clonotype_id,clonotype_ncells,exact_subclonotype_id,nchains,cdr3_dna1,cdr3_aa1,const1,v_name1,d_name1,j_name1,u_cell1,r_cell1,const2,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,u_cell2,r_cell2    > __NAME__.pchain2.pcell.log
+enclone TCR=\${dn} POUT=__NAME__.pchain4.pcell.csv PCELL PCHAINS=4 PCOLS=barcode,group_id,group_ncells,clonotype_id,clonotype_ncells,exact_subclonotype_id,nchains,cdr3_dna1,cdr3_aa1,const1,v_name1,d_name1,j_name1,u_cell1,r_cell1,cdr3_dna2,cdr3_aa2,const2,v_name2,d_name2,j_name2,u_cell2,r_cell2,cdr3_dna3,cdr3_aa3,const3,v_name3,d_name3,j_name3,u_cell3,r_cell3,cdr3_dna4,cdr3_aa4,const4,v_name4,d_name4,j_name4,u_cell4,r_cell4    > __NAME__.pchain4.pcell.log
+#enclone TCR=\${dn} POUT=__NAME__.pchain2.csv PCHAINS=2 PCOLS=group_id,group_ncells,clonotype_id,clonotype_ncells,exact_subclonotype_id,cdr3_dna1,cdr3_aa1,v_name1,d_name1,j_name1,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,barcodes    > __NAME__.pchain2.log
+enclone TCR=\${dn} POUT=__NAME__.pchain4.csv PCHAINS=4 PCOLS=n,group_id,group_ncells,clonotype_id,clonotype_ncells,exact_subclonotype_id,cdr3_dna1,cdr3_aa1,v_name1,d_name1,j_name1,cdr3_dna2,cdr3_aa2,v_name2,d_name2,j_name2,cdr3_dna3,cdr3_aa3,v_name3,d_name3,j_name3,cdr3_dna4,cdr3_aa4,v_name4,d_name4,j_name4,barcodes    > __NAME__.pchain4.log
 ",
     interpretor           => "",
     check_program         => 0,
@@ -99,6 +99,7 @@ enclone TCR=\${dn} POUT=__NAME__.pchain4.csv PCHAINS=4 PCOLS=n,group_id,group_nc
   };
 
   push(@$tasks, $taskName);
+  return($taskName);
 }
 
 sub addClonotypeMerge {
@@ -126,6 +127,7 @@ sub addClonotypeMerge {
     },
   };
   push @$tasks, $taskname;
+  return($taskname);
 }
 
 sub addEncloneToClonotype {
@@ -145,10 +147,8 @@ sub addEncloneToClonotype {
     parameterFile2_arg => "-c",
     parameterFile2_ref => $cdr3_ref,
     output_arg               => "-o",
-    output_file              => "clonotypes",
-    output_file_ext          => ".csv",
-    output_no_name           => 1,
-    output_to_same_folder    => 1,
+    output_file              => ".clonotype",
+    output_file_ext          => ".csv,.sub.csv",
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",
@@ -200,6 +200,7 @@ sub addConsensusToImmunarch {
     docker_prefix            => "immunarch_",
     option                   => "",
     rtemplate                => "../CQS/Functions.Rmd;../scRNA/immunarch.Rmd;../scRNA/immunarch.r",
+    use_vanilla              => 0,
     parameterFile1_ref => $source_ref,
     output_file_ext          => ".html",
     sh_direct                => 1,
@@ -1079,7 +1080,6 @@ sub addSubClusterV2 {
   push( @$summary, $subcluster_task );
 }
 
-
 sub addClonotypeVis {
   my ( $config, $def, $tasks, $target_dir, $taskname, $object_ref, $cell_type_ref, $clonotype_convert ) = @_;
 
@@ -1092,7 +1092,7 @@ sub addClonotypeVis {
     output_file_ext            => ".clonotype_vis.csv",
     parameterFile1_ref         => $object_ref,
     parameterFile2_ref         => $cell_type_ref,
-    parameterFile3_ref         => $clonotype_convert,
+    parameterSampleFile1_ref         => $clonotype_convert,
     sh_direct                  => 1,
     pbs                        => {
       "nodes"     => "1:ppn=1",
@@ -1111,8 +1111,8 @@ sub addClonotypeDB {
     target_dir                 => $target_dir . "/" . $taskname,
     rtemplate                  => "../scRNA/clonotype_db.r",
     output_to_result_directory => 1,
-    output_file_ext            => ".clonotype_db.csv",
-    parameterFile1_ref         => [ $clonotype_convert ],
+    output_file_ext            => ".clonotype.db.csv,.clonotype.sub.db.csv,",
+    parameterSampleFile1_ref         => [ $clonotype_convert ],
     parameterFile2         => getValue($def, "clonotype_McPAS_TCR"),
     parameterFile3         => getValue($def, "clonotype_TBAdb"),
     parameterFile4         => getValue($def, "clonotype_vdjdb"),
@@ -1124,18 +1124,19 @@ sub addClonotypeDB {
     },
   };
   push(@$tasks, $taskname);
+  return($taskname);
 }
 
 sub addClonotypeCluster {
-  my ( $config, $def, $tasks, $target_dir, $taskname, $clonotype_db, $celltype_ref ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $taskname, $clonotype_db, $celltype_ref, $output_file_ext ) = @_;
   $config->{$taskname} = {
     class                      => "CQS::UniqueR",
     perform                    => 1,
     target_dir                 => $target_dir . "/" . $taskname,
     rtemplate                  => "../scRNA/clonotype_cluster.r",
     output_to_result_directory => 1,
-    output_file_ext            => ".clonotype_cluster.csv",
-    parameterFile1_ref         => [ $clonotype_db ],
+    output_file_ext            => $output_file_ext,
+    parameterSampleFile1_ref   => [ $clonotype_db ],
     parameterFile2_ref         => $celltype_ref,
     sh_direct                  => 1,
     pbs                        => {
