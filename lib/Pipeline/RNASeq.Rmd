@@ -250,14 +250,15 @@ check_and_include_graphics(files["all_correlation_density",1])
 <br>
 
 ```{r deseq2_1, results="asis", echo=FALSE} 
-if(hasDEseq2 ){
+if(hasDEseq2){
   cat("# Differential expression\n<br>\n\n")
   if ("DE_use_raw_pvalue" %in% row.names(rnaseqOptions) & rnaseqOptions["DE_use_raw_pvalue", 1]==1) {
     pValueText="p value"
   } else {
-    pValueText="FDR"
+    pValueText="FDR adjusted p value"
   }
-  cat("Differential expression analysis criteria:  fold change >= ", rnaseqOptions["DE_fold_change", 1], " and ",pValueText," <= ", rnaseqOptions["DE_pvalue", 1], "\n\n")
+  deseq2criteria<-paste0("absolute fold change >= ", rnaseqOptions["DE_fold_change", 1], " and ", pValueText, " <= ", rnaseqOptions["DE_pvalue", 1])  
+  cat("Differential expression analysis criteria:", deseq2criteria, "\n\n")
   cat("## Volcano plot\n<br>\n\n")
 }
 ```
@@ -395,28 +396,27 @@ print(kable(df, caption=tabRef("resultFiles", "Result files")) %>%
 
 # Software versions
 ```{r softwareVersion, echo=FALSE, results='asis'}
-files<-read.delim("fileList4.txt", header=F, stringsAsFactors = F)
-df<-NULL
-curfile<-files$V1[1]
-for(curfile in files$V1){
-  if(file.exists(curfile)){
-    curdf<-read.csv(curfile, header=F, check.names=F)
-    df<-rbind(df, curdf)
-  }
-}
-
-if(file.exists("fileList5.txt")){
-  vers<-read.delim("fileList5.txt", header=F, stringsAsFactors = F)
-  vers<-vers[,c(2,1)]
-  colnames(vers)<-c("V1","V2")
-  df<-rbind(df, vers)
-}
-
-df<-unique(df)
-df<-df[order(df$V1),]
-colnames(df)<-c("Software", "Version")
-print(kable(df, caption=tabRef("versionFiles", "Software versions"), row.names=F) %>%
-        kable_styling() %>%
-        htmltools::HTML())
-
+versions<-display_versions()
 ```
+
+# Description
+```{r echo=FALSE}
+vmap<-split(versions$Version, versions$Software)
+```
+
+Reads were trimmed to remove adapter sequences using Cutadapt (`r vmap['Cutadapt']`)[1] and aligned to the `r vmap['genome']` genome using STAR (`r vmap['STAR']`)[2]. 
+`r vmap['gtf']` gene annotations were provided to STAR to improve the accuracy of mapping. 
+Quality control on both raw reads and adaptor-trimmed reads was performed using FastQC (`r vmap['FastQC']`)(www.bioinformatics.babraham.ac.uk/projects/fastqc). 
+featureCounts (`r vmap['featureCounts']`)[3] was used to count the number of mapped reads to each gene. 
+Heatmap3 [4] was used for cluster analysis and visualization. 
+`r if(hasDEseq2){paste0("Significantly differential expressed genes with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[5].")}`
+`r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[6].")}`
+`r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[7] on database (", vmap['GSEA_DB'], ").")}`
+
+[1]	Martin M: Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnetjournal 2011, 17:10-12. \
+[2]	Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, Batut P, Chaisson M, Gingeras TR: STAR: ultrafast universal RNA-seq aligner. Bioinformatics 2013, 29(1):15-21. \
+[3]	Liao Y, Smyth GK, Shi W: featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics 2014, 30(7):923-930. \
+[4]	Zhao S, Guo Y, Sheng Q, Shyr Y: Advanced heat map and clustering analysis using heatmap3. BioMed research international 2014, 2014:986048. \
+`r if(hasDEseq2){"[5] Love MI, Huber W, Anders S: Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol 2014, 15(12):550."}` \
+`r if(hasWebGestaltAnalysis){"[6]	Wang J, Vasaikar S, Shi Z, Greer M, Zhang B: WebGestalt 2017: a more comprehensive, powerful, flexible and interactive gene set enrichment analysis toolkit. Nucleic Acids Res 2017, 45(W1):W130-W137."}` \
+`r if(hasGseaAnalysis){"[7]	Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, Paulovich A, Pomeroy SL, Golub TR, Lander ES et al: Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A 2005, 102(43):15545-15550."}` \
