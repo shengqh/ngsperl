@@ -1019,3 +1019,15 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   }
   return(list(obj=subobj, umap_names=umap_names))
 }
+
+get_dim_plot<-function(obj, group.by, label.by){
+  labels<-obj@meta.data[,c(group.by, label.by)]
+  labels<-labels[unique(labels),]
+  labels<-labels[order(labels[,group.by]),]
+  cts<-labels[,label.by]
+
+  g<-DimPlot(obj, group.by=group.by, label=T)+ 
+    guides(colour = guide_legend(ncol = 1)) +
+    scale_color_discrete(labels = cts)
+  return(g)
+}
