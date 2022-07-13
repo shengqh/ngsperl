@@ -1342,7 +1342,7 @@ sub getSmallRNAConfig {
     );
   }
 
-  if (getValue($def, "search_refseq_bacteria", 0)) {
+  if (getValue($def, "search_nonhost_genome", 1) && getValue($def, "search_refseq_bacteria", 0)) {
     my $refseq_bacteria_bowtie = "refseq_bacteria_bowtie";
     $config->{"refseq_bacteria_bowtie_index"} = getValue($def, "refseq_bacteria_bowtie_index");
     $config->{$refseq_bacteria_bowtie} = {
@@ -2813,23 +2813,30 @@ fi
       push( @report_names, "bacteria_count_vis", "bacteria_count_rpm" );
     }
 
+    my $version_files = get_version_files($config);
+
     my $options = {
-      "DE_fold_change" => [ getValue( $def, "DE_fold_change", 2 ) ],
-      "DE_pvalue"      => [ getValue( $def, "DE_pvalue",      0.05 ) ]
+      "DE_fold_change" => [ getValue( $def, "DE_fold_change" ) ],
+      "DE_pvalue"      => [ getValue( $def, "DE_pvalue" ) ],
+      "DE_use_raw_pvalue"=> [ getValue( $def, "DE_use_raw_pvalue" ) ],
+      "search_nonhost_genome" => [ getValue($def, "search_nonhost_genome") ],
+      "normalize_by" => [ getValue($def, "normalize_by") ],
     };
     $config->{report} = {
       class                      => "CQS::BuildReport",
       perform                    => 1,
       target_dir                 => $def->{target_dir} . "/report",
       report_rmd_file            => "../Pipeline/SmallRNA.Rmd",
-      additional_rmd_files       => "Functions.Rmd",
+      additional_rmd_files       => "Functions.Rmd;../Pipeline/Pipeline.Rmd",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
-      parameterSampleFile2_ref   => $options,
+      parameterSampleFile2       => $options,
       parameterSampleFile3_ref   => \@copy_files,
+      parameterSampleFile4       => $version_files,
+      parameterSampleFile5       => $def->{software_version},
+      parameterSampleFile6       => $def->{groups},
       sh_direct                  => 1,
       pbs                        => {
-        "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
         "walltime" => "1",
         "mem"      => "10gb"
