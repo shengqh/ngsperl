@@ -128,4 +128,36 @@ display_gsea=function(files) {
     }  
   }
 }
+
+get_versions=function(){
+  files<-read.delim("fileList4.txt", header=F, stringsAsFactors = F)
+  df<-NULL
+  curfile<-files$V1[1]
+  for(curfile in files$V1){
+    if(file.exists(curfile)){
+      curdf<-read.csv(curfile, header=F, check.names=F)
+      df<-rbind(df, curdf)
+    }
+  }
+
+  if(file.exists("fileList5.txt")){
+    vers<-read.delim("fileList5.txt", header=F, stringsAsFactors = F)
+    vers<-vers[,c(2,1)]
+    colnames(vers)<-c("V1","V2")
+    df<-rbind(df, vers)
+  }
+
+  df<-unique(df)
+  df<-df[order(df$V1),]
+  colnames(df)<-c("Software", "Version")
+  return(df)
+}
+
+display_versions=function(){
+  df<-get_versions()
+  print(kable(df, caption=tabRef("versionFiles", "Software versions"), row.names=F) %>%
+          kable_styling() %>%
+          htmltools::HTML())
+  return(df)
+}
 ```
