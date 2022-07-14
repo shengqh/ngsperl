@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='AG3669'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge/result/AK6383.final.rds'
+parFile1='/data/h_gelbard_lab/projects/20220508_scRNA_3669/seurat_merge/result/AG3669.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires/result')
+setwd('/data/h_gelbard_lab/projects/20220508_scRNA_3669/seurat_merge_multires/result')
 
 ### Parameter setting end ###
 
@@ -96,7 +96,9 @@ multi_cts<-colnames(obj@meta.data)[grepl("_celltype", colnames(obj@meta.data))]
 res_df<-data.frame("resolution"=resolutions, "cluster"=multi_res, "celltype"=multi_cts)
 write.csv(res_df, file=paste0(outFile, ".resolutions.csv"), row.names=F)
 
-umaplist<-RunMultipleUMAP(obj, curreduction=curreduction, cur_pca_dims=c(1:npcs))
+#umaplist<-RunMultipleUMAP(obj, curreduction=curreduction, cur_pca_dims=c(1:npcs))
+
+umaplist<-RunMultipleUMAP(obj, nn=c(30,30,30,20,20,20,10,10,10), min.dist=c(0.3,0.1,0.01,0.3,0.1,0.01,0.3,0.1,0.01), curreduction=curreduction, cur_pca_dims=c(1:npcs))
 obj<-umaplist$obj
 umap_names<-umaplist$umap_names
 rm(umaplist)
@@ -116,38 +118,50 @@ for(cur_celltype in multi_cts){
   meta<-meta[colnames(obj),]
   obj@meta.data = meta
   
-  placeholds="ABCDEFGHIGJLMNOPQRSTUVWXYZ"
-  placehold_index=0
-  placehold_r1=""
+  g3<-get_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA")
+
   g<-NULL
   for(umap_name in umap_names){
-    g1<-DimPlot(obj, group.by = cur_celltype, reduction=umap_name, label=T, repel=T) + ggtitle(umap_name) + guides(fill=guide_legend(ncol=1))
-    placehold_index = placehold_index + 1
-    placehold_r1 = paste0(placehold_r1, substr(placeholds, placehold_index, placehold_index))
+    g1<-get_dim_plot_labelby(obj, label.by=cur_celltype, reduction=umap_name) + ggtitle(umap_name)
+    #g1<-DimPlot(obj, group.by = cur_celltype, reduction=umap_name, label=T, repel=T) + ggtitle(umap_name) + guides(fill=guide_legend(ncol=1))
     if(is.null(g)){
       g<-g1
     }else{
       g<-g+g1
     }
   }
+  g<-g+g3
+  layout<-"
+ABC
+DEF
+GHL
+MMM
+"
+  g<-g+plot_layout(design = layout)
+  png(paste0(prefix, ".", cur_celltype, ".png"), width=as.numeric(myoptions$plot_width), height=as.numeric(myoptions$plot_height), res=300)
+  print(g)
+  dev.off()
 
-  placehold_r2=""
+  g<-NULL
   for(umap_name in umap_names){
-    g2<-DimPlot(obj, group.by = sname, reduction=umap_name, label=T, repel=T) + guides(color=guide_legend(ncol=1))
-    placehold_index = placehold_index + 1
-    placehold_r2 = paste0(placehold_r2, substr(placeholds, placehold_index, placehold_index))
-    g<-g+g2
+    g2<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction=umap_name) + ggtitle(umap_name)
+    #g2<-DimPlot(obj, group.by = sname, reduction=umap_name, label=T, repel=T) + guides(color=guide_legend(ncol=1))
+    if(is.null(g)){
+      g<-g2
+    }else{
+      g<-g+g2
+    }
   }
 
-  placehold_index = placehold_index + 1
-  placehold_r3=strrep(substr(placeholds, placehold_index, placehold_index), length(umap_names))
-  g3<-get_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA")
   g<-g+g3
-
-  layout <- paste0("\n", placehold_r1, "\n", placehold_r2, "\n", placehold_r3, "\n")
+  layout<-"
+ABC
+DEF
+GHL
+MMM
+"
   g<-g+plot_layout(design = layout)
-
-  png(paste0(prefix, ".", cur_celltype, ".png"), width=as.numeric(myoptions$plot_width), height=as.numeric(myoptions$plot_height), res=300)
+  png(paste0(prefix, ".", cur_celltype, ".seurat.png"), width=as.numeric(myoptions$plot_width), height=as.numeric(myoptions$plot_height), res=300)
   print(g)
   dev.off()
   
