@@ -169,8 +169,8 @@ DDD
   ncol<-ceiling(sqrt(length(cts)))
   nrow<-ceiling(length(cts)/ncol)
   
-  width=3100 * ncol
-  height=3000 * nrow
+  width=1600 * ncol
+  height=1500 * nrow
   
   g<-g+plot_layout(ncol=ncol)
   png(paste0(prefix, ".", cur_celltype, ".cell.png"), width=width, height=height, res=300)
