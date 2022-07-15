@@ -1032,16 +1032,18 @@ get_dim_plot<-function(obj, group.by, label.by, reduction="umap"){
   return(g)
 }
 
-# for obj with group.by only, we will generate dummy cluster
-get_dim_plot2<-function(obj, group.by){
-  groups<-obj[[group.by]]
-  labels<-labels[unique(labels),]
-  labels<-labels[order(labels[,group.by]),]
-  cts<-labels[,label.by]
+get_dim_plot_labelby<-function(obj, label.by, reduction="umap"){
+  groups<-as.character(obj@meta.data[,label.by])
+  gt<-table(groups)
+  gt<-gt[order(gt, decreasing=T)]
+  dummy_cluster<-c(1:length(gt))
+  names(dummy_cluster)<-names(gt)
+  dc<-factor(dummy_cluster[groups], levels=dummy_cluster)
+  obj@meta.data$dummy_cluster<-dc
+  group.by="dummy_cluster"
+  obj@meta.data$dummy_label<-paste0(obj@meta.data$dummy_cluster, ": ", groups)
 
-  g<-DimPlot(obj, group.by=group.by, label=T)+ 
-    guides(colour = guide_legend(ncol = 1)) +
-    scale_color_discrete(labels = cts)
+  g<-get_dim_plot(obj, group.by="dummy_cluster", label.by="dummy_label", reduction=reduction) + ggtitle(label.by)
   return(g)
 }
 
