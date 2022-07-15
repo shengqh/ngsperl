@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AG3669'
+outFile='AK6383'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='c:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge/result/AK6383.final.rds'
+parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge/result/AK6383.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('c:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires/result')
+setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires/result')
 
 ### Parameter setting end ###
 
@@ -98,7 +98,7 @@ write.csv(res_df, file=paste0(outFile, ".resolutions.csv"), row.names=F)
 
 #umaplist<-RunMultipleUMAP(obj, curreduction=curreduction, cur_pca_dims=c(1:npcs))
 
-umaplist<-RunMultipleUMAP(obj, nn=c(30,30,30,20,20,20,10,10,10), min.dist=c(0.3,0.1,0.01,0.3,0.1,0.01,0.3,0.1,0.01), curreduction=curreduction, cur_pca_dims=c(1:npcs))
+umaplist<-RunMultipleUMAP(obj, nn=c(30,20,10), min.dist=c(0.3,0.3,0.3), curreduction=curreduction, cur_pca_dims=c(1:npcs))
 obj<-umaplist$obj
 umap_names<-umaplist$umap_names
 rm(umaplist)
@@ -131,9 +131,7 @@ for(cur_celltype in multi_cts){
   g<-g+get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA")
   layout<-"
 ABC
-DEF
-GHL
-MMM
+DDD
 "
   g<-g+plot_layout(design = layout)
   png(paste0(prefix, ".", cur_celltype, ".png"), width=as.numeric(myoptions$plot_width), height=as.numeric(myoptions$plot_height), res=300)
@@ -154,9 +152,7 @@ MMM
   g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA")
   layout<-"
 ABC
-DEF
-GHL
-MMM
+DDD
 "
   g<-g+plot_layout(design = layout)
   png(paste0(prefix, ".", cur_celltype, ".seurat.png"), width=as.numeric(myoptions$plot_width), height=as.numeric(myoptions$plot_height), res=300)
