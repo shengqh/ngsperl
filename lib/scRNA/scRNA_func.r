@@ -1020,6 +1020,8 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   return(list(obj=subobj, umap_names=umap_names))
 }
 
+# for obj with both group.by and label.by annotation, 
+# usually group.by would be cell type and label.by would be cluster
 get_dim_plot<-function(obj, group.by, label.by){
   labels<-obj@meta.data[,c(group.by, label.by)]
   labels<-labels[unique(labels),]
@@ -1030,4 +1032,33 @@ get_dim_plot<-function(obj, group.by, label.by){
     guides(colour = guide_legend(ncol = 1)) +
     scale_color_discrete(labels = cts)
   return(g)
+}
+
+# for obj with group.by only, we will generate dummy cluster
+get_dim_plot2<-function(obj, group.by){
+  groups<-obj[[group.by]]
+  labels<-labels[unique(labels),]
+  labels<-labels[order(labels[,group.by]),]
+  cts<-labels[,label.by]
+
+  g<-DimPlot(obj, group.by=group.by, label=T)+ 
+    guides(colour = guide_legend(ncol = 1)) +
+    scale_color_discrete(labels = cts)
+  return(g)
+}
+
+get_highlight_cell_plot<-function(obj, group.by, reduction="umap") {
+  cts<-table(obj[[group.by]])
+  cts<-cts[order(cts, decreasing = T)]
+  
+  g<-NULL
+  for (ct in names(cts)){
+    ct_count<-cts[ct]
+    pct<-paste0(ct, "(", ct_count, ")")
+    cells<-colnames(obj)[obj[[group.by]] == ct]
+    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", ct))
+    g<-g+g0
+  }
+  
+  return(list(g=g, cts=cts))
 }
