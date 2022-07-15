@@ -1005,7 +1005,7 @@ get_groups_dot<-function(subobj, group1, group2){
 }
 
 RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curreduction="PCA", cur_pca_dims=c(1:30)){
-  ops=data.frame("nn"=c(30,20,10), "min.dist"=c(0.3,0.1,0.05))
+  ops=data.frame("nn"=nn, "min.dist"=min.dist)
   umap_names<-c()
   for(idx in c(1:nrow(ops))){
     nn=ops[idx, 'nn']
@@ -1020,15 +1020,13 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   return(list(obj=subobj, umap_names=umap_names))
 }
 
-# for obj with both group.by and label.by annotation, 
-# usually group.by would be cell type and label.by would be cluster
-get_dim_plot<-function(obj, group.by, label.by){
+get_dim_plot<-function(obj, group.by, label.by, reduction="umap"){
   labels<-obj@meta.data[,c(group.by, label.by)]
-  labels<-labels[unique(labels),]
+  labels<-labels[!duplicated(labels),]
   labels<-labels[order(labels[,group.by]),]
   cts<-labels[,label.by]
 
-  g<-DimPlot(obj, group.by=group.by, label=T)+ 
+  g<-DimPlot(obj, group.by=group.by, label=T, reduction=reduction)+ 
     guides(colour = guide_legend(ncol = 1)) +
     scale_color_discrete(labels = cts)
   return(g)

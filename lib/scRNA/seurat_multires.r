@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='AG3669'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
