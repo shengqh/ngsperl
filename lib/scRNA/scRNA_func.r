@@ -1057,7 +1057,11 @@ get_highlight_cell_plot<-function(obj, group.by, reduction="umap") {
     pct<-paste0(ct, "(", ct_count, ")")
     cells<-colnames(obj)[obj[[group.by]] == ct]
     g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", ct))
-    g<-g+g0
+    if(is.null(g)){
+      g<-g0
+    }else{
+      g<-g+g0
+    }
   }
   
   return(list(g=g, cts=cts))
