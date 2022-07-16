@@ -203,6 +203,7 @@ sub addFastQC {
     source_ref => $source_ref,
     cluster    => $def->{"cluster"},
     fastqc     => $def->{"fastqc"},
+    use_tmp_folder => $def->{use_tmp_folder_fastqc},
     sh_direct  => 0,
     pbs        => {
       "nodes"    => "1:ppn=" . $curThread,
@@ -2222,18 +2223,31 @@ sub add_split_fastq {
 sub add_BWA_and_summary_scatter {
   my ($config, $def, $tasks, $target_dir, $source_ref) = @_;
 
-  my $splitFastq = "bwa_01_splitFastq";
-  add_split_fastq($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+  my $bwa_key = "bwa";
+
+  my $splitFastq = "bwa_00_splitFastq";
+  if(getValue($def, "has_multiple_fastq_per_sample", 0)){
+    $config->{ $splitFastq } = {
+      class       => "CQS::FileScatterTask",
+      source_ref  => $source_ref,
+      step => 2,
+    };
+  }else{
+    add_split_fastq($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+  }
 
   my $rg_name_regex = "(.+)_ITER_";
 
-  my $bwa = "bwa_02_alignment";
+  my $bwa = "bwa_01_alignment";
   add_BWA($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
 
-  my $mergeBam = "bwa_03_merge";
+  #we need stat and chromosome count file for bwa_summary
+  #add_BWA_WGS($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
+
+  my $mergeBam = "bwa_02_merge";
   add_merge_bam($config, $def, $tasks, $target_dir, $mergeBam, $bwa, $rg_name_regex); 
 
-  my $bwa_summary = "bwa_04_summary";
+  my $bwa_summary = "bwa_03_summary";
   add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
 
   return( [ $mergeBam, ".bam\$" ], $mergeBam);
@@ -2284,7 +2298,6 @@ sub addSequenceTask {
     option     => "",
     source     => {
       step_1 => $tasks,
-      step_2 => $summary_tasks,
     },
     sh_direct => 0,
     pbs       => {
@@ -2293,6 +2306,10 @@ sub addSequenceTask {
       "mem"       => "40gb"
     },
   };
+
+  if(defined $summary_tasks){
+    $config->{sequencetask}{step_2} = $summary_tasks;
+  }
 }
 
 sub addFilesFromSraRunTable {
