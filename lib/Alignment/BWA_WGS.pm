@@ -93,13 +93,30 @@ sub perform {
     my $final_file =  $sample_name . ".sortedByCoord.bam";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $sample_file_0 );
 
+    my $localized_files = [];
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
+
     print $pbs "
 echo bwa_mem=`date`
+
+rm ${final_file}.failed
+
+status=0
+
 bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bhu - | sambamba sort -m $memory -l 0 -u -t $thread --tmpdir tmp -o ${final_file} /dev/stdin
-bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
-sambamba index ${final_file}
+
+if [[ \$status -eq 0 ]]; then
+  touch ${final_file}.succeed
+  bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
+  sambamba index ${final_file}
+else
+  rm $final_file
+  touch ${final_file}.failed
+fi
+
 ";
 
+    $self->clean_temp_files($pbs, $localized_files);
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
