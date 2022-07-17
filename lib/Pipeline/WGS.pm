@@ -449,7 +449,7 @@ sub getConfig {
 
     my $bam_ref;
     my $bam_task;
-    if ($aligner_scatter_count > 0){
+    if ($aligner_scatter_count > 0 || getValue($def, "has_multiple_fastq_per_sample", 0)){
       my ($bam_ref, $bam_task) = add_BWA_and_summary_scatter($config, $def, $individual, $target_dir, "files");
       $bam_section = $bam_ref;
     } else {
@@ -534,7 +534,6 @@ fi
     addMarkduplicates($config, $def, $summary, $target_dir, $markduplicates, $bam_section);
 
     $bam_section = "markduplicates";
-    push(@$summary, "markduplicates");
   }
 
   my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
