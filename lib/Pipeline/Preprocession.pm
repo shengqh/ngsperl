@@ -65,7 +65,7 @@ sub addPairendFastqValidation {
     output_file_ext => ".txt",
     output_to_same_folder => 1,
     can_result_be_empty_file => 1,
-    use_tmp_folder => getValue($def, "paired_end_validation_use_tmp_folder", 0),
+    use_tmp_folder => getValue($def, "use_tmp_folder_paired_end_validation", 0),
     sh_direct   => 0,
     pbs => {
       "nodes"     => "1:ppn=1",
@@ -126,7 +126,7 @@ sub addCutadapt {
   push @$individual, ($cutadapt_task);
 
   if ($is_pairend) {
-    if (getValue($def, "perform_paired_end_validation", 0)){
+    if (getValue($def, "perform_paired_end_validation", 1)){
       my $fastq_validator = $cutadapt_task . "_validation";
       addPairendFastqValidation($config, $def, $individual, $intermediate_dir, $fastq_validator, [$cutadapt_task, ".fastq.gz"]);
     }
@@ -443,7 +443,7 @@ sub getPreprocessionConfig {
     push @$individual, ("sra2fastq");
   }
 
-  if (getValue($def, "perform_paired_end_validation", 0)){
+  if (getValue($def, "perform_paired_end_validation", 1)){
     defined $is_pairend or die "Define is_paired_end first!";
     my $fastq_validator = "paired_end_validation";
     addPairendFastqValidation($config, $def, $individual, $intermediate_dir, $fastq_validator, $source_ref);
