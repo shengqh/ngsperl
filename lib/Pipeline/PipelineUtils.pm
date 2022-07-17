@@ -2177,7 +2177,7 @@ sub add_merge_bam {
     output_to_same_folder => 1,
     output_arg            => "-o",
     output_file_prefix    => ".bam",
-    output_file_ext       => ".bam",
+    output_file_ext       => ".bam,.bai",
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=8",
@@ -2225,12 +2225,15 @@ sub add_BWA_and_summary_scatter {
 
   my $bwa_key = "bwa";
 
+  my $pairend = is_paired_end( $def );
+  my $step = $pairend ? 2 : 1;
+
   my $splitFastq = "bwa_00_splitFastq";
   if(getValue($def, "has_multiple_fastq_per_sample", 0)){
     $config->{ $splitFastq } = {
       class       => "CQS::FileScatterTask",
       source_ref  => $source_ref,
-      step => 2,
+      step => $step,
     };
   }else{
     add_split_fastq($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
@@ -2240,9 +2243,6 @@ sub add_BWA_and_summary_scatter {
 
   my $bwa = "bwa_01_alignment";
   add_BWA($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
-
-  #we need stat and chromosome count file for bwa_summary
-  #add_BWA_WGS($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
 
   my $mergeBam = "bwa_02_merge";
   add_merge_bam($config, $def, $tasks, $target_dir, $mergeBam, $bwa, $rg_name_regex); 
@@ -2260,15 +2260,23 @@ sub addMarkduplicates {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
-    option                => "markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam && touch __OUTPUT__.done
-    
-if [[ -e __OUTPUT__.done ]]; then
+    option                => "
+sambamba markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  rm -f __OUTPUT__.succeed
+  touch __OUTPUT__.failed
+  rm __NAME__.tmp.bam __NAME__.tmp.bam.bai
+else
+  rm -f __OUTPUT__.failed
+  touch __OUTPUT__.succeed
   mv __NAME__.tmp.bam __OUTPUT__
   mv __NAME__.tmp.bam.bai __OUTPUT__.bai
 fi
 ",
     interpretor           => "",
-    program               => "sambamba",
+    program               => "",
     check_program         => 0,
     source_arg            => "",
     source_ref            => $source_ref,
@@ -2277,7 +2285,7 @@ fi
     output_to_same_folder => 1,
     output_arg            => "",
     output_file_prefix    => ".duplicates_marked.bam",
-    output_file_ext       => ".duplicates_marked.bam",
+    output_file_ext       => ".duplicates_marked.bam, .duplicates_marked.bam.bai",
     sh_direct             => 0,
     pbs                   => {
       "nodes"    => "1:ppn=8",
