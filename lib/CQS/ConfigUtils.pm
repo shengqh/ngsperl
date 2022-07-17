@@ -103,6 +103,7 @@ our %EXPORT_TAGS = (
       get_joined_files
       get_joined_names
       process_parameter_sample_file
+      get_task_dep_pbs_map
       )
   ]
 );
@@ -2122,6 +2123,84 @@ sub process_parameter_sample_file {
     $cur_option = $cur_option . " " . $fileArg . " " . $input;
   }
   return($cur_option, $input);
+}
+
+sub get_task_dep_pbs_map {
+  my ($config, $task_section_name) = @_;
+  my $task_section = $config->{$task_section_name};
+  
+  if ( not defined $task_section->{class} ) {
+    next
+  }
+  
+  my $myclass = instantiate( $task_section->{class} );
+  my $pbs_sample_map = $myclass->get_pbs_source( $config, $task_section_name );
+
+  my $allSampleNameMap = {};
+  for my $pbs (keys %$pbs_sample_map){
+    my $sample_names = $pbs_sample_map->{$pbs};
+    for my $sample_name (@$sample_names){
+      $allSampleNameMap->{$sample_name} = 1;
+    }
+  }
+  my @allSampleNames = (sort keys %$allSampleNameMap);
+
+  my $taskdeppbsmap = {};
+  for my $key ( keys %$task_section ) {
+    if ($key eq "gather_name_ref"){
+      next;
+    }
+
+    my $mapname = $key;
+    if ( $mapname =~ /_ref$/ ) {
+      $mapname =~ s/_config_ref//g;
+      $mapname =~ s/_ref//g;
+      my $refpbsmap = get_ref_section_pbs( $config, $task_section_name, $mapname );
+      my @refNames = (sort keys %$refpbsmap);
+
+      my $keyEquals = 1;
+      if (scalar(@allSampleNames) != scalar(@refNames)){
+        $keyEquals = 0;
+      }else{
+        for my $idx (0..(scalar(@allSampleNames)-1)){
+          if ($allSampleNames[$idx] ne $refNames[$idx]) {
+            $keyEquals = 0;
+            last;
+          }
+        }
+      }
+
+      for my $pbs (keys %$pbs_sample_map){
+        my $curpbs = $taskdeppbsmap->{$pbs};
+        if ( !defined $curpbs ) {
+          $curpbs = {};
+        }
+        
+        if ($keyEquals) {
+          my $sample_names = $pbs_sample_map->{$pbs};
+          for my $sample_name (@$sample_names) {
+            my $ref_pbs_list = $refpbsmap->{$sample_name};
+            if (defined $ref_pbs_list){
+              for my $ref_pbs (@$ref_pbs_list){
+                $curpbs->{$ref_pbs} = 1;
+              }
+            }
+          }
+        }else{
+          for my $sample_name (sort keys %$refpbsmap){
+            my $ref_pbs_list = $refpbsmap->{$sample_name};
+            for my $ref_pbs (@$ref_pbs_list){
+              $curpbs->{$ref_pbs} = 1;
+            }
+          }
+        }
+
+        $taskdeppbsmap->{$pbs} = $curpbs;
+      }
+    }
+  }
+
+  return($taskdeppbsmap);
 }
 
 1;
