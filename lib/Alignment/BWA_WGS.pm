@@ -101,10 +101,9 @@ echo bwa_mem=`date`
 
 rm ${final_file}.failed
 
-status=0
-
 bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bhu - | sambamba sort -m $memory -l 0 -u -t $thread --tmpdir tmp -o ${final_file} /dev/stdin
 
+status=\$?
 if [[ \$status -eq 0 ]]; then
   touch ${final_file}.succeed
   bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
