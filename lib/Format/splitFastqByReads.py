@@ -63,9 +63,10 @@ def main():
   DEBUG = False
   NOT_DEBUG = not DEBUG
   
-  parser = argparse.ArgumentParser(description="Split big fastq file to multiple small fastq files",
+  parser = argparse.ArgumentParser(description="Split big fastq files to fixed number of reads per small FASTQ file",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   
+  #We don't know how many files would be generated
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input Fastq files (first,second for pairend data)', required=NOT_DEBUG)
   parser.add_argument('-o', '--outputPrefix', action='store', nargs='?', default="-", help="Output file prefix", required=NOT_DEBUG)
   parser.add_argument('--is_single_end', action='store', nargs='?', help="Is single end?")

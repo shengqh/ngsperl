@@ -1,4 +1,18 @@
+rm(list=ls()) 
+outFile='batch01'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3=''
+rg_name_regex='(.+)_ITER_'
 
+setwd('/scratch/cqs/breast_cancer_spore/analysis/batch01/bwa_03_summary/result')
+
+### Parameter setting end ###
+
+source("AlignmentUtils.r")
 options(bitmapType='cairo')
 
 library(reshape2)
@@ -11,8 +25,12 @@ library(dplyr)
 
 #source("AlignmentUtils.r")
 
+if(!exists("rg_name_regex")){
+  rg_name_regex=NA
+}
+
 if (parSampleFile2 != ""){
-  draw_chromosome_count(parSampleFile2, outFile)
+  draw_chromosome_count(parSampleFile2, outFile, rg_name_regex)
 }
 
 if (parSampleFile1 != ""){
@@ -32,7 +50,7 @@ if (parSampleFile1 != ""){
     }
   }
 
-  if (exists("rg_name_regex")) {
+  if (!is.na(rg_name_regex)) {
     sample_names<-str_match(colnames(final), rg_name_regex)[,2]
     unique_sample_names<-unique(sample_names)
 
@@ -57,13 +75,18 @@ if (parSampleFile1 != ""){
   meltreads$Read<-factor(meltreads$Read, levels=c("Multiple", "Unmapped", "Unique"))
 
   width=max(2000, 50 * nrow(treads))
-  png(file=paste0(outFile, ".reads.png"), height=1500, width=width, res=300)
-  g=ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
-    geom_bar(stat="identity", width=0.5) +
-    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
-          axis.text.y = element_text(size=11, face="bold"))
-  print(g)
-  dev.off()
+
+  draw_reads<-function(meltreads, filename, width){
+    png(file=filename, height=1500, width=width, res=300)
+    g=ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
+      geom_bar(stat="identity", width=0.5) +
+      theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+            axis.text.y = element_text(size=11, face="bold")) + theme_bw() +
+            theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("") + ylab("Reads")
+    print(g)
+    dev.off()
+  }
+  draw_reads(meltreads, paste0(outFile, ".reads.png"), width)
 
   treads$Total<-apply(treads[,c(1:3)], 1, sum)
   treads$UnmappedPerc<-treads$Unmapped / treads$Total
@@ -71,10 +94,5 @@ if (parSampleFile1 != ""){
 
   meltreads$Sample<-factor(meltreads$Sample, levels=treads$Sample)
 
-  png(file=paste0(outFile, ".reads.sorted.png"), height=1500, width=width, res=300)
-  g=ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
-    geom_bar(stat="identity", width=0.5) +
-    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
-          axis.text.y = element_text(size=11, face="bold"))
-  print(g)
+  draw_reads(meltreads, paste0(outFile, ".reads.sorted.png"), width)
 }

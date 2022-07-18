@@ -2,7 +2,7 @@ require("ggplot2")
 require("data.table")
 require("stringr")
 
-draw_chromosome_count<-function(listFile, outFilePrefix) {
+draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
   filelist = read.table(listFile, sep="\t", header=F, stringsAsFactors = F)
 
   missing = c()
@@ -95,13 +95,26 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
   colors=c("black","red")
   names(colors)=c("FALSE","TRUE")
 
-  height=max(1000, 60 * length(unique(final$Sample)))
-  png(file=paste0(chromosomeFilePrefix, ".png"), height=height, width=3000, res=300)
-  g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
-    geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
-    scale_color_manual(values=colors) +
-    theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
-          axis.title = element_blank())
-  print(g)
-  dev.off()
+  draw_figure<-function(final, filename){
+    height=max(1000, 60 * length(unique(final$Sample)))
+    png(file=filename, height=height, width=3000, res=300)
+    g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
+      geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
+      scale_color_manual(values=colors) +
+      theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
+            axis.title = element_blank())
+    print(g)
+    dev.off()
+  }
+
+  draw_figure(final, paste0(chromosomeFilePrefix, ".png"))
+
+  if(!is.na(rg_name_regex)){
+    final2<-final[,c("Sample", "Chrom", "Reads")]
+    final2$Sample<-str_match(final2$Sample, rg_name_regex)[,2]
+    final3 <- aggregate(Reads ~ Sample + Chrom, data = final2, FUN = sum, na.rm = TRUE)
+    final3$NoRead=final3$Reads==0
+    draw_figure(final3, paste0(chromosomeFilePrefix, ".aggr.png"))
+    write.csv(final3, paste0(chromosomeFilePrefix, ".aggr.csv"))
+  }
 }

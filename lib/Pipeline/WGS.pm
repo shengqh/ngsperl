@@ -126,6 +126,20 @@ sub initializeDefaultOptions {
     $def->{onco_options} = $default_onco_options;
   }
 
+  my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
+  if($perform_split_fastq) {#[ 0, "by_dynamic", "by_file", "by_scatter"],
+    if ($perform_split_fastq eq "by_dynamic"){ 
+      initDefaultValue($def, "split_fastq_min_file_size_gb", 10); #only the file with file size larger than this number would be splitted
+      initDefaultValue($def, "split_fastq_trunk_file_size_gb", 5); #the splitted file will be smaller than this file size
+    }elsif($perform_split_fastq eq "by_scatter"){ 
+      initDefaultValue($def, "aligner_scatter_count", 10); #split data into equal number of small files
+    }elsif($perform_split_fastq eq "by_file"){ 
+      #nothing need to be set
+    }else{
+      die 'wrong perform_split_fastq value, it should be one of [ 0, "by_dynamic", "by_file", "by_scatter"]';
+    }
+  }
+
   return $def;
 }
 
@@ -445,11 +459,11 @@ sub getConfig {
 
   my $bam_section = $def->{bam_file_section};
   if (not defined $bam_section) {
-    my $aligner_scatter_count = getValue($def, "aligner_scatter_count", 0);
+    my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
 
     my $bam_ref;
     my $bam_task;
-    if ($aligner_scatter_count > 0){
+    if ($perform_split_fastq){
       my ($bam_ref, $bam_task) = add_BWA_and_summary_scatter($config, $def, $individual, $target_dir, "files");
       $bam_section = $bam_ref;
     } else {
@@ -534,7 +548,6 @@ fi
     addMarkduplicates($config, $def, $summary, $target_dir, $markduplicates, $bam_section);
 
     $bam_section = "markduplicates";
-    push(@$summary, "markduplicates");
   }
 
   my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);

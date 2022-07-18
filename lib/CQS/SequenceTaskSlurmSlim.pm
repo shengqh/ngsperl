@@ -41,6 +41,7 @@ sub get_dependent_job_ids {
     return($result);
   }
 
+  my @ids = ();
   for my $dep_pbs (keys %$dep_pbs_map){
     if (!defined $pbs_id_map->{$dep_pbs}){
       my $str = Dumper($pbs_id_map);
@@ -51,18 +52,24 @@ sub get_dependent_job_ids {
       die "processing $task_section, $dep_pbs is not in pbs_id_map: id.map " ;
     }
     
-    if ($result eq ""){
-      $result = "--dependency=afterany";
-    }
-    
-    $result = $result . ":\$" . $pbs_id_map->{$dep_pbs}[0];
+    push(@ids, $pbs_id_map->{$dep_pbs}[0]);
     $pbs_id_map->{$dep_pbs}[1] = 1;
+  }
+
+  if(scalar(@ids) > 0){
+    my @sorted_ids = sort @ids;
+    $result = "--dependency=afterany";
+    for my $sorted_id (@sorted_ids){
+      $result = $result . ":\$" . $sorted_id;
+    }
   }
 
   return $result;
 }
 
 sub getDependentJobids {
+  print("getDependentJobids");
+
   my ( $task_dep_pbs_map, $pbs_id_map, $depend_all, $task_section, $task_name, $dep_sample_names ) = @_;
   my $dep_pbs_map = $task_dep_pbs_map->{$task_section};
 
@@ -77,7 +84,7 @@ sub getDependentJobids {
   }
 
   if ($depend_all){
-    $result = "--dependency=afterany";
+    my @ids = ();
     for my $sample ( keys %$dep_pbs_map ) {
       my $sample_pbs_map = $dep_pbs_map->{$sample};
       if ( keys %$sample_pbs_map ) {
@@ -86,22 +93,27 @@ sub getDependentJobids {
           if ( !defined $pid ) {
             die "Undefined $each_dep_pbs";
           }
-          $result = $result . ":\$" . $pid->[0];
+          push(@ids, $pid->[0]);
           $pbs_id_map->{$each_dep_pbs}[1] = 1;
         }
       }
     }
+    my @sorted_ids = sort @ids;
+    $result = "--dependency=afterany";
+    for my $sorted_id (@sorted_ids){
+      $result = $result . ":\$" . $sorted_id;
+    }
     return($result);
   }
 
+  my @ids = ();
   my $taskname_pbs_map = $dep_pbs_map->{$task_name};
   if ( defined $taskname_pbs_map ) {
-    $result = "--dependency=afterany";
     for my $each_dep_pbs ( keys %$taskname_pbs_map ) {
       if ( !defined $pbs_id_map->{$each_dep_pbs} ) {
         die "Didn't find $each_dep_pbs in $pbs_id_map";
       }
-      $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
+      push(@ids, $pbs_id_map->{$each_dep_pbs}[0]);
       $pbs_id_map->{$each_dep_pbs}[1] = 1;
     }
   }
@@ -116,15 +128,21 @@ sub getDependentJobids {
         if (!defined $pbs_id_map->{$each_dep_pbs}){
           die "$each_dep_pbs is not in pbs_id_map: " . Dumper($pbs_id_map);
         }
-        $result = $result . ":\$" . $pbs_id_map->{$each_dep_pbs}[0];
+        push(@ids, $pbs_id_map->{$each_dep_pbs}[0]);
         $pbs_id_map->{$each_dep_pbs}[1] = 1;
       }
     }
   }
 
-  #print(@$dep_sample_names);
-  #print($result);
-  return $result;
+  if(scalar(@ids) > 0){
+    my @sorted_ids = sort @ids;
+    $result = "--dependency=afterany";
+    for my $sorted_id (@sorted_ids){
+      $result = $result . ":\$" . $sorted_id;
+    }
+  }
+
+  return($result);
 }
 
 sub perform {
@@ -134,9 +152,9 @@ sub perform {
 
   my $task_dep_pbs_map = $self->get_all_dependent_pbs_map( $config, $section );
 
-  # if ($config->{general}{debug}){
-  #   print Dumper($task_dep_pbs_map->{bowtie1_contamination_all_02_align});
-  # }
+  if ($config->{general}{debug}){
+    print Dumper($task_dep_pbs_map->{GatherBQSRReports});
+  }
 
   my %step_map = %{ get_raw_files( $config, $section ) };
 

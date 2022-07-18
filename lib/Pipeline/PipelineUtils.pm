@@ -13,6 +13,7 @@ use Text::CSV;
 #use Pipeline::WdlPipeline qw(addCollectAllelicCounts);
 use List::MoreUtils qw(first_index);
 use Hash::Merge qw( merge );
+use POSIX qw/ceil/;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -71,6 +72,7 @@ our %EXPORT_TAGS = (
     add_BWA_WGS
     add_BWA_summary
     add_BWA_and_summary
+    get_expect_trunk
     add_BWA_and_summary_scatter
     addMarkduplicates
     addSequenceTask
@@ -203,6 +205,7 @@ sub addFastQC {
     source_ref => $source_ref,
     cluster    => $def->{"cluster"},
     fastqc     => $def->{"fastqc"},
+    use_tmp_folder => $def->{use_tmp_folder_fastqc},
     sh_direct  => 0,
     pbs        => {
       "nodes"    => "1:ppn=" . $curThread,
@@ -2176,7 +2179,7 @@ sub add_merge_bam {
     output_to_same_folder => 1,
     output_arg            => "-o",
     output_file_prefix    => ".bam",
-    output_file_ext       => ".bam",
+    output_file_ext       => ".bam,.bai",
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=8",
@@ -2186,6 +2189,74 @@ sub add_merge_bam {
   };
 
   push @$tasks, (  $merge_name );
+}
+
+sub get_expect_trunk{
+  my ($file_map, $max_file_size_gb, $trunk_file_size_gb) = @_;
+  my $result = {};
+
+  for my $sample (sort keys %$file_map){
+    my $files = $file_map->{$sample};
+    my $idx = 0;
+    my $total = 0;
+    while ($idx < scalar(@$files)){
+      my $read1 = $files->[$idx];
+      my $read1_filesize = -s $read1;
+      $idx = $idx + 2;
+      my $read1_gb = $read1_filesize / (1024 * 1024 * 1024);
+      if ($read1_gb <= $max_file_size_gb){
+        $total = $total + 1;
+        next
+      }
+
+      my $trunk = ceil($read1_gb / $trunk_file_size_gb);
+      $total = $total + $trunk;
+    }
+    $result->{$sample} = $total;
+  }
+
+  return($result);
+}
+
+sub add_split_fastq_dynamic {
+  my ($config, $def, $tasks, $target_dir, $split_fastq, $source_ref) = @_;
+
+  my $min_file_size_gb = getValue($def, "split_fastq_min_file_size_gb", 10);
+  my $trunk_file_size_gb = getValue($def, "split_fastq_trunk_file_size_gb", 5);
+
+  $config->{ $split_fastq } = {
+    class       => "CQS::ProgramWrapperOneToMany",
+    perform     => 1,
+    target_dir  => "$target_dir/$split_fastq",
+    option      => "",
+    interpretor => "python3",
+    program     => "../Format/splitFastqDynamic.py",
+    option      => "--min_file_size_gb $min_file_size_gb --trunk_file_size_gb $trunk_file_size_gb --fill_length 3",
+    source_ref      => $source_ref,
+    source_arg            => "-i",
+    source_join_delimiter => ",",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_file_prefix    => "",
+    output_file_ext       => "._ITER_.1.fastq.gz",
+    output_other_ext      => "._ITER_.2.fastq.gz",
+    iteration_arg         => "",
+    iteration_fill_length => 3,
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
+  my $file_map = get_raw_files($config, $split_fastq, "source");
+
+  my $trunk_map = get_expect_trunk($file_map, $min_file_size_gb, $trunk_file_size_gb);
+
+  $config->{$split_fastq}{iteration} = $trunk_map;
+
+  push @$tasks, (  $split_fastq );
 }
 
 sub add_split_fastq {
@@ -2222,18 +2293,37 @@ sub add_split_fastq {
 sub add_BWA_and_summary_scatter {
   my ($config, $def, $tasks, $target_dir, $source_ref) = @_;
 
-  my $splitFastq = "bwa_01_splitFastq";
-  add_split_fastq($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+  my $bwa_key = "bwa";
+
+  my $pairend = is_paired_end( $def );
+  my $step = $pairend ? 2 : 1;
+
+  my $splitFastq = "bwa_00_splitFastq";
+
+  my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
+  if($perform_split_fastq eq "by_dynamic") {
+    add_split_fastq_dynamic($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+  }elsif($perform_split_fastq eq "by_file"){
+    $config->{ $splitFastq } = {
+      class       => "CQS::FileScatterTask",
+      source_ref  => $source_ref,
+      step => $step,
+    };
+  }elsif($perform_split_fastq eq "by_scatter"){
+    add_split_fastq($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+  }else{
+    die 'wrong perform_split_fastq value, it should be one of [ 0, "by_dynamic", "by_file", "by_scatter"]';
+  }
 
   my $rg_name_regex = "(.+)_ITER_";
 
-  my $bwa = "bwa_02_alignment";
+  my $bwa = "bwa_01_alignment";
   add_BWA($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
 
-  my $mergeBam = "bwa_03_merge";
+  my $mergeBam = "bwa_02_merge";
   add_merge_bam($config, $def, $tasks, $target_dir, $mergeBam, $bwa, $rg_name_regex); 
 
-  my $bwa_summary = "bwa_04_summary";
+  my $bwa_summary = "bwa_03_summary";
   add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
 
   return( [ $mergeBam, ".bam\$" ], $mergeBam);
@@ -2246,15 +2336,23 @@ sub addMarkduplicates {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
-    option                => "markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam && touch __OUTPUT__.done
-    
-if [[ -e __OUTPUT__.done ]]; then
+    option                => "
+sambamba markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  rm -f __OUTPUT__.succeed
+  touch __OUTPUT__.failed
+  rm __NAME__.tmp.bam __NAME__.tmp.bam.bai
+else
+  rm -f __OUTPUT__.failed
+  touch __OUTPUT__.succeed
   mv __NAME__.tmp.bam __OUTPUT__
   mv __NAME__.tmp.bam.bai __OUTPUT__.bai
 fi
 ",
     interpretor           => "",
-    program               => "sambamba",
+    program               => "",
     check_program         => 0,
     source_arg            => "",
     source_ref            => $source_ref,
@@ -2263,7 +2361,7 @@ fi
     output_to_same_folder => 1,
     output_arg            => "",
     output_file_prefix    => ".duplicates_marked.bam",
-    output_file_ext       => ".duplicates_marked.bam",
+    output_file_ext       => ".duplicates_marked.bam, .duplicates_marked.bam.bai",
     sh_direct             => 0,
     pbs                   => {
       "nodes"    => "1:ppn=8",
@@ -2284,7 +2382,6 @@ sub addSequenceTask {
     option     => "",
     source     => {
       step_1 => $tasks,
-      step_2 => $summary_tasks,
     },
     sh_direct => 0,
     pbs       => {
@@ -2293,6 +2390,10 @@ sub addSequenceTask {
       "mem"       => "40gb"
     },
   };
+
+  if(defined $summary_tasks){
+    $config->{sequencetask}{step_2} = $summary_tasks;
+  }
 }
 
 sub addFilesFromSraRunTable {
