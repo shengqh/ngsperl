@@ -162,20 +162,8 @@ DDD
   #draw_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, paste0(prefix, ".", cur_celltype, assay))
   
   umap_name<-umap_names[1]
-  res<-get_highlight_cell_plot(obj, group.by = cur_celltype, reduction = umap_name)
-  g<-res$g
-  cts<-res$cts
   
-  ncol<-ceiling(sqrt(length(cts)))
-  nrow<-ceiling(length(cts)/ncol)
-  
-  width=1600 * ncol
-  height=1500 * nrow
-  
-  g<-g+plot_layout(ncol=ncol)
-  png(paste0(prefix, ".", cur_celltype, ".cell.png"), width=width, height=height, res=300)
-  print(g)
-  dev.off()
+  save_highlight_cell_plot(paste0(prefix, ".", cur_celltype, ".cell.png"), obj, group.by = cur_celltype, reduction = umap_name)
 }
 
 saveRDS(obj@meta.data, paste0(prefix, ".meta.rds"))
