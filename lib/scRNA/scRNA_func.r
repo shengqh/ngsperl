@@ -3,6 +3,15 @@ library(cowplot)
 library(Seurat)
 library(tools)
 
+get_hue_colors<-function(n, random.seed=20220606){
+  ccolors<-hue_pal()(n)
+  x <- .Random.seed
+  set.seed(random.seed)
+  scolors<-sample(ccolors, size=n)
+  .Random.seed <- x
+  return(scolors)
+}
+
 theme_bw3 <- function (axis.x.rotate=F) { 
 	result = theme_bw() +
     theme(
@@ -1020,19 +1029,21 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   return(list(obj=subobj, umap_names=umap_names))
 }
 
-get_dim_plot<-function(obj, group.by, label.by, reduction="umap"){
+get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1){
   labels<-obj@meta.data[,c(group.by, label.by)]
-  labels<-labels[!duplicated(labels),]
+  labels<-labels[!duplicated(labels[,group.by]),]
   labels<-labels[order(labels[,group.by]),]
-  cts<-labels[,label.by]
+  cts<-as.character(labels[,label.by])
 
-  g<-DimPlot(obj, group.by=group.by, label=T, reduction=reduction)+ 
-    guides(colour = guide_legend(ncol = 1)) +
-    scale_color_discrete(labels = cts)
+  ngroups<-length(unlist(unique(obj[[group.by]])))
+  scolors = get_hue_colors(ngroups)
+
+  g<-DimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by)+ 
+    scale_color_manual(legend.title, values=scolors, labels = cts, guide = guide_legend(ncol=ncol)) + ggtitle(title)
   return(g)
 }
 
-get_dim_plot_labelby<-function(obj, label.by, reduction="umap"){
+get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1){
   groups<-as.character(obj@meta.data[,label.by])
   gt<-table(groups)
   gt<-gt[order(gt, decreasing=T)]
@@ -1043,7 +1054,7 @@ get_dim_plot_labelby<-function(obj, label.by, reduction="umap"){
   group.by="dummy_cluster"
   obj@meta.data$dummy_label<-paste0(obj@meta.data$dummy_cluster, ": ", groups)
 
-  g<-get_dim_plot(obj, group.by="dummy_cluster", label.by="dummy_label", reduction=reduction) + ggtitle(label.by)
+  g<-get_dim_plot(obj, group.by="dummy_cluster", label.by="dummy_label", label=label, title=title, legend.title=legend.title, reduction=reduction, split.by=split.by, ncol=ncol)
   return(g)
 }
 
@@ -1065,4 +1076,26 @@ get_highlight_cell_plot<-function(obj, group.by, reduction="umap") {
   }
   
   return(list(g=g, cts=cts))
+}
+
+add_x_y_axis<-function(g){
+  g<-g+annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) + annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+  return(g)
+}
+
+save_highlight_cell_plot<-function(filename, obj, group.by, reduction="umap"){
+  res<-get_highlight_cell_plot(obj, group.by = group.by, reduction = reduction)
+  g<-res$g
+  cts<-res$cts
+  
+  ncol<-ceiling(sqrt(length(cts)))
+  nrow<-ceiling(length(cts)/ncol)
+  
+  width=1800 * ncol
+  height=1500 * nrow
+  
+  g<-g+plot_layout(ncol=ncol)
+  png(filename, width=width, height=height, res=300)
+  print(g)
+  dev.off()
 }
