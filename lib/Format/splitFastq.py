@@ -29,7 +29,7 @@ def get_record_per_file(logger, input_files, trunk_number):
   logger.info("Total %d reads, each file should have almost %d reads." % (total_record, result))
   return (result)
 
-def split(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber): 
+def split_by_trunk(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber, startTrunk=1): 
   if isPairedEnd:
     read1files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 0]
     read2files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 1]
@@ -42,7 +42,7 @@ def split(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber):
   fileIndex = 0
   for read_files in input_array:
     fileIndex = fileIndex + 1
-    trunk = 1
+    trunk = startTrunk
     read_count = 0
     fout = None
     for inputFile in read_files:
@@ -107,7 +107,7 @@ def main():
   
   inputFiles = args.input.split(",")
   
-  split(logger, inputFiles, not args.is_single_end, args.outputPrefix, args.trunk)
+  split_by_trunk(logger, inputFiles, not args.is_single_end, args.outputPrefix, args.trunk)
   
 if __name__ == "__main__":
     main()
