@@ -13,6 +13,7 @@ use Text::CSV;
 #use Pipeline::WdlPipeline qw(addCollectAllelicCounts);
 use List::MoreUtils qw(first_index);
 use Hash::Merge qw( merge );
+use POSIX qw/ceil/;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -71,6 +72,7 @@ our %EXPORT_TAGS = (
     add_BWA_WGS
     add_BWA_summary
     add_BWA_and_summary
+    get_expect_trunk
     add_BWA_and_summary_scatter
     addMarkduplicates
     addSequenceTask
@@ -2189,6 +2191,74 @@ sub add_merge_bam {
   push @$tasks, (  $merge_name );
 }
 
+sub get_expect_trunk{
+  my ($file_map, $max_file_size_gb, $trunk_file_size_gb) = @_;
+  my $result = {};
+
+  for my $sample (sort keys %$file_map){
+    my $files = $file_map->{$sample};
+    my $idx = 0;
+    my $total = 0;
+    while ($idx < scalar(@$files)){
+      my $read1 = $files->[$idx];
+      my $read1_filesize = -s $read1;
+      $idx = $idx + 2;
+      my $read1_gb = $read1_filesize / (1024 * 1024 * 1024);
+      if ($read1_gb <= $max_file_size_gb){
+        $total = $total + 1;
+        next
+      }
+
+      my $trunk = ceil($read1_gb / $trunk_file_size_gb);
+      $total = $total + $trunk;
+    }
+    $result->{$sample} = $total;
+  }
+
+  return($result);
+}
+
+sub add_split_fastq_dynamic {
+  my ($config, $def, $tasks, $target_dir, $split_fastq, $source_ref) = @_;
+
+  my $min_file_size_gb = getValue($def, "split_fastq_min_file_size_gb", 10);
+  my $trunk_file_size_gb = getValue($def, "split_fastq_trunk_file_size_gb", 5);
+
+  $config->{ $split_fastq } = {
+    class       => "CQS::ProgramWrapperOneToMany",
+    perform     => 1,
+    target_dir  => "$target_dir/$split_fastq",
+    option      => "",
+    interpretor => "python3",
+    program     => "../Format/splitFastqDynamic.py",
+    option      => "--min_file_size_gb $min_file_size_gb --trunk_file_size_gb $trunk_file_size_gb --fill_length 3",
+    source_ref      => $source_ref,
+    source_arg            => "-i",
+    source_join_delimiter => ",",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_file_prefix    => "",
+    output_file_ext       => "._ITER_.1.fastq.gz",
+    output_other_ext      => "._ITER_.2.fastq.gz",
+    iteration_arg         => "",
+    iteration_fill_length => 3,
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
+  my $file_map = get_raw_files($config, $split_fastq, "source");
+
+  my $trunk_map = get_expect_trunk($file_map, $min_file_size_gb, $trunk_file_size_gb);
+
+  $config->{$split_fastq}{iteration} = $trunk_map;
+
+  push @$tasks, (  $split_fastq );
+}
+
 sub add_split_fastq {
   my ($config, $def, $tasks, $target_dir, $split_fastq, $source_ref) = @_;
 
@@ -2229,14 +2299,20 @@ sub add_BWA_and_summary_scatter {
   my $step = $pairend ? 2 : 1;
 
   my $splitFastq = "bwa_00_splitFastq";
-  if(getValue($def, "has_multiple_fastq_per_sample", 0)){
+
+  my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
+  if($perform_split_fastq eq "by_dynamic") {
+    add_split_fastq_dynamic($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+  }elsif($perform_split_fastq eq "by_file"){
     $config->{ $splitFastq } = {
       class       => "CQS::FileScatterTask",
       source_ref  => $source_ref,
       step => $step,
     };
-  }else{
+  }elsif($perform_split_fastq eq "by_scatter"){
     add_split_fastq($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+  }else{
+    die 'wrong perform_split_fastq value, it should be one of [ 0, "by_dynamic", "by_file", "by_scatter"]';
   }
 
   my $rg_name_regex = "(.+)_ITER_";
