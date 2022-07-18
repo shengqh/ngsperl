@@ -120,8 +120,7 @@ for(cur_celltype in multi_cts){
   
   g<-NULL
   for(umap_name in umap_names){
-    g1<-get_dim_plot_labelby(obj, label.by=cur_celltype, reduction=umap_name) + ggtitle(umap_name)
-    #g1<-DimPlot(obj, group.by = cur_celltype, reduction=umap_name, label=T, repel=T) + ggtitle(umap_name) + guides(fill=guide_legend(ncol=1))
+    g1<-get_dim_plot_labelby(obj, label.by=cur_celltype, reduction=umap_name, title=umap_name)
     if(is.null(g)){
       g<-g1
     }else{
@@ -142,8 +141,7 @@ MMM
 
   g<-NULL
   for(umap_name in umap_names){
-    g2<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction=umap_name) + ggtitle(umap_name)
-    #g2<-DimPlot(obj, group.by = sname, reduction=umap_name, label=T, repel=T) + guides(color=guide_legend(ncol=1))
+    g2<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction=umap_name, title=umap_name)
     if(is.null(g)){
       g<-g2
     }else{
