@@ -7,7 +7,7 @@ def validate(logger, input, output):
   parts = input.split(',')
   #print(parts)
 
-  error_msg = ""
+  error_msgs = []
   total_read_count = 0
   idx = 0
   while idx < len(parts):
@@ -18,6 +18,7 @@ def validate(logger, input, output):
     logger.info("Validating %s ..." % read1)
     logger.info("Validating %s ..." % read2)
     read_count = 0
+    error_msg = None
     with gzip.open(read1, "rt") as fin1:
       with gzip.open(read2, "rt") as fin2:
         while(True):
@@ -87,17 +88,23 @@ def validate(logger, input, output):
             break
     total_read_count += read_count
 
+    if error_msg != None:
+      logger.error(error_msg)
+      error_msgs.append(error_msg)
+
   error_file = output + ".error"
-  if error_msg != "":
+  if os.path.exists(error_file):
+    os.remove(error_file)
+
+  if len(error_msgs) != "":
     if os.path.exists(output):
       os.remove(output)
     with open(error_file, "wt") as fout:
-      fout.write("ERROR: %s" % error_msg)
-    logger.error(error_msg)
+      for error_msg in error_msgs:
+        fout.write("ERROR: %s" % error_msg)
+    logger.info("failed")
     return(1)
   else:
-    if os.path.exists(error_file):
-      os.remove(error_file)
     with open(output, "wt") as fout:
       fout.write("READ\t%d" % total_read_count)
     logger.info("done")
