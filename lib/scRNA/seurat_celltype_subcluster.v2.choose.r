@@ -34,6 +34,8 @@ random.seed=20200107
 min.pct=0.5
 logfc.threshold=0.6
 
+output_heatmap=FALSE
+
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
@@ -144,10 +146,12 @@ if(length(remove_cts) > 0){
   obj<-subset(obj, cells=cells)
 }
 
-#find markers for cell types
-ct_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
-ct_top10<-get_top10_markers(ct_markers)
-ct_top10_map<-split(ct_top10$gene, ct_top10$cluster)
+if(output_heatmap){
+  #find markers for cell types
+  ct_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  ct_top10<-get_top10_markers(ct_markers)
+  ct_top10_map<-split(ct_top10$gene, ct_top10$cluster)
+}
 
 layer4map<-split(tiers$Layer4, tiers$Celltype.name)
 
@@ -164,7 +168,10 @@ previous_celltypes<-names(tblct)
 
 DefaultAssay(obj)<-assay
 
-allmarkers<-NULL
+if(output_heatmap){
+  allmarkers<-NULL
+}
+
 cluster_index=0
 pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
@@ -186,7 +193,10 @@ for(pct in previous_celltypes){
     meta[cells, resolution_col] = 0
     cluster_index = cluster_index + 1
 
-    allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
+    if(output_heatmap){
+      allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
+    }
+
     next
   }
   
@@ -260,14 +270,17 @@ for(pct in previous_celltypes){
   meta[rownames(cur_meta), seurat_clusters] = cur_meta$seurat_clusters
   meta[rownames(cur_meta), cur_layer] = cur_meta$cur_layer
 
-  markers_file = file_map['markers']  
-  cur_markers=read.csv(markers_file, header=T, row.names=1)
-  cur_top19 = get_top10_markers(cur_markers)
-  allmarkers=c(allmarkers, cur_top19$gene)
+  if(output_heatmap){
+    markers_file = file_map['markers']  
+    cur_markers=read.csv(markers_file, header=T, row.names=1)
+    cur_top10 = get_top10_markers(cur_markers)
+    allmarkers=c(allmarkers, cur_top19$gene)
+  }
 }
 
 obj@meta.data<-meta
-obj<-subset(obj, seurat_clusters >= 0)
+cells<-colnames(obj)[obj$seurat_clusters>=0]
+obj<-subset(obj, cells=cells)
 
 meta = obj@meta.data
 meta[,seurat_cur_layer] = paste0(meta$seurat_clusters, ": ", meta[,cur_layer])
@@ -282,22 +295,22 @@ obj@meta.data<-meta
 write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
 
-allmarkers<-unique(allmarkers)
-obj<-myScaleData(obj, allmarkers, "RNA")
+if(output_heatmap){
+  allmarkers<-unique(allmarkers)
+  obj<-myScaleData(obj, allmarkers, "RNA")
+}
 saveRDS(obj, paste0(outFile, ".final.rds"))
 
 nclusters<-length(unique(obj$seurat_clusters))
 
-width<-max(3000, min(10000, nclusters * 150 + 1000))
-height<-max(3000, min(20000, length(allmarkers) * 60 + 1000))
+if(output_heatmap){
+  width<-max(3000, min(10000, nclusters * 150 + 1000))
+  height<-max(3000, min(20000, length(allmarkers) * 60 + 1000))
 
-g<-DoHeatmap(obj, assay="RNA", features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
-png(paste0(prefix, ".top10.heatmap.png"), width=width, height=height, res=300)
-print(g)
-dev.off()
-
-get_cluster_colors<-function(n){
-  return(hue_pal()(n))
+  g<-DoHeatmap(obj, assay="RNA", features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
+  png(paste0(prefix, ".top10.heatmap.png"), width=width, height=height, res=300)
+  print(g)
+  dev.off()
 }
 
 ccolors<-get_cluster_colors(nclusters)
@@ -318,3 +331,8 @@ g<-g+theme(text = element_text(size = 20))
 png(paste0(prefix, ".umap.png"), width=width, height=4000, res=300)
 print(g)
 dev.off()
+
+write.csv(table(obj$cell_type, obj$orig.ident), paste0(outFile, ".ct_orig.ident.csv"))
+if(!all(obj$orig.ident == obj$sample)){
+  write.csv(table(obj$cell_type, obj$sample), paste0(outFile, ".ct_sample.csv"))
+}
