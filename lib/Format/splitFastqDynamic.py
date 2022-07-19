@@ -3,6 +3,7 @@ import logging
 import os
 import math
 import enum
+import subprocess
 from splitFastq import split_by_trunk
 
 # Enum for size units
@@ -34,7 +35,16 @@ def do_symlink(source, target):
   
   os.symlink(source, target)
 
-def split_dynamic_paired_end(logger, inputFiles, outputFilePrefix, min_file_size_gb, trunk_file_size_gb, fill_length): 
+def do_fastqsplitter(logger, input_fastq, start_trunk, expect_trunk, output_file, fill_length, compresslevel=1):
+  options = ['fastqsplitter', '-i', input_fastq, "-c", compresslevel]
+  for trunk in range(start_trunk, start_trunk + expect_trunk):
+    trunk_str = str(trunk).zfill(fill_length)
+    trunk_file = output_file.replace("__TRUNK__", trunk_str)
+    options = options + ["-o", trunk_file]
+  logger.info(str(options))
+  subprocess.call(options)
+
+def split_dynamic_paired_end(logger, inputFiles, outputFilePrefix, min_file_size_gb, trunk_file_size_gb, fill_length, compresslevel=1, call_fastqsplitter=False): 
   input_array = [[inputFiles[idx], inputFiles[idx+1]] for idx in range(0, len(inputFiles), 2)]
 
   trunk = 1
@@ -43,10 +53,9 @@ def split_dynamic_paired_end(logger, inputFiles, outputFilePrefix, min_file_size
     read2 = read_files[1]
     read1_gb = get_file_size(read1)
 
-    file1 = f"{outputFilePrefix}.{str(trunk).zfill(fill_length)}.1.fastq.gz"
-    file2 = f"{outputFilePrefix}.{str(trunk).zfill(fill_length)}.2.fastq.gz"
-
     if read1_gb < min_file_size_gb:
+      file1 = f"{outputFilePrefix}.{str(trunk).zfill(fill_length)}.1.fastq.gz"
+      file2 = f"{outputFilePrefix}.{str(trunk).zfill(fill_length)}.2.fastq.gz"
       logger.info(f"softlink {read1} => {file1}")
       logger.info(f"softlink {read2} => {file2}")
       do_symlink(read1, file1)
@@ -55,14 +64,17 @@ def split_dynamic_paired_end(logger, inputFiles, outputFilePrefix, min_file_size
       continue
 
     expect_trunk = math.ceil(read1_gb / trunk_file_size_gb)
-
-    split_by_trunk(logger, read_files, True, outputFilePrefix, expect_trunk, trunk)
+    if not call_fastqsplitter:
+      split_by_trunk(logger, read_files, True, outputFilePrefix, expect_trunk, trunk, fill_length, compresslevel)
+    else:
+      do_fastqsplitter(logger, read1, trunk, expect_trunk, f"{outputFilePrefix}.__TRUNK__.1.fastq.gz", fill_length, compresslevel)
+      do_fastqsplitter(logger, read2, trunk, expect_trunk, f"{outputFilePrefix}.__TRUNK__.2.fastq.gz", fill_length, compresslevel)
 
     trunk += expect_trunk
 
   logger.info("done")
 
-def split_dynamic_single_end(logger, inputFiles, outputFilePrefix, min_file_size_gb, trunk_file_size_gb, fill_length): 
+def split_dynamic_single_end(logger, inputFiles, outputFilePrefix, min_file_size_gb, trunk_file_size_gb, fill_length, compresslevel=1, call_fastqsplitter=False): 
   trunk = 1
   for read1 in inputFiles:
     read1_gb = get_file_size(read1)
@@ -76,7 +88,10 @@ def split_dynamic_single_end(logger, inputFiles, outputFilePrefix, min_file_size
 
     expect_trunk = math.ceil(read1_gb / trunk_file_size_gb)
 
-    split_by_trunk(logger, read1, False, outputFilePrefix, expect_trunk, trunk)
+    if not call_fastqsplitter:
+      split_by_trunk(logger, read1, False, outputFilePrefix, expect_trunk, trunk, fill_length, compresslevel)
+    else:
+      do_fastqsplitter(logger, read1, trunk, expect_trunk, f"{outputFilePrefix}.__TRUNK__.fastq.gz", fill_length, compresslevel)
 
     trunk += expect_trunk
 
@@ -96,7 +111,9 @@ def main():
   parser.add_argument('--is_single_end', action='store', nargs='?', help="Is single end?")
   parser.add_argument('--min_file_size_gb', action='store', nargs='?', type=float, default=10, help="Min file size for split in GB")
   parser.add_argument('--trunk_file_size_gb', action='store', nargs='?', type=float, default=5, help="Expect file size for splitted file in GB")
-  parser.add_argument('--fill_length', action='store', nargs='?', type=int, default=2, help="Trunk name length (fill with zero)")
+  parser.add_argument('--fill_length', action='store', nargs='?', type=int, default=3, help="Trunk name length (fill with zero)")
+  parser.add_argument('--compresslevel', action='store', nargs='?', type=int, default=1, help="Compress level, 1: fastest, 9: slowest")
+  parser.add_argument('--call_fastqsplitter', action='store_true', help="Call fastqsplitter to speed up")
   
   args = parser.parse_args()
   
@@ -113,9 +130,9 @@ def main():
   inputFiles = args.input.split(",")
   
   if args.is_single_end:
-    split_dynamic_single_end(logger, inputFiles, args.outputPrefix, args.min_file_size_gb, args.trunk_file_size_gb, args.fill_length)
+    split_dynamic_single_end(logger, inputFiles, args.outputPrefix, args.min_file_size_gb, args.trunk_file_size_gb, args.fill_length, args.compresslevel, args.call_fastqsplitter)
   else:
-    split_dynamic_paired_end(logger, inputFiles, args.outputPrefix, args.min_file_size_gb, args.trunk_file_size_gb, args.fill_length)
+    split_dynamic_paired_end(logger, inputFiles, args.outputPrefix, args.min_file_size_gb, args.trunk_file_size_gb, args.fill_length, args.compresslevel, args.call_fastqsplitter)
   
 if __name__ == "__main__":
     main()
