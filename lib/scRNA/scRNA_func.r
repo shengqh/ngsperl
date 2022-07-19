@@ -783,30 +783,32 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
   gene_groups=split(genes_df$gene, genes_df$cell_type)
-  
+
+  if(is.na(cur_res)){
+    cur_res = paste0(cur_celltype, "_cluster")
+    obj<-build_dummy_cluster(obj, label.by=cur_celltype, new_cluster_name=cur_res)
+  }
+
   cell_type=obj@meta.data
   cell_type$cell_type <- cell_type[,cur_celltype]
 
-  ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Dendritic cells", "Monocytes", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
-  ct<-cell_type[!duplicated(cell_type$cell_type),]
-  missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
-  if(length(missed) > 0){
-    ct_levels = c(ct_levels, as.character(missed))
-  }
-  ct_levels = ct_levels[ct_levels %in% ct$cell_type]
-  cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
-  if(!is.na(cur_res)){
-    if(orderby_cluster){
-      cell_type<-cell_type[order(cell_type[,cur_res]),]
-    }else{
-      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
-    }
-    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], " : ", cell_type$cell_type)
-    cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
-    group.by="seurat_celltype_clusters"
+  # ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Dendritic cells", "Monocytes", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
+  # ct<-cell_type[!duplicated(cell_type$cell_type),]
+  # missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
+  # if(length(missed) > 0){
+  #   ct_levels = c(ct_levels, as.character(missed))
+  # }
+  # ct_levels = ct_levels[ct_levels %in% ct$cell_type]
+  # cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
+
+  if(orderby_cluster){
+    cell_type<-cell_type[order(cell_type[,cur_res]),]
   }else{
-    group.by="cell_type"
+    cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
   }
+  cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], " : ", cell_type$cell_type)
+  cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
+  group.by="seurat_celltype_clusters"
   
   cell_type<-cell_type[colnames(obj),]
   obj@meta.data<-cell_type
@@ -1043,18 +1045,25 @@ get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.
   return(g)
 }
 
-get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1){
+build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_label=paste0(new_cluster_name, "_label")){
   groups<-as.character(obj@meta.data[,label.by])
   gt<-table(groups)
   gt<-gt[order(gt, decreasing=T)]
   dummy_cluster<-c(1:length(gt))
   names(dummy_cluster)<-names(gt)
   dc<-factor(dummy_cluster[groups], levels=dummy_cluster)
-  obj@meta.data$dummy_cluster<-dc
-  group.by="dummy_cluster"
-  obj@meta.data$dummy_label<-paste0(obj@meta.data$dummy_cluster, ": ", groups)
+  obj[[new_cluster_name]]<-dc
+  obj[[new_cluster_name_label]]<-paste0(obj@meta.data$dummy_cluster, ": ", groups)
+  return(obj)
+}
 
-  g<-get_dim_plot(obj, group.by="dummy_cluster", label.by="dummy_label", label=label, title=title, legend.title=legend.title, reduction=reduction, split.by=split.by, ncol=ncol)
+get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1){
+  group.by="dummy_cluster"
+  group.label="dummy_label"
+
+  obj<-build_dummy_cluster(obj, label.by, group.by, group.label)
+
+  g<-get_dim_plot(obj, group.by=group.by, label.by=group.label, label=label, title=title, legend.title=legend.title, reduction=reduction, split.by=split.by, ncol=ncol)
   return(g)
 }
 
@@ -1067,7 +1076,7 @@ get_highlight_cell_plot<-function(obj, group.by, reduction="umap") {
     ct_count<-cts[ct]
     pct<-paste0(ct, "(", ct_count, ")")
     cells<-colnames(obj)[obj[[group.by]] == ct]
-    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", ct))
+    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", ct)) + NoLegend()
     if(is.null(g)){
       g<-g0
     }else{
@@ -1091,7 +1100,7 @@ save_highlight_cell_plot<-function(filename, obj, group.by, reduction="umap"){
   ncol<-ceiling(sqrt(length(cts)))
   nrow<-ceiling(length(cts)/ncol)
   
-  width=1800 * ncol
+  width=1500 * ncol
   height=1500 * nrow
   
   g<-g+plot_layout(ncol=ncol)
