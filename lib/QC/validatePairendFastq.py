@@ -96,7 +96,7 @@ def validate(logger, input, output):
   if os.path.exists(error_file):
     os.remove(error_file)
 
-  if len(error_msgs) != "":
+  if len(error_msgs) > 0:
     if os.path.exists(output):
       os.remove(output)
     with open(error_file, "wt") as fout:
