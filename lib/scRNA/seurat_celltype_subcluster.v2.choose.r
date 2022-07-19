@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='mouse_8363'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge/result/AK6383.final.rds'
-parFile2='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_01_dynamic/result/AK6383.scDynamic.meta.rds'
-parFile3='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/essential_genes/result/AK6383.txt'
-parFile4='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_02_subcluster.v2/result/AK6383.files.csv'
+parFile1='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
+parFile2='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_01_call/result/mouse_8363.meta.rds'
+parFile3='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
+parFile4='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_02_subcluster/result/mouse_8363.files.csv'
 
 
-setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_03_choose_res/result')
+setwd('/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_03_choose/result')
 
 ### Parameter setting end ###
 
@@ -41,19 +41,7 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 reduction<-myoptions$reduction
-npcs<-as.numeric(myoptions$pca_dims)
-
-species=myoptions$species
-markerfile<-myoptions$db_markers_file
-remove_subtype<-myoptions$remove_subtype
-annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
-HLA_panglao5_file<-myoptions$HLA_panglao5_file
-tcell_markers_file<-myoptions$tcell_markers_file
 assay=ifelse(by_sctransform, "SCT", "RNA")
-by_harmony<-reduction=="harmony"
-regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
-
-min_markers<-20
 
 previous_layer<-myoptions$celltype_layer
 cur_layer<-myoptions$output_layer
@@ -61,23 +49,10 @@ seurat_clusters = "seurat_clusters"
 seurat_cur_layer=paste0("seurat_", cur_layer)
 resolution_col = "resolution"
 
-if(regress_by_percent_mt){
-  vars.to.regress="percent.mt"
-}else{
-  vars.to.regress=NULL
-}
-
 essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
 
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
-
-pca_dims<-1:npcs
-
-tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
-
-remove_subtype_of=remove_subtype
-cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file, curated_markers_file=myoptions$curated_markers_file)
 
 prefix<-outFile
 
@@ -106,9 +81,7 @@ if(has_bubblemap){
   bubble_genes<-unique(genes_df$gene)
 }
 
-best_res_tbl<-read.table(parSampleFile3, sep="\t", header=F)
-best_res_tbl$V1 = as.character(best_res_tbl$V1)
-best_res_tbl$V2 = as.character(best_res_tbl$V2)
+best_res_tbl<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
 
 res_files<-read.csv(parFile4, header=T)
 if(!("type" %in% colnames(res_files))){
@@ -152,8 +125,6 @@ if(output_heatmap){
   ct_top10<-get_top10_markers(ct_markers)
   ct_top10_map<-split(ct_top10$gene, ct_top10$cluster)
 }
-
-layer4map<-split(tiers$Layer4, tiers$Celltype.name)
 
 meta = obj@meta.data
 
@@ -280,7 +251,11 @@ for(pct in previous_celltypes){
 
 obj@meta.data<-meta
 cells<-colnames(obj)[obj$seurat_clusters>=0]
-obj<-subset(obj, cells=cells)
+
+if(any(obj$seurat_clusters<0)){
+  #there are cells deleted
+  obj<-subset(obj, cells=cells)
+}
 
 meta = obj@meta.data
 meta[,seurat_cur_layer] = paste0(meta$seurat_clusters, ": ", meta[,cur_layer])
@@ -313,12 +288,7 @@ if(output_heatmap){
   dev.off()
 }
 
-ccolors<-get_cluster_colors(nclusters)
-
-set.seed(random.seed)
-scolors<-sample(ccolors, size=nclusters)
-g<-DimPlot(obj, group.by = "seurat_clusters", label=T) + ggtitle(cur_layer)+
-      scale_color_manual(values=scolors, labels = ct[,seurat_cur_layer])
+g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_cur_layer)
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
   g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA", TRUE)
   g<-g+plot_layout(ncol = 2, widths = c(4, 6))
@@ -336,3 +306,29 @@ write.csv(table(obj$cell_type, obj$orig.ident), paste0(outFile, ".ct_orig.ident.
 if(!all(obj$orig.ident == obj$sample)){
   write.csv(table(obj$cell_type, obj$sample), paste0(outFile, ".ct_sample.csv"))
 }
+
+#obj<-readRDS("mouse_8363.final.rds")
+
+Idents(obj)<-"cell_type"
+markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+markers=markers[markers$p_val_adj < 0.05,]
+write.csv(markers, paste0(outFile, ".markers.csv"))
+top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
+
+top10genes=unique(top10$gene)
+obj<-myScaleData(obj, top10genes, assay="RNA")
+height<-max(3000, min(20000, length(top10genes) * 60 + 1000))
+
+nclusters<-length(unique(obj$cell_type))
+width<-max(3000, min(10000, nclusters * 300 + 1000))
+g<-DoHeatmap(obj, assay="RNA", features = top10genes, group.by = "cell_type", angle = 90) + NoLegend()
+png(paste0(prefix, ".cell_type.top10.heatmap.png"), width=width, height=height, res=300)
+print(g)
+dev.off()
+
+nclusters<-length(unique(obj$seurat_cell_type))
+width<-max(3000, min(10000, nclusters * 300 + 1000))
+g<-DoHeatmap(obj, assay="RNA", features = top10genes, group.by = "seurat_cell_type", angle = 90) + NoLegend()
+png(paste0(prefix, ".seurat_cell_type.top10.heatmap.png"), width=width, height=height, res=300)
+print(g)
+dev.off()
