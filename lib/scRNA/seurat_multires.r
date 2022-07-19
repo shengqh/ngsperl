@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='mouse_8363'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge/result/AK6383.final.rds'
+parFile1='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires/result')
+setwd('/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires/result')
 
 ### Parameter setting end ###
 
@@ -19,7 +19,6 @@ library(knitr)
 library(kableExtra)
 library(ggplot2)
 library(ggpubr)
-library(rmdformats)
 library(DT)
 library(data.table)
 library(digest)
@@ -56,6 +55,11 @@ if(file.exists(parFile2)){
   npcs<-read.table(parFile2, row.names=1)$V2[1]
 }
 pca_dims<-1:npcs
+
+if(file.exists(parSampleFile2)){
+  cts<-read.table(parSampleFile2, header=F, sep="\t", stringsAsFactors = F)
+  combined_ct<-unlist(split(cts$V2, cts$V1))
+}
 
 tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
 
@@ -97,18 +101,13 @@ res_df<-data.frame("resolution"=resolutions, "cluster"=multi_res, "celltype"=mul
 write.csv(res_df, file=paste0(outFile, ".resolutions.csv"), row.names=F)
 
 #umaplist<-RunMultipleUMAP(obj, curreduction=curreduction, cur_pca_dims=c(1:npcs))
+#obj<-RunUMAP(obj, reduction=curreduction, dims=c(1:npcs))
 
-umaplist<-RunMultipleUMAP(obj, nn=c(30,20,10), min.dist=c(0.3,0.3,0.3), curreduction=curreduction, cur_pca_dims=c(1:npcs))
-obj<-umaplist$obj
-umap_names<-umaplist$umap_names
-rm(umaplist)
-
-meta<-obj@meta.data
-
-cur_celltype<-multi_cts[1]
+cur_celltype<-multi_cts[2]
 for(cur_celltype in multi_cts){
   cat(cur_celltype, "\n")
   
+  meta<-obj@meta.data
   cur_res = gsub("_celltype", "", cur_celltype)
   meta<-meta[order(meta[,cur_res]),]  
   seurat_celltype<-paste0(meta[,cur_res], ":", meta[,cur_celltype])
@@ -118,52 +117,47 @@ for(cur_celltype in multi_cts){
   meta<-meta[colnames(obj),]
   obj@meta.data = meta
   
-  g<-NULL
-  for(umap_name in umap_names){
-    g1<-get_dim_plot_labelby(obj, label.by=cur_celltype, reduction=umap_name) + ggtitle(umap_name)
-    #g1<-DimPlot(obj, group.by = cur_celltype, reduction=umap_name, label=T, repel=T) + ggtitle(umap_name) + guides(fill=guide_legend(ncol=1))
-    if(is.null(g)){
-      g<-g1
-    }else{
-      g<-g+g1
-    }
-  }
-  g<-g+get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA")
+  g<-get_dim_plot_labelby(obj, label.by=cur_celltype, reduction="umap")
+  g<-g+get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
   layout<-"
-ABC
-DDD
+ABB
 "
   g<-g+plot_layout(design = layout)
-  png(paste0(prefix, ".", cur_celltype, ".png"), width=as.numeric(myoptions$plot_width), height=as.numeric(myoptions$plot_height), res=300)
+  png(paste0(prefix, ".", cur_celltype, ".png"), width=6600, height=2000, res=300)
   print(g)
   dev.off()
 
-  g<-NULL
-  for(umap_name in umap_names){
-    g2<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction=umap_name) + ggtitle(umap_name)
-    #g2<-DimPlot(obj, group.by = sname, reduction=umap_name, label=T, repel=T) + guides(color=guide_legend(ncol=1))
-    if(is.null(g)){
-      g<-g2
-    }else{
-      g<-g+g2
-    }
-  }
-
-  g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA")
+  g<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction="umap")
+  g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
   layout<-"
-ABC
-DDD
+ABB
 "
   g<-g+plot_layout(design = layout)
-  png(paste0(prefix, ".", cur_celltype, ".seurat.png"), width=as.numeric(myoptions$plot_width), height=as.numeric(myoptions$plot_height), res=300)
+  png(paste0(prefix, ".", cur_celltype, ".seurat.png"), width=6600, height=2000, res=300)
   print(g)
   dev.off()
   
   #draw_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, paste0(prefix, ".", cur_celltype, assay))
   
-  umap_name<-umap_names[1]
-  
-  save_highlight_cell_plot(paste0(prefix, ".", cur_celltype, ".cell.png"), obj, group.by = cur_celltype, reduction = umap_name)
+  save_highlight_cell_plot(paste0(prefix, ".", cur_celltype, ".cell.png"), obj, group.by = cur_celltype, reduction = "umap")
+
+  if(file.exists(parSampleFile2)){
+    new_layer = paste0(cur_celltype, "_summary")
+    new_celltype<-as.character(obj@meta.data[,cur_celltype])
+    in_new_celltype<-new_celltype %in% names(combined_ct)
+    new_celltype[in_new_celltype]<-combined_ct[new_celltype[in_new_celltype]]
+    obj[[new_layer]] = new_celltype
+
+    g<-get_dim_plot_labelby(obj, label.by=new_layer, reduction="umap")
+    g<-g+get_bubble_plot(obj, cur_res=NA, new_layer, bubblemap_file, assay="RNA", orderby_cluster = T)
+    layout<-"
+ABB
+"
+    g<-g+plot_layout(design = layout)
+    png(paste0(prefix, ".", new_layer, ".png"), width=6600, height=2000, res=300)
+    print(g)
+    dev.off()
+  }
 }
 
 saveRDS(obj@meta.data, paste0(prefix, ".meta.rds"))
