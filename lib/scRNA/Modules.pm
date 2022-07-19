@@ -11,6 +11,30 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [qw(
   get_marker_gene_dict
+  add_seurat_rawdata
+  add_seurat
+  add_essential_gene
+  add_scRNABatchQC
+
+  add_hto_samples_preparation  
+  add_hto
+  add_hto_summary
+
+  add_souporcell
+  add_souporcell_integration
+
+  add_hto_bam
+
+  add_clonotype_split
+
+  add_invidual_qc
+
+  add_gliph2
+
+  add_group_umap
+
+  add_doublet_check
+
   addEnclone 
   addClonotypeMerge 
   addEncloneToClonotype 
@@ -19,7 +43,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addArcasHLA 
   addScMRMA 
   addCHETAH
-  addSignac_only
+  add_signacx_only
   addSignac
   addCellRangerCount 
   addCellRangerVdj
@@ -32,6 +56,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addDynamicCluster
   addDynamicClusterSignacX
   addSubClusterV2
+  addSubClusterChoose
   addClonotypeVis
   addClonotypeDB
   addClonotypeCluster)] );
@@ -61,6 +86,105 @@ sub get_marker_gene_dict {
   }
 
   return($marker_genes);
+}
+
+sub add_seurat_rawdata {
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file) = @_;
+  $config->{$seurat_rawdata} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
+    rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_rawdata.r",
+    parameterSampleFile1_ref => "files",
+    parameterSampleFile2     => {
+      Mtpattern             => getValue( $def, "Mtpattern" ),
+      rRNApattern           => getValue( $def, "rRNApattern" ),
+      hemoglobinPattern     => getValue( $def, "hemoglobinPattern" ),
+      species               => getValue( $def, "species" ),
+      pool_sample           => getValue( $def, "pool_sample" ),
+      hto_sample_file       => $hto_sample_file,
+    },
+    parameterSampleFile3 => $def->{"pool_sample_groups"},
+    parameterSampleFile4_ref => $hto_ref,
+    output_file_ext      => ".rawobj.rds",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+
+  push( @$summary, $seurat_rawdata );
+}
+
+sub add_seurat {
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task) = @_;
+
+  my $seurat_task;
+  my $reduction;
+
+  my @sample_names = keys %{$def->{files}};
+  my $nsamples = scalar(@sample_names);
+  my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
+  my $sct_str = getValue( $def, "by_sctransform" ) ? "_sct":"";
+
+  my $preprocessing_rscript;
+  if($by_integration){
+    my $integration_by_harmony = getValue( $def, "integration_by_harmony", 1);
+    if($integration_by_harmony){
+      $seurat_task = "seurat${sct_str}_harmony";
+      $preprocessing_rscript = "../scRNA/seurat_harmony.r";
+      $reduction = "harmony";
+    }else{
+      $seurat_task = "seurat${sct_str}_integration";
+      $preprocessing_rscript = "../scRNA/seurat_integration.r";
+      $reduction = "pca";
+    }
+  }else{
+    $seurat_task = "seurat${sct_str}_merge";
+    $preprocessing_rscript = "../scRNA/seurat_merge.r";
+    $reduction = "pca";
+  }
+
+  $config->{$seurat_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_task,
+    rtemplate                => "../scRNA/scRNA_func.r,$preprocessing_rscript",
+    parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
+    parameterFile2_ref => $essential_gene_task,
+    parameterSampleFile1     => {
+      Mtpattern             => getValue( $def, "Mtpattern" ),
+      rRNApattern           => getValue( $def, "rRNApattern" ),
+      Remove_rRNA           => getValue( $def, "Remove_rRNA" ),
+      Remove_MtRNA          => getValue( $def, "Remove_MtRNA" ),
+      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+      mt_cutoff             => getValue( $def, "mt_cutoff" ),
+      species               => getValue( $def, "species" ),
+      resolution            => getValue( $def, "resolution" ),
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_integration        => $by_integration,
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      batch_for_integration => getValue( $def, "batch_for_integration" ),
+    },
+    output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  if ($def->{batch_for_integration}){
+    $config->{$seurat_task}{parameterSampleFile2} = getValue($def, "batch_for_integration_groups");
+  }
+
+  push( @$summary, $seurat_task );
+  return($seurat_task, $reduction);
 }
 
 sub addEnclone {
@@ -423,15 +547,15 @@ sub addCHETAH {
   push( @$tasks, $task_name );
 }
 
-sub addSignac_only {
-  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $reduction ) = @_;
+sub add_signacx_only {
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $obj_ref, $reduction ) = @_;
 
   $config->{$task_name} = {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . $task_name,
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
-    parameterFile1_ref   => $seurat_ref,
+    parameterFile1_ref   => $obj_ref,
     parameterSampleFile1 => {
       species             => getValue( $def, "species" ),
       prefix              => $project_name,
@@ -944,16 +1068,16 @@ sub addComparison {
 }
 
 sub addDynamicClusterSignacX {
-  my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $signacX_name) = @_;
+  my ($config, $def, $summary, $target_dir, $dynamic_signacx_task, $obj_ref, $essential_gene_task, $reduction, $signacX_task) = @_;
 
-  $config->{$scDynamic_task} = {
+  $config->{$dynamic_signacx_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $dynamic_signacx_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamicSignacX.r",
-    parameterFile1_ref => [$seurat_task, ".rds"],
+    parameterFile1_ref => $obj_ref,
     parameterFile3_ref => $essential_gene_task,
-    parameterFile4_ref => [ $signacX_name, ".meta.rds" ],
+    parameterFile4_ref => [ $signacX_task, ".meta.rds" ],
     parameterSampleFile1     => {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
@@ -984,9 +1108,9 @@ sub addDynamicClusterSignacX {
     },
   };
   if ($def->{batch_for_integration}){
-    $config->{$scDynamic_task}{parameterSampleFile3} = getValue($def, "batch_for_integration_groups");
+    $config->{$dynamic_signacx_task}{parameterSampleFile3} = getValue($def, "batch_for_integration_groups");
   }
-  push( @$summary, $scDynamic_task );
+  push( @$summary, $dynamic_signacx_task );
 }
 
 sub addDynamicCluster {
@@ -1035,21 +1159,20 @@ sub addDynamicCluster {
 }
 
 sub addSubClusterV2 {
-  my ($config, $def, $summary, $target_dir, $subcluster_task, $seurat_task, $scDynamic_task, $essential_gene_task, $reduction, $signacX_name) = @_;
+  my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options) = @_;
 
   $config->{$subcluster_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v2.r",
-    parameterFile1_ref => [$seurat_task, ".rds"],
-    parameterFile2_ref => [$scDynamic_task, ".meta.rds"],
+    parameterFile1_ref => $obj_ref,
+    parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
-    parameterSampleFile1     => {
+    parameterSampleFile1     => merge_hash_left_precedent($cur_options, {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
-      reduction             => $reduction,
       species               => getValue( $def, "species" ),
       db_markers_file       => getValue( $def, "markers_file" ),
       curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
@@ -1063,7 +1186,7 @@ sub addSubClusterV2 {
       celltype_layer        => "layer4",
       output_layer          => "cell_type",
       best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
-    },
+    }),
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     output_file_ext      => ".files.csv",
     sh_direct            => 1,
@@ -1073,11 +1196,53 @@ sub addSubClusterV2 {
       "mem"       => "40gb"
     },
   };
-  if(defined $config->{$signacX_name}){
-    $config->{$subcluster_task}{parameterFile4_ref} = [ $signacX_name, ".meta.rds" ];
+  if(defined $config->{$signacX_task}){
+    $config->{$subcluster_task}{parameterFile4_ref} = [ $signacX_task, ".meta.rds" ];
   }
 
   push( @$summary, $subcluster_task );
+}
+
+sub addSubClusterChoose {
+  my ($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $celltype_subclusters_table) = @_;
+
+  $config->{$choose_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $choose_task,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v2.choose.r",
+    parameterFile1_ref => $obj_ref,
+    parameterFile2_ref => $meta_ref,
+    parameterFile3_ref => $essential_gene_task,
+    parameterFile4_ref => [$subcluster_task, ".files.csv"],
+    parameterSampleFile1     => merge_hash_left_precedent($cur_options, {
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      species               => getValue( $def, "species" ),
+      db_markers_file       => getValue( $def, "markers_file" ),
+      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+      annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+      tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+      bubblemap_file        => $def->{bubblemap_file},
+      bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
+      summary_layer_file    => $def->{summary_layer_file},
+      output_layer          => "cell_type",
+    }),
+    parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
+    parameterSampleFile3 => $celltype_subclusters_table,
+    output_file_ext      => ".meta.rds",
+    output_other_ext  => ".final.rds,.umap.png",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$summary, $choose_task );
+
 }
 
 sub addClonotypeVis {
@@ -1148,5 +1313,499 @@ sub addClonotypeCluster {
   push(@$tasks, $taskname);
 }
 
+sub add_essential_gene {
+  my ($config, $def, $summary, $target_dir) = @_;
+
+  my $essential_gene_task = "essential_genes";
+  $config->{$essential_gene_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $essential_gene_task,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/essential_genes.r",
+    parameterSampleFile1     => {
+      species               => getValue( $def, "species" ),
+      db_markers_file       => getValue( $def, "markers_file" ),
+      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+      remove_subtype        => getValue( $def, "remove_subtype", ""),
+      bubblemap_file        => $def->{bubblemap_file},
+    },
+    parameterSampleFile2    => get_marker_gene_dict($def),
+    rCode                    => "",
+    output_file_ext          => ".txt",
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $essential_gene_task );
+
+  return($essential_gene_task);
+}
+
+sub add_scRNABatchQC{
+  my ($config, $def, $summary, $target_dir) = @_;
+  my $task = "scRNABatchQC";
+  $config->{$task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $task,
+    rtemplate                => "../scRNA/scRNABatchQC.r",
+    parameterSampleFile1_ref => "files",
+    rCode                    => "webgestalt_organism='" . getValue( $def, "webgestalt_organism" ) . "'",
+    output_file_ext      => ".html",
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $task );
+  return($task);
+}
+
+sub add_hto_samples_preparation {
+  my ($config, $def, $summary, $target_dir, $hto_file_ref) = @_;
+  my $preparation_task = "hto_samples_preparation";
+  $config->{$preparation_task} = {
+    class => "CQS::UniqueR",
+    target_dir => "${target_dir}/$preparation_task",
+    rtemplate => "../scRNA/split_samples_utils.r,../scRNA/split_samples_preparation.r",
+    option => "",
+    parameterSampleFile1_ref => $hto_file_ref,
+    parameterSampleFile2 => {
+      hto_regex => getValue($def, "hto_regex", ""),
+      nFeature_cutoff_min => getValue($def, "nFeature_cutoff_min"),
+      hto_non_zero_percentage => getValue($def, "hto_non_zero_percentage", 0.2),
+    },
+    output_perSample_file => "parameterSampleFile1",
+    output_perSample_file_byName => 1,
+    output_perSample_file_ext => ".hto.rds;.barcodes.tsv",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $preparation_task );
+  return($preparation_task);
+}
+
+sub add_hto {
+  my ($config, $def, $summary, $target_dir, $hto_file_ref) = @_;
+  my $hto_task;
+  my $r_script = undef;
+  if ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
+    if(getValue($def, "use_cutoff_v2", 0)){
+      $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all_v2.r";
+      $hto_task = "hto_samples_cutoff_all_v2";
+    }else{
+      $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
+      $hto_task = "hto_samples_cutoff_all";
+    }
+  } else {
+    $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_seurat_all.r";
+    $hto_task = "hto_samples_HTODemux_all";
+  }
+
+  $config->{$hto_task} = {
+    class => "CQS::UniqueR",
+    target_dir => "${target_dir}/$hto_task",
+    rtemplate => $r_script,
+    option => "",
+    parameterSampleFile1_ref => $hto_file_ref,
+    #parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
+    parameterSampleFile3 => {
+      hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
+      cutoff_file => getValue($def, "cutoff_file", ""),
+      umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),
+      umap_num_neighbors => getValue($def, "hto_umap_num_neighbors", 30),
+    },
+    output_perSample_file => "parameterSampleFile1",
+    output_perSample_file_byName => 1,
+    output_perSample_file_ext => ".HTO.umap.class.png;.HTO.csv;.HTO.data.csv;.HTO.umap.rds",
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $hto_task );
+  return($hto_task);
+}
+
+sub add_hto_summary {
+  my ($config, $def, $summary, $target_dir, $hto_ref) = @_;
+  my $hto_task = $hto_ref->[0];
+
+  my $hto_summary_task = $hto_task . "_summary";
+  $config->{$hto_summary_task} = {
+    class => "CQS::UniqueR",
+    target_dir => "${target_dir}/${hto_summary_task}",
+    rtemplate => "../scRNA/split_samples_summary.r",
+    option => "",
+    parameterSampleFile1_ref => $hto_ref,
+    parameterSampleFile2 => $def->{"HTO_name_map"},
+    output_file => "",
+    output_file_ext => ".HTO.summary.csv;.HTO.summary.global.png",
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  },
+  push( @$summary, $hto_summary_task );
+  return($hto_summary_task);
+}
+
+sub add_souporcell {
+  my ($config, $def, $individual, $target_dir, $preparation_task) = @_;
+
+  my $fasta = getValue($def, "fasta_file");
+  my $skip_remap = getValue($def, "skip_remap", 0);
+  my $common_variants = getValue($def, "common_variants", "");
+
+  my $hto_souporcell_task = "hto_souporcell" . ($skip_remap ? "_skip_remap" : "_remap");
+
+  my $skip_remap_option = $skip_remap ? "--skip_remap SKIP_REMAP" : "";
+  my $common_variants_option = ($common_variants eq "") ? "" : "--common_variants $common_variants";
+  my $souporcell_thread = getValue($def, "souporcell_cpu", "16");
+
+  $config->{$hto_souporcell_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$hto_souporcell_task",
+    interpretor => "",
+    program => "souporcell_pipeline.py",
+    check_program => 0,
+    docker_prefix => "souporcell_",
+    option => "-i __FILE__ -b __FILE2__ -f $fasta -t $souporcell_thread -o . -k __FILE3__ $common_variants_option $skip_remap_option
+    
+#__OUTPUT__
+",
+    source_arg => "-i",
+    source_ref => "bam_files",
+    parameterSampleFile2_arg => "-b",
+    parameterSampleFile2_ref => [ $preparation_task, ".barcodes.tsv"],
+    parameterSampleFile3_arg => "-k",
+    parameterSampleFile3 => getValue($def, "souporcell_tag_number"),
+    output_arg => "-o",
+    output_file_prefix => "",
+    output_no_name => 1,
+    output_file_ext => "clusters.tsv",
+    output_to_same_folder => 0,
+    can_result_be_empty_file => 0,
+    use_tmp_folder => getValue($def, "use_tmp_folder", 1),
+    sh_direct   => 0,
+    pbs => {
+      "nodes"     => "1:ppn=" . $souporcell_thread,
+      "walltime"  => getValue($def, "souporcell_walltime", "47"),
+      "mem"       => getValue($def, "souporcell_mem", "40gb")
+    },
+  };
+  push( @$individual, $hto_souporcell_task );
+  return($hto_souporcell_task);
+}
+
+sub add_souporcell_integration {
+  my ($config, $def, $summary, $target_dir, $hto_souporcell_task, $hto_ref) = @_;
+  my $hto_task = $hto_ref->[0];
+  my $hto_integration_task = $hto_souporcell_task . "_cutoff_integration";
+  $config->{$hto_integration_task} = {
+    class => "CQS::UniqueR",
+    target_dir => "${target_dir}/${hto_integration_task}",
+    rtemplate => "../scRNA/hto_soupercell_integration.r",
+    option => "",
+    parameterSampleFile1_ref => $hto_souporcell_task,
+    parameterSampleFile2_ref => $hto_ref,
+    parameterSampleFile3_ref => [ $hto_task, ".umap.rds" ],
+    parameterSampleFile4     => $def->{ignore_souporcell_cluster},
+    output_perSample_file => "parameterSampleFile1",
+    output_perSample_file_byName => 1,
+    output_perSample_file_ext => ".HTO.png;.meta.rds",
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$summary, $hto_integration_task );
+  return($hto_integration_task);
+}
+
+sub add_hto_bam {
+  my ($config, $def, $individual, $target_dir, $hto_ref) = @_;
+
+  if ( not defined $def->{bam_files}){
+    die "Define bam_files for perform_arcasHLA";
+  }
+
+  if (not defined $def->{HTO_samples}) {
+    die "Define HTO_samples for split bam files";
+  }
+
+  $config->{HTO_samples} = $def->{HTO_samples};
+  $config->{bam_files} = $def->{bam_files};
+
+  my $hto_bam_task = "hto_bam";
+  $config->{$hto_bam_task} = {
+    class => "CQS::ProgramWrapperOneToManyFile",
+    target_dir => "${target_dir}/hto_bam",
+    interpretor => "python3",
+    program => "../scRNA/split_samples.py",
+    check_program => 1,
+    option => "-o .",
+    source_arg => "-s",
+    source_ref => ["HTO_samples"],
+    parameterSampleFile2_arg => "-b",
+    parameterSampleFile2_ref => ["bam_files"],
+    parameterSampleFile3_arg => "-i",
+    parameterSampleFile3_ref => $hto_ref,
+    output_arg => "-o",
+    output_file_prefix => "",
+    output_file_key => 0,
+    output_file_ext => ".bam",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$individual, $hto_bam_task );
+  return($hto_bam_task);
+}
+
+sub add_clonotype_split {
+  my ($config, $def, $individual, $target_dir, $hto_ref, $clono_key) = @_;
+  if (not defined $def->{HTO_samples}) {
+    die "Define HTO_samples for split vdj json files";
+  }
+
+  $config->{HTO_samples} = $def->{HTO_samples};
+  $config->{vdj_json_files} = getValue($def, "vdj_json_files");
+
+  my $split_task = "clonotype". get_next_index($def, $clono_key) . "_split";
+
+  $config->{$split_task} = {
+    class => "CQS::ProgramWrapperOneToManyFile",
+    target_dir => "${target_dir}/$split_task",
+    interpretor => "python3",
+    program => "../scRNA/clonotype_split.py",
+    check_program => 1,
+    option => "-o .",
+    source_arg => "-i",
+    source_ref => "vdj_json_files",
+    parameterSampleFile2_arg => "-c",
+    parameterSampleFile2_ref => $hto_ref,
+    parameterSampleFile3_arg => "-s",
+    parameterSampleFile3_ref => ["HTO_samples"],
+    output_file => "parameterSampleFile3",
+    output_arg => "-o",
+    output_file_prefix => "",
+    output_file_ext => "all_contig_annotations.json",
+    output_to_same_folder => 0,
+    samplename_in_result => 0,
+    output_file_key => 0,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$individual, $split_task );
+  return($split_task);
+}
+
+sub add_invidual_qc {
+  my ($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file) = @_;
+
+  my $qc_files_ref;
+  if(defined $def->{qc_files}){
+    $qc_files_ref = "qc_files";
+    $config->{qc_files} = $def->{qc_files};
+  }else{
+    $qc_files_ref = "files";
+  }
+  $config->{$individual_qc_task} = {
+    class => "CQS::UniqueRmd",
+    target_dir => "${target_dir}/$individual_qc_task",
+    report_rmd_file => "../scRNA/individual_qc.Rmd",
+    additional_rmd_files => "../scRNA/markerCode_filter.R;../scRNA/scRNA_func.r",
+    option => "",
+    parameterSampleFile1_ref => $qc_files_ref,
+    parameterSampleFile2 => {
+      species => getValue($def, "species"),
+      Mtpattern             => getValue( $def, "Mtpattern" ),
+      rRNApattern           => getValue( $def, "rRNApattern" ),
+      Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+      Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+      mt_cutoff             => getValue( $def, "mt_cutoff" ),
+      species               => getValue( $def, "species" ),
+      resolution            => getValue( $def, "resolution" ),
+      pca_dims              => getValue( $def, "pca_dims" ),
+      markers_file     => getValue( $def, "markers_file" ),
+      curated_markers_file     => getValue( $def, "curated_markers_file", "" ),
+      bubblemap_file => getValue( $def, "bubblemap_file", "" ),
+    },
+    output_file_ext => "objectlist.Rdata",
+    output_no_name => 1,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+
+  if($perform_split_hto_samples){
+    $config->{$individual_qc_task}{parameterSampleFile3_ref} = $hto_ref;
+    $config->{$individual_qc_task}{parameterSampleFile2}{hto_sample_file} = $hto_sample_file;
+  }
+    
+  if( ! -e $qc_filter_config_file){
+    open(my $qc, '>', $qc_filter_config_file) or die $!;
+    print $qc "sample\tnFeature_cutoff_min\tnFeature_cutoff_max\tnCount_cutoff\tmt_cutoff\tcluster_remove\n";
+    my $files = $def->{files};
+    for my $fname (sort keys %$files){
+      print $qc "$fname\t" . 
+                getValue( $def, "nFeature_cutoff_min" ) . "\t" . 
+                getValue( $def, "nFeature_cutoff_max" ) . "\t" . 
+                getValue( $def, "nCount_cutoff" ) . "\t" .
+                getValue( $def, "mt_cutoff" ) . "\t\n";
+    }
+    close($qc);
+  }
+  
+  push( @$summary, $individual_qc_task );
+}
+
+sub add_gliph2 {
+  my ($config, $def, $summary, $target_dir, $meta_ref, $clonotype_convert, $hla_merge) = @_;
+
+  my $prepare_task = (defined $hla_merge) ? "tcr_hla_data" : "tcr_data";
+  $config->{$prepare_task} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $prepare_task,
+    rtemplate            => "../scRNA/gliph2_prepare.r",
+    parameterFile1_ref   => $meta_ref,
+    parameterFile2_ref   => $clonotype_convert,
+    parameterSampleFile1 => getValue($def, "gliph2_config"),
+    parameterSampleFile2 => {
+      gliph2_hla_condition => getValue($def, "gliph2_hla_condition"),
+    },
+    output_file_ext      => ".tcr.CD4.txt,.tcr.CD8.txt",
+    output_other_ext     => "",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  if( defined $hla_merge ) {
+    $config->{$prepare_task}{parameterFile3_ref} = $hla_merge; 
+    $config->{$prepare_task}{output_other_ext} = ".hla.txt"; 
+  }
+  push( @$summary, $prepare_task );
+
+  my $gliph2_config_file = dirname(__FILE__) . "/../scRNA/gliph2_config.txt";
+
+  my $gliph2_task = $prepare_task . "_gliph2";
+  $config->{$gliph2_task} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $gliph2_task,
+    rtemplate            => "../scRNA/gliph2.r",
+    parameterFile1       => getValue($def, "gliph2_config_file", $gliph2_config_file),
+    parameterFile2_ref   => [ $prepare_task, '.tcr.CD4.txt'],
+    parameterFile3_ref   => [ $prepare_task, '.tcr.CD8.txt'],
+    parameterSampleFile1 => getValue($def, "gliph2_reference"),
+    output_file_ext      => "_HLA.txt",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  if( defined $hla_merge ) {
+    $config->{$gliph2_task}{parameterFile4_ref} = [$prepare_task, '.hla.txt'], 
+  }
+  push( @$summary, $gliph2_task );
+  return($gliph2_task);
+}
+
+sub add_group_umap {
+  my ($config, $def, $summary, $target_dir, $section_key, $obj_ref) = @_;
+
+  my $seurat_task = $obj_ref->[0];
+  my $group_umap_task = $seurat_task . get_next_index($def, $section_key) . "_group_umap";
+  $config->{$group_umap_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $group_umap_task,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_group_umap.r",
+    parameterFile1_ref       => $obj_ref,
+    parameterSampleFile1     => $def->{groups},
+    output_file_ext      => ".all.label.umap.png",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$summary, $group_umap_task );
+  return($group_umap_task);
+}
+
+sub add_doublet_check {
+  my ($config, $def, $summary, $target_dir, $doublet_check_task, $obj_ref, $doublet_finder_task ) = @_;
+
+  $config->{$doublet_check_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $doublet_check_task,
+    rtemplate                => "countTableVisFunctions.R,../scRNA/scRNA_func.r,../scRNA/seurat_doublet_check.r",
+    parameterFile1_ref       => $obj_ref,
+    parameterFile2_ref       => ,
+    parameterFile3_ref       => [ $doublet_finder_task, ".meta.rds" ],
+    parameterFile4_ref       => [ $doublet_finder_task, ".options.csv" ],
+    parameterSampleFile1     => {
+      cluster_layer           => "seurat_clusters",
+      celltype_layer          => "cell_type",
+      cluster_celltype_layer  => "seurat_cell_type",
+      bubblemap_file        => $def->{bubblemap_file},
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+    },
+    output_file_ext      => ".doublet_perc.png",
+    output_other_ext  => "",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$summary, $doublet_check_task );
+}
 
 1;
