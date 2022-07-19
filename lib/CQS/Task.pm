@@ -444,7 +444,7 @@ fi
 
 for i in {1..5}; do 
   echo iteration \$i ...
-  cp -f $old_file $new_file
+  cp -fL $old_file $new_file
   diff $old_file $new_file
   status=\$?
   if [[ \$status -eq 0 ]]; then
@@ -477,7 +477,7 @@ fi
 
 for i in {1..5}; do 
   echo iteration \$i ...
-  cp -f $old_ext_file $new_ext_file
+  cp -fL $old_ext_file $new_ext_file
   diff $old_ext_file $new_ext_file
   status=\$?
   if [[ \$status -eq 0 ]]; then
