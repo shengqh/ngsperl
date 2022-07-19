@@ -49,6 +49,8 @@ sub perform {
   my $rg_name_regex        = get_option( $config, $section, "rg_name_regex",      "" );
   my $rg_id_regex        = get_option( $config, $section, "rg_id_regex",      "" );
 
+  my $output_unmapped_bam = get_option( $config, $section, "output_unmapped_bam", 0 );
+
   my $sort_by_thread        = get_option( $config, $section, "sort_by_thread",     0 );
   my $samtools_sort_thread = $sort_by_thread ? "-@ $thread":"";
   my $sambamba_sort_thread = $sort_by_thread ? "-t $thread":"";
@@ -144,7 +146,6 @@ fi
 
     print $pbs "
 
-status=0
 if [[ ! -e ${unsorted_bam_file}.succeed ]]; then
   echo bwa_mem=`date`
   bwa mem $option $rg $bwa_index $sample_files_str  2> >(tee ${sample_name}.bwa.stderr.log >\&2) | samtools view -bS -o $unsorted_bam_file
@@ -158,6 +159,33 @@ if [[ ! -e ${unsorted_bam_file}.succeed ]]; then
   bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
 fi
 ";
+
+    if($output_unmapped_bam){
+      #http://www.novocraft.com/documentation/novoalign-2/novoalign-ngs-quick-start-tutorial/1040-2/
+      print $pbs "
+
+if [[ -e ${unsorted_bam_file}.succeed ]]; then
+  echo bwa_unmapped=`date`
+  samtools view -u  -f 4 -F264 $unsorted_bam_file  > ${sample_name}.tmps1.bam
+  samtools view -u -f 8 -F 260 $unsorted_bam_file  > ${sample_name}.tmps2.bam
+  samtools view -u -f 12 -F 256 $unsorted_bam_file > ${sample_name}.tmps3.bam
+
+  samtools merge -u - ${sample_name}.tmps[123].bam | samtools sort -n - ${sample_name}.unmapped
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    rm ${sample_name}.tmps[123].bam
+    bedtools bamtofastq -i ${sample_name}.unmapped.bam -fq ${sample_name}.unmapped.1.fq -fq2 ${sample_name}.unmapped.2.fq
+    status=\$?
+    if [[ \$status -eq 0 ]]; then
+      rm ${sample_name}.unmapped.bam
+      gzip ${sample_name}.unmapped.1.fq
+      gzip ${sample_name}.unmapped.2.fq
+    fi
+  fi
+fi
+
+";
+    }
 
     if ($bwa_only) {
       $self->close_pbs( $pbs, $pbs_file );
