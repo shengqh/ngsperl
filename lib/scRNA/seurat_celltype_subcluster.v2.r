@@ -3,12 +3,12 @@ outFile='mouse_8363'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_merge/result/mouse_8363.final.rds'
-parFile2='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_merge_01_dynamic/result/mouse_8363.scDynamic.meta.rds'
-parFile3='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
+parFile1='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
+parFile2='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires/result/mouse_8363.meta.rds'
+parFile3='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
 
 
-setwd('C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_merge_02_subcluster.v2/result')
+setwd('/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_subcluster.v2/result')
 
 ### Parameter setting end ###
 
@@ -131,11 +131,13 @@ tblct<-table(celltypes)
 tblct<-tblct[order(tblct, decreasing = F)]
 
 previous_celltypes<-names(tblct)
+ordered_celltypes<-previous_celltypes[order(previous_celltypes)]
+writeLines(ordered_celltypes, paste0(outFile, ".cell_types.txt"))
 #previous_celltypes<-c("B cells")
 
 DefaultAssay(obj)<-assay
 
-g00<-DimPlot(obj, group.by=previous_layer, label=T)
+g00<-get_dim_plot_labelby(obj, label.by=previous_layer)
 g01<-DimPlot(obj, group.by="orig.ident", label=T)
 
 filelist<-NULL
@@ -157,7 +159,7 @@ for(pct in previous_celltypes){
   k_n_neighbors<-min(cur_npcs, 20)
   u_n_neighbors<-min(cur_npcs, 30)
   
-  curprefix<-paste0(prefix, ".", previous_layer, "_", gsub(" ", "_", pct))
+  curprefix<-paste0(prefix, ".", gsub('[/\ ]', "_", pct))
   
   if(by_harmony){
     cat(key, "harmony\n")
