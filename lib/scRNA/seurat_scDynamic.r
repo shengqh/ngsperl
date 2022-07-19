@@ -505,3 +505,5 @@ dev.off()
 if("batch" %in% colnames(obj@meta.data)){
   output_barplot(obj, "batch", "layer4", paste0(outFile, ".batch_cluster.png"))
 }
+
+save_highlight_cell_plot(paste0(prefix, ".", "layer4", ".cell.png"), obj, group.by = "layer4", reduction = "umap");
