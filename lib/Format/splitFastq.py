@@ -29,7 +29,7 @@ def get_record_per_file(logger, input_files, trunk_number):
   logger.info("Total %d reads, each file should have almost %d reads." % (total_record, result))
   return (result)
 
-def split_by_trunk(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber, startTrunk=1): 
+def split_by_trunk(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber, startTrunk=1, fill_length=3, compresslevel=1): 
   if isPairedEnd:
     read1files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 0]
     read2files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 1]
@@ -64,11 +64,11 @@ def split_by_trunk(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumbe
           
           if read_count == 0:
             if isPairedEnd:
-              fileName = f"{outputFilePrefix}.{str(trunk).zfill(2)}.{fileIndex}.fastq.gz"
+              fileName = f"{outputFilePrefix}.{str(trunk).zfill(fill_length)}.{fileIndex}.fastq.gz"
             else:
-              fileName = f"{outputFilePrefix}.{str(trunk).zfill(2)}.fastq.gz"
+              fileName = f"{outputFilePrefix}.{str(trunk).zfill(fill_length)}.fastq.gz"
             logger.info("Writing reads to %s ..." % fileName)
-            fout = gzip.open(fileName, "wt")
+            fout = gzip.open(fileName, "wt",  compresslevel=compresslevel)
 
           read_count += 1
           fout.write(line1)
@@ -92,7 +92,9 @@ def main():
   parser.add_argument('-o', '--outputPrefix', action='store', nargs='?', default="-", help="Output file prefix", required=NOT_DEBUG)
   parser.add_argument('--is_single_end', action='store', nargs='?', help="Is single end?")
   parser.add_argument('--trunk', action='store', nargs='?', type=int, default=50, help="Number of small files")
-  
+  parser.add_argument('--fill_length', action='store', nargs='?', type=int, default=3, help="Trunk name length (fill with zero)")
+  parser.add_argument('--compresslevel', action='store', nargs='?', type=int, default=1, help="Compress level, 1: fastest, 9: slowest")
+
   args = parser.parse_args()
   
   if DEBUG:
@@ -107,7 +109,7 @@ def main():
   
   inputFiles = args.input.split(",")
   
-  split_by_trunk(logger, inputFiles, not args.is_single_end, args.outputPrefix, args.trunk)
+  split_by_trunk(logger, inputFiles, not args.is_single_end, args.outputPrefix, args.trunk, args.fill_length, args.compresslevel)
   
 if __name__ == "__main__":
     main()
