@@ -1457,6 +1457,9 @@ fi
     push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
     push @table_for_correlation, ( $refseq_bacteria_table, ".aggregated.count\$" );
 
+    push @table_for_readSummary, ( $refseq_bacteria_table, '.read.count$' );
+    push @name_for_readSummary,  ( "Refseq Bacteria" );
+
     my @file_exts = ();
 
     my $task_name = $def->{task_name};
@@ -1469,7 +1472,7 @@ fi
       push(@file_exts, ".${gname}.html");
     }
 
-    my $krona_count_table = getValue($def, "krona_count_table", "tree");
+    my $krona_count_table = getValue($def, "krona_count_table", "estimated");
     my $refseq_bacteria_krona = "refseq_bacteria_krona_" . $krona_count_table;
     my $krona_ref;
     if ($krona_count_table eq "estimated"){
@@ -1487,7 +1490,7 @@ fi
       program => getValue($def, "spcount", "spcount"),
       check_program => 0,
       option => "krona -o __NAME__ ",
-      post_command => "rm -rf *.html.files",
+      post_command => "rm -rf *.html.files .cache .config",
       parameterSampleFile1_arg => "-g",
       parameterSampleFile1 => $groups,
       parameterFile1_arg => "-i",
@@ -2287,11 +2290,11 @@ fi
 
   if ($perform_class_independent_analysis) {
     my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "'); ";
-    $config->{sequence_mapped_in_categories} = {
+    $config->{top_sequence_mapped_in_categories} = {
       class                    => "CQS::UniqueR",
       perform                  => 1,
-      target_dir               => $data_visualization_dir . "/sequence_mapped_in_categories",
-      rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
+      target_dir               => $data_visualization_dir . "/top_sequence_mapped_in_categories",
+      rtemplate                => "countTableVisFunctions.R,TopReadsMappingSummary.R",
       output_file_ext          => ".ReadsMapping.Summary.csv",
       parameterFile1_ref       => [ "identical_sequence_count_table", $task_name . "_sequence.read.count\$" ],
       parameterSampleFile1_ref => \@table_for_readSummary,
@@ -2307,7 +2310,7 @@ fi
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, "sequence_mapped_in_categories";
+    push @$summary_ref, "top_sequence_mapped_in_categories";
   }
   if ($perform_short_reads_source) {
     $config->{short_reads_source} = {
