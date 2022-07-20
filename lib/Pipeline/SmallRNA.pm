@@ -1469,7 +1469,17 @@ fi
       push(@file_exts, ".${gname}.html");
     }
 
-    my $refseq_bacteria_krona = "refseq_bacteria_krona";
+    my $krona_count_table = getValue($def, "krona_count_table", "estimated");
+    my $refseq_bacteria_krona = "refseq_bacteria_krona_" . $krona_count_table;
+    my $krona_ref;
+    if ($krona_count_table eq "estimated"){
+      $krona_ref = [$refseq_bacteria_table, ".species.estimated.count"];
+    }elsif($krona_count_table eq "tree"){
+      $krona_ref = [$refseq_bacteria_table, ".tree.count"];
+    }else{
+      die "krona_count_table should be either estimated or tree, now is " . $krona_count_table;
+    }
+
     $config->{$refseq_bacteria_krona} = {
       class => "CQS::ProgramWrapper",
       target_dir => "$data_visualization_dir/$refseq_bacteria_krona",
@@ -1480,7 +1490,7 @@ fi
       parameterSampleFile1_arg => "-g",
       parameterSampleFile1 => $groups,
       parameterFile1_arg => "-i",
-      parameterFile1_ref => [$refseq_bacteria_table, ".tree.count"],
+      parameterFile1_ref => $krona_ref,
       parameterFile2_arg => "-t",
       parameterFile2     => getValue($def, "krona_taxonomy_folder"),
       output_arg => "-o",
