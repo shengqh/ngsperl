@@ -36,7 +36,7 @@ def do_symlink(source, target):
   os.symlink(source, target)
 
 def do_fastqsplitter(logger, input_fastq, start_trunk, expect_trunk, output_file, fill_length, compresslevel=1):
-  options = ['fastqsplitter', '-i', input_fastq, "-c", compresslevel]
+  options = ['fastqsplitter', '-i', input_fastq, "-c", str(compresslevel)]
   for trunk in range(start_trunk, start_trunk + expect_trunk):
     trunk_str = str(trunk).zfill(fill_length)
     trunk_file = output_file.replace("__TRUNK__", trunk_str)
