@@ -105,7 +105,8 @@ sub perform {
     $first++;
 
     my $comp_def = $comparisons->{$comparison_name};
-    my $group_names = $comp_def->{groups};
+    print "$comparison_name\n";
+    my $group_names = $comp_def->{"groups"};
 
     if ( scalar(@$group_names) != 2 ) {
       die "Comparison of $comparison_name should contains and only contains two groups!";

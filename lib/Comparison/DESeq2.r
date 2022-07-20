@@ -763,7 +763,7 @@ for(countfile_index in c(1:length(countfiles))){
 
     res$FoldChange<-2^res$log2FoldChange
 
-    baseMeanPerLvl <- sapply( levels(dds$Condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$Condition == lvl] ) )
+    baseMeanPerLvl <- sapply( levels(dds$Condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$Condition == lvl,drop=FALSE] ) )
     colnames(baseMeanPerLvl)<-paste0("baseMean_", colnames(baseMeanPerLvl))
     res<-cbind(res, baseMeanPerLvl)
 
