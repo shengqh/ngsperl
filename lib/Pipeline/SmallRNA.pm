@@ -1474,10 +1474,10 @@ fi
     my $krona_ref;
     if ($krona_count_table eq "estimated"){
       $krona_ref = [$refseq_bacteria_table, ".species.estimated.count"];
-    }elsif($krona_count_table eq "tree"){
+    }elsif($krona_count_table eq "aggregated"){
       $krona_ref = [$refseq_bacteria_table, ".tree.count"];
     }else{
-      die "krona_count_table should be either estimated or tree, now is " . $krona_count_table;
+      die "krona_count_table should be either estimated or aggregated, now is " . $krona_count_table;
     }
 
     $config->{$refseq_bacteria_krona} = {
@@ -1487,6 +1487,7 @@ fi
       program => getValue($def, "spcount", "spcount"),
       check_program => 0,
       option => "krona -o __NAME__ ",
+      post_command => "rm -rf *.html.files",
       parameterSampleFile1_arg => "-g",
       parameterSampleFile1 => $groups,
       parameterFile1_arg => "-i",
