@@ -97,17 +97,18 @@ def validate(logger, input, output):
     os.remove(error_file)
 
   if len(error_msgs) > 0:
+    logger.error("failed : all error msgs:")
     if os.path.exists(output):
       os.remove(output)
     with open(error_file, "wt") as fout:
       for error_msg in error_msgs:
+        logger.error(error_msg)
         fout.write("ERROR: %s" % error_msg)
-    logger.info("failed")
     return(1)
   else:
+    logger.info("succeed")
     with open(output, "wt") as fout:
       fout.write("READ\t%d" % total_read_count)
-    logger.info("done")
     return(0)
 
 def main():
