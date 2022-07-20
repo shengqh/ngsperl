@@ -49,7 +49,7 @@ sub perform {
   my $rg_name_regex        = get_option( $config, $section, "rg_name_regex",      "" );
   my $rg_id_regex        = get_option( $config, $section, "rg_id_regex",      "" );
 
-  my $output_unmapped_bam = get_option( $config, $section, "output_unmapped_bam", 0 );
+  my $output_unmapped_fastq = get_option( $config, $section, "output_unmapped_fastq", 0 );
 
   my $sort_by_thread        = get_option( $config, $section, "sort_by_thread",     0 );
   my $samtools_sort_thread = $sort_by_thread ? "-@ $thread":"";
@@ -160,7 +160,7 @@ if [[ ! -e ${unsorted_bam_file}.succeed ]]; then
 fi
 ";
 
-    if($output_unmapped_bam){
+    if($output_unmapped_fastq){
       #http://www.novocraft.com/documentation/novoalign-2/novoalign-ngs-quick-start-tutorial/1040-2/
       print $pbs "
 
@@ -170,7 +170,7 @@ if [[ -e ${unsorted_bam_file}.succeed ]]; then
   samtools view -u -f 8 -F 260 $unsorted_bam_file  > ${sample_name}.tmps2.bam
   samtools view -u -f 12 -F 256 $unsorted_bam_file > ${sample_name}.tmps3.bam
 
-  samtools merge -u - ${sample_name}.tmps[123].bam | samtools sort -n - ${sample_name}.unmapped
+  samtools merge -u - ${sample_name}.tmps[123].bam | samtools sort -n - -o ${sample_name}.unmapped.bam
   status=\$?
   if [[ \$status -eq 0 ]]; then
     rm ${sample_name}.tmps[123].bam
@@ -329,6 +329,7 @@ sub result {
 
   my $sortByCoordinate = get_option( $config, $section, "sort_by_coordinate", 1 );
   my %raw_files        = %{ get_raw_files( $config, $section ) };
+  my $output_unmapped_fastq = get_option( $config, $section, "output_unmapped_fastq", 0 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
@@ -346,6 +347,10 @@ sub result {
     push( @result_files, $final_file . ".stat" );
     if($sortByCoordinate){
       push( @result_files, $final_file . ".chromosome.count" );
+    }
+    if($output_unmapped_fastq){
+      push( @result_files, "${result_dir}/${sample_name}.unmapped.1.fq.gz" );
+      push( @result_files, "${result_dir}/${sample_name}.unmapped.2.fq.gz" );
     }
     push( @result_files, "${result_dir}/${sample_name}.bamstat" );
     push( @result_files, "${result_dir}/${sample_name}.bwa.version" );
