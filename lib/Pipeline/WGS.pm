@@ -457,7 +457,12 @@ sub getConfig {
   my $gatk_index_snv = "SNV_index";
   my $use_hard_filter = getValue($def, "use_hard_filter");
 
-  my $bam_section = $def->{bam_file_section};
+  my $bam_section = undef;
+  if (getValue($def, "is_input_bam", 0)){
+    $bam_section = $def->{files};
+  }elsif(defined $def->{bam_file_section}){
+    $bam_section = $def->{bam_file_section};
+  }
   if (not defined $bam_section) {
     my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
 
