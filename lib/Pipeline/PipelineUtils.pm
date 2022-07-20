@@ -68,6 +68,8 @@ our %EXPORT_TAGS = (
     annotateNearestGene
     checkFileGroupPairNames
     addStarFeaturecount
+    add_pairedend_fastq_gather
+    add_pairedend_fastq_to_ubam
     add_BWA
     add_BWA_WGS
     add_BWA_summary
@@ -2083,7 +2085,7 @@ sub add_BWA {
     target_dir            => "${target_dir}/${bwa_name}",
     option                => getValue( $def, "bwa_option" ),
     bwa_index             => getValue( $def, "bwa_fasta" ),
-    output_unmapped_bam   => getValue( $def, "bwa_output_unmapped_bam", 0),
+    output_unmapped_fastq   => getValue( $def, "bwa_output_unmapped_fastq", 0),
     source_ref            => $source_ref,
     output_to_same_folder => 1,
     rg_name_regex         => $rg_name_regex,
@@ -2224,6 +2226,8 @@ sub add_split_fastq_dynamic {
 
   my $min_file_size_gb = getValue($def, "split_fastq_min_file_size_gb", 10);
   my $trunk_file_size_gb = getValue($def, "split_fastq_trunk_file_size_gb", 5);
+  
+  my $options = getValue($def, "call_fastqsplitter", 1) ? "--call_fastqsplitter ":"";
 
   $config->{ $split_fastq } = {
     class       => "CQS::ProgramWrapperOneToMany",
@@ -2232,7 +2236,7 @@ sub add_split_fastq_dynamic {
     option      => "",
     interpretor => "python3",
     program     => "../Format/splitFastqDynamic.py",
-    option      => "--min_file_size_gb $min_file_size_gb --trunk_file_size_gb $trunk_file_size_gb --fill_length 3",
+    option      => $options . "--min_file_size_gb $min_file_size_gb --trunk_file_size_gb $trunk_file_size_gb --fill_length 3",
     source_ref      => $source_ref,
     source_arg            => "-i",
     source_join_delimiter => ",",
@@ -2294,6 +2298,123 @@ sub add_split_fastq {
   push @$tasks, (  $split_fastq );
 }
 
+sub add_pairedend_fastq_gather {
+  my ($config, $def, $tasks, $target_dir, $merge_fastq, $read1_ref, $read2_ref) = @_;
+  $config->{$merge_fastq} = {
+    class                 => "CQS::ProgramWrapperManyToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$merge_fastq",
+    option                => "
+rm -f __NAME__.failed __NAME__.succeed
+
+cat __INPUT__ > __NAME__.unmapped.1.fq.gz
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  rm __NAME__.unmapped.1.fq.gz
+  touch __NAME__.failed
+else
+  cat __INPUT2__ > __NAME__.unmapped.2.fq.gz
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    rm __NAME__.unmapped.1.fq.gz __NAME__.unmapped.2.fq.gz
+    touch __NAME__.failed
+  else
+    touch __NAME__.succeed
+  fi
+fi
+
+#__OUTPUT__
+",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "",
+    source_ref            => $read1_ref,
+    source_arg            => "",
+    source_join_delimiter => " ",
+    parameterSampleFile2_ref            => $read2_ref,
+    parameterSampleFile2_arg            => "",
+    parameterSampleFile2_join_delimiter => " ",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_file_prefix    => ".unmapped.1.fq.gz",
+    output_file_ext       => ".unmapped.1.fq.gz,.unmapped.2.fq.gz",
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
+  push(@$tasks, $merge_fastq);
+}
+
+sub add_pairedend_fastq_to_ubam {
+  my ($config, $def, $tasks, $target_dir, $ubam_fastq, $fastq_ref) = @_;
+  $config->{$ubam_fastq} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$ubam_fastq",
+    docker_prefix         => "gatk4_",
+    option                => "
+rm -f __NAME__.failed __NAME__.succeed
+
+gatk FastqToSam \\
+  -FASTQ __FILE__ \\
+  -OUTPUT __NAME__.tmp.bam \\
+  -READ_GROUP_NAME __NAME__ \\
+  -SAMPLE_NAME __NAME__ \\
+  -LIBRARY_NAME __NAME__ 
+
+gatk RevertSam \\
+  -I __NAME__.tmp.bam \\
+  -O __NAME__.unmapped.bam \\
+  --SANITIZE true \\
+  --MAX_DISCARD_FRACTION 0.005 \\
+  --ATTRIBUTE_TO_CLEAR XT \\
+  --ATTRIBUTE_TO_CLEAR XN \\
+  --ATTRIBUTE_TO_CLEAR AS \\
+  --ATTRIBUTE_TO_CLEAR OC \\
+  --ATTRIBUTE_TO_CLEAR OP \\
+  --SORT_ORDER queryname \\
+  --RESTORE_ORIGINAL_QUALITIES true \\
+  --REMOVE_DUPLICATE_INFORMATION true \\
+  --REMOVE_ALIGNMENT_INFORMATION true
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  rm __NAME__.tmp.bam __NAME__.unmapped.bam
+  touch __NAME__.failed
+else
+  rm __NAME__.tmp.bam
+  touch __NAME__.succeed
+fi
+
+#__OUTPUT__
+",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "",
+    source_ref            => $fastq_ref,
+    source_arg            => "",
+    source_join_delimiter => " -FASTQ2 ",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_file_prefix    => ".unmapped.bam",
+    output_file_ext       => ".unmapped.bam",
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    },
+  };
+
+  push(@$tasks, $ubam_fastq);
+}
+
 sub add_BWA_and_summary_scatter {
   my ($config, $def, $tasks, $target_dir, $source_ref) = @_;
 
@@ -2330,6 +2451,15 @@ sub add_BWA_and_summary_scatter {
   my $bwa_summary = "bwa_03_summary";
   add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
 
+  if (getValue($def, "bwa_output_unmapped_fastq", 0)){
+    my $merge_fastq = "bwa_04_unmapped_fastq";
+    add_pairedend_fastq_gather($config, $def, $tasks, $target_dir, $merge_fastq, [$bwa, ".1.fq.gz"], [$bwa, ".2.fq.gz"]);
+
+    if (getValue($def, "bwa_output_unmapped_bam", 0)){
+      my $ubam_fastq = "bwa_05_unmapped_bam";
+      add_pairedend_fastq_to_ubam($config, $def, $tasks, $target_dir, $ubam_fastq, [$merge_fastq, ".fq.gz"]);
+    }
+  }
   return( [ $mergeBam, ".bam\$" ], $mergeBam);
 }
 
