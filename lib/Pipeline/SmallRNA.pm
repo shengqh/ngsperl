@@ -1469,7 +1469,7 @@ fi
       push(@file_exts, ".${gname}.html");
     }
 
-    my $krona_count_table = getValue($def, "krona_count_table", "estimated");
+    my $krona_count_table = getValue($def, "krona_count_table", "tree");
     my $refseq_bacteria_krona = "refseq_bacteria_krona_" . $krona_count_table;
     my $krona_ref;
     if ($krona_count_table eq "estimated"){
