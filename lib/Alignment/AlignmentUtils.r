@@ -72,7 +72,13 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
     chromosomeFilePrefix = paste0(outFilePrefix, ".chromosome")
   }
 
-  write.csv(file=paste0(chromosomeFilePrefix, ".chromosome.csv"), final, row.names=F)
+  is_bam_scattered<-!is.na(rg_name_regex)
+
+  if(is_bam_scattered){
+    write.csv(file=paste0(chromosomeFilePrefix, ".scattered.csv"), final, row.names=F)
+  }else{
+    write.csv(file=paste0(chromosomeFilePrefix, ".csv"), final, row.names=F)
+  }
 
   chroms=paste0("chr", c(1:22,'X','Y','M', 'MT'))
   if(!any(all_chroms %in% chroms)){
@@ -90,7 +96,11 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
 
   noreads<-final[final$NoRead,]
   noreads<-noreads[!duplicated(noreads$Sample),]
-  write.table(file=paste0(chromosomeFilePrefix, ".noread.txt"), noreads, sep="\t", quote=F, row.names=F)
+  if(is_bam_scattered){
+    write.table(file=paste0(chromosomeFilePrefix, ".scattered.noread.txt"), noreads, sep="\t", quote=F, row.names=F)
+  }else{
+    write.table(file=paste0(chromosomeFilePrefix, ".noread.txt"), noreads, sep="\t", quote=F, row.names=F)
+  }
 
   colors=c("black","red")
   names(colors)=c("FALSE","TRUE")
@@ -107,14 +117,14 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
     dev.off()
   }
 
-  draw_figure(final, paste0(chromosomeFilePrefix, ".png"))
-
   if(!is.na(rg_name_regex)){
     final2<-final[,c("Sample", "Chrom", "Reads")]
     final2$Sample<-str_match(final2$Sample, rg_name_regex)[,2]
     final3 <- aggregate(Reads ~ Sample + Chrom, data = final2, FUN = sum, na.rm = TRUE)
     final3$NoRead=final3$Reads==0
-    draw_figure(final3, paste0(chromosomeFilePrefix, ".aggr.png"))
-    write.csv(final3, paste0(chromosomeFilePrefix, ".aggr.csv"))
+    draw_figure(final3, paste0(chromosomeFilePrefix, ".png"))
+    write.csv(final3, paste0(chromosomeFilePrefix, ".csv"))
+  }else{
+    draw_figure(final, paste0(chromosomeFilePrefix, ".png"))
   }
 }
