@@ -529,7 +529,13 @@ sub getScRNASeqConfig {
         if(getValue($def, "perform_multires_subcluster", 0)){
           my $subcluster_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_subcluster";
           my $multires_resolution = getValue( $def, "multires_resolution" );
-          my $multires_celltype = "SCT_snn_res." . $multires_resolution . "_celltype_summary";
+
+          my $multires_celltype;
+          if(getValue( $def, "by_sctransform" )){
+            $multires_celltype = "SCT_snn_res." . $multires_resolution . "_celltype_summary";
+          }else{
+            $multires_celltype = "RNA_snn_res." . $multires_resolution . "_celltype_summary";
+          }
           my $cur_options = {
             reduction => $reduction, 
             celltype_layer => $multires_celltype,
