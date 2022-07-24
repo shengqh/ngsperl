@@ -73,6 +73,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "filter_variants_by_allele_frequency",            1 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
+  initDefaultValue( $def, "filter_variants_by_min_inbreeding_coeff",        -0.2 );
   initDefaultValue( $def, "filter_variants_fq_equal_1",                     0 );
 
   initDefaultValue( $def, "perform_cnv_gatk4_cohort", 1 );
