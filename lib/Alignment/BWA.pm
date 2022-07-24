@@ -174,12 +174,10 @@ if [[ -e ${unsorted_bam_file}.succeed ]]; then
   status=\$?
   if [[ \$status -eq 0 ]]; then
     rm ${sample_name}.tmps[123].bam
-    bedtools bamtofastq -i ${sample_name}.unmapped.bam -fq ${sample_name}.unmapped.1.fq -fq2 ${sample_name}.unmapped.2.fq
+    samtools fastq -1 ${sample_name}.unmapped.1.fq -2 ${sample_name}.unmapped.2.fq ${sample_name}.unmapped.bam 
     status=\$?
     if [[ \$status -eq 0 ]]; then
       rm ${sample_name}.unmapped.bam
-      gzip ${sample_name}.unmapped.1.fq
-      gzip ${sample_name}.unmapped.2.fq
     fi
   fi
 fi
