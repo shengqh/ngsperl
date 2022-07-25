@@ -1,9 +1,23 @@
-source("scRNA_func.r")
+#rm(list=ls()) 
+outFile='AK6383'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
+parFile2='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
+parFile3=''
 
+
+setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_byCell/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
 library(Seurat)
+library(testit)
 
 sumcount<-function(ct_count, names, sample_df){
   result<-lapply(names, function(x){
@@ -25,7 +39,9 @@ foldChange<-as.numeric(myoptions$foldChange)
 useRawPvalue<-ifelse(myoptions$useRawPvalue == "0", FALSE, TRUE)
 cluster_name=myoptions$cluster_name
 
-obj<-read_object(parFile1, parFile2, cluster_name)
+if(!exists('obj')){
+  obj<-read_object(parFile1, parFile2, cluster_name)
+}
 
 clusterDf<-obj@meta.data
 
@@ -138,10 +154,8 @@ for (comp in comparisonNames){
     }
   }else{
     cts = unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name])
-    prefixList<-gsub(" ", "_", cts)
-    prefixList<-gsub(":", "_", prefixList)
-    prefixList<-gsub("_+", "_", prefixList)
-    
+    prefixList<-gsub('[ /:_]+', '_', cts)
+
     idx<-1
     for (idx in c(1:length(cts))){
       ct = cts[idx]

@@ -205,6 +205,24 @@ sub getScRNASeqConfig {
 
   $config->{bam_files} = $def->{bam_files};
 
+  my $perform_comparison = getValue( $def, "perform_comparison", 0 );
+  if(getValue( $def, "perform_edgeR" )){
+    $perform_comparison = 1;
+  }
+  my $DE_by_sample = getValue( $def, "DE_by_sample" );
+  my $DE_by_cell = getValue( $def, "DE_by_cell" );
+
+  my @deByOptions = ();
+  if ( getValue( $def, "DE_by_celltype" ) ) {
+    push( @deByOptions, "DE_by_celltype" );
+  }
+  if ( getValue( $def, "DE_by_cluster" ) ) {
+    push( @deByOptions, "DE_by_cluster" );
+  }
+
+  print("perform_comparison=" . $perform_comparison , "\n");
+  print("DE_by_sample=" . $DE_by_sample , "\n");
+
   my $perform_split_hto_samples = getValue($def, "perform_split_hto_samples", 0);
   if($perform_split_hto_samples){
     my $hto_samples = getValue($def, "HTO_samples");
@@ -389,7 +407,8 @@ sub getScRNASeqConfig {
             $localization_ref = $obj_ref;
 
             if(defined $def->{groups}){
-              my $group_umap_task = add_group_umap($config, $def, $summary, $target_dir, $dynamicKey, $obj_ref);
+              my $group_umap_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_group_umap";
+              add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, [$choose_task, ".final.rds"]);
             }
 
             if(defined $clonotype_convert){
@@ -546,6 +565,26 @@ sub getScRNASeqConfig {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
             my $table = getValue($def, "multires_subclusters_table");
             addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
+
+            my $obj_ref = [$choose_task, ".final.rds"];
+            if(defined $def->{groups}){
+              my $group_umap_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_group_umap";
+              add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, $obj_ref);
+            }
+
+            my $pseudo_count_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_pseudo_count";
+            add_pseudo_count($config, $def, $summary, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
+
+            if ( $perform_comparison ) {
+              if ( defined $def->{"DE_cluster_pairs"} ) {
+                addEdgeRTask( $config, $def, $summary, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 1, 0, $DE_by_cell );
+              }
+
+              for my $deByOption (@deByOptions) {
+                my $DE_by_celltype = $deByOption eq "DE_by_celltype";
+                my $edgeRtask = addEdgeRTask( $config, $def, $summary, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 0, $DE_by_celltype, $DE_by_cell );
+              }
+            }
           }
         }
       }
@@ -973,24 +1012,6 @@ sub getScRNASeqConfig {
           push( @$summary, $tcell_clusters_task );
         }
 
-        my $perform_comparison = getValue( $def, "perform_comparison", 0 );
-        if(getValue( $def, "perform_edgeR" )){
-          $perform_comparison = 1;
-        }
-        my $DE_by_sample = getValue( $def, "DE_by_sample" );
-        my $DE_by_cell = getValue( $def, "DE_by_cell" );
-
-        my @deByOptions = ();
-        if ( getValue( $def, "DE_by_celltype" ) ) {
-          push( @deByOptions, "DE_by_celltype" );
-        }
-        if ( getValue( $def, "DE_by_cluster" ) ) {
-          push( @deByOptions, "DE_by_cluster" );
-        }
-
-        print("perform_comparison=" . $perform_comparison , "\n");
-        print("DE_by_sample=" . $DE_by_sample , "\n");
-        
         if ( $perform_comparison ) {
           if ( defined $def->{"DE_cluster_pairs"} ) {
             addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell );
