@@ -1925,6 +1925,16 @@ sub get_covariances_by_pattern {
   my ($def) = @_;
 
   my $files = $def->{files};
+  if(getValue($def, "perform_split_hto_samples", 0)){
+    $files = {};
+    my $HTO_samples = getValue($def, "HTO_samples");
+    for my $exp (keys %$HTO_samples){
+      my $samples = $HTO_samples->{$exp};
+      for my $sample (values %$samples){
+        $files->{$sample} = [];
+      }
+    }
+  }
   my $covariance_patterns = $def->{covariance_patterns};
   my $covariances = [sort keys %$covariance_patterns];
   my $samplenames = [sort keys %$files];
