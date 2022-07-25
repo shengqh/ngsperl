@@ -2,6 +2,10 @@ library(harmony)
 library(cowplot)
 library(Seurat)
 library(tools)
+library(scales)
+library(ggplot2)
+library(patchwork)
+library(Matrix.utils)
 
 get_hue_colors<-function(n, random.seed=20220606){
   ccolors<-hue_pal()(n)
@@ -676,7 +680,7 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file){
   dev.off()
 }
 
-read_bubble_genes<-function(bubble_file, allgenes=NA){
+read_bubble_genes<-function(bubble_file, allgenes=c()){
   library("readxl")
   library("tidyr")
   
@@ -703,10 +707,10 @@ read_bubble_genes<-function(bubble_file, allgenes=NA){
   
   genes$gene<-gene_names
   
-  miss_genes=genes$gene[!(genes$gene %in% allgenes)]
-  writeLines(miss_genes, con="miss_gene.csv")
-  
-  if(!is.na(allgenes)){
+  if(length(allgenes) > 0){
+    miss_genes=setdiff(genes$gene, allgenes)
+    writeLines(miss_genes, con="miss_gene.csv")
+
     genes<-genes[genes$gene %in% allgenes,]
   }
   genes$cell_type=factor(genes$cell_type, levels=unique(genes$cell_type))
@@ -1108,3 +1112,44 @@ save_highlight_cell_plot<-function(filename, obj, group.by, reduction="umap"){
   print(g)
   dev.off()
 }
+
+sumcount<-function(ct_count, groupings){
+  rescount<-t(aggregate.Matrix(t(ct_count), groupings=groupings, fun="sum"))
+  psum<-rowSums(rescount)
+  rescount<-rescount[psum>0,]
+  return(rescount)
+}
+
+get_seurat_sum_count<-function(obj, cluster_name){
+  clusterDf<-obj@meta.data
+  cts = as.character(unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name]))
+  prefixList<-gsub('[ /:_]+', '_', cts)
+
+  res_files=c()
+
+  idx<-1
+  for (idx in c(1:length(cts))){
+    ct = cts[idx]
+    cat(ct, "\n")
+    
+    prefix = prefixList[idx]
+    
+    clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
+    de_obj<-subset(obj, cells=rownames(clusterCt))
+
+    ct_count<-de_obj@assays$RNA@counts
+    groupings<-unlist(de_obj$orig.ident)
+    p_count<-sumcount(ct_count, groupings)
+
+    p_file=paste0(prefix, ".pseudo_count.csv")
+    
+    write.csv(p_count, p_file)
+    
+    res_files<-c(res_files, file_path_as_absolute(p_file))
+  }
+
+  res_df<-data.frame("cluster"=cts, "prefix"=prefixList, "pusedo_file"=res_files)
+  return(res_df)
+}
+
+
