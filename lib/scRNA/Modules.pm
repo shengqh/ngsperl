@@ -32,6 +32,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_gliph2
 
   add_group_umap
+  add_pseudo_count
 
   add_doublet_check
 
@@ -851,6 +852,7 @@ sub addEdgeRTask {
   my $curClusterName = undef;
   my $curClusterDisplayName = undef;
 
+  my $edgeRscript = "../scRNA/edgeR.r";
   if ($bBetweenCluster) {
     $edgeRtaskname  = $edgeRtaskname . "_betweenCluster_byCell";
     $curClusterName = getValue( $def, "DE_cluster_name" );
@@ -879,6 +881,7 @@ sub addEdgeRTask {
       $rCodeDic->{"filter_minTPM"}=getValue( $def, "DE_by_sample_filter_minTPM" );
       $rCodeDic->{"filter_samplePercentage"}=getValue( $def, "DE_by_sample_filter_cellPercentage" );
       $edgeRtaskname = $edgeRtaskname . "_bySample";
+      $edgeRscript = "../scRNA/edgeR_pseudo.r";
     }
 
     $groups = getValue( $def, "groups" );
@@ -890,7 +893,7 @@ sub addEdgeRTask {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $edgeRtaskname,
-    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/edgeR.r",
+    rtemplate            => "../scRNA/scRNA_func.r,${edgeRscript}",
     parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
     parameterFile2_ref   => [ $celltype_task, $celltype_cluster_file ],
     parameterSampleFile1 => $groups,
@@ -919,6 +922,7 @@ sub addEdgeRTask {
     parameterSampleFile1 => {
       "cluster_name" => $curClusterName,
       "bBetweenCluster" => $bBetweenCluster,
+      "DE_by_cell" => $DE_by_cell,
     },
     sh_direct          => 1,
     pbs                => {
@@ -1233,7 +1237,7 @@ sub addSubClusterChoose {
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $celltype_subclusters_table,
     output_file_ext      => ".meta.rds",
-    output_other_ext  => ".final.rds,.umap.png",
+    output_other_ext  => ".final.rds,.umap.csv,.umap.png",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
@@ -1754,10 +1758,8 @@ sub add_gliph2 {
 }
 
 sub add_group_umap {
-  my ($config, $def, $summary, $target_dir, $section_key, $obj_ref) = @_;
+  my ($config, $def, $summary, $target_dir, $group_umap_task, $obj_ref) = @_;
 
-  my $seurat_task = $obj_ref->[0];
-  my $group_umap_task = $seurat_task . get_next_index($def, $section_key) . "_group_umap";
   $config->{$group_umap_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -1774,7 +1776,29 @@ sub add_group_umap {
     },
   };
   push( @$summary, $group_umap_task );
-  return($group_umap_task);
+}
+
+sub add_pseudo_count {
+  my ($config, $def, $summary, $target_dir, $task_name, $obj_ref, $group_by) = @_;
+
+  $config->{$task_name} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/pseudo_count.r",
+    parameterFile1_ref       => $obj_ref,
+    parameterSampleFile1     => {
+      group_by => $group_by
+    },
+    output_file_ext      => ".pusedo_count.list.csv",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$summary, $task_name );
 }
 
 sub add_doublet_check {
