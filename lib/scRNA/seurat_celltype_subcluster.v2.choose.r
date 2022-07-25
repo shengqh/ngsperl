@@ -276,6 +276,8 @@ if(output_heatmap){
 }
 saveRDS(obj, paste0(outFile, ".final.rds"))
 
+write.csv(obj[["umap"]]@cell.embeddings, paste0(outFile, ".umap.csv"))
+
 nclusters<-length(unique(obj$seurat_clusters))
 
 if(output_heatmap){
