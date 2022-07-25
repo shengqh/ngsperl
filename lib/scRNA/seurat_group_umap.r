@@ -3,17 +3,19 @@ outFile='AK6383'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_03_choose_res/result/AK6383.final.rds'
+parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_04_group_umap/result')
+setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_04_group_umap/result')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
-obj<-read_object(parFile1)
+if(!exists('obj')){
+  obj<-read_object(parFile1)
+}
 
 groups<-read.table(parSampleFile1, sep="\t", stringsAsFactors = F)
 groups_map<-unlist(split(groups$V2, groups$V1))
