@@ -1078,7 +1078,10 @@ sub addAnnovar {
     $annovar_name = $prefix . "_annovar";
   }
 
-  my $isBed = $source_pattern =~ /.bed$/;
+  my $isBed=0;
+  if(defined $source_pattern){
+    $isBed = $source_pattern =~ /.bed$/;
+  } 
 
   my $source_ref = ( defined($source_pattern) and ( $source_pattern ne "" ) ) ? [ $source_name, $source_pattern ] : $source_name;
   $config->{$annovar_name} = {
@@ -2182,7 +2185,7 @@ sub add_merge_bam {
     output_to_same_folder => 1,
     output_arg            => "-o",
     output_file_prefix    => ".bam",
-    output_file_ext       => ".bam,.bai",
+    output_file_ext       => ".bam,.bam.bai",
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=8",
@@ -3091,11 +3094,16 @@ sub add_gsea {
 
 sub add_maf_filter {
   my ($config, $def, $tasks, $target_dir, $maf_filter_name, $source_ref ) = @_;
+
+  my $allele_frequency_percentage = getValue($def, "filter_variants_by_allele_frequency_percentage");
+  my $allele_frequency_maf = getValue($def, "filter_variants_by_allele_frequency_maf");
+  my $min_inbreeding_coeff = getValue($def, "filter_variants_by_min_inbreeding_coeff");
+
   $config->{$maf_filter_name} = {
     class                 => "CQS::ProgramWrapper",
     perform               => 1,
     target_dir            => "${target_dir}/${maf_filter_name}",
-    option                => "-p " . $def->{"filter_variants_by_allele_frequency_percentage"} . " -f " . $def->{"filter_variants_by_allele_frequency_maf"},
+    option                => "-p $allele_frequency_percentage -f $allele_frequency_maf --min_inbreeding_coeff $min_inbreeding_coeff",
     interpretor           => "python3",
     program               => "../Annotation/filterVcf.py",
     parameterFile1_arg    => "-i",
