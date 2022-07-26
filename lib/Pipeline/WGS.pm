@@ -469,11 +469,11 @@ sub getConfig {
     my $bam_ref;
     my $bam_task;
     if ($perform_split_fastq){
-      my ($bam_ref, $bam_task) = add_BWA_and_summary_scatter($config, $def, $individual, $target_dir, "files");
+      my ($bam_ref, $bam_task) = add_BWA_and_summary_scatter($config, $def, $individual, $target_dir, $source_ref);
       $bam_section = $bam_ref;
     } else {
       my $bam_task = "bwa_wgs";
-      add_BWA_WGS($config, $def, $individual, $target_dir, $bam_task, "files");
+      add_BWA_WGS($config, $def, $individual, $target_dir, $bam_task, $source_ref);
       $bam_section = [ $bam_task, ".bam\$" ];
     }
   }
