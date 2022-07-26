@@ -1,4 +1,4 @@
-#rm(list=ls()) 
+rm(list=ls()) 
 outFile='AK6383'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
@@ -98,7 +98,7 @@ for (prefix in rownames(edgeRres)){
         cpmvalues<-read.csv(cpmFile)
         melt_cpm<-melt(cpmvalues, id.vars = 'X')
         colnames(melt_cpm)<-c("Gene", "Sample", "CPM")
-        melt_cpm$Group<-factor(gdismap[melt_cpm$Sample], levels=names(groupColors))
+        melt_cpm$Group<-factor(gdismap[as.character(melt_cpm$Sample)], levels=names(groupColors))
       }
       
       coords<-data.frame(cell_obj@reductions$umap@cell.embeddings)
