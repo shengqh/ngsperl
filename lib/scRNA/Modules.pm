@@ -4,6 +4,7 @@ package scRNA::Modules;
 use strict;
 use warnings;
 require Exporter;
+use File::Basename;
 use CQS::ConfigUtils;
 use Pipeline::PipelineUtils;
 
@@ -286,7 +287,7 @@ sub addEncloneToClonotype {
 }
 
 sub addEncloneToConsensus {
-  my ( $config, $def, $tasks, $target_dir, $taskname, $source_ref, $cdr3_ref ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $taskname, $source_ref, $cdr3_ref, $celltype_ref ) = @_;
 
   $config->{$taskname} = {
     class                    => "CQS::ProgramWrapper",
@@ -294,15 +295,17 @@ sub addEncloneToConsensus {
     target_dir               => "${target_dir}/$taskname",
     option                   => "",
     interpretor              => "python3",
-    program                  => "../scRNA/enclone_to_consensus_annotations.py",
+    program                  => "../scRNA/enclone_to_consensus_annotations_celltype.py",
     parameterFile1_arg => "-i",
     parameterFile1_ref => $source_ref,
     parameterFile2_arg => "-c",
     parameterFile2_ref => $cdr3_ref,
+    parameterFile3_arg => "--celltype_file",
+    parameterFile3_ref => $celltype_ref,
     output_arg               => "-o",
-    output_file              => "metadata",
-    output_file_ext          => ".txt",
-    output_no_name           => 1,
+    output_file              => ".meta.list",
+    output_file_ext          => ".meta.list",
+    output_no_name           => 0,
     output_to_same_folder    => 1,
     sh_direct                => 1,
     pbs                      => {
@@ -1237,7 +1240,7 @@ sub addSubClusterChoose {
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $celltype_subclusters_table,
     output_file_ext      => ".meta.rds",
-    output_other_ext  => ".final.rds,.umap.csv,.umap.png",
+    output_other_ext  => ".final.rds,.meta.csv,.umap.csv,.umap.png",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
