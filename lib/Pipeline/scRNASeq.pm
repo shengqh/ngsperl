@@ -302,6 +302,8 @@ sub getScRNASeqConfig {
       }
     }
 
+    my $merge_task = undef;
+    my $enclone_task = undef;
     my $clonotype_convert = undef;
     my $clonotype_db = undef;
     if ($perform_clonotype_analysis){
@@ -310,14 +312,13 @@ sub getScRNASeqConfig {
         $clonotype_ref = ["vdj_json_files", "all_contig_annotations.json"];
       }
       
-      my $merge_task = addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_merge", $clonotype_ref);
-      my $enclone_task = addEnclone($config, $def, $summary, "clonotype". get_next_index($def, $clono_key) . "_enclone", $target_dir, [$merge_task, ".json\$"] );
+      $merge_task = addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_merge", $clonotype_ref);
+      $enclone_task = addEnclone($config, $def, $summary, "clonotype". get_next_index($def, $clono_key) . "_enclone", $target_dir, [$merge_task, ".json\$"] );
       $clonotype_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_convert", [$enclone_task, ".pchain4.csv"], [$merge_task, ".cdr3\$"]);
       $clonotype_db = addClonotypeDB($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_db", $clonotype_convert);
       my $clonotype_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_consensus", [$enclone_task, ".pchain4.pcell.csv"], [$merge_task, ".cdr3\$"]);
       my $immunarch_task = addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch", $clonotype_consensus);
     }
-
 
     if ( getValue($def, "perform_individual_qc", 1) ){
       add_invidual_qc($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file);
@@ -393,6 +394,8 @@ sub getScRNASeqConfig {
               if( getValue($def, "perform_gliph2", 0) ) {
                 my $gliph2_task = add_gliph2($config, $def, $summary, $target_dir, $meta_ref, $clonotype_convert, $hla_merge);
               }
+              my $clonotype_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_consensus_tcell", [$enclone_task, ".pchain4.pcell.csv"], [$merge_task, ".cdr3\$"], [ $choose_task, ".meta.csv" ]);
+              my $immunarch_task = addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch_tcell", $clonotype_consensus);
             }
 
             if(getValue($def, "perform_dynamic_signacX")){
@@ -495,7 +498,6 @@ sub getScRNASeqConfig {
         };
         push( @$summary, $gene_ratio_localization_map_task );
       }
-
 
       if(getValue($def, "perform_multires", 0)){
         my $multiresKey = "multires";
