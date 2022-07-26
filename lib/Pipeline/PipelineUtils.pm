@@ -2430,6 +2430,15 @@ sub add_BWA_and_summary_scatter {
 
   my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
   if($perform_split_fastq eq "by_dynamic") {
+    if (is_array($source_ref)){
+      if ($source_ref->[0] ne "files"){
+        die "split fastq files can only work when source_ref is files directly, now is [" . join(',', @$source_ref) . "]";
+      }
+    }else{
+      if ($source_ref ne "files"){
+        die "split fastq files can only work when source_ref is files directly, now is $source_ref";
+      }
+    }
     add_split_fastq_dynamic($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
   }elsif($perform_split_fastq eq "by_file"){
     $config->{ $splitFastq } = {
