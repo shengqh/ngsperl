@@ -574,8 +574,8 @@ sub getScRNASeqConfig {
               add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, $obj_ref);
             }
 
-            my $pseudo_count_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_pseudo_count";
-            add_pseudo_count($config, $def, $summary, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
+            #my $pseudo_count_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_pseudo_count";
+            #add_pseudo_count($config, $def, $summary, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
 
             if ( $perform_comparison ) {
               if ( defined $def->{"DE_cluster_pairs"} ) {
