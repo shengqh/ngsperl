@@ -174,7 +174,7 @@ if [[ -e ${unsorted_bam_file}.succeed ]]; then
   status=\$?
   if [[ \$status -eq 0 ]]; then
     rm ${sample_name}.tmps[123].bam
-    samtools fastq -1 ${sample_name}.unmapped.1.fq -2 ${sample_name}.unmapped.2.fq ${sample_name}.unmapped.bam 
+    samtools fastq -1 ${sample_name}.unmapped.1.fq.gz -2 ${sample_name}.unmapped.2.fq.gz ${sample_name}.unmapped.bam 
     status=\$?
     if [[ \$status -eq 0 ]]; then
       rm ${sample_name}.unmapped.bam
