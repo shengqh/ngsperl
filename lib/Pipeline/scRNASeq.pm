@@ -151,7 +151,10 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_CHETAH", 0 );
 
-  initDefaultValue( $def, "perform_dynamic_cluster", 1 );
+  initDefaultValue( $def, "perform_multires", 1 );
+  
+
+  initDefaultValue( $def, "perform_dynamic_cluster", 0 );
   
   if(getValue($def, "species") ne "Hs"){
     if(getValue($def, "perform_SignacX", 0)){
