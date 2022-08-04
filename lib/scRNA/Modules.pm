@@ -1486,6 +1486,13 @@ sub add_souporcell {
   my $common_variants_option = ($common_variants eq "") ? "" : "--common_variants $common_variants";
   my $souporcell_thread = getValue($def, "souporcell_cpu", "16");
 
+  my $bam_files =  getValue($def, "bam_files");
+  my $souporcell_tag_number = getValue($def, "souporcell_tag_number");
+  my $souporcell_bam_files = {};
+  for my $sample (keys %$souporcell_tag_number){
+    $souporcell_bam_files->{$sample} = $bam_files->{$sample};
+  }
+
   $config->{$hto_souporcell_task} = {
     class => "CQS::ProgramWrapperOneToOne",
     target_dir => "${target_dir}/$hto_souporcell_task",
@@ -1498,7 +1505,7 @@ sub add_souporcell {
 #__OUTPUT__
 ",
     source_arg => "-i",
-    source_ref => "bam_files",
+    source => $souporcell_bam_files,
     parameterSampleFile2_arg => "-b",
     parameterSampleFile2_ref => [ $preparation_task, ".barcodes.tsv"],
     parameterSampleFile3_arg => "-k",
@@ -1509,7 +1516,7 @@ sub add_souporcell {
     output_file_ext => "clusters.tsv",
     output_to_same_folder => 0,
     can_result_be_empty_file => 0,
-    use_tmp_folder => getValue($def, "use_tmp_folder", 1),
+    use_tmp_folder => getValue($def, "use_tmp_folder_souporcell", 0),
     sh_direct   => 0,
     pbs => {
       "nodes"     => "1:ppn=" . $souporcell_thread,
