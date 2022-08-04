@@ -1,5 +1,18 @@
-source("split_samples_utils.r")
+rm(list=ls()) 
+outFile='AG_integrated'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3='fileList3.txt'
+parFile1=''
+parFile2=''
+parFile3=''
 
+
+setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/hto_samples_cutoff_all/result')
+
+### Parameter setting end ###
+
+source("split_samples_utils.r")
 library(Seurat)
 library(ggplot2)
 
@@ -76,10 +89,11 @@ params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
 umap_min_dist=as.numeric(params$umap_min_dist)
 umap_num_neighbors=as.numeric(params$umap_num_neighbors)
 
-if(file.exists(params$cutoff_file)){
-  cutoffs=read.table(params$cutoff_file, sep="\t")
-}else{
-  cutoffs=NULL
+cutoffs=NULL
+if(!is.na(params$cutoff_file)){
+  if(file.exists(params$cutoff_file)){
+    cutoffs=read.table(params$cutoff_file, sep="\t")
+  }
 }
 
 idx=14
