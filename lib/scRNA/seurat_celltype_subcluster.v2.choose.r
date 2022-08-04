@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='mouse_8363'
+outFile='PH_scRNA'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
-parFile2='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_01_call/result/mouse_8363.meta.rds'
-parFile3='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
-parFile4='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_02_subcluster/result/mouse_8363.files.csv'
+parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/seurat_merge/result/PH_scRNA.final.rds'
+parFile2='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/seurat_merge_multires_01_call/result/PH_scRNA.meta.rds'
+parFile3='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/essential_genes/result/PH_scRNA.txt'
+parFile4='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/seurat_merge_multires_02_subcluster/result/PH_scRNA.files.csv'
 
 
-setwd('/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_03_choose/result')
+setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/seurat_merge_multires_03_choose/result')
 
 ### Parameter setting end ###
 
@@ -67,6 +67,8 @@ obj<-unfactorize_layer(obj, cur_layer)
 obj<-AddMetaData(obj, -1, col.name = seurat_clusters)
 obj<-AddMetaData(obj, -1, col.name = resolution_col)
 
+clcounts<-table(obj[[cur_layer]])
+
 if(parSampleFile2 != ""){
   ignore_gene_files=read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
   ignore_genes=unlist(lapply(ignore_gene_files$V1, function(x){
@@ -102,13 +104,13 @@ if(!("type" %in% colnames(res_files))){
   }))
 }
 
-if(!all(best_res_tbl$V3 %in% res_files$celltype)){
-  defined_ct<-unique(best_res_tbl$V3[!(best_res_tbl$V3 %in% res_files$celltype)])
+if(!all(best_res_tbl$V3 %in% names(clcounts))){
+  defined_ct<-unique(best_res_tbl$V3[!(best_res_tbl$V3 %in% names(clcounts))])
   stop(paste0("those cell types were defined at celltype_subclusters_table but not exists:", paste0(defined_ct, sep=",")))
 }
 
-if(!all(res_files$celltype %in% best_res_tbl$V3)){
-  miss_ct<-unique(res_files$celltype[!(res_files$celltype %in% best_res_tbl$V3)])
+if(!all(names(clcounts) %in% best_res_tbl$V3)){
+  miss_ct<-unique(names(clcounts)[!(names(clcounts) %in% best_res_tbl$V3)])
   stop(paste0("those cell types were not defined at celltype_subclusters_table :", paste0(miss_ct, collapse=",")))
 }
 
@@ -127,6 +129,7 @@ if(output_heatmap){
 }
 
 meta = obj@meta.data
+meta[, cur_layer] = as.character(meta[, cur_layer])
 
 curprefix = prefix
 
@@ -144,7 +147,7 @@ if(output_heatmap){
 }
 
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[8]
 for(pct in previous_celltypes){
   cat(pct, "\n")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -163,6 +166,13 @@ for(pct in previous_celltypes){
     meta[cells, seurat_clusters] = cluster_index
     meta[cells, resolution_col] = 0
     cluster_index = cluster_index + 1
+    
+    if(nrow(best_res_row) > 0){
+      rename_row = best_res_row[best_res_row$V2 == 0,]
+      if(nrow(rename_row) > 0){
+        meta[cells, cur_layer] = rename_row$V1[1]
+      }
+    }
 
     if(output_heatmap){
       allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
