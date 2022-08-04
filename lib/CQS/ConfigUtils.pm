@@ -104,6 +104,7 @@ our %EXPORT_TAGS = (
       get_joined_names
       process_parameter_sample_file
       get_task_dep_pbs_map
+      add_bind
       )
   ]
 );
@@ -2211,6 +2212,26 @@ sub get_task_dep_pbs_map {
   }
 
   return($taskdeppbsmap);
+}
+
+sub add_bind{
+  my ($config, $bind) = @_;
+
+  for my $section_key (keys %$config){
+    my $section = $config->{$section_key};
+    if (is_hash($section)){
+      for my $key (keys %$section){
+        if ($key =~ /docker_command$/){
+          my $value = $section->{$key};
+          $value =~ s/exec/exec -B $bind/;
+          $section->{$key} = $value;
+          #print($value . "\n");
+        }
+      }
+    }
+  }
+
+  return($config);
 }
 
 1;
