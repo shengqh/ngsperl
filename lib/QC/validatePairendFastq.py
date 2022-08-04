@@ -103,12 +103,12 @@ def validate(logger, input, output):
     with open(error_file, "wt") as fout:
       for error_msg in error_msgs:
         logger.error(error_msg)
-        fout.write("ERROR: %s" % error_msg)
+        fout.write("ERROR: %s\n" % error_msg)
     return(1)
   else:
     logger.info("succeed")
     with open(output, "wt") as fout:
-      fout.write("READ\t%d" % total_read_count)
+      fout.write("READ\t%d\n" % total_read_count)
     return(0)
 
 def main():
