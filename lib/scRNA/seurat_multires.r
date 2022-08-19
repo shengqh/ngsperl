@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='mouse_8363'
+outFile='AG_integrated'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
+parFile1='C:/projects/data/h_gelbard_lab/projects/20220803_integrated_project/seurat_sct_harmony/result/AG_integrated.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires/result')
+setwd('C:/projects/data/h_gelbard_lab/projects/20220803_integrated_project/seurat_sct_harmony_multires_01_call/result')
 
 ### Parameter setting end ###
 
@@ -42,10 +42,11 @@ reduction<-myoptions$reduction
 npcs<-as.numeric(myoptions$pca_dims)
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
-remove_subtype<-myoptions$remove_subtype
+remove_subtype_str<-myoptions$remove_subtype
 annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
+curated_markers_file=myoptions$curated_markers_file
 assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
 by_harmony<-reduction=="harmony"
 
@@ -63,8 +64,14 @@ if(file.exists(parSampleFile2)){
 
 tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
 
-remove_subtype_of=remove_subtype
-cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file, curated_markers_file=myoptions$curated_markers_file)
+cell_activity_database<-read_cell_markers_file(
+  panglao5_file = markerfile, 
+  species = species, 
+  remove_subtype_str = remove_subtype_str, 
+  HLA_panglao5_file = HLA_panglao5_file, 
+  curated_markers_file=curated_markers_file, 
+  remove_subtype_by_map=TRUE)
+celltype_map<-cell_activity_database$celltype_map
 
 prefix<-outFile
 
@@ -78,7 +85,8 @@ curreduction=ifelse(by_harmony, "harmony", "pca")
 obj <- FindNeighbors(object=obj, reduction=curreduction, dims=c(1:npcs), verbose=FALSE)
 obj <- FindClusters(object=obj, verbose=FALSE, random.seed=random.seed, resolution=resolutions)
 
-multi_res<-colnames(obj@meta.data)[grepl("_snn_res", colnames(obj@meta.data))]
+res_prefix<-paste0(assay, "_snn_res")
+multi_res<-colnames(obj@meta.data)[grepl(paste0("^", res_prefix, ".+\\d$"), colnames(obj@meta.data))]
 
 cur_res = multi_res[1]
 for(cur_res in multi_res){
@@ -86,8 +94,17 @@ for(cur_res in multi_res){
   data.norm=get_seurat_average_expression(obj, cur_res)
   
   predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
+  res_values=unlist(FetchData(obj, cur_res))
   
+  #store the raw cell types
   new.cluster.ids<-names(predict_celltype$max_cta)
+  names(new.cluster.ids) <- colnames(data.norm)
+  
+  cur_celltype<-paste0(cur_res, "_rawcelltype")
+  obj[[cur_celltype]] = unlist(new.cluster.ids[res_values])
+  
+  #store mapped cell types (summerize sub celltypes, for example T cells)
+  new.cluster.ids<-celltype_map[names(predict_celltype$max_cta)]
   names(new.cluster.ids) <- colnames(data.norm)
   
   cur_celltype<-paste0(cur_res, "_celltype")
@@ -95,25 +112,34 @@ for(cur_res in multi_res){
   obj[[cur_celltype]] = unlist(new.cluster.ids[res_values])
 }
 
-multi_cts<-colnames(obj@meta.data)[grepl("_celltype", colnames(obj@meta.data))]
+raw_cts<-paste0(multi_res, "_rawcelltype")
+multi_cts<-paste0(multi_res, "_celltype")
 
-res_df<-data.frame("resolution"=resolutions, "cluster"=multi_res, "celltype"=multi_cts)
+res_df<-data.frame("resolution"=resolutions, "cluster"=multi_res, "celltype"=multi_cts, "rawcelltype"=raw_cts)
 write.csv(res_df, file=paste0(outFile, ".resolutions.csv"), row.names=F)
 
 #umaplist<-RunMultipleUMAP(obj, curreduction=curreduction, cur_pca_dims=c(1:npcs))
 #obj<-RunUMAP(obj, reduction=curreduction, dims=c(1:npcs))
 
-cur_celltype<-multi_cts[2]
-for(cur_celltype in multi_cts){
+cind<-1
+for(cind in c(1:nrow(res_df))){
+  cur_res = res_df$cluster[cind]
+  raw_celltype = res_df$rawcelltype[cind]
+  cur_celltype = res_df$celltype[cind]
   cat(cur_celltype, "\n")
   
   meta<-obj@meta.data
-  cur_res = gsub("_celltype", "", cur_celltype)
   meta<-meta[order(meta[,cur_res]),]  
   seurat_celltype<-paste0(meta[,cur_res], ":", meta[,cur_celltype])
   seurat_celltype<-factor(seurat_celltype, levels=unique(seurat_celltype))
   sname = paste0("seurat_", cur_celltype)
   meta[,sname] = seurat_celltype
+
+  seurat_rawcelltype<-paste0(meta[,cur_res], ":", meta[,raw_celltype])
+  seurat_rawcelltype<-factor(seurat_rawcelltype, levels=unique(seurat_rawcelltype))
+  s_rawname = paste0("seurat_", raw_celltype)
+  meta[,s_rawname] = seurat_rawcelltype
+
   meta<-meta[colnames(obj),]
   obj@meta.data = meta
   
@@ -126,7 +152,17 @@ ABB
   png(paste0(prefix, ".", cur_celltype, ".png"), width=6600, height=2000, res=300)
   print(g)
   dev.off()
-
+  
+  g<-get_dim_plot(obj, group.by=cur_res, label.by=s_rawname, reduction="umap")
+  g<-g+get_bubble_plot(obj, cur_res=cur_res, raw_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
+  layout<-"
+ABB
+"
+  g<-g+plot_layout(design = layout)
+  png(paste0(prefix, ".", raw_celltype, ".seurat.png"), width=6600, height=2000, res=300)
+  print(g)
+  dev.off()
+  
   g<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction="umap")
   g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
   layout<-"

@@ -635,6 +635,7 @@ sub addCellRangerCount {
   $config->{$task_name} = {
     class => "CQS::ProgramWrapperOneToOne",
     target_dir => "${target_dir}/$task_name",
+    docker_prefix => "cellranger_",
     program => "cellranger",
     check_program => 0,
     option => " count --disable-ui --id=__NAME__ --transcriptome=$count_reference --fastqs=$fastq_folder --sample=__FILE__ $job_arg $chemistry_arg
@@ -685,6 +686,7 @@ sub addCellRangerVdj {
   $config->{$task_name} = {
     class => "CQS::ProgramWrapperOneToOne",
     target_dir => "${target_dir}/$task_name",
+    docker_prefix => "cellranger_",
     program => "cellranger",
     check_program => 0,
     option => " vdj --disable-ui --id=__NAME__ --reference=$vdj_reference --fastqs=$fastq_folder --sample=__FILE__ $job_arg $chain_arg
@@ -1184,7 +1186,8 @@ sub addSubClusterV2 {
       db_markers_file       => getValue( $def, "markers_file" ),
       curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
       annotate_tcell        => getValue( $def, "annotate_tcell", 0),
-      remove_subtype        => getValue( $def, "remove_subtype", ""),
+      remove_subtype        => "", #use all subtypes
+      #remove_subtype        => getValue( $def, "remove_subtype", ""),
       HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
       bubblemap_file        => $def->{bubblemap_file},

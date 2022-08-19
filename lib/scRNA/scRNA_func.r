@@ -63,31 +63,51 @@ calc_weight<-function(cellType){
   return(weight)
 }
 
-read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", HLA_panglao5_file="", curated_markers_file=""){
+get_celltype_map<-function( root_celltypes, HLA_panglao5_file ){
+  cts<-read.table(HLA_panglao5_file, sep="\t", header=T, row.names=1)
+  cmap=cts$Layer4
+  names(cmap) = rownames(cts)
+
+  layer="Layer3"
+  for(layer in c("Layer1", "Layer2", "Layer3")){
+    lcts<-cts[cts[,layer] %in% root_celltypes,]
+    cmap[rownames(lcts)]<-lcts[,layer]
+  }
+
+  return(cmap)
+}
+
+read_cell_markers_file<-function(panglao5_file, species, remove_subtype_str="", HLA_panglao5_file="", curated_markers_file="", remove_subtype_by_map=FALSE){
   #preparing cell activity database
   marker<-data.frame(fread(panglao5_file))
-  if(remove_subtype_of != ""){
-    remove_subtype_of<-unique(unlist(strsplit(remove_subtype_of, ",")))
-    pangdb_ct <- read.table(HLA_panglao5_file,header = T,row.names = 1,sep = "\t",stringsAsFactors = F)
-    remove_subtype_of<-remove_subtype_of[remove_subtype_of %in% marker$cell.type]
-    layer="Layer2"
-    removed<-c()
-    for(layer in c("Layer1","Layer2", "Layer3")){
-      layer_ct<-unique(pangdb_ct[,layer])
-      for(rs in remove_subtype_of){
-        if(rs %in% removed){
-          next
-        }
-        
-        if(rs %in% layer_ct){
-          subdb<-rownames(pangdb_ct)[pangdb_ct[,layer]==rs]
-          if(rs %in% subdb){ 
-            subdb<-subdb[!(subdb %in% remove_subtype_of)]
-            marker<-marker[!(marker$cell.type %in% subdb),]
-          }else{
-            marker$cell.type[marker$cell.type %in% subdb] = rs
+  celltype_map=c()
+
+  if(remove_subtype_str != ""){
+    remove_subtype_of<-unique(unlist(strsplit(remove_subtype_str, ",")))
+    if(remove_subtype_by_map){
+      celltype_map = get_celltype_map(remove_subtype_of, HLA_panglao5_file)
+    }else{
+      pangdb_ct <- read.table(HLA_panglao5_file,header = T,row.names = 1,sep = "\t",stringsAsFactors = F)
+      remove_subtype_of<-remove_subtype_of[remove_subtype_of %in% marker$cell.type]
+      layer="Layer2"
+      removed<-c()
+      for(layer in c("Layer1","Layer2", "Layer3")){
+        layer_ct<-unique(pangdb_ct[,layer])
+        for(rs in remove_subtype_of){
+          if(rs %in% removed){
+            next
           }
-          removed<-c(removed, rs)
+          
+          if(rs %in% layer_ct){
+            subdb<-rownames(pangdb_ct)[pangdb_ct[,layer]==rs]
+            if(rs %in% subdb){ 
+              subdb<-subdb[!(subdb %in% remove_subtype_of)]
+              marker<-marker[!(marker$cell.type %in% subdb),]
+            }else{
+              marker$cell.type[marker$cell.type %in% subdb] = rs
+            }
+            removed<-c(removed, rs)
+          }
         }
       }
     }
@@ -110,10 +130,17 @@ read_cell_markers_file<-function(panglao5_file, species, remove_subtype_of="", H
     curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
     for(cmct in names(curated_markers_celltype)){
       cellType[[cmct]]=curated_markers_celltype[[cmct]]
+      #celltype_map[cmct] = cmct
     }
     weight=calc_weight(cellType)
   } 
-  return(list(cellType=cellType, weight=weight))
+
+  for (ct in names(cellType)){
+    if (! ct %in% names(celltype_map)){
+      celltype_map[ct] = ct
+    }
+  }
+  return(list(cellType=cellType, weight=weight, celltype_map=celltype_map))
 }
 
 get_selfdefinedCelltype <- function(file, finalLayer="layer3"){
@@ -1151,5 +1178,3 @@ get_seurat_sum_count<-function(obj, cluster_name){
   res_df<-data.frame("cluster"=cts, "prefix"=prefixList, "pusedo_file"=res_files)
   return(res_df)
 }
-
-
