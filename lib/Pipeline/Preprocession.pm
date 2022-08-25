@@ -445,8 +445,10 @@ sub getPreprocessionConfig {
 
   if (getValue($def, "perform_paired_end_validation", 1)){
     defined $is_pairend or die "Define is_paired_end first!";
-    my $fastq_validator = "paired_end_validation";
-    addPairendFastqValidation($config, $def, $individual, $intermediate_dir, $fastq_validator, $source_ref);
+    if($is_pairend){
+      my $fastq_validator = "paired_end_validation";
+      addPairendFastqValidation($config, $def, $individual, $intermediate_dir, $fastq_validator, $source_ref);
+    }
   }
 
   if ( $def->{merge_fastq} ) {
