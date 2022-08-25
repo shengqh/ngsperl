@@ -28,6 +28,8 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
+  #https://annovar.openbioinformatics.org/en/latest/articles/VCF/
+
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
   $self->get_docker_value(1);
