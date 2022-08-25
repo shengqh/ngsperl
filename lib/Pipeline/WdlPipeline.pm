@@ -443,7 +443,9 @@ sub addSomaticCNV {
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $somaticCNV_pipeline->{"wdl_file"},
-    output_file_ext => ".".$output_genome_ext.".called.seg",
+    "use_filename_in_result" => 1,
+    output_file_ext => ".called.seg",
+#    output_file_ext => ".".$output_genome_ext.".called.seg",
 #    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
     "input_json_file" => $somaticCNV_pipeline->{"input_file"},
     "input_parameters" => {
