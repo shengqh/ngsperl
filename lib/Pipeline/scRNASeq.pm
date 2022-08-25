@@ -543,8 +543,8 @@ sub getScRNASeqConfig {
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "40gb"
+            "walltime"  => "23",
+            "mem"       => getValue($def, "seurat_mem", "40gb")
           },
         };
         push( @$summary, $multires_task );
@@ -576,6 +576,8 @@ sub getScRNASeqConfig {
               my $group_umap_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_group_umap";
               add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, $obj_ref);
             }
+
+            addGeneTask( $config, $def, $summary, $target_dir, $choose_task, undef, undef, "cell_type", "seurat_cell_type" );
 
             #my $pseudo_count_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_pseudo_count";
             #add_pseudo_count($config, $def, $summary, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
@@ -617,8 +619,8 @@ sub getScRNASeqConfig {
           sh_direct            => 1,
           pbs                  => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "40gb"
+            "walltime"  => "10",
+            "mem"       => getValue($def, "seurat_mem", "40gb")
           },
         };
         push( @$summary, $cluster_task );
@@ -640,8 +642,8 @@ sub getScRNASeqConfig {
             sh_direct            => 1,
             pbs                  => {
               "nodes"     => "1:ppn=1",
-              "walltime"  => "1",
-              "mem"       => "40gb"
+              "walltime"  => "10",
+              "mem"       => getValue($def, "seurat_mem", "40gb")
             },
           };
           push( @$summary, $heatmap_task );
