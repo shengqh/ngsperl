@@ -564,8 +564,6 @@ sub addDeseq2Visualization {
     sh_direct                => 1,
     cluster                  => $def->{cluster},
     pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "10gb"
@@ -1092,6 +1090,7 @@ sub addAnnovar {
     option     => getValue( $def, "annovar_param" ),
     annovar_db => getValue( $def, "annovar_db" ),
     buildver   => getValue( $def, "annovar_buildver" ),
+    annovar_gzipped => getValue( $def, "annovar_gzipped", 0 ),
     docker_prefix => "annovar_",
     clean_folder => $clean_folder,
     perform_splicing => $perform_splicing,
