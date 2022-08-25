@@ -13,6 +13,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [qw(
   get_marker_gene_dict
   add_seurat_rawdata
+  add_seurat_merge_object
   add_seurat
   add_essential_gene
   add_scRNABatchQC
@@ -108,6 +109,32 @@ sub add_seurat_rawdata {
     },
     parameterSampleFile3 => $def->{"pool_sample_groups"},
     parameterSampleFile4_ref => $hto_ref,
+    output_file_ext      => ".rawobj.rds",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+
+  push( @$summary, $seurat_rawdata );
+}
+
+sub add_seurat_merge_object {
+  my ( $config, $def, $summary, $target_dir, $seurat_rawdata ) = @_;
+  $config->{$seurat_rawdata} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
+    rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_merge_object.r",
+    parameterSampleFile1_ref => "files",
+    parameterSampleFile2     => {
+      sample_pattern => getValue($def, "sample_pattern", ""),
+      Mtpattern             => getValue( $def, "Mtpattern" ),
+      rRNApattern           => getValue( $def, "rRNApattern" ),
+      hemoglobinPattern     => getValue( $def, "hemoglobinPattern" ),
+    },
     output_file_ext      => ".rawobj.rds",
     sh_direct            => 1,
     pbs                  => {
