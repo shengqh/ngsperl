@@ -1,5 +1,6 @@
 import argparse
 import re
+import gzip
 
 parser = argparse.ArgumentParser(description="filter Annovar result for truncating/nonsense SNVs with/without ExAC/1000G limitation",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -41,9 +42,14 @@ def getDicValueCount(item): return len(item[1])
 filtered = []
 genes = {}
 outputFile = outputprefix + ".filtered.tsv"
-with open(outputFile, 'w') as sw:
-  with open(outputprefix + ".filtered.missense.tsv", 'w') as swMis:
-    with open(inputfile, 'r') as f:
+with open(outputFile, 'wt') as sw:
+  with open(outputprefix + ".filtered.missense.tsv", 'wt') as swMis:
+    if inputfile.endswith(".gz"):
+      f = gzip.open(inputfile, "rt")
+    else:
+      f = open(inputfile, 'rt')
+
+    with f:
       for line in f:
         if(not line.startswith("#")):
           break
