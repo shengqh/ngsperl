@@ -333,10 +333,13 @@ sub getScRNASeqConfig {
 
     my $essential_gene_task = add_essential_gene($config, $def, $summary, $target_dir);
 
-    my $seurat_task;
+    my $seurat_rawdata = "seurat_rawdata";
     if ( getValue( $def, "perform_seurat" ) ) {
-      my $seurat_rawdata = "seurat_rawdata";
-      add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file);
+      if (getValue($def, "merge_seurat_object", 0)){
+        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata);
+      }else{
+        add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file);
+      }
 
       push (@report_files, ($seurat_rawdata, "rawobj.rds"));
       push (@report_names, "raw_obj");
