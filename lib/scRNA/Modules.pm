@@ -113,7 +113,7 @@ sub add_seurat_rawdata {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
 
@@ -177,8 +177,8 @@ sub add_seurat {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => "40gb"
+      "walltime"  => getValue($def, "seurat_walltime", "12"),
+      "mem"       => getValue($def, "seurat_mem", "40gb"),
     },
   };
   if ($def->{batch_for_integration}){
@@ -519,7 +519,7 @@ sub addScMRMA {
     pbs             => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
-      "mem"       => "10gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   push( @$tasks, $scMRMA_name );
@@ -544,8 +544,8 @@ sub addCHETAH {
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "10",
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   push( @$tasks, $task_name );
@@ -572,8 +572,8 @@ sub add_signacx_only {
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => getValue($def, "signacx_walltime", "10"),
+      "mem"       => getValue($def, "signacx_mem", getValue($def, "seurat_mem", "40gb")),
     },
   };
 
@@ -603,8 +603,8 @@ sub addSignac {
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "10",
+      "mem"       => getValue($def, "seurat_mem", "40gb") 
     },
   };
 
@@ -635,6 +635,7 @@ sub addCellRangerCount {
   $config->{$task_name} = {
     class => "CQS::ProgramWrapperOneToOne",
     target_dir => "${target_dir}/$task_name",
+    docker_prefix => "cellranger_",
     program => "cellranger",
     check_program => 0,
     option => " count --disable-ui --id=__NAME__ --transcriptome=$count_reference --fastqs=$fastq_folder --sample=__FILE__ $job_arg $chemistry_arg
@@ -685,11 +686,15 @@ sub addCellRangerVdj {
   $config->{$task_name} = {
     class => "CQS::ProgramWrapperOneToOne",
     target_dir => "${target_dir}/$task_name",
+    docker_prefix => "cellranger_",
     program => "cellranger",
     check_program => 0,
     option => " vdj --disable-ui --id=__NAME__ --reference=$vdj_reference --fastqs=$fastq_folder --sample=__FILE__ $job_arg $chain_arg
 
-if [[ -s __NAME__/outs ]]; then
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+else
   rm -rf __NAME__/SC_VDJ_ASSEMBLER_CS
   mkdir __NAME__/log
   mv __NAME__/_* __NAME__/log   
@@ -736,7 +741,7 @@ sub addDoubletFinder {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb") 
     },
   };
   push( @$tasks, $task_name );
@@ -792,7 +797,7 @@ sub addMarkerGenes {
     pbs                => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
-      "mem"       => "10gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb") 
     },
   };
   
@@ -822,18 +827,21 @@ sub addGeneTask {
       class              => "CQS::UniqueR",
       perform            => 1,
       target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $genes_task,
-      rtemplate          => "../scRNA/scRNAgenes.r",
+      rtemplate          => "../scRNA/scRNA_func.r;../scRNA/scRNAgenes.r",
       parameterFile1_ref => [ $cluster_task, ".final.rds" ],
-      parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
       output_file_ext    => ".cluster.csv",
       rCode              => "genes='" . $genes . "'; celltype_name='$celltype_name'; cluster_name='$cluster_name'; dotPlotOnly=$dotPlotOnly;",
       sh_direct          => 1,
       pbs                => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
+        "walltime"  => "10",
+        "mem"       => getValue($def, "seurat_mem", "40gb") 
       },
     };
+
+    if(defined $celltype_task){
+      $config->{$genes_task}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
+    }
     push( @$summary, $genes_task );
   }
 }
@@ -906,8 +914,8 @@ sub addEdgeRTask {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "10",
+      "mem"       => getValue($def, "seurat_mem", "40gb") 
     },
   };
   push( @$summary, $edgeRtaskname );
@@ -930,8 +938,8 @@ sub addEdgeRTask {
     sh_direct          => 1,
     pbs                => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "10",
+      "mem"       => getValue($def, "seurat_mem", "40gb") 
     },
   };
   push( @$summary, $vistaskname );
@@ -956,8 +964,8 @@ sub addEdgeRTask {
       sh_direct          => 1,
       pbs                => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
+        "walltime"  => "10",
+        "mem"       => getValue($def, "seurat_mem", "40gb") 
       },
     };
     push( @$summary, $vistaskname2 );
@@ -981,7 +989,7 @@ sub addEdgeRTask {
       sh_direct          => 1,
       pbs                => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
+        "walltime"  => "10",
         "mem"       => "10gb"
       },
     };
@@ -1002,7 +1010,7 @@ sub addEdgeRTask {
       rCode                      => "",
       pbs                        => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
+        "walltime"  => "10",
         "mem"       => "10gb"
       },
     };
@@ -1111,7 +1119,7 @@ sub addDynamicClusterSignacX {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   if ($def->{batch_for_integration}){
@@ -1156,7 +1164,7 @@ sub addDynamicCluster {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   if ($def->{batch_for_integration}){
@@ -1184,7 +1192,7 @@ sub addSubClusterV2 {
       db_markers_file       => getValue( $def, "markers_file" ),
       curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
       annotate_tcell        => getValue( $def, "annotate_tcell", 0),
-      remove_subtype        => getValue( $def, "remove_subtype", ""),
+      remove_subtype        => getValue( $def, "subcluster_remove_subtype", ""),
       HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
       bubblemap_file        => $def->{bubblemap_file},
@@ -1200,11 +1208,13 @@ sub addSubClusterV2 {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
-  if(defined $config->{$signacX_task}){
-    $config->{$subcluster_task}{parameterFile4_ref} = [ $signacX_task, ".meta.rds" ];
+  if(defined $signacX_task){
+    if(defined $config->{$signacX_task}){
+      $config->{$subcluster_task}{parameterFile4_ref} = [ $signacX_task, ".meta.rds" ];
+    }
   }
 
   push( @$summary, $subcluster_task );
@@ -1245,7 +1255,7 @@ sub addSubClusterChoose {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   push( @$summary, $choose_task );
@@ -1269,7 +1279,7 @@ sub addClonotypeVis {
     pbs                        => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "23",
-      "mem"       => "10gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   push(@$tasks, $taskname);
@@ -1367,7 +1377,7 @@ sub add_scRNABatchQC{
     pbs                      => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
-      "mem"       => "10gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   push( @$summary, $task );
@@ -1476,21 +1486,38 @@ sub add_hto_summary {
 sub add_souporcell {
   my ($config, $def, $individual, $target_dir, $preparation_task) = @_;
 
-  my $fasta = getValue($def, "fasta_file");
+  my $fasta = getValue($def, "souporcell_fasta_file", "");
+  my $fasta_map = getValue($def, "souporcell_fasta_file_map", {});
+
+  my $common_variants = getValue($def, "souporcell_common_variants", "");
+  my $common_variants_map = getValue($def, "souporcell_common_variants_map", {});
+
   my $skip_remap = getValue($def, "skip_remap", 0);
-  my $common_variants = getValue($def, "common_variants", "");
 
   my $hto_souporcell_task = "hto_souporcell" . ($skip_remap ? "_skip_remap" : "_remap");
 
   my $skip_remap_option = $skip_remap ? "--skip_remap SKIP_REMAP" : "";
-  my $common_variants_option = ($common_variants eq "") ? "" : "--common_variants $common_variants";
   my $souporcell_thread = getValue($def, "souporcell_cpu", "16");
 
   my $bam_files =  getValue($def, "bam_files");
-  my $souporcell_tag_number = getValue($def, "souporcell_tag_number");
+  my $tag_map = getValue($def, "souporcell_tag_number_map");
   my $souporcell_bam_files = {};
-  for my $sample (keys %$souporcell_tag_number){
+  for my $sample (keys %$tag_map){
     $souporcell_bam_files->{$sample} = $bam_files->{$sample};
+    if (!defined $fasta_map->{$sample}){
+      if($fasta eq ""){
+        die "define souporcell_fasta_file_map with $sample, or define souporcell_fasta_file for all samples";
+      }else{
+        $fasta_map->{$sample} = $fasta;
+      }
+    }
+    if (!defined $common_variants_map->{$sample}){
+      if($common_variants eq ""){
+        die "define souporcell_common_variants_map with $sample, or define souporcell_common_variants for all samples";
+      }else{
+        $common_variants_map->{$sample} = $common_variants;
+      }
+    }
   }
 
   $config->{$hto_souporcell_task} = {
@@ -1500,28 +1527,29 @@ sub add_souporcell {
     program => "souporcell_pipeline.py",
     check_program => 0,
     docker_prefix => "souporcell_",
-    option => "-i __FILE__ -b __FILE2__ -f $fasta -t $souporcell_thread -o . -k __FILE3__ $common_variants_option $skip_remap_option
-    
-#__OUTPUT__
-",
+    option => "-i __FILE__ -b __FILE2__ -t $souporcell_thread -o . -k __FILE3__ $skip_remap_option",
     source_arg => "-i",
     source => $souporcell_bam_files,
     parameterSampleFile2_arg => "-b",
     parameterSampleFile2_ref => [ $preparation_task, ".barcodes.tsv"],
     parameterSampleFile3_arg => "-k",
-    parameterSampleFile3 => getValue($def, "souporcell_tag_number"),
+    parameterSampleFile3 => $tag_map,
+    parameterSampleFile4_arg => "-f",
+    parameterSampleFile4 => $fasta_map,
+    parameterSampleFile5_arg => "--common_variants",
+    parameterSampleFile5 => $common_variants_map,
     output_arg => "-o",
     output_file_prefix => "",
     output_no_name => 1,
     output_file_ext => "clusters.tsv",
     output_to_same_folder => 0,
     can_result_be_empty_file => 0,
-    use_tmp_folder => getValue($def, "use_tmp_folder_souporcell", 0),
+    use_tmp_folder => getValue($def, "souporcell_use_tmp_folder", 0),
     sh_direct   => 0,
     pbs => {
       "nodes"     => "1:ppn=" . $souporcell_thread,
-      "walltime"  => getValue($def, "souporcell_walltime", "47"),
-      "mem"       => getValue($def, "souporcell_mem", "40gb")
+      "walltime"  => getValue($def, "souporcell_walltime", "71"),
+      "mem"       => getValue($def, "souporcell_mem", "80gb")
     },
   };
   push( @$individual, $hto_souporcell_task );
@@ -1684,7 +1712,7 @@ sub add_invidual_qc {
     pbs => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
-      "mem"       => "10gb"
+      "mem"       => "20gb"
     },
   };
 
@@ -1731,7 +1759,7 @@ sub add_gliph2 {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   if( defined $hla_merge ) {
@@ -1757,7 +1785,7 @@ sub add_gliph2 {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
   if( defined $hla_merge ) {
