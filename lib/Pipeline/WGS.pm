@@ -630,7 +630,16 @@ fi
         $merged_vcf_section = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
       }
 
-      addAnnovar($config, $def, $summary, $target_dir, $merged_vcf_section, , "", $gatk_prefix, $def, $gatk_index_snv );
+      my $annovar_name = addAnnovar($config, $def, $summary, $target_dir, $merged_vcf_section, , "", $gatk_prefix, $def, $gatk_index_snv );
+
+      if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+        my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $def, $gatk_index_snv);
+
+        if ( defined $def->{annotation_genes} ) {
+          my $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+        }
+
+        my $mafreport = addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $def, $gatk_index_snv);
     }
   }
 
