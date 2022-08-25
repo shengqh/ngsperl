@@ -105,6 +105,7 @@ our %EXPORT_TAGS = (
       process_parameter_sample_file
       get_task_dep_pbs_map
       add_bind
+      get_final_file_by_task_name
       )
   ]
 );
@@ -1538,7 +1539,12 @@ sub get_program_param {
       close($list);
       $result = trim($arg . " " . $configfile);
     }else{
-      my $pfile  = join($joinDelimiter, @$pfiles );
+      my $pfile;
+      if(is_array($pfiles)){
+        $pfile  = join($joinDelimiter, @$pfiles );
+      }else{
+        $pfile = $pfiles;
+      }
       $result = trim($arg . " " . $pfile);
     }
   }
@@ -2232,6 +2238,28 @@ sub add_bind{
   }
 
   return($config);
+}
+
+sub get_final_file_by_task_name {
+  my ($all_results, $task_name) = @_;
+  my $result_files = $all_results->{$task_name};
+  my $final_file;
+  if((not defined $result_files) || (scalar(@$result_files) == 0)){
+    #get last sample_name result file
+    for my $cur_key (sort keys %$all_results){
+      if($cur_key eq $task_name){
+        next;
+      }
+
+      my $cur_files = $all_results->{$cur_key};
+      $final_file = $cur_files->[-1];
+      #print($final_file . "\n");
+    }
+  }else{
+    #get last task_name result file
+    $final_file = $result_files->[-1];
+  }
+  return($final_file);
 }
 
 1;
