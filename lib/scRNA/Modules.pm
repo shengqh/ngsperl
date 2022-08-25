@@ -13,6 +13,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [qw(
   get_marker_gene_dict
   add_seurat_rawdata
+  add_seurat_merge_object
   add_seurat
   add_essential_gene
   add_scRNABatchQC
@@ -113,7 +114,7 @@ sub add_seurat_rawdata {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
-      "mem"       => getValue($def, "seurat_mem", "40gb")
+      "mem"       => "40gb"
     },
   };
 
@@ -1192,7 +1193,8 @@ sub addSubClusterV2 {
       db_markers_file       => getValue( $def, "markers_file" ),
       curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
       annotate_tcell        => getValue( $def, "annotate_tcell", 0),
-      remove_subtype        => getValue( $def, "subcluster_remove_subtype", ""),
+      remove_subtype        => "", #use all subtypes
+      #remove_subtype        => getValue( $def, "remove_subtype", ""),
       HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
       bubblemap_file        => $def->{bubblemap_file},
