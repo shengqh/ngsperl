@@ -1,3 +1,17 @@
+rm(list=ls()) 
+outFile=''
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3=''
+genome='hg38'
+
+setwd('/scratch/cqs/breast_cancer_spore/analysis/all/gatk4_13_report/result')
+
+### Parameter setting end ###
+
 library(mafreport)
 
 #https://github.com/PoisonAlien/maftools/issues/532
