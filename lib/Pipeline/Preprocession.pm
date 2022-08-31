@@ -690,10 +690,10 @@ sub getPreprocessionConfig {
         {
           class              => "CQS::UniqueR",
           perform            => 1,
-          rtemplate          => "countInFastQcVis.R",
+          rtemplate          => "countTableVisFunctions.R,countInFastQcVis.R",
           output_file        => ".countInFastQcVis.Result",
           output_file_ext    => ".Reads.csv",
-          output_other_ext   => ".pdf",
+          output_other_ext   => ".pdf,.png",
           sh_direct          => 1,
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
           pbs                => {
