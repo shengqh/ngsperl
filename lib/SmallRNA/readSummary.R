@@ -3,30 +3,21 @@ outFile='obesity'
 parSampleFile1=''
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/scratch/cqs/ravi_shah_projects/20220221_obesity_smallRNA_hg38/preprocessing/fastqc_post_trim_summary/result/obesity.countInFastQcVis.Result.Reads.csv'
+parFile1='/scratch/cqs/ravi_shah_projects/20220823_obesity_smallRNA_hg38_all_VAT/preprocessing/fastqc_post_trim_summary/result/obesity.countInFastQcVis.Result.Reads.csv'
 parFile2=''
-parFile3='/scratch/cqs/ravi_shah_projects/20220221_obesity_smallRNA_hg38/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/obesity.Category.Table.csv'
+parFile3='/scratch/cqs/ravi_shah_projects/20220823_obesity_smallRNA_hg38_all_VAT/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/obesity.Category.Table.csv'
 
 
-setwd('/scratch/cqs/ravi_shah_projects/20220221_obesity_smallRNA_hg38/data_visualization/read_summary/result')
+setwd('/scratch/cqs/ravi_shah_projects/20220823_obesity_smallRNA_hg38_all_VAT/data_visualization/read_summary/result')
 
 ### Parameter setting end ###
 
 options(bitmapType='cairo')
 
-DEBUG<-FALSE
-
-if (DEBUG){
-  resultPrefix<-"/data/stein_lab/mjo_sRNA_data/20180424_michelle_smallRNA_2868_human_320to475/data_visualization/read_summary/result/P2868_treatment"
-  allreadsFile<-"/data/stein_lab/mjo_sRNA_data/20180424_michelle_smallRNA_2868_human_320to475/preprocessing/fastqc_post_trim/result/P2868_treatment.countInFastQcVis.Result.Reads.csv"
-  readCategoryFile<-"/data/stein_lab/mjo_sRNA_data/20180424_michelle_smallRNA_2868_human_320to475/data_visualization/reads_in_tasks/result/P2868_treatment.NonParallel.TaskReads.csv"
-  smallRNACategoryFile<-"/data/stein_lab/mjo_sRNA_data/20180424_michelle_smallRNA_2868_human_320to475/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/P2868_treatment.Category.Table.csv"
-}else{
-  resultPrefix<-outFile
-  allreadsFile<-parFile1
-  readCategoryFile<-parFile2
-  smallRNACategoryFile<-parFile3
-}
+resultPrefix<-outFile
+allreadsFile<-parFile1
+readCategoryFile<-parFile2
+smallRNACategoryFile<-parFile3
 
 library(ggplot2)
 library(reshape2)
