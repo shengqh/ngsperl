@@ -778,7 +778,11 @@ sub addAntibody {
 sub addMarkerGenes {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $marker_name, $marker_file, $samples ) = @_;
 
-  my $markergenes_task = $celltype_task . "_" . $marker_name;
+  my $markergenes_task = $cluster_task . "_" . $marker_name;
+  if(defined $celltype_task){
+    $markergenes_task = $celltype_task . "_" . $marker_name;
+  }
+
   $config->{$markergenes_task} = {
     class              => "CQS::UniqueR",
     perform            => 1,
@@ -786,7 +790,6 @@ sub addMarkerGenes {
     rtemplate          => "../scRNA/scRNA_func.r;../scRNA/plot_genes.r",
     parameterFile1_ref => [ $cluster_task, ".final.rds" ],
     parameterFile2     => $marker_file,
-    parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
     output_file_ext    => ".cluster.csv",
     parameterSampleFile1 => {
       celltype_name => $celltype_name,
@@ -801,6 +804,10 @@ sub addMarkerGenes {
       "mem"       => getValue($def, "seurat_mem", "40gb") 
     },
   };
+
+  if(defined $celltype_task){
+    $config->{$markergenes_task}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
+  }
   
   push( @$summary, $markergenes_task );
 }
@@ -1488,7 +1495,7 @@ sub add_hto_summary {
 sub add_souporcell {
   my ($config, $def, $individual, $target_dir, $preparation_task) = @_;
 
-  my $fasta = getValue($def, "souporcell_fasta_file", "");
+  my $fasta = getValue($def, "souporcell_fasta_file", getValue($def, "", ""));
   my $fasta_map = getValue($def, "souporcell_fasta_file_map", {});
 
   my $common_variants = getValue($def, "souporcell_common_variants", "");
