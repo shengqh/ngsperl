@@ -49,18 +49,14 @@ getHeatmapOption<-function(countHT, isCorr=FALSE){
 theme_bw2 <- function () { 
 	theme_bw() %+replace% 
 		theme(
-			panel.border = element_blank(),
+			strip.background = element_rect(fill = NA, colour = 'black'),
+			panel.border = element_rect(fill = NA, color = "black"),			
 			axis.line = element_line(colour = "black", size = 0.5)
 		)
 }
 
 theme_bw3 <- function () { 
-	theme_bw() +
-	theme(
-		strip.background = element_rect(fill = NA, colour = 'black'),
-		panel.border = element_rect(fill = NA, color = "black"),			
-		axis.line = element_line(colour = "black", size = 0.5)
-	)
+	theme_bw2()
 }
 
 getSampleInGroup<-function(groupDefineFile, samples, useLeastGroups=FALSE,onlySamplesInGroup=FALSE){
