@@ -171,6 +171,15 @@ sub get_config_section {
 
 sub has_config_section {
   my ( $config, $section ) = @_;
+
+  if(!defined $section){
+    my $i = 1;
+    print STDERR "Stack Trace:\n";
+    while ( (my @call_details = (caller($i++))) ){
+      print STDERR $call_details[1].":".$call_details[2]." in function ".$call_details[3]."\n";
+    }    
+  }
+
   my @sections = split( '::', $section );
   my $result   = $config;
   for my $curSection (@sections) {
