@@ -18,6 +18,8 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [qw(performWGS 
   performWGSTask 
+  add_bam_recalibration
+  add_recalibrated_bam_to_gvcf
   add_bam_to_gvcf 
   add_gvcf_to_genotype
   add_gvcf_to_genotype_scatter 
@@ -163,10 +165,10 @@ sub initializeDefaultOptions {
   return $def;
 }
 
-sub add_bam_to_gvcf {
+sub add_bam_recalibration {
   my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $bam_to_gvcf = {
+  my $bam_recalibration = {
     BaseRecalibratorScatter => {
       class             => "GATK4::BaseRecalibratorScatter",
       perform           => 1,
@@ -227,6 +229,26 @@ sub add_bam_to_gvcf {
         "mem"      => "80gb"
       },
     },
+  };
+
+  my @newtasks = ("BaseRecalibratorScatter", 
+      "GatherBQSRReports", 
+      "ApplyBQSRScatter", 
+      "GatherSortedBamFiles");
+
+  push(@$tasks, @newtasks);
+
+  foreach my $task (@newtasks){
+    $config->{$task} = $bam_recalibration->{$task};
+  }
+
+  return "GatherSortedBamFiles";
+}
+
+sub add_recalibrated_bam_to_gvcf {
+  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+
+  my $bam_to_gvcf = {
     HaplotypeCallerScatter => {
       class             => "GATK4::HaplotypeCallerScatter",
       perform           => 1,
@@ -235,8 +257,10 @@ sub add_bam_to_gvcf {
       option            => "\\
     -contamination 0 \\
     -G StandardAnnotation -G StandardHCAnnotation -G AS_StandardAnnotation \\
-    -GQB 10 -GQB 20 -GQB 30 -GQB 40 -GQB 50 -GQB 60 -GQB 70 -GQB 80 -GQB 90",
-      source_ref        => ["GatherSortedBamFiles", ".bam\$"],
+    -GQB 10 -GQB 20 -GQB 30 -GQB 40 -GQB 50 -GQB 60 -GQB 70 -GQB 80 -GQB 90 \\
+    --soft-clip-low-quality-ends true \\
+    --dont-use-soft-clipped-bases true",
+      source_ref        => $source,
       java_option       => "",
       fasta_file        => $def->{ref_fasta},
       extension         => ".g.vcf.gz",
@@ -266,12 +290,7 @@ sub add_bam_to_gvcf {
     },
   };
 
-  my @newtasks = ("BaseRecalibratorScatter", 
-      "GatherBQSRReports", 
-      "ApplyBQSRScatter", 
-      "GatherSortedBamFiles",
-      "HaplotypeCallerScatter", 
-      "GatherVcfs");
+  my @newtasks = ("HaplotypeCallerScatter", "GatherVcfs");
 
   push(@$tasks, @newtasks);
 
@@ -280,6 +299,13 @@ sub add_bam_to_gvcf {
   }
 
   return "GatherVcfs";
+}
+
+sub add_bam_to_gvcf {
+  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+  my $bam_recalibration_section = add_bam_recalibration($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source);
+  my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, [ $bam_recalibration_section, '.bam$']);
+  return($gvcf_section);
 }
 
 sub add_gvcf_to_genotype_scatter {
@@ -638,7 +664,14 @@ fi
       $bam_section = "markduplicates";
     }
 
-    my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
+    my $bam_recalibration_section = add_bam_recalibration($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
+    my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, [ $bam_recalibration_section, '.bam$']);
+
+    #my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
+
+    if ( $def->{perform_cnv_gatk4_cohort} ) {
+      my $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $bam_recalibration_section, "Recalibrated_bam", $individual, $summary, $summary, $summary, $summary, $summary );
+    }
 
     if ($def->{perform_gvcf_to_genotype}) {
       my $genotypeGVCFs_section = add_gvcf_to_genotype_scatter($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_section);
