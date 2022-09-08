@@ -41,7 +41,7 @@ for(idx in c(1:length(cluster_request))) {
 
   cname_df=data.frame("cluster_name"=subobj[[cluster_name]], "display_cluster_name"=subobj[["final_seurat_clusters"]])
 
-  markers=FindAllMarkers(subobj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  markers=FindAllMarkers(subobj, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 
   # Try to find pairwise biomarker
   # allmarkers=NULL
@@ -52,7 +52,7 @@ for(idx in c(1:length(cluster_request))) {
   #     if(c1 == c2){
   #       next
   #     }
-  #     c1c2_markers = FindMarkers(subobj, ident.1 = c1, ident.2=c2, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+  #     c1c2_markers = FindMarkers(subobj, assay="RNA", ident.1 = c1, ident.2=c2, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
   #     sig_c1c2 = ifelse(rownames(c1markers) %in% rownames(c1c2_markers), 1, 0)
   #     c1markers$sig_count = c1markers$sig_count + sig_c1c2
   #   }
@@ -78,7 +78,7 @@ for(idx in c(1:length(cluster_request))) {
     all_genes = c(all_genes, genes)
 
     pdf(file=paste0(curname, ".", file_name, ".dot.pdf"), width=max(length(genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
-    p<-DotPlot(subobj, assay = assay, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+    p<-DotPlot(subobj, assay="RNA", group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
       xlab("") + ylab("")
     print(p)
     dev.off()
@@ -86,7 +86,7 @@ for(idx in c(1:length(cluster_request))) {
   
   all_genes=unique(all_genes)
   pdf(file=paste0(curname, ".dot.pdf"), width=max(length(all_genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
-  p<-DotPlot(subobj, assay = assay, group.by="final_seurat_clusters", features=all_genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+  p<-DotPlot(subobj, assay="RNA", group.by="final_seurat_clusters", features=all_genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
     xlab("") + ylab("") + ggtitle("Seurat Marker Genes") + theme(plot.title = element_text(hjust = 0.5))
   print(p)
   dev.off()

@@ -252,6 +252,17 @@ fi
     for my $key (@keys){
       if ($json_dic->{$key} eq ""){
         delete($json_dic->{$key});
+        next;
+      }
+
+      if(is_array($json_dic->{$key})){
+        my $jarray = $json_dic->{$key};
+        if (scalar(@$jarray) == 0){
+          delete($json_dic->{$key});
+          next;
+        }
+
+        print(@$jarray);
       }
     }
     #print("After deletion: " . Dumper($json_dic));
@@ -346,7 +357,7 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
     my $final_dir = $cromwell_finalOutputs ? $cur_dir . "/cromwell_finalOutputs" : $cur_dir;
 
     my $sample_file = $raw_files{$sample_name}[0];

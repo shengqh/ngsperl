@@ -23,6 +23,22 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.06';
 
+sub getUniqueGroups {
+  my ($def) = @_;
+  my $result = "";
+  if (defined $def->{unique_groups}){
+    my $uni_groups = $def->{unique_groups};
+    my @uniqueGroups;
+    if (is_string($uni_groups)){
+      @uniqueGroups = split(/[,;]/, $uni_groups);
+    }else{
+      @uniqueGroups = @$uni_groups;
+    }
+    $result = "uniqueGroupNames=c('" . join("','", @uniqueGroups) . "');";
+  }
+  return($result);
+}
+
 sub getSmallRNAConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -203,7 +219,9 @@ sub getSmallRNAConfig {
   my $hostLibraryStr    = "";
   my $nonhostLibraryStr = "";
   if ( defined $libraryKey ) {
-    $hostLibraryStr = $libraryKey;
+    if ( $libraryKey ne "None" ){
+      $hostLibraryStr = $libraryKey;
+    }
     if ( $libraryKey eq "TotalReads" ) {
       $nonhostLibraryStr = $hostLibraryStr;
     }
@@ -235,10 +253,17 @@ sub getSmallRNAConfig {
       $comparisons = $sampleComparisons;
     }
 
-    my $hostSmallRNA       = ["isomiR"];
-    my $hostSmallRNAFolder = ["miRNA_isomiR"];
-    if ($notMicroRNAOnly) {
+    my $hostSmallRNA       = [];
+    my $hostSmallRNAFolder = [];
+    if(getValue($def, "use_isomiR_in_vis", 1)){
+      push( @$hostSmallRNA,       "isomiR" );
+      push( @$hostSmallRNAFolder, "miRNA_isomiR" );
+    }else{
+      push( @$hostSmallRNA,       "miRNA" );
+      push( @$hostSmallRNAFolder, "miRNA" );
+    }
 
+    if ($notMicroRNAOnly) {
       push( @$hostSmallRNA,       "tDR-anticodon" );
       push( @$hostSmallRNAFolder, "tRNA" );
       if ( $def->{hasSnRNA} ) {
@@ -428,8 +453,6 @@ sub getSmallRNAConfig {
           sh_direct  => 1,
           cluster    => $cluster,
           pbs        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
             "mem"       => "40gb"
@@ -446,8 +469,6 @@ sub getSmallRNAConfig {
           sh_direct  => 1,
           cluster    => $cluster,
           pbs        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
             "mem"       => "10gb"
@@ -468,8 +489,6 @@ sub getSmallRNAConfig {
           rCode                     => $R_font_size,
           sh_direct                 => 1,
           pbs                       => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "10gb"
@@ -917,7 +936,12 @@ sub getSmallRNAConfig {
 
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push @visual_source, "miRNA_isomiR";
+
+      if(getValue($def, "use_isomiR_in_vis", 1)){
+        push @visual_source, "miRNA_isomiR";
+      }else{
+        push @visual_source, "miRNA";
+      }
 
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
@@ -1326,6 +1350,187 @@ sub getSmallRNAConfig {
     );
   }
 
+  if (getValue($def, "search_nonhost_genome", 1) && getValue($def, "search_refseq_bacteria", 0)) {
+    my $refseq_bacteria_bowtie = "refseq_bacteria_bowtie";
+    $config->{"refseq_bacteria_bowtie_index"} = getValue($def, "refseq_bacteria_bowtie_index");
+    $config->{$refseq_bacteria_bowtie} = {
+      class => "CQS::ProgramWrapperOneToManyScatter",
+      target_dir => "$host_intermediate_dir/$refseq_bacteria_bowtie",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      option => "
+rm -f __NAME_____SCATTERNAME__.failed
+
+bowtie -a --best -m 10000 --strata -v 0 -p 8 -x __SCATTER__ __FILE__ __OUTPUT__.tmp
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME_____SCATTERNAME__.failed
+  rm __OUTPUT__.tmp
+else
+  cut -f1-4 __OUTPUT__.tmp > __OUTPUT__
+  gzip __OUTPUT__
+  rm __OUTPUT__.tmp
+fi
+",
+      source_arg => "-x",
+      source_ref => $identical_ref,
+      scatter_arg => "",
+      scatter_ref => "refseq_bacteria_bowtie_index",
+      output_arg => "",
+      output_file_prefix => ".txt",
+      output_file_ext => ".txt.gz",
+      output_to_same_folder => 0,
+      can_result_be_empty_file => 0,
+      use_tmp_folder => getValue($def, "use_tmp_folder", 0),
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=" . getValue($def, "${refseq_bacteria_bowtie}_nodes", "8"),,
+        "walltime"  => getValue($def, "${refseq_bacteria_bowtie}_walltime", "4"),
+        "mem"       => getValue($def, "${refseq_bacteria_bowtie}_mem", "20gb"),
+      },
+    };
+
+    push( @$individual_ref, $refseq_bacteria_bowtie );
+
+    my $refseq_bacteria_bowtie_count = "refseq_bacteria_bowtie_count";
+    $config->{$refseq_bacteria_bowtie_count} = {
+      class => "CQS::ProgramWrapperManyToOneGather",
+      target_dir => "$host_intermediate_dir/$refseq_bacteria_bowtie_count",
+      interpretor => "",
+      program => getValue($def, "spcount", "spcount"),
+      check_program => 0,
+      option => "bowtie_count --species_column " . getValue($def, "species_column", "species"),
+      source_arg => "-i",
+      source_ref => $identical_ref,
+      parameterSampleFile2_arg => "-c",
+      parameterSampleFile2_ref => $identical_count_ref,
+      sample_scatter_ref => $refseq_bacteria_bowtie,
+      scatter_ref => "refseq_bacteria_bowtie_index",
+      parameterFile1_arg => "-s",
+      parameterFile1 => getValue($def, "refseq_bacteria_species"),
+      output_arg => "-o",
+      output_file_prefix => ".txt.gz",
+      output_file_ext => ".txt.gz",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 0,
+      #no_docker => 1,
+      use_tmp_folder => getValue($def, "use_tmp_folder", 0),
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => getValue($def, "${refseq_bacteria_bowtie_count}_walltime", "2"),
+        "mem"       => getValue($def, "${refseq_bacteria_bowtie_count}_mem", "20gb"),
+      },
+    };
+
+    push( @$individual_ref, $refseq_bacteria_bowtie_count );
+
+    my $categories = ["species", "genus", "family", "order", "class", "phylum" ];
+    my $file_exts = [];
+    for my $cat (@$categories){
+      push(@$file_exts, ".${cat}.query.count");
+      push(@$file_exts, ".${cat}.estimated.count");
+      push(@$file_exts, ".${cat}.aggregated.count");
+    }
+    my $file_ext_str = ".read.count,.tree.count," . join(",", @$file_exts);
+
+    my $refseq_bacteria_table = "refseq_bacteria_table";
+    $config->{$refseq_bacteria_table} = {
+      class => "CQS::ProgramWrapper",
+      target_dir => "$nonhost_genome_dir/$refseq_bacteria_table",
+      interpretor => "",
+      program => getValue($def, "spcount", "spcount"),
+      check_program => 0,
+      option => "count_table -o __NAME__ --species_column " . getValue($def, "species_column", "species"),
+      source_arg => "-i",
+      source_ref => $refseq_bacteria_bowtie_count,
+      parameterFile1_arg => "-s",
+      parameterFile1 => getValue($def, "refseq_bacteria_species"),
+      parameterFile2_arg => "-t",
+      parameterFile2 => getValue($def, "refseq_taxonomy"),
+      output_arg => "-o",
+      output_file_ext => $file_ext_str,
+      #no_docker => 1,
+      sh_direct   => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => getValue($def, "${refseq_bacteria_table}_walltime", "24"),
+        "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "100gb"),
+      },
+    };
+
+    push( @$summary_ref, $refseq_bacteria_table );  
+    push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
+    push @table_for_correlation, ( $refseq_bacteria_table, ".aggregated.count\$" );
+
+    push @table_for_readSummary, ( $refseq_bacteria_table, '.read.count$' );
+    push @name_for_readSummary,  ( "Refseq Bacteria" );
+
+    my @file_exts = ();
+
+    my $task_name = $def->{task_name};
+    my $files = $def->{files};
+    my $groups = $def->{groups};
+    for my $sample (sort keys %$files){
+      push(@file_exts, ".${sample}.html");
+    }
+    for my $gname (sort keys %$groups){
+      push(@file_exts, ".${gname}.html");
+    }
+
+    my $krona_count_table = getValue($def, "krona_count_table", "estimated");
+    my $refseq_bacteria_krona = "refseq_bacteria_krona_" . $krona_count_table;
+    my $krona_ref;
+    if ($krona_count_table eq "estimated"){
+      $krona_ref = [$refseq_bacteria_table, ".species.estimated.count"];
+    }elsif($krona_count_table eq "aggregated"){
+      $krona_ref = [$refseq_bacteria_table, ".tree.count"];
+    }else{
+      die "krona_count_table should be either estimated or aggregated, now is " . $krona_count_table;
+    }
+
+    $config->{$refseq_bacteria_krona} = {
+      class => "CQS::ProgramWrapper",
+      target_dir => "$data_visualization_dir/$refseq_bacteria_krona",
+      interpretor => "",
+      program => getValue($def, "spcount", "spcount"),
+      check_program => 0,
+      option => "krona -o __NAME__ ",
+      post_command => "rm -rf *.html.files .cache .config",
+      parameterSampleFile1_arg => "-g",
+      parameterSampleFile1 => $groups,
+      parameterFile1_arg => "-i",
+      parameterFile1_ref => $krona_ref,
+      parameterFile2_arg => "-t",
+      parameterFile2     => getValue($def, "krona_taxonomy_folder"),
+      output_arg => "-o",
+      output_file_ext => join(",", @file_exts),
+      #no_docker => 1,
+      sh_direct   => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => getValue($def, "${refseq_bacteria_krona}_walltime", "10"),
+        "mem"       => getValue($def, "${refseq_bacteria_krona}_mem", "20gb"),
+      },
+    };
+    push( @$summary_ref, $refseq_bacteria_krona );  
+
+    if ($do_comparison) {
+      for my $cat (@$categories){
+        # addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_query", [ $refseq_bacteria_table, ".${cat}.query.count\$" ],
+        #   $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_aggregated", [ $refseq_bacteria_table, ".${cat}.aggregated.count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      }
+      addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_read", [ $refseq_bacteria_table, ".read.count\$" ],
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+    }
+  }
+
   if ($search_refseq_genome) {
     my $refseq_genomes = ["bacteria", "viruses"];
     for my $refseq (@$refseq_genomes){
@@ -1345,8 +1550,6 @@ sub getSmallRNAConfig {
         output_to_same_folder => 1,
         sh_direct          => 0,
         pbs                => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=8",
           "walltime"  => "4",
           "mem"       => "20gb"
@@ -1373,8 +1576,6 @@ sub getSmallRNAConfig {
         output_to_same_folder => 1,
         sh_direct          => 1,
         pbs                => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "4",
           "mem"       => "10gb"
@@ -1458,7 +1659,6 @@ sub getSmallRNAConfig {
           source2_ref => [ "identical", ".dupcount\$" ],
           sh_direct   => 1,
           pbs         => {
-            "email"    => $def->{email},
             "nodes"    => "1:ppn=1",
             "walltime" => "2",
             "mem"      => "20gb"
@@ -1482,10 +1682,9 @@ sub getSmallRNAConfig {
         parameterSampleFile1_ref => $nonhost_genome_count_xml,
         output_arg         => "-o",
         output_file_ext    => ".nonhost_genome.tsv",
+        can_result_be_empty_file => 1,
         sh_direct          => 1,
         pbs                => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "1",
           "mem"       => "10gb"
@@ -1505,10 +1704,9 @@ sub getSmallRNAConfig {
         parameterSampleFile1_ref => $microbial_genome_count_xml,
         output_arg         => "-o",
         output_file_ext    => ".microbial.tsv",
+        can_result_be_empty_file => 1,
         sh_direct          => 1,
         pbs                => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "1",
           "mem"       => "10gb"
@@ -1558,10 +1756,11 @@ sub getSmallRNAConfig {
       "nonhost_library_tRNA_vis",
       $data_visualization_dir,
       {
-        rtemplate          => "countTableVisFunctions.R,bacteriaTrnaMappingVis.R",
-        output_file        => ".tRNAMapping.Result",
+        rtemplate          => "countTableVisFunctions.R,../SmallRNA/bacteriaTrnaMappingVis2.R",
+        output_file        => ".tRNAMapping",
         output_file_ext    => ".Species12.csv;.tRNAType1.csv;.tRNAType2.csv",
         parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".count\$" ],
+        parameterFile2     => getValue($def, "trna_category_map"),
         rCode              => 'maxCategory=3;' . $R_font_size,
       }
     );
@@ -1941,8 +2140,8 @@ sub getSmallRNAConfig {
     sh_direct                 => 1,
     pbs                       => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "10",
+      "mem"       => "20gb"
     },
   };
 
@@ -1964,37 +2163,39 @@ sub getSmallRNAConfig {
 
   push @$summary_ref, ("count_table_correlation");
 
-  if($def->{perform_permanova}){
-    my $log_transform = getValue($def, "permanova_log_transform", 1);
-    my $log_prefix = $log_transform ? ".log" : "";
+  if(defined $deseq2Task){
+    if($def->{perform_permanova}){
+      my $log_transform = getValue($def, "permanova_log_transform", 1);
+      my $log_prefix = $log_transform ? ".log2" : "";
 
-    $config->{count_table_permanova} = {
-      class                     => "CQS::UniqueR",
-      perform                   => 1,
-      target_dir                => $data_visualization_dir . "/count_table_permanova",
-      rtemplate                 => "../SmallRNA/permanova.r",
-      output_file               => "",
-      output_file_ext           => "",
-      output_file_task_ext      => "$log_prefix.permanova.txt;$log_prefix.betadisper.txt;$log_prefix.PCoA.pdf",
-      parameterSampleFile1_ref  => \@table_for_correlation,
-      parameterSampleFile2      => $config->{count_table_correlation}{parameterSampleFile2},
-      parameterSampleFile2Order => $def->{groups_order},
-      parameterSampleFile3_ref  => [ $deseq2Task, ".design\$"],
-      parameterSampleFile4  => {
-        log_transform => getValue($def, "permanova_log_transform", 1)
-      },
-      parameterFile2_ref        => $config->{count_table_correlation}{parameterFile2_ref},
-      parameterFile3_ref        => $config->{count_table_correlation}{parameterFile3_ref},
-      rCode                     => $config->{count_table_correlation}{rCode},
-      sh_direct                 => 1,
-      pbs                       => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
-      },
-    };
+      $config->{count_table_permanova} = {
+        class                     => "CQS::UniqueR",
+        perform                   => 1,
+        target_dir                => $data_visualization_dir . "/count_table_permanova",
+        rtemplate                 => "../SmallRNA/permanova.r",
+        output_file               => "",
+        output_file_ext           => "$log_prefix.PCoA.pdf",
+        output_file_task_ext      => "$log_prefix.permanova.txt;$log_prefix.betadisper.txt",
+        parameterSampleFile1_ref  => \@table_for_correlation,
+        parameterSampleFile2      => $config->{count_table_correlation}{parameterSampleFile2},
+        parameterSampleFile2Order => $def->{groups_order},
+        parameterSampleFile3_ref  => [ $deseq2Task, ".design\$"],
+        parameterSampleFile4  => {
+          log_transform => getValue($def, "permanova_log_transform", 1)
+        },
+        parameterFile2_ref        => $config->{count_table_correlation}{parameterFile2_ref},
+        parameterFile3_ref        => $config->{count_table_correlation}{parameterFile3_ref},
+        rCode                     => $config->{count_table_correlation}{rCode},
+        sh_direct                 => 1,
+        pbs                       => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
 
-    push @$summary_ref, ("count_table_permanova");
+      push @$summary_ref, ("count_table_permanova");
+    }
   }
 
   my $paramFile = undef;
@@ -2023,11 +2224,7 @@ sub getSmallRNAConfig {
   push @$summary_ref, ("reads_in_tasks");
 
   if ( $search_host_genome && $search_nonhost_database ) {
-    my $cur_r_code = $R_font_size;
-    if (defined $def->{unique_groups}){
-      my @uniqueGroups = split(/[,;]/, $def->{unique_groups});
-      $cur_r_code = $cur_r_code . "uniqueGroupNames=c('" . join("','", @uniqueGroups) . "');";
-    }
+    my $cur_r_code = $R_font_size . " " . getUniqueGroups($def);
     $config->{reads_in_tasks_pie} = {
       class                => "CQS::UniqueR",
       suffix               => "_pie",
@@ -2073,11 +2270,7 @@ sub getSmallRNAConfig {
     push @$summary_ref, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
 
     if($perform_nonhost_genome_count){  
-      my $rCode = '';
-      if (defined $def->{host_microbial_vis_groups}){
-        my $visgroups = $def->{host_microbial_vis_groups};
-        $rCode = 'groupNames=c("' . join('", "', @$visgroups) . '"';
-      }
+      my $rCode = getUniqueGroups($def);
       $config->{host_microbial_vis} = {
         class                     => "CQS::UniqueR",
         perform                   => 1,
@@ -2105,11 +2298,11 @@ sub getSmallRNAConfig {
 
   if ($perform_class_independent_analysis) {
     my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "'); ";
-    $config->{sequence_mapped_in_categories} = {
+    $config->{top_sequence_mapped_in_categories} = {
       class                    => "CQS::UniqueR",
       perform                  => 1,
-      target_dir               => $data_visualization_dir . "/sequence_mapped_in_categories",
-      rtemplate                => "countTableVisFunctions.R,ReadsMappingSummary.R",
+      target_dir               => $data_visualization_dir . "/top_sequence_mapped_in_categories",
+      rtemplate                => "countTableVisFunctions.R,TopReadsMappingSummary.R",
       output_file_ext          => ".ReadsMapping.Summary.csv",
       parameterFile1_ref       => [ "identical_sequence_count_table", $task_name . "_sequence.read.count\$" ],
       parameterSampleFile1_ref => \@table_for_readSummary,
@@ -2125,7 +2318,7 @@ sub getSmallRNAConfig {
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, "sequence_mapped_in_categories";
+    push @$summary_ref, "top_sequence_mapped_in_categories";
   }
   if ($perform_short_reads_source) {
     $config->{short_reads_source} = {
@@ -2356,6 +2549,29 @@ sub getSmallRNAConfig {
       },
     };
     push @$summary_ref, "bacteria_count";
+
+    if(getValue($def, "search_refseq_bacteria")){
+      $config->{bacteria_count_summary} = {
+        'class'                    => 'CQS::UniqueR',
+        'parameterFile1_ref' => [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],
+        'parameterFile2_ref' => [ "bowtie1_bacteria_group2_pm_table", ".read.count\$" ],
+        'parameterFile3_ref' => [ "refseq_bacteria_table", ".read.count\$" ],
+        'option'                   => "",
+        'rtemplate'                => 'countTableVisFunctions.R,../SmallRNA/bacteriaReadSummary.R',
+        'target_dir'               => $data_visualization_dir . "/bacteria_count_summary",
+        'output_file_ext'          => '.csv,.bar1.png,.bar2.png',
+        'sh_direct'                => 1,
+        'perform'                  => 1,
+        'pbs'                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, "bacteria_count_summary";
+    }
   }
 
   if (getValue($def, "perform_search_fasta", 0)){
@@ -2564,6 +2780,32 @@ sub getSmallRNAConfig {
           push( @report_names, "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
         }
       }
+
+      if ( defined $config->{refseq_bacteria_table} ) {
+        my $levels = [ 'species', 'genus', 'family', 'order', 'class', 'phylum'];
+
+        for my $level (@$levels){
+          push( @report_files, "count_table_correlation",     "${task_name}.${level}.aggregated.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",     "${task_name}.${level}.aggregated.count.PCA.png" );
+          push( @report_names, "correlation_refseq_bacteria_${level}_agg_heatmap", "correlation_refseq_bacteria_${level}_agg_pca" );
+
+          if ($hasGroupHeatmap) {
+            push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.heatmap.png" );
+            push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.Correlation.Cluster.png" );
+            push( @report_names, "correlation_refseq_bacteria_${level}_agg_group_heatmap", "correlation_refseq_bacteria_${level}_agg_corr_cluster" );
+          }
+
+          push( @report_files, "count_table_correlation",     "${task_name}.${level}.estimated.count.heatmap.png" );
+          push( @report_files, "count_table_correlation",     "${task_name}.${level}.estimated.count.PCA.png" );
+          push( @report_names, "correlation_refseq_bacteria_${level}_est_heatmap", "correlation_refseq_bacteria_${level}_est_pca" );
+
+          if ($hasGroupHeatmap) {
+            push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.heatmap.png" );
+            push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.Correlation.Cluster.png" );
+            push( @report_names, "correlation_refseq_bacteria_${level}_est_group_heatmap", "correlation_refseq_bacteria_${level}_est_corr_cluster" );
+          }
+        }
+      }
     }
     
     if ( defined $config->{host_length_dist_category} ) {
@@ -2580,9 +2822,11 @@ sub getSmallRNAConfig {
       if ( defined $config->{deseq2_host_genome_TotalReads_vis} ) {
         push( @report_files, "deseq2_host_genome_TotalReads_vis", ".DESeq2.Matrix.png" );
         push( @report_names, "deseq2_host_vis" );
-      }
-      if ( defined $config->{deseq2_host_genome_FeatureReads_vis} ) {
+      }elsif ( defined $config->{deseq2_host_genome_FeatureReads_vis} ) {
         push( @report_files, "deseq2_host_genome_FeatureReads_vis", ".DESeq2.Matrix.png" );
+        push( @report_names, "deseq2_host_vis" );
+      }elsif ( defined $config->{deseq2_host_genome_vis} ) {
+        push( @report_files, "deseq2_host_genome_vis", ".DESeq2.Matrix.png" );
         push( @report_names, "deseq2_host_vis" );
       }
     }
@@ -2593,23 +2837,30 @@ sub getSmallRNAConfig {
       push( @report_names, "bacteria_count_vis", "bacteria_count_rpm" );
     }
 
+    my $version_files = get_version_files($config);
+
     my $options = {
-      "DE_fold_change" => [ getValue( $def, "DE_fold_change", 2 ) ],
-      "DE_pvalue"      => [ getValue( $def, "DE_pvalue",      0.05 ) ]
+      "DE_fold_change" => [ getValue( $def, "DE_fold_change" ) ],
+      "DE_pvalue"      => [ getValue( $def, "DE_pvalue" ) ],
+      "DE_use_raw_pvalue"=> [ getValue( $def, "DE_use_raw_pvalue" ) ],
+      "search_nonhost_genome" => [ getValue($def, "search_nonhost_genome") ],
+      "normalize_by" => [ getValue($def, "normalize_by") ],
     };
     $config->{report} = {
       class                      => "CQS::BuildReport",
       perform                    => 1,
       target_dir                 => $def->{target_dir} . "/report",
       report_rmd_file            => "../Pipeline/SmallRNA.Rmd",
-      additional_rmd_files       => "Functions.Rmd",
+      additional_rmd_files       => "Functions.Rmd;../Pipeline/Pipeline.Rmd",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
-      parameterSampleFile2_ref   => $options,
+      parameterSampleFile2       => $options,
       parameterSampleFile3_ref   => \@copy_files,
+      parameterSampleFile4       => $version_files,
+      parameterSampleFile5       => $def->{software_version},
+      parameterSampleFile6       => $def->{groups},
       sh_direct                  => 1,
       pbs                        => {
-        "email"    => $def->{email},
         "nodes"    => "1:ppn=1",
         "walltime" => "1",
         "mem"      => "10gb"

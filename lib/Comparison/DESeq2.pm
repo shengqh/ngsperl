@@ -330,6 +330,7 @@ sub result {
     push( @result_files, $result_dir . "/${prefix}_DESeq2_GSEA.rnk" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_sig.csv" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoPlot.png" );
+    push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoEnhanced.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-heatmap.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-pca.png" );
     if ($exportSignificantGeneName) {

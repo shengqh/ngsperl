@@ -2,7 +2,7 @@ require("ggplot2")
 require("data.table")
 require("stringr")
 
-draw_chromosome_count<-function(listFile, outFilePrefix) {
+draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
   filelist = read.table(listFile, sep="\t", header=F, stringsAsFactors = F)
 
   missing = c()
@@ -72,7 +72,13 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
     chromosomeFilePrefix = paste0(outFilePrefix, ".chromosome")
   }
 
-  write.csv(file=paste0(chromosomeFilePrefix, ".chromosome.csv"), final, row.names=F)
+  is_bam_scattered<-!is.na(rg_name_regex)
+
+  if(is_bam_scattered){
+    write.csv(file=paste0(chromosomeFilePrefix, ".scattered.csv"), final, row.names=F)
+  }else{
+    write.csv(file=paste0(chromosomeFilePrefix, ".csv"), final, row.names=F)
+  }
 
   chroms=paste0("chr", c(1:22,'X','Y','M', 'MT'))
   if(!any(all_chroms %in% chroms)){
@@ -90,18 +96,35 @@ draw_chromosome_count<-function(listFile, outFilePrefix) {
 
   noreads<-final[final$NoRead,]
   noreads<-noreads[!duplicated(noreads$Sample),]
-  write.table(file=paste0(chromosomeFilePrefix, ".noread.txt"), noreads, sep="\t", quote=F, row.names=F)
+  if(is_bam_scattered){
+    write.table(file=paste0(chromosomeFilePrefix, ".scattered.noread.txt"), noreads, sep="\t", quote=F, row.names=F)
+  }else{
+    write.table(file=paste0(chromosomeFilePrefix, ".noread.txt"), noreads, sep="\t", quote=F, row.names=F)
+  }
 
   colors=c("black","red")
   names(colors)=c("FALSE","TRUE")
 
-  height=max(1000, 60 * length(unique(final$Sample)))
-  png(file=paste0(chromosomeFilePrefix, ".png"), height=height, width=3000, res=300)
-  g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
-    geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
-    scale_color_manual(values=colors) +
-    theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
-          axis.title = element_blank())
-  print(g)
-  dev.off()
+  draw_figure<-function(final, filename){
+    height=max(1000, 60 * length(unique(final$Sample)))
+    png(file=filename, height=height, width=3000, res=300)
+    g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
+      geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
+      scale_color_manual(values=colors) +
+      theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
+            axis.title = element_blank())
+    print(g)
+    dev.off()
+  }
+
+  if(!is.na(rg_name_regex)){
+    final2<-final[,c("Sample", "Chrom", "Reads")]
+    final2$Sample<-str_match(final2$Sample, rg_name_regex)[,2]
+    final3 <- aggregate(Reads ~ Sample + Chrom, data = final2, FUN = sum, na.rm = TRUE)
+    final3$NoRead=final3$Reads==0
+    draw_figure(final3, paste0(chromosomeFilePrefix, ".png"))
+    write.csv(final3, paste0(chromosomeFilePrefix, ".csv"))
+  }else{
+    draw_figure(final, paste0(chromosomeFilePrefix, ".png"))
+  }
 }

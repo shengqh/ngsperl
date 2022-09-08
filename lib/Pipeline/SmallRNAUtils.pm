@@ -181,7 +181,8 @@ sub initializeSmallRNADefaultOptions {
     $def->{"perform_class_independent_analysis"} = 0;
     $def->{"blast_unmapped_reads"} = 0;
     $def->{"perform_report"} = 0;
-    $def->{perform_host_genome_reads_deseq2} = 0;
+    $def->{"perform_host_genome_reads_deseq2"} = 0;
+    $def->{"search_refseq_bacteria"} = 1;
   }else{
     initDefaultValue( $def, "search_not_identical",               0 );
     initDefaultValue( $def, "search_host_genome",                 1 );
@@ -190,6 +191,7 @@ sub initializeSmallRNADefaultOptions {
     initDefaultValue( $def, "search_nonhost_library",             1 );
     initDefaultValue( $def, "perform_class_independent_analysis", 1 );
     initDefaultValue( $def, "perform_host_genome_reads_deseq2", 0 );
+    initDefaultValue( $def, "search_refseq_bacteria", 1 );
   }
 
   #blastn
@@ -240,6 +242,8 @@ sub initializeSmallRNADefaultOptions {
     $str = $str . ";";
   }
   $def->{correlation_rcode} = $str;
+
+  initDefaultValue( $def, "perform_permanova", 1 );
 
   return $def;
 }

@@ -1,5 +1,18 @@
-source("split_samples_utils.r")
+rm(list=ls()) 
+outFile='AG_integrated'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3='fileList3.txt'
+parFile1=''
+parFile2=''
+parFile3=''
 
+
+setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/hto_samples_cutoff_all/result')
+
+### Parameter setting end ###
+
+source("split_samples_utils.r")
 library(Seurat)
 library(ggplot2)
 
@@ -63,35 +76,25 @@ my_startval <- function(values,D1="normal",D2="normal",cutoff_point=0) {
 get_cutoff<-function(values, prefix, cutoff_startval=NA){
   my_out <- em(values,"normal","normal", cutoff_startval=cutoff_startval)
   cut_off <- cutoff(my_out)
-  png(paste0(prefix, ".cutoff.png"), width=2000, height=1600, res=300)
-  his<-hist(values,200,F,xlab="concentration",ylab="density", main=NULL,col="grey")
-  lines(density(values),lwd=1.5,col="blue")
-  lines(my_out,lwd=1.5,col="red")
-  abline(v=cut_off[1],lwd=1.5,col="brown")
-  abline(v=my_out$start.val,lwd=1.5,col="green")
-  
-  minb=min(his$breaks)
-  maxb=max(his$breaks)
-  x=minb + (maxb-minb) * 3 /4
-  
-  y=max(his$density)
-  legend(x=x, y=y, legend=c("density", "fit", "fit", "cutoff", "start_val"), col=c("blue", "red", "red", "brown", "green"), lty=c(1,1,2,1,1))
-  dev.off()
+  draw_cutoff(paste0(output_prefix, "_", tagname), values, cut_off[1])
   return(list(em_out=my_out, cut_off=cut_off))
 }
 
 files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
 
-if(parSampleFile2 != ''){
-  cutoffs=read.table(parSampleFile2, sep="\t")
-}else{
-  cutoffs=NULL
-}
-
 params_lines=read.table(parSampleFile3, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
+umap_min_dist=as.numeric(params$umap_min_dist)
+umap_num_neighbors=as.numeric(params$umap_num_neighbors)
+
+cutoffs=NULL
+if(!is.na(params$cutoff_file)){
+  if(file.exists(params$cutoff_file)){
+    cutoffs=read.table(params$cutoff_file, sep="\t")
+  }
+}
 
 idx=14
 for(idx in c(1:length(files))){
@@ -108,8 +111,6 @@ for(idx in c(1:length(files))){
 
   obj=read_hto(rdsfile, output_prefix)
   
-  cutoff_point=ifelse(fname %in% names(cutoffs), as.numeric(cutoffs[[fname]]), NA)
-
   tagnames=rownames(obj[["HTO"]])
   data <- FetchData(object=obj, vars=tagnames)
   write.csv(data, file=paste0(output_prefix, ".data.csv"))
@@ -120,34 +121,28 @@ for(idx in c(1:length(files))){
     values=data[,tagname]
     values=values[values>0]
 
-    cutoff_point=NA
-    if(!is.null(cutoffs)){
-      if(ncol(cutoffs) == 3){
-        cfs<-cutoffs[cutoffs$V3==fname & cutoffs$V2==tagname,]
-        if(nrow(cfs)>0){
-          cutoff_point<-cfs$V1[1]
-        }
-      }else{
-        cfs<-cutoffs[cutoffs$V2==fname,]
-        if(nrow(cfs)>0){
-          cutoff_point<-cfs$V1[1]
-        }
-      }
+    my_cutoff=lookup_cutoff(cutoffs, fname, tagname)
+    if(my_cutoff == 0){
+      cat(paste0("get cutoff of ", tagname, " ...\n"))
+      my_cutoff=get_cutoff(values, paste0(output_prefix, "_", tagname))
+      data[,paste0(tagname,"_pos")] = ifelse(data[,tagname]>my_cutoff$cut_off[1], tagname, "Negative")
+      res<-rbind(res, data.frame(
+        tagname=tagname,
+        start.val=my_cutoff$em_out$start.val,
+        mu1=my_cutoff$em_out$param["mu1"], 
+        sigma1=my_cutoff$em_out$param["sigma1"], 
+        mu2=my_cutoff$em_out$param["mu2"], 
+        sigma2=my_cutoff$em_out$param["sigma2"], 
+        cutoff=my_cutoff$cut_off[1]))
+    }else{
+      cat("use predefined cutoff=", my_cutoff, "\n")
+      draw_cutoff(paste0(output_prefix, "_", tagname), values, my_cutoff)
+      data[,paste0(tagname,"_pos")] = ifelse(data[,tagname]>my_cutoff, tagname, "Negative")
     }
-
-    cat(paste0("get cutoff of ", tagname, " ...\n"))
-    my_cutoff=get_cutoff(values, paste0(output_prefix, "_", tagname), cutoff_point)
-    data[,paste0(tagname,"_pos")] = ifelse(data[,tagname]>my_cutoff$cut_off[1], tagname, "Negative")
-    res<-rbind(res, data.frame(
-      start.val=my_cutoff$em_out$start.val,
-      mu1=my_cutoff$em_out$param["mu1"], 
-      sigma1=my_cutoff$em_out$param["sigma1"], 
-      mu2=my_cutoff$em_out$param["mu2"], 
-      sigma2=my_cutoff$em_out$param["sigma2"], 
-      cutoff=my_cutoff$cut_off[1]))
   }
-  rownames(res)=tagnames
-  write.csv(res, paste0(output_prefix, ".estimated.csv"))
+  if(!is.null(res)){
+    write.csv(res, paste0(output_prefix, ".estimated.csv"))
+  }
   
   cat(paste0("get classification ...\n"))
   class_names=paste0(tagnames, "_pos")
@@ -177,6 +172,8 @@ for(idx in c(1:length(files))){
   
   obj[["HTO_classification"]] = data$HTO_classification
   obj[["HTO_classification.global"]] = data$HTO_classification.global
+
+  saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))
   
-  output_post_classification(obj, output_prefix)
+  output_post_classification(obj, output_prefix, umap_min_dist=umap_min_dist, umap_num_neighbors=umap_num_neighbors)
 }

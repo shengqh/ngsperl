@@ -1,38 +1,88 @@
+rm(list=ls()) 
+outFile='AG_integrated'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parFile1=''
+parFile2=''
+parFile3=''
+
+
+setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/hto_souporcell_skip_remap_cutoff_integration/result')
+
+### Parameter setting end ###
 
 library(Seurat)
 library(patchwork)
 library(ggplot2)
+library(dplyr)
+library(tidyr)
 
 souporcell_tb<-read.table(parSampleFile1, sep="\t", row.names=2)
 cutoff_tb<-read.table(parSampleFile2, sep="\t", row.names=2)
 umap_rds_tb<-read.table(parSampleFile3, sep="\t", row.names=2)
 
-sample_name=rownames(souporcell_tb)[2]
+if(exists("parSampleFile4")){
+  if(file.exists(parSampleFile4)){
+    ignores<-read.table(parSampleFile4, sep="\t")
+    ignore_map<-split(ignores$V1, ignores$V2)
+  }
+}else{
+  ignore_map=list()
+}
+
+get_max_row<-function(x){
+  x<-x[order(x, decreasing = T)]
+  if(names(x)[1] == "Doublet"){
+    dperc = x[1] / sum(x)
+    if (dperc >= 0.8){
+      return("Doublet")
+    }
+    return(names(x)[2])
+  }else{
+    return(names(x)[1])
+  }
+}
+
+sample_name=rownames(souporcell_tb)[1]
 for (sample_name in rownames(souporcell_tb)){
   s1<-read.csv(cutoff_tb[sample_name, "V1"], row.names=1)
   s2<-read.table(souporcell_tb[sample_name, "V1"], row.names=1, header=T)
   obj<-readRDS(umap_rds_tb[sample_name, "V1"])
   
+  if(sample_name %in% names(ignore_map)){
+    ignore_souporcells<-unlist(ignore_map[sample_name])
+  }else{
+    ignore_souporcells = NULL
+  }
+  
   s <- merge(s1, s2, by=0, all.x=TRUE)
   
-  single<-s[s$HTO.global == "Singlet",]
-  single<-single[single$status == "singlet",]
+  #single<-s[s$HTO.global == "Singlet",]
+  #single<-single[single$status == "singlet",]
+  single<-s[s$status == "singlet",]
   tb<-table(single$HTO, single$assignment)
   
   write.csv(tb, paste0(sample_name, ".HTO_soupor_singlet.csv"))
   
-  maxrow<-unlist(rownames(tb)[apply(tb,2,which.max)])
-  
-  cmap<-split(maxrow, colnames(tb))
+  tb2<-as.data.frame.matrix(tb)
+  tb2$id = rownames(tb2)
+  top2<-tb2 %>%
+    gather(column, value, -id) %>%
+    group_by(column) %>%
+    top_n(2)
 
+  cmap<-unlist(apply(tb,2,get_max_row))
+  names(cmap) = colnames(tb)
+  
   final<-unlist(apply(s, 1, function(x){
     #print(x['HTO.global'])
     if (x['HTO.global'] == 'Singlet'){
       return(x['HTO'])
     }
-    if(x['HTO.global'] == 'Negative'){
-      return(x['HTO'])
-    }
+    # if(x['HTO.global'] == 'Negative'){
+    #   return(x['HTO'])
+    # }
     if(x['status'] == 'doublet'){
       return(x['HTO'])
     }
@@ -41,6 +91,12 @@ for (sample_name in rownames(souporcell_tb)){
     }
     
     ass=x['assignment']
+    
+    if(!is.null(ignore_souporcells)){
+      if(ass %in% ignore_souporcells){
+        return(x['HTO'])
+      }
+    }
     
     if(!(ass %in% names(cmap))){
       return(x['HTO'])
@@ -61,8 +117,14 @@ for (sample_name in rownames(souporcell_tb)){
     
     ass=x['assignment']
     
+    if(!is.null(ignore_souporcells)){
+      if(ass %in% ignore_souporcells){
+        return("Ignored")
+      }
+    }
+    
     if(!(ass %in% names(cmap))){
-      return('unmapped')
+      return('Unmapped')
     }
     
     res=cmap[ass]
@@ -89,6 +151,8 @@ for (sample_name in rownames(souporcell_tb)){
   s<-s[colnames(obj),]
   rownames(s)<-s$Row.names
 
+  cmap<-cmap[!(cmap %in% c("Doublet", "Negative"))]
+  
   tags<-unlist(cmap)
   tags<-tags[order(tags)]
   tags<-gsub("-",".",tags)
@@ -110,13 +174,23 @@ for (sample_name in rownames(souporcell_tb)){
   obj$final<-s$Final
   obj$assignment<-s$assignment
 
+  write.csv(obj@meta.data, paste0(sample_name, ".meta.csv"))
+  saveRDS(obj@meta.data, paste0(sample_name, ".meta.rds"))
+  
   pt.size=0.3
 
   ss<-s[s$status=="singlet",]
   ss_assign<-unique(ss$assignment)
   ss_assign<-ss_assign[order(ss_assign)]
   for (assign in ss_assign){
-    g2<-DimPlot(obj, group.by="assignment", pt.size = pt.size) + ggtitle(paste0("soupor cluster ", assign))
+    title = ""
+    if(!is.null(ignore_souporcells)){
+      if(assign %in% ignore_souporcells){
+        title = ",ignored"
+      }      
+    }
+    
+    g2<-DimPlot(obj, group.by="assignment", pt.size = pt.size) + ggtitle(paste0("soupor cluster ", assign, title))
     gdata<-g2$data
     gdata$assignment<-as.character(gdata$assignment)
     gdata$assignment[gdata$assignment != assign] <- "Other"
@@ -135,9 +209,9 @@ for (sample_name in rownames(souporcell_tb)){
     dev.off()
   }
   
-  g1<-DimPlot(obj, group.by="HTO_classification", pt.size = pt.size)
-  g2<-DimPlot(obj, group.by="souporcell", pt.size = pt.size)
-  g3<-DimPlot(obj, group.by="final", pt.size = pt.size)
+  g1<-DimPlot(obj, group.by="HTO_classification", pt.size = pt.size) + ggtitle("HTO")
+  g2<-DimPlot(obj, group.by="souporcell", pt.size = pt.size) + ggtitle("souporcell")
+  g3<-DimPlot(obj, group.by="final", pt.size = pt.size) + ggtitle("integrated")
 
   g1levels<-unique(as.character(g1$data[,3]))
   g1levels<-g1levels[order(g1levels)]
@@ -161,15 +235,29 @@ for (sample_name in rownames(souporcell_tb)){
   print(g)
   dev.off()
   
-  get_gg<-function(g1, hto){
+  get_gg<-function(g1, hto, name){
     groups<-unique(as.character(g1$data[,3]))
     groups<-groups[order(groups)]
     col1<-rep("gray", length(groups))
     names(col1)<-groups
     col1[hto]<-"red"
     gg1<-g1+scale_color_manual(values=col1)
-    gg1$data<-rbind(gg1$data[gg1$data[,3] != hto,], gg1$data[gg1$data[,3] == hto,])
+    
+    htodata<-gg1$data[gg1$data[,3] == hto,]
+    nohtodata<-gg1$data[gg1$data[,3] != hto,]
+    
+    gg1$data<-rbind(nohtodata, htodata)
     gg1$data[,3]=factor(gg1$data[,3], levels=groups)
+    
+    title = ""
+    if(!is.null(ignore_souporcells)){
+      if(hto %in% ignore_souporcells){
+        title = ",ignored"
+      }
+    }
+    
+    gg1<-gg1+ggtitle(paste0(name,"(",nrow(htodata),")", title))
+    
     return(gg1)
   }
 
@@ -179,14 +267,14 @@ for (sample_name in rownames(souporcell_tb)){
   htos<-unique(as.character(obj$HTO_classification))
   hto<-htos[1]
   for (hto in htos){
-    gg1<-get_gg(g1, hto)
+    gg1<-get_gg(g1, hto, "HTO")
     
     if(hto %in% names(hmap)){
-      gg2<-get_gg(g2, as.character(hmap[hto]))
+      gg2<-get_gg(g2, as.character(hmap[hto]), "souporcell")
     }else{
-      gg2<-get_gg(g2, "Unmapped")
+      gg2<-get_gg(g2, "Unmapped", "souporcell")
     }
-    gg3<-get_gg(g3, hto)
+    gg3<-get_gg(g3, hto, "integrated")
     gg<-gg1+gg2+gg3
     
     png(paste0(sample_name, ".", hto, ".png"), width=4000, height=1000, res=300)
@@ -194,3 +282,4 @@ for (sample_name in rownames(souporcell_tb)){
     dev.off()
   }
 }
+

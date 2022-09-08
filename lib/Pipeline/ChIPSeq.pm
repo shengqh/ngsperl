@@ -300,6 +300,10 @@ sub getConfig {
         is_rainbow_color   => 0,
         is_draw_individual => 0,
         is_single_pdf      => 1,
+        is_multi_page => getValue($def, "bamplot_multi_page", 1),
+        draw_by_r => getValue($def, "bamplot_draw_by_r", 1),
+        draw_by_r_width => getValue($def, "bamplot_draw_by_r_width", 10),
+        draw_by_r_height => getValue($def, "bamplot_draw_by_r_height", 10),
         sh_direct          => 1,
         pbs                => {
           "email"    => $email,
@@ -436,6 +440,7 @@ sub getConfig {
         controls   => $def->{"controls"},
         output_bigwig=>$macs2_output_bigwig,
         chr_size_file   => $chr_size_file,
+        can_result_be_empty_file => 1,
         sh_direct  => 0,
         pbs        => {
           "email"    => $email,
@@ -451,6 +456,35 @@ sub getConfig {
     push (@$step2, $peakCallerTask);
 
     my $peak_count_task = add_peak_count($config, $def, $summary, $target_dir, $peakCallerTask . "_count", $peakCallerTask);
+
+    # if(getValue($def, "perform_annotateNearestGene", 0)){
+    #   annotateNearestGene($config, $def, $summary, $target_dir,  [$peakCallerTask, ".bed"]);
+    # }
+
+    if(getValue($def, "perform_annovar", 1)){
+      my $annovar_task = addAnnovar( $config, $def, $summary, $target_dir, $peakCallerTask, ".bed", undef, undef, undef, 1, 0, 1 );
+
+      if(0){
+        my $annovar_vis_task = $annovar_task . "_vis";
+        $config->{$annovar_vis_task} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          rCode                    => "",
+          target_dir               => "${target_dir}/" . getNextFolderIndex($def) . $annovar_vis_task,
+          option                   => "",
+          parameterSampleFile1_ref => $annovar_task,
+          rtemplate                => "../Visualization/peakAnnovarVis.r",
+          output_file              => "",
+          output_file_ext          => ".png",
+          pbs                      => {
+            "nodes"    => "1:ppn=1",
+            "walltime" => "1",
+            "mem"      => "10gb"
+          },
+        };
+        push(@$summary, $annovar_vis_task);
+      }
+    }
 
     if (getValue($def, "perform_activeGene", 0)) {
       $config->{"activeGene"} = {

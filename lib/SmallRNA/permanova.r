@@ -23,6 +23,9 @@ file_list$name<-gsub("bacteria_group1.+","Microbiome",file_list$name)
 file_list$name<-gsub("bacteria_group2.+","Environment",file_list$name)
 file_list$name<-gsub("_group.+","",file_list$name)
 
+is_bacteria<-grepl("estimated|aggregated", file_list$name)
+file_list$name[is_bacteria] <-gsub(outFile,"Bacteria",file_list$name[is_bacteria])
+
 files <- file_list$V1
 
 design_files<-read.table(parSampleFile3, sep="\t",  stringsAsFactors=F)
@@ -59,13 +62,13 @@ for (i in 1:nrow(file_list)){
 
   cat(count_name, "\n")
 
-  data <- read.table(files[i], sep="\t", header=T, row.names=1, stringsAsFactors=F)
+  data <- read.table(files[i], sep="\t", header=T, row.names=1, stringsAsFactors=F, check.names=F)
   data<-data[,colnames(data) %in% samples]
 
   #normalize total reads per million 
   count <- rbind(data, librarySize[colnames(data)])
   count_N <- data.frame(row.names=rownames(count),lapply(count, function(x)
-    (x/x[nrow(count)])*1e+6))
+    (x/x[nrow(count)])*1e+6), check.names=F)
   count_N <- count_N[-nrow(count_N),]
   
   count_N <- t(count_N)

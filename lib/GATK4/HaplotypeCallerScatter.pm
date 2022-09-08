@@ -106,9 +106,17 @@ gatk --java-options \"$java_option\" \\
   -I $bam_file \\
   -O $snvTmp
 
-if [[ -s $snvTmpIndex ]]; then
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${snvOut}.succeed
+  rm -f ${snvOut}.failed
   mv $snvTmp $snvOut
   mv $snvTmpIndex $snvOutIndex
+else
+  touch ${snvOut}.failed
+  rm -f ${snvOut}.succeed
+  rm -f $snvTmp
+  rm -f $snvTmpIndex
 fi
 ";
       

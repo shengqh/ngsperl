@@ -3,6 +3,7 @@ package Pipeline::ExomeSeq;
 
 use strict;
 use warnings;
+use File::Basename;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -72,6 +73,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "filter_variants_by_allele_frequency",            1 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
+  initDefaultValue( $def, "filter_variants_by_min_inbreeding_coeff",        -0.2 );
   initDefaultValue( $def, "filter_variants_fq_equal_1",                     0 );
 
   initDefaultValue( $def, "perform_cnv_gatk4_cohort", 1 );
@@ -105,6 +107,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "remove_duplicate", 1 );
   initDefaultValue( $def, "perform_multiqc", 0 );
+  initDefaultValue( $def, "perform_report", 1 );
 
   my $default_onco_options = {
     "picture_width" => "0",
@@ -769,6 +772,7 @@ fi
   }
 
   if ($def->{perform_target_coverage}){
+    my $script = dirname(__FILE__) . "/../GATK4/fixCollectHsMetrics.py";
     my $target_coverage_task = $bam_input . "_target_coverage";
     my $bait_intervals = getValue($def, "bait_intervals_file");
     my $target_intervals = getValue($def, "target_intervals_file");
@@ -776,15 +780,25 @@ fi
       class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
       target_dir            => "${target_dir}/${target_coverage_task}",
-      option                => "--java-options \"-Xms__MEMORY__\" CollectHsMetrics \\
+      option                => "
+gatk --java-options \"-Xms__MEMORY__\" CollectHsMetrics \\
       --INPUT __FILE__ \\
-      --OUTPUT __OUTPUT__ \\
+      --OUTPUT __OUTPUT__.tmp \\
       --BAIT_INTERVALS ${bait_intervals} \\
       --TARGET_INTERVALS ${target_intervals}
-  ",
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+else
+  python3 $script -i __OUTPUT__.tmp -o __OUTPUT__
+fi
+rm __OUTPUT__.tmp
+
+",
       interpretor           => "",
       docker_prefix         => "gatk4_",
-      program               => "gatk",
+      program               => "",
       check_program         => 0,
       source_arg            => "",
       source_ref            => $bam_ref,
@@ -991,7 +1005,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       class             => "GATK4::HaplotypeCaller",
       perform           => 1,
       target_dir        => "${target_dir}/$gvcf_name",
-      option            => "",
+      option            => getValue($def, "HaplotypeCaller_option", "--soft-clip-low-quality-ends true --dont-use-soft-clipped-bases true"),
       source_ref        => $tumor_bam,
       java_option       => "",
       fasta_file        => $fasta,
@@ -1147,7 +1161,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       class         => "GATK::HaplotypeCaller",
       perform       => 1,
       target_dir    => "${target_dir}/$gvcf_name",
-      option        => "",
+      option        => getValue($def, "HaplotypeCaller_option", "--soft-clip-low-quality-ends true --dont-use-soft-clipped-bases true"),
       source_ref    => $tumor_bam,
       java_option   => "",
       fasta_file    => $fasta,
@@ -1445,10 +1459,13 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       my $is_tumor_only = not defined $normal_files;
       #print("is_tumor_only=" . $is_tumor_only . "\n");
 
+      my $is_pon_file = (index($pon, '/') != -1) || (index($pon, '/') != -1);
+
       if ($pon eq ""){
         my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, undef, undef);
         $mutect_ref = [ $mutect2call, '.vcf$' ];
-      }elsif(-e $pon){
+      }elsif($is_pon_file){
+        die "file not exists: $pon "if (! -e $pon);
         my $suffix = ($pon =~ /vcf.gz/) ? ".tbi" : ".idx";
         my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, $pon, $pon . $suffix);
         $mutect_ref = [ $mutect2call, '.vcf$' ];

@@ -3,6 +3,7 @@ package CQS::ConfigUtils;
 
 use strict;
 use warnings;
+use POSIX;
 use Carp qw<longmess>;
 use File::Basename;
 use File::Copy;
@@ -102,6 +103,9 @@ our %EXPORT_TAGS = (
       get_joined_files
       get_joined_names
       process_parameter_sample_file
+      get_task_dep_pbs_map
+      add_bind
+      get_final_file_by_task_name
       )
   ]
 );
@@ -167,6 +171,15 @@ sub get_config_section {
 
 sub has_config_section {
   my ( $config, $section ) = @_;
+
+  if(!defined $section){
+    my $i = 1;
+    print STDERR "Stack Trace:\n";
+    while ( (my @call_details = (caller($i++))) ){
+      print STDERR $call_details[1].":".$call_details[2]." in function ".$call_details[3]."\n";
+    }    
+  }
+
   my @sections = split( '::', $section );
   my $result   = $config;
   for my $curSection (@sections) {
@@ -484,10 +497,10 @@ sub get_first_result_file {
         return $files[0];
       }
     }
-    die "section $refSectionName return nothing!";
+    die "section $refSectionName return nothing for pattern $pattern !";
   }
 
-  die "section $refSectionName return nothing!";
+  die "section $refSectionName return nothing for pattern $pattern !";
 }
 
 sub parse_param_file {
@@ -1301,8 +1314,12 @@ sub writeParameterSampleFile {
       if ( $refstr eq 'HASH' ) {
         foreach my $groupName ( sort keys %$subSampleFiles ) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
-          for my $groupSampleName (@$groupSampleNames) {
-            print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+          if (is_string($groupSampleNames)){
+            print $list "$groupSampleNames\t${groupName}\t${sample_name}\n";
+          }else{
+            for my $groupSampleName (@$groupSampleNames) {
+              print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+            }
           }
         }
       }
@@ -1531,7 +1548,12 @@ sub get_program_param {
       close($list);
       $result = trim($arg . " " . $configfile);
     }else{
-      my $pfile  = join($joinDelimiter, @$pfiles );
+      my $pfile;
+      if(is_array($pfiles)){
+        $pfile  = join($joinDelimiter, @$pfiles );
+      }else{
+        $pfile = $pfiles;
+      }
       $result = trim($arg . " " . $pfile);
     }
   }
@@ -1655,7 +1677,7 @@ sub getMemoryPerThread {
   my $result = $memory_in_gb;
   $result =~ /(\d+)(\S+)/;
   my $memNum = $1;
-  $result = $memNum / $thread;
+  $result = floor($memNum / $thread);
   my $isMB = 0;
   if ($result < 1) {
     $result = floor($result * 1024);
@@ -1919,6 +1941,16 @@ sub get_covariances_by_pattern {
   my ($def) = @_;
 
   my $files = $def->{files};
+  if(getValue($def, "perform_split_hto_samples", 0)){
+    $files = {};
+    my $HTO_samples = getValue($def, "HTO_samples");
+    for my $exp (keys %$HTO_samples){
+      my $samples = $HTO_samples->{$exp};
+      for my $sample (values %$samples){
+        $files->{$sample} = [];
+      }
+    }
+  }
   my $covariance_patterns = $def->{covariance_patterns};
   my $covariances = [sort keys %$covariance_patterns];
   my $samplenames = [sort keys %$files];
@@ -2117,6 +2149,126 @@ sub process_parameter_sample_file {
     $cur_option = $cur_option . " " . $fileArg . " " . $input;
   }
   return($cur_option, $input);
+}
+
+sub get_task_dep_pbs_map {
+  my ($config, $task_section_name) = @_;
+  my $task_section = $config->{$task_section_name};
+  
+  if ( not defined $task_section->{class} ) {
+    next
+  }
+  
+  my $myclass = instantiate( $task_section->{class} );
+  my $pbs_sample_map = $myclass->get_pbs_source( $config, $task_section_name );
+
+  my $allSampleNameMap = {};
+  for my $pbs (keys %$pbs_sample_map){
+    my $sample_names = $pbs_sample_map->{$pbs};
+    for my $sample_name (@$sample_names){
+      $allSampleNameMap->{$sample_name} = 1;
+    }
+  }
+  my @allSampleNames = (sort keys %$allSampleNameMap);
+
+  my $taskdeppbsmap = {};
+  for my $key ( keys %$task_section ) {
+    if ($key eq "gather_name_ref"){
+      next;
+    }
+
+    my $mapname = $key;
+    if ( $mapname =~ /_ref$/ ) {
+      $mapname =~ s/_config_ref//g;
+      $mapname =~ s/_ref//g;
+      my $refpbsmap = get_ref_section_pbs( $config, $task_section_name, $mapname );
+      my @refNames = (sort keys %$refpbsmap);
+
+      my $keyEquals = 1;
+      if (scalar(@allSampleNames) != scalar(@refNames)){
+        $keyEquals = 0;
+      }else{
+        for my $idx (0..(scalar(@allSampleNames)-1)){
+          if ($allSampleNames[$idx] ne $refNames[$idx]) {
+            $keyEquals = 0;
+            last;
+          }
+        }
+      }
+
+      for my $pbs (keys %$pbs_sample_map){
+        my $curpbs = $taskdeppbsmap->{$pbs};
+        if ( !defined $curpbs ) {
+          $curpbs = {};
+        }
+        
+        if ($keyEquals) {
+          my $sample_names = $pbs_sample_map->{$pbs};
+          for my $sample_name (@$sample_names) {
+            my $ref_pbs_list = $refpbsmap->{$sample_name};
+            if (defined $ref_pbs_list){
+              for my $ref_pbs (@$ref_pbs_list){
+                $curpbs->{$ref_pbs} = 1;
+              }
+            }
+          }
+        }else{
+          for my $sample_name (sort keys %$refpbsmap){
+            my $ref_pbs_list = $refpbsmap->{$sample_name};
+            for my $ref_pbs (@$ref_pbs_list){
+              $curpbs->{$ref_pbs} = 1;
+            }
+          }
+        }
+
+        $taskdeppbsmap->{$pbs} = $curpbs;
+      }
+    }
+  }
+
+  return($taskdeppbsmap);
+}
+
+sub add_bind{
+  my ($config, $bind) = @_;
+
+  for my $section_key (keys %$config){
+    my $section = $config->{$section_key};
+    if (is_hash($section)){
+      for my $key (keys %$section){
+        if ($key =~ /docker_command$/){
+          my $value = $section->{$key};
+          $value =~ s/exec/exec -B $bind/;
+          $section->{$key} = $value;
+          #print($value . "\n");
+        }
+      }
+    }
+  }
+
+  return($config);
+}
+
+sub get_final_file_by_task_name {
+  my ($all_results, $task_name) = @_;
+  my $result_files = $all_results->{$task_name};
+  my $final_file;
+  if((not defined $result_files) || (scalar(@$result_files) == 0)){
+    #get last sample_name result file
+    for my $cur_key (sort keys %$all_results){
+      if($cur_key eq $task_name){
+        next;
+      }
+
+      my $cur_files = $all_results->{$cur_key};
+      $final_file = $cur_files->[-1];
+      #print($final_file . "\n");
+    }
+  }else{
+    #get last task_name result file
+    $final_file = $result_files->[-1];
+  }
+  return($final_file);
 }
 
 1;

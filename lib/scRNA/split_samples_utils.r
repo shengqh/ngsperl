@@ -17,13 +17,18 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1)
   gfinal=list()
   for(feature in features){
     ddata=mdata[mdata$variable==feature,]
+    mvalue=ceiling(max(ddata$value))
+    breaks = seq(0, mvalue, 0.2)
+    
     g<-ggplot(ddata, aes_string(x="value")) + 
       geom_histogram(aes(y=..density..), bins=50, colour="black", fill="white", position="identity") + 
       geom_density(color="red") +
       xlab(feature) + theme_bw()+
       theme(axis.text=element_text(size=18),
             axis.title=element_text(size=24),
-            axis.title.y=element_blank())
+            axis.title.y=element_blank(),
+            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+      scale_x_continuous(breaks=breaks)
     if(length(unique(mdata[,identName])) > 1){
       g<-g+facet_grid(reformulate(".", identName), scale="free_y") + 
         theme(strip.background=element_rect(colour="black", fill=NA),
@@ -45,7 +50,7 @@ read_hto<-function(rdsfile, output_prefix) {
   return(obj)
 }
 
-output_post_classification<-function(obj, output_prefix){
+output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap_num_neighbors=30){
   tagnames=rownames(obj[["HTO"]])
   
   hto_names=unique(obj$HTO_classification)
@@ -54,14 +59,14 @@ output_post_classification<-function(obj, output_prefix){
   hto_names=c(a_hto_names, "Negative", "Doublet")
   obj$HTO_classification=factor(obj$HTO_classification, levels=hto_names)
   
-  width=max(1600, length(tagnames) * 1000)
+  width=max(1800, length(tagnames) * 1500 + 300)
   
   Idents(obj) <- "HTO_classification"
-  png(paste0(output_prefix, ".class.ridge.png"), width=width, height=max(1400, length(tagnames) * 300), res=300)
+  png(paste0(output_prefix, ".class.ridge.png"), width=width, height=max(1400, (length(tagnames) + 2) * 300), res=300)
   print(RidgePlot(obj, assay = "HTO", features = tagnames, ncol = length(tagnames)))
   dev.off()
   
-  png(paste0(output_prefix, ".class.dist.png"), width=width, height=max(1400, length(tagnames) * 500), res=300)
+  png(paste0(output_prefix, ".class.dist.png"), width=width, height=max(1400, (length(tagnames) + 2) * 1000), res=300)
   rplot(obj, assay = "HTO", features = tagnames, identName="HTO_classification")
   dev.off()
   
@@ -71,28 +76,38 @@ output_post_classification<-function(obj, output_prefix){
     dev.off()
   }
   
-  tmat=data.frame(t(data.frame(obj@assays$HTO@counts)))
+  tmat=data.frame(t(data.frame(obj@assays$HTO@counts, check.names = F)), check.names = F)
   rownames(tmat)=colnames(obj)
   tmat$HTO = unlist(obj$HTO_classification)
   tmat$HTO.global = unlist(obj$HTO_classification.global)
   write.csv(tmat, file=paste0(output_prefix, ".csv"))
   
-  if(length(tagnames) > 2) {
+  if(length(tagnames) >= 2) {
     VariableFeatures(obj)<-tagnames
-    obj<-ScaleData(obj, assay="HTO")
-    obj<-RunUMAP(obj, assay="HTO", slot="scale.data", features=rownames(obj))
+    obj<-ScaleData(obj)
+
+    #https://jlmelville.github.io/uwot/abparams.html
+    #adjust param for umap
+    obj<-RunUMAP(obj, features=tagnames, slot="scale.data", min.dist=umap_min_dist, n.neighbors=umap_num_neighbors)
+
+    saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))
+
+    umap<-FetchData(obj, c("UMAP_1", "UMAP_2"))
+    scaled_data<-FetchData(obj, tagnames)
+    colnames(scaled_data)<-paste0("Scaled_", tagnames)
     
-    saveRDS(object = obj, file = paste0(output_prefix, ".umap.rds"))
+    alldata<-cbind(umap, scaled_data, tmat)
+    write.csv(alldata, file=paste0(output_prefix, ".csv"))
     
     png(paste0(output_prefix, ".umap.class.png"), width=2000, height=1800, res=300)
     g<-DimPlot(obj, reduction = "umap", group.by="HTO_classification")
     print(g)
     dev.off()
-    
-    nwidth=ceiling(sqrt(length(tagnames)))
-    nheight=ceiling(length(tagnames)/nwidth)
-    png(paste0(output_prefix, ".umap.tag.png"), width=nwidth*1500, height=1500*nheight, res=300)
-    g<-FeaturePlot(obj, features=tagnames, reduction = "umap", ncol=nwidth)
+
+    ncol=ceiling(sqrt(length(tagnames)))
+    nrow=ceiling(length(tagnames)/ncol)
+    png(paste0(output_prefix, ".umap.tag.png"), width=ncol*1500, height=1500*nrow, res=300)
+    g<-FeaturePlot(obj, features=tagnames, reduction = "umap", ncol=ncol)
     print(g)
     dev.off()
     
@@ -128,3 +143,32 @@ build_summary<-function(allres, output_prefix, nameMapFile=NA){
   print(g)
   dev.off()
 }
+
+lookup_cutoff<-function(cutoffs, fname, tagname){
+  if(is.null(cutoffs)){
+    return(0)
+  }
+  
+  fc<-cutoffs[cutoffs$V3==fname & cutoffs$V2==tagname,]
+  if(nrow(fc) == 0){
+    return(0)
+  }
+  
+  return(fc$V1[1])
+}
+
+draw_cutoff<-function(prefix, values, cut_off){
+  png(paste0(prefix, ".cutoff.png"), width=2000, height=1600, res=300)
+  his<-hist(values,200,F,xlab="concentration",ylab="density", main=NULL,col="grey")
+  lines(density(values),lwd=1.5,col="blue")
+  abline(v=cut_off,lwd=1.5,col="red")
+
+  minb=min(his$breaks)
+  maxb=max(his$breaks)
+  x=minb + (maxb-minb) * 3 /4
+  
+  y=max(his$density)
+  legend(x=x, y=y, legend=c("density", "cutoff"), col=c("blue", "red"), lty=c(1,2))
+  dev.off()
+}
+

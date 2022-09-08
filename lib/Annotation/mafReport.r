@@ -1,3 +1,17 @@
+rm(list=ls()) 
+outFile=''
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/home/shengq2/program/projects/breast_cancer_spore/20220713_wgs/BRE15136_Summary_21Oct2021_correctedv5.csv'
+parFile2=''
+parFile3=''
+clinicalFeatures='ARM,CBR_6,TNBCtype_4,TIL_call,PDL1_IHC_Agg,BMI_CLASS,diabetes';genome='hg38'
+
+setwd('/scratch/cqs/breast_cancer_spore/analysis/all/gatk4_13_report/result')
+
+### Parameter setting end ###
+
 library(mafreport)
 
 #https://github.com/PoisonAlien/maftools/issues/532
@@ -9,8 +23,14 @@ mafFileList = parSampleFile1
 reportOutDir = getwd()
 
 if(parFile1 != ''){
-  clinicalData = parFile1
   #need also define clinicalFeatures in rCode
+  clinicalData = parFile1
+  clinicalFeatures = unlist(strsplit(clinicalFeatures, ","))
+  cdata<-read.csv(clinicalData, header=T, stringsAsFactor=F)
+  missedFeatures<-clinicalFeatures[!(clinicalFeatures %in% colnames(cdata))]
+  if (length(missedFeatures) > 0){
+    stop(paste0("missing clinical features: ", paste0(missedFeatures, collapse = ",")))
+  }
 }else{
   clinicalData = NULL
   clinicalFeatures = NULL

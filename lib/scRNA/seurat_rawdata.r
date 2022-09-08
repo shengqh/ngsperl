@@ -1,9 +1,24 @@
+rm(list=ls()) 
+outFile='AG_integrated'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parSampleFile4='fileList4.txt'
+parFile1=''
+parFile2=''
+parFile3=''
+
+
+setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/seurat_rawdata/result')
+
+### Parameter setting end ###
 
 source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
 library(digest)
 library(patchwork)
+library(sparseMatrixStats)
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -13,6 +28,8 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 Mtpattern= myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
+hemoglobinPattern=myoptions$hemoglobinPattern
+
 species=myoptions$species
 pool_sample<-ifelse(myoptions$pool_sample == "0", FALSE, TRUE)
 
@@ -35,11 +52,20 @@ if (has_hto) {
   sample = rownames(hto_cell_files)[1]
   for (sample in rownames(hto_cell_files)){
     cell_file = hto_cell_files[sample, "V1"]
-    cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
-    colnames(cell_data)[1]<-"cell"
-    hto_md5[[sample]] = digest(cell_file, file=TRUE)
+    if(file_ext(cell_file) == "csv"){
+      cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
+      colnames(cell_data)[1]<-"cell"
+    }else{
+      cell_data = readRDS(cell_file)
+      cell_data$cell<-rownames(cell_data)
+      cell_data$HTO<-cell_data$final
+    }
     cell_data$Sample = ""
     cur_samples = hto_samples[hto_samples$File == sample,]
+    if(!all(cur_samples$Tagname %in% cell_data$HTO)){
+      stop(paste0("failed, not all tag defined ", paste0(cur_samples$Tagname, collapse = "/") , " for sample ", sample,  " were found in HTO tags ", paste0(unique(cell_data$HTO), collapse = "/") ))
+    }
+    
     for (cidx in c(1:nrow(cur_samples))){
       tagname = cur_samples$Tagname[cidx]
       samplename = cur_samples$Sample[cidx]
@@ -64,33 +90,71 @@ if(file.exists(parFile1)){
   rowi=1
   for(rowi in c(1:nrow(objs_config))){
     sample_id = objs_config$sample[rowi]
-    sample_obj = object.list[[sample_id]]
-    cd<-FetchData(sample_obj, c("seurat_clusters"))
-    rm(sample_obj)
+
+    #cat(sample_id, "\n")
     
-    crs<-objs_config$cluster_remove[rowi]
-    crslist<-unlist(strsplit(crs,','))
-    rcs<-rownames(cd)[as.character(cd$seurat_clusters) %in% crslist] 
-    
-    remove_cells[[sample_id]]=rcs
+    if(sample_id %in% names(object.list)){
+      crs<-objs_config$cluster_remove[rowi]
+      if(!is.na(crs)){
+        sample_obj = object.list[[sample_id]]
+        cd<-sample_obj$meta
+  
+        crslist<-unlist(strsplit(crs,','))
+        rcs<-rownames(cd)[as.character(cd$seurat_clusters) %in% crslist] 
+        
+        remove_cells[[sample_id]]=rcs
+      }
+    }
   }
+}
+
+read_gzip_count_file<-function(files, sample, species){
+  all_counts<-NA
+  index = 1
+  for(file in files){
+    cat('reading ', file, "\n")
+    counts<-fread(file)
+    if (species=="Mm") {
+      counts$GENE<-toMouseGeneSymbol(counts$GENE)
+    }
+    if (species=="Hs") {
+      counts$GENE<-toupper(counts$GENE)
+    }
+    
+    counts<-counts[!duplicated(counts$GENE),]
+    colnames(counts)[2:ncol(counts)]<-paste0(sample, index, "_", colnames(counts)[2:ncol(counts)])
+    if(is.na(all_counts)){
+      all_counts<-counts
+    }else{
+      all_counts<-merge(all_counts, counts, by="GENE")
+    }
+    index = index + 1
+  }
+  all_counts<-data.frame(all_counts)
+  rownames(all_counts)<-all_counts$GENE
+  all_counts$GENE<-NULL
+  return(all_counts)
 }
 
 #read raw count dat
 filelist1<-read.table(parSampleFile1, header=F, stringsAsFactors = F)
 rawobjs = list()
-fidx=1
-for (fidx in c(1:nrow(filelist1))) {
-  fileName  = filelist1[fidx, 1]
-  fileTitle = filelist1[fidx, 2]
+fidx=3
+fileMap<-split(filelist1$V1, filelist1$V2)
+
+for(fileTitle in names(fileMap)) {
+  fileName  = fileMap[[fileTitle]]
+  cat(fileTitle, "\n")
   if(dir.exists(fileName)){
     counts = Read10X(fileName)
-  } else {
+  } else if (grepl('.h5$', fileName)) {
     counts = Read10X_h5(fileName)
+  } else if (grepl('.gz$', fileName)) {
+    counts = data.frame(read_gzip_count_file(fileName, fileTitle, species))
   }
   
   adt.counts<-NULL
-  if (is.list(counts)){
+  if (is.list(counts) & ("Gene Expression" %in% names(counts))){
     adt.counts<-counts$`Antibody Capture`
     counts<-counts$`Gene Expression` 
   }
@@ -112,7 +176,10 @@ for (fidx in c(1:nrow(filelist1))) {
     rownames(counts)<-toupper(rownames(counts))
   }
   sobj = CreateSeuratObject(counts = counts, project = fileTitle)
-  sobj[["percent.mt"]] <- PercentageFeatureSet(object = sobj, pattern = Mtpattern)
+  sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt")
+  sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo")
+  sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+
   if (!is.null(adt.counts)){
     mat<-as.matrix(adt.counts)
     rowsum<-apply(mat>0, 1, sum)
@@ -183,28 +250,35 @@ rm(rawobjs)
 
 writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
 
-saveRDS(rawobj, paste0(outFile, ".rawobj.rds"));
+saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
 
-png(file=paste0(outFile, ".qc.png"), width=3000, height=1200, res=300)
-p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
-p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
-p<-p1+p2+plot_layout(ncol=2)
-print(p)
+png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
+par(mar = c(4, 8, 2, 1))
+C <- rawobj@assays$RNA@counts
+C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
+mc<-rowMedians(C)
+most_expressed <- order(mc, decreasing = T)[20:1]
+tm<-as.matrix(Matrix::t(C[most_expressed,]))
+boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
+        col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
 dev.off()
 
-nsample=length(unique(rawobj$sample))
-mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$sample, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
-png(file=paste0(outFile, ".qc.individual.png"), width=3000, height=min(20000, 1200 * nsample), res=300)
-p1<-ggplot(mt, aes(x=mt,y=nCount) ) +
-  geom_bin2d(bins = 70) + 
-  scale_fill_continuous(type = "viridis") + 
-  xlab("Percentage of mitochondrial") + ylab("log10(number of read)") +
-  facet_grid(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-p2<-ggplot(mt, aes(x=mt,y=nFeature) ) +
-  geom_bin2d(bins = 70) + 
-  scale_fill_continuous(type = "viridis") + 
-  xlab("Percentage of mitochondrial") + ylab("log10(number of feature)") +
-  facet_grid(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-p<-p1+p2+plot_layout(ncol=2)
-print(p)
-dev.off()
+draw_feature_qc(outFile, rawobj, "orig.ident")
+
+if(any(rawobj$orig.ident != rawobj$sample)){
+  draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
+}
+
+rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
+rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
+
+rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
+rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
+rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+
+draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
+
+if(any(rawobj$orig.ident != rawobj$sample)){
+  draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
+}
+

@@ -1,0 +1,15 @@
+#this line will be ignored
+out_prefix=scRNA_5126_CD4 #entry after this pound sign will be ignored
+cdr3_file=20220531_gliph2_tcr_CTRL_Pep_selected.txt
+hla_file=scRNA_5126.genotypes.arcasHLA.resolution3_subject.txt
+refer_file=/data/cqs/references/gliph2/human_v2.0/ref_CD4_v2.0.txt
+v_usage_freq_file=/data/cqs/references/gliph2/human_v2.0/ref_V_CD4_v2.0.txt
+cdr3_length_freq_file=/data/cqs/references/gliph2/human_v2.0/ref_L_CD4_v2.0.txt
+local_min_pvalue=0.001
+p_depth = 1000
+global_convergence_cutoff = 1
+simulation_depth=1000
+kmer_min_depth=3
+local_min_OVE=10
+algorithm=GLIPH2
+all_aa_interchangeable=1

@@ -72,7 +72,7 @@ if(length(sheets) > 1){
 }
 
 genes=unique(unlist(gene_groups))
-g<-DotPlot(obj, features=genes, assay=assay,group.by=group.by)
+g<-DotPlot(obj, features=genes, assay="RNA",group.by=group.by)
 gdata<-g$data
 
 data.plot<-NULL

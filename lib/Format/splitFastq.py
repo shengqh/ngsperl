@@ -20,14 +20,16 @@ def rawgencount(filename):
 def get_record_per_file(logger, input_files, trunk_number):
   total_line_count = 0
   for input_file in input_files:
-    logger.info("Check line count of %s ..." % input_file)
-    total_line_count += rawgencount(input_file)
+    logger.info("Check read count of %s ..." % input_file)
+    cur_line_count = rawgencount(input_file)
+    logger.info(f"  {cur_line_count / 4} reads")
+    total_line_count += cur_line_count
   total_record = total_line_count / 4
   result = math.ceil(total_record / trunk_number)
   logger.info("Total %d reads, each file should have almost %d reads." % (total_record, result))
   return (result)
 
-def split(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber): 
+def split_by_trunk(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber, startTrunk=1, fill_length=3, compresslevel=1): 
   if isPairedEnd:
     read1files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 0]
     read2files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 1]
@@ -40,7 +42,7 @@ def split(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber):
   fileIndex = 0
   for read_files in input_array:
     fileIndex = fileIndex + 1
-    trunk = 1
+    trunk = startTrunk
     read_count = 0
     fout = None
     for inputFile in read_files:
@@ -62,11 +64,11 @@ def split(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber):
           
           if read_count == 0:
             if isPairedEnd:
-              fileName = "%s.%d.%d.fastq.gz" % (outputFilePrefix, trunk, fileIndex)
+              fileName = f"{outputFilePrefix}.{str(trunk).zfill(fill_length)}.{fileIndex}.fastq.gz"
             else:
-              fileName = "%s.%d.fastq.gz" % (outputFilePrefix, trunk)
+              fileName = f"{outputFilePrefix}.{str(trunk).zfill(fill_length)}.fastq.gz"
             logger.info("Writing reads to %s ..." % fileName)
-            fout = gzip.open(fileName, "wt")
+            fout = gzip.open(fileName, "wt",  compresslevel=compresslevel)
 
           read_count += 1
           fout.write(line1)
@@ -81,14 +83,18 @@ def main():
   DEBUG = False
   NOT_DEBUG = not DEBUG
   
-  parser = argparse.ArgumentParser(description="Split big fastq file to multiple small fastq files",
+  parser = argparse.ArgumentParser(description="Scatter big FASTQ files to N small FASTQ files",
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   
+  #input can be multiple FASTQ files, such as F1_R1,F1_R2,F2_R1,F2_R2,F3_R1,F3_R2 in case some of them are more larger than others.
+  #we don't know how many reads per sample
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input Fastq files (first,second for pairend data)', required=NOT_DEBUG)
   parser.add_argument('-o', '--outputPrefix', action='store', nargs='?', default="-", help="Output file prefix", required=NOT_DEBUG)
   parser.add_argument('--is_single_end', action='store', nargs='?', help="Is single end?")
   parser.add_argument('--trunk', action='store', nargs='?', type=int, default=50, help="Number of small files")
-  
+  parser.add_argument('--fill_length', action='store', nargs='?', type=int, default=3, help="Trunk name length (fill with zero)")
+  parser.add_argument('--compresslevel', action='store', nargs='?', type=int, default=1, help="Compress level, 1: fastest, 9: slowest")
+
   args = parser.parse_args()
   
   if DEBUG:
@@ -103,7 +109,7 @@ def main():
   
   inputFiles = args.input.split(",")
   
-  split(logger, inputFiles, not args.is_single_end, args.outputPrefix, args.trunk)
+  split_by_trunk(logger, inputFiles, not args.is_single_end, args.outputPrefix, args.trunk, args.fill_length, args.compresslevel)
   
 if __name__ == "__main__":
     main()

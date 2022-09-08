@@ -119,7 +119,7 @@ sub getConfig {
     output_to_folder      => 1,
     output_arg            => "-o",
     output_file_prefix    => "",
-    output_file_ext       => ".genotype.txt",
+    output_file_ext       => ".genotypes.tsv",
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",

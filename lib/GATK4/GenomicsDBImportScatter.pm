@@ -27,7 +27,7 @@ sub new {
 
 sub get_sample_names {
   my ($self, $config, $section) = @_;
-  my ( $task_name ) = $self->init_parameter( $config, $section );
+  my ( $task_name ) = $self->init_parameter( $config, $section, 0 );
   return [$task_name];
 }
 
@@ -74,15 +74,15 @@ fi
     print $pbs "
 rm -rf $prefix
 
-gatk --java-options -Xms8g \\
-    GenomicsDBImport \\
-    --genomicsdb-workspace-path $prefix \\
-    --batch-size 50 \\
-    -L $interval_file \\
-    --sample-name-map $sample_name_map_file \\
-    --reader-threads 5 \\
-    --merge-input-intervals \\
-    --consolidate
+gatk --java-options \"-Xmx8g -Xms8g\"  \\
+  GenomicsDBImport \\
+  --genomicsdb-workspace-path $prefix \\
+  --batch-size 50 \\
+  -L $interval_file \\
+  --sample-name-map $sample_name_map_file \\
+  --reader-threads 5 \\
+  --merge-input-intervals \\
+  --consolidate
 
 ";
     

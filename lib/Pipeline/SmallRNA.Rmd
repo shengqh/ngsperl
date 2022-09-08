@@ -18,12 +18,20 @@ output:
 
 ```{r, child="Functions.Rmd"} 
 ```
-  
+```{r, child="Pipeline.Rmd"} 
+```
 ```{r setup, include=FALSE}
+library(kableExtra)
+library(tidyverse)
+
 knitr::opts_chunk$set(fig.width=8, fig.height=6, out.width="80%")
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 files=split(files$V1, files$V2)
+
+myoptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
+myoptions$V1 <- as.character(myoptions$V1)
+option_map<-split(myoptions$V1, myoptions$V2)
 
 #For RnaSeq only
 #rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
@@ -59,13 +67,14 @@ getCategory<-function(category, description){
 
 getCategory2<-function(category1, category2, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.show='hold', out.width='45%', fig.align = 'default'}\n",
+"has_category_file<-has_file(files,'", category1, "')\n",
 "check_and_include_graphics(get_file(files,'", category1, "'))\n",
 "check_and_include_graphics(get_file(files,'", category2, "'))\n",
 "```\n",
-"```{r,echo=FALSE,results='asis'}\n",
+"```{r,echo=FALSE,results='asis',eval=has_category_file}\n",
 "curFigRef<-figRef('", paste0(category1, category2), "', '",description, "')\n",
-"```\n",
-"<center>`r curFigRef`</center>\n"))
+"cat(paste0('<center>', curFigRef, '</center>'))\n",
+"```\n"))
 }
 
 categoryRmd<-function(dfCategory, fileName, header){
@@ -148,6 +157,24 @@ nonhostLibraryFile="nonhostlibrary.Rmd"
 nonhostLibrary<-data.frame(Section=c("###", "###"), Category=c("trnalib", "rrnalib"), Name=c("tRNA library", "rRNA library"))
 hasNonhostLibrary<-categoryRmd(nonhostLibrary, nonhostLibraryFile, "## Non-host library\n\n")
 
+categories = c("species", "genus", "family", "order", "class", "phylum")
+
+nonhostBacteriaAggFile="nonhostBacteriaAgg.Rmd"
+nonhostBacteriaAgg=NULL
+for(cat in categories){
+  nonhostBacteriaAgg<-rbind(nonhostBacteriaAgg, data.frame(Section=c("###"), Category=c(paste0("refseq_bacteria_", cat, "_agg")), Name=c(paste0("Bacteria ", cat, " aggregated count"))))
+}
+hasRefBacteriaAgg<-categoryRmd(nonhostBacteriaAgg, nonhostBacteriaAggFile, "## Refseq bacteria aggregated count \n\n")
+
+nonhostBacteriaEstFile="nonhostBacteriaEst.Rmd"
+nonhostBacteriaEst=NULL
+for(cat in categories){
+  nonhostBacteriaEst<-rbind(nonhostBacteriaEst, data.frame(Section=c("###"), Category=c(paste0("refseq_bacteria_", cat, "_est")), Name=c(paste0("Bacteria ", cat, " estimated count"))))
+}
+hasRefBacteriaEst<-categoryRmd(nonhostBacteriaEst, nonhostBacteriaEstFile, "## Refseq bacteria estimated count \n\n")
+
+hasHostDEseq2<-any(grepl("deseq2_host_vis", names(files)))
+
 ```
 
 <br>
@@ -225,8 +252,15 @@ check_and_include_graphics(files$host_length_dist_category)
 ```{r hostgenome, child=hostGenomeFile} 
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("deseq2_host_vis", "DESeq2 result of host smallRNA", trunk.eval=has_file(files,"deseq2_host_vis")), eval=has_file(files,"deseq2_host_vis")}
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("deseq2_host_vis", "DESeq2 result of host smallRNA", trunk.eval=hasHostDEseq2), eval=hasHostDEseq2}
 cat('## host smallRNA DESeq2 result\n') 
+if ("DE_use_raw_pvalue" %in% names(option_map) & option_map$DE_use_raw_pvalue == "1") {
+  pValueText="p value"
+} else {
+  pValueText="FDR-adjusted p-value"
+}
+deseq2criteria<-paste0("absolute fold change >= ", option_map$DE_fold_change, " and ", pValueText, " <= ", option_map$DE_pvalue)
+cat("Differential expression analysis criteria:", deseq2criteria, "\n\n")
 
 check_and_include_graphics(files$deseq2_host_vis)
 ```
@@ -253,6 +287,28 @@ cat('## Non-Host bacteria count\n')
 check_and_include_graphics(files$bacteria_count_vis)
 ```
 
+```{r, echo=FALSE, results='asis'}
+if(hasNonhostGenome | hasNonhostLibrary){
+  cat("## Non-host summary")
+}
+```
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("nonhost_overlap_bar", "Read overlapped in non-host genome/database", trunk.eval=has_file(files,"nonhost_overlap_bar")), eval=has_file(files,"nonhost_overlap_bar")}
+check_and_include_graphics(files$nonhost_overlap_bar)
+```
+
+```{r, echo=FALSE, results='asis'}
+if(hasRefBacteriaAgg){
+  cat("# Refseq bacteria")
+}
+```
+
+```{r refBacteriaAgg, include=hasRefBacteriaAgg, child=nonhostBacteriaAggFile} 
+```
+
+```{r refBacteriaEst, include=hasRefBacteriaEst, child=nonhostBacteriaEstFile} 
+```
+
 ```{r teardown, include=FALSE}
 if(file.exists(hostGenomeFile)){
   file.remove(hostGenomeFile)
@@ -263,14 +319,49 @@ if(file.exists(nonhostGenomeFile)){
 if(file.exists(nonhostLibraryFile)){
   file.remove(nonhostLibraryFile)
 }
+if(file.exists(nonhostBacteriaAggFile)){
+  file.remove(nonhostBacteriaAggFile)
+}
+if(file.exists(nonhostBacteriaEstFile)){
+  file.remove(nonhostBacteriaEstFile)
+}
+```
+# Software versions
+```{r softwareVersion, echo=FALSE, results='asis'}
+versions<-display_versions()
 ```
 
-```{r, echo=FALSE, results='asis'}
-if(hasNonhostGenome | hasNonhostLibrary){
-  cat("## Non-host summary")
+# Description
+```{r echo=FALSE}
+vmap<-split(versions$Version, versions$Software)
+
+normalize_by_read<-option_map['normalize_by']
+if(normalize_by_read == "FeatureReads"){
+  if(!hasNonhostGenome){
+    normalize_by_read = "total host smallRNA reads"
+  }
+}else{
+  normalize_by_read = "total mappable reads"
 }
 ```
 
-```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("nonhost_overlap_bar", "Read overlapped in non-host genome/database", trunk.eval=has_file(files,"nonhost_overlap_bar")), eval=has_file(files,"nonhost_overlap_bar")}
-check_and_include_graphics(files$nonhost_overlap_bar)
-```
+TIGER (“Tools for Integrative Genome analysis of Extracellular sRNAs”), an in-house small RNA sequencing analysis pipeline, was used to quantify small RNAs[1]. 
+Briefly, Cutadapt (`r vmap['Cutadapt']`)[2] was used to trim 3’ adapters for raw reads. 
+All reads with less than 16 nucleotides were designated as “too short” and discarded. 
+Quality control on both raw reads and adaptor-trimmed reads was performed using FastQC (`r vmap['FastQC']`)(www.bioinformatics.babraham.ac.uk/projects/fastqc). 
+The adaptor-trimmed reads were mapped to the `r vmap['host']` genome, addition to rRNA and tRNA reference sequences, 
+by Bowtie1 (`r vmap['bowtie']`)[3] allowing only one mismatch. 
+`r if(hasHostDEseq2){paste0("Significantly differential expressed features with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[4] using ", normalize_by_read, " as normalization factor.")}` 
+`r if(hasNonhostGenome){"The reads with less than 20 nucleotides which were neither annotated as small RNA nor perfectly mapped to human genome were discarded. 
+Remaining unmapped reads were then mapped in parallel to exogenous structural RNA databases and curated 
+microbial genome databases allowing no mismatches. Reads that failed to align to any strategy were categorized 
+as 'unknown'."}` 
+
+[1] Allen, R. M., Zhao, S., Ramirez Solano, M. A., Zhu, W., et al., Bioinformatic analysis of endogenous and exogenous small RNAs on lipoproteins. J Extracell Vesicles 2018, 7, 1506198. \
+[2] Martin, M., Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnet.journal 2011, 17, 10-12. \
+[3] Langmead, B., Trapnell, C., Pop, M., Salzberg, S. L., Ultrafast and memory-efficient alignment of short DNA sequences to the human genome. Genome Biol 2009, 10, R25. \
+`r if(hasHostDEseq2){"[4] Love, M. I., Huber, W., Anders, S., Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol 2014, 15, 550."}`
+
+
+
+

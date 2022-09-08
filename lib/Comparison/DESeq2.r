@@ -140,6 +140,7 @@ library("VennDiagram")
 library("RColorBrewer")
 #library("preprocessCore")
 library("BiocParallel")
+library("ggrepel")
 
 setwd(rootdir)  
 comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
@@ -296,7 +297,7 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
     
     if(showLabelInPCA){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-        geom_text(vjust=-0.6, size=4)
+        geom_text_repel(size=4)
     }else{
       g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
         labs(color = "Group")
@@ -762,7 +763,7 @@ for(countfile_index in c(1:length(countfiles))){
 
     res$FoldChange<-2^res$log2FoldChange
 
-    baseMeanPerLvl <- sapply( levels(dds$Condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$Condition == lvl] ) )
+    baseMeanPerLvl <- sapply( levels(dds$Condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$Condition == lvl,drop=FALSE] ) )
     colnames(baseMeanPerLvl)<-paste0("baseMean_", colnames(baseMeanPerLvl))
     res<-cbind(res, baseMeanPerLvl)
 
@@ -871,6 +872,7 @@ for(countfile_index in c(1:length(countfiles))){
         coord_flip()+
         #     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
         scale_y_continuous(name=bquote(log[2]~Fold~Change))+
+        theme_bw2() +
         theme(axis.text = element_text(colour = "black"))
       
       filePrefix<-paste0(prefix,"_DESeq2_sig_barplot")
@@ -896,16 +898,19 @@ for(countfile_index in c(1:length(countfiles))){
     
     write.csv(diffResult, file=paste0(prefix, "_DESeq2_volcanoPlot.csv"))
     
-    if (useRawPvalue==1) {
-      p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-        scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
-    } else {
-      p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-        scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+    if(useRawPvalue == 1){
+      yname=bquote(p~value)
+      yvar="pvalue"
+    }else{
+      yname=bquote(Adjusted~p~value)
+      yvar="padj"
     }
-    p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
+    xname=bquote(log[2]~Fold~Change)
+    p<-ggplot(diffResult,aes_string(x="log2FoldChange",y=yvar))+
+      scale_y_continuous(trans=reverselog_trans(10),name=yname) +
+      geom_point(aes(size=log10BaseMean,colour=colour))+
       scale_color_manual(values=changeColours,guide = FALSE)+
-      scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+      scale_x_continuous(name=xname)+
       geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
       geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
       guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
@@ -918,10 +923,35 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(!showVolcanoLegend){
       p<-p+ theme(legend.position = "none")
+      pdfWidth=10
+      otherWidth=3000
+    }else{
+      pdfWidth=15
+      otherWidth=4500
     }
     
     filePrefix<-paste0(prefix,"_DESeq2_volcanoPlot")
-    drawPlot(filePrefix, outputFormat, 10, 10, 3000, 3000, p, "Volcano")
+    drawPlot(filePrefix, outputFormat, pdfWidth, 10, otherWidth, 3000, p, "Volcano")
+
+    if(require("EnhancedVolcano")){
+      if(!("Feature_gene_name" %in% colnames(diffResult))){
+        diffResult$Feature_gene_name=rownames(diffResult)
+      }
+
+      p<-EnhancedVolcano(diffResult,
+          lab = diffResult$Feature_gene_name,
+          x = 'log2FoldChange',
+          y = yvar,
+          title = comparisonTitle,
+          pCutoff = pvalue,
+          FCcutoff = log2(foldChange),
+          pointSize = 3.0,
+          labSize = 6.0,
+          colAlpha = 1,
+          subtitle = NULL) + ylab(yname)
+      filePrefix<-paste0(prefix,"_DESeq2_volcanoEnhanced")
+      drawPlot(filePrefix, outputFormat, 10, 10, 3000, 3000, p, "Volcano")
+    }
   }
   
   if(length(pairedspearman) > 0){

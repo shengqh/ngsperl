@@ -59,7 +59,7 @@ python3 $py_script -i $template -o $finalFile --originalName $originalName --tar
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section, 0 );
 
   my $templates = get_raw_files( $config, $section );
   my $targetNames = get_option( $config, $section, "target_names" );

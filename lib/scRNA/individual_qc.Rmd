@@ -1,17 +1,22 @@
 ---
-title: "singlecell_multiple_analysis"
-author: Qi Liu, Quanhu Sheng
+title: "QC and Cell Type Annotation"
+author: Quanhu Sheng, Qi Liu
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
-  html_document:
-    toc: true
-    toc_depth: 4
-    number_sections: true
+  rmdformats::readthedown:
+    toc_depth: 2
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, results = 'hide', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #load the library and set the parameters and load our own function
 library(Seurat)
@@ -20,6 +25,9 @@ library(dplyr)
 library(ggplot2)
 library(pheatmap)
 library(RCurl)
+library(knitr)
+library(kableExtra)
+source("scRNA_func.r")
 ```
 
 
@@ -31,43 +39,53 @@ cat("\n\n## Files Parameters\n\n")
 #work directory to save or load objectlist, objectintegrated and integratedmarkers; the raw files are in workdir/raw
 
 
-option_table<-read.table("filelist2.txt", stringsAsFactors = F)
+option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F)
 myoptions<-split(option_table$V1, option_table$V2)
+myoptions$mt_cutoff=as.numeric(myoptions$mt_cutoff)
+myoptions$nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
+myoptions$nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
+myoptions$nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
+myoptions$pca_dims=as.numeric(myoptions$pca_dims)
+myoptions$resolution=as.numeric(myoptions$resolution)
+myoptions$Remove_MtRNA=myoptions$Remove_MtRNA=="1"
+myoptions$Remove_rRNA=myoptions$Remove_rRNA=="1"
+Mtpattern=myoptions$Mtpattern
+rRNApattern=myoptions$rRNApattern
+Remove_Mt_rRNA=myoptions$Remove_MtRNA
+resolution=as.numeric(myoptions$resolution)
 
 species=myoptions$species # Hs or Mm
 
 #raw data file locations
-SampleInfos<-read.table("filelist1.txt", stringsAsFactors = F)
+SampleInfos<-read.table("fileList1.txt", stringsAsFactors = F)
 colnames(SampleInfos)<-c("countfile", "SampleId")
 
-if(file.exists('filelist3.txt')){
-  clinicalInfo<-read.table('filelist3.txt', stringsAsFactors = F)
-  colnames(clinicalInfo)<-c('SampleId','condition')
-  SampleInfos<-merge(SampleInfos, clinicalInfo, by="SampleId")
+if(file.exists('fileList3.txt')){
+  hto_samples<-read.table('fileList3.txt', stringsAsFactors = F)
+  hto_map=split(hto_samples$V1, hto_samples$V2)
+  
+  tag_tb<-read.table(myoptions$hto_sample_file, sep="\t", stringsAsFactors = F, header=T)
+}else{
+  hto_map=list()
+  tag_tb=NULL
 }
 
-clinicalfeature<-c(1,1)
-
 ```
-
-
 ```{r,echo=FALSE}
 
 ##cutoff dataframe for each sample to filter empty droplets
-Cutoffs<-data.frame(nFeature_cutoff_min = 500 ,nFeature_cutoff_max = 7000,nCount_cutoff=1000, mt_cutoff = 10, cluster_remove=c(""),stringsAsFactors = F)
+Cutoffs<-data.frame(nFeature_cutoff_min=myoptions$nFeature_cutoff_min ,
+                    nFeature_cutoff_max=myoptions$nFeature_cutoff_max,
+                    nCount_cutoff=myoptions$nCount_cutoff, 
+                    mt_cutoff=myoptions$mt_cutoff, 
+                    cluster_remove=c(""),stringsAsFactors = F)
 
 #every sample share the same cutoff, otherwise put every parameter in the Cutoff dataframe
 if (dim(Cutoffs)[1]==1){
   Cutoffs<-data.frame(lapply(Cutoffs, rep, nrow(SampleInfos)),stringsAsFactors = F)
 }
 
-Mtpattern=myoptions$Mtpattern
-rRNApattern=myoptions$rRNApattern
-Remove_Mt_rRNA=ifelse(myoptions$Remove_MtRNA==0, FALSE, TRUE)
-resolution=as.numeric(myoptions$resolution)
 transpose=FALSE
-analysis_individual=TRUE
-Ensemblfile=NULL
 
 ```
 
@@ -96,8 +114,15 @@ marker_species<-marker[species_ind>0 & marker$ubiquitousness.index<0.05,]
 if (species=="Mm") {
   marker_species$official.gene.symbol<-paste0(substr(marker_species$official.gene.symbol,1,1),substr(tolower(marker_species$official.gene.symbol),2,nchar(marker_species$official.gene.symbol)))
 }
-##
 cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
+##combine with other marker genes
+if(file.exists(myoptions$curated_markers_file)){
+  curated_markers_df<-read.table(myoptions$curated_markers_file, sep="\t", header=F, stringsAsFactors=F)
+  curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
+  for(cmct in names(curated_markers_celltype)){
+    cellType[[cmct]]=curated_markers_celltype[[cmct]]
+  }
+}
 
 ###if add crc-specific signatures # if add_subtype==NULL, only use subtype but not markerfile
 if(is.null(add_Subtype)) {
@@ -121,28 +146,43 @@ if(species=="Mm") {
 
 ```
 
-```{r,fig.width=15, fig.height=15,eval=analysis_individual,results="asis"}
+```{r,fig.width=15, fig.height=15,results="asis"}
 
-cat("\n\n# QC and cell type identification in each sample\n")
-
-object.list<-NULL
+object.list<-list()
 
 i=1
 for (i in 1:nrow(SampleInfos)) {
   SampleInfo<-SampleInfos[i,]
   Cutoff<-Cutoffs[i,]
-  object<-preprocess(SampleInfo,
+  bubble_file=myoptions$bubblemap_file
+  Ensemblfile=NULL
+  info<-preprocess(SampleInfo,
                      Cutoff,
                      Mtpattern,
                      resolution, 
                      Remove_Mt_rRNA,
                      celltype_predictmethod,
-                     transpose=transpose, 
-                     analysis_individual=analysis_individual,
-                     Ensemblfile=Ensemblfile)
-  print(DoHeatmap(object,features=knownmarkers,slot="data"))
-  object.list<-c(object.list,object)
+                     transpose=transpose,
+                     hto_map=hto_map,
+                     tag_tb=tag_tb,
+                     Ensemblfile=Ensemblfile,
+                     bubble_file=bubble_file)
+  
+  object.list<-c(object.list, info)
 }
 
 save(object.list,file=paste0("objectlist.Rdata"))
+#load("objectlist.Rdata")
+
+cat("\n\n# Sample summary\n")
+
+stats<-lapply(object.list, function(x){unlist(x$preprocess)})
+stats_df<-data.frame(do.call(rbind, stats))
+colnames(stats_df)<-gsub("preprocess.","",colnames(stats_df))
+print(kable(stats_df, row.names=F) %>%	
+  kable_styling() %>%
+  htmltools::HTML())
+
+write.table(stats_df, file="qc_filter_config.txt", sep="\t", row.names=F)
+
 ```

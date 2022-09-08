@@ -262,6 +262,7 @@ if [[ \$status -eq 0 ]]; then
   else
     rm $read1name $read2name
     touch ${sample_name}.failed
+  fi
 else
   rm $temp1_file $temp2_file
   touch ${sample_name}.failed

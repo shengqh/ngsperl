@@ -85,11 +85,22 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, undef, 1 );
 
     print $pbs "   
+rm -f $sample_name.macs2.failed $sample_name.macs2.succeed 
+
 macs2 callpeak $option $treatment $control -n $sample_name
-cut -f1-6 ${sample_name}_peaks.${peak_name} > ${sample_name}_peaks.${peak_name}.bed
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.macs2.failed
+  rm -f ${sample_name}_peaks.${peak_name}
+else
+  touch $sample_name.macs2.succeed
+  cut -f1-6 ${sample_name}_peaks.${peak_name} > ${sample_name}_peaks.${peak_name}.bed
+fi
+
 ";
       if ($outputBigwig) {
     $chr_size_file = $config->{$section}{chr_size_file} or die "define ${section}::chr_size_file first to be used in output_bigwig";
@@ -118,7 +129,7 @@ bedGraphToBigWig ${sample_name}_treat_pileup.bdg $chr_size_file ${sample_name}_t
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section, 0 );
 
   my %raw_files = %{$self->get_raw_files_with_or_without_groups($config, $section)};
 
@@ -142,7 +153,7 @@ sub result {
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section, 0 );
 
   my %raw_files = %{$self->get_raw_files_with_or_without_groups($config, $section)};
 

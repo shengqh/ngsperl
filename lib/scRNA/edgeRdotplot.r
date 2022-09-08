@@ -10,7 +10,6 @@ sigGeneList$designFile<-paste0(dirname(parFile2), "/", sigGeneList$designFile)
 sigGeneList$sigFile<-paste0(dirname(parFile2), "/", sigGeneList$sigFile)
 
 obj<-finalList$obj
-assay=ifelse("SCT" %in% names(obj@assays), "SCT", "RNA")
 
 params_def=read.table(parSampleFile1)
 params <- setNames(as.character(params_def$V1), params_def$V2)
@@ -41,7 +40,7 @@ for(idx in c(1:nrow(sigGeneList))) {
   clusternames=unique(subobj[["final_seurat_clusters"]])
 
   pdf(file=paste0(comparison, ".dot.pdf"), width=max(length(genes) * 0.4, 10), height=max(6, min(10, length(clusternames))))
-  p<-DotPlot(subobj, assay = assay, group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
+  p<-DotPlot(subobj, assay = "RNA", group.by="final_seurat_clusters", features=genes, cols = c("lightgrey", "red"), dot.scale = 8) + RotatedAxis() +
     xlab("genes") + ggtitle(comparison) + theme(plot.title = element_text(hjust = 0.5)) + xlab("Up-regulated genes") + ylab("")
   print(p)
   dev.off()

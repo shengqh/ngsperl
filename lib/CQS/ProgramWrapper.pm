@@ -63,7 +63,20 @@ sub replace_tag {
     $cur_init_command =~ s/__FILE__/$input/g;
   }
 
-  return($cur_option, $output_option, $cur_init_command);
+  my $cur_post_command = get_option( $config, $section, "post_command", "" );
+  if ($cur_post_command =~ /__NAME__/){
+    $cur_post_command =~ s/__NAME__/$sample_name/g;
+  }
+
+  if ($cur_post_command =~ /__FILE__/){
+    $cur_post_command =~ s/__FILE__/$input/g;
+  }
+
+  if ($cur_post_command =~ /__OUTPUT__/){
+    $cur_post_command =~ s/__OUTPUT__/$final_prefix/g;
+  }
+
+  return($cur_option, $output_option, $cur_init_command, $cur_post_command);
 }
 
 sub perform {
@@ -147,12 +160,14 @@ sub perform {
 
   #print($final_file);
 
-  my ($cur_option, $output_option, $cur_init_command) = replace_tag( $config, $section, $task_name, $result_dir, $option, $source_key, $task_name, $final_file);
+  my ($cur_option, $output_option, $cur_init_command, $cur_post_command) = replace_tag( $config, $section, $task_name, $result_dir, $option, $source_key, $task_name, $final_file);
 
   print $pbs "
 $cur_init_command
 
 $interpretor $program $cur_option $output_option
+
+$cur_post_command
 ";
 
   $self->close_pbs( $pbs, $pbs_file );

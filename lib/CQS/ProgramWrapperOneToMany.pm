@@ -24,6 +24,23 @@ sub new {
   return $self;
 }
 
+sub get_iteration_map {
+  my ($config, $section, $raw_files) = @_;
+
+  my $result = {};
+  my $iteration = get_option( $config, $section, "iteration" );
+  if (is_hash($iteration)){
+    $result = $iteration;
+  }else{
+    $iteration = int($iteration);
+    for my $sample (keys %$raw_files){
+      $result->{$sample} = $iteration;
+    }
+  }
+
+  return($result);
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -37,12 +54,6 @@ sub perform {
   my $program     = get_program( $config, $section );
 
   my $iteration_arg = get_option( $config, $section, "iteration_arg", "" );
-  my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
-
-  if ($iteration_arg ne ""){
-    $option = $option . " " . $iteration_arg . " " . $iteration;
-  }
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix" );
@@ -53,6 +64,10 @@ sub perform {
   my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
   $option = $option . " " . get_parameter_file_option($config, $section);
+
+  my $iteration_map = get_iteration_map($config, $section, $parameterSampleFile1);
+  my $max_length = int(get_option( $config, $section, "iteration_fill_length", 3));
+  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
 
   my $hasMultiple = scalar(keys %$parameterSampleFile1) > 1;
   my $shfile;
@@ -100,16 +115,25 @@ sub perform {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
-
-    if ($hasMultiple){
-      print $sh "\$MYCMD ./$pbs_name \n";
-    }
-
     my $log_desc = $cluster->get_log_description($log);
 
-    my $sample_name_iteration = $iteration_zerobased ?  $sample_name . "_ITER_" . ($iteration -1) :  $sample_name . "_ITER_" . $iteration;
-    my $final_file            = $expect_result->{$sample_name_iteration}[-1];
+    my $iteration = $iteration_map->{$sample_name};
+    if ($iteration_arg ne ""){
+      $curOption = $curOption . " " . $iteration_arg . " " . $iteration;
+    }
+
+    my $last_iter = $iteration_zerobased ?  ($iteration -1) :  $iteration;
+    my $key = get_key($sample_name, $last_iter, $max_length);
+    my $final_file            = $expect_result->{$key}[-1];
     my $pbs                   = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+
+    if ($hasMultiple){
+      print $sh "if [[ ! -s $final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+
+";
+    }
 
     my $final_prefix = $sample_name . $output_file_prefix;
 
@@ -171,26 +195,35 @@ sub result {
   $self->{_task_suffix} = $task_suffix;
 
   my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
-  my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration")));
+  my $max_length = int(get_option( $config, $section, "iteration_fill_length", 3));
   my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
+  my $zfill_iter_in_result = get_option( $config, $section, "zfill_iter_in_result", 0);
 
   my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
   my $output_exts = get_output_ext_list( $config, $section );
 
-  my $iter_start = $iteration_zerobased ? 0: 1;
-  my $iter_end = $iteration_zerobased ? ($iteration - 1): $iteration;
+  my $iteration_map = get_iteration_map($config, $section, $source_files);
+
   my $result = {};
   for my $sample_name ( sort keys %$source_files ) {
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
+    my $iteration = $iteration_map->{$sample_name};
+    my $iter_start = $iteration_zerobased ? 0: 1;
+    my $iter_end = $iteration_zerobased ? ($iteration - 1): $iteration;
+
     for my $iter ($iter_start .. $iter_end){
-      my $key = $sample_name . "_ITER_" . left_pad($iter, $max_length);
+      my $key = get_key($sample_name, $iter, $max_length);
       my @result_files = ();
       for my $ext (@$output_exts){
         my $cur_ext = $ext;
-        $cur_ext =~ s/_ITER_/$iter/g;
+        if($zfill_iter_in_result){
+          my $iter_str = left_pad($iter, $max_length);
+          $cur_ext =~ s/_ITER_/$iter_str/g;
+        }else{
+          $cur_ext =~ s/_ITER_/$iter/g;
+        }
         my $final_file = $samplename_in_result ? $sample_name . $cur_ext : $cur_ext;
         push( @result_files, "${cur_dir}/$final_file" );
       }
@@ -219,6 +252,11 @@ sub get_pbs_source {
   return ($result);
 }
 
+sub get_key {
+  my ($sample_name, $iter, $max_length) = @_;
+  return($sample_name . "_ITER_" . left_pad($iter, $max_length))
+}
+
 #get result sample name and its depedent current pbs
 sub get_result_pbs {
   my ( $self, $config, $section ) = @_;
@@ -227,20 +265,23 @@ sub get_result_pbs {
   
   my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
 
-  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
-  my $iteration = int(get_option( $config, $section, "iteration" ));
-  my $max_length = int(get_option( $config, $section, "iteration_fill_length", length("$iteration")));
-  my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
+  my $iteration_map = get_iteration_map($config, $section, $source_files);
 
-  my $iter_start = $iteration_zerobased ? 0: 1;
-  my $iter_end = $iteration_zerobased ? ($iteration - 1): $iteration;
+  my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
+  my $max_length = int(get_option( $config, $section, "iteration_fill_length", 3));
+  my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
 
   my $result = {};
   
   for my $sample_name ( sort keys %$source_files ) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
+
+    my $iteration = $iteration_map->{$sample_name};
+    my $iter_start = $iteration_zerobased ? 0: 1;
+    my $iter_end = $iteration_zerobased ? ($iteration - 1): $iteration;
+
     for my $iter ($iter_start .. $iter_end){
-      my $key = $sample_name . "_ITER_" . left_pad($iter, $max_length);
+      my $key = get_key($sample_name, $iter, $max_length);
       $result->{$key} = $pbs_file;
     }
   }

@@ -43,6 +43,8 @@ sub perform {
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
+  my $use_vanilla = get_option( $config, $section, "use_vanilla", 1 );
+
   my $copy_template = get_option( $config, $section, "copy_template", 1 );
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
@@ -60,23 +62,7 @@ sub perform {
 
   my $all_results =  $self->result( $config, $section );
   #print(Dumper($all_results));
-  my $result_files = $all_results->{$task_name};
-  my $final_file;
-  if((not defined $result_files) || (scalar(@$result_files) == 0)){
-    #get last sample_name result file
-    for my $cur_key (sort keys %$all_results){
-      if($cur_key eq $task_name){
-        next;
-      }
-
-      my $cur_files = $all_results->{$cur_key};
-      $final_file = $cur_files->[-1];
-      #print($final_file . "\n");
-    }
-  }else{
-    #get last task_name result file
-    $final_file = $result_files->[-1];
-  }
+  my $final_file = get_final_file_by_task_name($all_results, $task_name);
 
   my $output_file_r;
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
@@ -112,7 +98,10 @@ sub perform {
     print $rf $rCode . "\n";
   }
   
-  print $rf "\nsetwd('$result_dir')\n\n";
+  print $rf "\nsetwd('$result_dir')\n";
+  
+  my $setting_line = "### Parameter setting end ###";
+  print $rf "\n$setting_line\n\n";
 
   my $rtemplates = get_option( $config, $section, "rtemplate" );
   my @rtemplates = split( ",|;", $rtemplates );
@@ -134,10 +123,12 @@ sub perform {
       if ($index < $rnum-1){
         my $remote_r = $result_dir . "/" . basename($rtemplate);
         copy($rtemplate, $remote_r);
-        my $line = 'source("' . basename($rtemplate) . '")';
-        $ignore_lines->{$line} = 1;
-        $line =~ s/"/'/g;
+        if($rtemplate =~ '.R$' || $rtemplate =~ '.r$' ){
+          my $line = 'source("' . basename($rtemplate) . '")';
+          $ignore_lines->{$line} = 1;
+          $line =~ s/"/'/g;
         $ignore_lines->{$line} = 0;
+        }
         next;
       }else{
         for my $line (keys %$ignore_lines){
@@ -148,19 +139,38 @@ sub perform {
       }
     }
     
+    my @valid_lines = ();
+    
     open( my $rt, "<$rtemplate" ) or die $!;
     while ( my $row = <$rt> ) {
       chomp($row);
       $row =~ s/\r//g;
+      if($row eq $setting_line){
+        @valid_lines = ();
+        next;
+      }
+
       if($copy_template && ($row =~/^source/)){
         if(defined $ignore_lines->{$row}){
           next;
         }
       }
 
-      print $rf "$row\n";
+      push(@valid_lines, $row);
     }
-    close($rt);
+
+    my $first = 1;
+    for my $row (@valid_lines){
+      if ($row eq ""){
+        if ($first){
+          next
+        }
+      }else{
+        $first = 0;
+      }
+      print $rf "$row\n";
+      close($rt);
+    }
   }
   close($rf);
 
@@ -219,11 +229,13 @@ sub perform {
   }
 
   my $rscript = get_option_include_general($config, $section, "Rscript", "Rscript");
+
+  my $vanilla_option = $use_vanilla ? "--vanilla ":"";
   if ( defined($option) and $option ne "" ) {
-    print $pbs "$rscript --vanilla " . basename($rfile) . " $option";
+    print $pbs "$rscript $vanilla_option " . basename($rfile) . " $option";
   }
   else {
-    print $pbs "$rscript --vanilla " . basename($rfile);
+    print $pbs "$rscript $vanilla_option " . basename($rfile);
   }
   $self->close_pbs( $pbs, $pbs_file );
 }

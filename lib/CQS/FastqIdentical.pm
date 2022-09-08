@@ -28,6 +28,7 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
 
   my $extension = get_option( $config, $section, "extension" );
+  my $use_first_read_after_trim = get_option( $config, $section, "use_first_read_after_trim");
 
   my $minlen = $config->{$section}{minlen};
   if ( defined $minlen ) {
@@ -55,7 +56,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    if ( scalar(@sample_files) == 1 ) {
+    if ( scalar(@sample_files) == 1 or $use_first_read_after_trim ) {
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
       print $pbs "cqstools fastq_identical $option -i $sample_files[0] $minlen -o $final_file \n";
       $self->close_pbs( $pbs, $pbs_file );
@@ -88,6 +89,7 @@ sub result {
 
   my $extension = get_option( $config, $section, "extension" );
   my $merge_result = get_option( $config, $section, "merge_result", 0 );
+  my $use_first_read_after_trim = get_option( $config, $section, "use_first_read_after_trim");
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -97,7 +99,7 @@ sub result {
     my $final_file   = $result_dir . "/" . $sample_name . $extension;
     my @result_files = ();
 
-    if ( scalar(@sample_files) == 1 ) {
+    if ( scalar(@sample_files) == 1 or $use_first_read_after_trim) {
       push( @result_files, $final_file );
       push( @result_files, change_extension( $final_file, ".dupcount" ) );
     }

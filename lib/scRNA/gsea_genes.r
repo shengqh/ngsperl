@@ -20,8 +20,6 @@ ctmap=split(celltype$seurat_cellactivity_clusters, celltype$seurat_clusters)
 
 all_obj$seurat_cellactivity_clusters=unlist(ctmap[as.character(all_obj$seurat_clusters)])
 
-#assay=ifelse(by_sctransform, "SCT", "RNA")
-assay="RNA"
 gmt<-read.table(parFile3, sep=",", fill=NA, header=F)
 
 idx=1
@@ -34,7 +32,7 @@ for(idx in 1:nrow(gmt)){
   width=ceiling(length(genes) * 0.3)
   dot_filename=paste0(name, ".dot.pdf")
   pdf(file=dot_filename, width=width, height=7)
-  g=DotPlot(all_obj, features=genes, assay=assay, group.by="seurat_cellactivity_clusters" ) + 
+  g=DotPlot(all_obj, features=genes, assay="RNA", group.by="seurat_cellactivity_clusters" ) + 
     xlab("") + ylab("") + ggtitle(name) + 
     theme(plot.title = element_text(hjust = 0.5), axis.text.x = element_text(angle = 90, hjust=1))
   print(g)

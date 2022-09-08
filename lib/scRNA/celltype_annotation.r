@@ -1,5 +1,18 @@
-source("scRNA_func.r")
+rm(list=ls()) 
+outFile='AK6383'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_cluster_res0.5/result/AK6383.cluster.meanexp.csv'
+parFile2='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_cluster_res0.5/result/AK6383.cluster.csv'
+parFile3='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_cluster_res0.5/result/AK6383.final.rds'
 
+
+setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_cluster_res0.5_celltype/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(data.table)
 library(Seurat)
 library(heatmap3)
@@ -176,9 +189,8 @@ draw_celltype_bar<-function(obj, seurat_clusters, celltypes, celltype_name, outF
 
 if(file.exists(parFile3)){
   library(ggplot2)
-  finalList=readRDS(parFile3)
-  obj=finalList$obj
-  
+  obj=read_object(parFile3)
+
   idmap = split(id_tbl$seurat_cellactivity_clusters, id_tbl$seurat_clusters)
   obj$seurat_cellactivity_clusters = unlist(idmap[as.character(obj$seurat_clusters)])
   
@@ -204,7 +216,7 @@ if(file.exists(parFile3)){
   dev.off()
   
   cat("Draw marker gene heatmap\n")
-  obj.markers <- FindAllMarkers(obj, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+  obj.markers <- FindAllMarkers(obj, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
   write.csv(obj.markers, paste0(outFile, ".markers.csv"))
   obj@misc$markers<-obj.markers
   
@@ -213,7 +225,7 @@ if(file.exists(parFile3)){
   }else{
     top10 <- obj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
   }
-
+  
   if (nrow(top10)>200) {
     genesize=5
   } else {
@@ -223,10 +235,12 @@ if(file.exists(parFile3)){
       genesize=7
     } 
   }
+  
+  obj<-myScaleData(obj, top10$gene, "RNA")
 
   Idents(obj)<-'seurat_cellactivity_clusters'
   png(paste0(outFile, ".heatmap.png"), width=6600, height=6000, res=300)
-  print(DoHeatmap(obj, features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
+  print(DoHeatmap(obj, assay="RNA", features = top10$gene,slot="data")+ theme(axis.text.y = element_text(size = genesize))) 
   dev.off()
   
   if(file.exists(myoptions$summary_layer_file)){
@@ -251,38 +265,39 @@ if(file.exists(parFile3)){
     
     if(file.exists(parSampleFile2)){
       groups<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F) 
-      sample_map<-split(groups$V2, groups$V1)
-      obj$group=unlist(sample_map[as.character(obj$orig.ident)])
-      
-      width=2000 * length(unique(groups$V2)) + 300
-      png(paste0(outFile, ".summary_layer.group.png"), width=width, height=2000, res=300)
-      p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="summary_layer", split.by="group") + 
-        ggtitle("") +
-        scale_color_manual(values=summary_color)+
-        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
-        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
-      print(p)
-      dev.off()
-      
-      width=3000 * length(unique(groups$V2)) + 300
-      png(paste0(outFile, ".celltype.group.label.png"), width=width, height=3000, res=300)
-      p<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters", split.by="group") + 
-        guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
-        ggtitle("") +
-        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
-        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
-      print(p)
-      dev.off()
-      
-      png(paste0(outFile, ".celltype.group.nolabel.png"), width=width, height=3000, res=300)
-      p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="seurat_cellactivity_clusters", split.by="group") + 
-        guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
-        ggtitle("") +
-        annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
-        annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
-      print(p)
-      dev.off()
+      if(length(unique(groups$V2)) > 1){
+        sample_map<-split(groups$V2, groups$V1)
+        obj$group=unlist(sample_map[as.character(obj$orig.ident)])
+        
+        width=2000 * length(unique(groups$V2)) + 300
+        png(paste0(outFile, ".summary_layer.group.png"), width=width, height=2000, res=300)
+        p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="summary_layer", split.by="group") + 
+          ggtitle("") +
+          scale_color_manual(values=summary_color)+
+          annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+          annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+        print(p)
+        dev.off()
+        
+        width=3000 * length(unique(groups$V2)) + 300
+        png(paste0(outFile, ".celltype.group.label.png"), width=width, height=3000, res=300)
+        p<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters", split.by="group") + 
+          guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
+          ggtitle("") +
+          annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+          annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+        print(p)
+        dev.off()
+        
+        png(paste0(outFile, ".celltype.group.nolabel.png"), width=width, height=3000, res=300)
+        p<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="seurat_cellactivity_clusters", split.by="group") + 
+          guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
+          ggtitle("") +
+          annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf)+
+          annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf)
+        print(p)
+        dev.off()
+      }
     }
   }
 }
-

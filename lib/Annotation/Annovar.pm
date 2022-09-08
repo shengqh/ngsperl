@@ -31,6 +31,12 @@ sub perform {
   my $buildver = $config->{$section}{buildver} or die "buildver is not defined in $section";
   $option = "-buildver $buildver $option";
 
+  my $clean_folder = get_option( $config, $section, "clean_folder", 0 );
+  my $perform_splicing = get_option( $config, $section, "perform_splicing", 1 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
+
+  my $annovar_gzipped = get_option( $config, $section, "annovar_gzipped", 0 );
+
   my $annovarDB = $config->{$section}{annovar_db} or die "annovar_db is not defined in $section";
   my $isvcf = $config->{$section}{isvcf};
   if ( !defined $isvcf ) {
@@ -41,12 +47,15 @@ sub perform {
     $isBed = 0;
   }
 
-  my $splicing_threshold = get_option( $config, $section, "splicing_threshold", 0 );
-  if ( $splicing_threshold > 0 ) {
-    $option = $option + " -splicing_threshold $splicing_threshold";
+  my $splicing_threshold;
+  if($perform_splicing){
+    $splicing_threshold = get_option( $config, $section, "splicing_threshold", 0 );
+    if ( $splicing_threshold > 0 ) {
+      $option = $option + " -splicing_threshold $splicing_threshold";
+    }
   }
 
-  my $refineSplicing = $option =~ 'refGene';
+  my $refineSplicing = $perform_splicing && ($option =~ 'refGene');
   my $pythonSplicing = dirname(__FILE__) . "/annovarSplicing.py";
   if ( $refineSplicing & !-e $pythonSplicing ) {
     die "File not found : " . $pythonSplicing;
@@ -77,7 +86,7 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log_file = $self->get_log_filename( $log_dir, $sample_name );
 
-    my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
+    my $cur_dir = create_directory_or_die($output_to_same_folder ? $result_dir : $result_dir . "/$sample_name");
 
     my $log_desc = $cluster->get_log_description($log_file);
 
@@ -99,9 +108,9 @@ sub perform {
       my $annovar       = $filename . ".annovar";
       my $result        = "${annovar}.${buildver}_multianno.txt";
       my $refine_result = "${annovar}.splicing.${buildver}_multianno.txt";
-      my $final         = $annovar . ".final.tsv";
+      my $final_tsv         = $annovar . ".final.tsv";
+      my $final = $annovar_gzipped ? $final_tsv . ".gz" : $final_tsv;
       my $excel         = $final . ".xls";
-
 
       my $runcmd;
       my $passinput;
@@ -142,30 +151,38 @@ fi
       }
 
       print $pbs "
-if [[ -s $result && ! -s $final ]]; then
-  sed -n '/^[^#]/q;p' ${sampleFile}|sed '\$ d' > ${final}.header
-  $cat ${sampleFile} | grep -v \"^##\" | cut -f7- > ${sampleFile}.clean
+if [[ -s $result && ! -s $final_tsv ]]; then
+  sed -n '/^[^#]/q;p' ${sampleFile} | sed '\$ d' > ${final_tsv}.header
+  $cat ${sampleFile} | grep -v \"^##\" | cut -f7- > ${filename}.clean
   grep -v \"^##\" ${result} > ${result}.clean
-  paste ${result}.clean ${sampleFile}.clean > ${final}.data
-  cat ${final}.header ${final}.data > $final
-  rm ${sampleFile}.clean ${result}.clean ${final}.header ${final}.data
+  paste ${result}.clean ${filename}.clean > ${final_tsv}.data
+  cat ${final_tsv}.header ${final_tsv}.data > $final_tsv
+  rm ${filename}.clean ${result}.clean ${final_tsv}.header ${final_tsv}.data
 fi
 ";
 
       if ( $toExcel ) {
         my $affyoption = defined($affyFile) ? "-a $affyFile" : "";
         print $pbs "
-if [ -s $final ]; then
-  rm $passinput $result
+if [[ -s $final_tsv && ! -s $excel ]]; then
+  cqstools annovar_refine -i $final_tsv $affyoption -o $excel
 fi
+";
+      }
 
-if [[ -s $final && ! -s $excel ]]; then
-  cqstools annovar_refine -i $final $affyoption -o $excel
+      if($annovar_gzipped){
+        print $pbs "
+if [[ -s $final_tsv && ! -s $final ]]; then
+  gzip $final_tsv
 fi
 ";
       }
 
       print $lt "${cur_dir}/${result}\n";
+
+      if($clean_folder){
+        print $pbs "\nrm -f $passinput $result $refine_result \n";
+      }
     }
     $self->close_pbs( $pbs, $pbs_file );
 
@@ -194,11 +211,13 @@ sub result {
   my $buildver = $config->{$section}{buildver} or die "buildver is not defined in $section";
   my $raw_files = get_raw_files( $config, $section );
   my $toExcel = get_option( $config, $section, "to_excel", 0 );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
+  my $annovar_gzipped = get_option( $config, $section, "annovar_gzipped", 0 );
 
   my $result = {};
   for my $sample_name ( sort keys %{$raw_files} ) {
     my @sample_files = @{ $raw_files->{$sample_name} };
-    my $cur_dir      = $result_dir . "/$sample_name";
+    my $cur_dir      = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
     my @result_files = ();
     for my $sampleFile (@sample_files) {
       my ( $filename, $dir ) = fileparse($sampleFile);
@@ -210,6 +229,9 @@ sub result {
 
       my $annovar = $filename . ".annovar";
       my $final   = $annovar . ".final.tsv";
+      if ($annovar_gzipped){
+        $final = $final . ".gz";
+      }
       if ( $toExcel ) {
         my $excel = $final . ".xls";
         push( @result_files, $cur_dir . "/$excel" );

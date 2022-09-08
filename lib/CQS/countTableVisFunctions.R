@@ -49,18 +49,14 @@ getHeatmapOption<-function(countHT, isCorr=FALSE){
 theme_bw2 <- function () { 
 	theme_bw() %+replace% 
 		theme(
-			panel.border = element_blank(),
+			strip.background = element_rect(fill = NA, colour = 'black'),
+			panel.border = element_rect(fill = NA, color = "black"),			
 			axis.line = element_line(colour = "black", size = 0.5)
 		)
 }
 
 theme_bw3 <- function () { 
-	theme_bw() +
-	theme(
-		strip.background = element_rect(fill = NA, colour = 'black'),
-		panel.border = element_rect(fill = NA, color = "black"),			
-		axis.line = element_line(colour = "black", size = 0.5)
-	)
+	theme_bw2()
 }
 
 getSampleInGroup<-function(groupDefineFile, samples, useLeastGroups=FALSE,onlySamplesInGroup=FALSE){
@@ -219,7 +215,6 @@ myEstimateSizeFactors<-function(dds){
   return(dds)
 }
 
-library("VennDiagram")
 venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, resolution = 500, 
 		units = "px", compression = "lzw", na = "stop", main = NULL, 
 		sub = NULL, main.pos = c(0.5, 1.05), main.fontface = "plain", 
@@ -230,6 +225,7 @@ venn.diagram1<-function (x, count=NULL,filename, height = 3000, width = 3000, re
 		fill=NA,
 		...) 
 {
+	library("VennDiagram")
 	if (is.null(count)) {
 		countFun<-function(x) length(x)
 	} else {
@@ -486,10 +482,13 @@ makeColors<-function(n,colorNames="Set1") {
 	return(colors)
 }
 
-tableMaxCategory<-function(dat,maxCategory=NA) {
+tableMaxCategory<-function(dat,maxCategory=NA,viewCategory=15) {
 	if (!is.na(maxCategory) & nrow(dat)>maxCategory) {
 		temp<-apply(dat,2,function(x) rev(order(x))[1:maxCategory])
 		categoryKeptInd<-sort(unique(as.vector(temp)))
+		if(length(categoryKeptInd) > viewCategory){
+			categoryKeptInd<-categoryKeptInd[1:viewCategory]
+		}
 		datForFigure<-dat[categoryKeptInd,]
 		if (length(categoryKeptInd)<nrow(dat)) {
 			datForFigure<-rbind(datForFigure,Other=colSums(dat[-categoryKeptInd,,drop=FALSE]))
@@ -500,9 +499,9 @@ tableMaxCategory<-function(dat,maxCategory=NA) {
 	return(datForFigure)
 }
 
-tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1",barwidth=0.5) {
+tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1",barwidth=0.5,viewCategory=15) {
 	if (transformTable) {
-		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory)
+		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory,viewCategory=viewCategory)
 		
 #		datForFigure$Groups<-row.names(dat)
 		datForFigure<-reshape2::melt(as.matrix(datForFigure))
@@ -561,7 +560,7 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 	width<-max(3000,75*ncol(dat))
 	height<-height
 	png(fileName,width=width,height=height,res=300)
-	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,...)
+	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,viewCategory=15,...)
 	print(p)
 	dev.off()
 	if (proportionBar) {

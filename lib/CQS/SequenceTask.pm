@@ -27,10 +27,11 @@ sub new {
   return $self;
 }
 
+
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $result = {};
 
@@ -64,7 +65,7 @@ sub get_pbs_files {
 sub get_task_pbs_map {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my %step_map = %{ get_raw_files( $config, $section ) };
 
@@ -90,7 +91,7 @@ sub get_task_pbs_map {
 sub get_all_dependent_pbs_map {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my %step_map = %{ get_raw_files( $config, $section ) };
 
@@ -99,97 +100,13 @@ sub get_all_dependent_pbs_map {
     my @tasks = @{ $step_map{$step_name} };
 
     for my $task_section_name (@tasks) {
-      #print $task_section_name . "\n";
       my $task_section = $config->{$task_section_name};
       
       if ( not defined $task_section->{class} ) {
         next
       }
-      
-      my $myclass = instantiate( $task_section->{class} );
-      my $pbs_sample_map = $myclass->get_pbs_source( $config, $task_section_name );
 
-      # if ($config->{general}{debug} && $task_section_name eq "bowtie1_contamination_all_01_index"){
-      #   print("found\n");
-      #   print(Dumper($pbs_sample_map));
-      # }
-      
-      my $allSampleNameMap = {};
-      for my $pbs (keys %$pbs_sample_map){
-        my $sample_names = $pbs_sample_map->{$pbs};
-        for my $sample_name (@$sample_names){
-          $allSampleNameMap->{$sample_name} = 1;
-        }
-      }
-      my @allSampleNames = (sort keys %$allSampleNameMap);
-
-      # if ($config->{general}{debug} && $task_section_name eq "bwa_refine_nosoftclip_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls"){
-      #   print Dumper(@allSampleNames);
-      # }
-
-      my $taskdeppbsmap = {};
-      for my $key ( keys %$task_section ) {
-        my $mapname = $key;
-        if ( $mapname =~ /_ref$/ ) {
-          $mapname =~ s/_config_ref//g;
-          $mapname =~ s/_ref//g;
-          my $refpbsmap = get_ref_section_pbs( $config, $task_section_name, $mapname );
-          my @refNames = (sort keys %$refpbsmap);
-
-          my $keyEquals = 1;
-          if (scalar(@allSampleNames) != scalar(@refNames)){
-            $keyEquals = 0;
-          }else{
-            for my $idx (0..(scalar(@allSampleNames)-1)){
-              if ($allSampleNames[$idx] ne $refNames[$idx]) {
-                $keyEquals = 0;
-                last;
-              }
-            }
-          }
-
-          for my $pbs (keys %$pbs_sample_map){
-            my $curpbs = $taskdeppbsmap->{$pbs};
-            if ( !defined $curpbs ) {
-              $curpbs = {};
-            }
-            # if ($config->{general}{debug} && $task_section_name eq "bowtie1_contamination_all_02_align"){
-            #   print ("before ...");
-            #   print(Dumper($taskdeppbsmap->{$pbs}));
-            # }
-            
-            if ($keyEquals) {
-              my $sample_names = $pbs_sample_map->{$pbs};
-              for my $sample_name (@$sample_names) {
-                my $ref_pbs_list = $refpbsmap->{$sample_name};
-                if (defined $ref_pbs_list){
-                  for my $ref_pbs (@$ref_pbs_list){
-                    $curpbs->{$ref_pbs} = 1;
-                  }
-                }
-              }
-            }else{
-              for my $sample_name (sort keys %$refpbsmap){
-                my $ref_pbs_list = $refpbsmap->{$sample_name};
-                for my $ref_pbs (@$ref_pbs_list){
-                  $curpbs->{$ref_pbs} = 1;
-                }
-              }
-            }
-
-            $taskdeppbsmap->{$pbs} = $curpbs;
-            # if ($config->{general}{debug} && $task_section_name eq "bowtie1_contamination_all_02_align"){
-            #   print ("after ...");
-            #   print(Dumper($taskdeppbsmap->{$pbs}));
-            # }
-          }
-        }
-      }
-      $result->{$task_section_name} = $taskdeppbsmap;
-      # if ($config->{general}{debug} && $task_section_name eq "bowtie1_contamination_all_01_index"){
-      #   print(Dumper($taskdeppbsmap));
-      # }
-
+      $result->{$task_section_name} = get_task_dep_pbs_map($config, $task_section_name);
     }
   }
   return ($result);

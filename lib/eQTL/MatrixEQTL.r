@@ -1,6 +1,7 @@
 library("MatrixEQTL")
 
 args = commandArgs(trailingOnly=TRUE)
+print(args)
 
 snp_genotype_file=args[1]
 snp_location_file=args[2]
@@ -9,6 +10,19 @@ gene_location_file=args[4]
 sort_data_by_tcga=args[5]
 output_cis_file=args[6]
 output_trans_file=args[7]
+covariates_file=args[8]
+
+if(!is.na(output_trans_file)){
+  if (output_trans_file == 'NA'){
+    output_trans_file = NA
+  }
+}
+
+if(!is.na(covariates_file)){
+  if (covariates_file == 'NA'){
+    covariates_file = NA
+  }
+}
 
 cat("snp_genotype_file=", snp_genotype_file, "\n")
 cat("snp_location_file=", snp_location_file, "\n")
@@ -17,6 +31,7 @@ cat("gene_location_file=", gene_location_file, "\n")
 cat("sort_data_by_tcga=", sort_data_by_tcga, "\n")
 cat("output_cis_file=", output_cis_file, "\n")
 cat("output_trans_file=", output_trans_file, "\n")
+cat("covariates_file=", covariates_file, "\n")
 
 pvalue <- 1e-2
 
@@ -31,13 +46,27 @@ checkFileExists(snp_location_file)
 checkFileExists(gene_expression_file)
 checkFileExists(gene_location_file)
 
+cvrt = SlicedData$new()
+if(!is.na(covariates_file)){
+  checkFileExists(covariates_file)
+  cvrt$fileDelimiter = "\t";      # the TAB character
+  cvrt$fileOmitCharacters = "NA"; # denote missing values;
+  cvrt$fileSkipRows = 1;          # one row of column labels
+  cvrt$fileSkipColumns = 1;       # one column of row labels
+  cvrt$LoadFile(covariates_file);
+}
+
 useModel = modelLINEAR
 
-# perform local (cis) only
-#pvOutputThreshold_tra = 0;
+if(!is.na(output_trans_file)){
+  # perform both cis and trans
+  pvOutputThreshold_tra = pvalue
+}else{
+  # perform local (cis) only
+  pvOutputThreshold_tra = 0;
+  output_trans_file = ""
+}
 
-# perform both cis and trans
-pvOutputThreshold_tra = pvalue;
 pvOutputThreshold_cis = pvalue;
 
 # Error covariance matrix
@@ -97,6 +126,7 @@ genepos = read.table(gene_location_file, header = TRUE, stringsAsFactors = FALSE
 me = Matrix_eQTL_main(
   snps = snps, 
   gene = gene, 
+  cvrt = cvrt,
   output_file_name     = output_trans_file,
   pvOutputThreshold     = pvOutputThreshold_tra,
   useModel = useModel, 
@@ -110,6 +140,12 @@ me = Matrix_eQTL_main(
   pvalue.hist = "qqplot",
   min.pv.by.genesnp = FALSE,
   noFDRsaveMemory = FALSE);
+
+saveRDS(me, paste0(output_cis_file, ".rds"))
+
+png(paste0(output_cis_file, ".qqplot.png"), width=2000, height=2000, res=300)
+plot(me, pch = 16, cex = 0.7);
+dev.off()
 
 if(sort_data_by_tcga == "1"){
   unlink(snp_file)

@@ -317,6 +317,43 @@ sub getRNASeqConfig {
     }
   }
 
+  if(getValue($def, "perform_dexseq", 0)){
+    my $dexseq_count = "dexseq_count";
+    $config->{$dexseq_count} = {
+      class        => "Count::DexseqCount",
+      perform      => 1,
+      target_dir   => $target_dir . "/" . getNextFolderIndex($def) . "$dexseq_count",
+      option       => "",
+      source_ref   => $source_ref,
+      gff_file     => getValue($def, "dexseq_gff"),
+      dexseq_count => getValue($def, "dexseq_count.py", "dexseq_count.py"),
+      sh_direct    => 0,
+      pbs          => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    push @$individual, "$dexseq_count";
+
+    my $dexseq_count_table = "dexseq_count_table";
+    $config->{$dexseq_count_table} = {
+      class         => "CQS::CQSDatatable",
+      perform       => 1,
+      target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "$dexseq_count_table",
+      option        => "-p ENS --noheader",
+      source_ref    => $dexseq_count,
+      name_map_file => $def->{name_map_file},
+      sh_direct     => 1,
+      pbs           => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "20gb"
+      },
+    };
+    push @$summary, "$dexseq_count_table";
+  }
+
   if(defined $def->{annotation_genes}){
     my $genes_str = $def->{annotation_genes};
     my @genes = split /[;, ]+/, $genes_str;
@@ -329,6 +366,11 @@ sub getRNASeqConfig {
     if($def->{perform_bamsnap}){
       my $bamsnap_task = "annotation_genes_bamsnap";
       addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $source_ref);
+    }
+
+    if($def->{bamsnap_coverage}){
+      my $coverage_task = "annotation_genes_coverage";
+      addGeneCoverage($config, $def, $summary, $target_dir, $coverage_task, "annotation_genes", $source_ref, $geneLocus);
     }
 
     my $sizeFactorTask = "size_factor";
@@ -389,6 +431,7 @@ sub getRNASeqConfig {
       parameterSampleFile4 => {
         "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
         "draw_umap" => getValue($def, "draw_umap", 0),
+        "heatmap_cexCol" => $def->{heatmap_cexCol},
       },
       rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file     => "parameterSampleFile1",
@@ -837,7 +880,7 @@ fi
         class         => "GATK4::HaplotypeCaller",
         perform       => 1,
         target_dir    => $target_dir . "/" . getNextFolderIndex($def) . $hc_task,
-        option        => "-dont-use-soft-clipped-bases --standard-min-confidence-threshold-for-calling 20",
+        option        => getValue($def, "HaplotypeCaller_option", "--soft-clip-low-quality-ends true --dont-use-soft-clipped-bases true --standard-min-confidence-threshold-for-calling 20"),
         source_ref    => $refine_task,
         java_option   => "",
         bed_file      => $def->{covered_bed},
@@ -982,7 +1025,7 @@ fi
         class         => "GATK::HaplotypeCaller",
         perform       => 1,
         target_dir    => $target_dir . "/" . getNextFolderIndex($def) . $hc_task,
-        option        => "-dontUseSoftClippedBases -stand_call_conf 20.0",
+        option        => getValue($def, "HaplotypeCaller_option", "--soft-clip-low-quality-ends true --dont-use-soft-clipped-bases true --standard-min-confidence-threshold-for-calling 20"),
         source_ref    => $refine_task,
         java_option   => "",
         fasta_file    => $fasta,
@@ -1148,7 +1191,7 @@ fi
         push( @report_names, "deseq2_volcano_plot" );
       }
       else {
-        push( @report_files, $deseq2taskname, "_DESeq2_volcanoPlot.png" );
+        push( @report_files, $deseq2taskname, "_DESeq2_volcanoEnhanced.png" );
         push( @report_names, "deseq2_volcano_plot" );
       }
       for my $key ( keys %$pairs ) {

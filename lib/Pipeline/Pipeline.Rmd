@@ -6,6 +6,7 @@ display_webgestalt=function(files) {
   enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
   enrich_files$Comparisons<-gsub("WebGestalt_GO....", "", enrich_files$V2)
   enrich_files$Comparisons<-gsub("WebGestalt_KEGG_", "", enrich_files$Comparisons)
+  enrich_files<-enrich_files[order(enrich_files$Comparisons),]
   comparisons<-unique(enrich_files$Comparisons)
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
@@ -104,6 +105,7 @@ display_gsea=function(files) {
   cat(paste0("  \n## GSEA  \n"))
   gsea_files<-files[grepl("gsea_", rownames(files)),]
   gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
+  gsea_files<-gsea_files[order(gsea_files$Comparisons),]
   comparisons<-unique(gsea_files$Comparisons)
   j=1
   for (j in 1:length(comparisons)){
@@ -125,5 +127,37 @@ display_gsea=function(files) {
       }
     }  
   }
+}
+
+get_versions=function(){
+  files<-read.delim("fileList4.txt", header=F, stringsAsFactors = F)
+  df<-NULL
+  curfile<-files$V1[1]
+  for(curfile in files$V1){
+    if(file.exists(curfile)){
+      curdf<-read.csv(curfile, header=F, check.names=F)
+      df<-rbind(df, curdf)
+    }
+  }
+
+  if(file.exists("fileList5.txt")){
+    vers<-read.delim("fileList5.txt", header=F, stringsAsFactors = F)
+    vers<-vers[,c(2,1)]
+    colnames(vers)<-c("V1","V2")
+    df<-rbind(df, vers)
+  }
+
+  df<-unique(df)
+  df<-df[order(df$V1),]
+  colnames(df)<-c("Software", "Version")
+  return(df)
+}
+
+display_versions=function(){
+  df<-get_versions()
+  print(kable(df, caption=tabRef("versionFiles", "Software versions"), row.names=F) %>%
+          kable_styling() %>%
+          htmltools::HTML())
+  return(df)
 }
 ```

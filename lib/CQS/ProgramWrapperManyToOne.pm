@@ -116,12 +116,18 @@ sub perform {
     my $final_prefix = $sample_name . $output_file_prefix;
 
     my $curOption = "";
+    my $g_option = $option;
+
     if ( not $bFound2 ) {
       $curOption = $curOption . " " . $param_option2;
     }else{
       my $param2 = get_joined_files($sample_name_map, $sample_name, $parameterSampleFile2, $parameterSampleFile2JoinDelimiter);
-      if ($param2 != ""){
-        $curOption = $curOption . " " . $parameterSampleFile2arg . " \"" .$param2 . "\"";
+      if ($param2 ne ""){
+        if ($g_option =~ /__INPUT2__/){
+          $g_option =~ s/__INPUT2__/$param2/g;
+        }else{
+          $curOption = $curOption . " " . $parameterSampleFile2arg . " \"" .$param2 . "\"";
+        }
       }
     }
 
@@ -129,12 +135,19 @@ sub perform {
       $curOption = $curOption . " " . $param_option3;
     }else{
       my $param3 = get_joined_files($sample_name_map, $sample_name, $parameterSampleFile3, $parameterSampleFile3JoinDelimiter);
-      if ($param3 != ""){
-        $curOption = $curOption . " " . $parameterSampleFile3arg . " \"" .$param3 . "\"";
+      if ($param3 ne ""){
+        if ($g_option =~ /__INPUT3__/){
+          $g_option =~ s/__INPUT3__/$param3/g;
+        }else{
+          $curOption = $curOption . " " . $parameterSampleFile3arg . " \"" .$param3 . "\"";
+        }
       }
     }
 
-    my $g_option = $option;
+    if ($g_option =~ /__NAME__/){
+      $g_option =~ s/__NAME__/$sample_name/g;
+    }
+
     if ($g_option =~ /__INPUT__/){
       $g_option =~ s/__INPUT__/$input_file/g;
     }elsif (option_contains_arg($g_option, $parameterSampleFile1arg)) {
@@ -197,7 +210,7 @@ sub result {
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   #print  "task_name = " . $task_name . "\n";
 
@@ -221,7 +234,7 @@ sub get_pbs_files {
 sub get_pbs_source {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );

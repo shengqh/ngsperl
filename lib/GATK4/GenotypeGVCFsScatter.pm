@@ -76,13 +76,14 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $output_vcf_filename_index );
     print $pbs "
-gatk --java-options -Xms8g \\
+gatk --java-options \"-Xmx8g -Xms8g\" \\
   GenotypeGVCFs \\
   -R ${ref_fasta} \\
   -O ${tmp_file} \\
   -D ${dbsnp_vcf} \\
   -G StandardAnnotation -G AS_StandardAnnotation \\
   --only-output-calls-starting-in-intervals \\
+  --use-new-qual-calculator \\
   -V gendb://$WORKSPACE \\
   -L ${interval} \\
   --merge-input-intervals

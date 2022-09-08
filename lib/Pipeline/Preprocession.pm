@@ -16,6 +16,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [qw(
   getPreprocessionConfig
+  addPairendFastqValidation
   addCutadapt
   addFastqLen)
   ] );
@@ -45,6 +46,34 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "emailType",                 "FAIL" );
 
   return $def;
+}
+
+sub addPairendFastqValidation {
+  my ($config, $def, $individual, $parent_dir, $task_name, $source_ref) = @_;
+  $config->{"$task_name"} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => $parent_dir . "/" . getNextFolderIndex($def) . "$task_name",
+    option => "",
+    use_tmp_folder => 1,
+    suffix  => "_qc",
+    interpretor => "python3",
+    program => "../QC/validatePairendFastq.py",
+    source_arg => "-i",
+    source_ref => $source_ref,
+    output_arg => "-o",
+    output_file_prefix => ".txt",
+    output_file_ext => ".txt",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 1,
+    use_tmp_folder => getValue($def, "use_tmp_folder_paired_end_validation", 0),
+    sh_direct   => 0,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "6",
+      "mem"       => "10gb"
+    }
+  };
+  push(@$individual, $task_name);
 }
 
 sub addCutadapt {
@@ -97,31 +126,9 @@ sub addCutadapt {
   push @$individual, ($cutadapt_task);
 
   if ($is_pairend) {
-    if (getValue($def, "perform_cutadapt_validate", 0)){
-      my $fastq_validator = $cutadapt_task . "_validate";
-      $config->{"$fastq_validator"} = {
-        class => "CQS::ProgramWrapperOneToOne",
-        target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "$fastq_validator",
-        option => "",
-        use_tmp_folder => 1,
-        suffix  => "_qc",
-        interpretor => "python3",
-        program => "../QC/validatePairendFastq.py",
-        source_arg => "-i",
-        source_ref => [$cutadapt_task, ".fastq.gz"],
-        output_arg => "-o",
-        output_file_prefix => ".txt",
-        output_file_ext => ".txt",
-        output_to_same_folder => 1,
-        can_result_be_empty_file => 1,
-        sh_direct   => 0,
-        pbs => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "6",
-          "mem"       => "10gb"
-        }
-      };
-      push(@$individual, $fastq_validator);
+    if (getValue($def, "perform_paired_end_validation", 1)){
+      my $fastq_validator = $cutadapt_task . "_validation";
+      addPairendFastqValidation($config, $def, $individual, $intermediate_dir, $fastq_validator, [$cutadapt_task, ".fastq.gz"]);
     }
   }
 
@@ -413,8 +420,9 @@ sub getPreprocessionConfig {
   }
 
   if ( $def->{sra_to_fastq} ) {
+    my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FastqDump";
     $config->{sra2fastq} = {
-      class      => "SRA::FastqDump",
+      class      => $class,
       perform    => 1,
       is_paired_end   => $is_pairend,
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "sra2fastq",
@@ -433,6 +441,14 @@ sub getPreprocessionConfig {
     };
     $source_ref = "sra2fastq";
     push @$individual, ("sra2fastq");
+  }
+
+  if (getValue($def, "perform_paired_end_validation", 1)){
+    defined $is_pairend or die "Define is_paired_end first!";
+    if($is_pairend){
+      my $fastq_validator = "paired_end_validation";
+      addPairendFastqValidation($config, $def, $individual, $intermediate_dir, $fastq_validator, $source_ref);
+    }
   }
 
   if ( $def->{merge_fastq} ) {
@@ -674,10 +690,10 @@ sub getPreprocessionConfig {
         {
           class              => "CQS::UniqueR",
           perform            => 1,
-          rtemplate          => "countInFastQcVis.R",
+          rtemplate          => "countTableVisFunctions.R,countInFastQcVis.R",
           output_file        => ".countInFastQcVis.Result",
           output_file_ext    => ".Reads.csv",
-          output_other_ext   => ".pdf",
+          output_other_ext   => ".pdf,.png",
           sh_direct          => 1,
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
           pbs                => {

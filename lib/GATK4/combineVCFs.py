@@ -12,7 +12,7 @@ from collections import OrderedDict
 from FileListUtils import readHashMap 
 from Bio import SeqIO, bgzf
 
-DEBUG=True
+DEBUG=False
 NotDEBUG=not DEBUG
 
 parser = argparse.ArgumentParser(description="Combine VCFs from GATK4/spin/trim",

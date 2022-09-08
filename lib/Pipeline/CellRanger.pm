@@ -67,18 +67,21 @@ sub getConfig {
     $count_jobmode,
     $def->{count_chemistry});
 
-  my $vdj_jobmode = getValue($def, "vdj_jobmode", "local");
-  my $vdj_task_name = (defined $def->{vdj_chain}) ? "vdj_chain_$vdj_jobmode" : "vdj_$vdj_jobmode";
-  addCellRangerVdj($config, 
-    $def, 
-    $individual, 
-    $target_dir, 
-    $vdj_task_name, 
-    getValue($def, "vdj_fastq_folder"),
-    "vdj_files", 
-    getValue($def, "vdj_reference"),
-    $vdj_jobmode,
-    $def->{vdj_chain});
+  if (defined $def->{vdj_files}) {
+    my $vdj_jobmode = getValue($def, "vdj_jobmode", "local");
+    my $vdj_task_name = (defined $def->{vdj_chain}) ? "vdj_chain_$vdj_jobmode" : "vdj_$vdj_jobmode";
+    addCellRangerVdj($config, 
+      $def, 
+      $individual, 
+      $target_dir, 
+      $vdj_task_name, 
+      getValue($def, "vdj_fastq_folder"),
+      "vdj_files", 
+      getValue($def, "vdj_reference"),
+      $vdj_jobmode,
+      $def->{vdj_chain});
+  }
+
 
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),

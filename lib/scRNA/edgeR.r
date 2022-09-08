@@ -1,8 +1,23 @@
+rm(list=ls()) 
+outFile='AK6383'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
+parFile2='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
+parFile3=''
 
+
+setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_byCell/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
 library(Seurat)
+library(testit)
 
 sumcount<-function(ct_count, names, sample_df){
   result<-lapply(names, function(x){
@@ -14,19 +29,21 @@ sumcount<-function(ct_count, names, sample_df){
   return(rescount)
 }
 
-finalList<-readRDS(parFile1)
-obj<-finalList$obj
+options_table<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+bBetweenCluster<-ifelse(myoptions$bBetweenCluster == "0", FALSE, TRUE)
+filter_cellPercentage<-as.numeric(myoptions$filter_cellPercentage)
+filter_minTPM<-as.numeric(myoptions$filter_minTPM)
+pvalue<-as.numeric(myoptions$pvalue)
+foldChange<-as.numeric(myoptions$foldChange)
+useRawPvalue<-ifelse(myoptions$useRawPvalue == "0", FALSE, TRUE)
+cluster_name=myoptions$cluster_name
 
-clusterDf<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
-if(!(cluster_name %in% colnames(obj@meta.data))){
-  if(all(names(obj$orig.ident) %in% rownames(clusterDf))){
-    obj[[cluster_name]]<-clusterDf[names(obj$orig.ident), cluster_name]
-  }else{
-    obj[[cluster_name]]<-clusterDf[obj$seurat_clusters, cluster_name]
-  }
+if(!exists('obj')){
+  obj<-read_object(parFile1, parFile2, cluster_name)
 }
 
-meta<-obj@meta.data
+clusterDf<-obj@meta.data
 
 comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
 if(ncol(comparisons) == 3){
@@ -40,8 +57,10 @@ comparisonNames<-unique(comparisons$Comparison)
 
 comp <-comparisonNames[1]
 
+designFailed<-data.frame("comp"=character(), "celltype"=character(), "reason"=character())
 designMatrix<-NULL
 for (comp in comparisonNames){
+  cat(comp, "\n")
   comp_groups<-comparisons[comparisons$Comparison==comp,]
   comp_options = split(comp_groups$Value, comp_groups$Key)
   
@@ -59,6 +78,18 @@ for (comp in comparisonNames){
     controlGroup<-ifelse("control_name" %in% names(comp_options), comp_options$control_name, paste("Cluster", paste(control_names, collapse = "_"), sep="_"))
     sample_names<-as.numeric(comp_options$sample_clusters)
     sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
+  }
+  
+  if("covariances" %in% names(comp_options)){
+    covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T)
+    assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
+    for(col_name in comp_options$covariances){
+      colmap = unlist(split(covariances_tbl[,col_name], covariances_tbl$Sample))
+      obj<-AddMetaData(obj, colmap[obj$orig.ident], col.name = col_name )
+    }
+    covariances=comp_options$covariances
+  }else{
+    covariances=NULL
   }
 
   if(bBetweenCluster){
@@ -90,9 +121,9 @@ for (comp in comparisonNames){
     sample_files=unique(meta[sample_cells, "orig.ident"])
     
     if(!all(control_files %in% sample_files)){
-      sampleInGroup = 0
+      sampleInGroup = FALSE
     }else{
-      sampleInGroup = 1
+      sampleInGroup = TRUE
     }
     
     all_cells<-c(control_cells, sample_cells)
@@ -104,8 +135,8 @@ for (comp in comparisonNames){
     de_obj<-subset(obj, cells=all_cells)
     de_obj$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
     de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
-    
     designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
+    
     designfile<-paste0(prefix, ".design")
     write.csv(designdata, file=designfile, row.names=F, quote=F)
     
@@ -125,13 +156,12 @@ for (comp in comparisonNames){
     }
   }else{
     cts = unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name])
-    prefixList<-gsub(" ", "_", cts)
-    prefixList<-gsub(":", "_", prefixList)
-    prefixList<-gsub("_+", "_", prefixList)
-    
+    prefixList<-gsub('[ /:_]+', '_', cts)
+
     idx<-1
     for (idx in c(1:length(cts))){
       ct = cts[idx]
+      cat("  ", as.character(ct), "\n")
       prefix = paste0(prefixList[idx], ".", comp)
       
       clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
@@ -142,11 +172,17 @@ for (comp in comparisonNames){
       invalid_sample_names= sample_names[!(sample_names %in% unique(clusterCt$sample))]
 
       if (length(invalid_control_names) == length(control_names)){
-        stop(paste0("There were no control ", paste0(invalid_control_names, collapse=","), " found in object sample names!"))
+        error_msg = paste0("There were no control ", paste0(invalid_control_names, collapse=","), " found in object sample names!")
+        designFailed[nrow(designFailed) + 1,] <- c(comp, as.character(ct), error_msg)
+        cat(error_msg, "\n", file=stderr())
+        next
       }
       
       if (length(invalid_sample_names)  == length(sample_names)){
-        stop(paste0("There were no sample ", paste0(invalid_sample_names, collapse=","), " found in object sample names!"))
+        error_msg = paste0("There were no sample ", paste0(invalid_sample_names, collapse=","), " found in object sample names!")
+        designFailed[nrow(designFailed) + 1,] <- c(comp, as.character(ct), error_msg)
+        cat(error_msg, "\n", file=stderr())
+        next
       }
       
       control_cells<-rownames(clusterCt)[clusterCt$sample %in% control_names]  
@@ -159,10 +195,17 @@ for (comp in comparisonNames){
       de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
       
       designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
+      if(!is.null(covariances)){
+        for(cov_name in covariances){
+          designdata[,cov_name] = unlist(de_obj@meta.data[,cov_name])
+        }
+      }
+      assert(all(covariances %in% colnames(designdata)))
+
       designfile<-paste0(prefix, ".design")
       write.csv(designdata, file=designfile, row.names=F, quote=F)
       
-      curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, sampleInGroup=0, design=designfile, stringsAsFactors = F)
+      curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, sampleInGroup=FALSE, design=designfile, stringsAsFactors = F)
       if (is.null(designMatrix)){
         designMatrix = curdf
       }else{
@@ -170,6 +213,10 @@ for (comp in comparisonNames){
       }
     }
   }
+}
+
+if(nrow(designFailed) > 0){
+  write.csv(designFailed, paste0(outFile, ".design_failed.csv"), row.names=F)
 }
 
 result<-NULL
@@ -208,14 +255,19 @@ for(idx in c(1:nrow(designMatrix))){
   
   cells<-cells[keep_rows,]
   cdr <- scale(colMeans(cells > 0))
+  designdata$cdr = unlist(cdr)
   
+  variables = c("cdr")
   if(sampleInGroup){
-    samples<-designdata$Sample
-    design <- model.matrix(~ cdr + samples + groups)
-  }else{
-    design <- model.matrix(~ cdr + groups)
+    variables = c(variables, "Sample")
   }
-  
+  if(!is.null(covariances)){
+    variables = c(variables, covariances)
+  }
+  variables = c(variables, "Group")
+  formula_str = paste0("~ ", paste0(variables, collapse = " + "))
+  design <- model.matrix(as.formula(formula_str), designdata)
+
   rownames(design)<-colnames(cells)
   write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
   

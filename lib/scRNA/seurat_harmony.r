@@ -1,7 +1,3 @@
-
-source("scRNA_func.r")
-
-
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -21,33 +17,35 @@ random.seed=20200107
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-batch_for_integration<-ifelse(myoptions$batch_for_integration == "0", FALSE, TRUE)
-by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
-
 prefix<-outFile
 
 has_batch_file<-file.exists(parSampleFile2)
 npcs<-as.numeric(myoptions$pca_dims)
 pca_dims<-1:npcs
 
-rawobj<-readRDS(parFile1)
+obj<-readRDS(parFile1)
 
-finalList<-preprocessing_rawobj(rawobj, myoptions, prefix)
-rawobj<-finalList$rawobj
+finalList<-preprocessing_rawobj(obj, myoptions, prefix)
+obj<-finalList$rawobj
 finalList<-finalList[names(finalList) != "rawobj"]
 
-objs<-SplitObject(object = rawobj, split.by = "sample")
-rm(rawobj)
+essential_genes=read.table(parFile2, sep="\t" ,header=F)$V1
 
-obj=do_harmony(objs, by_sctransform, npcs, parSampleFile2)
+by_sctransform<-ifelse(myoptions$by_sctransform == "1", TRUE, FALSE)
+regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
+
+if(regress_by_percent_mt){
+  vars.to.regress="percent.mt"
+}else{
+  vars.to.regress=NULL
+}
+
+obj<-do_harmony(obj, by_sctransform, vars.to.regress, has_batch_file, parSampleFile2, pca_dims, essential_genes=essential_genes)
+
 reduction="harmony"
-rm(objs)
 
 for (reduct in c("pca", "harmony")){
-  png(paste0(outFile, ".elbowplot.", reduct, ".png"), width=1500, height=1200, res=300)
-  p<-ElbowPlot(obj, ndims = 20, reduction = reduct)
-  print(p)
-  dev.off()
+  output_ElbowPlot(obj, outFile, reduct)
 }
 
 cat("run_umap ... ")
@@ -58,4 +56,4 @@ finalList$obj<-obj
 finalListFile<-paste0(outFile, ".final.rds")
 saveRDS(finalList, file=finalListFile)
 
-output_integraion_dimplot(obj, outFile, has_batch_file)
+output_integration_dimplot(obj, outFile, has_batch_file)

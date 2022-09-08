@@ -329,12 +329,20 @@ sub addMutect2Wdl {
     if( -e $pon ){
       $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = $pon;
       $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = $pon_idx;
-    }elsif(defined $pon){
-      $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_ref"} = $pon;
-      $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_idx_ref"} = $pon_idx;
     }else{
-      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = "";
-      $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = "";
+      if(defined $pon){
+        if ((index($pon, '/') != -1) || (index($pon, '/') != -1)){
+          die "file not exists: " . $pon
+        }
+        if ((index($pon_idx, '/') != -1) || (index($pon_idx, '/') != -1)){
+          die "file not exists: " . $pon_idx
+        }
+        $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_ref"} = $pon;
+        $config->{$mutect2_call}{"input_single"}{"Mutect2.pon_idx_ref"} = $pon_idx;
+      }else{
+        $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon"} = "";
+        $config->{$mutect2_call}{"input_parameters"}{"Mutect2.pon_idx"} = "";
+      }
     }
   }
 
@@ -412,7 +420,7 @@ sub addSomaticCNV {
   my $somaticCNV_call = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_call";
   my $run_funcotator="true";
   my $funcotator_ref_version="";
-  if ($def->{ncbi_build} eq "GRCh19") { #based on genome, hg38=true, else false
+  if ($def->{ncbi_build} eq "GRCh19" or $def->{ncbi_build} eq "GRCh37") { #based on genome, hg38=true, else false
     $funcotator_ref_version="hg19";
   } elsif ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
     $funcotator_ref_version="hg38";
@@ -435,7 +443,9 @@ sub addSomaticCNV {
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $somaticCNV_pipeline->{"wdl_file"},
-    output_file_ext => ".".$output_genome_ext.".called.seg",
+    "use_filename_in_result" => 1,
+    output_file_ext => ".called.seg",
+#    output_file_ext => ".".$output_genome_ext.".called.seg",
 #    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
     "input_json_file" => $somaticCNV_pipeline->{"input_file"},
     "input_parameters" => {
@@ -583,6 +593,7 @@ sub addEncodeATACseq {
   my $adapter = getValue($def, "adapter");
   #my $adapter = getValue($def, "perform_cutadapt", 0) ? getValue($def, "adapter", "") : "";
   #print("adapter = " . $adapter . "\n");
+  my $is_paired_end = is_paired_end($def);
 
   $config->{$task} = {     
     "class" => "CQS::Wdl",
@@ -599,7 +610,7 @@ sub addEncodeATACseq {
       "atac.title" => "SAMPLE_NAME",
       "atac.description" => "SAMPLE_NAME",
       "atac.genome_tsv" => getValue($def, "encode_atacseq_genome_tsv"),
-      "atac.paired_end" => is_paired_end($def) ? "true" : "false",
+      "atac.paired_end" => $is_paired_end ? "true" : "false",
       "atac.adapter" => $adapter,
       "atac.singularity" => getValue($def, "atac.singularity"),
     },
@@ -643,17 +654,19 @@ sub addEncodeATACseq {
         "source_ref" => [$group_i],
         "sample_index" => 0, 
       };
-      
-      my $fastq_2 = "fastq_${pick_str}_2";
-      $config->{$fastq_2} = {     
-        "class" => "CQS::FilePickTask",
-        "source_ref" => [$group_i],
-        "sample_index" => 1, 
-      };
       $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R1_ref"} = [$fastq_1];
-      $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R2_ref"} = [$fastq_2];
       $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R1"} = 1;
-      $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R2"} = 1;
+      
+      if($is_paired_end){
+        my $fastq_2 = "fastq_${pick_str}_2";
+        $config->{$fastq_2} = {     
+          "class" => "CQS::FilePickTask",
+          "source_ref" => [$group_i],
+          "sample_index" => 1, 
+        };
+        $config->{$task}{input_parameters}{"atac.fastqs_rep${pick_str}_R2_ref"} = [$fastq_2];
+        $input_parameters_is_vector->{"atac.fastqs_rep${pick_str}_R2"} = 1;
+      }
 
       $pick_index = $pick_index + 1;
     }
