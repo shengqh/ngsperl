@@ -52,7 +52,7 @@ sub result {
       push( @result_files, "${cur_dir}/${sample_name}.log" );
     }
     
-    if($option =~ /\-m/){
+    if($option =~ /.bam.max.txt/){
       push( @result_files, "${cur_dir}/${sample_name}.bam.max.txt" );
     }
     push( @result_files, "${cur_dir}/${sample_name}.bam.version" );
