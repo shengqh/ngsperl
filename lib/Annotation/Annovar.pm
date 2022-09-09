@@ -26,7 +26,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
 
   my $buildver = $config->{$section}{buildver} or die "buildver is not defined in $section";
   $option = "-buildver $buildver $option";
@@ -118,19 +118,19 @@ sub perform {
         $passinput = $filename . ".avinput";
         $runcmd    = "convert2annovar.pl -format vcf4old ${sampleFile} | cut -f1-7 | awk '{gsub(\",\\\\*\", \"\", \$0); print}'> $passinput 
   if [ -s $passinput ]; then
-    table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
+    table_annovar.pl $passinput $annovarDB $option --thread $thread --outfile $annovar --remove
   fi";
       }
       elsif ($isBed) {
         $passinput = $filename . ".avinput";
         $runcmd    = "perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"\t\",\@F[3..(\$fileColNum-1)]);print \"\$F[0]\t\$F[1]\t\$F[2]\t0\t-\t\$fileColPart\"' $sampleFile > $passinput 
   if [ -s $passinput ]; then
-    table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove
+    table_annovar.pl $passinput $annovarDB $option --thread $thread --outfile $annovar --remove
   fi";
       }
       else {
         $passinput = $sampleFile;
-        $runcmd    = "table_annovar.pl $passinput $annovarDB $option --outfile $annovar --remove";
+        $runcmd    = "table_annovar.pl $passinput $annovarDB $option --thread $thread --outfile $annovar --remove";
       }
 
       print $pbs "
