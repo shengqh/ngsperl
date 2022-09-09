@@ -96,6 +96,7 @@ our %EXPORT_TAGS = (
     addLocusCoverage    
     addGeneCoverage
     get_next_index
+    add_extract_bam_locus
     )
   ]
 );
@@ -1099,9 +1100,9 @@ sub addAnnovar {
     isBed => $isBed,
     isvcf      => $isBed?0:1,
     pbs        => {
-      "nodes"    => "1:ppn=1",
+      "nodes"    => "1:ppn=8",
       "walltime" => "10",
-      "mem"      => "10gb"
+      "mem"      => "40gb"
     },
   };
   push @$summary, $annovar_name;
@@ -3175,6 +3176,35 @@ bowtie-build $fasta __NAME__
   };
 
   push(@$tasks, $bowtie_index_task);
+}
+
+sub add_extract_bam_locus {
+  my ($config, $def, $tasks, $target_dir, $task_name, $locus, $bam_ref) = @_;
+
+  $config->{$task_name} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
+    interpretor => "",
+    check_program => 0,
+    option => "
+samtools view -b -o __OUTPUT__ __FILE__ $locus
+samtools index __OUTPUT__
+",
+    program => "",
+    source_ref => $bam_ref,
+    output_arg => "",
+    output_file_prefix => ".bam",
+    output_file_ext => ".bam",
+    output_to_same_folder => 1,
+    sh_direct   => 1,
+    use_tmp_folder => 0,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    }
+  };
+  push @$tasks, ($task_name);
 }
 
 1;
