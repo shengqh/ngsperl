@@ -71,6 +71,9 @@ names(colors)<-c("PASS","WARN","FAIL")
 
 for (step in unique(ResultOut$StepName)) {
   tableForPlot<-ResultOut[which(ResultOut$StepName==step),]
+  #remove some smallRNA tasks from scatter
+  tableForPlot<-tableForPlot[!grepl('_bacteria.\\d{3}', tableForPlot$SampleName),]
+
   failLength<-length(grep("FAIL",tableForPlot$Result))
   warnLength<-length(grep("WARN",tableForPlot$Result))
   if (failLength>0) {
