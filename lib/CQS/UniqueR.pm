@@ -62,23 +62,7 @@ sub perform {
 
   my $all_results =  $self->result( $config, $section );
   #print(Dumper($all_results));
-  my $result_files = $all_results->{$task_name};
-  my $final_file;
-  if((not defined $result_files) || (scalar(@$result_files) == 0)){
-    #get last sample_name result file
-    for my $cur_key (sort keys %$all_results){
-      if($cur_key eq $task_name){
-        next;
-      }
-
-      my $cur_files = $all_results->{$cur_key};
-      $final_file = $cur_files->[-1];
-      #print($final_file . "\n");
-    }
-  }else{
-    #get last task_name result file
-    $final_file = $result_files->[-1];
-  }
+  my $final_file = get_final_file_by_task_name($all_results, $task_name);
 
   my $output_file_r;
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {

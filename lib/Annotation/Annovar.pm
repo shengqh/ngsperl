@@ -35,6 +35,8 @@ sub perform {
   my $perform_splicing = get_option( $config, $section, "perform_splicing", 1 );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
 
+  my $annovar_gzipped = get_option( $config, $section, "annovar_gzipped", 0 );
+
   my $annovarDB = $config->{$section}{annovar_db} or die "annovar_db is not defined in $section";
   my $isvcf = $config->{$section}{isvcf};
   if ( !defined $isvcf ) {
@@ -106,7 +108,8 @@ sub perform {
       my $annovar       = $filename . ".annovar";
       my $result        = "${annovar}.${buildver}_multianno.txt";
       my $refine_result = "${annovar}.splicing.${buildver}_multianno.txt";
-      my $final         = $annovar . ".final.tsv";
+      my $final_tsv         = $annovar . ".final.tsv";
+      my $final = $annovar_gzipped ? $final_tsv . ".gz" : $final_tsv;
       my $excel         = $final . ".xls";
 
       my $runcmd;
@@ -148,25 +151,29 @@ fi
       }
 
       print $pbs "
-if [[ -s $result && ! -s $final ]]; then
-  sed -n '/^[^#]/q;p' ${sampleFile}|sed '\$ d' > ${final}.header
-  $cat ${sampleFile} | grep -v \"^##\" | cut -f7- > ${sampleFile}.clean
+if [[ -s $result && ! -s $final_tsv ]]; then
+  sed -n '/^[^#]/q;p' ${sampleFile} | sed '\$ d' > ${final_tsv}.header
+  $cat ${sampleFile} | grep -v \"^##\" | cut -f7- > ${filename}.clean
   grep -v \"^##\" ${result} > ${result}.clean
-  paste ${result}.clean ${sampleFile}.clean > ${final}.data
-  cat ${final}.header ${final}.data > $final
-  rm ${sampleFile}.clean ${result}.clean ${final}.header ${final}.data
+  paste ${result}.clean ${filename}.clean > ${final_tsv}.data
+  cat ${final_tsv}.header ${final_tsv}.data > $final_tsv
+  rm ${filename}.clean ${result}.clean ${final_tsv}.header ${final_tsv}.data
 fi
 ";
 
       if ( $toExcel ) {
         my $affyoption = defined($affyFile) ? "-a $affyFile" : "";
         print $pbs "
-if [ -s $final ]; then
-  rm $passinput $result
+if [[ -s $final_tsv && ! -s $excel ]]; then
+  cqstools annovar_refine -i $final_tsv $affyoption -o $excel
 fi
+";
+      }
 
-if [[ -s $final && ! -s $excel ]]; then
-  cqstools annovar_refine -i $final $affyoption -o $excel
+      if($annovar_gzipped){
+        print $pbs "
+if [[ -s $final_tsv && ! -s $final ]]; then
+  gzip $final_tsv
 fi
 ";
       }
@@ -205,6 +212,7 @@ sub result {
   my $raw_files = get_raw_files( $config, $section );
   my $toExcel = get_option( $config, $section, "to_excel", 0 );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
+  my $annovar_gzipped = get_option( $config, $section, "annovar_gzipped", 0 );
 
   my $result = {};
   for my $sample_name ( sort keys %{$raw_files} ) {
@@ -221,6 +229,9 @@ sub result {
 
       my $annovar = $filename . ".annovar";
       my $final   = $annovar . ".final.tsv";
+      if ($annovar_gzipped){
+        $final = $final . ".gz";
+      }
       if ( $toExcel ) {
         my $excel = $final . ".xls";
         push( @result_files, $cur_dir . "/$excel" );

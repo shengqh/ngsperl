@@ -564,8 +564,6 @@ sub addDeseq2Visualization {
     sh_direct                => 1,
     cluster                  => $def->{cluster},
     pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "10gb"
@@ -1092,6 +1090,7 @@ sub addAnnovar {
     option     => getValue( $def, "annovar_param" ),
     annovar_db => getValue( $def, "annovar_db" ),
     buildver   => getValue( $def, "annovar_buildver" ),
+    annovar_gzipped => getValue( $def, "annovar_gzipped", 0 ),
     docker_prefix => "annovar_",
     clean_folder => $clean_folder,
     perform_splicing => $perform_splicing,
@@ -1496,11 +1495,22 @@ sub addGATK4PreprocessIntervals {
 
   my $result = $prefix . "_gatk4_CNV_Germline${index}_PreprocessIntervals";
   if ( !defined $config->{$result} ) {
+    my $interval_file;
+    if (defined $def->{is_wgs}) {
+      if($def->{is_wgs}){
+        $interval_file = getValue($def, "wgs_calling_regions_file");
+      }else{
+        $interval_file = getValue($def, "covered_bed");
+      }
+    }else{
+      $interval_file = getValue($def, "covered_bed");
+    }
+
     #PreprocessIntervals at summary level
     $config->{$result} = {
       class             => "GATK4::PreprocessIntervals",
       option            => "",
-      interval_file     => getValue( $def, "covered_bed" ),
+      interval_file     => $interval_file,
       ref_fasta_dict    => getValue( $def, "ref_fasta_dict" ),
       ref_fasta         => getValue( $def, "ref_fasta" ),
       'sh_direct'       => 1,
@@ -1680,72 +1690,26 @@ sub addGATK4CNVGermlineCohortAnalysis {
   };
   push( @$step5, $PostprocessGermlineCNVCalls );
 
-  #CombineGCNV at summary level
-  my $CombineGCNV = $prefix . "_gatk4_CNV_Germline_07_CombineGCNV";
-  $result->{CombineGCNV} = $CombineGCNV;
-  $config->{$CombineGCNV} = {
-    class                    => "CQS::ProgramWrapper",
-    perform                  => 1,
-    target_dir               => $target_dir . '/' . $CombineGCNV,
-    interpretor              => "python3",
-    program                  => "../GATK4/combineGCNV.py",
-    parameterSampleFile1_arg => "-i",
-    parameterSampleFile1_ref => [ $PostprocessGermlineCNVCalls, ".genotyped_intervals.vcf.gz" ],
-    parameterFile1_arg       => "-b",
-    parameterFile1           => getValue( $def, "covered_bed" ),
-    parameterFile2_arg       => "--annovar_db",
-    parameterFile2           => $def->{perform_annovar} ? $def->{annovar_db} : undef,
-    parameterFile3_arg       => "--annovar_buildver",
-    parameterFile3           => $def->{perform_annovar} ? $def->{annovar_buildver} : undef,
-    output_arg               => "-o",
-    output_file_ext          => ".txt",
-    sh_direct                => 1,
-    'pbs'                    => {
-      'nodes'    => '1:ppn=1',
-      'mem'      => '40gb',
-      'walltime' => '10'
-    },
-  };
-  push( @$step6, $CombineGCNV );
-  
-  my $sizeFactorTask = $prefix . "_gatk4_CNV_Germline_08_SizeFactor";
-  $result->{sizeFactor} = $sizeFactorTask;
-  $config->{$sizeFactorTask} = {
-    class                    => "CQS::ProgramWrapper",
-    perform                  => 1,
-    target_dir               => $target_dir . '/' . $sizeFactorTask,
-    interpretor              => "python3",
-    program                  => "../GATK4/getBackgroundCount.py",
-    parameterSampleFile1_arg => "-b",
-    parameterSampleFile1_ref => $bam_ref,
-    parameterFile1_arg       => "-i",
-    parameterFile1           => getValue( $def, "covered_bed" ),
-    parameterFile2_arg       => "-c",
-    parameterFile2_ref       => [ $CombineGCNV ],
-    output_arg               => "-o",
-    output_file_ext          => ".txt",
-    output_other_ext         => ".txt.sizefactor",
-    sh_direct                => 1,
-    'pbs'                    => {
-      'nodes'    => '1:ppn=1',
-      'mem'      => '40gb',
-      'walltime' => '10'
-    },
-  };
-  push( @$step6, $sizeFactorTask );
-
-  my $cnvIndex = "09";
-  if($def->{plotCNVGenes} && $def->{annotation_genes}){
-    my $cnvGenes = $prefix . "_gatk4_CNV_Germline_09_CNVGenesLocus";
-    $result->{cnvGenes} = $cnvGenes;
-    $config->{$cnvGenes} = {
-      class                    => "CQS::UniqueR",
+  if(not $def->{is_wgs}) {
+    #CombineGCNV at summary level
+    my $CombineGCNV = $prefix . "_gatk4_CNV_Germline_07_CombineGCNV";
+    $result->{CombineGCNV} = $CombineGCNV;
+    $config->{$CombineGCNV} = {
+      class                    => "CQS::ProgramWrapper",
       perform                  => 1,
-      target_dir               => $target_dir . '/' . $cnvGenes,
-      rtemplate                => "../Annotation/getCNVGeneLocus.r",
-      rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\"" . $chrCode,
-      parameterFile1_ref       => [$CombineGCNV, ".txt"],
-      output_file_ext          => ".bed",
+      target_dir               => $target_dir . '/' . $CombineGCNV,
+      interpretor              => "python3",
+      program                  => "../GATK4/combineGCNV.py",
+      parameterSampleFile1_arg => "-i",
+      parameterSampleFile1_ref => [ $PostprocessGermlineCNVCalls, ".genotyped_intervals.vcf.gz" ],
+      parameterFile1_arg       => "-b",
+      parameterFile1           => getValue( $def, "covered_bed" ),
+      parameterFile2_arg       => "--annovar_db",
+      parameterFile2           => $def->{perform_annovar} ? $def->{annovar_db} : undef,
+      parameterFile3_arg       => "--annovar_buildver",
+      parameterFile3           => $def->{perform_annovar} ? $def->{annovar_buildver} : undef,
+      output_arg               => "-o",
+      output_file_ext          => ".txt",
       sh_direct                => 1,
       'pbs'                    => {
         'nodes'    => '1:ppn=1',
@@ -1753,76 +1717,124 @@ sub addGATK4CNVGermlineCohortAnalysis {
         'walltime' => '10'
       },
     };
-    push( @$step6, $cnvGenes );
+    push( @$step6, $CombineGCNV );
     
-    my $plotCNVgenes = $prefix . "_gatk4_CNV_Germline_10_CNVGenesPlot";
-    $result->{plotCNVgenes} = $plotCNVgenes;
-    $config->{$plotCNVgenes} = {
-      class                 => "CQS::ProgramWrapper",
-      perform               => 1,
-      target_dir            => $def->{target_dir} . "/$plotCNVgenes",
-      option                => "",
-      interpretor           => "python3",
-      program               => "../Visualization/plotCNV.py",
-      parameterFile1_arg => "-i",
-      parameterFile1_ref => [ $cnvGenes, ".bed" ],
-      parameterFile2_arg => "-c",
-      parameterFile2_ref => [$CombineGCNV, ".txt"],
-      parameterFile3_arg => "-s",
-      parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
+    my $sizeFactorTask = $prefix . "_gatk4_CNV_Germline_08_SizeFactor";
+    $result->{sizeFactor} = $sizeFactorTask;
+    $config->{$sizeFactorTask} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => $target_dir . '/' . $sizeFactorTask,
+      interpretor              => "python3",
+      program                  => "../GATK4/getBackgroundCount.py",
       parameterSampleFile1_arg => "-b",
       parameterSampleFile1_ref => $bam_ref,
-      output_to_result_directory => 1,
-      output_arg            => "-o",
-      output_file_ext       => ".position.txt",
-      sh_direct             => 1,
-      pbs                   => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "10gb"
+      parameterFile1_arg       => "-i",
+      parameterFile1           => getValue( $def, "covered_bed" ),
+      parameterFile2_arg       => "-c",
+      parameterFile2_ref       => [ $CombineGCNV ],
+      output_arg               => "-o",
+      output_file_ext          => ".txt",
+      output_other_ext         => ".txt.sizefactor",
+      sh_direct                => 1,
+      'pbs'                    => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
       },
     };
+    push( @$step6, $sizeFactorTask );
 
-    push( @$step6, $plotCNVgenes );
-    $cnvIndex = "11"; 
-  }
-  
-  my $annotationGenesPlot = undef;
-  if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
-    $annotationGenesPlot = $prefix . "_gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
-    $result->{annotationGenesPlot} = $annotationGenesPlot;
-    $config->{$annotationGenesPlot} = {
-      class                 => "CQS::ProgramWrapper",
-      perform               => 1,
-      target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
-      option                => "",
-      interpretor           => "python3",
-      program               => "../Visualization/plotCNV.py",
-      parameterFile1_arg => "-i",
-      parameterFile1_ref => [ "annotation_genes_locus", ".bed" ],
-      parameterFile2_arg => "-c",
-      parameterFile2_ref => [$CombineGCNV, ".txt"],
-      parameterFile3_arg => "-s",
-      parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
-      parameterSampleFile1_arg => "-b",
-      parameterSampleFile1_ref => $bam_ref,
-      output_to_result_directory => 1,
-      output_arg            => "-o",
-      output_file_ext       => ".position.txt",
-      output_other_ext      => ".position.txt.slim",
-      sh_direct             => 1,
-      pbs                   => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "10gb"
-      },
-    };
+    my $cnvIndex;
+    if($def->{plotCNVGenes} && $def->{annotation_genes}){
+      my $cnvGenes = $prefix . "_gatk4_CNV_Germline_09_CNVGenesLocus";
+      $result->{cnvGenes} = $cnvGenes;
+      $config->{$cnvGenes} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $target_dir . '/' . $cnvGenes,
+        rtemplate                => "../Annotation/getCNVGeneLocus.r",
+        rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\"" . $chrCode,
+        parameterFile1_ref       => [$CombineGCNV, ".txt"],
+        output_file_ext          => ".bed",
+        sh_direct                => 1,
+        'pbs'                    => {
+          'nodes'    => '1:ppn=1',
+          'mem'      => '40gb',
+          'walltime' => '10'
+        },
+      };
+      push( @$step6, $cnvGenes );
+      
+      my $plotCNVgenes = $prefix . "_gatk4_CNV_Germline_10_CNVGenesPlot";
+      $result->{plotCNVgenes} = $plotCNVgenes;
+      $config->{$plotCNVgenes} = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => $def->{target_dir} . "/$plotCNVgenes",
+        option                => "",
+        interpretor           => "python3",
+        program               => "../Visualization/plotCNV.py",
+        parameterFile1_arg => "-i",
+        parameterFile1_ref => [ $cnvGenes, ".bed" ],
+        parameterFile2_arg => "-c",
+        parameterFile2_ref => [$CombineGCNV, ".txt"],
+        parameterFile3_arg => "-s",
+        parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
+        parameterSampleFile1_arg => "-b",
+        parameterSampleFile1_ref => $bam_ref,
+        output_to_result_directory => 1,
+        output_arg            => "-o",
+        output_file_ext       => ".position.txt",
+        sh_direct             => 1,
+        pbs                   => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
 
-    push( @$step6, $annotationGenesPlot );
+      push( @$step6, $plotCNVgenes );
+      $cnvIndex = "11"; 
+    }else{
+      $cnvIndex = "07"; 
+    }
+
+    my $annotationGenesPlot = undef;
+    if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
+      $annotationGenesPlot = $prefix . "_gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
+      $result->{annotationGenesPlot} = $annotationGenesPlot;
+      $config->{$annotationGenesPlot} = {
+        class                 => "CQS::ProgramWrapper",
+        perform               => 1,
+        target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
+        option                => "",
+        interpretor           => "python3",
+        program               => "../Visualization/plotCNV.py",
+        parameterFile1_arg => "-i",
+        parameterFile1_ref => [ "annotation_genes_locus", ".bed" ],
+        parameterFile2_arg => "-c",
+        parameterFile2_ref => [$CombineGCNV, ".txt"],
+        parameterFile3_arg => "-s",
+        parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
+        parameterSampleFile1_arg => "-b",
+        parameterSampleFile1_ref => $bam_ref,
+        output_to_result_directory => 1,
+        output_arg            => "-o",
+        output_file_ext       => ".position.txt",
+        output_other_ext      => ".position.txt.slim",
+        sh_direct             => 1,
+        pbs                   => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "10gb"
+        },
+      };
+
+      push( @$step6, $annotationGenesPlot );
+    }
   }
   
   return($result);

@@ -50,7 +50,7 @@ sub getConfig {
 
   my $target_dir = $def->{target_dir};
 
-  my $config_json = dirname(__FILE__) . "/../Chipseq/cutruntools2-bulk-config.json";
+  my $config_json = getValue($def, "cutruntools2-bulk-config", dirname(__FILE__) . "/../Chipseq/cutruntools2-bulk-config.json");
 
   my $cutruntools2 = "cutruntools2";
   $config->{$cutruntools2} = {

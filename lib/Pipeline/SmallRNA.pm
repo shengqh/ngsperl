@@ -219,7 +219,9 @@ sub getSmallRNAConfig {
   my $hostLibraryStr    = "";
   my $nonhostLibraryStr = "";
   if ( defined $libraryKey ) {
-    $hostLibraryStr = $libraryKey;
+    if ( $libraryKey ne "None" ){
+      $hostLibraryStr = $libraryKey;
+    }
     if ( $libraryKey eq "TotalReads" ) {
       $nonhostLibraryStr = $hostLibraryStr;
     }
@@ -251,10 +253,17 @@ sub getSmallRNAConfig {
       $comparisons = $sampleComparisons;
     }
 
-    my $hostSmallRNA       = ["isomiR"];
-    my $hostSmallRNAFolder = ["miRNA_isomiR"];
-    if ($notMicroRNAOnly) {
+    my $hostSmallRNA       = [];
+    my $hostSmallRNAFolder = [];
+    if(getValue($def, "use_isomiR_in_vis", 1)){
+      push( @$hostSmallRNA,       "isomiR" );
+      push( @$hostSmallRNAFolder, "miRNA_isomiR" );
+    }else{
+      push( @$hostSmallRNA,       "miRNA" );
+      push( @$hostSmallRNAFolder, "miRNA" );
+    }
 
+    if ($notMicroRNAOnly) {
       push( @$hostSmallRNA,       "tDR-anticodon" );
       push( @$hostSmallRNAFolder, "tRNA" );
       if ( $def->{hasSnRNA} ) {
@@ -444,8 +453,6 @@ sub getSmallRNAConfig {
           sh_direct  => 1,
           cluster    => $cluster,
           pbs        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
             "mem"       => "40gb"
@@ -462,8 +469,6 @@ sub getSmallRNAConfig {
           sh_direct  => 1,
           cluster    => $cluster,
           pbs        => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
             "mem"       => "10gb"
@@ -484,8 +489,6 @@ sub getSmallRNAConfig {
           rCode                     => $R_font_size,
           sh_direct                 => 1,
           pbs                       => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "10gb"
@@ -933,7 +936,12 @@ sub getSmallRNAConfig {
 
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      push @visual_source, "miRNA_isomiR";
+
+      if(getValue($def, "use_isomiR_in_vis", 1)){
+        push @visual_source, "miRNA_isomiR";
+      }else{
+        push @visual_source, "miRNA";
+      }
 
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
@@ -2132,8 +2140,8 @@ fi
     sh_direct                 => 1,
     pbs                       => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "10",
+      "mem"       => "20gb"
     },
   };
 
@@ -2814,9 +2822,11 @@ fi
       if ( defined $config->{deseq2_host_genome_TotalReads_vis} ) {
         push( @report_files, "deseq2_host_genome_TotalReads_vis", ".DESeq2.Matrix.png" );
         push( @report_names, "deseq2_host_vis" );
-      }
-      if ( defined $config->{deseq2_host_genome_FeatureReads_vis} ) {
+      }elsif ( defined $config->{deseq2_host_genome_FeatureReads_vis} ) {
         push( @report_files, "deseq2_host_genome_FeatureReads_vis", ".DESeq2.Matrix.png" );
+        push( @report_names, "deseq2_host_vis" );
+      }elsif ( defined $config->{deseq2_host_genome_vis} ) {
+        push( @report_files, "deseq2_host_genome_vis", ".DESeq2.Matrix.png" );
         push( @report_names, "deseq2_host_vis" );
       }
     }

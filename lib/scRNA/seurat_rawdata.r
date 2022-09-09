@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='AG_integrated'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_rawdata/result')
+setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -52,7 +52,7 @@ if (has_hto) {
   sample = rownames(hto_cell_files)[1]
   for (sample in rownames(hto_cell_files)){
     cell_file = hto_cell_files[sample, "V1"]
-    if(file_ext(cell_file) == ".csv"){
+    if(file_ext(cell_file) == "csv"){
       cell_data = read.csv(cell_file, stringsAsFactors=FALSE, header=TRUE, check.names=F)
       colnames(cell_data)[1]<-"cell"
     }else{

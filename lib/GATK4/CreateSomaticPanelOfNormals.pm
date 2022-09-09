@@ -27,7 +27,7 @@ sub new {
 
 sub get_sample_names {
   my ($self, $config, $section) = @_;
-  my ( $task_name ) = $self->init_parameter( $config, $section );
+  my ( $task_name ) = $self->init_parameter( $config, $section, 0 );
   return [$task_name];
 }
 

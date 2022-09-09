@@ -1,3 +1,17 @@
+rm(list=ls()) 
+outFile='AG_integrated'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parFile1=''
+parFile2=''
+parFile3=''
+
+
+setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/hto_souporcell_skip_remap_cutoff_integration/result')
+
+### Parameter setting end ###
+
 library(Seurat)
 library(patchwork)
 library(ggplot2)
@@ -30,7 +44,7 @@ get_max_row<-function(x){
   }
 }
 
-sample_name=rownames(souporcell_tb)[2]
+sample_name=rownames(souporcell_tb)[1]
 for (sample_name in rownames(souporcell_tb)){
   s1<-read.csv(cutoff_tb[sample_name, "V1"], row.names=1)
   s2<-read.table(souporcell_tb[sample_name, "V1"], row.names=1, header=T)
@@ -39,7 +53,7 @@ for (sample_name in rownames(souporcell_tb)){
   if(sample_name %in% names(ignore_map)){
     ignore_souporcells<-unlist(ignore_map[sample_name])
   }else{
-    ignore_souporcells = c()
+    ignore_souporcells = NULL
   }
   
   s <- merge(s1, s2, by=0, all.x=TRUE)
@@ -78,8 +92,10 @@ for (sample_name in rownames(souporcell_tb)){
     
     ass=x['assignment']
     
-    if(ass %in% ignore_souporcells){
-      return(x['HTO'])
+    if(!is.null(ignore_souporcells)){
+      if(ass %in% ignore_souporcells){
+        return(x['HTO'])
+      }
     }
     
     if(!(ass %in% names(cmap))){
@@ -101,8 +117,10 @@ for (sample_name in rownames(souporcell_tb)){
     
     ass=x['assignment']
     
-    if(ass %in% ignore_souporcells){
-      return("Ignored")
+    if(!is.null(ignore_souporcells)){
+      if(ass %in% ignore_souporcells){
+        return("Ignored")
+      }
     }
     
     if(!(ass %in% names(cmap))){
@@ -165,10 +183,11 @@ for (sample_name in rownames(souporcell_tb)){
   ss_assign<-unique(ss$assignment)
   ss_assign<-ss_assign[order(ss_assign)]
   for (assign in ss_assign){
-    if(assign %in% ignore_souporcells){
-      title = ",ignored"
-    }else{
-      title = ""
+    title = ""
+    if(!is.null(ignore_souporcells)){
+      if(assign %in% ignore_souporcells){
+        title = ",ignored"
+      }      
     }
     
     g2<-DimPlot(obj, group.by="assignment", pt.size = pt.size) + ggtitle(paste0("soupor cluster ", assign, title))
@@ -230,10 +249,11 @@ for (sample_name in rownames(souporcell_tb)){
     gg1$data<-rbind(nohtodata, htodata)
     gg1$data[,3]=factor(gg1$data[,3], levels=groups)
     
-    if(hto %in% ignore_souporcells){
-      title = ",ignored"
-    }else{
-      title = ""
+    title = ""
+    if(!is.null(ignore_souporcells)){
+      if(hto %in% ignore_souporcells){
+        title = ",ignored"
+      }
     }
     
     gg1<-gg1+ggtitle(paste0(name,"(",nrow(htodata),")", title))

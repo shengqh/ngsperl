@@ -1,5 +1,18 @@
-source("scRNA_func.r")
+rm(list=ls()) 
+outFile='AK6383'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
+parFile2='/home/shengq2/program/projects/alexander_gelbard/20220103_cell_markers.txt'
+parFile3='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
 
+
+setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_genes_marker/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
 library(patchwork)
@@ -11,10 +24,8 @@ celltype_name=myoptions$celltype_name
 cluster_name=myoptions$cluster_name
 samples=myoptions$samples
 
-finalList<-readRDS(parFile1)
+obj<-read_object(parFile1)
 geneFile<-parFile2
-
-obj<-finalList$obj
 
 DefaultAssay(obj)<-"RNA"
 
@@ -30,7 +41,11 @@ allgenes<-rownames(obj)
 allgenes<-allgenes[order(allgenes)]
 writeLines(allgenes, con="all_genes.txt")
 
-clusterDf<-read.csv(parFile3, stringsAsFactors = F, row.names=1)
+if(grepl('.rds$', parFile3)){
+  clusterDf<-readRDS(parFile3)
+}else{
+  clusterDf<-read.csv(parFile3, stringsAsFactors = F, row.names=1)
+}
 
 cts=cluster_to_cell_type(clusterDf)
 

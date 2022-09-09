@@ -1,14 +1,14 @@
-#rm(list=ls()) 
+rm(list=ls()) 
 outFile='AK6383'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
-parFile2='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
+parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
+parFile2='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
 parFile3=''
 
 
-setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_byCell/result')
+setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
@@ -57,8 +57,10 @@ comparisonNames<-unique(comparisons$Comparison)
 
 comp <-comparisonNames[1]
 
+designFailed<-data.frame("comp"=character(), "celltype"=character(), "reason"=character())
 designMatrix<-NULL
 for (comp in comparisonNames){
+  cat(comp, "\n")
   comp_groups<-comparisons[comparisons$Comparison==comp,]
   comp_options = split(comp_groups$Value, comp_groups$Key)
   
@@ -159,6 +161,7 @@ for (comp in comparisonNames){
     idx<-1
     for (idx in c(1:length(cts))){
       ct = cts[idx]
+      cat("  ", as.character(ct), "\n")
       prefix = paste0(prefixList[idx], ".", comp)
       
       clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
@@ -169,11 +172,17 @@ for (comp in comparisonNames){
       invalid_sample_names= sample_names[!(sample_names %in% unique(clusterCt$sample))]
 
       if (length(invalid_control_names) == length(control_names)){
-        stop(paste0("There were no control ", paste0(invalid_control_names, collapse=","), " found in object sample names!"))
+        error_msg = paste0("There were no control ", paste0(invalid_control_names, collapse=","), " found in object sample names!")
+        designFailed[nrow(designFailed) + 1,] <- c(comp, as.character(ct), error_msg)
+        cat(error_msg, "\n", file=stderr())
+        next
       }
       
       if (length(invalid_sample_names)  == length(sample_names)){
-        stop(paste0("There were no sample ", paste0(invalid_sample_names, collapse=","), " found in object sample names!"))
+        error_msg = paste0("There were no sample ", paste0(invalid_sample_names, collapse=","), " found in object sample names!")
+        designFailed[nrow(designFailed) + 1,] <- c(comp, as.character(ct), error_msg)
+        cat(error_msg, "\n", file=stderr())
+        next
       }
       
       control_cells<-rownames(clusterCt)[clusterCt$sample %in% control_names]  
@@ -204,6 +213,10 @@ for (comp in comparisonNames){
       }
     }
   }
+}
+
+if(nrow(designFailed) > 0){
+  write.csv(designFailed, paste0(outFile, ".design_failed.csv"), row.names=F)
 }
 
 result<-NULL

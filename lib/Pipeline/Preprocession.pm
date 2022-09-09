@@ -445,8 +445,10 @@ sub getPreprocessionConfig {
 
   if (getValue($def, "perform_paired_end_validation", 1)){
     defined $is_pairend or die "Define is_paired_end first!";
-    my $fastq_validator = "paired_end_validation";
-    addPairendFastqValidation($config, $def, $individual, $intermediate_dir, $fastq_validator, $source_ref);
+    if($is_pairend){
+      my $fastq_validator = "paired_end_validation";
+      addPairendFastqValidation($config, $def, $individual, $intermediate_dir, $fastq_validator, $source_ref);
+    }
   }
 
   if ( $def->{merge_fastq} ) {
@@ -688,10 +690,10 @@ sub getPreprocessionConfig {
         {
           class              => "CQS::UniqueR",
           perform            => 1,
-          rtemplate          => "countInFastQcVis.R",
+          rtemplate          => "countTableVisFunctions.R,countInFastQcVis.R",
           output_file        => ".countInFastQcVis.Result",
           output_file_ext    => ".Reads.csv",
-          output_other_ext   => ".pdf",
+          output_other_ext   => ".pdf,.png",
           sh_direct          => 1,
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
           pbs                => {

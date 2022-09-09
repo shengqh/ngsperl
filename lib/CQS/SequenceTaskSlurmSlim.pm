@@ -290,23 +290,18 @@ sub perform {
 
         $final_index = $final_index + 1;
 
-        if ( not defined $expect_file_map->{$sample} ) {
-          print $final_submit "jid" . $final_index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}') \n";
-          $final_pbs_id_map->{$samplepbs} = [ "jid" . $final_index, 0 ];
-        }
-        else {
-          my $expect_file = $expect_file_map->{$sample}[0];
+        my $expect_file = get_final_file_by_task_name($expect_file_map, $sample);
           
-          if(not defined $expect_file){
-            print "Found error";
-          }
-          print $final_submit "if [[ (1 -eq \$1) || ((! -s $expect_file) && (! -d $expect_file)) ]]; then \n";
-          print $final_submit "  jid" . $final_index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}') \n";
-          print $final_submit "else \n";
-          print $final_submit "  jid" . $final_index . "=1000000000 \n";
-          print $final_submit "fi \n";
-          $final_pbs_id_map->{$samplepbs} = [ "jid" . $final_index, 0 ];
+        if(not defined $expect_file){
+          print "Found error";
         }
+        print $final_submit "if [[ (1 -eq \$1) || ((! -s $expect_file) && (! -d $expect_file)) ]]; then \n";
+        print $final_submit "  jid" . $final_index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}') \n";
+        print $final_submit "else \n";
+        print $final_submit "  jid" . $final_index . "=1000000000 \n";
+        print $final_submit "fi \n";
+        $final_pbs_id_map->{$samplepbs} = [ "jid" . $final_index, 0 ];
+#      }
         print $final "bash $samplepbs \n";
       }
 

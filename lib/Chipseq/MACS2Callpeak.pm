@@ -129,7 +129,7 @@ bedGraphToBigWig ${sample_name}_treat_pileup.bdg $chr_size_file ${sample_name}_t
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section, 0 );
 
   my %raw_files = %{$self->get_raw_files_with_or_without_groups($config, $section)};
 
@@ -153,7 +153,7 @@ sub result {
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section, 0 );
 
   my %raw_files = %{$self->get_raw_files_with_or_without_groups($config, $section)};
 

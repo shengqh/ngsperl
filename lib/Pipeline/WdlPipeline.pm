@@ -420,7 +420,7 @@ sub addSomaticCNV {
   my $somaticCNV_call = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_call";
   my $run_funcotator="true";
   my $funcotator_ref_version="";
-  if ($def->{ncbi_build} eq "GRCh19") { #based on genome, hg38=true, else false
+  if ($def->{ncbi_build} eq "GRCh19" or $def->{ncbi_build} eq "GRCh37") { #based on genome, hg38=true, else false
     $funcotator_ref_version="hg19";
   } elsif ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
     $funcotator_ref_version="hg38";

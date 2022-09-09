@@ -308,10 +308,26 @@ sub add_left_trim_pbs {
   $fix_file =~ s/.gz//g;
 
 print $pbs "
+rm -f $split_file.failed $left_trim_file.failed
+
 if [[ -s $pass_file && ! -s $left_trim_file ]]; then
   echo LeftAlignAndNorm=`date`
   bcftools norm -m- -o $split_file $pass_file 
-  bcftools norm -f $faFile -o $left_trim_file $split_file 
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $split_file.failed
+    rm -f $split_file
+  else
+    bcftools norm -f $faFile -o $left_trim_file $split_file 
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch $left_trim_file.failed
+      rm -f $left_trim_file
+    else
+      touch left_trim_file.succeed
+      rm -f $split_file
+    fi  
+  fi  
 fi
 
 if [[ -s $left_trim_file && ! -s $final_file ]]; then

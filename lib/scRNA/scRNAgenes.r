@@ -1,13 +1,26 @@
+rm(list=ls()) 
+outFile='mouse_8363'
+parSampleFile1=''
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_03_choose/result/mouse_8363.final.rds'
+parFile2=''
+parFile3=''
+genes='Cd68;Cd163;Adgre1;Ccr2;Ccr5;Cx3cr1;Brca1;Rad51;Trl9;Tmem173;cgas;Mx1;Ifit1;Irf7;'; celltype_name='cell_type'; cluster_name='seurat_cell_type'; dotPlotOnly=0;
 
+setwd('/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_03_choose_genes/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
 library(ggpubr)
 
-finalList<-readRDS(parFile1)
 genes<-unlist(strsplit(genes, ";"))
 genes<-unique(genes)
 
-obj<-finalList$obj
+obj<-read_object(parFile1)
 
 DefaultAssay(obj)<-"RNA"
 
@@ -40,7 +53,11 @@ write.csv(geneinfo, file="gene_summary.csv")
 
 genes<-genes[genes %in% rownames(obj)]
 
-clusterDf<-read.csv(parFile3, stringsAsFactors = F)
+if(parFile3 != ""){
+  clusterDf<-read.csv(parFile3, stringsAsFactors = F)
+}else{
+  clusterDf<-obj@meta.data
+}
 clusters<-clusterDf[,cluster_name]
 
 caCount<-table(clusters)

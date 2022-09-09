@@ -7,6 +7,7 @@ def validate(logger, input, output):
   parts = input.split(',')
   #print(parts)
 
+  error_files = []
   error_msgs = []
   total_read_count = 0
   idx = 0
@@ -91,6 +92,8 @@ def validate(logger, input, output):
     if error_msg != None:
       logger.error(error_msg)
       error_msgs.append(error_msg)
+      error_files.append(read1)
+      error_files.append(read2)
 
   error_file = output + ".error"
   if os.path.exists(error_file):
@@ -104,6 +107,11 @@ def validate(logger, input, output):
       for error_msg in error_msgs:
         logger.error(error_msg)
         fout.write("ERROR: %s\n" % error_msg)
+
+    fout.write("\n")
+    for error_file in error_files:
+      fout.write(error_file)
+      
     return(1)
   else:
     logger.info("succeed")

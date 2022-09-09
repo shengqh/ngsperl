@@ -107,8 +107,9 @@ $pythonCode
 sub addOutput {
   my ( $self, $result_files, $result_dir, $pbs_dir, $key, $option, $is_tRH ) = @_;
   my $noCategory = $option =~ /noCategory/;
-  push( @$result_files, $self->get_file( $result_dir, $key, ".count", 0 ) );
   push( @$result_files, $self->get_file( $result_dir, $key, ".read.count", 0 ) );
+  push( @$result_files, $self->get_file( $result_dir, $key, ".count", 0 ) );
+  push( @$result_files, $self->get_file( $pbs_dir, $key, ".filelist", 0 ) );
 
   if ( !$noCategory ) {
     if ( !$is_tRH ) {
@@ -151,7 +152,6 @@ sub addOutput {
       push( @$result_files, $self->get_file( $result_dir, $key, ".other.read.count", 0 ) );
     }
   }
-  push( @$result_files, $self->get_file( $pbs_dir, $key, ".filelist", 0 ) );
 }
 
 sub result {
