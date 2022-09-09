@@ -1866,14 +1866,14 @@ sub get_groups_by_pattern_value {
       if(defined $3){
         $groupname = $groupname . $3;
       }
-    }
-    #print($groupname . " : " . $samplename . "\n");
-    if (not defined $groups->{$groupname}){
-      $groups->{$groupname} = [$samplename];
-    }
-    else{
-      my $samples = $groups->{$groupname};
-      push (@$samples, $samplename);
+      #print($groupname . " : " . $samplename . "\n");
+      if (not defined $groups->{$groupname}){
+        $groups->{$groupname} = [$samplename];
+      }
+      else{
+        my $samples = $groups->{$groupname};
+        push (@$samples, $samplename);
+      }
     }
   }
   return ($groups);
@@ -2261,12 +2261,14 @@ sub get_final_file_by_task_name {
       }
 
       my $cur_files = $all_results->{$cur_key};
-      $final_file = $cur_files->[-1];
+      my @no_filelists = grep(!/.filelist$/, @$cur_files);
+      $final_file = $no_filelists[-1];
       #print($final_file . "\n");
     }
   }else{
     #get last task_name result file
-    $final_file = $result_files->[-1];
+    my @no_filelists = grep(!/.filelist$/, @$result_files);
+    $final_file = $no_filelists[-1];
   }
   return($final_file);
 }
