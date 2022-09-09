@@ -960,13 +960,24 @@ output_ElbowPlot<-function(obj, outFile, reduction){
 draw_feature_qc<-function(prefix, rawobj, ident_name) {
   Idents(rawobj)<-ident_name
   
-  feats <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo", "percent.hb")
+  feats<-c("nFeature_RNA","nCount_RNA","percent.mt","percent.ribo")
+  if("percent.hb" %in% colnames(obj@meta.data)){
+    feats<-c(feats, "percent.hb")
+  }
 
   png(file=paste0(prefix, ".qc.violin.png"), width=6000, height=4000, res=300)
   g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
   print(g)
   dev.off()
-  
+
+  g<-FeaturePlot(rawobj, feats, split.by=ident_name)
+  width = length(unique(unlist(rawobj[[ident_name]]))) * 800
+  height = length(feats) * 700
+
+  png(paste0(prefix, ".qc_exp.png"), width=width, height=height, res=300)
+  print(g)
+  dev.off()  
+
   png(file=paste0(prefix, ".qc.png"), width=3000, height=1200, res=300)
   p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
   p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
