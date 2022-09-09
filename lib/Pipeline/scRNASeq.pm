@@ -174,7 +174,7 @@ sub initializeScRNASeqDefaultOptions {
   
   initDefaultValue( $def, "perform_fix_resolution", 0 );
   #initDefaultValue( $def, "remove_subtype", "T cells,Fibroblasts,Neurons,Macrophages,Dendritic cells"),
-  initDefaultValue( $def, "remove_subtype", "T cells,B cells,Fibroblasts,Neurons,Epithelial cells,Endothelial cells,Macrophages,Dendritic cells,Ciliated cells"),
+  initDefaultValue( $def, "remove_subtype", "T cells,B cells,Plasma cells, Fibroblasts,Neurons,Epithelial cells,Endothelial cells,Macrophages,Dendritic cells,Ciliated cells"),
   initDefaultValue( $def, "best_resolution_min_markers", 20);
 
   return $def;
