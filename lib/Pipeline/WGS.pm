@@ -667,6 +667,12 @@ fi
     my $bam_recalibration_section = add_bam_recalibration($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
     my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, [ $bam_recalibration_section, '.bam$']);
 
+    if($def->{perform_extract_bam}){
+      my $extract_bam_locus = getValue($def, "extract_bam_locus");
+      my $extract_bam_task = "extract_bam_locus" . getValue($def, "extract_bam_locus_suffix", "");
+      add_extract_bam_locus($config, $def, $individual, $target_dir, $extract_bam_task, $extract_bam_locus, [ $bam_recalibration_section, ".bam\$" ] );
+    }
+
     #my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
 
     if ( $def->{perform_cnv_gatk4_cohort} ) {
