@@ -90,7 +90,7 @@ sub perform {
   if ( $random_bases_remove_after_trim > 0 ) {
     $remove_bases_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
     if($ispairend){
-      $remove_bases_option = "-U $random_bases_remove_after_trim -U -$random_bases_remove_after_trim";
+      $remove_bases_option = $remove_bases_option . " -U $random_bases_remove_after_trim -U -$random_bases_remove_after_trim";
     }
   }
   else {
