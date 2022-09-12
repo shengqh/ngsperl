@@ -726,7 +726,7 @@ sub getPreprocessionConfig {
 
 sub addExtractSingleEndFastqFromPairend {
   my ($config, $def, $individual, $summary, $extract_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref) = @_;
-  my $maxReadLength = getValue($def, "maxReadLength", 50);
+  my $maxReadLength = getValue($def, "maxReadLength", 60);
   my $minReadLength = getValue($def, "minReadLength", 16);
   my $minSimilarityRatio = getValue($def, "minSimilarityRatio", 0.8);
   $config->{$extract_task} = {
