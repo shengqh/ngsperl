@@ -493,11 +493,9 @@ sub addDEseq2 {
     library_key                  => $libraryKey,
     rCode                        => $rCode,
     pbs                          => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => "10",
-      "mem"       => "20gb"
+      "walltime"  => getValue($def, "DESeq2_walltime", "23"),
+      "mem"       => getValue($def, "DESeq2_mem", "40gb"),
     },
   };
 
