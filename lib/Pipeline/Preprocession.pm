@@ -18,7 +18,9 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   getPreprocessionConfig
   addPairendFastqValidation
   addCutadapt
-  addFastqLen)
+  addFastqLen
+  addExtractSingleEndFastqFromPairend
+  )
   ] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -44,6 +46,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "max_thread",                '8' );
   initDefaultValue( $def, "sequencetask_run_time",     '12' );
   initDefaultValue( $def, "emailType",                 "FAIL" );
+  initDefaultValue( $def, "extractSingleEndFastqFromPairend", 0 );
 
   return $def;
 }
@@ -663,6 +666,14 @@ sub getPreprocessionConfig {
     addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
   }
 
+  if($def->{extractSingleEndFastqFromPairend}){
+    my $extract_task = "extract_singleend_fastq";
+    my $fastqc_task = "fastqc_extract_singleend";
+    addExtractSingleEndFastqFromPairend($config, $def, $individual, $summary, $extract_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref, $cluster );
+    $source_ref = [$extract_task, ".se.fastq.gz"];
+    addFastqLen($config, $def, $individual, $summary, "fastq_len_extract", $preprocessing_dir, $source_ref, $cluster );
+  }
+
   if ( $def->{perform_fastqc} ) {
     my $fastqc_count_vis_files = undef;
     if ( length($remove_sequences) && $run_cutadapt ) {
@@ -711,6 +722,44 @@ sub getPreprocessionConfig {
   }
 
   return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster, $run_cutadapt_test );
+}
+
+sub addExtractSingleEndFastqFromPairend {
+  my ($config, $def, $individual, $summary, $extract_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref) = @_;
+  my $maxReadLength = getValue($def, "maxReadLength", 50);
+  my $minReadLength = getValue($def, "minReadLength", 16);
+  my $minSimilarityRatio = getValue($def, "minSimilarityRatio", 0.8);
+  $config->{$extract_task} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$intermediate_dir/$extract_task",
+    #init_command          => "source /data/cqs/softwares/cqsperl/scripts/path_conda.txt",
+    option                => "-o __NAME__.se.fastq.gz --maxReadLength $maxReadLength --minReadLength $minReadLength --minSimilarityRatio 0.8",
+    interpretor           => "python3",
+    check_program         => 1,
+    program               => "../SmallRNA/getFastqFromTrimmedPairendReads.py",
+    source_ref            => $source_ref,
+    source_arg            => "--read1",
+    source_join_delimiter => " --read2 ",
+    no_output             => 0,
+    output_to_same_folder => 1, 
+    output_arg            => "-o",
+    output_ext            => ".se.fastq.gz",
+    sh_direct             => 0,
+    use_tmp_folder        => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$individual, ($extract_task);
+
+  get_result_file($config, $extract_task, "");
+
+  if ( $def->{perform_fastqc} ) {
+    addFastQC( $config, $def, $individual, $summary, $fastqc_task, [ $extract_task, ".se.fastq.gz" ], $preprocessing_dir );
+  }
 }
 
 1;
