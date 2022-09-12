@@ -23,6 +23,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(
+      print_trace
       is_string
       is_array
       is_not_array
@@ -169,15 +170,19 @@ sub get_config_section {
   return ($result);
 }
 
+sub print_trace {
+  print STDERR "Stack Trace:\n";
+  my $i = 1;
+  while ( (my @call_details = (caller($i++))) ){
+    print STDERR $call_details[1].":".$call_details[2]." in function ".$call_details[3]."\n";
+  }    
+}
+
 sub has_config_section {
   my ( $config, $section ) = @_;
 
   if(!defined $section){
-    my $i = 1;
-    print STDERR "Stack Trace:\n";
-    while ( (my @call_details = (caller($i++))) ){
-      print STDERR $call_details[1].":".$call_details[2]." in function ".$call_details[3]."\n";
-    }    
+    print_trace();
   }
 
   my @sections = split( '::', $section );
@@ -722,7 +727,13 @@ sub do_get_unsorted_raw_files {
   my $mapname_config_ref = $mapname . "_config_ref";
 
   if ( defined $curSection->{$mapname} ) {
-    return ( $curSection->{$mapname}, 1 );
+    my $result = $curSection->{$mapname};
+    if (is_hash($result)) {
+      return ( $curSection->{$mapname}, 1 );
+    }else{
+      warn("Did you forget to use _ref for $mapname of $section?");
+      return ( $curSection->{$mapname}, 1 );
+    }
   }
 
   if ( defined $curSection->{$mapname_ref} || defined $curSection->{$mapname_config_ref} ) {
@@ -890,6 +901,10 @@ sub get_raw_files_keys {
 
 sub get_sorted_raw_files {
   my $resultUnsorted = shift;
+  if (!is_hash($resultUnsorted)){
+    print("resultUnsorted = " . Dumper($resultUnsorted));
+    print_trace();
+  }
   my @keys           = grep { $_ !~ /^\./ } keys %$resultUnsorted;
   my %result;
   tie %result, 'Tie::IxHash';
