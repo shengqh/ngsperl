@@ -81,12 +81,17 @@ sub perform {
     $thread_option = "-j $thread";
   }
 
+  my $ispairend = get_is_paired_end_option( $config, $section );
+
   my $hard_trim = get_option( $config, $section, "hard_trim", 0 );
 
   my $remove_bases_option = "";
   my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
   if ( $random_bases_remove_after_trim > 0 ) {
     $remove_bases_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
+    if($ispairend){
+      $remove_bases_option = "-U $random_bases_remove_after_trim -U -$random_bases_remove_after_trim";
+    }
   }
   else {
     my $random_bases_remove_after_trim_5 = get_option( $config, $section, "random_bases_remove_after_trim_5", 0 );
@@ -103,8 +108,6 @@ sub perform {
   if($trim_base_quality_after_adapter_trim > 0 && $remove_bases_option eq ""){
     $remove_bases_option = "-q " . $trim_base_quality_after_adapter_trim;
   }
-
-  my $ispairend = get_is_paired_end_option( $config, $section );
 
   my $limit_options   = '';
   my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
