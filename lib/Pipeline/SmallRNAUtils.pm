@@ -122,7 +122,8 @@ sub initializeSmallRNADefaultOptions {
 
   initDefaultValue( $def, "fastq_len", 1 );
 
-  initDefaultValue( $def, "use_first_read_after_trim", 1);
+  initDefaultValue( $def, "extractSingleEndFastqFromPairend", 0 );
+  initDefaultValue( $def, "use_first_read_after_trim", 1 );
   
   if ( $def->{perform_cutadapt} ) {
     initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
