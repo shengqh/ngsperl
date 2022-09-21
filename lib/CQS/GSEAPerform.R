@@ -1,3 +1,20 @@
+rm(list=ls()) 
+outFile='AG_integrated'
+parSampleFile1=''
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result/AG_integrated.edgeR.files.csv'
+parFile2=''
+parFile3=''
+outputDirectory='.'
+gseaDb='/data/cqs/references/gsea/v7.5.1'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v7.5.1.symbols.gmt', 'c2.all.v7.5.1.symbols.gmt', 'c5.all.v7.5.1.symbols.gmt', 'c6.all.v7.5.1.symbols.gmt', 'c7.all.v7.5.1.symbols.gmt'); makeReport=0;
+
+setwd('/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_GSEA/result')
+
+### Parameter setting end ###
+
+library(stringr)
+
 ###############################################################################
 # Author: Shilin Zhao, Quanhu Sheng
 ###############################################################################
@@ -18,6 +35,8 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
   } else {
     gesaResultDir<-paste0(resultDir,"/",basename(preRankedGeneFile),".gsea")
   }
+  gesaResultDir<-str_replace_all(gesaResultDir, '[()]', '_')
+
   if (file.exists(gesaResultDir)) {
     warning(paste0(gesaResultDir," folder exists! Will delete all files in it and regenerate GSEA results."))
     unlink(gesaResultDir, recursive = TRUE)
@@ -35,7 +54,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
     }else{
       runCommand=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked") 
     }
-    runCommand = paste0(runCommand, " -gmx ",gseaDb,"/",gseaCategory, " -rnk ",preRankedGeneFile," -rpt_label ",gseaCategoryName," -scoring_scheme weighted -make_sets true -nperm 1000 -plot_top_x 20 -set_max 500 -set_min 15 -mode Abs_max_of_probes -zip_report false -norm meandiv -create_svgs false -include_only_symbols true -rnd_seed timestamp -out ", gesaResultDir)
+    runCommand = paste0(runCommand, " -gmx ",gseaDb,"/",gseaCategory, " -rnk \"",preRankedGeneFile,"\" -rpt_label ",gseaCategoryName," -scoring_scheme weighted -make_sets true -nperm 1000 -plot_top_x 20 -set_max 500 -set_min 15 -mode Abs_max_of_probes -zip_report false -norm meandiv -create_svgs false -include_only_symbols true -rnd_seed timestamp -out \"", gesaResultDir, "\"")
     
     if(!is.na(gseaChip)){
       runCommand=paste0(runCommand, " -collapse Collapse -chip ", gseaChip)
