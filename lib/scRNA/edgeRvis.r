@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='AG_integrated'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
-parFile2='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_bySample/result/AK6383.edgeR.files.csv'
-parFile3='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
+parFile1='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose/result/AG_integrated.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result/AG_integrated.edgeR.files.csv'
+parFile3='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose/result/AG_integrated.meta.rds'
 
 
-setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_bySample_vis/result')
+setwd('/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_vis/result')
 
 ### Parameter setting end ###
 
@@ -115,9 +115,12 @@ for (prefix in rownames(edgeRres)){
         width=width+5
       }
       
+      topN = ifelse(nrow(siggenes) >= 100, 100, nrow(siggenes))
+      topNgenes<-siggenes$gene[1:topN]
+
       pdf(file=visFile, onefile = T, width=width, height=10)
-      siggene<-siggenes$gene[1]
-      for (siggene in siggenes$gene){
+      siggene<-topNgenes[1]
+      for (siggene in topNgenes){
         logFC<-sigout[siggene, "logFC"]
         FDR<-sigout[siggene,"FDR"]
         
