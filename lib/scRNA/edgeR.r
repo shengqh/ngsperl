@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='AG_integrated'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
-parFile2='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
+parFile1='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose/result/AG_integrated.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose/result/AG_integrated.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_byCell/result')
+setwd('/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
@@ -93,7 +93,7 @@ for (comp in comparisonNames){
   }
 
   if(bBetweenCluster){
-    prefix<-comp
+    prefix<-get_valid_path(comp)
     
     control_cells<-rownames(meta)[meta[,cluster_name] %in% control_names]  
     if("control_file_regex" %in% names(comp_options)){
@@ -156,7 +156,7 @@ for (comp in comparisonNames){
     }
   }else{
     cts = unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name])
-    prefixList<-gsub('[ /:_]+', '_', cts)
+    prefixList<-get_valid_path(cts)
 
     idx<-1
     for (idx in c(1:length(cts))){

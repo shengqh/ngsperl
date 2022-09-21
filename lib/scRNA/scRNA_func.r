@@ -1189,3 +1189,8 @@ get_seurat_sum_count<-function(obj, cluster_name){
   res_df<-data.frame("cluster"=cts, "prefix"=prefixList, "pusedo_file"=res_files)
   return(res_df)
 }
+
+get_valid_path<-function(oldpath){
+  result<-gsub('[ /:_()]+', '_', oldpath)
+  return(result)
+}
