@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='AG_integrated'
+outFile='PH_combine'
 parSampleFile1=''
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result/AG_integrated.edgeR.files.csv'
+parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result/PH_combine.edgeR.files.csv'
 parFile2=''
 parFile3=''
 outputDirectory='.'
-gseaDb='/data/cqs/references/gsea/v7.5.1'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v7.5.1.symbols.gmt', 'c2.all.v7.5.1.symbols.gmt', 'c5.all.v7.5.1.symbols.gmt', 'c6.all.v7.5.1.symbols.gmt', 'c7.all.v7.5.1.symbols.gmt'); makeReport=0;
+gseaDb='C:/projects/database/gsea/v7.5.1/'; gseaJar='gsea-cli.bat'; gseaCategories=c('h.all.v7.5.1.symbols.gmt', 'c2.all.v7.5.1.symbols.gmt', 'c5.all.v7.5.1.symbols.gmt', 'c6.all.v7.5.1.symbols.gmt', 'c7.all.v7.5.1.symbols.gmt'); makeReport=0;
 
-setwd('/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_GSEA/result')
+setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_GSEA/result')
 
 ### Parameter setting end ###
 
@@ -33,7 +33,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
   if (is.null(resultDir)) {
     gesaResultDir<-paste0(preRankedGeneFile,".gsea")
   } else {
-    gesaResultDir<-paste0(resultDir,"/",basename(preRankedGeneFile),".gsea")
+    gesaResultDir<-paste0(resultDir,"/",gsub("_GSEA.rnk", "", basename(preRankedGeneFile)))
   }
   gesaResultDir<-str_replace_all(gesaResultDir, '[()]', '_')
 
