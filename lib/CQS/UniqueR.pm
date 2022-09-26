@@ -172,6 +172,9 @@ sub perform {
       close($rt);
     }
   }
+
+  print $rf "writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')\n";
+
   close($rf);
 
   my $rReportTemplates = get_option( $config, $section, "rReportTemplate", "" );
