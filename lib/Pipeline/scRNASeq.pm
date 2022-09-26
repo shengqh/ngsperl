@@ -336,7 +336,7 @@ sub getScRNASeqConfig {
     my $seurat_rawdata = "seurat_rawdata";
     if ( getValue( $def, "perform_seurat" ) ) {
       if (getValue($def, "merge_seurat_object", 0)){
-        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata);
+        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, "files");
       }else{
         add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file);
       }
@@ -584,6 +584,29 @@ sub getScRNASeqConfig {
 
             my $pseudo_count_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_pseudo_count";
             add_pseudo_count($config, $def, $summary, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
+
+            if(defined $def->{bubble_plots}){
+              my $bubblemap_name = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_bubblemap";
+              $config->{$bubblemap_name} = {
+                class                => "CQS::UniqueR",
+                perform              => 1,
+                target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubblemap_name,
+                rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multires.r",
+                parameterSampleFile1 => $def->{bubble_plots},
+                parameterSampleFile2 => {
+                  celltype_name => $celltype_name,
+                },
+                parameterFile1_ref   => [ $choose_task, ".final.rds" ],
+                output_file_ext      => ".bubblemap.png",
+                sh_direct            => 1,
+                pbs                  => {
+                  "nodes"     => "1:ppn=1",
+                  "walltime"  => "1",
+                  "mem"       => "10gb"
+                },
+              };
+              push( @$summary, $bubblemap_name );
+            }
 
             if ( $perform_comparison ) {
               if ( defined $def->{"DE_cluster_pairs"} ) {

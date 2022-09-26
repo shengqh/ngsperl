@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AG_integrated'
+outFile='PH_combine'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose/result/AG_integrated.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose/result/AG_integrated.meta.rds'
+parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose/result/PH_combine.final.rds'
+parFile2='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose/result/PH_combine.meta.rds'
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result')
+setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
@@ -156,6 +156,10 @@ for (comp in comparisonNames){
     }
   }else{
     cts = unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name])
+    if(myoptions$DE_cluster_pattern != '*' & myoptions$DE_cluster_pattern != ''){
+      cts=cts[grepl(myoptions$DE_cluster_pattern, cts)]
+    }
+    
     prefixList<-get_valid_path(cts)
 
     idx<-1

@@ -121,6 +121,32 @@ sub add_seurat_rawdata {
   push( @$summary, $seurat_rawdata );
 }
 
+sub add_seurat_merge_object {
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $source_ref) = @_;
+  $config->{$seurat_rawdata} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
+    rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_merge_object.r",
+    parameterSampleFile1_ref => $source_ref,
+    parameterSampleFile2     => {
+      Mtpattern             => getValue( $def, "Mtpattern" ),
+      rRNApattern           => getValue( $def, "rRNApattern" ),
+      hemoglobinPattern     => getValue( $def, "hemoglobinPattern" ),
+      sample_pattern        => getValue( $def, "sample_pattern" ),
+    },
+    output_file_ext      => ".rawobj.rds",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+
+  push( @$summary, $seurat_rawdata );
+}
+
 sub add_seurat {
   my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task) = @_;
 
@@ -903,6 +929,8 @@ sub addEdgeRTask {
       $edgeRscript = "../scRNA/edgeR_pseudo.r";
     }
 
+    $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
+
     $groups = getValue( $def, "groups" );
     $pairs  = getValue( $def, "pairs" );
   }
@@ -1446,7 +1474,7 @@ sub add_hto {
     rtemplate => $r_script,
     option => "",
     parameterSampleFile1_ref => $hto_file_ref,
-    #parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
+    parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
     parameterSampleFile3 => {
       hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
       cutoff_file => getValue($def, "cutoff_file", ""),
@@ -1878,5 +1906,6 @@ sub add_doublet_check {
   };
   push( @$summary, $doublet_check_task );
 }
+
 
 1;
