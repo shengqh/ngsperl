@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 outputPdf<-TRUE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
 
-setwd("C:/projects/scratch/cqs/shengq2/justin_balko_projects/20220209_rnaseq_7312_mm10/genetable/result")
+setwd("H:/shengquanhu/projects/justin_balko/20220209_rnaseq_7312_mm10/genetable/result")
 
 ### Parameter setting end ###
 
@@ -333,7 +333,7 @@ for (i in 1:nrow(countTableFileAll)) {
 
   titles<-unique(sampleToGroup$V3)
   if(draw_all_groups_in_HCA){
-    allSamples<-unique(sampleToGroup$V1)
+    allSamples<-sort(unique(sampleToGroup$V1))
     conditionColors<-data.frame(Sample=allSamples)
     rownames(conditionColors)=allSamples
 
@@ -445,11 +445,10 @@ for (i in 1:nrow(countTableFileAll)) {
         }
         conditionColors<-as.matrix(data.frame(Group=colors[groups]))
       }else{
+        cc<-conditionColors[validSampleToGroup$V1,]
         gname = ifelse(title == "all", "Group", title)
-        cnames=c(gname, colnames(conditionColors)[colnames(conditionColors) != gname])
-        conditionColors<-conditionColors[,cnames,drop=F]
-        colors<-unique(conditionColors[,title])
-        names(colors)<-unique(groups)
+        colors<-unique(cc[,gname])
+        names(colors)<-unique(validSampleToGroup$V2)
       }
     }else{
       groups<-NA
