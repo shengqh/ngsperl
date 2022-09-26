@@ -729,7 +729,6 @@ sub getPreprocessionConfig {
 
 sub addExtractSingleEndFastqFromPairend {
   my ($config, $def, $individual, $summary, $extract_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref) = @_;
-  my $maxReadLength = getValue($def, "maxReadLength", 60);
   my $minReadLength = getValue($def, "minReadLength", 16);
   my $minSimilarityRatio = getValue($def, "minSimilarityRatio", 0.8);
   $config->{$extract_task} = {
@@ -737,7 +736,7 @@ sub addExtractSingleEndFastqFromPairend {
     perform               => 1,
     target_dir            => "$intermediate_dir/$extract_task",
     #init_command          => "source /data/cqs/softwares/cqsperl/scripts/path_conda.txt",
-    option                => "-o __NAME__.se.fastq.gz --maxReadLength $maxReadLength --minReadLength $minReadLength --minSimilarityRatio 0.8",
+    option                => "-o __NAME__.se.fastq.gz --minReadLength $minReadLength --minSimilarityRatio 0.8",
     interpretor           => "python3",
     check_program         => 1,
     program               => "../SmallRNA/getFastqFromTrimmedPairendReads.py",
