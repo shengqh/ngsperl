@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='mouse_8363'
+outFile='PH_combine'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
-parFile2='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires/result/mouse_8363.meta.rds'
-parFile3='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
+parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony/result/PH_combine.final.rds'
+parFile2='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_01_call/result/PH_combine.meta.rds'
+parFile3='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/essential_genes/result/PH_combine.txt'
+parFile4='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_SignacX/result/PH_combine.meta.rds'
 
 
-setwd('/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_subcluster.v2/result')
+setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_02_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -204,6 +205,10 @@ for(pct in previous_celltypes){
     umap_key = paste0("UMAPnn", nn, "dist", min.dist * 100, "_")
     subobj<-RunUMAP(object = subobj, reduction=curreduction, reduction.key=umap_key, reduction.name=umap_name, n.neighbors=nn, min.dist=min.dist, dims=cur_pca_dims, verbose = FALSE)
   }
+  
+  reductions_rds = paste0(curprefix, ".reductions.rds")
+  saveRDS(subobj@reductions, reductions_rds)
+
 # 
 #   g<-NULL
 #   for(umap_name in umap_names){  
@@ -377,9 +382,11 @@ EFGH"
 #     print(gg)
 #     dev.off()
     
-    cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, umap_file, heatmap_file)), "type"=c("markers", "meta", "umap", "heatmap"), "resolution"=cur_resolution, "celltype"=pct)
+    cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
     filelist<-rbind(filelist, cur_df)
   }
 }
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+
+save_session_info(paste0(outFile, ".sessionInfo.txt"))
