@@ -16,6 +16,7 @@ use Data::Dumper;
 use Hash::Merge qw( merge );
 use Tie::IxHash;
 use String::Util qw(trim);
+use List::MoreUtils qw(uniq);
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -93,6 +94,7 @@ our %EXPORT_TAGS = (
       read_table
       merge_hash_left_precedent
       merge_hash_right_precedent
+      get_groups_by_pattern_dic      
       get_groups_by_pattern
       get_covariances_by_pattern
       create_covariance_file_by_pattern
@@ -1827,10 +1829,29 @@ sub get_groups_by_pattern_dic {
 
   my $files = $def->{files};
 
+  my $sample_names = {};
+  for my $sample_name (keys %$files){
+    $sample_names->{$sample_name} = $sample_name;
+  }
+
+  if(getValue($def, "pool_sample", 0)){
+    my $sample_pool = getValue($def, "pool_sample_groups");
+    my $sample_to_pool = {};
+    for my $pool (keys %$sample_pool){
+      my $samples = $sample_pool->{$pool};
+      for my $s (@$samples){
+        $sample_names->{$s} = $pool;
+      }
+    }
+  }
+
+  my @samplenames = uniq (values %$sample_names);
+  #print(@samplenames);
+
   my $groups = {};
   for my $groupname (sort keys %$gpattern_dic){
     my $gpattern = $gpattern_dic->{$groupname};
-    for my $samplename (sort keys %$files) {
+    for my $samplename (@samplenames) {
       if($samplename =~ /$gpattern/){
         if (not defined $groups->{$groupname}){
           $groups->{$groupname} = [$samplename];
