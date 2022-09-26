@@ -7,6 +7,16 @@ library(ggplot2)
 library(patchwork)
 library(Matrix.utils)
 
+is_one<-function(value){
+  if(is.null(value)){
+    return(FALSE)
+  }
+  if(is.na(value)){
+    return(FALSE)
+  }
+  return(value == '1')
+}
+
 get_hue_colors<-function(n, random.seed=20220606){
   ccolors<-hue_pal()(n)
   x <- .Random.seed
@@ -764,7 +774,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA" ){
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE ){
   genes=unique(unlist(gene_groups))
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
   
@@ -802,15 +812,17 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA" ){
     scale_color_gradient(low = cols[1], high = cols[2])
   
   
-  g=plot + 
-    xlab("") + ylab("") + theme_bw() + theme(plot.title = element_text(hjust = 0.5), 
+  g=plot + xlab("") + ylab("") + theme_bw() + theme(plot.title = element_text(hjust = 0.5),
                                              axis.text.x = element_text(angle = 90, hjust=1, vjust=0.5),
-                                             strip.background = element_blank(),
-                                             strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
+                                             strip.background = element_blank())
+  
+  if(rotate.title){
+    g=g+theme(strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
+  }
   return(g)
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
   gene_groups=split(genes_df$gene, genes_df$cell_type)
@@ -832,25 +844,34 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   # ct_levels = ct_levels[ct_levels %in% ct$cell_type]
   # cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
 
-  if(orderby_cluster){
-    cell_type<-cell_type[order(cell_type[,cur_res]),]
+  if (! is.null(split.by)){ 
+    if(orderby_cluster){
+      cell_type<-cell_type[order(cell_type[,cur_res], cell_type[,split.by]),]
+    }else{
+      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res], cell_type[,split.by]),]
+    }
+    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], ": ", cell_type$cell_type, ": ", cell_type[,split.by])
   }else{
-    cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+    if(orderby_cluster){
+      cell_type<-cell_type[order(cell_type[,cur_res]),]
+    }else{
+      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+    }
+    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], ": ", cell_type$cell_type)
   }
-  cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], " : ", cell_type$cell_type)
   cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
   group.by="seurat_celltype_clusters"
   
   cell_type<-cell_type[colnames(obj),]
   obj@meta.data<-cell_type
   
-  g<-get_dot_plot(obj, group.by, gene_groups, assay)
+  g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title)
   
   return(g)
 }
 
-draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=5500, height=3000){
-  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file)
+draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=5500, height=3000, rotate.title=TRUE){
+  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file, rotate.title=rotate.title)
   png(paste0(prefix, ".bubblemap.png"), width=width, height=height, res=300)
   print(g)
   dev.off()
@@ -961,7 +982,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   Idents(rawobj)<-ident_name
   
   feats<-c("nFeature_RNA","nCount_RNA","percent.mt","percent.ribo")
-  if("percent.hb" %in% colnames(obj@meta.data)){
+  if("percent.hb" %in% colnames(rawobj@meta.data)){
     feats<-c(feats, "percent.hb")
   }
 
@@ -970,13 +991,15 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   print(g)
   dev.off()
 
-  g<-FeaturePlot(rawobj, feats, split.by=ident_name)
-  width = length(unique(unlist(rawobj[[ident_name]]))) * 800
-  height = length(feats) * 700
+  if('umap' %in% names(rawobj@reductions)){
+    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap")
+    width = length(unique(unlist(rawobj[[ident_name]]))) * 800
+    height = length(feats) * 700
 
-  png(paste0(prefix, ".qc_exp.png"), width=width, height=height, res=300)
-  print(g)
-  dev.off()  
+    png(paste0(prefix, ".qc_exp.png"), width=width, height=height, res=300)
+    print(g)
+    dev.off()  
+  }
 
   png(file=paste0(prefix, ".qc.png"), width=3000, height=1200, res=300)
   p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
@@ -1073,7 +1096,7 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   return(list(obj=subobj, umap_names=umap_names))
 }
 
-get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1){
+get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, ...){
   labels<-obj@meta.data[,c(group.by, label.by)]
   labels<-labels[!duplicated(labels[,group.by]),]
   labels<-labels[order(labels[,group.by]),]
@@ -1082,7 +1105,7 @@ get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.
   ngroups<-length(unlist(unique(obj[[group.by]])))
   scolors = get_hue_colors(ngroups)
 
-  g<-DimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by)+ 
+  g<-DimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by, ...)+ 
     scale_color_manual(legend.title, values=scolors, labels = cts, guide = guide_legend(ncol=ncol)) + ggtitle(title)
   return(g)
 }
@@ -1193,4 +1216,44 @@ get_seurat_sum_count<-function(obj, cluster_name){
 get_valid_path<-function(oldpath){
   result<-gsub('[ /:_()]+', '_', oldpath)
   return(result)
+}
+
+output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern) {
+  writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
+
+  saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
+
+  png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
+  par(mar = c(4, 8, 2, 1))
+  C <- rawobj@assays$RNA@counts
+  C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
+  mc<-rowMedians(C)
+  most_expressed <- order(mc, decreasing = T)[20:1]
+  tm<-as.matrix(Matrix::t(C[most_expressed,]))
+  boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
+          col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+  dev.off()
+
+  draw_feature_qc(outFile, rawobj, "orig.ident")
+
+  if(any(rawobj$orig.ident != rawobj$sample)){
+    draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
+  }
+
+  rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
+  rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
+
+  rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
+  rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
+  rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+
+  draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
+
+  if(any(rawobj$orig.ident != rawobj$sample)){
+    draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
+  }
+}
+
+save_session_info<-function(filename="sessionInfo.txt") {
+  writeLines(capture.output(sessionInfo()), filename)
 }
