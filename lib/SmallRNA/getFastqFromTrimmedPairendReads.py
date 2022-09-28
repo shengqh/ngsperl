@@ -18,7 +18,7 @@ def output_read(fout, qname1, seq1, m1, s1, sequence_count):
   fout.write(f"{qname1}")
   fout.write(f"{seq1}\n")
   fout.write(f"{m1}")
-  fout.write(f"{s1}")
+  fout.write(f"{s1}\n")
   if seq1 in sequence_count:
     sequence_count[seq1] = sequence_count[seq1] + 1
   else:
@@ -66,8 +66,8 @@ def check(logger, read1, read2, minReadLength, minSimilarityRatio, output):
       m1 = fin1.readline()
       m2 = fin2.readline()
 
-      s1 = fin1.readline()
-      s2 = fin2.readline()
+      s1 = fin1.readline().rstrip()
+      s2 = fin2.readline().rstrip()
 
       seq = Seq(seq2)
       rc_seq = str(seq.reverse_complement())
@@ -125,7 +125,7 @@ def check(logger, read1, read2, minReadLength, minSimilarityRatio, output):
         fout.write(f"{qname}\n")
         fout.write(f"{r1}\n")
         fout.write(f"{v[2]}")
-        fout.write(f"{v[3]}")
+        fout.write(f"{v[3]}\n")
         continue
       
       if c2 > c1 * 2:
@@ -133,7 +133,7 @@ def check(logger, read1, read2, minReadLength, minSimilarityRatio, output):
         fout.write(f"{qname}\n")
         fout.write(f"{r2}\n")
         fout.write(f"{v[2]}")
-        fout.write(f"{v[5][::-1]}")
+        fout.write(f"{v[5][::-1]}\n")
         continue
 
       #try remove N difference
@@ -156,7 +156,7 @@ def check(logger, read1, read2, minReadLength, minSimilarityRatio, output):
         fout.write(f"{qname}\n")
         fout.write(f"{newseq}\n")
         fout.write(f"{v[2]}")
-        fout.write(f"{v[3]}")
+        fout.write(f"{v[3]}\n")
         continue
 
       #if there is N in either reads, discard
@@ -192,7 +192,6 @@ if DEBUG:
   read1="/scratch/weissvl/shengq2/20210624_human_wntpathway_rnaseq/cutadapt/result/X6129CP9_clipped.1.fastq.short.gz"
   read2="/scratch/weissvl/shengq2/20210624_human_wntpathway_rnaseq/cutadapt/result/X6129CP9_clipped.2.fastq.short.gz"
   minReadLength=16
-  maxReadLength=50
   minSimilarityRatio=0.7
   output="/scratch/weissvl/shengq2/20220819_rnaseq_1508_smallRNA/fastq/X6129CP9.mirna.fastq.gz"
 else:
