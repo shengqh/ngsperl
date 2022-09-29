@@ -100,7 +100,7 @@ sub perform {
     }
     my $random_bases_remove_after_trim_3 = get_option( $config, $section, "random_bases_remove_after_trim_3", 0 );
     if ( $random_bases_remove_after_trim_3 > 0 ) {
-      $remove_bases_option = $remove_bases_option . "-u -$random_bases_remove_after_trim_3";
+      $remove_bases_option = $remove_bases_option . " -u -$random_bases_remove_after_trim_3";
     }
   }
 
@@ -255,7 +255,7 @@ cutadapt $thread_option -l $hard_trim -o $temp_file $sample_file
 cutadapt $thread_option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
 status=\$?
 if [[ \$status -eq 0 ]]; then
-  cutadapt $thread_option $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
+  cutadapt $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
   status=\$?
   rm $temp1_file $temp2_file
   if [[ \$status -eq 0 ]]; then
@@ -333,7 +333,7 @@ fi
 
         print $pbs "
 if [[ \$status -eq 0 ]]; then
-  cutadapt $thread_option $remove_bases_option $limit_file_options -o $final_file $temp_file
+  cutadapt $remove_bases_option $limit_file_options -o $final_file $temp_file
   status=\$?
   if [[ \$status -eq 0 ]]; then
     rm $temp_file
