@@ -46,6 +46,11 @@ sub getSmallRNAConfig {
   initializeSmallRNADefaultOptions($def);
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref ) = getPrepareConfig( $def, 1 );
+
+  #merge summary and individual 
+  push @$individual_ref, @$summary_ref;
+  $summary_ref = $individual_ref;
+
   my $task_name = $def->{task_name};
 
   my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
@@ -1350,6 +1355,10 @@ sub getSmallRNAConfig {
     );
   }
 
+  my $nonhost_count = [];
+  my $nonhost_genome_read_count = [];
+  my $bacteria_read_count = [];
+
   if (getValue($def, "search_nonhost_genome", 1) && getValue($def, "search_refseq_bacteria", 0)) {
     my $refseq_bacteria_bowtie = "refseq_bacteria_bowtie";
     $config->{"refseq_bacteria_bowtie_index"} = getValue($def, "refseq_bacteria_bowtie_index");
@@ -1470,6 +1479,10 @@ fi
     push @table_for_readSummary, ( $refseq_bacteria_table, '.read.count$' );
     push @name_for_readSummary,  ( "Refseq Bacteria" );
 
+    push @$nonhost_count, ( $refseq_bacteria_table, '.read.count$' );
+    push @$nonhost_genome_read_count, ( $refseq_bacteria_table, '.read.count$' );
+    push @$bacteria_read_count, ( $refseq_bacteria_table, '.read.count$' );
+  
     my @file_exts = ();
 
     my $task_name = $def->{task_name};
@@ -1533,63 +1546,7 @@ fi
     }
   }
 
-  if ($search_refseq_genome) {
-    my $refseq_genomes = ["bacteria", "viruses"];
-    for my $refseq (@$refseq_genomes){
-      my $spcount_bowtie = "bowtie1_${refseq}_pm";
-      $config->{$spcount_bowtie} = {
-        class              => "CQS::ProgramIndividualWrapper",
-        perform            => 1,
-        target_dir         => "$host_intermediate_dir/$spcount_bowtie",
-        option             => "bowtie -t 8 -d " . getValue($def, "bowtie_${refseq}_index_list_file"),
-        interpretor        => "python3",
-        program            => "/scratch/cqs_share/softwares/spcount/debug.py",
-        check_program     => 1,
-        source_arg => "-i",
-        source_ref => $identical_ref,
-        output_arg         => "-o",
-        output_file_ext    => ".txt",
-        output_to_same_folder => 1,
-        sh_direct          => 0,
-        pbs                => {
-          "nodes"     => "1:ppn=8",
-          "walltime"  => "4",
-          "mem"       => "20gb"
-        },
-      };
-
-      push( @$individual_ref, $spcount_bowtie );
-
-      my $spcount_count = $spcount_bowtie . "_table";
-      $config->{$spcount_count} = {
-        class              => "CQS::ProgramWrapper",
-        perform            => 1,
-        target_dir         => "$nonhost_genome_dir/$spcount_count",
-        option             => "count",
-        interpretor        => "python3",
-        program            => "/scratch/cqs_share/softwares/spcount/debug.py",
-        check_program     => 1,
-        parameterSampleFile1_arg => "-i",
-        parameterSampleFile1_ref => $spcount_bowtie,
-        parameterSampleFile2_arg => "-c",
-        parameterSampleFile2_ref => $identical_count_ref,
-        output_arg         => "-o",
-        output_file_ext    => ".count",
-        output_to_same_folder => 1,
-        sh_direct          => 1,
-        pbs                => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "4",
-          "mem"       => "10gb"
-        },
-      };
-
-      push( @$summary_ref, $spcount_count );
-    }
-  }
-
   my $nonhostXml   = [];
-  my @mapped       = ();
   my @overlap      = ();
   my @overlapNames = ();
 
@@ -1640,11 +1597,14 @@ fi
       }
       push @table_for_countSum,    ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
       push @table_for_readSummary, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
-      push @mapped,                ( "bowtie1_${nonhostGroup}_pm_count", ".xml" );
       push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
       
+      push @$nonhost_count,( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ); 
+
+      push @$nonhost_genome_read_count,( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ); 
       push @$nonhost_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
-      if( ($nonhostGroup !~ /virus/) and ($nonhostGroup !~ /algae/)){
+      if( $nonhostGroup =~ /bacteria/ ){
+        push @$bacteria_read_count, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
         push @$microbial_genome_count_xml, ( "bowtie1_${nonhostGroup}_pm_table", ".count.xml\$" );
       }
 
@@ -1674,15 +1634,15 @@ fi
 
     if ($perform_nonhost_genome_count){
       $config->{nonhost_genome_count} = {
-        class              => "CQS::ProgramWrapper",
+        class              => "CQS::UniqueR",
         perform            => 1,
         target_dir         => $nonhost_genome_dir . "/nonhost_genome_count",
         option             => "",
-        interpretor        => "python3",
-        program            => "../SmallRNA/nonhostXmlCount.py",
-        parameterSampleFile1_arg => "-i",
-        parameterSampleFile1_ref => $nonhost_genome_count_xml,
-        output_arg         => "-o",
+        rtemplate          => "../SmallRNA/nonhostSampleCount.r",
+        parameterSampleFile1_ref => $nonhost_genome_read_count,
+        parameterSampleFile2 => {
+          extension => ".nonhost_genome.tsv"
+        },
         output_file_ext    => ".nonhost_genome.tsv",
         can_result_be_empty_file => 1,
         sh_direct          => 1,
@@ -1692,19 +1652,18 @@ fi
           "mem"       => "10gb"
         },
       };
-
       push( @$summary_ref, "nonhost_genome_count" );
 
       $config->{microbial_genome_count} = {
-        class              => "CQS::ProgramWrapper",
+        class              => "CQS::UniqueR",
         perform            => 1,
         target_dir         => $nonhost_genome_dir . "/microbial_genome_count",
         option             => "",
-        interpretor        => "python3",
-        program            => "../SmallRNA/nonhostXmlCount.py",
-        parameterSampleFile1_arg => "-i",
-        parameterSampleFile1_ref => $microbial_genome_count_xml,
-        output_arg         => "-o",
+        rtemplate          => "../SmallRNA/nonhostSampleCount.r",
+        parameterSampleFile1_ref => $bacteria_read_count,
+        parameterSampleFile2 => {
+          extension => ".microbial.tsv"
+        },
         output_file_ext    => ".microbial.tsv",
         can_result_be_empty_file => 1,
         sh_direct          => 1,
@@ -1740,7 +1699,7 @@ fi
     $config->{bowtie1_miRBase_pm_count}{can_result_be_empty_file} = 1;
 
     push @table_for_countSum, ( "bowtie1_miRBase_pm_table", "^((?!read|contig).)*\.count\$" );
-    push @mapped,             ( "bowtie1_miRBase_pm_count", ".xml" );
+    push @$nonhost_count, ( "bowtie1_miRBase_pm_table", '.read.count$' );
 
     #Mapping unmapped reads to tRNA library
     addNonhostDatabase(
@@ -1751,6 +1710,7 @@ fi
       $identical_count_ref,
       $nonhostXml
     );
+    push @$nonhost_count, ( "bowtie1_tRNA_pm_table", '.read.count$' );
 
     addNonhostVis(
       $config, $def,
@@ -1839,6 +1799,7 @@ fi
       $identical_count_ref,
       $nonhostXml
     );
+    push @$nonhost_count, ( "bowtie1_rRNA_pm_table", '.read.count$' );
 
     if ( getValue( $def, "perform_nonhost_rRNA_coverage" ) ) {
       my $positionTask      = "nonhost_library_rRNA_position";
@@ -1913,7 +1874,6 @@ fi
     push @table_for_countSum,    ( "bowtie1_tRNA_pm_table", ".category.count\$", "bowtie1_rRNA_pm_table", "$task_name\.count\$" );
     push @table_for_readSummary, ( "bowtie1_tRNA_pm_table", ".read.count\$",     "bowtie1_rRNA_pm_table", ".read.count\$" );
     push @name_for_readSummary,  ( "Non host tRNA",         "Non host rRNA" );
-    push @mapped,                ( "bowtie1_tRNA_pm_count", ".xml",              "bowtie1_rRNA_pm_count", ".xml" );
     push @overlap,               ( "bowtie1_tRNA_pm_table", ".read.count\$",     "bowtie1_rRNA_pm_table", ".read.count\$" );
     push @overlapNames,          ( "Non host tRNA",         "Non host rRNA" );
     if ($do_comparison) {
@@ -1945,6 +1905,30 @@ fi
 
       addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA", [ "bowtie1_rRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
     }
+  }
+
+
+  if (getValue($def, "perform_nonhost_count", 1)) {
+    $config->{nonhost_count} = {
+      class              => "CQS::UniqueR",
+      perform            => 1,
+      target_dir         => $data_visualization_dir . "/nonhost_count",
+      option             => "",
+      rtemplate          => "../SmallRNA/nonhostSampleCount.r",
+      parameterSampleFile1_ref => $nonhost_count,
+      parameterSampleFile2 => {
+        extension => ".nonhost.tsv"
+      },
+      output_file_ext    => ".nonhost.tsv",
+      can_result_be_empty_file => 1,
+      sh_direct          => 1,
+      pbs                => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary_ref, "nonhost_count" );
   }
 
   if ( $def->{perform_nonhost_mappedToHost} ) {
@@ -2041,12 +2025,35 @@ fi
       target_dir       => $nonhost_blast_dir . "/final_unmapped_reads",
       perlFile         => "unmappedReadsToFastq.pl",
       source_ref       => $identical_ref,
-      source2_ref      => \@mapped,
+      source2_ref      => $nonhost_count,
       output_ext       => "_clipped_identical.unmapped.fastq.gz",
       output_other_ext => "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.unmapped.fastq.gz.info",
       sh_direct        => 1,
       pbs              => {
-        "email"    => $def->{email},
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+
+    $config->{final_unmapped_reads_python} = {
+      class            => "CQS::ProgramWrapperOneToOne",
+      perform          => 1,
+      target_dir       => $nonhost_blast_dir . "/final_unmapped_reads_python",
+      option           => "-o __NAME__.unmapped.fastq.gz",
+      interpretor      => "python3",
+      program          => "../SmallRNA/unmappedReadsToFastq.py",
+      source_arg       => "-i",
+      source_ref       => $identical_ref,
+      parameterSampleFile2_arg      => "-m",
+      parameterSampleFile2_ref      => $nonhost_count,
+      parameterSampleFile3_arg      => "-c",
+      parameterSampleFile3_ref      => $identical_count_ref,
+      output_to_same_folder => 1,
+      output_arg       => "-o",
+      output_file_ext  => ".unmapped.fastq.gz,.unmapped.fastq.dupcount",
+      sh_direct        => 1,
+      pbs              => {
         "nodes"    => "1:ppn=1",
         "walltime" => "1",
         "mem"      => "10gb"
@@ -2528,7 +2535,7 @@ fi
     $config->{bacteria_count} = {
       'class'                    => 'CQS::ProgramWrapper',
       'parameterSampleFile1_arg' => '-g',
-      'parameterSampleFile1_ref' => [ "bowtie1_bacteria_group1_pm_table", ".count.xml\$", "bowtie1_bacteria_group2_pm_table", ".count.xml\$", ],
+      'parameterSampleFile1_ref' => $bacteria_read_count,
       'parameterFile2_arg' => '-d',
       'parameterFile2_ref' => [ "bowtie1_rRNA_pm_table", ".count.xml\$" ],
       'parameterFile3_arg'       => '-t',
@@ -2877,14 +2884,11 @@ fi
     target_dir => $def->{target_dir} . "/sequencetask",
     option     => "",
     source     => {
-      step1 => $individual_ref,
-      step2 => $summary_ref,
+      tasks => $individual_ref,
     },
     sh_direct => 0,
     cluster   => $cluster,
     pbs       => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => $def->{sequencetask_run_time},
       "mem"       => "40gb"
