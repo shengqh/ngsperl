@@ -108,6 +108,7 @@ sub perform {
 
   my $rnum = scalar(@rtemplates);
 
+  my $output_sessioninfo = 1;
   my $ignore_lines={};
   for my $index (0 .. $#rtemplates){
     my $rtemplate = $rtemplates[$index];
@@ -158,6 +159,7 @@ sub perform {
 
       push(@valid_lines, $row);
     }
+    close($rt);
 
     my $first = 1;
     for my $row (@valid_lines){
@@ -169,11 +171,16 @@ sub perform {
         $first = 0;
       }
       print $rf "$row\n";
-      close($rt);
+
+      if ($row =~ /capture.output(sessionInfo())/){
+        $output_sessioninfo = 0;
+      }
     }
   }
 
-  print $rf "writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')\n";
+  if ($output_sessioninfo){
+    print $rf "writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')\n";
+  }
 
   close($rf);
 

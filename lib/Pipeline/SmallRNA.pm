@@ -1465,6 +1465,8 @@ fi
     push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
     push @table_for_correlation, ( $refseq_bacteria_table, ".aggregated.count\$" );
 
+    push @table_for_countSum,    ( $refseq_bacteria_table, ".phylum.estimated.count\$" );
+
     push @table_for_readSummary, ( $refseq_bacteria_table, '.read.count$' );
     push @name_for_readSummary,  ( "Refseq Bacteria" );
 

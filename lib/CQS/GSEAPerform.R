@@ -33,7 +33,9 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
   if (is.null(resultDir)) {
     gesaResultDir<-paste0(preRankedGeneFile,".gsea")
   } else {
-    gesaResultDir<-paste0(resultDir,"/",gsub("_GSEA.rnk", "", basename(preRankedGeneFile)))
+    gsea_name=gsub("_GSEA.rnk", "", basename(preRankedGeneFile))
+    gsea_name=gsub("_min5_fdr.*", "", gsea_name)
+    gesaResultDir<-paste0(resultDir,"/",gsea_name)
   }
   gesaResultDir<-str_replace_all(gesaResultDir, '[()]', '_')
 
