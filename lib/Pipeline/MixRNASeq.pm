@@ -253,7 +253,7 @@ sub getMixRNASeqConfig {
     target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "featureCount",
     option        => "-g gene_id -t exon",
     source_ref    => ["filterMixBam", ".bam\$"],
-    gff_file      => getValue($def, "gff_file"),
+    gff_file      => getValue($def, "transcript_gtf"),
     is_paired_end => is_paired_end($def),
     sh_direct     => 0,
     pbs           => {
