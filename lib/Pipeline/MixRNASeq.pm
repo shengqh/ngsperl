@@ -187,7 +187,7 @@ sub getMixRNASeqConfig {
     pbs                       => {
       "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => "23",
-      "mem"       => "40gb"
+      "mem"       => getValue($def, "star_mem", "80gb")
     },
   };
 
@@ -216,7 +216,7 @@ sub getMixRNASeqConfig {
     interpretor           => "python3",
     check_program         => 1,
     program               => "../Alignment/filterMixBam.py",
-    source_ref            => ["star"],
+    source_ref            => ["star", "_Aligned.out.bam"],
     source_arg            => "-i",
     source_join_delimiter => "",
     output_to_same_folder => 1,
