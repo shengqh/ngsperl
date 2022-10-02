@@ -7,9 +7,10 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
+parFile4='C:/projects/scratch/cqs/justin_balko_projects/20220907_rnaseq_7312_6295_mm10/covariance.txt'
 outputPdf<-TRUE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
 
-setwd("H:/shengquanhu/projects/justin_balko/20220209_rnaseq_7312_mm10/genetable/result")
+setwd("C:/projects/scratch/cqs/justin_balko_projects/20220907_rnaseq_7312_6295_mm10/genetable/result")
 
 ### Parameter setting end ###
 
@@ -21,6 +22,7 @@ library(DESeq2)
 library(RColorBrewer)
 library(colorRamps)
 library(genefilter)
+library(limma)
 
 is_one<-function(value){
   if(is.na(value)){
@@ -60,6 +62,15 @@ fixColorRange<-TRUE
 
 geneFile<-parFile1
 totalCountFile<-parFile3
+
+covarianceFile<-ifelse(exists("parFile4"), parFile4, "")
+if(file.exists((covarianceFile))){
+  covariances<-read.table(covarianceFile, sep="\t", header=T)
+  has_batch<-"batch" %in% colnames(covariances)
+  batch_map<-unlist(split(covariances$batch, covariances$Sample))
+}else{
+  has_batch<-FALSE
+}
 
 if(!exists("onlySamplesInGroup")){
   onlySamplesInGroup=TRUE
@@ -248,6 +259,7 @@ if(file.exists(succeed_file)){
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]
+  countTableFile<-paste0("C:/projects", countTableFile)
 
   if(!file.exists(countTableFile)){
     missed_count_tables<-c(missed_count_tables, countTableFile)
@@ -408,14 +420,32 @@ for (i in 1:nrow(countTableFileAll)) {
     } else {
       dds=DESeqDataSetFromMatrix(countData = validCountNum, colData = as.data.frame(rep(1,ncol(validCountNum))),design = ~1)
       dds<-try(myEstimateSizeFactors(dds))
-      vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
+      vsdres<-try(dds<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
       if (class(vsdres) == "try-error") {
         message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
         warning(message)
         writeLines(message,paste0(outputFilePrefix,curSuffix,".vsd.warning"))
         next;
       }
-      countNumVsd<-assay(temp)
+      
+      if(has_batch){
+        countNumVsd<-assay(dds)
+        colnames(countNumVsd)<-colnames(validCountNum)
+        write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.vsd.txt"),col.names=NA, quote=F, sep="\t")
+
+        dds$batch<-batch_map[colnames(dds)]
+        png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.png"), width=2000, height=2000, res=300)
+        g<-plotPCA(dds, "batch") + theme_bw3()
+        print(g)
+        dev.off()
+        assay(dds) <- limma::removeBatchEffect(assay(dds), dds$batch)
+        png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.png"), width=2000, height=2000, res=300)
+        g<-plotPCA(dds, "batch") + theme_bw3()
+        print(g)
+        dev.off()
+      }
+
+      countNumVsd<-assay(dds)
       colnames(countNumVsd)<-colnames(validCountNum)
       write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
       
@@ -504,6 +534,8 @@ for (i in 1:nrow(countTableFileAll)) {
     #pca plot
     print(paste0("Drawing PCA for ", title, " samples."))
     drawPCA(paste0(outputFilePrefix,curSuffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat, width=1600, height=1500)
+    
+    
     
     #hca plot
     hcaOption<-getHeatmapOption(countHT)
@@ -706,3 +738,5 @@ if(length(missed_count_tables) == 0){
 }else{
   writeLines(missed_count_tables, "count_table_missing.txt")
 }
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
+
