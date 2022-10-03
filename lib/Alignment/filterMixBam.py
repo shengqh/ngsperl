@@ -4,7 +4,12 @@ import sys
 import logging
 import os
 import re
+import errno
 from asyncore import read
+
+def check_file_exists(file):
+  if not os.path.exists(file):
+    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
 
 def write_reads(fout, refmap, reads, counts):
   hostReads = []
@@ -67,13 +72,14 @@ if DEBUG:
 logger = logging.getLogger('filterMixBam')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
+check_file_exists(args.input)
+
 tmpfile = args.output + ".tmp.bam"
-output = open(tmpfile, 'w')
 
 counts={"host":0, "feed":0, "both":0}
 
 refmap = {}
-with pysam.Samfile(args.input, "rb") as sam:
+with pysam.Samfile(args.input, "rb") as sam, open(tmpfile, 'w') as output:
   for nf in range(0, sam.nreferences):
     if(sam.get_reference_name(nf) != sam.references[nf]):
       raise Exception("%s != %s" % (sam.get_reference_name(nf), sam.references[nf]))
@@ -109,5 +115,8 @@ with open(txtfile, "wt") as flog:
   flog.write("host\t%d\n" % counts["host"])
   flog.write("feed\t%d\n" % counts["feed"])
   flog.write("both\t%d\n" % counts["both"])
-  
+
+if os.path.exists(args.output):
+  os.unlink(args.output)
+
 os.rename(tmpfile, args.output)
