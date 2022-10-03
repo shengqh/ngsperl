@@ -11,6 +11,21 @@ files=split(files_lines$V1, files_lines$V2)
 
 cutoff_tbl<-NULL
 
+output_tag_dist<-function(htos, filename){
+  obj <- CreateSeuratObject(counts = htos, assay="HTO")
+  # Normalize HTO data, here we use centered log-ratio (CLR) transformation
+  obj <- NormalizeData(obj, assay = "HTO", normalization.method = "CLR")
+  DefaultAssay(object = obj) <- "HTO"
+  tagnames=rownames(obj[["HTO"]])
+  n_col=ceiling(sqrt(length(tagnames)))
+  n_row=ceiling(length(tagnames) / n_col)
+  width=max(3200, n_col * 3000 + 200)
+  height=max(3000, n_row * 3000)
+  png(filename, width=width, height=height, res=300)
+  rplot(object=obj, assay="HTO", features = tagnames, identName="orig.ident", n_row=n_row)
+  dev.off()
+}
+
 cname=names(files)[1]
 for(cname in names(files)){
   cfiles=files[[cname]]
@@ -44,13 +59,9 @@ for(cname in names(files)){
       stop(paste0("Unknown file format:", cfiles))
     }
   }
-  
-  hto.exp <- CreateSeuratObject(counts = exp, min.features = params$nFeature_cutoff_min)
-  cells.valid<-colnames(hto.exp)
-  htos<-htos[,cells.valid]
-  
-  write.csv(htos, paste0(cname, ".alltags.csv"), row.names=T)
-  
+
+  write.csv(htos, paste0(cname, ".raw.alltags.csv"), row.names=T)
+
   if (!is.na(params$hto_regex) & params$hto_regex != "" ) {
     htos<-htos[grepl(params$hto_regex, rownames(htos)),]
     if (nrow(htos) == 0){
@@ -58,7 +69,15 @@ for(cname in names(files)){
     }
     cat("After hash tag regex filter: ", paste(rownames(htos), collapse=","), "\n")
   }
+
+  output_tag_dist(htos, paste0(cname, ".raw.alltags.png"))
+
+  hto.exp <- CreateSeuratObject(counts = exp, min.features = params$nFeature_cutoff_min)
+  cells.valid<-colnames(hto.exp)
+  htos<-htos[,cells.valid]
   
+  write.csv(htos, paste0(cname, ".alltags.csv"), row.names=T)
+
   if(params$hto_non_zero_percentage > 0){
     rowsum<-apply(htos>0, 1, sum)
     htos<-htos[rowsum > (ncol(htos) * params$hto_non_zero_percentage),]
