@@ -104,7 +104,7 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "regress_by_percent_mt",   getValue($def, "Remove_MtRNA") ? 0 : 1 );
   initDefaultValue( $def, "Remove_hemoglobin",   0 );
   
-  initDefaultValue( $def, "nFeature_cutoff_min", 200 );
+  initDefaultValue( $def, "nFeature_cutoff_min", 300 );
   initDefaultValue( $def, "nFeature_cutoff_max", 10000 );
   initDefaultValue( $def, "nCount_cutoff",       500 );
   initDefaultValue( $def, "mt_cutoff",           20 );
