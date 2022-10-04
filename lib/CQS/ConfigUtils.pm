@@ -158,6 +158,10 @@ sub getValue {
 ####
 sub get_config_section {
   my ( $config, $section ) = @_;
+
+  if(!defined $section){
+    die "section not defined";
+  }
   my @sections = split( '::', $section );
   if ( is_hash($section) ){
     my $mess = longmess();
@@ -185,6 +189,7 @@ sub has_config_section {
 
   if(!defined $section){
     print_trace();
+    die "section not defined";
   }
 
   my @sections = split( '::', $section );
@@ -198,6 +203,10 @@ sub has_config_section {
 
 sub has_option {
   my ( $config, $section, $key ) = @_;
+  if (!defined $section){
+    die "section not defined";
+  }
+
   my $curSection = get_config_section( $config, $section );
   my $result     = $curSection->{$key};
   return ( defined $result );
@@ -2063,15 +2072,20 @@ sub write_HTO_sample_file {
 }
 
 sub get_parameter_file_option {
-  my ($config, $section) = @_;
-  my $result = "";
+  my ($config, $section, $option) = @_;
+  my $result = $option;
   for my $index (1..10){
     my $key = "parameterFile" . $index;
     my $parameterFile = parse_param_file( $config, $section, $key, 0 );
-    my $parameterFileArg = get_option($config, $section, "${key}_arg", "");
 
     if (defined($parameterFile)){
-      $result = $result . " " . $parameterFileArg . " " . $parameterFile;
+      my $key = "__${key}__";
+      if ($result =~ /$key/){
+        $result =~ s/$key/$parameterFile/g;
+      }else{
+        my $parameterFileArg = get_option($config, $section, "${key}_arg", "");
+        $result = $result . " " . $parameterFileArg . " " . $parameterFile;
+      }
     }
   }
   return($result);
