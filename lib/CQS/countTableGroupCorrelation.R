@@ -259,7 +259,7 @@ if(file.exists(succeed_file)){
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]
-  countTableFile<-paste0("C:/projects", countTableFile)
+  #countTableFile<-paste0("C:/projects", countTableFile)
 
   if(!file.exists(countTableFile)){
     missed_count_tables<-c(missed_count_tables, countTableFile)
