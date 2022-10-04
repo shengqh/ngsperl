@@ -692,17 +692,17 @@ fi
             perform               => 1,
             target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_HardFilterAndMakeSitesOnlyVcf",
             option                => "
-  gatk --java-options \"-Xms10g -Xmx10g\" \\
-    VariantFiltration \\
-    --filter-expression \"ExcessHet > 54.69\" \\
-    --filter-name ExcessHet \\
-    -O __NAME__.variant_filtered.vcf.gz \\
-    -V __FILE__
+gatk --java-options \"-Xms10g -Xmx10g\" \\
+  VariantFiltration \\
+  --filter-expression \"ExcessHet > 54.69\" \\
+  --filter-name ExcessHet \\
+  -O __NAME__.variant_filtered.vcf.gz \\
+  -V __FILE__
 
-  gatk --java-options \"-Xms10g -Xmx10g\" \\
-    MakeSitesOnlyVcf \\
-    -I __NAME__.variant_filtered.vcf.gz \\
-    -O __NAME__.sites_only.variant_filtered.vcf.gz
+gatk --java-options \"-Xms10g -Xmx10g\" \\
+  MakeSitesOnlyVcf \\
+  -I __NAME__.variant_filtered.vcf.gz \\
+  -O __NAME__.variant_filtered.sites_only.vcf.gz
 
         ",
             interpretor           => "",
@@ -717,7 +717,7 @@ fi
             output_arg            => "-O",
             output_file_prefix    => "",
             output_file_ext       => ".variant_filtered.vcf.gz",
-            output_other_ext      => ".sites_only.variant_filtered.vcf.gz",
+            output_other_ext      => ".variant_filtered.sites_only.vcf.gz",
             sh_direct             => 0,
             pbs                   => {
               "nodes"    => "1:ppn=1",
@@ -732,9 +732,9 @@ fi
             perform               => 1,
             target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_SitesOnlyGatherVcf",
             option                => "
-  gatk --java-options -Xms6g GatherVcfsCloud  \\
-    --input __FILE__ \\
-    --output __NAME__.sites_only.vcf.gz && tabix __NAME__.sites_only.vcf.gz
+gatk --java-options -Xms6g GatherVcfsCloud  \\
+  --input __FILE__ \\
+  --output __NAME__.sites_only.vcf.gz && tabix __NAME__.sites_only.vcf.gz
   ",
             interpretor           => "",
             program               => "",
@@ -742,7 +742,7 @@ fi
             check_program         => 0,
             source_arg            => "--input",
             source_type           => "array",
-            source_ref            => $HardFilterAndMakeSitesOnlyVcf,
+            source_ref            => [ $HardFilterAndMakeSitesOnlyVcf, ".sites_only.vcf.gz" ],
             source_join_delimiter => " \\\n  --input ",
             output_arg            => "--output",
             output_file_prefix    => "",
@@ -773,22 +773,22 @@ fi
             perform               => 1,
             target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_IndelsVariantRecalibrator",
             option                => "
-  gatk --java-options \"-Xmx24g -Xms24g\" \\
-    VariantRecalibrator \\
-    -V __FILE__ \\
-    -O __NAME__.indels.recal.vcf.gz \\
-    --tranches-file __NAME__.indels.tranches \\
-    --trust-all-polymorphic \\
-    -tranche $indel_tranche_str \\
-    -an $indel_anno_str \\
-    -mode INDEL \\
-    --max-gaussians $indel_max_gaussians \\
-    --resource:mills,known=false,training=true,truth=true,prior=12 ${mills_resource_vcf} \\
-    --resource:axiomPoly,known=false,training=true,truth=false,prior=10 ${axiomPoly_resource_vcf} \\
-    --resource:dbsnp,known=true,training=false,truth=false,prior=2 ${dbsnp_resource_vcf}
+gatk --java-options \"-Xmx24g -Xms24g\" \\
+  VariantRecalibrator \\
+  -V __FILE__ \\
+  -O __NAME__.indels.recal.vcf.gz \\
+  --tranches-file __NAME__.indels.tranches \\
+  --trust-all-polymorphic \\
+  -tranche $indel_tranche_str \\
+  -an $indel_anno_str \\
+  -mode INDEL \\
+  --max-gaussians $indel_max_gaussians \\
+  --resource:mills,known=false,training=true,truth=true,prior=12 ${mills_resource_vcf} \\
+  --resource:axiomPoly,known=false,training=true,truth=false,prior=10 ${axiomPoly_resource_vcf} \\
+  --resource:dbsnp,known=true,training=false,truth=false,prior=2 ${dbsnp_resource_vcf}
 
-  #__OUTPUT__
-  ",
+#__OUTPUT__
+",
             interpretor           => "",
             program               => "",
             docker_prefix         => "gatk4_",
@@ -797,7 +797,7 @@ fi
             source_ref            => $SitesOnlyGatherVcf,
             output_arg            => "-O",
             output_file_prefix    => "",
-            output_file_ext            => ".indels.recal.vcf.gz",
+            output_file_ext       => ".indels.recal.vcf.gz",
             output_other_ext      => ".indels.tranches",
             output_to_same_folder => 1,
             other_localization_ext_array => [".tbi"],
@@ -821,29 +821,29 @@ fi
 
           my $snp_max_gaussians = getValue($def, "snp_max_gaussians", 6);
 
-          my $SNPsVariantRecalibrator = "SNPsVariantRecalibrator";
+          my $SNPsVariantRecalibrator = "SNPsVariantRecalibratorClassic";
           $config->{$SNPsVariantRecalibrator} = {
             class                 => "CQS::ProgramWrapperOneToOne",
             perform               => 1,
-            target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_SNPsVariantRecalibrator",
+            target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_SNPsVariantRecalibratorClassic",
             option                => "
-  gatk --java-options \"-Xmx3g -Xms3g\" \\
-    VariantRecalibrator \\
-    -V __FILE__ \\
-    -O __NAME__.snp.recal.vcf.gz \\
-    --tranches-file __NAME__.snp.tranches \\
-    --trust-all-polymorphic \\
-    -tranche $snp_tranche_str \\
-    -an $snp_anno_str \\
-    -mode SNP \\
-    --max-gaussians $snp_max_gaussians \\
-    --resource:hapmap,known=false,training=true,truth=true,prior=15 ${hapmap_resource_vcf} \
-    --resource:omni,known=false,training=true,truth=true,prior=12 ${omni_resource_vcf} \
-    --resource:1000G,known=false,training=true,truth=false,prior=10 ${one_thousand_genomes_resource_vcf} \
-    --resource:dbsnp,known=true,training=false,truth=false,prior=7 ${dbsnp_resource_vcf}
+gatk --java-options \"-Xmx3g -Xms3g\" \\
+  VariantRecalibrator \\
+  -V __FILE__ \\
+  -O __NAME__.snp.recal.vcf.gz \\
+  --tranches-file __NAME__.snp.tranches \\
+  --trust-all-polymorphic \\
+  -tranche $snp_tranche_str \\
+  -an $snp_anno_str \\
+  -mode SNP \\
+  --max-gaussians $snp_max_gaussians \\
+  --resource:hapmap,known=false,training=true,truth=true,prior=15 ${hapmap_resource_vcf} \
+  --resource:omni,known=false,training=true,truth=true,prior=12 ${omni_resource_vcf} \
+  --resource:1000G,known=false,training=true,truth=false,prior=10 ${one_thousand_genomes_resource_vcf} \
+  --resource:dbsnp,known=true,training=false,truth=false,prior=7 ${dbsnp_resource_vcf}
 
-  #__OUTPUT__
-  ",
+#__OUTPUT__
+",
             interpretor           => "",
             program               => "",
             docker_prefix         => "gatk4_",
@@ -852,8 +852,8 @@ fi
             source_ref            => $SitesOnlyGatherVcf,
             output_arg            => "-O",
             output_file_prefix    => "",
-            output_file_ext            => ".indels.recal.vcf.gz",
-            output_other_ext      => ".indels.tranches",
+            output_file_ext            => ".snps.recal.vcf.gz",
+            output_other_ext      => ".snps.tranches",
             output_to_same_folder => 1,
             other_localization_ext_array => [".tbi"],
             sh_direct             => 0,
@@ -864,101 +864,161 @@ fi
             },
           };
 
-          # initDefaultValue( $def, "snp_filter_level", 99.7 );
-          # initDefaultValue( $def, "indel_filter_level", 99.7 );
-          # initDefaultValue( $def, "SNP_VQSR_downsampleFactor", 10 );
+          my $indel_filter_level = getValue($def, "indel_filter_level", "99.7");
+          my $snp_filter_level = getValue($def, "snp_filter_level", "99.7");
+          my $ApplyRecalibration = "ApplyRecalibration";
+          $config->{$ApplyRecalibration} = {
+            class                 => "CQS::ProgramWrapperOneToOne",
+            perform               => 1,
+            target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_ApplyRecalibration",
+            option                => "
+set -euo pipefail
 
+gatk --java-options \"-Xms5000m -Xmx6500m\" \\
+  ApplyVQSR \\
+  -O tmp.indel.recalibrated.vcf \\
+  -V __FILE__ \\
+  --recal-file __parameterFile1__ \\
+  --use-allele-specific-annotations \\
+  --tranches-file __parameterFile2__ \\
+  --truth-sensitivity-filter-level $indel_filter_level \\
+  --create-output-variant-index true \\
+  -mode INDEL
 
+gatk --java-options \"-Xms5000m -Xmx6500m\" \\
+  ApplyVQSR \\
+  -O __NAME__.filtered.vcf.gz \\
+  -V tmp.indel.recalibrated.vcf \\
+  --recal-file __parameterFile3__ \\
+  --use-allele-specific-annotations \\
+  --tranches-file __parameterFile4__ \\
+  --truth-sensitivity-filter-level $snp_filter_level \\
+  --create-output-variant-index true \\
+  -mode SNP
 
-          # my $fasta = getValue($def, "bwa_fasta");
-          # my $dbsnp = getValue($def, "dbsnp");
+rm tmp.indel.recalibrated.vcf tmp.indel.recalibrated.vcf.idx
+#__OUTPUT__
+",
+            interpretor           => "",
+            program               => "",
+            docker_prefix         => "gatk4_",
+            check_program         => 0,
+            source_arg            => "-V",
+            source_ref            => [ $HardFilterAndMakeSitesOnlyVcf, ".variant_filtered.vcf.gz" ],
+            parameterFile1_ref    => [ $IndelsVariantRecalibrator, ".indels.recal.vcf.gz" ],           
+            parameterFile2_ref    => [ $IndelsVariantRecalibrator, ".indels.tranches" ],
+            parameterFile3_ref    => [ $SNPsVariantRecalibrator, ".snps.recal.vcf.gz" ],           
+            parameterFile4_ref    => [ $SNPsVariantRecalibrator, ".snps.tranches" ],
+            output_arg            => "-O",
+            output_file_prefix    => "",
+            output_file_ext            => ".filtered.vcf.gz",
+            output_to_same_folder => 1,
+            other_localization_ext_array => [".tbi"],
+            sh_direct             => 0,
+            pbs                   => {
+              "nodes"    => "1:ppn=1",
+              "walltime" => "12",
+              "mem"      => "7gb"
+            },
+          };
 
-          # my $vqsr_recalibrator = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_vqsr_recalibrator";
-          # $config->{$vqsr_recalibrator} = {
-          #   class             => "GATK4::VariantFilterRecalibrator",
-          #   perform           => 1,
-          #   target_dir        => "${target_dir}/$vqsr_recalibrator",
-          #   option            => "",
-          #   vqsr_mode         => 1,
-          #   source_ref        => ["$genotypeGVCFs_section",  "sites_only.vcf.gz"],
-          #   java_option       => "",
-          #   fasta_file        => $fasta,
-          #   dbsnp_vcf         => $dbsnp,
-          #   hapmap_vcf        => $def->{hapmap},
-          #   omni_vcf          => $def->{omni},
-          #   g1000_vcf         => $def->{g1000},
-          #   axiomPoly_vcf     => $def->{axiomPoly},
-          #   mills_vcf         => getValue($def, "mills"),
-          #   chromosome_names  => getValue($def, "chromosome_names"),
-          #   sh_direct         => 0,
-          #   pbs               => {
-          #     "nodes"    => "1:ppn=1",
-          #     "walltime" => "4",
-          #     "mem"      => "10gb"
-          #   },
-          # };
-          # push @$summary, ($vqsr_recalibrator);
+          my $FinalGatherVcf = "FinalGatherVcf";
+          $config->{$FinalGatherVcf} = {
+            class                 => "CQS::ProgramWrapper",
+            perform               => 1,
+            target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_FinalGatherVcf",
+            option                => "
+set -euo pipefail
 
-          # my $filter_name_chr_recalibrator_apply = $vqsr_prefix . "_vqsr_3_applyVQSR";
-          # $config->{$filter_name_chr_recalibrator_apply} = {
-          #   class             => "GATK4::VariantFilterApplyVQSR",
-          #   perform           => 1,
-          #   target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply",
-          #   option            => "",
-          #   vqsr_mode         => 1,
-          #   source_ref        => [$genotypeGVCFs_section,  "variant_filtered.vcf.gz"],
-          #   java_option       => "",
-          #   indels_recalibration_ref => [$vqsr_recalibrator, ".indels.recal.vcf.gz"],
-          #   indels_tranches_ref => [$vqsr_recalibrator, ".indels.tranches"],
-          #   snps_recalibration_ref => [$vqsr_recalibrator, ".snp.recal.vcf.gz"],
-          #   snps_tranches_ref => [$vqsr_recalibrator, ".snp.tranches"],
-          #   chromosome_names  => getValue($def, "chromosome_names"),
-          #   sh_direct         => 1,
-          #   pbs               => {
-          #     "nodes"    => "1:ppn=1",
-          #     "walltime" => "4",
-          #     "mem"      => "10gb"
-          #   },
-          # };
-          # push @$summary, ($filter_name_chr_recalibrator_apply);
+# --ignore-safety-checks makes a big performance difference so we include it in our invocation.
+# This argument disables expensive checks that the file headers contain the same set of
+# genotyped samples and that files are in order by position of first record.
+gatk --java-options \"-Xms6000m -Xmx6500m\" \\
+  GatherVcfsCloud \\
+  --ignore-safety-checks \\
+  --gather-type BLOCK \\
+  --input __FILE__ \\
+  --output __NAME__.vcf.gz
 
-          # my $filter_name_chr_recalibrator_apply_gather = $vqsr_prefix . "_vqsr_4_gather";
-          # $config->{$filter_name_chr_recalibrator_apply_gather} = {
-          #   class             => "GATK4::VariantFilterGather",
-          #   perform           => 1,
-          #   target_dir        => "${target_dir}/$filter_name_chr_recalibrator_apply_gather",
-          #   option            => "",
-          #   source_ref        => ["$filter_name_chr_recalibrator_apply",  "pass.vcf.gz"],
-          #   fasta_file        => $fasta,
-          #   java_option       => "",
-          #   chromosome_names  => getValue($def, "chromosome_names"),
-          #   sh_direct         => 1,
-          #   pbs               => {
-          #     "nodes"    => "1:ppn=1",
-          #     "walltime" => "4",
-          #     "mem"      => "10gb"
-          #   },
-          # };
-          # push @$summary, ($filter_name_chr_recalibrator_apply_gather);
+tabix __NAME__.vcf.gz
+",
+            interpretor           => "",
+            program               => "",
+            docker_prefix         => "gatk4_",
+            check_program         => 0,
+            source_arg            => "--input",
+            source_type           => "array",
+            source_ref            => [ $ApplyRecalibration, ".filtered.vcf.gz" ],
+            source_join_delimiter => " \\\n  --input ",
+            output_arg            => "--output",
+            output_file_prefix    => "",
+            output_file_ext       => ".vcf.gz",
+            sh_direct             => 0,
+            pbs                   => {
+              "nodes"    => "1:ppn=1",
+              "walltime" => "12",
+              "mem"      => "10gb"
+            },
+          };
 
-          # $merged_vcf_section = $filter_name_chr_recalibrator_apply_gather;
+          my $ref_fasta_dict = getValue($def, "ref_fasta_dict");
+          my $eval_interval_list = getValue($def, "eval_interval_list");
+          my $CollectMetricsOnFullVcf = "CollectMetricsOnFullVcf";
+          $config->{$CollectMetricsOnFullVcf} = {
+            class                 => "CQS::ProgramWrapperOneToOne",
+            perform               => 1,
+            target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_CollectMetricsOnFullVcf",
+            option                => "
+set -euo pipefail
 
+gatk --java-options \"-Xms6000m -Xmx7000m\" \\
+  CollectVariantCallingMetrics \\
+  --INPUT __FILE__ \\
+  --DBSNP ${dbsnp_resource_vcf} \\
+  --SEQUENCE_DICTIONARY ${ref_fasta_dict} \\
+  --OUTPUT __NAME__ \\
+  --THREAD_COUNT 8 \\
+  --TARGET_INTERVALS ${eval_interval_list}
+",
+            interpretor           => "",
+            program               => "",
+            docker_prefix         => "gatk4_",
+            check_program         => 0,
+            source_arg            => "--INPUT",
+            source_ref            => [ $FinalGatherVcf, ".vcf.gz" ],
+            output_arg            => "--OUTPUT",
+            output_file_prefix    => "",
+            output_file_ext       => ".variant_calling_detail_metrics;.variant_calling_summary_metrics",
+            sh_direct             => 0,
+            output_to_same_folder => 1,
+            pbs                   => {
+              "nodes"    => "1:ppn=8",
+              "walltime" => "12",
+              "mem"      => "10gb"
+            },
+          };
+          push @$summary, ($HardFilterAndMakeSitesOnlyVcf, $SitesOnlyGatherVcf, $IndelsVariantRecalibrator, $SNPsVariantRecalibrator, $ApplyRecalibration, $FinalGatherVcf, $CollectMetricsOnFullVcf);
+
+          $merged_vcf_section = $FinalGatherVcf;
         } else {
           $merged_vcf_section = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
         }
       }
     }
   }
-  my $annovar_name = addAnnovar($config, $def, $summary, $target_dir, $merged_vcf_section, '.gz$', $gatk_prefix, $def, $gatk_index_snv );
 
-  if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-    my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $def, $gatk_index_snv);
+  if(defined $merged_vcf_section){
+    my $annovar_name = addAnnovar($config, $def, $summary, $target_dir, $merged_vcf_section, '.gz$', $gatk_prefix, $def, $gatk_index_snv );
 
-    if ( defined $def->{annotation_genes} ) {
-      my $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+    if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+      my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $def, $gatk_index_snv);
+
+      if ( defined $def->{annotation_genes} ) {
+        my $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+      }
+
+      my $mafreport = addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $def, $gatk_index_snv);
     }
-
-    my $mafreport = addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $def, $gatk_index_snv);
   }
 
   my $tasks = [@$individual, @$summary];
