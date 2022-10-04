@@ -48,7 +48,7 @@ sub perform {
   my ( $scatter, $scatter_arg, $scatter_JoinDelimiter ) = get_parameter_sample_files( $config, $section, "scatter" );
   #print(Dumper($scatter));
 
-  $option = $option . " " . get_parameter_file_option($config, $section);
+  $option = get_parameter_file_option($config, $section, $option);
 
   my $shfile= $self->get_task_filename( $pbs_dir, $task_name );
   my $sh;

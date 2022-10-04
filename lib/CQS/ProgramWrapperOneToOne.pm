@@ -55,7 +55,7 @@ sub perform {
   my @sample_names = ( sort keys %$parameterSampleFile1 );
   my $has_multi_samples = scalar(@sample_names) > 1;
 
-  $option = $option . " " . get_parameter_file_option($config, $section);
+  $option = get_parameter_file_option($config, $section, $option);
 
   my $shfile;
   my $sh;
