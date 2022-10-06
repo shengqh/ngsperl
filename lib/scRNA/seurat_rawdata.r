@@ -146,7 +146,9 @@ for(fileTitle in names(fileMap)) {
   fileName  = fileMap[[fileTitle]]
   cat(fileTitle, "\n")
   if(dir.exists(fileName)){
-    counts = Read10X(fileName)
+    feature.names <- read.delim(paste0(fileName, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
+    gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
+    counts = Read10X(fileName, gene.column=gene.column)
   } else if (grepl('.h5$', fileName)) {
     counts = Read10X_h5(fileName)
   } else if (grepl('.gz$', fileName)) {

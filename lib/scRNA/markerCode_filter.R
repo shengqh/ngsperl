@@ -277,7 +277,9 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
       counts = data.frame(fread(countfile),row.names = 1,check.names=F) 
     }
   } else {
-    counts=Read10X(countfile)
+    feature.names <- read.delim(paste0(countfile, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
+    gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
+    counts=Read10X(countfile, gene.column=gene.column)
   }
   if (transpose){
     counts<-t(counts)
