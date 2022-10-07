@@ -652,7 +652,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   return(finalList)
 }
 
-output_integration_dimplot<-function(obj, outFile, has_batch_file){
+output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL){
   g<-FeaturePlot(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
   width=2500
   ncol=1
@@ -715,6 +715,14 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file){
   png(paste0(outFile, ".final.png"), width=width, height=height, res=300)
   print(p)
   dev.off()
+
+  if(!is.null(qc_genes) & qc_genes != ''){
+    genes<-unlist(strsplit( qc_genes, ',' ))
+    g<-FeaturePlot(obj, genes, split.by="orig.ident")
+    png(paste0(outFile, ".qc_genes.png"), width=3000, height=6000, res=300)
+    print(g)
+    dev.off()
+  }
 }
 
 read_bubble_genes<-function(bubble_file, allgenes=c()){
