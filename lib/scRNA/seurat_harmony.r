@@ -56,4 +56,5 @@ finalList$obj<-obj
 finalListFile<-paste0(outFile, ".final.rds")
 saveRDS(finalList, file=finalListFile)
 
-output_integration_dimplot(obj, outFile, has_batch_file)
+output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
+

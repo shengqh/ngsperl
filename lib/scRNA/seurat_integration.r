@@ -124,4 +124,5 @@ write.csv(clusters, file=paste0(prefix, ".cluster.csv"))
 finalList$obj<-obj
 saveRDS(finalList, file=finalListFile)
 
-output_integration_dimplot(obj, outFile, has_batch_file)
+output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
+

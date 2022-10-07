@@ -76,4 +76,5 @@ obj <- RunUMAP(object = obj, dims=pca_dims, verbose = FALSE)
 finalList$obj<-obj
 saveRDS(finalList, file=finalListFile)
 
-output_integration_dimplot(obj, outFile, FALSE)
+output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
+
