@@ -1834,6 +1834,65 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
       push( @$step6, $annotationGenesPlot );
     }
+  }elsif(getValue($def, "perform_gistic2", 0)){
+    my $Gistic2SegFile = $prefix . "_gatk4_CNV_Germline_07_Gistic2SegFile";
+    $result->{Gistic2SegFile} = $Gistic2SegFile;
+    $config->{$Gistic2SegFile} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => $target_dir . '/' . $Gistic2SegFile,
+      interpretor              => "python3",
+      program                  => "../Format/gatk2gistic_segment_file.py",
+      option                   => "--no_chr",
+      parameterSampleFile1_arg => "-i",
+      parameterSampleFile1_ref => [ $PostprocessGermlineCNVCalls, ".genotyped_segments.vcf.gz" ],
+      parameterFile1_arg       => "-b",
+      output_arg               => "-o",
+      output_file_ext          => ".segmentation.txt",
+      sh_direct                => 1,
+      'pbs'                    => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push( @$step6, $Gistic2SegFile );
+
+    my $gistic2_sif = getValue($def, "gistic2_docker");
+    my $gistic2_refgene = getValue($def, "gistic2_refgene");
+    my $Gistic2 = $prefix . "_gatk4_CNV_Germline_08_Gistic2";
+    $result->{Gistic2} = $Gistic2;
+    $config->{$Gistic2} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => $target_dir . '/' . $Gistic2,
+      interpretor              => "",
+      program                  => "",
+      check_program            => 0,
+      option                   => "
+GISTIC_LOC=/opt/GISTIC
+DOCKER_OUTDIR=\${GISTIC_LOC}/run_result
+
+singularity run -e --bind `pwd`:\${DOCKER_OUTDIR}  $gistic2_sif \\
+  -b \${DOCKER_OUTDIR} -seg __parameterFile1__ -refgene \${GISTIC_LOC}/refgenefiles/$gistic2_refgene \\
+  -rx 0 -genegistic 1 -smallmem 1 -broad 1 -brlen 0.5 -twosize 1 \\
+  -armpeel 1 -savegene 1 -maxseg 10000 -conf 0.99
+
+#__OUTPUT__
+",
+      parameterFile1_arg => "-seg",
+      parameterFile1_ref => $Gistic2SegFile,
+      output_arg               => "-o",
+      output_file_ext          => ".segmentation.txt",
+      sh_direct                => 1,
+      no_docker                => 1,
+      'pbs'                    => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push( @$step6, $Gistic2 );
   }
   
   return($result);
