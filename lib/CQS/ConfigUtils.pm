@@ -2079,9 +2079,9 @@ sub get_parameter_file_option {
     my $parameterFile = parse_param_file( $config, $section, $key, 0 );
 
     if (defined($parameterFile)){
-      my $key = "__${key}__";
-      if ($result =~ /$key/){
-        $result =~ s/$key/$parameterFile/g;
+      my $param_key = "__${key}__";
+      if ($result =~ /$param_key/){
+        $result =~ s/$param_key/$parameterFile/g;
       }else{
         my $parameterFileArg = get_option($config, $section, "${key}_arg", "");
         $result = $result . " " . $parameterFileArg . " " . $parameterFile;
