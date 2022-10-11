@@ -496,6 +496,9 @@ sub getConfig {
   $def = initializeDefaultOptions($def);
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+  #merge summary and individual 
+  push @$individual, @$summary;
+  $summary = $individual;
 
   $config->{general}{interval_list_file} = getValue($def, "interval_list_file");
 
@@ -1021,16 +1024,13 @@ gatk --java-options \"-Xms6000m -Xmx7000m\" \\
     }
   }
 
-  my $tasks = [@$individual, @$summary];
-
   $config->{sequencetask} = {
     class => "CQS::SequenceTaskSlurmSlim",
     perform => 1,
     target_dir            => "${target_dir}/sequencetask",
     option                => "",
     source                => {
-      
-      processing => $tasks,
+      processing => $summary,
     },
     sh_direct             => 1,
     pbs                   => {
