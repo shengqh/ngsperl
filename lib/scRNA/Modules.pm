@@ -199,7 +199,7 @@ sub add_seurat {
       by_integration        => $by_integration,
       by_sctransform        => getValue( $def, "by_sctransform" ),
       batch_for_integration => getValue( $def, "batch_for_integration" ),
-      qc_genes              => getValue( $def, "qc_genes" ),
+      qc_genes              => getValue( $def, "qc_genes", "" ),
     },
     output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
     sh_direct            => 1,
