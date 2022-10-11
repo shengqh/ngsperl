@@ -1,4 +1,4 @@
-#rm(list=ls()) 
+rm(list=ls()) 
 outFile='PL_7114_human'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('C:/projects/nobackup/h_turner_lab/shengq2/20220805_7114_scRNA_human/seurat_sct_harmony_multires_03_choose_bubblemap/result')
+setwd('C:/projects/nobackup/h_turner_lab/shengq2/20220805_7114_scRNA_human/seurat_sct_harmony_multires_06_bubblemap/result')
 
 ### Parameter setting end ###
 
@@ -34,6 +34,8 @@ for(bn in bnames){
   bubblemap_file=bubble_files$V1[bubble_files$V2 == "file" & bubble_files$V3 == bn][1]
   ignore.case=is_one(bubble_files$V1[bubble_files$V2 == "ignore.case" & bubble_files$V3 == bn][1])
   rotate.title= is_one(bubble_files$V1[bubble_files$V2 == "rotate.title" & bubble_files$V3 == bn][1])
+  width=as.numeric(bubble_files$V1[bubble_files$V2 == "width" & bubble_files$V3 == bn][1])
+  height=as.numeric(bubble_files$V1[bubble_files$V2 == "height" & bubble_files$V3 == bn][1])
   
   if(cluster_pattern == "" | cluster_pattern == "*"){
     subobj=obj
@@ -41,10 +43,11 @@ for(bn in bnames){
     cells = colnames(obj)[grepl(cluster_pattern, obj$cell_type, ignore.case = ignore.case)]
     subobj=subset(obj, cells=cells)
   }
-  g=get_bubble_plot(subobj, "seurat_clusters", "cell_type", bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=rotate.title)
+  g=get_bubble_plot(subobj, "seurat_clusters", "cell_type", bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=rotate.title) + scale_color_gradient2(low="blue", mid="yellow", high="red")
   
-  png(paste0(outFile, ".", bn, ".bubblemap.png"), width=5000, height=2000,res=300)
+  png(paste0(outFile, ".", bn, ".bubblemap.png"), width=width, height=height,res=300)
   print(g)
   dev.off()
 }
 
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
