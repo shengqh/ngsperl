@@ -53,16 +53,16 @@ foreach my $file ( split( ",", $input_file ) ) {
     $genome =~ s/PREDICTED: //g;
     $genome =~ s/Homologies in //g;
 
-    if ( $genome =~ /human/i || $genome =~ /homo sapiens/i ) {
+    if ( $genome =~ /human[ \t]/i || $genome =~ /homo sapiens/i ) {
       $genome = "Human";
     }
-    elsif ( $genome =~ /rat/i || $genome =~ /rattus norvegicus/i ) {
+    elsif ( $genome =~ /rat[ \t]/i || $genome =~ /rattus norvegicus/i ) {
       $genome = "Rat";
     }
-    elsif ( $genome =~ /mouse/i || $genome =~ /Mus musculus/i ) {
+    elsif ( $genome =~ /mouse[ \t]/i || $genome =~ /Mus musculus/i ) {
       $genome = "Mouse";
     }
-    elsif ( $genome =~ /zebrafish/i || $genome =~ /Danio rerio/i ) {
+    elsif ( $genome =~ /zebrafish[ \t]/i || $genome =~ /Danio rerio/i ) {
       $genome = "Zebrafish";
     }
     else {

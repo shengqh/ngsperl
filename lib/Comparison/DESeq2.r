@@ -285,12 +285,15 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   }
 }
 
-drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat){
+drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat,scalePCs=TRUE){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     pca<-prcomp(t(rldmatrix))
     supca<-summary(pca)$importance
     pcadata<-data.frame(pca$x)
+    if (scalePCs) {
+      pcadata=as.data.frame(scale(pcadata))
+    }
     pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
     pcadata$sample<-row.names(pcadata)
     pcadata$Group<-condition

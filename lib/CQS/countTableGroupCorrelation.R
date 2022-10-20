@@ -183,13 +183,16 @@ unByteCodeAssign(stats:::plotNode)
 # Now raise the interpreted code recursion limit (you may need to adjust this,
 #  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
 options(expressions=5e4)
-drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width=3000, height=3000){
+drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width=3000, height=3000,scalePCs=TRUE){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
     pca<-prcomp(t(rldmatrix))
     supca<-summary(pca)$importance
     pcadata<-data.frame(pca$x)
+    if (scalePCs) {
+      pcadata=as.data.frame(scale(pcadata))
+    }
     pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
     pcadata["sample"]<-row.names(pcadata)
     if(!is.na(groups[1])){
