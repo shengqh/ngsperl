@@ -1082,6 +1082,25 @@ sub addEdgeRTask {
       },
     };
     push( @$summary, $gseaTaskName );
+
+    my $gsea_report = $gseaTaskName . "_report";
+    $config->{$gsea_report} = {
+      class                      => "CQS::BuildReport",
+      perform                    => 1,
+      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
+      report_rmd_file            => "GSEAReport.Rmd",
+      additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+      parameterSampleFile1_ref   => [$gseaTaskName],
+      parameterSampleFile1_names => ["gsea"],
+      parameterSampleFile3       => [],
+      sh_direct                  => 1,
+      pbs                        => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $gsea_report );
   }
   
   return ($edgeRtaskname);
