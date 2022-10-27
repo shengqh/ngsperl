@@ -489,6 +489,7 @@ sub addDEseq2 {
     cluster                      => $def->{cluster},
     export_significant_gene_name => $def->{DE_export_significant_gene_name},
     cooksCutoff                  => $def->{DE_cooksCutoff},
+    covariance_name_index        => getValue($def, "covariance_name_index", 0),
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
     rCode                        => $rCode,
@@ -1492,12 +1493,15 @@ sub addGATK4PreprocessIntervals {
     $index = "";
   }
 
-  my $result = $prefix . "_gatk4_CNV_Germline${index}_PreprocessIntervals";
+  my $result = $prefix . "gatk4_CNV_Germline${index}_PreprocessIntervals";
   if ( !defined $config->{$result} ) {
     my $interval_file;
+    my $bin_option = "";
     if (defined $def->{is_wgs}) {
       if($def->{is_wgs}){
         $interval_file = getValue($def, "wgs_calling_regions_file");
+        my $cnv_bin_length = getValue($def, "cnv-bin-length", 1000);
+        $bin_option = "--bin-length $cnv_bin_length";
       }else{
         $interval_file = getValue($def, "covered_bed");
       }
@@ -1508,7 +1512,7 @@ sub addGATK4PreprocessIntervals {
     #PreprocessIntervals at summary level
     $config->{$result} = {
       class             => "GATK4::PreprocessIntervals",
-      option            => "",
+      option            => $bin_option,
       interval_file     => $interval_file,
       ref_fasta_dict    => getValue( $def, "ref_fasta_dict" ),
       ref_fasta         => getValue( $def, "ref_fasta" ),
@@ -1537,12 +1541,12 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
 
   #CollectReadCounts at sample level
-  my $CollectReadCounts = $prefix . "_gatk4_CNV_Germline_02_CollectReadCounts";
+  my $CollectReadCounts = $prefix . "gatk4_CNV_Germline_02_CollectReadCounts";
   $result->{CollectReadCounts} = $CollectReadCounts;
   $config->{$CollectReadCounts} = {
     class                      => "GATK4::CollectReadCounts",
     source_ref                 => $bam_ref,
-    option                     => "",
+    option                     => getValue($def, "gatk4_CollectReadCounts_option", ""),
     preprocessed_intervals_ref => $preprocessIntervalsTask,
     ref_fasta_dict             => getValue( $def, "ref_fasta_dict" ),
     ref_fasta                  => getValue( $def, "ref_fasta" ),
@@ -1558,7 +1562,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step3, $CollectReadCounts );
 
   #FilterIntervals at summary level
-  my $FilterIntervals = $prefix . "_gatk4_CNV_Germline_03_FilterIntervals";
+  my $FilterIntervals = $prefix . "gatk4_CNV_Germline_03_FilterIntervals";
   $result->{FilterIntervals} = $FilterIntervals;
   $config->{$FilterIntervals} = {
     class                      => "GATK4::FilterIntervals",
@@ -1581,7 +1585,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $FilterIntervals );
 
   #DetermineGermlineContigPloidy at summary level
-  my $DetermineGermlineContigPloidyCohortMode = $prefix . "_gatk4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
+  my $DetermineGermlineContigPloidyCohortMode = $prefix . "gatk4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
   $result->{DetermineGermlineContigPloidyCohortMode} = $DetermineGermlineContigPloidyCohortMode;
   $config->{$DetermineGermlineContigPloidyCohortMode} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
@@ -1601,7 +1605,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $DetermineGermlineContigPloidyCohortMode );
 
   #GermlineCNVCaller at summary level
-  my $GermlineCNVCaller = $prefix . "_gatk4_CNV_Germline_05_GermlineCNVCaller";
+  my $GermlineCNVCaller = $prefix . "gatk4_CNV_Germline_05_GermlineCNVCaller";
   if ($def->{gatk4_cnv_by_scatter}){
     #scatter filter intervals
     my $ScatterIntervals = $GermlineCNVCaller . "_1_scatterIntervals";
@@ -1668,7 +1672,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   $result->{GermlineCNVCaller} = $GermlineCNVCaller;
 
   #PostprocessGermlineCNVCalls at sample level
-  my $PostprocessGermlineCNVCalls = $prefix . "_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls";
+  my $PostprocessGermlineCNVCalls = $prefix . "gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls";
   $result->{PostprocessGermlineCNVCalls} = $PostprocessGermlineCNVCalls;
   $config->{$PostprocessGermlineCNVCalls} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
@@ -1691,7 +1695,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   if(not $def->{is_wgs}) {
     #CombineGCNV at summary level
-    my $CombineGCNV = $prefix . "_gatk4_CNV_Germline_07_CombineGCNV";
+    my $CombineGCNV = $prefix . "gatk4_CNV_Germline_07_CombineGCNV";
     $result->{CombineGCNV} = $CombineGCNV;
     $config->{$CombineGCNV} = {
       class                    => "CQS::ProgramWrapper",
@@ -1718,7 +1722,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     };
     push( @$step6, $CombineGCNV );
     
-    my $sizeFactorTask = $prefix . "_gatk4_CNV_Germline_08_SizeFactor";
+    my $sizeFactorTask = $prefix . "gatk4_CNV_Germline_08_SizeFactor";
     $result->{sizeFactor} = $sizeFactorTask;
     $config->{$sizeFactorTask} = {
       class                    => "CQS::ProgramWrapper",
@@ -1746,7 +1750,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
     my $cnvIndex;
     if($def->{plotCNVGenes} && $def->{annotation_genes}){
-      my $cnvGenes = $prefix . "_gatk4_CNV_Germline_09_CNVGenesLocus";
+      my $cnvGenes = $prefix . "gatk4_CNV_Germline_09_CNVGenesLocus";
       $result->{cnvGenes} = $cnvGenes;
       $config->{$cnvGenes} = {
         class                    => "CQS::UniqueR",
@@ -1765,7 +1769,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       };
       push( @$step6, $cnvGenes );
       
-      my $plotCNVgenes = $prefix . "_gatk4_CNV_Germline_10_CNVGenesPlot";
+      my $plotCNVgenes = $prefix . "gatk4_CNV_Germline_10_CNVGenesPlot";
       $result->{plotCNVgenes} = $plotCNVgenes;
       $config->{$plotCNVgenes} = {
         class                 => "CQS::ProgramWrapper",
@@ -1803,7 +1807,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
     my $annotationGenesPlot = undef;
     if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
-      $annotationGenesPlot = $prefix . "_gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
+      $annotationGenesPlot = $prefix . "gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
       $result->{annotationGenesPlot} = $annotationGenesPlot;
       $config->{$annotationGenesPlot} = {
         class                 => "CQS::ProgramWrapper",
@@ -1835,7 +1839,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       push( @$step6, $annotationGenesPlot );
     }
   }elsif(getValue($def, "perform_gistic2", 0)){
-    my $Gistic2SegFile = $prefix . "_gatk4_CNV_Germline_07_Gistic2SegFile";
+    my $Gistic2SegFile = $prefix . "gatk4_CNV_Germline_07_Gistic2SegFile";
     $result->{Gistic2SegFile} = $Gistic2SegFile;
     $config->{$Gistic2SegFile} = {
       class                    => "CQS::ProgramWrapper",
@@ -1843,7 +1847,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       target_dir               => $target_dir . '/' . $Gistic2SegFile,
       interpretor              => "python3",
       program                  => "../Format/gatk2gistic_segment_file.py",
-      option                   => "--no_chr",
+      option                   => getValue($def, "Gistic2SegFile_option", "--no_chr --no_y"),
       parameterSampleFile1_arg => "-i",
       parameterSampleFile1_ref => [ $PostprocessGermlineCNVCalls, ".genotyped_segments.vcf.gz" ],
       parameterFile1_arg       => "-b",
@@ -1860,7 +1864,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
     my $gistic2_sif = getValue($def, "gistic2_docker");
     my $gistic2_refgene = getValue($def, "gistic2_refgene");
-    my $Gistic2 = $prefix . "_gatk4_CNV_Germline_08_Gistic2";
+    my $Gistic2 = $prefix . "gatk4_CNV_Germline_08_Gistic2";
     $result->{Gistic2} = $Gistic2;
     $config->{$Gistic2} = {
       class                    => "CQS::ProgramWrapper",
