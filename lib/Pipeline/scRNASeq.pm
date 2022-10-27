@@ -236,6 +236,10 @@ sub getScRNASeqConfig {
   my $perform_clonotype_analysis = getValue($def, "perform_clonotype_analysis", 0);
   my $clonotype_ref = undef;
 
+  my $perform_arcasHLA = getValue($def, "perform_arcasHLA", 0);
+  my $perform_strelka2 = getValue($def, "perform_strelka2", 0);
+
+  my $bam_ref = undef;
   my $hla_merge = undef;
   my $individual_qc_task = "individual_qc";
   my $qc_filter_config_file = $target_dir . "/qc_filter_config.txt";
@@ -266,6 +270,8 @@ sub getScRNASeqConfig {
       my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref);
       $hto_ref = [ $hto_task, ".HTO.csv" ];
 
+      my $hto_bam_ref = $hto_ref;
+
       my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, $hto_ref);
 
       push (@report_files, ($hto_summary_task, ".HTO.summary.global.png"));
@@ -276,17 +282,19 @@ sub getScRNASeqConfig {
         my $hto_souporcell_task = add_souporcell($config, $def, $summary, $target_dir, $preparation_task);
         my $hto_integration_task = add_souporcell_integration($config, $def, $summary, $target_dir, $hto_souporcell_task, $hto_ref);
         $hto_ref = [ $hto_integration_task, ".meta.rds" ];
+        $hto_bam_ref = [ $hto_integration_task, ".HTO.csv" ];
       }
 
       if(defined $def->{HTO_samples}){
         $hto_sample_file = write_HTO_sample_file($def);
       }
 
-      my $perform_arcasHLA = getValue($def, "perform_arcasHLA", 0);
+      if($perform_arcasHLA || $perform_strelka2){
+        $bam_ref = add_hto_bam($config, $def, $individual, $target_dir, $hto_bam_ref);
+      }
 
       if($perform_arcasHLA){
-        my $hto_bam_task = add_hto_bam($config, $def, $individual, $target_dir, $hto_ref);
-        $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, $hto_bam_task . "_", $hto_bam_task);        
+        $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref);        
       }
 
       if($perform_clonotype_analysis){
@@ -294,15 +302,24 @@ sub getScRNASeqConfig {
         $clonotype_ref = [$split_task, "all_contig_annotations.json"];
       }
     }else{
-      if(getValue($def, "perform_arcasHLA", 0)){
+      if($perform_arcasHLA || $perform_strelka2){
         getValue($def, "bam_files");
+        $bam_ref = "bam_files";
+      }
+    
+      if($perform_arcasHLA){
         if (defined $def->{singleend_bam_files}){
           $config->{singleend_bam_files} = $def->{singleend_bam_files};
-          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files", "singleend_bam_files");        
+          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref, "singleend_bam_files");        
         }else{
-          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files");        
+          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref);        
         }
       }
+    }
+
+    if($perform_strelka2){
+      my $strelka2_task = "strelka2";
+      add_strelka2($config, $def, $summary, $target_dir, $strelka2_task, $bam_ref);
     }
 
     my $merge_task = undef;
