@@ -106,7 +106,7 @@ for (i in 1:nrow(preRankedGeneFileTable)) {
   preRankedGeneFile=preRankedGeneFileTable[i,1]
   
   if(!file.exists(preRankedGeneFile)){
-    stop(paste0("File not exists: " + preRankedGeneFile))
+    stop(paste0("File not exists: ", preRankedGeneFile))
   }
 }
 
