@@ -500,10 +500,10 @@ for(countfile_index in c(1:length(countfiles))){
                                 colData = designData,
                                 design = ~1) 
       dds=collapseReplicates(dds, designData[,collapse_by], designData$Sample)   
-      comparisonData<-counts(dds)
       designData<-designData[!duplicated(designData[,collapse_by]),]
       designData$Sample<-designData[,collapse_by]
       designData<-designData[,colnames(designData) != collapse_by]
+      comparisonData<-counts(dds)[,designData$Sample]
       rm(dds)
     }
     
