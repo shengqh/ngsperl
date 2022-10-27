@@ -62,7 +62,9 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addSubClusterChoose
   addClonotypeVis
   addClonotypeDB
-  addClonotypeCluster)] );
+  addClonotypeCluster
+  add_strelka2
+)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -259,6 +261,16 @@ enclone TCR=\${dn} POUT=__NAME__.pchain4.csv PCHAINS=4 PCOLS=n,group_id,group_nc
 sub addClonotypeMerge {
   my ( $config, $def, $tasks, $target_dir, $taskname, $source_ref ) = @_;
 
+  my $post_command = "";
+  if(defined $def->{enclone_vdj_reference_tar_gz}){
+    $post_command = "if [[ ! -e vdj_reference ]]; then
+  mkdir vdj_reference
+fi
+
+tar -xzvf $def->{enclone_vdj_reference_tar_gz} -C vdj_reference
+";
+  }
+
   $config->{$taskname} = {
     class                    => "CQS::ProgramWrapper",
     perform                  => 1,
@@ -273,6 +285,7 @@ sub addClonotypeMerge {
     output_file_ext          => ".json",
     output_other_ext         => ".json.cdr3",
     output_no_name           => 1,
+    post_command             => $post_command,
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",
@@ -369,6 +382,7 @@ sub addConsensusToImmunarch {
   push(@$tasks, $taskname);
   return($taskname);
 }
+
 
 sub addArcasHLA_extract {
   my ( $config, $def, $tasks, $target_dir, $task_name, $extract_task, $source_ref, $ispairend ) = @_;
@@ -1609,7 +1623,7 @@ sub add_souporcell_integration {
     parameterSampleFile4     => $def->{ignore_souporcell_cluster},
     output_perSample_file => "parameterSampleFile1",
     output_perSample_file_byName => 1,
-    output_perSample_file_ext => ".HTO.png;.meta.rds",
+    output_perSample_file_ext => ".HTO.png;.HTO.csv;.meta.rds",
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=1",
@@ -1655,11 +1669,12 @@ sub add_hto_bam {
     output_file_ext => ".bam",
     output_to_same_folder => 1,
     can_result_be_empty_file => 0,
+    docker_prefix => "pysam_",
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "24",
+      "mem"       => "20gb"
     },
   };
   push( @$individual, $hto_bam_task );
@@ -1908,5 +1923,110 @@ sub add_doublet_check {
   push( @$summary, $doublet_check_task );
 }
 
+#https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1863-4#availability-of-data-and-materials
+#https://github.com/fenglin0/benchmarking_variant_callers/blob/master/callVCF_adjustparameters.sh
+sub add_strelka2 {
+  my ($config, $def, $summary, $target_dir, $strelka2_task, $bam_ref ) = @_;
+
+  my $referenceFasta = getValue($def, "strelka2_referenceFasta");
+
+  $config->{$strelka2_task} = {
+    class                    => "CQS::ProgramWrapperOneToOne",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $strelka2_task,
+    option                   => "
+
+if [[ -s __FILE__.bai ]]; then
+  configureStrelkaGermlineWorkflow.py --rna --bam __FILE__ --referenceFasta $referenceFasta --runDir .
+
+  ./runWorkflow.py -m local -j __THREAD__
+fi
+
+#__OUTPUT__
+", 
+    source_ref => $bam_ref,
+    program             => "",
+    check_program        => 0,
+    output_arg           => "",
+    output_no_name       => 1,
+    output_file_ext      => "results/variants/variants.vcf.gz",
+    output_other_ext  => "",
+    sh_direct            => 1,
+    output_to_same_folder => 0,
+    no_docker            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$summary, $strelka2_task );
+
+  if(getValue($def, "strelka2_extract_snp", 0)){
+    my $snp_chrom = getValue($def, "strelka2_extract_snp_chrom");
+    my $snp_position = getValue($def, "strelka2_extract_snp_position");
+
+    my $snp_task = $strelka2_task . "_snp";
+    $config->{$snp_task} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $snp_task,
+      option                   => "--snp_chrom $snp_chrom --snp_position $snp_position",
+      source_arg => "-i",
+      source_ref => $strelka2_task,
+      interpretor          => "python3",
+      program             => "../Variants/extractVariant.py",
+      check_program        => 1,
+      output_arg           => "-o",
+      output_file_ext      => ".snp.vcf",
+      output_other_ext  => "",
+      sh_direct            => 1,
+      output_to_same_folder => 0,
+      no_docker            => 0,
+      pbs                  => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary, $snp_task );
+  }
+
+  my $combined_task = $strelka2_task . "_combine";
+  $config->{$combined_task} = {
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $combined_task,
+    option                   => "
+
+configureStrelkaGermlineWorkflow.py --rna \\
+  --bam __FILE__ \\
+  --referenceFasta $referenceFasta --runDir .
+
+./runWorkflow.py -m local -j __THREAD__
+
+#__OUTPUT__
+", 
+    source_arg => "--bam",
+    source_type => "array",
+    source_join_delimiter => " \\\n  --bam ",
+    source_ref => $bam_ref,
+    program             => "",
+    check_program        => 0,
+    output_arg           => "",
+    output_file_ext      => ".doublet_perc.png",
+    output_other_ext  => "",
+    sh_direct            => 1,
+    output_to_same_folder => 0,
+    no_docker            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "48",
+      "mem"       => "60gb"
+    },
+  };
+  push( @$summary, $combined_task );
+
+}
 
 1;
