@@ -1781,6 +1781,7 @@ sub read_table {
   my $header = <$fh>;
   chomp($header);
   my @headers = split('\t', $header);
+  map { s/^\s+|\s+$//g; } @headers;
   #print(Dumper(@headers));
   
   my $names = {};
