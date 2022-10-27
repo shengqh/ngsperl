@@ -1955,7 +1955,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
 
   my $cnvMap = undef;
   if ( $def->{perform_cnv_gatk4_cohort} ) {
-    $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
+    $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, "", $individual, $summary, $step3, $step4, $step5, $step6 );
     if(defined $annovar_filter_geneannotation_name ) {
       my $combineTask = $cnvMap->{CombineGCNV};
       my $snvTop10cnvOncoPlotTask = "${bam_input}_SNV_top10_CNV_Oncoplot";
