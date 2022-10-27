@@ -157,7 +157,7 @@ for (sample_name in rownames(souporcell_tb)){
   tags<-tags[order(tags)]
   tags<-gsub("-",".",tags)
   hto_final<-s[,c(tags, "Final")]
-  hto_final$HTO.golbal=unlist(lapply(hto_final$Final, function(x){
+  hto_final$HTO.global=unlist(lapply(hto_final$Final, function(x){
     if(x == "Doublet"){
       return("Doublet")
     }
@@ -166,7 +166,7 @@ for (sample_name in rownames(souporcell_tb)){
     }
     return("Singlet")
   }))
-  colnames(hto_final)<-c(tags, "HTO", "HTO.golbal")
+  colnames(hto_final)<-c(tags, "HTO", "HTO.global")
   write.csv(hto_final, paste0(sample_name, ".HTO.csv"))
   
   obj$souporcell<-s$souporcell
