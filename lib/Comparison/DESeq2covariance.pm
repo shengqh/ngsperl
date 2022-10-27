@@ -38,7 +38,9 @@ sub perform {
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $covariance_file = get_option_file($config, $section, "covariance_file", 1);
-  my ($cov_table, $cov_names) = read_table($covariance_file, 0);
+  my ($cov_table, $cov_names) = read_table($covariance_file, get_option($config, $section, "covariance_name_index", 0));
+
+  #print(Dumper($cov_table));
 
   my $comparisonAttributes = get_raw_files_attributes( $config, $section );
   my $comparisonTitles = \@comparison_names;
@@ -97,7 +99,7 @@ sub perform {
   my $designfilename = "${task_name}.define";
   my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
-  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tdesignFormula\tcontrast\n";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tdesignFormula\tcontrast\tcollapse_by\n";
 
   for my $comparisonIndex ( 0 .. $#comparison_names ) {
     my $comparison_name = $comparison_names[$comparisonIndex];
@@ -123,11 +125,15 @@ sub perform {
 
     my $contrast="";
     my $designFormula="";
+    my $collapse_by="";
     if (exists($$comp_def{"designFormula"})) {
         $designFormula = ${$comp_def->{designFormula}}[0];
     }
     if (exists($$comp_def{"contrast"})) {
         $contrast = ${$comp_def->{contrast}}[0];
+    }
+    if (exists($$comp_def{"collapse_by"})) {
+        $collapse_by = $comp_def->{collapse_by};
     }
 
     #print( Dumper(@group_names) );
@@ -193,7 +199,7 @@ sub perform {
     if ( ref $curcountfile eq ref [] ) {
       $curcountfile = $curcountfile->[0];
     }
-    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$designFormula\t$contrast\n";
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$designFormula\t$contrast\t$collapse_by\n";
   }
   close($df);
 
