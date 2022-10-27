@@ -67,7 +67,7 @@ sub getSmallRNAConfig {
 
   my $perform_annotate_unmapped_reads    = getValue( $def, "perform_annotate_unmapped_reads" );
   my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
-  my $perform_short_reads_source         = getValue( $def, "perform_short_reads_source", 0 );
+  my $perform_short_reads_source         = $search_host_genome && getValue( $def, "perform_short_reads_source" );
 
   my $perform_bacteria_count         = getValue( $def, "perform_bacteria_count", 0 );
 
@@ -378,6 +378,46 @@ sub getSmallRNAConfig {
     addBowtie( $config, $def, $individual_ref, $hostBowtieTask, $host_intermediate_dir, $def->{bowtie1_index}, $host_identical_ref, $def->{bowtie1_option_1mm} );
 
     my $bamSource = $hostBowtieTask;
+
+    if(getValue($def, "is_mix_genome", 0)){
+      my $filterMixBam_folder = $host_intermediate_dir . "/" . getNextFolderIndex($def) . "filterMixBam";
+      my $host_prefix = getValue($def, "host_prefix");
+      $config->{"filterMixBam"} = {
+        class                 => "CQS::ProgramWrapperOneToOne",
+        perform               => 1,
+        target_dir            => $filterMixBam_folder,
+        init_command          => "echo sort bam by query name
+samtools sort -o __NAME__.name.bam -n __FILE__
+
+echo filter bam by host_prefix $host_prefix ",
+        post_command          => "echo sort bam by coordinate
+samtools sort -o __NAME__.fixed.bam __NAME__.filtered.bam
+rm -f __NAME__.name.bam __NAME__.filtered.bam
+mv __NAME__.filtered.txt __NAME__.fixed.txt
+",
+        option                => "-i __NAME__.name.bam -o __NAME__.filtered.bam --host_prefix " . $host_prefix,
+        interpretor           => "python3",
+        check_program         => 1,
+        program               => "../Alignment/filterMixBam.py",
+        source_ref            => [ $bamSource, ".bam\$" ],
+        source_arg            => "-i",
+        source_join_delimiter => "",
+        output_to_same_folder => 1,
+        output_arg            => "-o",
+        output_file_prefix    => ".fixed.bam",
+        output_file_ext       => ".fixed.bam",
+        output_other_ext      => ".fixed.txt",
+        sh_direct             => 0,
+        pbs                   => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "10",
+          "mem"       => "40gb"
+        },
+      };
+
+      $bamSource = ["filterMixBam", ".fixed.bam"];
+      push @$individual_ref, ("filterMixBam");
+    }
 
     if ($isHomologyAnalysis) {
       my $realBowtieTask = "bowtie1_real_genome_1mm_NTA";
@@ -1907,8 +1947,8 @@ fi
     }
   }
 
-
-  if (getValue($def, "perform_nonhost_count", 1)) {
+  my $perform_nonhost_count = ($search_nonhost_genome || $search_nonhost_library) && getValue($def, "perform_nonhost_count", 1);
+  if ($perform_nonhost_count) {
     $config->{nonhost_count} = {
       class              => "CQS::UniqueR",
       perform            => 1,
@@ -2211,26 +2251,29 @@ fi
   if(defined $config->{nonhost_genome_count}){
     $paramFile = ["nonhost_genome_count"];
   }
-  $config->{reads_in_tasks} = {
-    class                    => "CQS::UniqueR",
-    perform                  => 1,
-    target_dir               => $data_visualization_dir . "/reads_in_tasks",
-    rtemplate                => "countTableVisFunctions.R,ReadsInTasks.R",
-    output_file_ext          => ".TaskReads.csv",
-    parameterSampleFile1_ref => \@table_for_countSum,
-    parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
-    rCode                    => $R_font_size,
-    sh_direct                => 1,
-    pbs                      => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => "10gb"
-    },
-  };
 
-  push @$summary_ref, ("reads_in_tasks");
+  if(scalar(@table_for_countSum) > 0) {
+    $config->{reads_in_tasks} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $data_visualization_dir . "/reads_in_tasks",
+      rtemplate                => "countTableVisFunctions.R,ReadsInTasks.R",
+      output_file_ext          => ".TaskReads.csv",
+      parameterSampleFile1_ref => \@table_for_countSum,
+      parameterFile3_ref       => [ "fastqc_count_vis", ".Reads.csv\$" ],
+      rCode                    => $R_font_size,
+      sh_direct                => 1,
+      pbs                      => {
+        "email"     => $def->{email},
+        "emailType" => $def->{emailType},
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "12",
+        "mem"       => "10gb"
+      },
+    };
+
+    push @$summary_ref, ("reads_in_tasks");
+  }
 
   if ( $search_host_genome && $search_nonhost_database ) {
     my $cur_r_code = $R_font_size . " " . getUniqueGroups($def);
@@ -2306,56 +2349,59 @@ fi
   }
 
   if ($perform_class_independent_analysis) {
-    my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "'); ";
-    $config->{top_sequence_mapped_in_categories} = {
-      class                    => "CQS::UniqueR",
-      perform                  => 1,
-      target_dir               => $data_visualization_dir . "/top_sequence_mapped_in_categories",
-      rtemplate                => "countTableVisFunctions.R,TopReadsMappingSummary.R",
-      output_file_ext          => ".ReadsMapping.Summary.csv",
-      parameterFile1_ref       => [ "identical_sequence_count_table", $task_name . "_sequence.read.count\$" ],
-      parameterSampleFile1_ref => \@table_for_readSummary,
-      parameterSampleFile2     => $groups,
-      parameterSampleFile3     => $def->{groups_vis_layout},
-      rCode                    => $name_for_readSummary_r . $R_font_size,
-      sh_direct                => 1,
-      pbs                      => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "12",
-        "mem"       => "10gb"
-      },
-    };
-    push @$summary_ref, "top_sequence_mapped_in_categories";
-  }
-  if ($perform_short_reads_source) {
-    $config->{short_reads_source} = {
-      'class'                    => 'CQS::ProgramWrapper',
-      'parameterSampleFile1_arg' => '-m',
-      'parameterSampleFile1_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
-      'parameterSampleFile2_arg' => '-a',
-      'parameterSampleFile2_ref' => \@table_for_readSummary,
-      'parameterFile1_arg'       => "-i",
-      'parameterFile1_ref'       => [ $short_reads_table, ".count.txt\$" ],
-      'option'                   => "-n \"" . join( ",", @name_for_readSummary ) . "\"",
-      'interpretor'              => 'python3',
-      'program'                  => '../SmallRNA/shortReadSource.py',
-      'target_dir'               => $data_visualization_dir . "/short_reads_source",
-      'output_ext'               => '.tsv',
-      'output_arg'               => '-o',
-      'output_to_same_folder'    => 1,
-      'sh_direct'                => 1,
-      'perform'                  => 1,
-      'pbs'                      => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
-      },
-    };
-    push @$summary_ref, "short_reads_source";
+    if(scalar(@table_for_readSummary) > 0){
+      my $name_for_readSummary_r = "readFilesModule=c('" . join( "','", @name_for_readSummary ) . "'); ";
+      $config->{top_sequence_mapped_in_categories} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $data_visualization_dir . "/top_sequence_mapped_in_categories",
+        rtemplate                => "countTableVisFunctions.R,TopReadsMappingSummary.R",
+        output_file_ext          => ".ReadsMapping.Summary.csv",
+        parameterFile1_ref       => [ "identical_sequence_count_table", $task_name . "_sequence.read.count\$" ],
+        parameterSampleFile1_ref => \@table_for_readSummary,
+        parameterSampleFile2     => $groups,
+        parameterSampleFile3     => $def->{groups_vis_layout},
+        rCode                    => $name_for_readSummary_r . $R_font_size,
+        sh_direct                => 1,
+        pbs                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "12",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, "top_sequence_mapped_in_categories";
+    }
+    
+    if ($perform_short_reads_source) {
+      $config->{short_reads_source} = {
+        'class'                    => 'CQS::ProgramWrapper',
+        'parameterSampleFile1_arg' => '-m',
+        'parameterSampleFile1_ref' => [ "bowtie1_genome_1mm_NTA", ".bam.max.txt" ],
+        'parameterSampleFile2_arg' => '-a',
+        'parameterSampleFile2_ref' => \@table_for_readSummary,
+        'parameterFile1_arg'       => "-i",
+        'parameterFile1_ref'       => [ $short_reads_table, ".count.txt\$" ],
+        'option'                   => "-n \"" . join( ",", @name_for_readSummary ) . "\"",
+        'interpretor'              => 'python3',
+        'program'                  => '../SmallRNA/shortReadSource.py',
+        'target_dir'               => $data_visualization_dir . "/short_reads_source",
+        'output_ext'               => '.tsv',
+        'output_arg'               => '-o',
+        'output_to_same_folder'    => 1,
+        'sh_direct'                => 1,
+        'perform'                  => 1,
+        'pbs'                      => {
+          "email"     => $def->{email},
+          "emailType" => $def->{emailType},
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary_ref, "short_reads_source";
+    }
   }
 
   #add time cost task in the end of pipeline

@@ -505,7 +505,8 @@ sub getPrepareConfig {
     }
   }
 
-  if ( $consider_tRNA_NTA ) {
+  my $search_host_genome = getValue($def, "search_host_genome", 1);
+  if ( $search_host_genome && $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
       perform            => 1,
@@ -572,7 +573,7 @@ sub getPrepareConfig {
     }
   }
 
-  if ( $consider_miRNA_NTA || $consider_tRNA_NTA ) {
+  if ( $search_host_genome && ($consider_miRNA_NTA || $consider_tRNA_NTA )) {
     my $ccaaOption = $consider_tRNA_NTA ? "--ccaa" : "--no-ccaa";
     $preparation->{identical_NTA} = {
       class      => "SmallRNA::FastqSmallRnaNTA",
