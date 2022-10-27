@@ -679,7 +679,8 @@ fi
     #my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
 
     if ( $def->{perform_cnv_gatk4_cohort} ) {
-      my $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $bam_recalibration_section, "Recalibrated_bam", $individual, $summary, $summary, $summary, $summary, $summary );
+      my $cnv_prefix = getValue($def, "cnv_prefix", "");
+      my $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $bam_recalibration_section, $cnv_prefix, $individual, $summary, $summary, $summary, $summary, $summary );
     }
 
     if ($def->{perform_gvcf_to_genotype}) {
