@@ -34,6 +34,9 @@ sub getAllDependentJobids {
 
 sub get_dependent_job_ids {
   my ( $task_dep_pbs_map, $pbs_id_map, $task_section, $task_name, $pbs_file ) = @_;
+
+  my $ignore_dependency = $task_dep_pbs_map->{ignore_dependency};
+
   my $dep_pbs_map = $task_dep_pbs_map->{$task_section}{$pbs_file};
 
   my $result = "";
@@ -44,6 +47,10 @@ sub get_dependent_job_ids {
   my @ids = ();
   for my $dep_pbs (keys %$dep_pbs_map){
     if (!defined $pbs_id_map->{$dep_pbs}){
+      if($ignore_dependency){
+        next;
+      }
+      
       my $str = Dumper($pbs_id_map);
       open(my $idmap, ">id.map");
       print ($idmap $str);
@@ -151,6 +158,8 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
 
   my $task_dep_pbs_map = $self->get_all_dependent_pbs_map( $config, $section );
+
+  $task_dep_pbs_map->{ignore_dependency} = get_option($config, $section, "ignore_dependency", 0);
 
   if ($config->{general}{debug}){
     print Dumper($task_dep_pbs_map->{GatherBQSRReports});
