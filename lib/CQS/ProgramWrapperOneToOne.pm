@@ -39,6 +39,7 @@ sub perform {
   }
 
   my $init_command = get_option( $config, $section, "init_command", "" );
+  my $post_command = get_option( $config, $section, "post_command", "" );
 
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program     = get_program( $config, $section );
@@ -170,6 +171,16 @@ fi
       $cur_init_command =~ s/__FILE__/$param_option1/g;
     }
 
+    my $cur_post_command = $post_command;
+    if ($cur_post_command =~ /__NAME__/){
+      $cur_post_command =~ s/__NAME__/$sample_name/g;
+    }
+
+    if ($cur_post_command =~ /__FILE__/){
+      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
+      $cur_post_command =~ s/__FILE__/$param_option1/g;
+    }
+
     for my $key (sort keys %$paramFileMap){
       my $values = $paramFileMap->{$key};
       if(!$ignored_map->{$key}) {
@@ -182,6 +193,7 @@ $cur_init_command
 
 $interpretor $program $curOption $output_option
 
+$cur_post_command
 ";
 
     $self->clean_temp_files($pbs, $localized_files);
