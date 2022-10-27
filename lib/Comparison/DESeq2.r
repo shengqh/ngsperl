@@ -456,6 +456,14 @@ for(countfile_index in c(1:length(countfiles))){
     } else {
       contrast=NULL
     }
+    if ("collapse_by" %in% colnames(comparisons)) {
+      collapse_by=comparisons$collapse_by[comparison_index]
+      if (is.na(collapse_by) || (collapse_by=="")) {
+        collapse_by=NULL
+      }
+    } else {
+      collapse_by=NULL
+    }
     
     titles<-c(titles, comparisonTitle)
     cat(comparisonName, " ", comparisonTitle, "\n")
@@ -466,6 +474,35 @@ for(countfile_index in c(1:length(countfiles))){
     
     designData<-read.table(designFile, sep="\t", header=T)
     designData$Condition<-factor(designData$Condition, levels=gnames)
+    
+    missedSamples<-as.character(designData$Sample)[!(as.character(designData$Sample) %in% colnames(countData))]
+    if(length(missedSamples) > 0){
+      message=paste0("There are missed sample defined in design file but not in real data: ", missedSamples)
+      warning(message)
+      writeLines(message,paste0(comparisonName,".error"))
+      next
+    }
+
+    comparisonData<-countData[,colnames(countData) %in% as.character(designData$Sample),drop=F]
+    if(ncol(comparisonData) != nrow(designData)){
+      message=paste0("Data not matched, there are ", nrow(designData), " samples in design file ", designFile, " but ", ncol(comparisonData), " samples in data ")
+      warning(message)
+      writeLines(message,paste0(comparisonName,".error"))
+      next
+    }
+    comparisonData<-comparisonData[,as.character(designData$Sample)]
+
+    if(!is.null(collapse_by)){
+      dds=DESeqDataSetFromMatrix(countData = comparisonData,
+                                colData = designData,
+                                design = ~1) 
+      dds=collapseReplicates(dds, designData[,collapse_by], designData$Sample)   
+      comparisonData<-counts(dds)
+      designData<-designData[!duplicated(designData[,collapse_by]),]
+      designData$Sample<-designData[,collapse_by]
+      designData<-designData[,colnames(designData) != collapse_by]
+      rm(dds)
+    }
     
     if(ncol(designData) >= 3){
       cat("Data with covariances!\n")
@@ -494,22 +531,6 @@ for(countfile_index in c(1:length(countfiles))){
       cat("\n")
       designData<-designData[,which(colnames(designData)%in% c("Sample","Condition"))]
     }
-    
-    missedSamples<-as.character(designData$Sample)[!(as.character(designData$Sample) %in% colnames(countData))]
-    if(length(missedSamples) > 0){
-      message=paste0("There are missed sample defined in design file but not in real data: ", missedSamples)
-      warning(message)
-      writeLines(message,paste0(comparisonName,".error"))
-      next
-    }
-    comparisonData<-countData[,colnames(countData) %in% as.character(designData$Sample),drop=F]
-    if(ncol(comparisonData) != nrow(designData)){
-      message=paste0("Data not matched, there are ", nrow(designData), " samples in design file ", designFile, " but ", ncol(comparisonData), " samples in data ")
-      warning(message)
-      writeLines(message,paste0(comparisonName,".error"))
-      next
-    }
-    comparisonData<-comparisonData[,as.character(designData$Sample)]
     
     prefix<-paste0(comparisonName, suffix)
     if(top25only){
