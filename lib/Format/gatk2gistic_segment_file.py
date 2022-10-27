@@ -8,17 +8,28 @@ parser = argparse.ArgumentParser(description="Convert GATK segment CNV to gistic
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input list file', required=True)
 parser.add_argument('-n', '--no_chr', action='store_true', default=False, help='Remove chr from chromosome')
+parser.add_argument('-y', '--no_y', action='store_true', default=False, help='No chrY')
 parser.add_argument('-o', '--output', action='store', nargs='?', default="-", help="Output file", required=True)
 
 args = parser.parse_args()
 
-def convert(name1, file1, no_chr, fout):
+def convert(name1, file1, no_chr, no_y, fout):
   with gzip.open(file1, "rt") as fin:
     for line in fin:
       if line.startswith('#'):
         continue
       
       parts = line.rstrip().split('\t')
+      
+      if no_chr:
+        chr = parts[0].replace('chr','')
+      else:
+        chr = parts[0]
+        
+      if no_y:
+        if chr == 'Y' or chr == 'chrY':
+          continue
+      
       # if parts[4] == '.':
       #   continue
       
@@ -34,12 +45,7 @@ def convert(name1, file1, no_chr, fout):
         segcn = -5
       else:
         segcn = math.log2(cn) - 1
-      
-      if no_chr:
-        chr = parts[0].replace('chr','')
-      else:
-        chr = parts[0]
-      
+
       segcnstr = "{:.2f}".format(segcn)
       fout.write(f"{name1}\t{chr}\t{start}\t{end}\t{n_markers}\t{segcnstr}\n")
   
@@ -51,6 +57,6 @@ with open(args.output, "wt") as fout:
     for line in fin:
       parts = line.rstrip().split('\t')
       logger.info(f"converting {parts[1]} : {parts[0]}")
-      convert(parts[1], parts[0], args.no_chr, fout)
+      convert(parts[1], parts[0], args.no_chr, args.no_y, fout)
 
 logger.info('done')
