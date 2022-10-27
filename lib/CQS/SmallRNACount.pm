@@ -115,9 +115,12 @@ sub perform {
 ";
     if ( $option !~ /noCategory/ ) {
       print $pbs "
-for positionFile in *.position; do
-  R --vanilla -f $r_script --args \$positionFile
-done    
+count=`ls -1 *.position 2>/dev/null | wc -l`
+if [[ \$count != 0 ]]; then 
+  for positionFile in *.position; do
+    R --vanilla -f $r_script --args \$positionFile
+  done    
+fi
 ";
     }
     $self->close_pbs( $pbs, $pbs_file );
