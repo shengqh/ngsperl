@@ -61,7 +61,7 @@ sub performTaskByPattern {
   my ( $config, $section_pattern ) = @_;
   for my $section (sort keys %$config){
     if ($section =~ /$section_pattern/){
-      if (is_hash($config->{$section})){
+      if (ref $config->{$section} eq ref {}){
         if (defined $config->{$section}{class}){
           performTask($config, $section);
         }
