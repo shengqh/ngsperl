@@ -67,9 +67,15 @@ sub perform {
     @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
     my $sampleFile    = $sample_files[0];
 
+    my $cur_option;
+    if(is_string($option)) {
+      $cur_option = $option;
+    }else{
+      $cur_option = $option->{$sample_name};
+    }
     print $pbs "  
 
-gatk --java-options \"$java_option\" CollectReadCounts $option \\
+gatk --java-options \"$java_option\" CollectReadCounts $cur_option \\
   -L ${preprocessed_intervals} \\
   --input $sampleFile \\
   --reference $ref_fasta \\
