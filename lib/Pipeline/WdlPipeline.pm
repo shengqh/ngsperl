@@ -437,7 +437,7 @@ sub addSomaticCNV {
   $config->{$somaticCNV_call} = {     
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$somaticCNV_call",
-    "source_ref" => [$somaticCNV_normal_files, ".bam\$"],
+    "source_ref" => [$somaticCNV_tumor_files, ".bam\$"],
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},

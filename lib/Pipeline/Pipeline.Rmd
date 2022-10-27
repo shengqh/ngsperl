@@ -122,9 +122,17 @@ print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
 
 display_gsea=function(files) {
   cat(paste0("  \n## GSEA  \n"))
-  gsea_files<-files[grepl("gsea_", rownames(files)),]
-  gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
-  comparisons<-unique(gsea_files$Comparisons)
+  
+  is_singlecell<-"compName" %in% colnames(files)
+  
+  if(is_singlecell){
+    gsea_files<-files
+    comparisons<-unique(gsea_files$Comparisons)
+  }else{
+    gsea_files<-files[grepl("gsea_", rownames(files)),]
+    gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
+    comparisons<-unique(gsea_files$Comparisons)
+  }
   j=1
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
@@ -133,9 +141,14 @@ display_gsea=function(files) {
   
     i=1
     for (i in 1:nrow(comp_files)){
-      gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F, check.names=F)
-      gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
-      gname<-gsub("_min5.*", "", gname)
+      if(is_singlecell){
+        gfolders<-comp_files
+        gname=comparison
+      }else{
+        gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F, check.names=F)
+        gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
+        gname<-gsub("_min5.*", "", gname)
+      }
 
       k=1
       for (k in 1:nrow(gfolders)){
@@ -173,6 +186,10 @@ display_gsea=function(files) {
         png(paste0(sig_file, ".png"), width=width, height=height, res=300)
         print(g)
         dev.off()
+      }
+      
+      if(is_singlecell){
+        break
       }
     }  
   }
