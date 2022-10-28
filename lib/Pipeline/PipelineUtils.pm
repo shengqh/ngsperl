@@ -3134,9 +3134,11 @@ sub add_gsea {
     rtemplate                  => "GSEAPerform.R",
     output_to_result_directory => 1,
     output_perSample_file      => "parameterSampleFile1",
-    output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
+    output_perSample_file_regex => "(.+)_min5_fdr",
+    output_perSample_file_ext  => ".gsea.csv;.gsea",
     parameterSampleFile1_ref   => $rnk_file_ref,
     no_docker                  => getValue($def, "gsea_no_docker", 0),
+    #has_empty_ext              => 1,
     sh_direct                  => 1,
     rCode                      => $rCode,
     pbs                        => {

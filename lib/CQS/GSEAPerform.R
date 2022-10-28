@@ -30,12 +30,11 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
 {
   fileToName=c("h"="HallmarkGeneSets","c1"="PositionalGeneSets","c2"="CuratedGeneSets","c3"="MotifGeneSets","c4"="ComputationalGeneSets","c5"="GOGeneSets","c6"="OncogenicGeneSets","c7"="ImmunologicGeneSets")
   
+  gsea_name=gsub("_min5_fdr.*", "", basename(preRankedGeneFile))
   if (is.null(resultDir)) {
     gesaResultDir<-paste0(preRankedGeneFile,".gsea")
   } else {
-    gsea_name=gsub("_GSEA.rnk", "", basename(preRankedGeneFile))
-    gsea_name=gsub("_min5_fdr.*", "", gsea_name)
-    gesaResultDir<-paste0(resultDir,"/",gsea_name)
+    gesaResultDir<-paste0(resultDir,"/",gsea_name, ".gsea")
   }
   gesaResultDir<-str_replace_all(gesaResultDir, '[()]', '_')
 
@@ -76,7 +75,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
   
   dt<-data.frame(Folder=newResultDirSubs)
   dt$GseaCategory<-gsub(paste0(gesaResultDir,"/"), "", dt$Folder)
-  write.csv(dt, file=paste0(basename(preRankedGeneFile),".gsea.csv"), row.names=F)
+  write.csv(dt, file=paste0(gsea_name,".gsea.csv"), row.names=F)
   
   if (makeReport) {
     library('rmarkdown')

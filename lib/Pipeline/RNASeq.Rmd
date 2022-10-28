@@ -25,6 +25,15 @@ output:
 library(kableExtra)
 library(tidyverse)
 
+files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
+rownames(files)<-files$V2
+
+rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
+rownames(rnaseqOptions)<-rnaseqOptions$V2
+
+taskName<-rnaseqOptions["task_name", 1]
+out.width<-rnaseqOptions["out.width", 1]
+
 knitr::opts_chunk$set(
   tidy = TRUE,
   tidy.opts = list(width.cutoff = 120),
@@ -32,14 +41,9 @@ knitr::opts_chunk$set(
   warning = FALSE,
   fig.width=8, 
   fig.height=6, 
-  out.width="60%"
+  out.width=out.width
 )
 
-files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
-rownames(files)<-files$V2
-
-rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
-rownames(rnaseqOptions)<-rnaseqOptions$V2
 
 hasFastqc<-any(grepl("fastqc_", rownames(files)))
 hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
@@ -352,7 +356,7 @@ if(hasWebGestaltAnalysis){
   
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
 if(hasGseaAnalysis){
-  display_gsea(files)
+  display_gsea(files, paste0(taskName, "/gsea/"))
 }
 ``` 
 

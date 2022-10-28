@@ -1,6 +1,7 @@
 ```{r pipeline, results="asis", echo=FALSE, warning=FALSE} 
 library(stringr)
 library(ggplot2)
+#library(tools)
 
 display_webgestalt=function(files) {
   cat(paste0("  \n## WebGestalt  \n"))
@@ -120,7 +121,7 @@ print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
   }
 }
 
-display_gsea=function(files) {
+display_gsea=function(files, target_folder="") {
   cat(paste0("  \n## GSEA  \n"))
   
   is_singlecell<-"compName" %in% colnames(files)
@@ -146,8 +147,8 @@ display_gsea=function(files) {
         gname=comparison
       }else{
         gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F, check.names=F)
-        gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
-        gname<-gsub("_min5.*", "", gname)
+        gname<-gsub("_min5.fdr*", "", basename(comp_files[i,1]))
+        gname<-gsub('.gsea.csv$', "", gname)
       }
 
       k=1
@@ -172,7 +173,7 @@ display_gsea=function(files) {
           next
         }
 
-        sig_file=paste0(gname, ".", gseaCategory, ".csv" )
+        sig_file=paste0(target_folder, gname, ".", gseaCategory, ".csv" )
         write.csv(final, sig_file, row.names=F)
 
         final<-final[order(final$NES, decreasing=T),]
@@ -183,9 +184,12 @@ display_gsea=function(files) {
         warning(final$NAME)
         ncharmax=max(nchar(as.character(final$NAME)))
         width=max(3000, ncharmax * 40 + 1000)
-        png(paste0(sig_file, ".png"), width=width, height=height, res=300)
+        pngfile=paste0(sig_file, ".png")
+        png(pngfile, width=width, height=height, res=300)
         print(g)
         dev.off()
+        #include_graphics(file_path_as_absolute(pngfile))
+        #cat("\n\n")
       }
       
       if(is_singlecell){

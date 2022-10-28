@@ -36,6 +36,7 @@ sub result {
   my $result       = {};
 
   my $output_result_folder             = get_option( $config, $section, "output_result_folder",                0 );
+  my $has_empty_ext             = get_option( $config, $section, "has_empty_ext",                0 );
   if($output_result_folder){
     $result->{$task_name} = [$result_dir];
     return($result);
@@ -51,7 +52,8 @@ sub result {
 
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
   my $output_perSample_file                = get_option( $config, $section, "output_perSample_file",                "" );
-  my $output_perSample_file_byName         = get_option( $config, $section, "output_perSample_file_byName",                0 );
+  my $output_perSample_file_byName         = get_option( $config, $section, "output_perSample_file_byName",         0 );
+  my $output_perSample_file_regex         = get_option( $config, $section, "output_perSample_file_regex",           "" );
   my $output_perSample_file_ext            = get_option( $config, $section, "output_perSample_file_ext",            "" );
 
   my @output_perSample_file_exts;
@@ -60,7 +62,11 @@ sub result {
   }else{
     @output_perSample_file_exts = ($output_perSample_file_ext );
   }
+  #we can keep the empty elements in case 
   @output_perSample_file_exts = grep { $_ ne '' } @output_perSample_file_exts; #remove empty elements
+  if($has_empty_ext){
+    push(@output_perSample_file_exts, "");
+  }
 
   if ( $output_file eq "parameterSampleFile1" or $output_file eq "parameterSampleFile2" or $output_file eq "parameterSampleFile3" ) {
     if ( has_raw_files( $config, $section, $output_file ) ) {
@@ -128,9 +134,17 @@ sub result {
         }
         else {
           foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
-            my $subSampleName = $output_to_result_directory ? $result_dir . "/" . basename($subSampleFile) : $subSampleFile;
+            my $subSampleFolder = $output_to_result_directory ? $result_dir : dirname($subSampleFile);
+            my $subSampleName = basename($subSampleFile);
+            if ($output_perSample_file_regex ne ""){
+              if ($subSampleName =~ /$output_perSample_file_regex/){
+                $subSampleName = $1;
+              }
+            }
+            #print($subSampleName . "\n");
+            my $final_SampleName = $subSampleFolder . "/" . $subSampleName;
             foreach my $output_file_ext_one (@output_perSample_file_exts) {
-              push( @result_perSample_files, "${subSampleName}${output_file_ext_one}" );
+              push( @result_perSample_files, "${final_SampleName}${output_file_ext_one}" );
             }
           }
         }

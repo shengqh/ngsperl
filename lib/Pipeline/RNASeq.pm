@@ -572,9 +572,9 @@ sub getRNASeqConfig {
 
       my $pairs = $config->{pairs};
       my $keys = [keys %$pairs];
-      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
+      #my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
 
-      add_gsea($config, $def, $summary, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, $suffix );
+      add_gsea($config, $def, $summary, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, "" );
     }
 
     if ( $def->{perform_keggprofile} ) {
@@ -1224,6 +1224,10 @@ fi
       push( @copy_files, $webgestaltTaskName, "_geneontology_Molecular_Function\$" );
       push( @copy_files, $webgestaltTaskName, "_pathway_KEGG\$" );
 
+      if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
+        push( @copy_files,   $linkTaskName, "txt.html\$" );
+      }
+
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
         if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
@@ -1231,7 +1235,6 @@ fi
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt.html.rds" );
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt.html.rds" );
           push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt.html.rds" );
-          push( @copy_files,   $linkTaskName, "txt.html\$" );
         }
         else {
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
@@ -1249,11 +1252,12 @@ fi
 
     if ( defined $gseaTaskName ) {
       push( @copy_files, $gseaTaskName, ".gsea\$" );
-      my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);      
+      #my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);      
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        push( @report_files, $gseaTaskName, "/" . $key . $suffix . "_.*gsea.csv" );
+        #push( @report_files, $gseaTaskName, "/" . $key . $suffix . "_.*gsea.csv" );
+        push( @report_files, $gseaTaskName, "/" . $key . ".*gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
       $hasFunctionalEnrichment = 1;
@@ -1266,7 +1270,9 @@ fi
       "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",         0.05 ) ],
       "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue", 0 ) ],
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping],
-      "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ]
+      "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ],
+      "task_name" => $taskName,
+      "out.width" => getValue($def, "report.out.width", "60%")
     };
 
     $config->{report} = {
