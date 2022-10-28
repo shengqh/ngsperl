@@ -3153,7 +3153,7 @@ sub add_gsea {
   my @gsea_report_names = ();
   my $pairs = $config->{pairs};
   for my $key ( @$keys ) {
-    push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
+    push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".gsea.csv" );
     push( @gsea_report_names, "gsea_" . $key );
   }
 

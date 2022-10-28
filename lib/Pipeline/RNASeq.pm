@@ -1257,7 +1257,7 @@ fi
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
         #push( @report_files, $gseaTaskName, "/" . $key . $suffix . "_.*gsea.csv" );
-        push( @report_files, $gseaTaskName, "/" . $key . ".*gsea.csv" );
+        push( @report_files, $gseaTaskName, "/" . $key . ".gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
       $hasFunctionalEnrichment = 1;
