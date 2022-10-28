@@ -107,7 +107,7 @@ sub result {
       push( @result_files, $self->get_file( $pbs_dir, "${task_name}_${group_name}", ".filelist", 0 ) );
       push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".count.xml", 0 ) );
       if ($has_category) {
-        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".category.count", 0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".Species.count", 0 ) );
       }
       if ($has_read_count) {
         push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".read.count", 0 ) );
@@ -124,7 +124,7 @@ sub result {
     push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist", 0 ) );
     push( @result_files, $self->get_file( $result_dir, $task_name, ".count.xml", 0 ) );
     if ($has_category) {
-      push( @result_files, $self->get_file( $result_dir, $task_name, ".category.count", 0 ) );
+      push( @result_files, $self->get_file( $result_dir, $task_name, ".Species.count", 0 ) );
     }
     if ($has_read_count) {
       push( @result_files, $self->get_file( $result_dir, $task_name, ".read.count", 0 ) );

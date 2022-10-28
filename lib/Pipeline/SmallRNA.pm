@@ -1613,7 +1613,7 @@ fi
           rtemplate          => "countTableVisFunctions.R,countTableVis.R",
           output_file        => ".${nonhostGroup}Mapping.Result",
           output_file_ext    => ".Group.Piechart.png",
-          parameterFile1_ref => [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
+          parameterFile1_ref => [ "bowtie1_${nonhostGroup}_pm_table", ".Species.count\$" ],
           rCode              => 'maxCategory=4;' . $R_font_size,
         }
       );
@@ -1622,7 +1622,7 @@ fi
       push @name_for_shortReadSource, ( $nonhostGroup);
 
       if ($do_comparison) {
-        addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}", [ "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" ],
+        addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}", [ "bowtie1_${nonhostGroup}_pm_table", ".Species.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}_reads", [ "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
@@ -1631,11 +1631,11 @@ fi
       push @files_for_annotate_unmapped, ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
       push( @names_for_annotate_unmapped, $nonhostGroup );
 
-      push @table_for_correlation, ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
+      push @table_for_correlation, ( "bowtie1_${nonhostGroup}_pm_table", ".Species.count\$" );
       if ( $def->{read_correlation} ) {
         push @table_for_correlation, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$", );
       }
-      push @table_for_countSum,    ( "bowtie1_${nonhostGroup}_pm_table", ".category.count\$" );
+      push @table_for_countSum,    ( "bowtie1_${nonhostGroup}_pm_table", ".Species.count\$" );
       push @table_for_readSummary, ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
       push @overlap,               ( "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" );
       
@@ -1778,7 +1778,7 @@ fi
         interpretor        => "python3",
         program            => "../SmallRNA/nonhostXmlCategoryRead.py",
         parameterFile1_arg => "-i",
-        parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".category.count" ],
+        parameterFile1_ref => [ "bowtie1_tRNA_pm_table", ".Species.count" ],
         output_arg         => "-o",
         output_ext         => ".tRNA.Bacteria.read.count",
         sh_direct          => 1,
@@ -1911,7 +1911,7 @@ fi
         push @table_for_correlation, ( $tRNA_bacteria_reads_task, ".read.count\$" );
       }
     }
-    push @table_for_countSum,    ( "bowtie1_tRNA_pm_table", ".category.count\$", "bowtie1_rRNA_pm_table", "$task_name\.count\$" );
+    push @table_for_countSum,    ( "bowtie1_tRNA_pm_table", ".Species.count\$", "bowtie1_rRNA_pm_table", "$task_name\.count\$" );
     push @table_for_readSummary, ( "bowtie1_tRNA_pm_table", ".read.count\$",     "bowtie1_rRNA_pm_table", ".read.count\$" );
     push @name_for_readSummary,  ( "Non host tRNA",         "Non host rRNA" );
     push @overlap,               ( "bowtie1_tRNA_pm_table", ".read.count\$",     "bowtie1_rRNA_pm_table", ".read.count\$" );
@@ -1931,7 +1931,7 @@ fi
         $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       push @$tRNADeseq2,
         addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_reads", [ "bowtie1_tRNA_pm_table", ".read.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_category", [ "bowtie1_tRNA_pm_table", ".category.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
+      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_category", [ "bowtie1_tRNA_pm_table", ".Species.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
         $libraryKey );
 
       if($perform_nonhost_tRNA_bacteria_reads){
@@ -2777,37 +2777,37 @@ fi
       }
 
       if ( defined $config->{bowtie1_bacteria_group1_pm_table} ) {
-        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.category.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.category.count.PCA.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.Species.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.Species.count.PCA.png" );
         push( @report_names, "correlation_group1_heatmap", "correlation_group1_pca" );
 
         if ($hasGroupHeatmap) {
-          push( @report_files, "count_table_correlation",          "bacteria_group1_.*.category.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",          "bacteria_group1_.*.category.count.Group.Correlation.Cluster.png" );
+          push( @report_files, "count_table_correlation",          "bacteria_group1_.*.Species.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",          "bacteria_group1_.*.Species.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_group1_group_heatmap", "correlation_group1_corr_cluster" );
         }
       }
 
       if ( defined $config->{bowtie1_bacteria_group2_pm_table} ) {
-        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.category.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.category.count.PCA.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.Species.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.Species.count.PCA.png" );
         push( @report_names, "correlation_group2_heatmap", "correlation_group2_pca" );
 
         if ($hasGroupHeatmap) {
-          push( @report_files, "count_table_correlation",          "bacteria_group2_.*.category.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",          "bacteria_group2_.*.category.count.Group.Correlation.Cluster.png" );
+          push( @report_files, "count_table_correlation",          "bacteria_group2_.*.Species.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",          "bacteria_group2_.*.Species.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_group2_group_heatmap", "correlation_group2_corr_cluster" );
         }
       }
 
       if ( defined $config->{bowtie1_virus_group6_pm_table} ) {
-        push( @report_files, "count_table_correlation",    "virus_group6_.*.category.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "virus_group6_.*.category.count.PCA.png" );
+        push( @report_files, "count_table_correlation",    "virus_group6_.*.Species.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "virus_group6_.*.Species.count.PCA.png" );
         push( @report_names, "correlation_group6_heatmap", "correlation_group6_pca" );
 
         if ($hasGroupHeatmap) {
-          push( @report_files, "count_table_correlation",          "virus_group6_.*.category.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",          "virus_group6_.*.category.count.Group.Correlation.Cluster.png" );
+          push( @report_files, "count_table_correlation",          "virus_group6_.*.Species.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",          "virus_group6_.*.Species.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_group6_group_heatmap", "correlation_group6_corr_cluster" );
         }
       }
