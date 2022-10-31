@@ -338,12 +338,16 @@ sub getRNASeqConfig {
 
     my $dexseq_count_table = "dexseq_count_table";
     $config->{$dexseq_count_table} = {
-      class         => "CQS::CQSDatatable",
+      class         => "CQS::ProgramWrapper",
       perform       => 1,
       target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "$dexseq_count_table",
+      interpretor   => "python3",
+      program       => "../Count/count_table.py",
       option        => "-p ENS --noheader",
+      source_arg    => "-i",
       source_ref    => $dexseq_count,
-      name_map_file => $def->{name_map_file},
+      output_arg    => "-o",
+      output_file_ext => ".count",
       sh_direct     => 1,
       pbs           => {
         "nodes"    => "1:ppn=1",
