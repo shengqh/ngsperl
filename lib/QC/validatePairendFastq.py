@@ -3,28 +3,29 @@ import logging
 import gzip
 import os
 
-def validate(logger, input, output): 
-  parts = input.split(',')
-  #print(parts)
+def validate2(logger, input1str, input2str, output):
+  input1 = input1str.split(',')
+  input2 = input2str.split(',')
 
   error_files = []
   error_msgs = []
   total_read_count = 0
   idx = 0
-  while idx < len(parts):
-    read1 = parts[idx]
-    read2 = parts[idx+1]
-    idx += 2
+  while idx < len(input1):
+    read1 = input1[idx]
+    read2 = input2[idx]
+    idx += 1
 
     logger.info("Validating %s ..." % read1)
     logger.info("Validating %s ..." % read2)
     read_count = 0
     error_msg = None
-    with gzip.open(read1, "rt") as fin1:
-      with gzip.open(read2, "rt") as fin2:
+    try:
+      with gzip.open(read1, "rt") as fin1, gzip.open(read2, "rt") as fin2:
         while(True):
           line1 = fin1.readline()
           line2 = fin2.readline()
+            
           if not line1:
             if not line2:
               break
@@ -87,6 +88,11 @@ def validate(logger, input, output):
           if len(seq2) != len(score2):
             error_msg = "sequence length not equals to score length for query %s in %s\n  seq  :%s\n  score:%s\n" % (qname2, read2, seq2, score2)
             break
+    except OSError as e:
+      error_msg = "I/O error({0}): {1}".format(e.errno, e.strerror)
+    except Exception as e:
+      error_msg = "Unexpected error: {0}".format(e)
+
     total_read_count += read_count
 
     if error_msg != None:
@@ -108,9 +114,9 @@ def validate(logger, input, output):
         logger.error(error_msg)
         fout.write("ERROR: %s\n" % error_msg)
 
-    fout.write("\n")
-    for error_file in error_files:
-      fout.write(error_file)
+      fout.write("\n")
+      for error_file in error_files:
+        fout.write(error_file + "\n")
       
     return(1)
   else:
@@ -118,6 +124,18 @@ def validate(logger, input, output):
     with open(output, "wt") as fout:
       fout.write("READ\t%d\n" % total_read_count)
     return(0)
+
+def validate1(logger, input, output): 
+  parts = input.split(',')
+  input1 = []
+  input2 = []
+  idx = 0
+  while idx < len(parts):
+    input1.append(parts[idx])
+    input2.append(parts[idx+1])
+    idx += 2
+  
+  return(validate2(logger, ",".join(input1), ",".join(input2), output))
 
 def main():
   DEBUG = False
@@ -127,6 +145,7 @@ def main():
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input fastq files, joined by ","', required=NOT_DEBUG)
+  parser.add_argument('--input2', action='store', nargs='?', help='Input fastq read2 files if input contains read1 only, joined by ","')
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output file", required=NOT_DEBUG)
   
   args = parser.parse_args()
@@ -138,7 +157,10 @@ def main():
   logger = logging.getLogger('fastq_validator')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
-  return(validate(logger, args.input, args.output))
+  if args.input2 == None:
+    return(validate1(logger, args.input, args.output))
+  else:
+    return(validate2(logger, args.input, args.input2, args.output))
   
 if __name__ == "__main__":
   main()
