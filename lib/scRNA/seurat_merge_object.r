@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_merge_object/result')
+setwd('/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -52,6 +52,22 @@ for(fileTitle in names(fileMap)) {
     sobj<-subset(sobj, cells=cells)
   }
 
+  if(!('percent.mt' %in% colnames(sobj@meta.data))){
+    sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt")
+  }
+
+  if(!('percent.ribo' %in% colnames(sobj@meta.data))){
+    sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo")
+  }
+
+  if(!('percent.hb' %in% colnames(sobj@meta.data))){
+    sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")
+  }   
+
+  if(!('sample' %in% colnames(sobj@meta.data))){
+    sobj$sample=sobj$orig.ident
+  }
+
   rawobjs[[fileTitle]] = sobj
   rm(sobj)
 }
@@ -63,4 +79,6 @@ if(length(rawobjs) == 1){
 }
 rm(rawobjs)
 
-output_rawdata(rawobj, outFile)
+#rawobj<-readRDS("PH_combine.rawobj.rds")
+output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
