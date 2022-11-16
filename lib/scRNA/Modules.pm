@@ -1783,7 +1783,7 @@ sub add_invidual_qc {
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
+      "walltime"  => "10",
       "mem"       => "20gb"
     },
   };
