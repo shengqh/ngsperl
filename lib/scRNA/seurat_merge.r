@@ -76,5 +76,7 @@ obj <- RunUMAP(object = obj, dims=pca_dims, verbose = FALSE)
 finalList$obj<-obj
 saveRDS(finalList, file=finalListFile)
 
+cat("output_integration_dimplot ... \n")
 output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
 
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
