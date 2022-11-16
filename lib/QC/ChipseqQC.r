@@ -26,10 +26,10 @@ cat("chromosomes=", chromosomes, "\n")
 
 register(SerialParam())
 
-rdatafile = paste0(configFile, ".rdata")
-if (file.exists(rdatafile)){
-  load(rdatafile)
-}else{
+#rdatafile = paste0(configFile, ".rdata")
+#if (file.exists(rdatafile)){
+#  load(rdatafile)
+#}else{
   if(!is.na(chromosomes)){
     chromosomes = unlist(strsplit(chromosomes, split=','))
   }else{
@@ -43,8 +43,8 @@ if (file.exists(rdatafile)){
   }else{
     qcresult = ChIPQC(experiment, consensus=TRUE, annotation = annotationName, chromosomes=chromosomes)
   }
-  save(qcresult, file=rdatafile)
-}
+#  save(qcresult, file=rdatafile)
+#}
 
 ChIPQCreport(qcresult)
 
