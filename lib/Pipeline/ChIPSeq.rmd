@@ -347,3 +347,8 @@ print(kable(df, caption=tabRef("resultFiles", "Result files")) %>%
     htmltools::HTML())
 
 ``` 
+
+# Software versions
+```{r softwareVersion, echo=FALSE, results='asis'}
+versions<-display_versions()
+```
