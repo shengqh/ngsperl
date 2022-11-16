@@ -48,7 +48,7 @@ for (reduct in c("pca", "harmony")){
   output_ElbowPlot(obj, outFile, reduct)
 }
 
-cat("run_umap ... ")
+cat("RunUMAP ... ")
 obj <- RunUMAP(object = obj, reduction=reduction, dims=pca_dims, verbose = FALSE)
 
 finalList$obj<-obj
@@ -58,3 +58,4 @@ saveRDS(finalList, file=finalListFile)
 
 output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
 
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
