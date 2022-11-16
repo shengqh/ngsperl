@@ -523,7 +523,7 @@ sub getScRNASeqConfig {
       }
 
       if(getValue($def, "perform_multires", 0)){
-        my $multiresKey = "multires";
+        my $multiresKey = $seurat_task . "_multires";
         my $multires_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_call";
 
         my $obj_ref = [$seurat_task, ".rds"];
