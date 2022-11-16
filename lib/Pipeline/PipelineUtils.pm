@@ -1095,7 +1095,7 @@ sub addAnnovar {
     clean_folder => $clean_folder,
     perform_splicing => $perform_splicing,
     output_to_same_folder => $output_to_same_folder,
-    sh_direct  => 1,
+    sh_direct  => getValue($def, "annovar_sh_direct", 1),
     isBed => $isBed,
     isvcf      => $isBed?0:1,
     pbs        => {
