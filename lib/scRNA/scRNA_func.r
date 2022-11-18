@@ -67,6 +67,14 @@ file_not_empty<-function(filename){
   return(file.info(filename)$size != 0)
 }
 
+get_assay<-function(by_sctransform, by_integration, by_harmony){
+  assay=ifelse(by_sctransform, "SCT", "RNA")
+  if(by_integration & (!by_harmony)){
+    assay="integrated"
+  }
+  return(assay)
+}
+
 calc_weight<-function(cellType){
   freq<-sort((table(unlist(cellType)))/length(cellType))
   weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))

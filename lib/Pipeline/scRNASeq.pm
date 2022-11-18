@@ -540,6 +540,7 @@ sub getScRNASeqConfig {
             Remove_MtRNA          => getValue( $def, "Remove_MtRNA" ),
             pca_dims              => getValue( $def, "pca_dims" ),
             by_sctransform        => getValue( $def, "by_sctransform" ),
+            by_integration        => getValue( $def, "by_integration" ),
             reduction             => $reduction,
             species               => getValue( $def, "species" ),
             db_markers_file       => getValue( $def, "markers_file" ),
@@ -580,6 +581,10 @@ sub getScRNASeqConfig {
           }else{
             $multires_celltype = "RNA_snn_res." . $multires_resolution . "_celltype_summary";
           }
+          if(getValue( $def, "by_integration" ) & (! getValue($def, "integration_by_harmony"))) {
+            $multires_celltype = "integrated_snn_res." . $multires_resolution . "_celltype_summary";
+          }
+
           my $cur_options = {
             reduction => $reduction, 
             celltype_layer => $multires_celltype,

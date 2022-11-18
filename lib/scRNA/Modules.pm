@@ -208,7 +208,7 @@ sub add_seurat {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => getValue($def, "seurat_walltime", "12"),
-      "mem"       => getValue($def, "seurat_mem", "40gb"),
+      "mem"       => getValue($def, "seurat_mem", getValue($def, "seurat_mem", "100gb")),
     },
   };
   if ($def->{batch_for_integration}){
@@ -1254,9 +1254,11 @@ sub addSubClusterV2 {
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
-    parameterSampleFile1     => merge_hash_left_precedent($cur_options, {
+    parameterSampleFile1    => merge_hash_left_precedent($cur_options, {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
+      by_integration        => getValue( $def, "by_integration" ),
+      by_harmony            => getValue( $def, "integration_by_harmony" ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
       species               => getValue( $def, "species" ),
       db_markers_file       => getValue( $def, "markers_file" ),

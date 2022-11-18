@@ -37,7 +37,11 @@ options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors =
 myoptions<-split(options_table$V1, options_table$V2)
 
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
+by_integration<-ifelse(myoptions$by_integration == "0", FALSE, TRUE)
 reduction<-myoptions$reduction
+by_harmony<-reduction=="harmony"
+assay=get_assay(by_sctransform, by_integration, by_harmony)
+
 npcs<-as.numeric(myoptions$pca_dims)
 
 species=myoptions$species
@@ -46,8 +50,6 @@ remove_subtype<-myoptions$remove_subtype
 annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
-assay=ifelse(by_sctransform, "SCT", "RNA")
-by_harmony<-reduction=="harmony"
 regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
 
 min_markers<-20
@@ -169,6 +171,7 @@ for(pct in previous_celltypes){
     #subobj<-do_harmony(subobj, by_sctransform, regress_by_percent_mt, FALSE, "", pca_dims)
     curreduction="harmony"
   }else{
+    #https://github.com/satijalab/seurat/issues/5244
     if (by_sctransform) {
       cat(key, "sctransform\n")
       #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform at individual sample level, 
