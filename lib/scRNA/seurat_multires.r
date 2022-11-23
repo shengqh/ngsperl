@@ -3,12 +3,12 @@ outFile='PH_combine'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_integration/result/PH_combine.final.rds'
+parFile1='/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_harmony/result/PH_combine.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_integration_multires_01_call/result')
+setwd('/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_01_call/result')
 
 ### Parameter setting end ###
 
@@ -197,6 +197,48 @@ ABB
     in_new_celltype<-new_celltype %in% names(combined_ct)
     new_celltype[in_new_celltype]<-combined_ct[new_celltype[in_new_celltype]]
     obj[[new_layer]] = new_celltype
+
+    save_highlight_cell_plot(paste0(prefix, ".", new_layer, ".cell.png"), obj, group.by = new_layer, reduction = "umap")
+
+    tb<-table(obj$orig.ident, obj@meta.data[,new_layer])
+    write.csv(tb, file=paste0(prefix, ".", new_layer, ".sample_celltype.csv"))
+
+    mtb<-reshape2::melt(tb)
+    colnames(mtb)<-c("Sample", "Celltype", "Cell")
+    g1<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+    g2<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+    g<-g1+g2+plot_layout(ncol=1)
+    png(paste0(prefix, ".", new_layer, ".sample_celltype.png"), width=3300, height=4000, res=300)
+    print(g)
+    dev.off()
+
+    g1<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+    g2<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+    g<-g1+g2+plot_layout(ncol=1)
+    png(paste0(prefix, ".", new_layer, ".celltype_sample.png"), width=3300, height=4000, res=300)
+    print(g)
+    dev.off()
+
+    if('batch' %in% colnames(obj@meta.data)){
+      tb<-table(obj$batch, obj@meta.data[,new_layer])
+      write.csv(tb, file=paste0(prefix, ".", new_layer, ".batch_celltype.csv"))
+
+      mtb<-reshape2::melt(tb)
+      colnames(mtb)<-c("Sample", "Celltype", "Cell")
+      g1<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+      g2<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+      g<-g1+g2+plot_layout(ncol=1)
+      png(paste0(prefix, ".", new_layer, ".batch_celltype.png"), width=3300, height=4000, res=300)
+      print(g)
+      dev.off()
+
+      g1<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+      g2<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+      g<-g1+g2+plot_layout(ncol=1)
+      png(paste0(prefix, ".", new_layer, ".celltype_batch.png"), width=3300, height=4000, res=300)
+      print(g)
+      dev.off()
+    }
 
     g<-get_dim_plot_labelby(obj, label.by=new_layer, reduction="umap")
     g<-g+get_bubble_plot(obj, cur_res=NA, new_layer, bubblemap_file, assay="RNA", orderby_cluster = T)
