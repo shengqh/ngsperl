@@ -296,11 +296,10 @@ sub getRNASeqConfig {
       $config->{"featurecount_summary"} = {
         class                    => "CQS::UniqueR",
         perform                  => 1,
-        target_dir               => $featureCountFolder,
+        target_dir               => "${featureCountFolder}_summary",
         option                   => "",
         rtemplate                => "../Alignment/STARFeatureCount.r",
-        #output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
-        output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
+        output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
         parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
         sh_direct                => 1,
         pbs                      => {
@@ -529,6 +528,7 @@ sub getRNASeqConfig {
         rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
         output_to_result_directory => 1,
         output_perSample_file      => "parameterSampleFile1",
+        output_perSample_file_regex => "enrichment_results_(.+).txt",
         output_perSample_file_ext  => ".html;.html.rds",
         parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
         parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
