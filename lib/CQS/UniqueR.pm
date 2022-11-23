@@ -172,7 +172,7 @@ sub perform {
       }
       print $rf "$row\n";
 
-      if ($row =~ /capture.output(sessionInfo())/){
+      if ($row =~ /sessionInfo/){
         $output_sessioninfo = 0;
       }
     }
