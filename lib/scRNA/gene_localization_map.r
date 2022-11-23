@@ -1,6 +1,18 @@
+rm(list=ls()) 
+outFile='mouse_8870'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_merge/result/mouse_8870.final.rds'
+parFile2=''
+parFile3=''
+
+
+setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_merge_gene_localization_map/result')
+
+### Parameter setting end ###
 
 source("scRNA_func.r")
-
 library(Seurat)
 library(ggplot2)
 library(ggpubr)
@@ -29,27 +41,14 @@ genes<-gsub('\\s+','',genes)
 miss_genes<-genes[!(genes %in% rownames(obj))]
 
 if(length(miss_genes) > 0){
-  stop(paste0("There is missing genes:", paste0(miss_genes, ",")))
+  writeLines(miss_genes, con="miss_genes.txt")
+  warning(paste0("There is missing genes:", paste0(miss_genes, ",")))
+  genes<-genes[genes %in% rownames(obj),]
 }
   
 gene=genes_tbl$V1[1]
 for (gene in genes_tbl$V1){
-  gdata<-FetchData(object = obj, gene)
-  colnames(gdata)<-"Gene"
-  coords<-data.frame(obj@reductions$umap@cell.embeddings)
-  gdata<-cbind(coords, data.frame(group=obj$group), gdata)
-  gdata1<-subset(gdata, gdata$Gene == 0)
-  gdata2<-subset(gdata, gdata$Gene > 0)
-
-  g1<-ggplot(gdata, aes(UMAP_1, UMAP_2)) + 
-    geom_point(data=gdata1, aes(col=Gene)) + 
-    geom_point(data=gdata2, aes(col=Gene)) + 
-    scale_colour_gradient(name=gene, low="grey", high="blue") + 
-    theme_bw() +
-    theme(strip.background=element_rect(fill="white"),
-          panel.grid.major = element_blank(), 
-          panel.grid.minor = element_blank()
-    )
+  g1<-FeaturePlot(obj, gene, cols=c("lightgray", "red"), order=TRUE, pt.size=1)
   
   pngfile = paste0(outFile, ".", gene, ".all.png")
   png(filename=pngfile, width=1300, height=1100, res=300)
@@ -58,7 +57,7 @@ for (gene in genes_tbl$V1){
   filelist=rbind(filelist, data.frame("file"=paste0(getwd(), "/", pngfile), "gene"=gene, "type"="all"))
 
   if(has_group){
-    g2<-g1+facet_grid(~group)
+    g2<-FeaturePlot(obj, gene, cols=c("lightgray", "red"), order=TRUE, pt.size=1, split.by="group")
     pngfile = paste0(outFile, ".", gene, ".group.png")
     png(filename=pngfile, width= ngroup * 1200, height=1200, res=300)
     print(g2)
