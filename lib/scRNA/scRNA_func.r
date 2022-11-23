@@ -7,12 +7,12 @@ library(ggplot2)
 library(patchwork)
 library(Matrix.utils)
 
-is_one<-function(value){
+is_one<-function(value, defaultValue=FALSE){
   if(is.null(value)){
-    return(FALSE)
+    return(defaultValue)
   }
   if(is.na(value)){
-    return(FALSE)
+    return(defaultValue)
   }
   return(value == '1')
 }
@@ -1268,6 +1268,10 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
   if(any(rawobj$orig.ident != rawobj$sample)){
     draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
   }
+}
+
+XAxisRotation<-function(){
+  return(theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)))
 }
 
 save_session_info<-function(filename="sessionInfo.txt") {
