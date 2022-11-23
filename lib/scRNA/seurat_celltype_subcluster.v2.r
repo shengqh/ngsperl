@@ -36,10 +36,11 @@ logfc.threshold=0.6
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
-by_integration<-ifelse(myoptions$by_integration == "0", FALSE, TRUE)
+by_sctransform<-is_one(myoptions$by_sctransform)
+by_integration<-is_one(myoptions$by_integration)
 reduction<-myoptions$reduction
 by_harmony<-reduction=="harmony"
+redo_harmony<-is_one(myoptions$redo_harmony, 0)
 assay=get_assay(by_sctransform, by_integration, by_harmony)
 
 npcs<-as.numeric(myoptions$pca_dims)
@@ -47,10 +48,10 @@ npcs<-as.numeric(myoptions$pca_dims)
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
 remove_subtype<-myoptions$remove_subtype
-annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
+annotate_tcell<-is_one(myoptions$annotate_tcell)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
-regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
+regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 
 min_markers<-20
 
@@ -166,6 +167,17 @@ for(pct in previous_celltypes){
   
   if(by_harmony){
     cat(key, "harmony\n")
+    if(redo_harmony){
+      cat("RunPCA ... \n")
+      subobj <- RunPCA(object = subobj, assay=assay, verbose=FALSE)
+      cat("RunHarmony ... \n")
+      subobj <- RunHarmony(object = subobj,
+                        assay.use = assay,
+                        reduction = "pca",
+                        dims.use = pca_dims,
+                        group.by.vars = "batch",
+                        do_pca=FALSE)    
+    }
     #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform and harmony, 
     #so we will keep the old data structure
     #subobj<-do_harmony(subobj, by_sctransform, regress_by_percent_mt, FALSE, "", pca_dims)
@@ -391,5 +403,3 @@ EFGH"
 }
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
-
-save_session_info(paste0(outFile, ".sessionInfo.txt"))
