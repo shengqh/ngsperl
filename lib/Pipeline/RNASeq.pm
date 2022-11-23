@@ -1229,16 +1229,16 @@ fi
       push( @copy_files, $webgestaltTaskName, "_pathway_KEGG\$" );
 
       if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
-        push( @copy_files,   $linkTaskName, "txt.html\$" );
+        push( @copy_files,   $linkTaskName, ".html\$" );
       }
 
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
         if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
-          push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt.html.rds" );
-          push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt.html.rds" );
-          push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt.html.rds" );
-          push( @report_files, $linkTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt.html.rds" );
+          push( @report_files, $linkTaskName, $key . "_geneontology_Biological_Process.html.rds" );
+          push( @report_files, $linkTaskName, $key . "_geneontology_Cellular_Component.html.rds" );
+          push( @report_files, $linkTaskName, $key . "_geneontology_Molecular_Function.html.rds" );
+          push( @report_files, $linkTaskName, $key . "_pathway_KEGG.html.rds" );
         }
         else {
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
