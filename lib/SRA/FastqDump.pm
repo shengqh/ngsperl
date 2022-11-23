@@ -37,6 +37,10 @@ sub perform {
   my $ispaired = get_is_paired_end_option($config, $section, 0);
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
 
+  if($ispaired){
+    $option = $option . " --split-3 ";
+  }
+
   my $raw_files = getSraFiles( $config, $section );
 
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
@@ -67,7 +71,7 @@ sub perform {
 ln -s $sample_file ${sample_name}.sra 
 rm -f $sample_name.failed
 
-fastq-dump --split-e --gzip --origfmt --helicos ${sample_name}.sra
+fastq-dump $option --gzip --origfmt --helicos ${sample_name}.sra
 
 status=\$?
 if [[ \$status -ne 0 ]]; then
@@ -116,7 +120,7 @@ fi
 ";
       }
     }
-    elsif ( $sample_file =~ /SRR/ ) {
+    elsif ( $sample_file =~ /[SD]RR/ ) {
       my $sratoolkit_setting_file = get_option_file($config, $section, "sratoolkit_setting_file");
 
       print $pbs "
