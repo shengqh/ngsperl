@@ -31,6 +31,13 @@ our $VERSION = '0.01';
 
 sub add_chipqc {
   my ($config, $def, $tasks, $target_dir, $task_name, $bed_ref, $bam_ref) = @_;
+
+  if(!defined $def->{"design_table"}){
+    if(defined $def->{design_table_condition_pattern}){
+      $def = init_design_table_by_pattern($def);
+    }
+  }
+
   $config->{$task_name} = {
     class          => "QC::ChipseqQC",
     perform        => 1,
@@ -147,7 +154,7 @@ sub addPeakPipelineReport {
     perform                    => 1,
     target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
     report_rmd_file            => "../Pipeline/ChIPSeq.rmd",
-    additional_rmd_files       => "Functions.Rmd",
+    additional_rmd_files       => "Functions.Rmd;../Pipeline/Pipeline.Rmd",
     docker_prefix              => "report_",
     parameterSampleFile1_ref   => \@report_files,
     parameterSampleFile1_names => \@report_names,
