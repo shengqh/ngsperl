@@ -26,7 +26,7 @@ cat("chromosomes=", chromosomes, "\n")
 
 register(SerialParam())
 
-#rdatafile = paste0(configFile, ".rdata")
+rdatafile = paste0(configFile, ".rdata")
 #if (file.exists(rdatafile)){
 #  load(rdatafile)
 #}else{
@@ -43,7 +43,7 @@ register(SerialParam())
   }else{
     qcresult = ChIPQC(experiment, consensus=TRUE, annotation = annotationName, chromosomes=chromosomes)
   }
-#  save(qcresult, file=rdatafile)
+  save(qcresult, file=rdatafile)
 #}
 
 ChIPQCreport(qcresult)
