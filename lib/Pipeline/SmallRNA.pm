@@ -285,6 +285,11 @@ sub getSmallRNAConfig {
       }
       push( @$hostSmallRNA,       ( "rDR",  "osRNA" ) );
       push( @$hostSmallRNAFolder, ( "rRNA", "otherSmallRNA" ) );
+
+      if ( $def->{hasERV} ) {
+        push( @$hostSmallRNA,       "ERV" );
+        push( @$hostSmallRNAFolder, "ERV" );
+      }
     }
     my $numberOfHostSmallRNA = scalar(@$hostSmallRNA);
 
@@ -417,6 +422,26 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
 
       $bamSource = ["filterMixBam", ".fixed.bam"];
       push @$individual_ref, ("filterMixBam");
+
+      # my $filterMixBam_summary = "filterMixBam_summary";
+      # $config->{$filterMixBam_summary} = {
+      #   class         => "CQS::UniqueR",
+      #   perform       => 1,
+      #   target_dir    => $host_genome_dir . "/" . getNextFolderIndex($def) . "$filterMixBam_summary",
+      #   program       => "../Count/count_table.py",
+      #   option        => "-p ENS --noheader",
+      #   source_arg    => "-i",
+      #   source_ref    => $dexseq_count,
+      #   output_arg    => "-o",
+      #   output_file_ext => ".count",
+      #   sh_direct     => 1,
+      #   pbs           => {
+      #     "nodes"    => "1:ppn=1",
+      #     "walltime" => "10",
+      #     "mem"      => "20gb"
+      #   },
+      # };
+      # push @$summary, "$dexseq_count_table";
     }
 
     if ($isHomologyAnalysis) {
@@ -494,7 +519,6 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           option     => $def->{host_smallrnacounttable_option},
           source_ref => [ $countTask, ".mapped.xml" ],
           prefix     => "smallRNA_1mm_",
-          hasYRNA    => $def->{hasYRNA},
           sh_direct  => 1,
           cluster    => $cluster,
           pbs        => {
@@ -962,6 +986,17 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$",         #rRNA
         "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$"         #other
       );
+
+      if ( $def->{hasERV} ) {
+        push @name_for_readSummary, "Host ERV";
+        push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.count\$" );
+        push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.read.count\$" );
+        push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.count\$" );
+        if ( $def->{read_correlation} ) {
+          push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.read.count\$", );
+        }
+      }
+
       if ( $def->{read_correlation} ) {
         push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$", );
       }
@@ -997,60 +1032,46 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       push @visual_source_reads, "miRNA_reads";
 
       if ($notMicroRNAOnly) {
+        my @biotypes = ();
 
-        #tRNA
-        addDEseq2( $config, $def, $summary_ref, "tRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source, "tRNA";
-        addDEseq2( $config, $def, $summary_ref, "tRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.read.count\$" ],
-          $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source_reads, "tRNA_reads";
+
+        push(@biotypes, "tRNA");
 
         if ( $def->{hasYRNA} ) {
-
-          #yRNA
-          addDEseq2( $config, $def, $summary_ref, "yRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          push @visual_source, "yRNA";
-          addDEseq2( $config, $def, $summary_ref, "yRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.read.count\$" ],
-            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          push @visual_source_reads, "yRNA_reads";
+          push(@biotypes, "yRNA");
         }
 
         if ( $def->{hasSnRNA} ) {
-
-          #snRNA
-          addDEseq2( $config, $def, $summary_ref, "snRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          push @visual_source, "snRNA";
-          addDEseq2( $config, $def, $summary_ref, "snRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snRNA.read.count\$" ],
-            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          push @visual_source_reads, "snRNA_reads";
+          push(@biotypes, "snRNA");
         }
 
         if ( $def->{hasSnoRNA} ) {
-
-          #snoRNA
-          addDEseq2( $config, $def, $summary_ref, "snoRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          push( @visual_source, "snoRNA" );
-          addDEseq2( $config, $def, $summary_ref, "snoRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" ],
-            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          push @visual_source_reads, "snoRNA_reads";
+          push(@biotypes, "snoRNA");
         }
 
-        #rRNA
-        addDEseq2( $config, $def, $summary_ref, "rRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push( @visual_source, "rRNA" );
-        addDEseq2( $config, $def, $summary_ref, "rRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$" ],
-          $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source_reads, "rRNA_reads";
+        push(@biotypes, "rRNA");
 
-        #otherSmallRNA
-        $deseq2Task = addDEseq2( $config, $def, $summary_ref, "otherSmallRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count\$" ],
-          $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push( @visual_source, "otherSmallRNA" );
-        addDEseq2( $config, $def, $summary_ref, "otherSmallRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$" ],
-          $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        push @visual_source_reads, "otherSmallRNA_reads";
+        push(@biotypes, "other");
+
+        if ( $def->{hasERV} ) {
+          push(@biotypes, "ERV");
+        }
+
+        #print(@biotypes);
+
+        for my $biotype (@biotypes){
+          my $biotype_name = $biotype eq "other" ? "otherSmallRNA" : $biotype;
+
+          $deseq2Task = addDEseq2( $config, $def, $summary_ref, $biotype_name, [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.count\$" ],
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          push( @visual_source, $biotype_name );
+
+          addDEseq2( $config, $def, $summary_ref, "${biotype_name}_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.read.count\$" ],
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          push @visual_source_reads, "${biotype_name}_reads";
+        }
       }
 
       #host genome smallRNA visualization
@@ -1799,7 +1820,7 @@ fi
         class              => "CQS::ProgramWrapper",
         perform            => 1,
         target_dir         => $folder,
-        option             => "-f " . $def->{bowtie1_tRNA_index} . ".fa -m " . $def->{trna_map} . " -s " . $def->{nonhost_tRNA_coverage_species},
+        option             => "-f " . $def->{bowtie1_tRNA_index} . ".fa -m " . getValue($def, "trna_map") . " -s " . $def->{nonhost_tRNA_coverage_species},
         interpretor        => "python3",
         program            => "../SmallRNA/tRNALibraryCoverage.py",
         parameterFile1_arg => "-i",

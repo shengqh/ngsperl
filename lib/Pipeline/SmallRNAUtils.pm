@@ -213,6 +213,9 @@ sub initializeSmallRNADefaultOptions {
   if ( $def->{hasYRNA} ) {
     $additionalOption = $additionalOption . " --exportYRNA";
   }
+  if ( $def->{hasERV} ) {
+    $additionalOption = $additionalOption . " --exportERV";
+  }
   my $defaultOption = getValue( $def, "host_smallrnacount_option", "" );
   initDefaultValue( $def, "host_smallrnacount_option", $defaultOption . " --min_overlap 0.9 --offsets 0,1,2,-1,-2" . $additionalOption );
 
