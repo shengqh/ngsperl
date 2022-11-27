@@ -3111,6 +3111,7 @@ fi
     output_file_prefix    => ".txt",
     output_file_ext       => ".txt",
     sh_direct             => 0,
+    can_result_be_empty_file => 1,
     pbs                   => {
       "nodes"    => "1:ppn=1",
       "walltime" => getValue($def, "bam_validation_walltime", "24"),
