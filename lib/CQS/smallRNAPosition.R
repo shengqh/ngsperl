@@ -99,6 +99,7 @@ if (groupSnRNA) {
 			scale_size_continuous(range = c(0.1,2))+
 			scale_colour_gradient(low="indianred1",high="darkred")+
 			xlim(c(-30, 120))+ 
+			theme_bw() +
 			theme(legend.position="none")
 	print(p)
 	dev.off()
