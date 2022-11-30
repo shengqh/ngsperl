@@ -1268,6 +1268,7 @@ sub addSubClusterV2 {
       #remove_subtype        => getValue( $def, "remove_subtype", ""),
       HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+      redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
       bubblemap_file        => $def->{bubblemap_file},
       bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
       summary_layer_file    => $def->{summary_layer_file},
@@ -1488,7 +1489,7 @@ sub add_hto_samples_preparation {
 }
 
 sub add_hto {
-  my ($config, $def, $summary, $target_dir, $hto_file_ref) = @_;
+  my ($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file) = @_;
   my $hto_task;
   my $r_script = undef;
   if ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
@@ -1509,6 +1510,7 @@ sub add_hto {
     target_dir => "${target_dir}/$hto_task",
     rtemplate => $r_script,
     option => "",
+    parameterFile1 => $hto_sample_file,
     parameterSampleFile1_ref => $hto_file_ref,
     parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
     parameterSampleFile3 => {
