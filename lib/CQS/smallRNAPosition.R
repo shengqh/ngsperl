@@ -62,6 +62,7 @@ p<-ggplot(fp,aes(x=Position,y=Feature,size=Percentage,colour=Percentage))+
 		scale_size_continuous(range = c(0.1,2))+
 		scale_colour_gradient(low="indianred1",high="darkred")+
 		xlim(c(-30, 120))+ 
+		theme_bw() +
 		theme(legend.position="none")+
 		theme(text = element_text(size=25))
 if (groupSnRNA) {
