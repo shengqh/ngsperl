@@ -169,8 +169,8 @@ sub addFastqLen {
       sh_direct   => 0,
       pbs => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
+        "walltime"  => "10",
+        "mem"       => "40gb"
       }
     },
     "${fastqLenName}_vis" => {
@@ -712,9 +712,8 @@ sub getPreprocessionConfig {
           output_other_ext   => ".pdf,.png",
           sh_direct          => 1,
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
+          can_result_be_empty_file => 1,
           pbs                => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "10gb"
