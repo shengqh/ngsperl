@@ -262,7 +262,7 @@ fi
           next;
         }
 
-        print(@$jarray);
+        #print(@$jarray);
       }
     }
     #print("After deletion: " . Dumper($json_dic));
