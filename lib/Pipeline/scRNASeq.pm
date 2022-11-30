@@ -267,7 +267,11 @@ sub getScRNASeqConfig {
       my $preparation_task = add_hto_samples_preparation($config, $def, $summary, $target_dir, $hto_file_ref);
       $hto_file_ref = [ $preparation_task, ".hto.rds"];
 
-      my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref);
+      if(defined $def->{HTO_samples}){
+        $hto_sample_file = write_HTO_sample_file($def);
+      }
+
+      my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
       $hto_ref = [ $hto_task, ".HTO.csv" ];
 
       my $hto_bam_ref = $hto_ref;
@@ -283,10 +287,6 @@ sub getScRNASeqConfig {
         my $hto_integration_task = add_souporcell_integration($config, $def, $summary, $target_dir, $hto_souporcell_task, $hto_ref);
         $hto_ref = [ $hto_integration_task, ".meta.rds" ];
         $hto_bam_ref = [ $hto_integration_task, ".HTO.csv" ];
-      }
-
-      if(defined $def->{HTO_samples}){
-        $hto_sample_file = write_HTO_sample_file($def);
       }
 
       if($perform_arcasHLA || $perform_strelka2){
