@@ -39,8 +39,15 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1)
   grid.arrange(grobs=gfinal, nrow=n_row)
 }
 
-read_hto<-function(rdsfile, output_prefix) {
+read_hto<-function(rdsfile, output_prefix, cur_tags=NULL) {
   htos<-readRDS(rdsfile)
+
+  if(!all(is.null(cur_tags))){
+    if(!all(cur_tags %in% rownames(htos))){
+      stop(paste0("Not all tags ", paste0(cur_tags, collapse = ","), " in tag names: ", paste0(rownames(htos), collapse = ",")))
+    }
+    htos<-htos[cur_tags,]
+  }
 
   obj <- CreateSeuratObject(counts = htos, assay="HTO")
   # Normalize HTO data, here we use centered log-ratio (CLR) transformation
@@ -50,8 +57,10 @@ read_hto<-function(rdsfile, output_prefix) {
   return(obj)
 }
 
-output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap_num_neighbors=30){
-  tagnames=rownames(obj[["HTO"]])
+output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap_num_neighbors=30, tagnames=NULL){
+  if(all(is.null(tagnames))){
+    tagnames=rownames(obj[["HTO"]])
+  }
   
   hto_names=unique(obj$HTO_classification)
   a_hto_names=hto_names[!(hto_names %in% c("Doublet","Negative"))]
