@@ -344,14 +344,14 @@ fi
 
         print $pbs "
 if [[ \$status -eq 0 ]]; then
-  cutadapt $remove_bases_option $limit_file_options -o ${final_file}.tmp $temp_file
+  cutadapt $remove_bases_option $limit_file_options -o tmp.${final_file} $temp_file
   status=\$?
   if [[ \$status -eq 0 ]]; then
     rm $temp_file
-    mv ${final_file}.tmp ${final_file}
+    mv tmp.${final_file} ${final_file}
     touch ${sample_name}.succeed
   else
-    rm ${final_file}.tmp $temp_file $failed_rm_files
+    rm tmp.${final_file} $temp_file $failed_rm_files
     touch ${sample_name}.failed
   fi
 else
@@ -363,13 +363,13 @@ fi
       else {    #NOT remove top random bases
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $thread_option $adapter_option $limit_file_options -o ${final_file}.tmp $sample_files[0]
+cutadapt $thread_option $adapter_option $limit_file_options -o tmp.${final_file} $sample_files[0]
 status=\$?
 if [[ \$status -eq 0 ]]; then
-  mv ${final_file}.tmp ${final_file}
+  mv tmp.${final_file} ${final_file}
   touch ${sample_name}.succeed
 else
-  rm ${final_file}.tmp $failed_rm_files
+  rm tmp.${final_file} $failed_rm_files
   touch ${sample_name}.failed
 fi
 
