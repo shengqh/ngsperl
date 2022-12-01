@@ -401,8 +401,6 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
       SCLC <- FindNeighbors(SCLC, dims = 1:30)
       SCLC <- FindClusters(SCLC, resolution = resolution)
       ##
-      SCLC[["celltype_each"]] <- paste(sampleid,SCLC@active.ident,sep="_")
-      
       SCLC <- RunUMAP(SCLC, dims = 1:30)
       
       cat("\n\n## Cell clusters\n\n")
@@ -443,10 +441,16 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
         predict_celltype<-ORA_celltype(meanexp,cellType,method=celltype_predictmethod)
         
         #use the max_cta_score for each cluster
-        new.cluster.ids<-paste(levels(SCLC@active.ident),rownames(predict_celltype$predict_result),sep="_")
-        
+        new.cluster.ids<-rownames(predict_celltype$predict_result)
         names(new.cluster.ids) <- levels(SCLC)
-        SCLC <- RenameIdents(SCLC, new.cluster.ids)
+        SCLC$cell_type=new.cluster.ids[SCLC$seurat_clusters]
+        
+        new.cluster.ids<-paste0(levels(SCLC$seurat_clusters), ": ", rownames(predict_celltype$predict_result))
+        names(new.cluster.ids) <- levels(SCLC)
+        SCLC$seurat_cell_type=factor(new.cluster.ids[SCLC$seurat_clusters], levels=new.cluster.ids)
+
+        Idents(SCLC)<-"seurat_cell_type"
+        
         cat("\n\n### ", "Fig.6 UMAP result\n\n")
         g<-DimPlot(SCLC, reduction = "umap",label=T,label.size=6)
         subchunkify(g, fig.height=15, fig.width=15)
