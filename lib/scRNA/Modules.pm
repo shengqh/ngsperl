@@ -208,7 +208,7 @@ sub add_seurat {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => getValue($def, "seurat_walltime", "12"),
-      "mem"       => getValue($def, "seurat_mem", "40gb"),
+      "mem"       => getValue($def, "seurat_mem", getValue($def, "seurat_mem", "100gb")),
     },
   };
   if ($def->{batch_for_integration}){
@@ -1254,9 +1254,11 @@ sub addSubClusterV2 {
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
-    parameterSampleFile1     => merge_hash_left_precedent($cur_options, {
+    parameterSampleFile1    => merge_hash_left_precedent($cur_options, {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
+      by_integration        => getValue( $def, "by_integration" ),
+      by_harmony            => getValue( $def, "integration_by_harmony" ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
       species               => getValue( $def, "species" ),
       db_markers_file       => getValue( $def, "markers_file" ),
@@ -1266,6 +1268,7 @@ sub addSubClusterV2 {
       #remove_subtype        => getValue( $def, "remove_subtype", ""),
       HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+      redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
       bubblemap_file        => $def->{bubblemap_file},
       bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
       summary_layer_file    => $def->{summary_layer_file},
@@ -1486,7 +1489,7 @@ sub add_hto_samples_preparation {
 }
 
 sub add_hto {
-  my ($config, $def, $summary, $target_dir, $hto_file_ref) = @_;
+  my ($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file) = @_;
   my $hto_task;
   my $r_script = undef;
   if ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
@@ -1507,6 +1510,7 @@ sub add_hto {
     target_dir => "${target_dir}/$hto_task",
     rtemplate => $r_script,
     option => "",
+    parameterFile1 => $hto_sample_file,
     parameterSampleFile1_ref => $hto_file_ref,
     parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
     parameterSampleFile3 => {
@@ -1783,7 +1787,7 @@ sub add_invidual_qc {
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
+      "walltime"  => "10",
       "mem"       => "20gb"
     },
   };

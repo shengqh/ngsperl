@@ -7,12 +7,12 @@ library(ggplot2)
 library(patchwork)
 library(Matrix.utils)
 
-is_one<-function(value){
+is_one<-function(value, defaultValue=FALSE){
   if(is.null(value)){
-    return(FALSE)
+    return(defaultValue)
   }
   if(is.na(value)){
-    return(FALSE)
+    return(defaultValue)
   }
   return(value == '1')
 }
@@ -65,6 +65,14 @@ file_not_empty<-function(filename){
   }
   
   return(file.info(filename)$size != 0)
+}
+
+get_assay<-function(by_sctransform, by_integration, by_harmony){
+  assay=ifelse(by_sctransform, "SCT", "RNA")
+  if(by_integration & (!by_harmony)){
+    assay="integrated"
+  }
+  return(assay)
 }
 
 calc_weight<-function(cellType){
@@ -319,10 +327,10 @@ run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction=
   return(object)
 }
 
-run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6, reduction="pca"){
-  object=run_cluster_only(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct, logfc.threshold, reduction)
+run_cluster<-function(object, pca_dims, resolution, random.seed, reduction="pca", min.pct = 0.5, logfc.threshold = 0.6){
+  object=run_cluster_only(object, pca_dims, resolution, random.seed, reduction)
   markers <- FindAllMarkers(object, assay="RNA", only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
-  markers <- markers[markers$p_val_adj < 0.01,]
+  markers <- markers[markers$p_val_adj < 0.05,]
   return(list(object=object, markers=markers))
 }
 
@@ -461,13 +469,13 @@ do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, sc
 
 do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE) {
   cat("performing SCTransform ...\n")
-  nsamples=length(unique(rawobj$sample))
+  nsamples=length(unique(rawobj$orig.ident))
   if(nsamples > 1){
     cat("  split objects ...\n")
-    objs<-SplitObject(object = rawobj, split.by = "sample")
+    objs<-SplitObject(object = rawobj, split.by = "orig.ident")
     #perform sctransform
     objs<-lapply(objs, function(x){
-      cat("  sctransform", unique(x$sample), "...\n")
+      cat("  sctransform", unique(x$orig.ident), "...\n")
       x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
       return(x)
     })  
@@ -695,18 +703,18 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   height=nHeight*600
   
   cat("draw pictures ... ")
-  draw_feature_qc(paste0(outFile, ".violin.sample"), obj, "sample")
+  draw_feature_qc(paste0(outFile, ".sample"), obj, "sample")
 
   p<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
   if(!all(mt$Sample == mt$Ident)){
-    draw_feature_qc(paste0(outFile, ".violin.Ident"), obj, "orig.ident")
+    draw_feature_qc(paste0(outFile, ".Ident"), obj, "orig.ident")
     p1<-draw_dimplot(mt, paste0(outFile, ".Ident.png"), "Ident")
     p<-p+p1
     width=width + nWidth * 600
   }
 
   if(has_batch_file){
-    draw_feature_qc(paste0(outFile, ".violin.batch"), obj, "batch")
+    draw_feature_qc(paste0(outFile, ".batch"), obj, "batch")
     p2<-draw_dimplot(mt, paste0(outFile, ".batch.png"), "batch")
     p<-p+p2
     width=width+nWidth * 600
@@ -1004,7 +1012,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     width = length(unique(unlist(rawobj[[ident_name]]))) * 800
     height = length(feats) * 700
 
-    png(paste0(prefix, ".qc_exp.png"), width=width, height=height, res=300)
+    png(paste0(prefix, ".qc.exp.png"), width=width, height=height, res=300)
     print(g)
     dev.off()  
   }
@@ -1260,6 +1268,10 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
   if(any(rawobj$orig.ident != rawobj$sample)){
     draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
   }
+}
+
+XAxisRotation<-function(){
+  return(theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)))
 }
 
 save_session_info<-function(filename="sessionInfo.txt") {

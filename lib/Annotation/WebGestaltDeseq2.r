@@ -1,3 +1,19 @@
+rm(list=ls()) 
+outFile='discovery_cohort'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3=''
+outputDirectory='.'
+
+
+setwd('/scratch/cqs/ravi_shah_projects/20221121_rnaseq_discovery_hg38/deseq2_genetable_WebGestalt_link_deseq2/result')
+
+### Parameter setting end ###
+
+source("WebGestaltReportFunctions.r")
 library("rmarkdown")
 
 if (!exists("annoFiles")) {
@@ -54,7 +70,9 @@ for (comparison in comparisons){
                      deseq2 = deseq2,
                      category = category)
     
-    output_path <- paste0(normalizePath("."), "/", basename(compAnnoFile), ".html")
+    fname<-gsub("^enrichment_results_", "",  basename(compAnnoFile))
+    fname<-gsub('.txt$', '', fname)
+    output_path <- paste0(normalizePath("."), "/", fname, ".html")
     saveRDS(plotData, paste0(output_path, ".rds"))
     
     #output_dir = "E:/temp"

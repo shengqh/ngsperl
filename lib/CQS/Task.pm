@@ -521,10 +521,14 @@ rm $rmstr
 }
 
 sub open_pbs {
-  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty, $input_file ) = @_;
+  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty, $input_file, $sh_command ) = @_;
 
   if ( !defined $init_command ) {
     $init_command = "";
+  }
+
+  if(!defined $sh_command){
+    $sh_command = "bash";
   }
 
   my $module_name = $self->{_name};
@@ -623,7 +627,7 @@ export JAVA_HOME=
  
 $docker_init
 
-$docker_command bash $sh_file 
+$docker_command $sh_command $sh_file 
 
 exitcode=\$?
 

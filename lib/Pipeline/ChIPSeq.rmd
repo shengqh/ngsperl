@@ -18,6 +18,8 @@ output:
 
 ```{r, child="Functions.Rmd"} 
 ```
+```{r, child="Pipeline.Rmd"} 
+```
   
 ```{r setup, include=FALSE}
 library(XML)
@@ -52,7 +54,7 @@ project_dir <- dir("../..", full.names=T)
 
 report <- project_dir[grep("report", project_dir)]
 
-has_macs2 <- file.exists(macs2)
+has_macs2 <- ifelse(is.null(macs2), FALSE, file.exists(macs2))
 has_report <- FALSE
 
 has_diffbind<-"diffbind_result" %in% names(chipseqOptions)
@@ -347,3 +349,8 @@ print(kable(df, caption=tabRef("resultFiles", "Result files")) %>%
     htmltools::HTML())
 
 ``` 
+
+# Software versions
+```{r softwareVersion, echo=FALSE, results='asis'}
+versions<-display_versions()
+```

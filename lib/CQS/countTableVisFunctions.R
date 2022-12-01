@@ -847,11 +847,12 @@ filterCountTable<-function(countNum,validSampleToGroup,minMedian=1,minMedianInGr
     print(paste0(length(which(minMedianInd<minMedian))," reads/genes were removed due to median less than ",minMedian))
   }
   
+	#if median counts of all groups were less than minMedianInGroup, the feature will be removed.
   countNumGroup<-mergeTableBySampleGroup(result,validSampleToGroup,toPercent=FALSE,rowFun=rowMedians)
-  minGroupMedianInd<-apply(countNumGroup,1,min)
-  if (all(minGroupMedianInd<minMedianInGroup)) {
-    result<-result[-which(minGroupMedianInd<minMedianInGroup),]
-    print(paste0(length(which(minGroupMedianInd<minMedianInGroup))," reads/genes were removed due to minimal group median less than ",minMedianInGroup))
+	maxGroupMedian<-apply(countNumGroup,1,max)
+  if (any(maxGroupMedian<minMedianInGroup)) {
+    result<-result[maxGroupMedian>=minMedianInGroup,]
+    print(paste0(length(which(maxGroupMedian<minMedianInGroup))," reads/genes were removed due to minimal group median less than ",minMedianInGroup))
   }
   
   return(result)

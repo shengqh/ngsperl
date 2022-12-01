@@ -85,6 +85,9 @@ if (countInFastQcTrim1=="") {
   }
 }
 
+countForFigureOut<-acast(countForFigure,Label~Sample,value.var="Reads")
+write.csv(countForFigureOut,paste0(resultFile,".Reads.csv"))
+
 g<-ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+
   geom_bar(stat="identity", width=0.5)+
   theme_bw2() +
@@ -93,16 +96,12 @@ g<-ggplot(countForFigure,aes(x=Sample,y=Reads,fill=Label))+
         legend.title=element_blank()) +
   xlab("")
 
-width<-max(14, length(unique(countForFigure$Sample)) * 0.15)
+width<-min(max(14, length(unique(countForFigure$Sample)) * 0.15), 60)
 pdf(paste0(resultFile,".pdf"),width=width)
 print(g)
 dev.off()
 
-width<-max(2000, length(unique(countForFigure$Sample)) * 75)
+width<-min(max(2000, length(unique(countForFigure$Sample)) * 75), 10000)
 png(paste0(resultFile,".png"),width=width, height=1500, res=300)
 print(g)
 dev.off()
-
-countForFigureOut<-acast(countForFigure,Label~Sample,value.var="Reads")
-write.csv(countForFigureOut,paste0(resultFile,".Reads.csv"))
-

@@ -6,8 +6,12 @@ import argparse
 import sys
 import logging
 import re
+import csv
  
 from glob import glob
+
+def get_valid_sample_name(old):
+  return re.sub('[ \-*+]+', '_', old)
 
 def get_dir_name(file_name, use_dir_name):
   result = file_name
@@ -25,7 +29,33 @@ def get_sample_name(f, name_pattern):
       result="".join(m.groups())
   return(result)
 
-def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, recursive_dir=False, fill_zero=False, add_prefix_P=False, add_prefix_X=False):
+def read_meta(meta_file, meta_file_index, meta_name_index, meta_file_delimiter=','):
+  result = {}
+  with open(meta_file, newline='') as f:
+    reader = csv.reader(f, delimiter=meta_file_delimiter)
+    for row in reader:  
+      result[row[meta_file_index]] = row[meta_name_index]
+  return(result)
+
+def replace_name(old, func):
+  result = {}
+  for sample_name in sorted(old.keys()):
+    new_name = func(sample_name)
+    result[new_name] = old[sample_name]
+  return(result)
+
+def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, recursive_dir=False, fill_zero=False, add_prefix_P=False, add_prefix_X=False, 
+  meta_file=None, meta_file_index=-1, meta_name_index=-1,meta_file_delimiter=','):
+
+  if meta_file != None:
+    meta_dic = read_meta(meta_file, meta_file_index, meta_name_index)
+    print("  meta data:")
+    for key in sorted(meta_dic.keys()):
+      print(f"    {key} : {meta_dic[key]}")
+    print("")
+  else:
+    meta_dic = None
+
   if recursive_dir:
     files=[y for x in os.walk(source_dir) for y in glob(os.path.join(x[0], file_pattern))]
   else:
@@ -50,6 +80,9 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
       else:
         result[sample_name].append(f)
   
+  if meta_file != None:
+    result = replace_name(result, lambda x: meta_dic[x] if x in meta_dic else x)
+
   if fill_zero:
     numbers = {}
     max_len = 0
@@ -81,11 +114,12 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
   prefix = "P" if add_prefix_P else ""
   prefix = "X" if add_prefix_X else prefix
 
+  result = replace_name(result, lambda x: prefix+get_valid_sample_name(x))
+
   print("  files => {")
   for sample_name in sorted(result.keys()):
-    sample_files = result[sample_name]
-    sample_files = sorted(sample_files)
-    print("    '%s%s' => [ '%s' ], " % (prefix, sample_name.replace("-", "_").replace(" ", "_"), "', '".join(sample_files) ))
+    sample_files = sorted(result[sample_name])
+    print("    '%s' => [ '%s' ], " % (sample_name, "', '".join(sample_files) ))
   print("  }, ")
 
   return(result)
@@ -105,6 +139,10 @@ def main():
   parser.add_argument('-r', '--recursive_dir', action='store_true', help='Find file in recursive dir')
   parser.add_argument('-p', '--add_prefix_P', action='store_true', help='Add P as prefix of sample name')
   parser.add_argument('-x', '--add_prefix_X', action='store_true', help='Add X as prefix of sample name')
+  parser.add_argument('--meta_file', action='store', nargs='?', help='Input meta file')
+  parser.add_argument('--meta_file_index', action='store', type=int, help='Input index corresponding to real file name')
+  parser.add_argument('--meta_name_index', action='store', type=int, help='Input index corresponding to expected file name')
+  parser.add_argument('--meta_file_delimiter', action='store', nargs='?', help='Input meta file delimiter')
   
   if not DEBUG and len(sys.argv)==1:
     parser.print_help()
@@ -127,7 +165,8 @@ def main():
   
   find_files(logger, source_dir=args.input, file_pattern=args.file_pattern, name_pattern=args.name_pattern,
              use_dir_name=args.use_dir_name, recursive_dir=args.recursive_dir, fill_zero=args.add_zero, 
-             add_prefix_P=args.add_prefix_P, add_prefix_X=args.add_prefix_X)
+             add_prefix_P=args.add_prefix_P, add_prefix_X=args.add_prefix_X,
+             meta_file=args.meta_file, meta_file_index=args.meta_file_index, meta_name_index=args.meta_name_index, meta_file_delimiter=args.meta_file_delimiter)
   
 if __name__ == "__main__":
     main()

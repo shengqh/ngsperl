@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AG_integrated'
+outFile='PH_combine'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='C:/projects/data/h_gelbard_lab/projects/20220803_integrated_project/seurat_sct_harmony/result/AG_integrated.final.rds'
+parFile1='/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_harmony/result/PH_combine.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('C:/projects/data/h_gelbard_lab/projects/20220803_integrated_project/seurat_sct_harmony_multires_01_call/result')
+setwd('/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_01_call/result')
 
 ### Parameter setting end ###
 
@@ -38,7 +38,11 @@ options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors =
 myoptions<-split(options_table$V1, options_table$V2)
 
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
+by_integration<-ifelse(myoptions$by_integration == "0", FALSE, TRUE)
 reduction<-myoptions$reduction
+by_harmony<-reduction=="harmony"
+assay=get_assay(by_sctransform, by_integration, by_harmony)
+
 npcs<-as.numeric(myoptions$pca_dims)
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
@@ -47,8 +51,6 @@ annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
 curated_markers_file=myoptions$curated_markers_file
-assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
-by_harmony<-reduction=="harmony"
 
 bubblemap_file=myoptions$bubblemap_file
 
@@ -82,12 +84,23 @@ if(!exists("obj")){
 resolutions=c(0.5, 1.0, 1.5)
 
 curreduction=ifelse(by_harmony, "harmony", "pca")
+
+DefaultAssay(obj)<-assay
+
+cat("FindNeighbors...\n")
 obj <- FindNeighbors(object=obj, reduction=curreduction, dims=c(1:npcs), verbose=FALSE)
+
+cat("FindClusters...\n")
 obj <- FindClusters(object=obj, verbose=FALSE, random.seed=random.seed, resolution=resolutions)
 
 res_prefix<-paste0(assay, "_snn_res")
 multi_res<-colnames(obj@meta.data)[grepl(paste0("^", res_prefix, ".+\\d$"), colnames(obj@meta.data))]
 
+if(identical(multi_res, character(0))){
+  stop(paste0("cannot find resolution with prefix: ", res_prefix))
+}
+
+cat("Predict cell type...\n")
 cur_res = multi_res[1]
 for(cur_res in multi_res){
   cat("  ", cur_res, "\n")
@@ -121,6 +134,7 @@ write.csv(res_df, file=paste0(outFile, ".resolutions.csv"), row.names=F)
 #umaplist<-RunMultipleUMAP(obj, curreduction=curreduction, cur_pca_dims=c(1:npcs))
 #obj<-RunUMAP(obj, reduction=curreduction, dims=c(1:npcs))
 
+cat("Visualization...\n")
 cind<-1
 for(cind in c(1:nrow(res_df))){
   cur_res = res_df$cluster[cind]
@@ -183,6 +197,48 @@ ABB
     in_new_celltype<-new_celltype %in% names(combined_ct)
     new_celltype[in_new_celltype]<-combined_ct[new_celltype[in_new_celltype]]
     obj[[new_layer]] = new_celltype
+
+    save_highlight_cell_plot(paste0(prefix, ".", new_layer, ".cell.png"), obj, group.by = new_layer, reduction = "umap")
+
+    tb<-table(obj$orig.ident, obj@meta.data[,new_layer])
+    write.csv(tb, file=paste0(prefix, ".", new_layer, ".sample_celltype.csv"))
+
+    mtb<-reshape2::melt(tb)
+    colnames(mtb)<-c("Sample", "Celltype", "Cell")
+    g1<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+    g2<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+    g<-g1+g2+plot_layout(ncol=1)
+    png(paste0(prefix, ".", new_layer, ".sample_celltype.png"), width=3300, height=4000, res=300)
+    print(g)
+    dev.off()
+
+    g1<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+    g2<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+    g<-g1+g2+plot_layout(ncol=1)
+    png(paste0(prefix, ".", new_layer, ".celltype_sample.png"), width=3300, height=4000, res=300)
+    print(g)
+    dev.off()
+
+    if('batch' %in% colnames(obj@meta.data)){
+      tb<-table(obj$batch, obj@meta.data[,new_layer])
+      write.csv(tb, file=paste0(prefix, ".", new_layer, ".batch_celltype.csv"))
+
+      mtb<-reshape2::melt(tb)
+      colnames(mtb)<-c("Sample", "Celltype", "Cell")
+      g1<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+      g2<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+      g<-g1+g2+plot_layout(ncol=1)
+      png(paste0(prefix, ".", new_layer, ".batch_celltype.png"), width=3300, height=4000, res=300)
+      print(g)
+      dev.off()
+
+      g1<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+      g2<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+      g<-g1+g2+plot_layout(ncol=1)
+      png(paste0(prefix, ".", new_layer, ".celltype_batch.png"), width=3300, height=4000, res=300)
+      print(g)
+      dev.off()
+    }
 
     g<-get_dim_plot_labelby(obj, label.by=new_layer, reduction="umap")
     g<-g+get_bubble_plot(obj, cur_res=NA, new_layer, bubblemap_file, assay="RNA", orderby_cluster = T)

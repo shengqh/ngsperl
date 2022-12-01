@@ -86,7 +86,7 @@ rm -f __NAME___R1_001.fastq.gz __NAME___R2_001.fastq.gz
     source_ref            => $untrimed_ref,
     output_to_same_folder => 1,
     output_arg            => "-o",
-    output_file_ext    => "__NAME__/peakcalling/seacr/__NAME__.stringent.sort.bed",
+    output_file_ext    => "__NAME__/peakcalling/seacr/__NAME__.spikein_normalized.bw",
     use_tmp_folder        => 0,
     sh_direct             => 0,
     pbs                   => {

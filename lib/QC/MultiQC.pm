@@ -40,11 +40,11 @@ sub perform {
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final );
 
   print $pbs "
-if [[ -d ${task_name}_data ]]; then
-  rm -rf ${task_name}_data
+if [[ -s ${task_name}.html ]]; then
+  rm -rf ${task_name}_data ${task_name}_plots ${task_name}.html
 fi
 
-multiqc $option -p -n $final $root_dir 
+multiqc $option -f -p -n $final $root_dir 
 ";
 
   $self->close_pbs( $pbs, $pbs_file );
@@ -58,22 +58,22 @@ sub result {
 
   my @result_files = ("$result_dir/${task_name}.html");
   if(defined $config->{fastqc_raw}){
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_fastqc_adapter_content_plot_1.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_fastqc_overrepresented_sequencesi_plot_1.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_fastqc_per_base_n_content_plot_1.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_fastqc_per_base_sequence_quality_plot_1.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_fastqc_per_sequence_gc_content_plot_Counts.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_fastqc_per_sequence_gc_content_plot_Percentages.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_fastqc_per_sequence_quality_scores_plot_1.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_fastqc_sequence_duplication_levels_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_fastqc_adapter_content_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_fastqc_overrepresented_sequences_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_fastqc_per_base_n_content_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_fastqc_per_base_sequence_quality_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_fastqc_per_sequence_gc_content_plot_Counts.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_fastqc_per_sequence_gc_content_plot_Percentages.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_fastqc_per_sequence_quality_scores_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_fastqc_sequence_duplication_levels_plot_1.png");    
   }
   if(defined $config->{star} || defined $config->{star_featurecount}){
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_star_alignment_plot_1_pc.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_star_alignment_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_star_alignment_plot_1_pc.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_star_alignment_plot_1.png");    
   }
   if(defined $config->{featurecount} || defined $config->{star_featurecount}){
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_featureCounts_assignment_plot_1_pc.png");    
-    push(@result_files, "${result_dir}/multiqc_plots/png/mqc_featureCounts_assignment_plot_1.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_featureCounts_assignment_plot_1_pc.png");    
+    push(@result_files, "${result_dir}/${task_name}_plots/png/mqc_featureCounts_assignment_plot_1.png");    
     push(@result_files, "${result_dir}/${task_name}_data/multiqc_featureCounts.txt");    
   }
   $result->{$task_name} = filter_array( \@result_files, $pattern );

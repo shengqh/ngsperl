@@ -4,6 +4,7 @@ package Pipeline::PipelineUtils;
 use strict;
 use warnings;
 use File::Basename;
+use CQS::StringUtils;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -43,6 +44,7 @@ our %EXPORT_TAGS = (
     addDiffbind    
     addHomerAnnotation 
     addEnhancer 
+    init_design_table_by_pattern    
     writeDesignTable 
     addMultiQC
     getNextIndex
@@ -1051,6 +1053,36 @@ sub writeDesignTable {
   return $result;
 }
 
+sub init_design_table_by_pattern {
+  my ( $def ) = @_;
+
+  my $task_name = getValue($def, "task_name");
+  my $treatments = getValue($def, "treatments");
+
+  my $condition_pattern = getValue($def, "design_table_condition_pattern");
+  my $factor_pattern = getValue($def, "design_table_factor_pattern", "");
+  my $replicate_pattern = getValue($def, "design_table_replicate_pattern", "");
+
+  my $samples = {};
+
+  for my $sampleName ( sort keys %$treatments ) {
+    my $condition = capture_regex_groups($sampleName, $condition_pattern);
+    my $factor = ($factor_pattern eq "") ? undef : capture_regex_groups($sampleName, $factor_pattern);
+    my $replicate = ($replicate_pattern eq "") ? "1" : capture_regex_groups($sampleName, $replicate_pattern);
+    $samples->{$sampleName} = {
+      'Condition' => $condition,
+      'Factor' => $factor,
+      'Replicate' => $replicate
+    };
+  }
+
+  $def->{"design_table"} = {
+    $task_name => $samples
+  };
+
+  return $def;
+}
+
 sub getSequenceTaskClassname {
   my $cluster = shift;
   my $result = $cluster eq "slurm" ? "CQS::SequenceTaskSlurmSlim" : "CQS::SequenceTask";
@@ -1095,7 +1127,7 @@ sub addAnnovar {
     clean_folder => $clean_folder,
     perform_splicing => $perform_splicing,
     output_to_same_folder => $output_to_same_folder,
-    sh_direct  => 1,
+    sh_direct  => getValue($def, "annovar_sh_direct", 1),
     isBed => $isBed,
     isvcf      => $isBed?0:1,
     pbs        => {
@@ -2617,7 +2649,9 @@ sub addSequenceTask {
 }
 
 sub addFilesFromSraRunTable {
-  my ($config, $filename) = @_;
+  my ($def, $filename) = @_;
+
+  my $sample_name_column = getValue($def, "SraRunTable_sample_name_column", 'Sample Name');
 
   my $csv = Text::CSV->new ({
     binary    => 1,
@@ -2628,7 +2662,11 @@ sub addFilesFromSraRunTable {
   my $files = {};
   open(my $fh, '<:encoding(utf8)', $filename) or die $!;
   my $headers = $csv->getline( $fh );
-  my $sample_name_index = first_index { $_ eq 'Sample Name' } @$headers;
+  my $sample_name_index = first_index { $_ eq $sample_name_column } @$headers;
+  if ($sample_name_index < 0){
+    die "cannot find '$sample_name_column' in '@$headers'"
+  }
+
   #print("$sample_name_index = " . $headers->[$sample_name_index]);
   while (my $fields = $csv->getline( $fh )) {
     my $srr = $fields->[0];
@@ -2637,7 +2675,7 @@ sub addFilesFromSraRunTable {
   }
   close($fh);
 
-  $config->{files} = $files;
+  $def->{files} = $files;
 }
 
 sub addWebgestalt {
@@ -3073,6 +3111,7 @@ fi
     output_file_prefix    => ".txt",
     output_file_ext       => ".txt",
     sh_direct             => 0,
+    can_result_be_empty_file => 1,
     pbs                   => {
       "nodes"    => "1:ppn=1",
       "walltime" => getValue($def, "bam_validation_walltime", "24"),

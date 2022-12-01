@@ -267,7 +267,11 @@ sub getScRNASeqConfig {
       my $preparation_task = add_hto_samples_preparation($config, $def, $summary, $target_dir, $hto_file_ref);
       $hto_file_ref = [ $preparation_task, ".hto.rds"];
 
-      my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref);
+      if(defined $def->{HTO_samples}){
+        $hto_sample_file = write_HTO_sample_file($def);
+      }
+
+      my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
       $hto_ref = [ $hto_task, ".HTO.csv" ];
 
       my $hto_bam_ref = $hto_ref;
@@ -283,10 +287,6 @@ sub getScRNASeqConfig {
         my $hto_integration_task = add_souporcell_integration($config, $def, $summary, $target_dir, $hto_souporcell_task, $hto_ref);
         $hto_ref = [ $hto_integration_task, ".meta.rds" ];
         $hto_bam_ref = [ $hto_integration_task, ".HTO.csv" ];
-      }
-
-      if(defined $def->{HTO_samples}){
-        $hto_sample_file = write_HTO_sample_file($def);
       }
 
       if($perform_arcasHLA || $perform_strelka2){
@@ -523,7 +523,7 @@ sub getScRNASeqConfig {
       }
 
       if(getValue($def, "perform_multires", 0)){
-        my $multiresKey = "multires";
+        my $multiresKey = $seurat_task . "_multires";
         my $multires_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_call";
 
         my $obj_ref = [$seurat_task, ".rds"];
@@ -540,6 +540,7 @@ sub getScRNASeqConfig {
             Remove_MtRNA          => getValue( $def, "Remove_MtRNA" ),
             pca_dims              => getValue( $def, "pca_dims" ),
             by_sctransform        => getValue( $def, "by_sctransform" ),
+            by_integration        => getValue( $def, "by_integration" ),
             reduction             => $reduction,
             species               => getValue( $def, "species" ),
             db_markers_file       => getValue( $def, "markers_file" ),
@@ -580,6 +581,10 @@ sub getScRNASeqConfig {
           }else{
             $multires_celltype = "RNA_snn_res." . $multires_resolution . "_celltype_summary";
           }
+          if(getValue( $def, "by_integration" ) & (! getValue($def, "integration_by_harmony"))) {
+            $multires_celltype = "integrated_snn_res." . $multires_resolution . "_celltype_summary";
+          }
+
           my $cur_options = {
             reduction => $reduction, 
             celltype_layer => $multires_celltype,
