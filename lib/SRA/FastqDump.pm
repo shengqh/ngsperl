@@ -36,6 +36,7 @@ sub perform {
 
   my $ispaired = get_is_paired_end_option($config, $section, 0);
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
+  my $prefetch_option = get_option($config, $section, "prefetch_option", "-X 50G");
 
   if($ispaired){
     $option = $option . " --split-3 ";
@@ -60,7 +61,7 @@ sub perform {
     my $current_dir = create_directory_or_die($result_dir . "/" . $sample_name);
 
     my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file, "", 0, undef, 'sh' );
 
     if ( $sample_file =~ /GSM/ ) {
       $sample_file = GsmToSrr( $sample_file );
@@ -143,15 +144,29 @@ echo dump $sample_name
         print $pbs "
 rm -f $sample_name.failed
 
-fastq-dump --split-e --gzip --origfmt --helicos $sample_file 
-        
-status=\$?
-if [[ \$status -ne 0 ]]; then
-  touch $sample_name.failed
-  rm -f ${sample_file}_1.fastq.gz ${sample_file}_2.fastq.gz ${sample_file}.fastq.gz
-else
-  touch $sample_name.succeed
+if [[ ! -s ${sample_file}.sra ]]; then
+  echo prefetch $sample_file $prefetch_option -o ${sample_file}.tmp.sra
+  prefetch $sample_file $prefetch_option --check-rs no -o ${sample_file}.tmp.sra
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.prefetch.failed
+    #rm -f ${sample_file}.sra 
+  else
+    touch $sample_name.prefetch.succeed
+    mv ${sample_file}.tmp.sra ${sample_file}.sra
+  fi
+fi
+
+if [[ -s ${sample_file}.sra ]]; then
+  echo fastq-dump --split-e --gzip --origfmt --helicos ${sample_file}.sra 
+  fastq-dump --split-e --gzip --origfmt --helicos ${sample_file}.sra 
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.fasterq.failed
+    rm -f ${sample_file}_1.fastq.gz ${sample_file}_2.fastq.gz ${sample_file}.fastq.gz
+  else
 ";
+
         if($ispaired){
           print $pbs "  mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz \n";
           print $pbs "  mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz \n";
