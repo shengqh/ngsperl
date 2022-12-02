@@ -37,6 +37,8 @@ sub perform {
   my $ispaired = get_is_paired_end_option($config, $section, 0);
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
 
+  my $prefetch_option = get_option($config, $section, "", "-X 50G");
+
   if($ispaired){
     $option = $option . " --split-files ";
   }
@@ -139,8 +141,6 @@ if [[ ! -s \${HOME}/.ncbi/user-settings.mkfg ]]; then
   cp $sratoolkit_setting_file \${HOME}/.ncbi
 fi
 
-echo dump $sample_name
-
 ";
 
       my @sample_files = split( '\s+', $sample_file );
@@ -148,18 +148,23 @@ echo dump $sample_name
         print $pbs "
 rm -f $sample_name.failed
 
-prefetch $sample_file -o ${sample_file}.sra
-status=\$?
-if [[ \$status -ne 0 ]]; then
-  touch $sample_name.failed
-  rm -f ${sample_file}.sra 
-else
+if [[ ! -s ${sample_file}.sra ]]; then
+  echo prefetch $sample_file $prefetch_option -o ${sample_file}.sra
+  prefetch $sample_file $prefetch_option --check-rs no -o ${sample_file}.sra
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.prefetch.failed
+    #rm -f ${sample_file}.sra 
+  fi
+fi
+
+if [[ -s ${sample_file}.sra ]]; then
   echo fasterq-dump $option ${sample_file}.sra
   fasterq-dump $option ${sample_file}.sra
   status=\$?
   if [[ \$status -ne 0 ]]; then
-    touch $sample_name.failed
-    rm -f ${sample_file}_1.fastq.gz ${sample_file}_2.fastq.gz ${sample_file}.fastq.gz
+    touch $sample_name.fasterq.failed
+    rm -f ${sample_file}_1.fastq ${sample_file}_2.fastq ${sample_file}.fastq
   else
 ";
         if($ispaired){
@@ -175,17 +180,23 @@ else
         }
         print $pbs "
     touch $sample_name.succeed
-    rm ${sample_file}.sra
+    #rm ${sample_file}.sra
   fi
 fi
 
-rm .ncbi
+rm -rf .ncbi
 ";
       }
       else {
-        print $pbs "if [[ -s ${sample_name}.fastq ]]; then\n  rm ${sample_name}.fastq \nfi \n";
+        print $pbs "if [[ -s ${sample_name}.fastq ]]; then
+  rm ${sample_name}.fastq 
+fi
+";
         for my $sf (@sample_files) {
-          print $pbs "fastq-dump $option --origfmt --helicos $sf -Z >> ${sample_name}.fastq \n";
+          print $pbs "
+echo fastq-dump $option --origfmt --helicos $sf -Z >> ${sample_name}.fastq
+fastq-dump $option --origfmt --helicos $sf -Z >> ${sample_name}.fastq 
+";
         }
         print $pbs "gzip ${sample_name}.fastq \n";
       }
