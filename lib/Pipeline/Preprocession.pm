@@ -443,7 +443,7 @@ sub getPreprocessionConfig {
       docker_prefix => "sratools_",
       pbs        => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
+        "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
         "mem"       => "10gb"
       },
     };
