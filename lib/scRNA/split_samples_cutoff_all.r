@@ -3,6 +3,7 @@ outFile='P9112'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parFile1='/data/h_gelbard_lab/projects/20221129_9112_scRNA_human/hto_samples.txt'
 parFile2=''
 parFile3=''
@@ -96,8 +97,14 @@ if(!is.na(params$cutoff_file)){
   }
 }
 
-has_hto_samples = parFile1 != "" 
-if(has_hto_samples){
+has_hto_samples = FALSE
+if(exists('parSampleFile4')){
+  has_hto_samples=TRUE
+  hto_samples_tbl = read.table(parSampleFile4, sep="\t", header=F)
+  hto_samples = split(hto_samples_tbl$V1, hto_samples_tbl$V2)
+}
+if(!has_hto_samples & (parFile1 != "")){
+  has_hto_samples=TRUE
   hto_samples_tbl = read.table(parFile1, sep="\t", header=T)
   hto_samples = split(hto_samples_tbl$Tagname, hto_samples_tbl$File)
 }
