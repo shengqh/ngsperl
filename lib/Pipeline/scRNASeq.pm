@@ -391,13 +391,13 @@ sub getScRNASeqConfig {
       my $celltype_name = undef;
 
       if(getValue($def, "perform_dynamic_cluster")){
-        my $dynamicKey = "dynamic_cluster";
-        my $scDynamic_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_call";
+        my $dynamicKey = $seurat_task . "_dynamic";
+        my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call";
         addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction);
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
         if(getValue($def, "perform_dynamic_subcluster", 1)){
-          my $subcluster_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_subcluster";
+          my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_subcluster";
 
           my $cur_options = {
             reduction => $reduction, 
@@ -565,7 +565,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "23",
-            "mem"       => getValue($def, "seurat_mem", "40gb")
+            "mem"       => getValue($def, "seurat_mem", "120gb")
           },
         };
         push( @$summary, $multires_task );
@@ -668,7 +668,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
-            "mem"       => getValue($def, "seurat_mem", "40gb")
+            "mem"       => getValue($def, "seurat_mem", "120gb")
           },
         };
         push( @$summary, $cluster_task );
@@ -691,7 +691,7 @@ sub getScRNASeqConfig {
             pbs                  => {
               "nodes"     => "1:ppn=1",
               "walltime"  => "10",
-              "mem"       => getValue($def, "seurat_mem", "40gb")
+              "mem"       => getValue($def, "seurat_mem", "120gb")
             },
           };
           push( @$summary, $heatmap_task );
