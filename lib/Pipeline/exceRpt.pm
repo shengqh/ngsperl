@@ -33,6 +33,12 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "cluster",   "slurm" );
   initDefaultValue( $def, "perform_preprocessing",   0 );
 
+  initDefaultValue( $def, "MAP_EXOGENOUS", "off");
+  initDefaultValue( $def, "ADAPTER_SEQ", getValue($def, "adapter", "guessKnown"));
+  initDefaultValue( $def, "RANDOM_BARCODE_LENGTH", getValue($def, "fastq_remove_random", 0));
+  initDefaultValue( $def, "RANDOM_BARCODE_LOCATION", "-5p -3p");
+  initDefaultValue( $def, "MIN_READ_LENGTH", getValue($def, "min_read_length", 16));
+  
   return $def;
 }
 
@@ -50,32 +56,53 @@ sub getConfig {
 
   my $target_dir      = $def->{target_dir};
 
+  my $exceRpt_DB = getValue($def, "exceRpt_DB");
   my $host = getValue($def, "exceRpt_host");
   my $image = getValue($def, "exceRpt_image");
-  my $fastq_remove_random = getValue($def, "fastq_remove_random");
-  my $min_read_length = getValue($def, "min_read_length", 16);
-  my $MAP_EXOGENOUS =  getValue($def, "MAP_EXOGENOUS", "miRNA");
-  
+
+  my $ADAPTER_SEQ = getValue($def, "ADAPTER_SEQ");
+  my $MAP_EXOGENOUS = getValue($def, "MAP_EXOGENOUS");
+  my $RANDOM_BARCODE_LENGTH = getValue($def, "RANDOM_BARCODE_LENGTH");
+  my $RANDOM_BARCODE_LOCATION = getValue($def, "RANDOM_BARCODE_LOCATION");
+  my $MIN_READ_LENGTH = getValue($def, "MIN_READ_LENGTH");
+
   $config->{"exceRpt"} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/exceRpt",
     option                => "
-input_dir=\$(dirname __INPUT__)
-input_name=\$(basename __INPUT__)
+input_dir=\$(dirname __FILE__)
+input_file=\$(basename __FILE__)
+
+echo input_dir=\$input_dir
+echo input_file=\$input_file
+echo sample_name=__NAME__
+echo host_genome=$host
+
+mkdir -p tmp
 
 singularity run \\
-    -B \$input_dir:/exceRptInput \
+    -c -e \\
+    -B \$input_dir:/exceRptInput \\
     -B `pwd`:/exceRptOutput \\
-    -B /scratch/h_vangard_1/references/exceRpt/$host:/exceRpt_DB/$host \\
+    -B `pwd`/tmp:/tmp \\
+    -B $exceRpt_DB/NCBI_taxonomy_taxdump:/exceRpt_DB/NCBI_taxonomy_taxdump \\
+    -B $exceRpt_DB/$host:/exceRpt_DB/$host \\
+    -B $exceRpt_DB/miRBase:/exceRpt_DB/miRBase \\
+    -B $exceRpt_DB/ribosomeDatabase:/exceRpt_DB/ribosomeDatabase \\
+    -B $exceRpt_DB/Genomes_BacteriaFungiMammalPlantProtistVirus:/exceRpt_DB/Genomes_BacteriaFungiMammalPlantProtistVirus \\
     $image \\
-    INPUT_FILE_PATH=/exceRptInput/\$input_name \\
+    INPUT_FILE_PATH=/exceRptInput/\$input_file \\
     MAIN_ORGANISM_GENOME_ID=$host \\
-    RANDOM_BARCODE_LENGTH=$fastq_remove_random \\
-    MIN_READ_LENGTH=$min_read_length \\
+    RANDOM_BARCODE_LENGTH=$RANDOM_BARCODE_LENGTH \\
+    RANDOM_BARCODE_LOCATION='$RANDOM_BARCODE_LOCATION' \\
+    MIN_READ_LENGTH=$MIN_READ_LENGTH \\
+    ADAPTER_SEQ=$ADAPTER_SEQ \\
     N_THREADS=8 \\
-    SAMPLE_NAME=__NAME__ \\
-    MAP_EXOGENOUS=miRNA 
+    JAVA_RAM=40G \\
+    REMOVE_LARGE_INTERMEDIATE_FILES=true \\
+    SAMPLE_NAME='__NAME__' \\
+    MAP_EXOGENOUS=$MAP_EXOGENOUS
 ",
     interpretor           => "",
     check_program         => 0,
@@ -88,6 +115,7 @@ singularity run \\
     output_file_prefix    => "",
     output_file_ext       => ".extracted.1.fq.gz",
     output_other_ext      => ".extracted.2.fq.gz",
+    no_output             => 1, #no output defined in command
     sh_direct             => 0,
     pbs                   => {
       "nodes"     => "1:ppn=8",
