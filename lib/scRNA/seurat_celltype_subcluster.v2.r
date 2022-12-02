@@ -160,50 +160,31 @@ for(pct in previous_celltypes){
   cur_npcs=min(pca_npcs, npcs)
   cur_pca_dims=1:cur_npcs
 
+  curreduction = reduction
+
   k_n_neighbors<-min(cur_npcs, 20)
   u_n_neighbors<-min(cur_npcs, 30)
   
   curprefix<-paste0(prefix, ".", gsub('[/\ ]', "_", pct))
-  
-  if(by_harmony){
-    cat(key, "harmony\n")
-    if(redo_harmony){
-      cat("RunPCA ... \n")
-      subobj <- RunPCA(object = subobj, assay=assay, verbose=FALSE)
-      cat("RunHarmony ... \n")
-      subobj <- RunHarmony(object = subobj,
-                        assay.use = assay,
-                        reduction = "pca",
-                        dims.use = pca_dims,
-                        group.by.vars = "batch",
-                        do_pca=FALSE)    
-    }
-    #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform and harmony, 
-    #so we will keep the old data structure
-    #subobj<-do_harmony(subobj, by_sctransform, regress_by_percent_mt, FALSE, "", pca_dims)
-    curreduction="harmony"
-  }else{
-    #https://github.com/satijalab/seurat/issues/5244
-    if (by_sctransform) {
-      cat(key, "sctransform\n")
-      #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform at individual sample level, 
-      #so we will keep the old data structure
-      #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
-    }else{
-      cat(key, "normalization\n")
-      subobj<-do_normalization(subobj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
-    }
-    cat(key, "RunPCA\n")
-    subobj<-RunPCA(subobj, npcs=cur_npcs)
-    curreduction="pca"
-  }
 
-  DefaultAssay(subobj)<-assay
-
-  cat(key, "FindClusters\n")
-  subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
-  subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
-  
+  subobj = sub_cluster(subobj, 
+                        assay, 
+                        by_sctransform, 
+                        by_harmony, 
+                        redo_harmony, 
+                        curreduction, 
+                        k_n_neighbors,
+                        u_n_neighbors,
+                        random.seed,
+                        resolutions,
+                        cur_npcs, 
+                        cur_pca_dims,
+                        vars.to.regress, 
+                        essential_genes, 
+                        key,
+                        do_umap = FALSE,
+                        umap_min_dist_map = NA,
+                        previous_layer = NA)
   
   g11<-DimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F)
   
@@ -223,22 +204,6 @@ for(pct in previous_celltypes){
   
   reductions_rds = paste0(curprefix, ".reductions.rds")
   saveRDS(subobj@reductions, reductions_rds)
-
-# 
-#   g<-NULL
-#   for(umap_name in umap_names){  
-#     cat(umap_name, "\n")
-#     cg<-DimPlot(subobj, reduction = umap_name, group.by="orig.ident") + ggtitle(umap_name)
-#     if(is.null(g)){
-#       g<-cg
-#     }else{
-#       g<-g+cg
-#     }
-#   }
-#   g<-g+plot_layout(ncol=3)
-#   png(paste0(curprefix, ".iumap.png"), width=6600, height=6000, res=300)
-#   print(g)
-#   dev.off()
   
   cat(key, "Find marker genes\n")
   cluster = clusters[1]

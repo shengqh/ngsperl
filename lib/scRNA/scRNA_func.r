@@ -1277,3 +1277,81 @@ XAxisRotation<-function(){
 save_session_info<-function(filename="sessionInfo.txt") {
   writeLines(capture.output(sessionInfo()), filename)
 }
+
+sub_cluster<-function(subobj, 
+                     assay, 
+                     by_sctransform, 
+                     by_harmony, 
+                     redo_harmony, 
+                     curreduction, 
+                     k_n_neighbors,
+                     u_n_neighbors,
+                     random.seed,
+                     resolutions,
+                     cur_npcs, 
+                     cur_pca_dims,
+                     vars.to.regress, 
+                     essential_genes, 
+                     key = "",
+                     do_umap = TRUE,
+                     umap_min_dist_map = NA,
+                     previous_layer = NA
+){
+  n_half_cell=round(ncol(subobj) / 2)
+  if(cur_npcs >= n_half_cell){
+    cur_npcs = n_half_cell
+    cur_pca_dims=1:cur_npcs
+  }
+  if(by_harmony){
+    if(redo_harmony){
+      if (length(unique(subobj$batch)) == 1){
+        cat(key, "use old harmony result\n")
+      }else{
+        cat(key, "redo harmony\n")
+        cat("RunPCA ... \n")
+        subobj <- RunPCA(object = subobj, npcs=cur_npcs, assay=assay, verbose=FALSE)
+        cat("RunHarmony ... \n")
+        subobj <- RunHarmony(object = subobj,
+                          assay.use = assay,
+                          reduction = "pca",
+                          dims.use = cur_pca_dims,
+                          group.by.vars = "batch",
+                          do_pca=FALSE)    
+      }
+    }else{
+      #due to very limited cell numbers in small cluster, it may cause problem to redo harmony, 
+      cat(key, "use old harmony result\n")
+    }
+  }else{
+    #https://github.com/satijalab/seurat/issues/5244
+    if (by_sctransform) {
+      cat(key, "use old sctransform result\n")
+      #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform at individual sample level, 
+      #so we will keep the old data structure
+      #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
+    }else{
+      cat(key, "redo normalization\n")
+      subobj<-do_normalization(subobj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+    }
+    cat(key, "RunPCA\n")
+    subobj<-RunPCA(subobj, npcs=cur_npcs)
+  }
+
+  cat(key, "FindNeighbors\n")
+  subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
+
+  cat(key, "FindClusters\n")
+  subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
+  
+  if(do_umap){
+    cat(key, "RunUMAP\n")
+    if(!all(is.na(umap_min_dist_map))){
+      cur_min_dist = umap_min_dist_map[previous_layer]
+    }else{
+      cur_min_dist = 0.3
+    }
+    subobj<-RunUMAP(object = subobj, min.dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE)
+  }
+
+  return(subobj)    
+}
