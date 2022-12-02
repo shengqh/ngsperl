@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='AG_integrated'
+outFile='P9112'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/hto_souporcell_skip_remap_cutoff_integration/result')
+setwd('/data/h_gelbard_lab/projects/20221129_9112_scRNA_human/hto_souporcell_skip_remap_cutoff_integration/result')
 
 ### Parameter setting end ###
 
@@ -57,21 +57,21 @@ for (sample_name in rownames(souporcell_tb)){
   }
   
   s <- merge(s1, s2, by=0, all.x=TRUE)
+
+  s$souporcell_v<-s$status
+  s$souporcell_v[s$status == "singlet"]<-s$assignment[s$status == "singlet"]
   
   #single<-s[s$HTO.global == "Singlet",]
   #single<-single[single$status == "singlet",]
-  single<-s[s$status == "singlet",]
-  tb<-table(single$HTO, single$assignment)
-  
-  write.csv(tb, paste0(sample_name, ".HTO_soupor_singlet.csv"))
-  
-  tb2<-as.data.frame.matrix(tb)
-  tb2$id = rownames(tb2)
-  top2<-tb2 %>%
-    gather(column, value, -id) %>%
-    group_by(column) %>%
-    top_n(2)
+  #single<-s[s$status == "singlet",]
+  tb<-table(s$HTO, s$souporcell_v)
+  write.csv(tb, paste0(sample_name, ".HTO_soupor.csv"))
 
+  single<-s[s$status == "singlet",]
+  tb<-table(single$HTO, single$souporcell_v)
+  
+  write.csv(tb, paste0(sample_name, ".HTO_soupor.singlet.csv"))
+  
   cmap<-unlist(apply(tb,2,get_max_row))
   names(cmap) = colnames(tb)
   
@@ -103,6 +103,9 @@ for (sample_name in rownames(souporcell_tb)){
     }
     
     res=cmap[ass]
+    if(res %in% c("Negative", "Doublet")){
+      res = paste0("souporcell_", ass)
+    }
     #print(paste0(x['assignment'], " => ", res))
     return(res)
   }))
@@ -282,4 +285,3 @@ for (sample_name in rownames(souporcell_tb)){
     dev.off()
   }
 }
-
