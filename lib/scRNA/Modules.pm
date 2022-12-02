@@ -208,7 +208,7 @@ sub add_seurat {
     pbs                  => {
       "nodes"     => "1:ppn=1",
       "walltime"  => getValue($def, "seurat_walltime", "12"),
-      "mem"       => getValue($def, "seurat_mem", getValue($def, "seurat_mem", "100gb")),
+      "mem"       => getValue($def, "seurat_mem", "120gb"),
     },
   };
   if ($def->{batch_for_integration}){
@@ -561,7 +561,7 @@ sub addScMRMA {
     pbs             => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
-      "mem"       => getValue($def, "seurat_mem", "40gb")
+      "mem"       => getValue($def, "seurat_mem", "120gb")
     },
   };
   push( @$tasks, $scMRMA_name );
@@ -1225,6 +1225,7 @@ sub addDynamicCluster {
       summary_layer_file => $def->{summary_layer_file},
       best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
       dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", "" ),
+      redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
     },
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
@@ -1237,9 +1238,6 @@ sub addDynamicCluster {
       "mem"       => getValue($def, "seurat_mem", "40gb")
     },
   };
-  if ($def->{batch_for_integration}){
-    $config->{$scDynamic_task}{parameterSampleFile3} = getValue($def, "batch_for_integration_groups");
-  }
   push( @$summary, $scDynamic_task );
 }
 
@@ -1519,6 +1517,7 @@ sub add_hto {
       umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),
       umap_num_neighbors => getValue($def, "hto_umap_num_neighbors", 30),
     },
+    parameterSampleFile4 => $def->{"HTO_tags"},
     output_perSample_file => "parameterSampleFile1",
     output_perSample_file_byName => 1,
     output_perSample_file_ext => ".HTO.umap.class.png;.HTO.csv;.HTO.data.csv;.HTO.umap.rds",
@@ -1567,7 +1566,7 @@ sub add_souporcell {
   my $common_variants = getValue($def, "souporcell_common_variants", "");
   my $common_variants_map = getValue($def, "souporcell_common_variants_map", {});
 
-  my $skip_remap = getValue($def, "skip_remap", 0);
+  my $skip_remap = getValue($def, "souporcell_skip_remap", 0);
 
   my $hto_souporcell_task = "hto_souporcell" . ($skip_remap ? "_skip_remap" : "_remap");
 
@@ -1643,7 +1642,7 @@ sub add_souporcell_integration {
     parameterSampleFile1_ref => $hto_souporcell_task,
     parameterSampleFile2_ref => $hto_ref,
     parameterSampleFile3_ref => [ $hto_task, ".umap.rds" ],
-    parameterSampleFile4     => $def->{ignore_souporcell_cluster},
+    parameterSampleFile4     => $def->{souporcell_ignore_cluster},
     output_perSample_file => "parameterSampleFile1",
     output_perSample_file_byName => 1,
     output_perSample_file_ext => ".HTO.png;.HTO.csv;.meta.rds",
