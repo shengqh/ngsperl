@@ -37,11 +37,7 @@ sub perform {
   my $ispaired = get_is_paired_end_option($config, $section, 0);
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
 
-  my $prefetch_option = get_option($config, $section, "", "-X 50G");
-
-  if($ispaired){
-    $option = $option . " --split-files ";
-  }
+  my $prefetch_option = get_option($config, $section, "prefetch_option", "-X 50G");
 
   my $raw_files = getSraFiles( $config, $section );
 
