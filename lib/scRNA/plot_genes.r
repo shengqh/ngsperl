@@ -4,7 +4,7 @@ parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
-parFile2='/home/shengq2/program/projects/alexander_gelbard/20220103_cell_markers.txt'
+parFile2='/home/shengq2/program/collaborations/alexander_gelbard/20220103_cell_markers.txt'
 parFile3='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
 
 
