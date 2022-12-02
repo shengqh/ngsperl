@@ -118,7 +118,7 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
     
           all_in_markers=rbind(all_in_markers, in_markers)
           
-          if(!is.na(bw_markers)){
+          if(all(!is.na(bw_markers))){
             both_markers=bw_markers[rownames(bw_markers) %in% rownames(in_markers),,drop=F]
             cat(paste0("  there are ", nrow(both_markers), " markers found in both between and in cell types\n"))
             all_both_markers=rbind(all_both_markers, both_markers)
