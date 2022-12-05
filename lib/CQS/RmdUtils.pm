@@ -64,7 +64,7 @@ sub build_rmd_file {
     }
   }
   else {
-    copy( $rtemplate, $rfile ) or die "Copy failed: $!";
+    copy( $rtemplate, $rfile ) or die "Copy failed $rtemplate: $!";
   }
 
   return($rfile);
