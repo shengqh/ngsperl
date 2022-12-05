@@ -1,0 +1,77 @@
+---
+title: "Seurat sub clustering analysis"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, child="reportFunctions.Rmd", include=FALSE} 
+```
+
+```{r data, echo = FALSE}
+
+options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outFile=myoptions$task_name
+
+files<-read.csv(paste0(outFile, ".files.csv"))
+
+
+getFigure<-function(filepath){
+  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", basename(filepath), "')\n```\n\n"))
+}
+
+resFile<-"subcluster.Rmd"
+figureRmd<-function(files){
+  result<-""
+  celltypes<-rev(unique(files$celltype))
+  idx=1
+  for(idx in c(1:length(celltypes))){
+    celltype=celltypes[idx]
+    result<-paste0(result, paste0("\n\n# ", celltype, "\n\n"))
+
+    ct_tbl<-files[files$celltype==celltype,]
+    resolutions<-unique(ct_tbl$resolution)
+    
+    idy = 1
+    for(idy in c(1:length(resolutions))){
+      res=resolutions[idy]
+
+      result<-paste0(result, paste0("\n\n## Resolution ", res, "\n\n"))
+      res_tbl=ct_tbl[ct_tbl$resolution == res,]
+
+      heatmap=res_tbl$file[res_tbl$type=="heatmap"]
+      if(file.info(heatmap)$size > 20000){
+        result<-paste0(result, "### Marker genes\n\n")
+        result<-paste0(result, getFigure(heatmap))
+      }
+
+      result<-paste0(result, "### UMAP\n\n")
+      umap=res_tbl$file[res_tbl$type=="umap"]
+      result<-paste0(result, getFigure(umap))
+    }
+  }
+  return(result)
+}
+cat(figureRmd(files), file=resFile)
+
+```
+
+```{r, child=resFile} 
+```
+

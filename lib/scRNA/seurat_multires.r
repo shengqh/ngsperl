@@ -255,4 +255,7 @@ ABB
 saveRDS(obj@meta.data, paste0(prefix, ".meta.rds"))
 write.csv(obj@meta.data, paste0(prefix, ".meta.csv"))
 
+library('rmarkdown')
+rmarkdown::render("seurat_multires.rmd",output_file=paste0(outFile,".html"))
+
 #saveRDS(obj, paste0(prefix, ".multires.rds"))

@@ -300,7 +300,7 @@ for(pct in previous_celltypes){
       g<-g+get_groups_dot(sxobj, "signacx_CellStates", "orig.ident")
     }
 
-    width=10000
+    width=8000
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
       #using global normalized data for bubblemap
       subobj2@meta.data <- subobj@meta.data
@@ -368,3 +368,7 @@ EFGH"
 }
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+
+library('rmarkdown')
+rmarkdown::render("seurat_celltype_subcluster.v2.rmd",output_file=paste0(outFile,".html"))
+
