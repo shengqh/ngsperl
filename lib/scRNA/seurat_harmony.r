@@ -58,4 +58,7 @@ saveRDS(finalList, file=finalListFile)
 
 output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
 
+library('rmarkdown')
+rmarkdown::render("seurat_data.rmd",output_file=paste0(outFile,".html"))
+
 writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
