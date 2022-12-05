@@ -182,10 +182,12 @@ sub add_seurat {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_task,
-    rtemplate                => "../scRNA/scRNA_func.r,$preprocessing_rscript",
+    rtemplate                => "../scRNA/scRNA_func.r;$preprocessing_rscript",
+    rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.Rmd",
     parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
     parameterFile2_ref => $essential_gene_task,
     parameterSampleFile1     => {
+      task_name             => getValue( $def, "task_name" ),
       Mtpattern             => getValue( $def, "Mtpattern" ),
       rRNApattern           => getValue( $def, "rRNApattern" ),
       Remove_rRNA           => getValue( $def, "Remove_rRNA" ),
@@ -213,6 +215,48 @@ sub add_seurat {
   };
   if ($def->{batch_for_integration}){
     $config->{$seurat_task}{parameterSampleFile2} = getValue($def, "batch_for_integration_groups");
+  }
+
+
+  $config->{$seurat_task . "_report"} = {
+    class => "CQS::UniqueRmd",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_task . "_report",
+    report_rmd_file => "../scRNA/seurat_data.rmd",
+    additional_rmd_files => "reportFunctions.Rmd;$preprocessing_rscript;../scRNA/scRNA_func.r",
+    option => "",
+    parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
+    parameterFile2_ref => $essential_gene_task,
+    parameterSampleFile1     => {
+      preprocessing_rscript => basename($preprocessing_rscript),
+      task_name             => getValue( $def, "task_name" ),
+      Mtpattern             => getValue( $def, "Mtpattern" ),
+      rRNApattern           => getValue( $def, "rRNApattern" ),
+      Remove_rRNA           => getValue( $def, "Remove_rRNA" ),
+      Remove_MtRNA          => getValue( $def, "Remove_MtRNA" ),
+      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+      mt_cutoff             => getValue( $def, "mt_cutoff" ),
+      species               => getValue( $def, "species" ),
+      resolution            => getValue( $def, "resolution" ),
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_integration        => $by_integration,
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      batch_for_integration => getValue( $def, "batch_for_integration" ),
+      qc_genes              => getValue( $def, "qc_genes", "" ),
+    },
+    output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "seurat_walltime", "12"),
+      "mem"       => getValue($def, "seurat_mem", "120gb"),
+    },
+  };
+  if ($def->{batch_for_integration}){
+    $config->{$$seurat_task . "_report"}{parameterSampleFile2} = getValue($def, "batch_for_integration_groups");
   }
 
   push( @$summary, $seurat_task );
@@ -1249,10 +1293,12 @@ sub addSubClusterV2 {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v2.r",
+    rReportTemplate          => "../scRNA/seurat_celltype_subcluster.v2.rmd;reportFunctions.Rmd",
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
     parameterSampleFile1    => merge_hash_left_precedent($cur_options, {
+      task_name             => getValue( $def, "task_name" ),
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
       by_integration        => getValue( $def, "by_integration" ),
