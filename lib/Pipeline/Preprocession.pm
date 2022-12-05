@@ -441,6 +441,7 @@ sub getPreprocessionConfig {
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
       is_restricted_data => getValue($def, "is_restricted_data"),
       docker_prefix => "sratools_",
+      no_docker => $def->{"no_docker"},
       pbs        => {
         "nodes"     => "1:ppn=1",
         "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
