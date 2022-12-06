@@ -95,6 +95,8 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_enclone_only",      0 );
 
   initDefaultValue( $def, "perform_seurat",      1 );
+  initDefaultValue( $def, "seurat_mem",          "120gb" );
+
   initDefaultValue( $def, "Mtpattern",           "^MT-|^Mt-" );
   initDefaultValue( $def, "rRNApattern",         "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]" );
   initDefaultValue( $def, "hemoglobinPattern",   "^HB[^(P)]|^Hb[^(p)]" );
@@ -404,7 +406,7 @@ sub getScRNASeqConfig {
             celltype_layer => "layer4",
           };
 
-          addSubClusterV2($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
 
           if(getValue($def, "perform_dynamic_choose")) {
             my $choose_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_choose";
@@ -567,7 +569,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "23",
-            "mem"       => getValue($def, "seurat_mem", "120gb")
+            "mem"       => getValue($def, "seurat_mem")
           },
         };
         push( @$summary, $multires_task );
@@ -591,7 +593,7 @@ sub getScRNASeqConfig {
             reduction => $reduction, 
             celltype_layer => $multires_celltype,
           };
-          addSubClusterV2($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
 
           if(getValue($def, "perform_multires_choose", 0)) {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
@@ -670,7 +672,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
-            "mem"       => getValue($def, "seurat_mem", "120gb")
+            "mem"       => getValue($def, "seurat_mem")
           },
         };
         push( @$summary, $cluster_task );
@@ -693,7 +695,7 @@ sub getScRNASeqConfig {
             pbs                  => {
               "nodes"     => "1:ppn=1",
               "walltime"  => "10",
-              "mem"       => getValue($def, "seurat_mem", "120gb")
+              "mem"       => getValue($def, "seurat_mem")
             },
           };
           push( @$summary, $heatmap_task );
