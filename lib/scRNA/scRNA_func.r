@@ -1294,6 +1294,7 @@ sub_cluster<-function(subobj,
                      essential_genes, 
                      key = "",
                      do_umap = TRUE,
+                     reduction.name = "umap",
                      umap_min_dist_map = NA,
                      previous_layer = NA
 ){
@@ -1350,7 +1351,7 @@ sub_cluster<-function(subobj,
     }else{
       cur_min_dist = 0.3
     }
-    subobj<-RunUMAP(object = subobj, min.dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE)
+    subobj<-RunUMAP(object = subobj, min.dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE, reduction.name=reduction.name)
   }
 
   return(subobj)    
