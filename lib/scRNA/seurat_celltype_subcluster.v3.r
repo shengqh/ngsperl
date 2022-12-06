@@ -164,7 +164,7 @@ for(pct in previous_celltypes){
   
   curprefix<-paste0(prefix, ".", gsub('[/\ ]', "_", pct))
 
-  sub_umap = "sub_umap"
+  subumap = "subumap"
   subobj = sub_cluster(subobj, 
                         assay, 
                         by_sctransform, 
@@ -181,7 +181,7 @@ for(pct in previous_celltypes){
                         essential_genes, 
                         key,
                         do_umap = TRUE,
-                        reduction.name = sub_umap,
+                        reduction.name = subumap,
                         umap_min_dist_map = NA,
                         previous_layer = NA)
   
@@ -262,32 +262,31 @@ for(pct in previous_celltypes){
       }
     }
 
+    # bar file
+    bar_file=paste0(cluster_prefix, ".bar.png")
+    gb<-get_groups_dot(subobj, "display_layer", "orig.ident")
+    if(bHasCurrentSignacX){
+      gb<-gb+get_groups_dot(subobj, "display_layer", "orig.ident") + get_groups_dot(subobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
+    }
+    height=ifelse(bHasCurrentSignacX, 3000, 1500)
+    png(bar_file, width=3000, height=height, res=300)
+    print(gb)
+    dev.off()
+
+    # umap file
     g0<-DimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
     g1<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
-    g3<-DimPlot(subobj, reduction=sub_umap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
-    g4<-DimPlot(subobj, reduction=sub_umap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
-
-    bar_file=paste0(cluster_prefix, ".bar.png")
+    g3<-DimPlot(subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
+    g4<-DimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
     if(bHasCurrentSignacX){
       g2<-DimPlot(sxobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle("signacx")
-      g5<-DimPlot(sxobj, reduction=sub_umap, group.by = "signacx_CellStates", label=F) + ggtitle(paste0(sub_umap, ": signacX"))
+      g5<-DimPlot(sxobj, reduction=subumap, group.by = "signacx_CellStates", label=F) + ggtitle(paste0(subumap, ": signacX"))
       g<-g0+g1+g2+g3+g4+g5
-
-      gs<-get_groups_dot(subobj, "display_layer", "orig.ident") + get_groups_dot(subobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
-      png(bar_file, width=3000, height=3000, res=300)
-      print(gs)
-      dev.off()
     }else{
       g<-g0+g1+g3+g4
-
-      gs<-get_groups_dot(subobj, "display_layer", "orig.ident")
-      png(bar_file, width=3000, height=15000, res=300)
-      print(gs)
-      dev.off()
     }
     ncol=ifelse(bHasCurrentSignacX, 3, 2)
     g<-g+plot_layout(ncol=ncol)
-
     width=ncol * 1800
     height=3000
     umap_file = paste0(cluster_prefix, ".umap.png")
@@ -295,8 +294,8 @@ for(pct in previous_celltypes){
     print(g)
     dev.off()
 
+    # marker gene heatmap
     subobj<-myScaleData(subobj, top10genes, "RNA")
-
     if(ncol(subobj) > 5000){
       subsampled <- subobj[, sample(colnames(subobj), size=5000, replace=F)]
       gh<-DoHeatmap(subsampled, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
@@ -313,7 +312,7 @@ for(pct in previous_celltypes){
     print(gh)
     dev.off()
     
-    cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
+    cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
       #using global normalized data for bubblemap
@@ -328,7 +327,7 @@ for(pct in previous_celltypes){
       print(g)
       dev.off()
 
-      cur_df<-rbind(cur_df, c(paste0(getwd(), dot_file), "dot", cur_resolution, pct))
+      cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot", cur_resolution, pct))
     }
 
     filelist<-rbind(filelist, cur_df)
@@ -338,4 +337,4 @@ for(pct in previous_celltypes){
 write.csv(filelist, paste0(outFile, ".files.csv"))
 
 library('rmarkdown')
-rmarkdown::render("seurat_celltype_subcluster.v2.rmd",output_file=paste0(outFile,".html"))
+rmarkdown::render("seurat_celltype_subcluster.v3.rmd",output_file=paste0(outFile,".html"))
