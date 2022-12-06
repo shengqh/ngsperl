@@ -599,12 +599,16 @@ sub addEncodeATACseq {
   #my $adapter = getValue($def, "perform_cutadapt", 0) ? getValue($def, "adapter", "") : "";
   #print("adapter = " . $adapter . "\n");
   my $is_paired_end = is_paired_end($def);
+  my $encode_option = getValue($def, "encode_option", "");
+  my $folder_suffix = $encode_option =~ /slurm/ ? "_slurm" : "";
+
+  my $task_folder = "${task}${folder_suffix}";
 
   $config->{$task} = {     
     "class" => "CQS::Wdl",
     #"option" => "--no-build-singularity",
-    "option" => "",
-    "target_dir" => "${target_dir}/$task",
+    "option" => getValue($def, "encode_option", ""),
+    "target_dir" => "${target_dir}/${task_folder}",
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
@@ -701,7 +705,7 @@ sub addEncodeATACseq {
   my $croo_task = $task . "_croo";
   $config->{$croo_task} = {
     class => "CQS::ProgramWrapperOneToOne",
-    target_dir => "${target_dir}/$croo_task",
+    target_dir => "${target_dir}/${task_folder}_croo",
     interpretor => "python3",
     program => "../Chipseq/croo.py",
     option => "-n __NAME__ --croo " . getValue($def, "croo", "croo") . " --out_def_json " . getValue($def, "croo_out_def_json"),
