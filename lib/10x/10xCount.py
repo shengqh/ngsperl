@@ -15,7 +15,7 @@ def count(outputFile, inputFile, logger):
         logger.info("processed %d" % (processed))
         
       if read.is_unmapped:
-        continue;
+        continue
       
       qname = read.query_name
       

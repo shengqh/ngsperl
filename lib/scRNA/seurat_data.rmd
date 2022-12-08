@@ -1,0 +1,87 @@
+---
+title: "Seurat data preparation"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, child="reportFunctions.Rmd", include=FALSE} 
+```
+
+```{r data, echo = FALSE}
+
+options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outFile=myoptions$task_name
+
+```
+
+# elbowplot
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".elbowplot.pca.png"))
+```
+
+# Filtering cutoffs
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".qc.1.png"))
+```
+
+# Number of reads ~ percentage of mitochondral
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".qc.2.png"))
+```
+
+# Number of features ~ percentage of mitochondral
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".qc.3.png"))
+```
+
+# Sample characters after filtering
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".qc.4.png"))
+```
+
+# Sample cells
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".sample.cell.bar.png"))
+```
+
+```{r, results="asis", echo=FALSE}
+tbl<-read.csv(paste0(outFile, ".sample_cell.csv"))
+print(kable(tbl, row.names=F) %>%	
+  kable_styling())
+
+```
+
+# Sample UMAP
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".sample.png"))
+```
+
+# Sample exp UMAP
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".sample.qc.exp.png"))
+```

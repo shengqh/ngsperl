@@ -1,3 +1,18 @@
+rm(list=ls()) 
+outFile='CM_8643_bakeoff'
+parSampleFile1='fileList1_pie.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/host_genome/bowtie1_genome_1mm_NTA_smallRNA_table/result/smallRNA_1mm_CM_8643_bakeoff.mapped.count'
+parFile2='/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/final_unmapped/final_unmapped_reads_summary/result/CM_8643_bakeoff.count'
+parFile3='/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/nonhost_genome/nonhost_genome_count/result/CM_8643_bakeoff.nonhost_genome.tsv'
+textSize=9;groupTextSize=10; uniqueGroupNames=c('Pool1_Media','Pool1_Exomere','Pool2_Media','Pool2_Exomere','Pool3_Media','Pool3_Supermere');
+
+setwd('/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/data_visualization/reads_in_tasks/result')
+
+### Parameter setting end ###
+
+source("countTableVisFunctions.R")
 options(bitmapType='cairo')
 
 #############################

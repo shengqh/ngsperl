@@ -285,7 +285,7 @@ libraryKey<-\"$libraryKey\"
   my $log_desc = $cluster->get_log_description($log);
 
   my $lastComparisonName = $comparison_names[-1];
-  my $final_file         = $lastComparisonName . $suffix . "_DESeq2_sig.csv";
+  my $final_file         = $lastComparisonName . $suffix . "_DESeq2_volcanoPlot.png";
   my $pbs                = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "R --vanilla -f $rfile \n";
@@ -329,7 +329,6 @@ sub result {
     push( @result_files, $result_dir . "/${prefix}_DESeq2-vsd.csv" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_GSEA.rnk" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_sig.csv" );
-    push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoPlot.png" );
     push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoEnhanced.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-heatmap.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-pca.png" );
@@ -341,6 +340,9 @@ sub result {
       push( @result_files, $result_dir . "/${prefix}_quantile_wilcox_sig.csv" );
     }
     push( @result_files, $result_dir . "/${comparison_name}.design" );
+
+    #put volcanoPlot at end of result list for checking if the task has been finished.
+    push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoPlot.png" );
 
     my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {

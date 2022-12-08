@@ -30,7 +30,14 @@ library(knitr)
 library(kableExtra)
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
-rownames(files)<-files$V2
+if(nrow(files) == 1 & files$V2[1] == 'gsea'){
+  #single cell GSEA result
+  files<-read.csv(files$V1[1])
+  files$Comparisons<-basename(dirname(files$Folder))
+}else{
+  rownames(files)<-files$V2
+}
+
 ```
  
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE} 

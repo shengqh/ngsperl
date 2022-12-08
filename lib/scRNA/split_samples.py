@@ -4,7 +4,6 @@ import sys
 import logging
 import os
 import pandas as pd
-from asyncore import read
 
 DEBUG = False
 NOT_DEBUG= not DEBUG
@@ -44,17 +43,22 @@ with pysam.Samfile(args.bam, "rb") as sam:
     if index % 1000000 == 0:
       logger.info("%s : %d" % (read.reference_name, index))
 
+    if read.is_unmapped:
+      continue
+
     if not read.has_tag('CB'):
       continue
+    
     barcode = read.get_tag('CB')
     if barcode in barcode_dict:
       hto = barcode_dict[barcode]
-      fname = samples_dict[hto]
-      if not fname in sam_dict:
-        new_file = os.path.join(args.output, fname + ".bam")
-        newsam = pysam.AlignmentFile(new_file, "wb", header=header)
-        sam_dict[fname] = newsam
-      sam_dict[fname].write(read)
+      if hto in samples_dict:
+        fname = samples_dict[hto]
+        if not fname in sam_dict:
+          new_file = os.path.join(args.output, fname + ".bam")
+          newsam = pysam.AlignmentFile(new_file, "wb", header=header)
+          sam_dict[fname] = newsam
+        sam_dict[fname].write(read)
 
 for fout in sam_dict.values():
   fout.close()

@@ -95,6 +95,8 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_enclone_only",      0 );
 
   initDefaultValue( $def, "perform_seurat",      1 );
+  initDefaultValue( $def, "seurat_mem",          "120gb" );
+
   initDefaultValue( $def, "Mtpattern",           "^MT-|^Mt-" );
   initDefaultValue( $def, "rRNApattern",         "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]" );
   initDefaultValue( $def, "hemoglobinPattern",   "^HB[^(P)]|^Hb[^(p)]" );
@@ -104,7 +106,7 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "regress_by_percent_mt",   getValue($def, "Remove_MtRNA") ? 0 : 1 );
   initDefaultValue( $def, "Remove_hemoglobin",   0 );
   
-  initDefaultValue( $def, "nFeature_cutoff_min", 200 );
+  initDefaultValue( $def, "nFeature_cutoff_min", 300 );
   initDefaultValue( $def, "nFeature_cutoff_max", 10000 );
   initDefaultValue( $def, "nCount_cutoff",       500 );
   initDefaultValue( $def, "mt_cutoff",           20 );
@@ -174,7 +176,7 @@ sub initializeScRNASeqDefaultOptions {
   
   initDefaultValue( $def, "perform_fix_resolution", 0 );
   #initDefaultValue( $def, "remove_subtype", "T cells,Fibroblasts,Neurons,Macrophages,Dendritic cells"),
-  initDefaultValue( $def, "remove_subtype", "T cells,B cells,Fibroblasts,Neurons,Epithelial cells,Endothelial cells,Macrophages,Dendritic cells,Ciliated cells"),
+  initDefaultValue( $def, "remove_subtype", "T cells,B cells,Plasma cells, Fibroblasts,Neurons,Epithelial cells,Endothelial cells,Macrophages,Dendritic cells,Ciliated cells"),
   initDefaultValue( $def, "best_resolution_min_markers", 20);
 
   return $def;
@@ -236,6 +238,10 @@ sub getScRNASeqConfig {
   my $perform_clonotype_analysis = getValue($def, "perform_clonotype_analysis", 0);
   my $clonotype_ref = undef;
 
+  my $perform_arcasHLA = getValue($def, "perform_arcasHLA", 0);
+  my $perform_strelka2 = getValue($def, "perform_strelka2", 0);
+
+  my $bam_ref = undef;
   my $hla_merge = undef;
   my $individual_qc_task = "individual_qc";
   my $qc_filter_config_file = $target_dir . "/qc_filter_config.txt";
@@ -263,8 +269,14 @@ sub getScRNASeqConfig {
       my $preparation_task = add_hto_samples_preparation($config, $def, $summary, $target_dir, $hto_file_ref);
       $hto_file_ref = [ $preparation_task, ".hto.rds"];
 
-      my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref);
+      if(defined $def->{HTO_samples}){
+        $hto_sample_file = write_HTO_sample_file($def);
+      }
+
+      my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
       $hto_ref = [ $hto_task, ".HTO.csv" ];
+
+      my $hto_bam_ref = $hto_ref;
 
       my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, $hto_ref);
 
@@ -276,17 +288,15 @@ sub getScRNASeqConfig {
         my $hto_souporcell_task = add_souporcell($config, $def, $summary, $target_dir, $preparation_task);
         my $hto_integration_task = add_souporcell_integration($config, $def, $summary, $target_dir, $hto_souporcell_task, $hto_ref);
         $hto_ref = [ $hto_integration_task, ".meta.rds" ];
+        $hto_bam_ref = [ $hto_integration_task, ".HTO.csv" ];
       }
 
-      if(defined $def->{HTO_samples}){
-        $hto_sample_file = write_HTO_sample_file($def);
+      if($perform_arcasHLA || $perform_strelka2){
+        $bam_ref = add_hto_bam($config, $def, $individual, $target_dir, $hto_bam_ref);
       }
-
-      my $perform_arcasHLA = getValue($def, "perform_arcasHLA", 0);
 
       if($perform_arcasHLA){
-        my $hto_bam_task = add_hto_bam($config, $def, $individual, $target_dir, $hto_ref);
-        $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, $hto_bam_task . "_", $hto_bam_task);        
+        $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref);        
       }
 
       if($perform_clonotype_analysis){
@@ -294,15 +304,24 @@ sub getScRNASeqConfig {
         $clonotype_ref = [$split_task, "all_contig_annotations.json"];
       }
     }else{
-      if(getValue($def, "perform_arcasHLA", 0)){
+      if($perform_arcasHLA || $perform_strelka2){
         getValue($def, "bam_files");
+        $bam_ref = "bam_files";
+      }
+    
+      if($perform_arcasHLA){
         if (defined $def->{singleend_bam_files}){
           $config->{singleend_bam_files} = $def->{singleend_bam_files};
-          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files", "singleend_bam_files");        
+          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref, "singleend_bam_files");        
         }else{
-          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", "bam_files");        
+          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref);        
         }
       }
+    }
+
+    if($perform_strelka2){
+      my $strelka2_task = "strelka2";
+      add_strelka2($config, $def, $summary, $target_dir, $strelka2_task, $bam_ref);
     }
 
     my $merge_task = undef;
@@ -336,7 +355,7 @@ sub getScRNASeqConfig {
     my $seurat_rawdata = "seurat_rawdata";
     if ( getValue( $def, "perform_seurat" ) ) {
       if (getValue($def, "merge_seurat_object", 0)){
-        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata);
+        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, "files");
       }else{
         add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file);
       }
@@ -374,20 +393,20 @@ sub getScRNASeqConfig {
       my $celltype_name = undef;
 
       if(getValue($def, "perform_dynamic_cluster")){
-        my $dynamicKey = "dynamic_cluster";
-        my $scDynamic_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_call";
+        my $dynamicKey = $seurat_task . "_dynamic";
+        my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call";
         addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction);
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
         if(getValue($def, "perform_dynamic_subcluster", 1)){
-          my $subcluster_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_subcluster";
+          my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_subcluster";
 
           my $cur_options = {
             reduction => $reduction, 
             celltype_layer => "layer4",
           };
 
-          addSubClusterV2($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
 
           if(getValue($def, "perform_dynamic_choose")) {
             my $choose_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_choose";
@@ -506,7 +525,7 @@ sub getScRNASeqConfig {
       }
 
       if(getValue($def, "perform_multires", 0)){
-        my $multiresKey = "multires";
+        my $multiresKey = $seurat_task . "_multires";
         my $multires_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_call";
 
         my $obj_ref = [$seurat_task, ".rds"];
@@ -515,14 +534,17 @@ sub getScRNASeqConfig {
           perform                  => 1,
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $multires_task,
           rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_multires.r",
+          rReportTemplate          => "../scRNA/seurat_multires.rmd;reportFunctions.Rmd",
           parameterFile1_ref => $obj_ref,
           parameterSampleFile1    => {
+            task_name             => getValue( $def, "task_name" ),
             Mtpattern             => getValue( $def, "Mtpattern" ),
             rRNApattern           => getValue( $def, "rRNApattern" ),
             Remove_rRNA           => getValue( $def, "Remove_rRNA" ),
             Remove_MtRNA          => getValue( $def, "Remove_MtRNA" ),
             pca_dims              => getValue( $def, "pca_dims" ),
             by_sctransform        => getValue( $def, "by_sctransform" ),
+            by_integration        => getValue( $def, "by_integration" ),
             reduction             => $reduction,
             species               => getValue( $def, "species" ),
             db_markers_file       => getValue( $def, "markers_file" ),
@@ -547,7 +569,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "23",
-            "mem"       => getValue($def, "seurat_mem", "40gb")
+            "mem"       => getValue($def, "seurat_mem")
           },
         };
         push( @$summary, $multires_task );
@@ -563,11 +585,15 @@ sub getScRNASeqConfig {
           }else{
             $multires_celltype = "RNA_snn_res." . $multires_resolution . "_celltype_summary";
           }
+          if(getValue( $def, "by_integration" ) & (! getValue($def, "integration_by_harmony"))) {
+            $multires_celltype = "integrated_snn_res." . $multires_resolution . "_celltype_summary";
+          }
+
           my $cur_options = {
             reduction => $reduction, 
             celltype_layer => $multires_celltype,
           };
-          addSubClusterV2($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
 
           if(getValue($def, "perform_multires_choose", 0)) {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
@@ -584,6 +610,29 @@ sub getScRNASeqConfig {
 
             my $pseudo_count_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_pseudo_count";
             add_pseudo_count($config, $def, $summary, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
+
+            if(defined $def->{bubble_plots}){
+              my $bubblemap_name = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_bubblemap";
+              $config->{$bubblemap_name} = {
+                class                => "CQS::UniqueR",
+                perform              => 1,
+                target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubblemap_name,
+                rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multires.r",
+                parameterSampleFile1 => $def->{bubble_plots},
+                parameterSampleFile2 => {
+                  celltype_name => $celltype_name,
+                },
+                parameterFile1_ref   => [ $choose_task, ".final.rds" ],
+                output_file_ext      => ".bubblemap.png",
+                sh_direct            => 1,
+                pbs                  => {
+                  "nodes"     => "1:ppn=1",
+                  "walltime"  => "1",
+                  "mem"       => "10gb"
+                },
+              };
+              push( @$summary, $bubblemap_name );
+            }
 
             if ( $perform_comparison ) {
               if ( defined $def->{"DE_cluster_pairs"} ) {
@@ -623,7 +672,7 @@ sub getScRNASeqConfig {
           pbs                  => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "10",
-            "mem"       => getValue($def, "seurat_mem", "40gb")
+            "mem"       => getValue($def, "seurat_mem")
           },
         };
         push( @$summary, $cluster_task );
@@ -646,7 +695,7 @@ sub getScRNASeqConfig {
             pbs                  => {
               "nodes"     => "1:ppn=1",
               "walltime"  => "10",
-              "mem"       => getValue($def, "seurat_mem", "40gb")
+              "mem"       => getValue($def, "seurat_mem")
             },
           };
           push( @$summary, $heatmap_task );

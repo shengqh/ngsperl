@@ -36,6 +36,11 @@ sub perform {
 
   my $ispaired = get_is_paired_end_option($config, $section, 0);
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
+  my $prefetch_option = get_option($config, $section, "prefetch_option", "-X 50G");
+
+  if($ispaired){
+    $option = $option . " --split-3 ";
+  }
 
   my $raw_files = getSraFiles( $config, $section );
 
@@ -51,12 +56,15 @@ sub perform {
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
     my $log_desc = $cluster->get_log_description($log);
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $current_dir = create_directory_or_die($result_dir . "/" . $sample_name);
 
     my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file, "", 0, undef, 'sh' );
+
+    print $sh "if [[ ! -s $current_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
     if ( $sample_file =~ /GSM/ ) {
       $sample_file = GsmToSrr( $sample_file );
@@ -67,7 +75,7 @@ sub perform {
 ln -s $sample_file ${sample_name}.sra 
 rm -f $sample_name.failed
 
-fastq-dump --split-e --gzip --origfmt --helicos ${sample_name}.sra
+fastq-dump $option --gzip --origfmt --helicos ${sample_name}.sra
 
 status=\$?
 if [[ \$status -ne 0 ]]; then
@@ -83,7 +91,7 @@ rm -f ${sample_name}.sra
 if [ -z \${SLURM_JOBID+x} ]; then 
   echo \"in bash mode\"; 
   ln -s $sample_file ${sample_name}.sra 
-  fastq-dump --split-e --gzip --origfmt --helicos ${sample_name}.sra
+  fastq-dump $option --gzip --origfmt --helicos ${sample_name}.sra
   rm ${sample_name}.sra
 else 
   echo \"in cluster mode\"; 
@@ -116,7 +124,7 @@ fi
 ";
       }
     }
-    elsif ( $sample_file =~ /SRR/ ) {
+    elsif ( $sample_file =~ /[SD]RR/ ) {
       my $sratoolkit_setting_file = get_option_file($config, $section, "sratoolkit_setting_file");
 
       print $pbs "
@@ -139,28 +147,43 @@ echo dump $sample_name
         print $pbs "
 rm -f $sample_name.failed
 
-fastq-dump --split-e --gzip --origfmt --helicos $sample_file 
-        
-status=\$?
-if [[ \$status -ne 0 ]]; then
-  touch $sample_name.failed
-  rm -f ${sample_file}_1.fastq.gz ${sample_file}_2.fastq.gz ${sample_file}.fastq.gz
-else
-  touch $sample_name.succeed
+if [[ ! -s ${sample_file}.sra ]]; then
+  echo prefetch $sample_file $prefetch_option -o ${sample_file}.tmp.sra
+  prefetch $sample_file $prefetch_option --check-rs no -o ${sample_file}.tmp.sra
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.prefetch.failed
+    #rm -f ${sample_file}.sra 
+  else
+    touch $sample_name.prefetch.succeed
+    mv ${sample_file}.tmp.sra ${sample_file}.sra
+  fi
+fi
+
+if [[ -s ${sample_file}.sra ]]; then
+  echo fastq-dump $option --gzip --origfmt --helicos ${sample_file}.sra 
+  fastq-dump $option --gzip --origfmt --helicos ${sample_file}.sra 
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.fasterq.failed
+    rm -f ${sample_file}_1.fastq.gz ${sample_file}_2.fastq.gz ${sample_file}.fastq.gz
+  else
 ";
+
         if($ispaired){
-          print $pbs "  mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz \n";
-          print $pbs "  mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz \n";
+          print $pbs "    mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz \n";
+          print $pbs "    mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz \n";
         }else{
-          print $pbs "  mv ${sample_file}.fastq.gz ${sample_name}.fastq.gz \n";
+          print $pbs "    mv ${sample_file}.fastq.gz ${sample_name}.fastq.gz \n";
         }
-        print $pbs "fi
+        print $pbs "  fi
+fi
 ";
       }
       else {
         print $pbs "if [[ -s ${sample_name}.fastq ]]; then\n  rm ${sample_name}.fastq \nfi \n";
         for my $sf (@sample_files) {
-          print $pbs "fastq-dump --split-e --origfmt --helicos $sf -Z >> ${sample_name}.fastq \n";
+          print $pbs "fastq-dump $option --origfmt --helicos $sf -Z >> ${sample_name}.fastq \n";
         }
         print $pbs "gzip ${sample_name}.fastq \n";
       }

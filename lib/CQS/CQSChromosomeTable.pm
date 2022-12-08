@@ -104,9 +104,10 @@ sub result {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
       push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",     0 ) );
+      push( @result_files, $self->get_file( $pbs_dir, "${task_name}_${group_name}", ".filelist", 0 ) );
       push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".count.xml", 0 ) );
       if ($has_category) {
-        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".category.count", 0 ) );
+        push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".Species.count", 0 ) );
       }
       if ($has_read_count) {
         push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".read.count", 0 ) );
@@ -116,14 +117,14 @@ sub result {
         push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".contig.count.details",       0 ) );
         push( @result_files, $self->get_file( $result_dir, "${task_name}_${group_name}", ".contig.count.details.depth", 0 ) );
       }
-      push( @result_files, $self->get_file( $pbs_dir, "${task_name}_${group_name}", ".filelist", 0 ) );
     }
   }
   else {
     push( @result_files, $self->get_file( $result_dir, $task_name, ".count", 0 ) );
+    push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist", 0 ) );
     push( @result_files, $self->get_file( $result_dir, $task_name, ".count.xml", 0 ) );
     if ($has_category) {
-      push( @result_files, $self->get_file( $result_dir, $task_name, ".category.count", 0 ) );
+      push( @result_files, $self->get_file( $result_dir, $task_name, ".Species.count", 0 ) );
     }
     if ($has_read_count) {
       push( @result_files, $self->get_file( $result_dir, $task_name, ".read.count", 0 ) );
@@ -133,7 +134,6 @@ sub result {
       push( @result_files, $self->get_file( $result_dir, $task_name, ".contig.count.details",       0 ) );
       push( @result_files, $self->get_file( $result_dir, $task_name, ".contig.count.details.depth", 0 ) );
     }
-    push( @result_files, $self->get_file( $pbs_dir, $task_name, ".filelist", 0 ) );
   }
 
   $result->{$task_name} = filter_array( \@result_files, $pattern );

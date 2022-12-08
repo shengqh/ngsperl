@@ -1,14 +1,14 @@
-#rm(list=ls()) 
-outFile='mouse_8363'
+rm(list=ls()) 
+outFile='PH_combine'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
-parSampleFile3='fileList3.txt'
-parFile1='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
+parSampleFile3=''
+parFile1='/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_harmony/result/PH_combine.final.rds'
 parFile2=''
-parFile3='C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
+parFile3='/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/essential_genes/result/PH_combine.txt'
 
 
-setwd('C:/projects/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_01_dynamic/result')
+setwd('/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_harmony_dynamic_01_call/result')
 
 ### Parameter setting end ###
 
@@ -36,19 +36,20 @@ logfc.threshold=0.6
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
+by_sctransform<-is_one(myoptions$by_sctransform)
 reduction<-myoptions$reduction
 npcs<-as.numeric(myoptions$pca_dims)
 
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
 remove_subtype<-myoptions$remove_subtype
-annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
+annotate_tcell<-is_one(myoptions$annotate_tcell)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
-assay=ifelse(myoptions$by_sctransform == "0", "RNA", "SCT")
+assay=ifelse(by_sctransform, "SCT", "RNA")
 by_harmony<-reduction=="harmony"
-regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
+regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
+redo_harmony<-is_one(myoptions$redo_harmony, 0)
 
 if(regress_by_percent_mt){
   vars.to.regress="percent.mt"
@@ -165,6 +166,7 @@ previous_layermap=layer2map
 cur_layermap=layer3map
 previous_celltypes<-unique(obj@meta.data[[previous_layer]])
 iter=1
+check_pre_layer=TRUE
 
 iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_layermap, cur_layer, cur_layermap, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, iter, check_pre_layer, vars.to.regress, umap_min_dist_map){
   meta = obj@meta.data
@@ -185,9 +187,12 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
       next
     }
     
-    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    #g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct)) + theme_bw3()
 
     subobj<-subset(obj, cells=cells)
+
+    subobj[["oumap"]] = subobj[["umap"]]
     
     stopifnot(all(subobj[[previous_layer]] == pct))
     
@@ -199,43 +204,34 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     u_n_neighbors<-min(cur_npcs, 30)
 
     DefaultAssay(subobj)<-assay
-    
-    #for dynamic clustering, we will not redo normalization/sctranform
-    if(by_harmony){
-      cat(key, "harmony\n")
-      #https://github.com/satijalab/seurat/issues/5289
-      #So we can either (1) re-do the complete workflow after subsetting including the re-integration with harmony or 
-      #(2) we can only re-run FindNeighbors and FindClusters. Is this correct? In our case, (2) worked better.
-      curreduction="harmony"
-    }else if (by_sctransform) {
-      #https://github.com/satijalab/seurat/issues/2812
-      #One thing to add. When you subset the clustering, Re-run PCA actually has more impacts than re-run SCTransform
-      cat(key, "sctransform/PCA\n")
-      #subobj[['SCT']]<-NULL
-      #subobj<-SCTransform(subobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes = F, verbose = FALSE)
-      subobj<-RunPCA(subobj, npcs=cur_npcs)
-      curreduction="pca"
+
+    curreduction=ifelse(by_harmony, "harmony", "pca")
+
+    if(pct != "Unassigned") {
+      subobj = sub_cluster(subobj, 
+                            assay, 
+                            by_sctransform, 
+                            by_harmony, 
+                            redo_harmony, 
+                            curreduction, 
+                            k_n_neighbors,
+                            u_n_neighbors,
+                            random.seed,
+                            resolutions,
+                            cur_npcs, 
+                            cur_pca_dims,
+                            vars.to.regress, 
+                            essential_genes, 
+                            key,
+                            do_umap = TRUE,
+                            umap_min_dist_map,
+                            previous_layer)
     }else{
-      cat(key, "normalization/PCA\n")
-      # subobj<-NormalizeData(subobj)
-      # subobj<-FindVariableFeatures(subobj)
+      cat(key, "FindNeighbors\n")
+      subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
 
-      # var.genes<-VariableFeatures(subobj)
-      # var.genes<-unique(c(var.genes, essential_genes))
-
-      # subobj<-ScaleData(subobj, vars.to.regress = vars.to.regress, features = var.genes)
-      subobj<-RunPCA(subobj, npcs=pca_npcs)
-      curreduction="pca"
-    }
-    
-    cat(key, "FindClusters\n")
-    subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
-    subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
-    
-    if(previous_layer != "layer0") {
-      cat(key, "RunUMAP\n")
-      cur_min_dist = umap_min_dist_map[previous_layer]
-      subobj<-RunUMAP(object = subobj, min.dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE)
+      cat(key, "FindClusters\n")
+      subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
     }
     
     cat(key, "Cell type annotation\n")
@@ -272,11 +268,15 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     }
     
     #using RNA assay for visualization
-    DefaultAssay(subobj)<-"RNA"
+    DefaultAssay(subobj)<-assay
 
     cls<-cur_cts[,grepl(paste0(assay, "_snn_res.+_ct$"), colnames(cur_cts)), drop=F]
     
-    g1<-DimPlot(subobj, group.by = previous_layer, label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": pre"))
+    if(check_pre_layer){
+      g1<-DimPlot(subobj, reduction="oumap", group.by = "pre_layer", label=T) + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle(paste0(pct, ": ", previous_layer, ": post"))
+    }else{
+      g1<-DimPlot(subobj, group.by = previous_layer, label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": pre"))
+    }
     g2<-DimPlot(subobj, group.by = "layer", label=T) + ggtitle(paste0(pct, ": ", cur_layer))
 
     if(check_pre_layer){
@@ -447,6 +447,7 @@ obj<-layer_cluster_celltype(obj, "layer0", NULL, "layer1", layer1map, npcs, reso
 
 obj<-layer_cluster_celltype(obj, "layer1", layer1map, "layer2", layer2map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, NULL, umap_min_dist_map)
 
+#obj@meta.data=readRDS("PH_combine.layer1_to_layer2.meta.rds")
 obj<-layer_cluster_celltype(obj, "layer2", layer2map, "layer3", layer3map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, NULL, umap_min_dist_map)
 #obj@meta.data=readRDS("iSGS_airway.layer2_to_layer3.meta.rds")
 obj<-layer_cluster_celltype(obj, "layer3", layer3map, "layer4", layer4map, npcs, resolutions, random.seed, by_sctransform, by_harmony, prefix, TRUE, vars.to.regress, unique_celltype, umap_min_dist_map)

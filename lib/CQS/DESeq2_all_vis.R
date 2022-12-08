@@ -122,7 +122,7 @@ if (useRawPvalue==1) {
 }
 p<-p+
     geom_point(aes(size=log10BaseMean,colour=colour))+
-    scale_color_manual(values=changeColours,guide = FALSE)+
+    scale_color_manual(values=changeColours,guide="none")+
     scale_x_continuous(name=bquote(log[2]~Fold~Change),breaks=pretty_breaks(n=4))+
     geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
     geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+

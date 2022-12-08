@@ -7,6 +7,16 @@ library(ggplot2)
 library(patchwork)
 library(Matrix.utils)
 
+is_one<-function(value, defaultValue=FALSE){
+  if(is.null(value)){
+    return(defaultValue)
+  }
+  if(is.na(value)){
+    return(defaultValue)
+  }
+  return(value == '1')
+}
+
 get_hue_colors<-function(n, random.seed=20220606){
   ccolors<-hue_pal()(n)
   x <- .Random.seed
@@ -55,6 +65,14 @@ file_not_empty<-function(filename){
   }
   
   return(file.info(filename)$size != 0)
+}
+
+get_assay<-function(by_sctransform, by_integration, by_harmony){
+  assay=ifelse(by_sctransform, "SCT", "RNA")
+  if(by_integration & (!by_harmony)){
+    assay="integrated"
+  }
+  return(assay)
 }
 
 calc_weight<-function(cellType){
@@ -309,10 +327,10 @@ run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction=
   return(object)
 }
 
-run_cluster<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct = 0.5, logfc.threshold = 0.6, reduction="pca"){
-  object=run_cluster_only(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform, min.pct, logfc.threshold, reduction)
+run_cluster<-function(object, pca_dims, resolution, random.seed, reduction="pca", min.pct = 0.5, logfc.threshold = 0.6){
+  object=run_cluster_only(object, pca_dims, resolution, random.seed, reduction)
   markers <- FindAllMarkers(object, assay="RNA", only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
-  markers <- markers[markers$p_val_adj < 0.01,]
+  markers <- markers[markers$p_val_adj < 0.05,]
   return(list(object=object, markers=markers))
 }
 
@@ -451,13 +469,13 @@ do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, sc
 
 do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE) {
   cat("performing SCTransform ...\n")
-  nsamples=length(unique(rawobj$sample))
+  nsamples=length(unique(rawobj$orig.ident))
   if(nsamples > 1){
     cat("  split objects ...\n")
-    objs<-SplitObject(object = rawobj, split.by = "sample")
+    objs<-SplitObject(object = rawobj, split.by = "orig.ident")
     #perform sctransform
     objs<-lapply(objs, function(x){
-      cat("  sctransform", unique(x$sample), "...\n")
+      cat("  sctransform", unique(x$orig.ident), "...\n")
       x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
       return(x)
     })  
@@ -642,7 +660,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   return(finalList)
 }
 
-output_integration_dimplot<-function(obj, outFile, has_batch_file){
+output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL){
   g<-FeaturePlot(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
   width=2500
   ncol=1
@@ -685,18 +703,18 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file){
   height=nHeight*600
   
   cat("draw pictures ... ")
-  draw_feature_qc(paste0(outFile, ".violin.sample"), obj, "sample")
+  draw_feature_qc(paste0(outFile, ".sample"), obj, "sample")
 
   p<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
   if(!all(mt$Sample == mt$Ident)){
-    draw_feature_qc(paste0(outFile, ".violin.Ident"), obj, "orig.ident")
+    draw_feature_qc(paste0(outFile, ".Ident"), obj, "orig.ident")
     p1<-draw_dimplot(mt, paste0(outFile, ".Ident.png"), "Ident")
     p<-p+p1
     width=width + nWidth * 600
   }
 
   if(has_batch_file){
-    draw_feature_qc(paste0(outFile, ".violin.batch"), obj, "batch")
+    draw_feature_qc(paste0(outFile, ".batch"), obj, "batch")
     p2<-draw_dimplot(mt, paste0(outFile, ".batch.png"), "batch")
     p<-p+p2
     width=width+nWidth * 600
@@ -705,6 +723,14 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file){
   png(paste0(outFile, ".final.png"), width=width, height=height, res=300)
   print(p)
   dev.off()
+
+  if(!is.null(qc_genes) & qc_genes != ''){
+    genes<-unlist(strsplit( qc_genes, ',' ))
+    g<-FeaturePlot(obj, genes, split.by="orig.ident")
+    png(paste0(outFile, ".qc_genes.png"), width=3000, height=6000, res=300)
+    print(g)
+    dev.off()
+  }
 }
 
 read_bubble_genes<-function(bubble_file, allgenes=c()){
@@ -764,7 +790,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA" ){
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE ){
   genes=unique(unlist(gene_groups))
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
   
@@ -802,15 +828,17 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA" ){
     scale_color_gradient(low = cols[1], high = cols[2])
   
   
-  g=plot + 
-    xlab("") + ylab("") + theme_bw() + theme(plot.title = element_text(hjust = 0.5), 
+  g=plot + xlab("") + ylab("") + theme_bw() + theme(plot.title = element_text(hjust = 0.5),
                                              axis.text.x = element_text(angle = 90, hjust=1, vjust=0.5),
-                                             strip.background = element_blank(),
-                                             strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
+                                             strip.background = element_blank())
+  
+  if(rotate.title){
+    g=g+theme(strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
+  }
   return(g)
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
   gene_groups=split(genes_df$gene, genes_df$cell_type)
@@ -832,25 +860,34 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   # ct_levels = ct_levels[ct_levels %in% ct$cell_type]
   # cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
 
-  if(orderby_cluster){
-    cell_type<-cell_type[order(cell_type[,cur_res]),]
+  if (! is.null(split.by)){ 
+    if(orderby_cluster){
+      cell_type<-cell_type[order(cell_type[,cur_res], cell_type[,split.by]),]
+    }else{
+      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res], cell_type[,split.by]),]
+    }
+    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], ": ", cell_type$cell_type, ": ", cell_type[,split.by])
   }else{
-    cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+    if(orderby_cluster){
+      cell_type<-cell_type[order(cell_type[,cur_res]),]
+    }else{
+      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+    }
+    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], ": ", cell_type$cell_type)
   }
-  cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], " : ", cell_type$cell_type)
   cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
   group.by="seurat_celltype_clusters"
   
   cell_type<-cell_type[colnames(obj),]
   obj@meta.data<-cell_type
   
-  g<-get_dot_plot(obj, group.by, gene_groups, assay)
+  g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title)
   
   return(g)
 }
 
-draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=5500, height=3000){
-  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file)
+draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=5500, height=3000, rotate.title=TRUE){
+  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file, rotate.title=rotate.title)
   png(paste0(prefix, ".bubblemap.png"), width=width, height=height, res=300)
   print(g)
   dev.off()
@@ -960,13 +997,26 @@ output_ElbowPlot<-function(obj, outFile, reduction){
 draw_feature_qc<-function(prefix, rawobj, ident_name) {
   Idents(rawobj)<-ident_name
   
-  feats <- c("nFeature_RNA", "nCount_RNA", "percent.mt", "percent.ribo", "percent.hb")
+  feats<-c("nFeature_RNA","nCount_RNA","percent.mt","percent.ribo")
+  if("percent.hb" %in% colnames(rawobj@meta.data)){
+    feats<-c(feats, "percent.hb")
+  }
 
   png(file=paste0(prefix, ".qc.violin.png"), width=6000, height=4000, res=300)
   g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
   print(g)
   dev.off()
-  
+
+  if('umap' %in% names(rawobj@reductions)){
+    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap")
+    width = length(unique(unlist(rawobj[[ident_name]]))) * 800
+    height = length(feats) * 700
+
+    png(paste0(prefix, ".qc.exp.png"), width=width, height=height, res=300)
+    print(g)
+    dev.off()  
+  }
+
   png(file=paste0(prefix, ".qc.png"), width=3000, height=1200, res=300)
   p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
   p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
@@ -1062,7 +1112,7 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   return(list(obj=subobj, umap_names=umap_names))
 }
 
-get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1){
+get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, ...){
   labels<-obj@meta.data[,c(group.by, label.by)]
   labels<-labels[!duplicated(labels[,group.by]),]
   labels<-labels[order(labels[,group.by]),]
@@ -1071,7 +1121,7 @@ get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.
   ngroups<-length(unlist(unique(obj[[group.by]])))
   scolors = get_hue_colors(ngroups)
 
-  g<-DimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by)+ 
+  g<-DimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by, ...)+ 
     scale_color_manual(legend.title, values=scolors, labels = cts, guide = guide_legend(ncol=ncol)) + ggtitle(title)
   return(g)
 }
@@ -1177,4 +1227,132 @@ get_seurat_sum_count<-function(obj, cluster_name){
 
   res_df<-data.frame("cluster"=cts, "prefix"=prefixList, "pusedo_file"=res_files)
   return(res_df)
+}
+
+get_valid_path<-function(oldpath){
+  result<-gsub('[ /:_()]+', '_', oldpath)
+  return(result)
+}
+
+output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern) {
+  writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
+
+  saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
+
+  png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
+  par(mar = c(4, 8, 2, 1))
+  C <- rawobj@assays$RNA@counts
+  C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
+  mc<-rowMedians(C)
+  most_expressed <- order(mc, decreasing = T)[20:1]
+  tm<-as.matrix(Matrix::t(C[most_expressed,]))
+  boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
+          col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
+  dev.off()
+
+  draw_feature_qc(outFile, rawobj, "orig.ident")
+
+  if(any(rawobj$orig.ident != rawobj$sample)){
+    draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
+  }
+
+  rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
+  rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
+
+  rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
+  rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
+  rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+
+  draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
+
+  if(any(rawobj$orig.ident != rawobj$sample)){
+    draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
+  }
+}
+
+XAxisRotation<-function(){
+  return(theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)))
+}
+
+save_session_info<-function(filename="sessionInfo.txt") {
+  writeLines(capture.output(sessionInfo()), filename)
+}
+
+sub_cluster<-function(subobj, 
+                     assay, 
+                     by_sctransform, 
+                     by_harmony, 
+                     redo_harmony, 
+                     curreduction, 
+                     k_n_neighbors,
+                     u_n_neighbors,
+                     random.seed,
+                     resolutions,
+                     cur_npcs, 
+                     cur_pca_dims,
+                     vars.to.regress, 
+                     essential_genes, 
+                     key = "",
+                     do_umap = TRUE,
+                     reduction.name = "umap",
+                     umap_min_dist_map = NA,
+                     previous_layer = NA
+){
+  n_half_cell=round(ncol(subobj) / 2)
+  if(cur_npcs >= n_half_cell){
+    cur_npcs = n_half_cell
+    cur_pca_dims=1:cur_npcs
+  }
+  if(by_harmony){
+    if(redo_harmony){
+      if (length(unique(subobj$batch)) == 1){
+        cat(key, "use old harmony result\n")
+      }else{
+        cat(key, "redo harmony\n")
+        cat("RunPCA ... \n")
+        subobj <- RunPCA(object = subobj, npcs=cur_npcs, assay=assay, verbose=FALSE)
+        cat("RunHarmony ... \n")
+        subobj <- RunHarmony(object = subobj,
+                          assay.use = assay,
+                          reduction = "pca",
+                          dims.use = cur_pca_dims,
+                          group.by.vars = "batch",
+                          do_pca=FALSE)    
+      }
+    }else{
+      #due to very limited cell numbers in small cluster, it may cause problem to redo harmony, 
+      cat(key, "use old harmony result\n")
+    }
+  }else{
+    #https://github.com/satijalab/seurat/issues/5244
+    if (by_sctransform) {
+      cat(key, "use old sctransform result\n")
+      #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform at individual sample level, 
+      #so we will keep the old data structure
+      #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
+    }else{
+      cat(key, "redo normalization\n")
+      subobj<-do_normalization(subobj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+    }
+    cat(key, "RunPCA\n")
+    subobj<-RunPCA(subobj, npcs=cur_npcs)
+  }
+
+  cat(key, "FindNeighbors\n")
+  subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
+
+  cat(key, "FindClusters\n")
+  subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
+  
+  if(do_umap){
+    cat(key, "RunUMAP\n")
+    if(!all(is.na(umap_min_dist_map))){
+      cur_min_dist = umap_min_dist_map[previous_layer]
+    }else{
+      cur_min_dist = 0.3
+    }
+    subobj<-RunUMAP(object = subobj, min.dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE, reduction.name=reduction.name)
+  }
+
+  return(subobj)    
 }

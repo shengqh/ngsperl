@@ -8,7 +8,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(instantiate getTaskClass performTask performConfig performTrace getResult)] );
+our %EXPORT_TAGS = ( 'all' => [qw(instantiate getTaskClass performTask performTaskByPattern performConfig performTrace getResult)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -53,6 +53,19 @@ sub performTask {
     for my $pbskey (keys %$pbs){
       my $pbsfile = $pbs->{$pbskey};
       `bash $pbsfile 1 `;
+    }
+  }
+}
+
+sub performTaskByPattern {
+  my ( $config, $section_pattern ) = @_;
+  for my $section (sort keys %$config){
+    if ($section =~ /$section_pattern/){
+      if (ref $config->{$section} eq ref {}){
+        if (defined $config->{$section}{class}){
+          performTask($config, $section);
+        }
+      }
     }
   }
 }

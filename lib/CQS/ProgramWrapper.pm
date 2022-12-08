@@ -121,7 +121,7 @@ sub perform {
     }
   }
 
-  $option = $option . " " . get_parameter_file_option($config, $section);
+  $option = get_parameter_file_option($config, $section, $option);
 
   my $pbs_file   = $self->get_pbs_filename( $pbs_dir, $task_name, ".pbs" );
   my $pbs_name   = basename($pbs_file);

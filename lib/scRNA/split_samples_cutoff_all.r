@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='AG_integrated'
+outFile='P9112'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1=''
+parSampleFile4='fileList4.txt'
+parFile1='/data/h_gelbard_lab/projects/20221129_9112_scRNA_human/hto_samples.txt'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/hto_samples_cutoff_all/result')
+setwd('/data/h_gelbard_lab/projects/20221129_9112_scRNA_human/hto_samples_cutoff_all/result')
 
 ### Parameter setting end ###
 
@@ -96,7 +97,19 @@ if(!is.na(params$cutoff_file)){
   }
 }
 
-idx=14
+has_hto_samples = FALSE
+if(exists('parSampleFile4')){
+  has_hto_samples=TRUE
+  hto_samples_tbl = read.table(parSampleFile4, sep="\t", header=F)
+  hto_samples = split(hto_samples_tbl$V1, hto_samples_tbl$V2)
+}
+if(!has_hto_samples & (parFile1 != "")){
+  has_hto_samples=TRUE
+  hto_samples_tbl = read.table(parFile1, sep="\t", header=T)
+  hto_samples = split(hto_samples_tbl$Tagname, hto_samples_tbl$File)
+}
+
+idx=1
 for(idx in c(1:length(files))){
   fname=names(files)[idx]
   output_prefix = paste0(fname, ".HTO")
@@ -109,9 +122,16 @@ for(idx in c(1:length(files))){
   rdsfile=files[[idx]]
   cat(fname, ":", rdsfile, " ...\n")
 
-  obj=read_hto(rdsfile, output_prefix)
+  if (has_hto_samples){
+    cur_tags = hto_samples[[fname]]
+  }else{
+    cur_tags = NULL
+  }
+
+  obj=read_hto(rdsfile, output_prefix, cur_tags)
   
   tagnames=rownames(obj[["HTO"]])
+
   data <- FetchData(object=obj, vars=tagnames)
   write.csv(data, file=paste0(output_prefix, ".data.csv"))
   
@@ -175,5 +195,5 @@ for(idx in c(1:length(files))){
 
   saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))
   
-  output_post_classification(obj, output_prefix, umap_min_dist=umap_min_dist, umap_num_neighbors=umap_num_neighbors)
+  output_post_classification(obj, output_prefix, umap_min_dist=umap_min_dist, umap_num_neighbors=umap_num_neighbors, tagnames=tagnames)
 }

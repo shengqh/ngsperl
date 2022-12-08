@@ -1,0 +1,70 @@
+---
+title: "Seurat multi-resolutions analysis"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, child="reportFunctions.Rmd", include=FALSE} 
+```
+
+```{r data, echo = FALSE}
+
+options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outFile=myoptions$task_name
+
+resolutions<-read.csv(paste0(outFile, ".resolutions.csv"))
+
+
+getFigure<-function(filepath){
+  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
+}
+
+resFile<-"resolutions.Rmd"
+figureRmd<-function(resolutions){
+  result<-""
+  for(idx in c(1:nrow(resolutions))){
+    res = resolutions$resolution[idx]
+    cluster = resolutions$cluster[idx]
+    celltype = resolutions$celltype[idx]
+    rawcelltype = resolutions$rawcelltype[idx]
+
+    result<-paste0(result, paste0("\n\n# Resolution ", res, "\n\n"))
+    
+    result<-paste0(result, "## Cluster level\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".seurat.png")))
+
+    result<-paste0(result, "## Cell type level\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".png")))
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".cell.png")))
+
+    result<-paste0(result, "## Summary type level\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.png")))
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.cell.png")))
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.sample_cell.png")))
+  }
+  return(result)
+}
+cat(figureRmd(resolutions), file=resFile)
+
+```
+
+```{r, child=resFile} 
+```
+

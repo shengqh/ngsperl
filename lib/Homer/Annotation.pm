@@ -81,7 +81,7 @@ sub perform {
 }
 
 sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
+  my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
@@ -105,7 +105,11 @@ sub result {
       push( @result_files, "${result_dir}/${pairName}/${outputFolder}knownResults.txt" );
       push( @result_files, "${result_dir}/${pairName}/${outputFolder}homerMotifs.all.motifs" );
     }
-    $result->{$pairName} = filter_array( \@result_files, $pattern );
+
+    my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+      $result->{$pairName} = $filtered;
+    }
   }
   return $result;
 }

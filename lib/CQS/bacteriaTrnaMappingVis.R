@@ -15,7 +15,7 @@ groupVisLayoutFileList<-parSampleFile2
 facetColCount=getFacetColCount(groupFileList)
 
 #Category count Table
-mappingResultCategory<-read.delim(gsub(".count$",".category.count",mappingResultFile),header=T,row.names=1, check.names=F)
+mappingResultCategory<-read.delim(gsub(".count$",".Species.count",mappingResultFile),header=T,row.names=1, check.names=F)
 
 #tRNA count file and Tables
 mappingResult<-read.delim(mappingResultFile,header=T,row.names=1, check.names=F)

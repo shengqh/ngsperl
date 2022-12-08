@@ -53,15 +53,16 @@ for genomeFile in genomeFiles:
   logger.info("Parsing " + genomeFile)
   queryMap = {}
 
-  tree = ET.parse(genomeFile)
-  root = tree.getroot()
-  queries = root.find('queries')
-  for query in queries.findall('query'):
-    query_count = int(query.get("count"))
-    query_seq = query.get("seq")
-    sample_name = query.get("sample")
-    sample_names.add(sample_name)
-    result.setdefault(query_seq, {})[sample_name] = query_count
+  with open(genomeFile, "rt") as fin:
+    headers = fin.readline().rstrip().split('\t')
+    sample_names.update(headers[1:])
+    for line in fin:
+      parts = line.rstrip().split('\t')
+      query_seq = parts[0]
+      for si in range(1, len(parts)):
+        sample_name = headers[si]
+        query_count = int(parts[si])
+        result.setdefault(query_seq, {})[sample_name] = query_count
     
 logger.info("Parsing " + databaseFile)
 tree = ET.parse(databaseFile)

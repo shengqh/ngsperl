@@ -1,12 +1,13 @@
 ```{r pipeline, results="asis", echo=FALSE, warning=FALSE} 
 library(stringr)
+library(ggplot2)
+#library(tools)
 
 display_webgestalt=function(files) {
   cat(paste0("  \n## WebGestalt  \n"))
   enrich_files<-files[grepl("WebGestalt_", rownames(files)),]
   enrich_files$Comparisons<-gsub("WebGestalt_GO....", "", enrich_files$V2)
   enrich_files$Comparisons<-gsub("WebGestalt_KEGG_", "", enrich_files$Comparisons)
-  enrich_files<-enrich_files[order(enrich_files$Comparisons),]
   comparisons<-unique(enrich_files$Comparisons)
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
@@ -84,12 +85,13 @@ print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
   title = ifelse(is_positive, "Positive-regulated", "Negative-regulated")
   pattern = paste0("gsea_report_for_na_", pstr, '_\\d+\\.(tsv|xls)$')
         
-  posTableFile<-list.files(resultDirSub,pattern=pattern,full.names=TRUE)
+  gseaTableFile<-list.files(resultDirSub,pattern=pattern,full.names=TRUE)
 
-  if (length(posTableFile)!=1) {
+  if (length(gseaTableFile)!=1) {
     warning(paste("Can't find ", title, "GSEA table file in", resultDirSub))
+    return(NULL)
   }else{
-    rawTableOut<-processGseaTable(posTableFile)
+    rawTableOut<-processGseaTable(gseaTableFile)
     if(!is.null(rawTableOut)){
       ename<-paste(gname, gseaCategory, title)
       print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
@@ -98,15 +100,40 @@ print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
     }else{
       warning(paste("Can't find significant", title, "GSEA gene set in", resultDirSub))
     }
+
+    rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
+    rawTable<-rawTable[rawTable$FDR.q.val <= 0.05, c("NAME", "NES", "FDR.q.val")]
+
+    if (nrow(rawTable) > 0){
+      rawTable$Core.Enrichment=0
+      for(idx in c(1:nrow(rawTable))){
+        gsfile = paste0(resultDirSub, "/", rawTable$NAME[idx], ".tsv")
+        if(!file.exists(gsfile)){
+          break
+        }
+        gsdetail = read.table(gsfile, sep="\t", header=T)
+        rawTable$Core.Enrichment[idx]=sum(gsdetail$CORE.ENRICHMENT == "Yes")
+      }
+      return(rawTable)
+    }else{
+      return(NULL)
+    }
   }
 }
 
-display_gsea=function(files) {
+display_gsea=function(files, target_folder="") {
   cat(paste0("  \n## GSEA  \n"))
-  gsea_files<-files[grepl("gsea_", rownames(files)),]
-  gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
-  gsea_files<-gsea_files[order(gsea_files$Comparisons),]
-  comparisons<-unique(gsea_files$Comparisons)
+  
+  is_singlecell<-"compName" %in% colnames(files)
+  
+  if(is_singlecell){
+    gsea_files<-files
+    comparisons<-unique(gsea_files$Comparisons)
+  }else{
+    gsea_files<-files[grepl("gsea_", rownames(files)),]
+    gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
+    comparisons<-unique(gsea_files$Comparisons)
+  }
   j=1
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
@@ -115,15 +142,58 @@ display_gsea=function(files) {
   
     i=1
     for (i in 1:nrow(comp_files)){
-      gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F, check.names=F)
-      gname<-gsub(".rnk.*", "", basename(comp_files[i,1]))
+      if(is_singlecell){
+        gfolders<-comp_files
+        gname=comparison
+      }else{
+        gfolders<-read.csv(comp_files[i,1],header=T,stringsAsFactor=F, check.names=F)
+        gname<-gsub("_min5.fdr*", "", basename(comp_files[i,1]))
+        gname<-gsub('.gsea.csv$', "", gname)
+      }
 
       k=1
       for (k in 1:nrow(gfolders)){
         resultDirSub<-gfolders$Folder[k]
         gseaCategory<-gfolders$GseaCategory[k]
-        print_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE)
-        print_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE)
+        pos = print_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE)
+        neg = print_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE)
+        if (is.null(pos) & is.null(neg)){
+          next
+        }
+
+        final = NULL
+        if(!is.null(pos)){
+          final = pos[pos$Core.Enrichment > 0,]
+        }
+        if(!is.null(neg)){
+          final = rbind(final, neg[neg$Core.Enrichment > 0,])
+        }
+
+        if(is.null(final)){
+          next
+        }
+
+        sig_file=paste0(target_folder, gname, ".", gseaCategory, ".csv" )
+        write.csv(final, sig_file, row.names=F)
+
+        final<-final[order(final$NES, decreasing=T),]
+        final$NAME<-factor(final$NAME, levels=final$NAME)
+        g<-ggplot(final, aes(NES, NAME)) + geom_point(aes(size=Core.Enrichment, color=FDR.q.val)) + geom_vline(xintercept=0) + theme_bw() + ylab("") + xlab("Normalized enrichment score")
+
+        height=max(1000, 3000/40*nrow(final))
+        warning(final$NAME)
+        ncharmax=max(nchar(as.character(final$NAME)))
+        width=max(3000, ncharmax * 40 + 1000)
+        pngfile=paste0(sig_file, ".png")
+        png(pngfile, width=width, height=height, res=300)
+        print(g)
+        dev.off()
+        #include_graphics(file_path_as_absolute(pngfile))
+        #cat("\n\n")
+      }
+      
+      if(is_singlecell){
+        break
       }
     }  
   }

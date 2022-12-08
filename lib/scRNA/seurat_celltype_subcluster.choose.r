@@ -300,9 +300,9 @@ if(output_heatmap){
   dev.off()
 }
 
-g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_cur_layer)
+g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_cur_layer, label.size = 8) + theme(legend.text = element_text(size = 20))
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-  g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA", TRUE)
+  g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA", orderby_cluster=TRUE)
   g<-g+plot_layout(ncol = 2, widths = c(4, 6))
   width=11000
 }else{

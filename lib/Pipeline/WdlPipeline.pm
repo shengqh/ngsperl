@@ -434,17 +434,21 @@ sub addSomaticCNV {
     $output_genome_ext="mm10";
   }
 
+  my $somaticCNV_call_output_ext=".called.seg";
+  if ($run_funcotator eq "true") {
+    $somaticCNV_call_output_ext=$somaticCNV_call_output_ext."; .called.seg.funcotated.tsv";
+  }
   $config->{$somaticCNV_call} = {     
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$somaticCNV_call",
-    "source_ref" => [$somaticCNV_normal_files, ".bam\$"],
+    "source_ref" => [$somaticCNV_tumor_files, ".bam\$"],
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $somaticCNV_pipeline->{"wdl_file"},
     "use_filename_in_result" => 1,
-    output_file_ext => ".called.seg",
+    output_file_ext => $somaticCNV_call_output_ext,
 #    output_file_ext => ".".$output_genome_ext.".called.seg",
 #    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
     "input_json_file" => $somaticCNV_pipeline->{"input_file"},
@@ -477,7 +481,8 @@ sub addSomaticCNV {
       target_dir                 => $target_dir . '/' . $somaticCNV_call_summary,
       rtemplate                  => "../CNV/GATKsomaticCNVSummary.R",
       parameterSampleFile1_ref   => [ $somaticCNV_call, ".called.seg\$" ],
- #     parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
+      parameterSampleFile2_ref   => [ $somaticCNV_call, ".called.seg.funcotated.tsv\$" ],
+#      parameterFile1_ref         => [ $cnvAnnotationGenesPlot, ".position.txt.slim" ],
 #      parameterSampleFile2       => $def->{onco_options},
 #      parameterSampleFile3       => $def->{onco_sample_groups},
       output_to_result_directory => 1,
@@ -594,12 +599,16 @@ sub addEncodeATACseq {
   #my $adapter = getValue($def, "perform_cutadapt", 0) ? getValue($def, "adapter", "") : "";
   #print("adapter = " . $adapter . "\n");
   my $is_paired_end = is_paired_end($def);
+  my $encode_option = getValue($def, "encode_option", "");
+  my $folder_suffix = $encode_option =~ /slurm/ ? "_slurm" : "";
+
+  my $task_folder = "${task}${folder_suffix}";
 
   $config->{$task} = {     
     "class" => "CQS::Wdl",
     #"option" => "--no-build-singularity",
-    "option" => "",
-    "target_dir" => "${target_dir}/$task",
+    "option" => getValue($def, "encode_option", ""),
+    "target_dir" => "${target_dir}/${task_folder}",
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
@@ -696,7 +705,7 @@ sub addEncodeATACseq {
   my $croo_task = $task . "_croo";
   $config->{$croo_task} = {
     class => "CQS::ProgramWrapperOneToOne",
-    target_dir => "${target_dir}/$croo_task",
+    target_dir => "${target_dir}/${task_folder}_croo",
     interpretor => "python3",
     program => "../Chipseq/croo.py",
     option => "-n __NAME__ --croo " . getValue($def, "croo", "croo") . " --out_def_json " . getValue($def, "croo_out_def_json"),

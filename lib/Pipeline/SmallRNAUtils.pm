@@ -103,6 +103,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "perform_short_reads_deseq2",        1 );
   initDefaultValue( $def, "perform_short_reads_source",        1 );
 
+  initDefaultValue( $def, "perform_nonhost_count",      1 );
   initDefaultValue( $def, "perform_nonhost_genome_count",      1 );
   initDefaultValue( $def, "nonhost_genome_count_no_virus",     0 );
 
@@ -122,7 +123,8 @@ sub initializeSmallRNADefaultOptions {
 
   initDefaultValue( $def, "fastq_len", 1 );
 
-  initDefaultValue( $def, "use_first_read_after_trim", 1);
+  initDefaultValue( $def, "extractSingleEndFastqFromPairend", 0 );
+  initDefaultValue( $def, "use_first_read_after_trim", 1 );
   
   if ( $def->{perform_cutadapt} ) {
     initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
@@ -210,6 +212,9 @@ sub initializeSmallRNADefaultOptions {
   }
   if ( $def->{hasYRNA} ) {
     $additionalOption = $additionalOption . " --exportYRNA";
+  }
+  if ( $def->{hasERV} ) {
+    $additionalOption = $additionalOption . " --exportERV";
   }
   my $defaultOption = getValue( $def, "host_smallrnacount_option", "" );
   initDefaultValue( $def, "host_smallrnacount_option", $defaultOption . " --min_overlap 0.9 --offsets 0,1,2,-1,-2" . $additionalOption );
@@ -503,7 +508,8 @@ sub getPrepareConfig {
     }
   }
 
-  if ( $consider_tRNA_NTA ) {
+  my $search_host_genome = getValue($def, "search_host_genome", 1);
+  if ( $search_host_genome && $consider_tRNA_NTA ) {
     $preparation->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
       perform            => 1,
@@ -570,7 +576,7 @@ sub getPrepareConfig {
     }
   }
 
-  if ( $consider_miRNA_NTA || $consider_tRNA_NTA ) {
+  if ( $search_host_genome && ($consider_miRNA_NTA || $consider_tRNA_NTA )) {
     my $ccaaOption = $consider_tRNA_NTA ? "--ccaa" : "--no-ccaa";
     $preparation->{identical_NTA} = {
       class      => "SmallRNA::FastqSmallRnaNTA",

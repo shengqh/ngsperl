@@ -79,11 +79,14 @@ def get_sample_map(files, file_pattern, name_pattern, use_dir_name=0, recursive_
 
 def find_files(logger, source_dir, output_file, file1_pattern, file2_pattern, name_pattern, use_dir_name=0, recursive_dir=False, fill_zero=False, add_prefix_P=False, add_prefix_X=False):
   if recursive_dir:
-    output = subprocess.getoutput(f"gsutil ls -r {source_dir}/**")
-    print(output)
+    if source_dir.endswith("/"):
+      output = subprocess.getoutput(f"gsutil ls -r {source_dir}**")
+    else:
+      output = subprocess.getoutput(f"gsutil ls -r {source_dir}/**")
   else:
     output = subprocess.getoutput(f"gsutil ls {source_dir}")
   files = output.split('\n')
+  print(files)
 
   read1map = get_sample_map(files, file1_pattern, name_pattern, use_dir_name, recursive_dir, fill_zero, add_prefix_P, add_prefix_X)
   read2map = get_sample_map(files, file2_pattern, name_pattern, use_dir_name, recursive_dir, fill_zero, add_prefix_P, add_prefix_X)
@@ -110,8 +113,8 @@ def main():
   
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input source folder', required=NOT_DEBUG)
   parser.add_argument('-o', '--output', action='store', nargs='?', help='Output terra data file', required=NOT_DEBUG)
-  parser.add_argument('--read1_pattern', action='store', nargs='?', help='Input read1 pattern', required=NOT_DEBUG)
-  parser.add_argument('--read2_pattern', action='store', nargs='?', help='Input read2 pattern', required=NOT_DEBUG)
+  parser.add_argument('--r1', action='store', nargs='?', help='Input read1 pattern', required=NOT_DEBUG)
+  parser.add_argument('--r2', action='store', nargs='?', help='Input read2 pattern', required=NOT_DEBUG)
   parser.add_argument('-n', '--name_pattern', action='store', nargs='?', help='Input name pattern')
   parser.add_argument('-a', '--add_zero', action='store_true', help='Filling digits with zero')
   parser.add_argument('-d', '--use_dir_name', action='store', type=int, default=0, help='Use X level dir name as sample name, 0 means use file name')
@@ -125,13 +128,6 @@ def main():
     
   args = parser.parse_args()
   
-  if DEBUG:
-    args.input="/scratch/cqs/shengq2/alexander_gelbard_projects/20210219_scRNA_JLin_human/VDJ_chain/result"
-    #args.input="/scratch/cqs/shengq2/alexander_gelbard_projects/20210219_scRNA_JLin_human/VDJ_chain/result/nMCu81420/outs"
-    args.file_pattern="all_contig_annotations.json"
-    args.use_dir_name = 2
-    args.recursive_dir = True
-
   if not args.input.startswith("gs://"):
     args.input= os.path.abspath(args.input)
   print(args)
@@ -139,7 +135,7 @@ def main():
   logger = logging.getLogger('file_def')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
-  find_files(logger, source_dir=args.input, output_file=args.output, file1_pattern=args.read1_pattern, file2_pattern=args.read2_pattern, name_pattern=args.name_pattern,
+  find_files(logger, source_dir=args.input, output_file=args.output, file1_pattern=args.r1, file2_pattern=args.r2, name_pattern=args.name_pattern,
              use_dir_name=args.use_dir_name, recursive_dir=args.recursive_dir, fill_zero=args.add_zero, 
              add_prefix_P=args.add_prefix_P, add_prefix_X=args.add_prefix_X)
   

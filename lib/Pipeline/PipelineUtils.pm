@@ -4,6 +4,7 @@ package Pipeline::PipelineUtils;
 use strict;
 use warnings;
 use File::Basename;
+use CQS::StringUtils;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -43,6 +44,7 @@ our %EXPORT_TAGS = (
     addDiffbind    
     addHomerAnnotation 
     addEnhancer 
+    init_design_table_by_pattern    
     writeDesignTable 
     addMultiQC
     getNextIndex
@@ -96,6 +98,7 @@ our %EXPORT_TAGS = (
     addLocusCoverage    
     addGeneCoverage
     get_next_index
+    add_extract_bam_locus
     )
   ]
 );
@@ -488,15 +491,14 @@ sub addDEseq2 {
     cluster                      => $def->{cluster},
     export_significant_gene_name => $def->{DE_export_significant_gene_name},
     cooksCutoff                  => $def->{DE_cooksCutoff},
+    covariance_name_index        => getValue($def, "covariance_name_index", 0),
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
     rCode                        => $rCode,
     pbs                          => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => "10",
-      "mem"       => "20gb"
+      "walltime"  => getValue($def, "DESeq2_walltime", "23"),
+      "mem"       => getValue($def, "DESeq2_mem", "40gb"),
     },
   };
 
@@ -1051,6 +1053,36 @@ sub writeDesignTable {
   return $result;
 }
 
+sub init_design_table_by_pattern {
+  my ( $def ) = @_;
+
+  my $task_name = getValue($def, "task_name");
+  my $treatments = getValue($def, "treatments");
+
+  my $condition_pattern = getValue($def, "design_table_condition_pattern");
+  my $factor_pattern = getValue($def, "design_table_factor_pattern", "");
+  my $replicate_pattern = getValue($def, "design_table_replicate_pattern", "");
+
+  my $samples = {};
+
+  for my $sampleName ( sort keys %$treatments ) {
+    my $condition = capture_regex_groups($sampleName, $condition_pattern);
+    my $factor = ($factor_pattern eq "") ? undef : capture_regex_groups($sampleName, $factor_pattern);
+    my $replicate = ($replicate_pattern eq "") ? "1" : capture_regex_groups($sampleName, $replicate_pattern);
+    $samples->{$sampleName} = {
+      'Condition' => $condition,
+      'Factor' => $factor,
+      'Replicate' => $replicate
+    };
+  }
+
+  $def->{"design_table"} = {
+    $task_name => $samples
+  };
+
+  return $def;
+}
+
 sub getSequenceTaskClassname {
   my $cluster = shift;
   my $result = $cluster eq "slurm" ? "CQS::SequenceTaskSlurmSlim" : "CQS::SequenceTask";
@@ -1095,13 +1127,13 @@ sub addAnnovar {
     clean_folder => $clean_folder,
     perform_splicing => $perform_splicing,
     output_to_same_folder => $output_to_same_folder,
-    sh_direct  => 1,
+    sh_direct  => getValue($def, "annovar_sh_direct", 1),
     isBed => $isBed,
     isvcf      => $isBed?0:1,
     pbs        => {
-      "nodes"    => "1:ppn=1",
+      "nodes"    => "1:ppn=8",
       "walltime" => "10",
-      "mem"      => "10gb"
+      "mem"      => "40gb"
     },
   };
   push @$summary, $annovar_name;
@@ -1493,12 +1525,15 @@ sub addGATK4PreprocessIntervals {
     $index = "";
   }
 
-  my $result = $prefix . "_gatk4_CNV_Germline${index}_PreprocessIntervals";
+  my $result = $prefix . "gatk4_CNV_Germline${index}_PreprocessIntervals";
   if ( !defined $config->{$result} ) {
     my $interval_file;
+    my $bin_option = "";
     if (defined $def->{is_wgs}) {
       if($def->{is_wgs}){
         $interval_file = getValue($def, "wgs_calling_regions_file");
+        my $cnv_bin_length = getValue($def, "cnv-bin-length", 1000);
+        $bin_option = "--bin-length $cnv_bin_length";
       }else{
         $interval_file = getValue($def, "covered_bed");
       }
@@ -1509,7 +1544,7 @@ sub addGATK4PreprocessIntervals {
     #PreprocessIntervals at summary level
     $config->{$result} = {
       class             => "GATK4::PreprocessIntervals",
-      option            => "",
+      option            => $bin_option,
       interval_file     => $interval_file,
       ref_fasta_dict    => getValue( $def, "ref_fasta_dict" ),
       ref_fasta         => getValue( $def, "ref_fasta" ),
@@ -1538,12 +1573,12 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
 
   #CollectReadCounts at sample level
-  my $CollectReadCounts = $prefix . "_gatk4_CNV_Germline_02_CollectReadCounts";
+  my $CollectReadCounts = $prefix . "gatk4_CNV_Germline_02_CollectReadCounts";
   $result->{CollectReadCounts} = $CollectReadCounts;
   $config->{$CollectReadCounts} = {
     class                      => "GATK4::CollectReadCounts",
     source_ref                 => $bam_ref,
-    option                     => "",
+    option                     => getValue($def, "gatk4_CollectReadCounts_option", ""),
     preprocessed_intervals_ref => $preprocessIntervalsTask,
     ref_fasta_dict             => getValue( $def, "ref_fasta_dict" ),
     ref_fasta                  => getValue( $def, "ref_fasta" ),
@@ -1559,7 +1594,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step3, $CollectReadCounts );
 
   #FilterIntervals at summary level
-  my $FilterIntervals = $prefix . "_gatk4_CNV_Germline_03_FilterIntervals";
+  my $FilterIntervals = $prefix . "gatk4_CNV_Germline_03_FilterIntervals";
   $result->{FilterIntervals} = $FilterIntervals;
   $config->{$FilterIntervals} = {
     class                      => "GATK4::FilterIntervals",
@@ -1582,7 +1617,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $FilterIntervals );
 
   #DetermineGermlineContigPloidy at summary level
-  my $DetermineGermlineContigPloidyCohortMode = $prefix . "_gatk4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
+  my $DetermineGermlineContigPloidyCohortMode = $prefix . "gatk4_CNV_Germline_04_DetermineGermlineContigPloidyCohortMode";
   $result->{DetermineGermlineContigPloidyCohortMode} = $DetermineGermlineContigPloidyCohortMode;
   $config->{$DetermineGermlineContigPloidyCohortMode} = {
     class                  => "GATK4::DetermineGermlineContigPloidy",
@@ -1602,7 +1637,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   push( @$step4, $DetermineGermlineContigPloidyCohortMode );
 
   #GermlineCNVCaller at summary level
-  my $GermlineCNVCaller = $prefix . "_gatk4_CNV_Germline_05_GermlineCNVCaller";
+  my $GermlineCNVCaller = $prefix . "gatk4_CNV_Germline_05_GermlineCNVCaller";
   if ($def->{gatk4_cnv_by_scatter}){
     #scatter filter intervals
     my $ScatterIntervals = $GermlineCNVCaller . "_1_scatterIntervals";
@@ -1669,7 +1704,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   $result->{GermlineCNVCaller} = $GermlineCNVCaller;
 
   #PostprocessGermlineCNVCalls at sample level
-  my $PostprocessGermlineCNVCalls = $prefix . "_gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls";
+  my $PostprocessGermlineCNVCalls = $prefix . "gatk4_CNV_Germline_06_PostprocessGermlineCNVCalls";
   $result->{PostprocessGermlineCNVCalls} = $PostprocessGermlineCNVCalls;
   $config->{$PostprocessGermlineCNVCalls} = {
     class                       => "GATK4::PostprocessGermlineCNVCalls",
@@ -1692,7 +1727,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   if(not $def->{is_wgs}) {
     #CombineGCNV at summary level
-    my $CombineGCNV = $prefix . "_gatk4_CNV_Germline_07_CombineGCNV";
+    my $CombineGCNV = $prefix . "gatk4_CNV_Germline_07_CombineGCNV";
     $result->{CombineGCNV} = $CombineGCNV;
     $config->{$CombineGCNV} = {
       class                    => "CQS::ProgramWrapper",
@@ -1719,7 +1754,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     };
     push( @$step6, $CombineGCNV );
     
-    my $sizeFactorTask = $prefix . "_gatk4_CNV_Germline_08_SizeFactor";
+    my $sizeFactorTask = $prefix . "gatk4_CNV_Germline_08_SizeFactor";
     $result->{sizeFactor} = $sizeFactorTask;
     $config->{$sizeFactorTask} = {
       class                    => "CQS::ProgramWrapper",
@@ -1747,7 +1782,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
     my $cnvIndex;
     if($def->{plotCNVGenes} && $def->{annotation_genes}){
-      my $cnvGenes = $prefix . "_gatk4_CNV_Germline_09_CNVGenesLocus";
+      my $cnvGenes = $prefix . "gatk4_CNV_Germline_09_CNVGenesLocus";
       $result->{cnvGenes} = $cnvGenes;
       $config->{$cnvGenes} = {
         class                    => "CQS::UniqueR",
@@ -1766,7 +1801,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       };
       push( @$step6, $cnvGenes );
       
-      my $plotCNVgenes = $prefix . "_gatk4_CNV_Germline_10_CNVGenesPlot";
+      my $plotCNVgenes = $prefix . "gatk4_CNV_Germline_10_CNVGenesPlot";
       $result->{plotCNVgenes} = $plotCNVgenes;
       $config->{$plotCNVgenes} = {
         class                 => "CQS::ProgramWrapper",
@@ -1804,7 +1839,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
     my $annotationGenesPlot = undef;
     if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
-      $annotationGenesPlot = $prefix . "_gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
+      $annotationGenesPlot = $prefix . "gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
       $result->{annotationGenesPlot} = $annotationGenesPlot;
       $config->{$annotationGenesPlot} = {
         class                 => "CQS::ProgramWrapper",
@@ -1835,6 +1870,65 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
       push( @$step6, $annotationGenesPlot );
     }
+  }elsif(getValue($def, "perform_gistic2", 0)){
+    my $Gistic2SegFile = $prefix . "gatk4_CNV_Germline_07_Gistic2SegFile";
+    $result->{Gistic2SegFile} = $Gistic2SegFile;
+    $config->{$Gistic2SegFile} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => $target_dir . '/' . $Gistic2SegFile,
+      interpretor              => "python3",
+      program                  => "../Format/gatk2gistic_segment_file.py",
+      option                   => getValue($def, "Gistic2SegFile_option", "--no_chr --no_y"),
+      parameterSampleFile1_arg => "-i",
+      parameterSampleFile1_ref => [ $PostprocessGermlineCNVCalls, ".genotyped_segments.vcf.gz" ],
+      parameterFile1_arg       => "-b",
+      output_arg               => "-o",
+      output_file_ext          => ".segmentation.txt",
+      sh_direct                => 1,
+      'pbs'                    => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push( @$step6, $Gistic2SegFile );
+
+    my $gistic2_sif = getValue($def, "gistic2_docker");
+    my $gistic2_refgene = getValue($def, "gistic2_refgene");
+    my $Gistic2 = $prefix . "gatk4_CNV_Germline_08_Gistic2";
+    $result->{Gistic2} = $Gistic2;
+    $config->{$Gistic2} = {
+      class                    => "CQS::ProgramWrapper",
+      perform                  => 1,
+      target_dir               => $target_dir . '/' . $Gistic2,
+      interpretor              => "",
+      program                  => "",
+      check_program            => 0,
+      option                   => "
+GISTIC_LOC=/opt/GISTIC
+DOCKER_OUTDIR=\${GISTIC_LOC}/run_result
+
+singularity run -e --bind `pwd`:\${DOCKER_OUTDIR}  $gistic2_sif \\
+  -b \${DOCKER_OUTDIR} -seg __parameterFile1__ -refgene \${GISTIC_LOC}/refgenefiles/$gistic2_refgene \\
+  -rx 0 -genegistic 1 -smallmem 1 -broad 1 -brlen 0.5 -twosize 1 \\
+  -armpeel 1 -savegene 1 -maxseg 10000 -conf 0.99
+
+#__OUTPUT__
+",
+      parameterFile1_arg => "-seg",
+      parameterFile1_ref => $Gistic2SegFile,
+      output_arg               => "-o",
+      output_file_ext          => ".segmentation.txt",
+      sh_direct                => 1,
+      no_docker                => 1,
+      'pbs'                    => {
+        'nodes'    => '1:ppn=1',
+        'mem'      => '40gb',
+        'walltime' => '10'
+      },
+    };
+    push( @$step6, $Gistic2 );
   }
   
   return($result);
@@ -2555,7 +2649,9 @@ sub addSequenceTask {
 }
 
 sub addFilesFromSraRunTable {
-  my ($config, $filename) = @_;
+  my ($def, $filename) = @_;
+
+  my $sample_name_column = getValue($def, "SraRunTable_sample_name_column", 'Sample Name');
 
   my $csv = Text::CSV->new ({
     binary    => 1,
@@ -2566,7 +2662,11 @@ sub addFilesFromSraRunTable {
   my $files = {};
   open(my $fh, '<:encoding(utf8)', $filename) or die $!;
   my $headers = $csv->getline( $fh );
-  my $sample_name_index = first_index { $_ eq 'Sample Name' } @$headers;
+  my $sample_name_index = first_index { $_ eq $sample_name_column } @$headers;
+  if ($sample_name_index < 0){
+    die "cannot find '$sample_name_column' in '@$headers'"
+  }
+
   #print("$sample_name_index = " . $headers->[$sample_name_index]);
   while (my $fields = $csv->getline( $fh )) {
     my $srr = $fields->[0];
@@ -2575,7 +2675,7 @@ sub addFilesFromSraRunTable {
   }
   close($fh);
 
-  $config->{files} = $files;
+  $def->{files} = $files;
 }
 
 sub addWebgestalt {
@@ -3011,6 +3111,7 @@ fi
     output_file_prefix    => ".txt",
     output_file_ext       => ".txt",
     sh_direct             => 0,
+    can_result_be_empty_file => 1,
     pbs                   => {
       "nodes"    => "1:ppn=1",
       "walltime" => getValue($def, "bam_validation_walltime", "24"),
@@ -3072,9 +3173,11 @@ sub add_gsea {
     rtemplate                  => "GSEAPerform.R",
     output_to_result_directory => 1,
     output_perSample_file      => "parameterSampleFile1",
-    output_perSample_file_ext  => ".gsea.html;.gsea.csv;.gsea;",
+    output_perSample_file_regex => "(.+?)[_min5_fdr|_GSEA.rnk]",
+    output_perSample_file_ext  => ".gsea.csv;.gsea",
     parameterSampleFile1_ref   => $rnk_file_ref,
     no_docker                  => getValue($def, "gsea_no_docker", 0),
+    #has_empty_ext              => 1,
     sh_direct                  => 1,
     rCode                      => $rCode,
     pbs                        => {
@@ -3089,7 +3192,7 @@ sub add_gsea {
   my @gsea_report_names = ();
   my $pairs = $config->{pairs};
   for my $key ( @$keys ) {
-    push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".*gsea.csv" );
+    push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".gsea.csv" );
     push( @gsea_report_names, "gsea_" . $key );
   }
 
@@ -3175,6 +3278,35 @@ bowtie-build $fasta __NAME__
   };
 
   push(@$tasks, $bowtie_index_task);
+}
+
+sub add_extract_bam_locus {
+  my ($config, $def, $tasks, $target_dir, $task_name, $locus, $bam_ref) = @_;
+
+  $config->{$task_name} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
+    interpretor => "",
+    check_program => 0,
+    option => "
+samtools view -b -o __OUTPUT__ __FILE__ $locus
+samtools index __OUTPUT__
+",
+    program => "",
+    source_ref => $bam_ref,
+    output_arg => "",
+    output_file_prefix => ".bam",
+    output_file_ext => ".bam",
+    output_to_same_folder => 1,
+    sh_direct   => 1,
+    use_tmp_folder => 0,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "10gb"
+    }
+  };
+  push @$tasks, ($task_name);
 }
 
 1;

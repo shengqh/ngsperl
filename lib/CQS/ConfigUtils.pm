@@ -16,6 +16,7 @@ use Data::Dumper;
 use Hash::Merge qw( merge );
 use Tie::IxHash;
 use String::Util qw(trim);
+use List::MoreUtils qw(uniq);
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -23,6 +24,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(
+      print_trace
       is_string
       is_array
       is_not_array
@@ -92,6 +94,7 @@ our %EXPORT_TAGS = (
       read_table
       merge_hash_left_precedent
       merge_hash_right_precedent
+      get_groups_by_pattern_dic      
       get_groups_by_pattern
       get_covariances_by_pattern
       create_covariance_file_by_pattern
@@ -155,6 +158,10 @@ sub getValue {
 ####
 sub get_config_section {
   my ( $config, $section ) = @_;
+
+  if(!defined $section){
+    die "section not defined";
+  }
   my @sections = split( '::', $section );
   if ( is_hash($section) ){
     my $mess = longmess();
@@ -169,15 +176,20 @@ sub get_config_section {
   return ($result);
 }
 
+sub print_trace {
+  print STDERR "Stack Trace:\n";
+  my $i = 1;
+  while ( (my @call_details = (caller($i++))) ){
+    print STDERR $call_details[1].":".$call_details[2]." in function ".$call_details[3]."\n";
+  }    
+}
+
 sub has_config_section {
   my ( $config, $section ) = @_;
 
   if(!defined $section){
-    my $i = 1;
-    print STDERR "Stack Trace:\n";
-    while ( (my @call_details = (caller($i++))) ){
-      print STDERR $call_details[1].":".$call_details[2]." in function ".$call_details[3]."\n";
-    }    
+    print_trace();
+    die "section not defined";
   }
 
   my @sections = split( '::', $section );
@@ -191,6 +203,10 @@ sub has_config_section {
 
 sub has_option {
   my ( $config, $section, $key ) = @_;
+  if (!defined $section){
+    die "section not defined";
+  }
+
   my $curSection = get_config_section( $config, $section );
   my $result     = $curSection->{$key};
   return ( defined $result );
@@ -722,7 +738,13 @@ sub do_get_unsorted_raw_files {
   my $mapname_config_ref = $mapname . "_config_ref";
 
   if ( defined $curSection->{$mapname} ) {
-    return ( $curSection->{$mapname}, 1 );
+    my $result = $curSection->{$mapname};
+    if (is_hash($result)) {
+      return ( $curSection->{$mapname}, 1 );
+    }else{
+      warn("Did you forget to use _ref for $mapname of $section?");
+      return ( $curSection->{$mapname}, 1 );
+    }
   }
 
   if ( defined $curSection->{$mapname_ref} || defined $curSection->{$mapname_config_ref} ) {
@@ -890,6 +912,10 @@ sub get_raw_files_keys {
 
 sub get_sorted_raw_files {
   my $resultUnsorted = shift;
+  if (!is_hash($resultUnsorted)){
+    print("resultUnsorted = " . Dumper($resultUnsorted));
+    print_trace();
+  }
   my @keys           = grep { $_ !~ /^\./ } keys %$resultUnsorted;
   my %result;
   tie %result, 'Tie::IxHash';
@@ -1755,6 +1781,7 @@ sub read_table {
   my $header = <$fh>;
   chomp($header);
   my @headers = split('\t', $header);
+  map { s/^\s+|\s+$//g; } @headers;
   #print(Dumper(@headers));
   
   my $names = {};
@@ -1812,10 +1839,29 @@ sub get_groups_by_pattern_dic {
 
   my $files = $def->{files};
 
+  my $sample_names = {};
+  for my $sample_name (keys %$files){
+    $sample_names->{$sample_name} = $sample_name;
+  }
+
+  if(getValue($def, "pool_sample", 0)){
+    my $sample_pool = getValue($def, "pool_sample_groups");
+    my $sample_to_pool = {};
+    for my $pool (keys %$sample_pool){
+      my $samples = $sample_pool->{$pool};
+      for my $s (@$samples){
+        $sample_names->{$s} = $pool;
+      }
+    }
+  }
+
+  my @samplenames = uniq (values %$sample_names);
+  #print(@samplenames);
+
   my $groups = {};
   for my $groupname (sort keys %$gpattern_dic){
     my $gpattern = $gpattern_dic->{$groupname};
-    for my $samplename (sort keys %$files) {
+    for my $samplename (@samplenames) {
       if($samplename =~ /$gpattern/){
         if (not defined $groups->{$groupname}){
           $groups->{$groupname} = [$samplename];
@@ -1866,14 +1912,14 @@ sub get_groups_by_pattern_value {
       if(defined $3){
         $groupname = $groupname . $3;
       }
-    }
-    #print($groupname . " : " . $samplename . "\n");
-    if (not defined $groups->{$groupname}){
-      $groups->{$groupname} = [$samplename];
-    }
-    else{
-      my $samples = $groups->{$groupname};
-      push (@$samples, $samplename);
+      #print($groupname . " : " . $samplename . "\n");
+      if (not defined $groups->{$groupname}){
+        $groups->{$groupname} = [$samplename];
+      }
+      else{
+        my $samples = $groups->{$groupname};
+        push (@$samples, $samplename);
+      }
     }
   }
   return ($groups);
@@ -2027,15 +2073,20 @@ sub write_HTO_sample_file {
 }
 
 sub get_parameter_file_option {
-  my ($config, $section) = @_;
-  my $result = "";
+  my ($config, $section, $option) = @_;
+  my $result = $option;
   for my $index (1..10){
     my $key = "parameterFile" . $index;
     my $parameterFile = parse_param_file( $config, $section, $key, 0 );
-    my $parameterFileArg = get_option($config, $section, "${key}_arg", "");
 
     if (defined($parameterFile)){
-      $result = $result . " " . $parameterFileArg . " " . $parameterFile;
+      my $param_key = "__${key}__";
+      if ($result =~ /$param_key/){
+        $result =~ s/$param_key/$parameterFile/g;
+      }else{
+        my $parameterFileArg = get_option($config, $section, "${key}_arg", "");
+        $result = $result . " " . $parameterFileArg . " " . $parameterFile;
+      }
     }
   }
   return($result);
@@ -2261,12 +2312,14 @@ sub get_final_file_by_task_name {
       }
 
       my $cur_files = $all_results->{$cur_key};
-      $final_file = $cur_files->[-1];
+      my @no_filelists = grep(!/.filelist$/, @$cur_files);
+      $final_file = $no_filelists[-1];
       #print($final_file . "\n");
     }
   }else{
     #get last task_name result file
-    $final_file = $result_files->[-1];
+    my @no_filelists = grep(!/.filelist$/, @$result_files);
+    $final_file = $no_filelists[-1];
   }
   return($final_file);
 }

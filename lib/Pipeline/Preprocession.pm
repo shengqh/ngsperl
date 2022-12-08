@@ -18,7 +18,9 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   getPreprocessionConfig
   addPairendFastqValidation
   addCutadapt
-  addFastqLen)
+  addFastqLen
+  addExtractSingleEndFastqFromPairend
+  )
   ] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -44,6 +46,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "max_thread",                '8' );
   initDefaultValue( $def, "sequencetask_run_time",     '12' );
   initDefaultValue( $def, "emailType",                 "FAIL" );
+  initDefaultValue( $def, "extractSingleEndFastqFromPairend", 0 );
 
   return $def;
 }
@@ -80,6 +83,9 @@ sub addCutadapt {
   my ($config, $def, $individual, $summary, $cutadapt_task, $fastqcName, $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster) = @_;
   my $default_thread = $is_pairend?2:1;
   my $cutadapt_thread = getValue($def, "cutadapt_thread", $default_thread);
+  if($def->{extractSingleEndFastqFromPairend}){
+    $def->{cutadapt_option} = $def->{cutadapt_option} . " -O " . getValue($def, "cutadapt_overlap", 8);
+  }
   print("cutadapt_option=" . $def->{cutadapt_option} . "\n");
   my $cutadapt_class = ( defined $def->{cutadapt_config} ) ? "Trimmer::CutadaptByConfig" : "Trimmer::Cutadapt";
   my $cutadapt = {
@@ -163,8 +169,8 @@ sub addFastqLen {
       sh_direct   => 0,
       pbs => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
+        "walltime"  => "10",
+        "mem"       => "40gb"
       }
     },
     "${fastqLenName}_vis" => {
@@ -421,6 +427,7 @@ sub getPreprocessionConfig {
 
   if ( $def->{sra_to_fastq} ) {
     my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FastqDump";
+    #my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FasterqDump";
     $config->{sra2fastq} = {
       class      => $class,
       perform    => 1,
@@ -429,13 +436,15 @@ sub getPreprocessionConfig {
       option     => "",
       source_ref => $source_ref,
       sra_table  => $def->{sra_table},
-      sh_direct  => 1,
+      sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 1),
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
       is_restricted_data => getValue($def, "is_restricted_data"),
+      docker_prefix => "sratools_",
+      no_docker => $def->{"no_docker"},
       pbs        => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
+        "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
         "mem"       => "10gb"
       },
     };
@@ -663,6 +672,14 @@ sub getPreprocessionConfig {
     addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
   }
 
+  if($def->{extractSingleEndFastqFromPairend}){
+    my $extract_task = "extract_singleend_fastq";
+    my $fastqc_task = "fastqc_extract_singleend";
+    addExtractSingleEndFastqFromPairend($config, $def, $individual, $summary, $extract_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref, $cluster );
+    $source_ref = [$extract_task, ".se.fastq.gz"];
+    addFastqLen($config, $def, $individual, $summary, "fastq_len_extract", $preprocessing_dir, $source_ref, $cluster );
+  }
+
   if ( $def->{perform_fastqc} ) {
     my $fastqc_count_vis_files = undef;
     if ( length($remove_sequences) && $run_cutadapt ) {
@@ -696,9 +713,8 @@ sub getPreprocessionConfig {
           output_other_ext   => ".pdf,.png",
           sh_direct          => 1,
           parameterFile1_ref => [ "fastqc_raw_summary", ".FastQC.reads.tsv\$" ],
+          can_result_be_empty_file => 1,
           pbs                => {
-            "email"     => $def->{email},
-            "emailType" => $def->{emailType},
             "nodes"     => "1:ppn=1",
             "walltime"  => "1",
             "mem"       => "10gb"
@@ -711,6 +727,43 @@ sub getPreprocessionConfig {
   }
 
   return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster, $run_cutadapt_test );
+}
+
+sub addExtractSingleEndFastqFromPairend {
+  my ($config, $def, $individual, $summary, $extract_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref) = @_;
+  my $minReadLength = getValue($def, "minReadLength", 16);
+  my $minSimilarityRatio = getValue($def, "minSimilarityRatio", 0.8);
+  $config->{$extract_task} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$intermediate_dir/$extract_task",
+    #init_command          => "source /data/cqs/softwares/cqsperl/scripts/path_conda.txt",
+    option                => "-o __NAME__.se.fastq.gz --minReadLength $minReadLength --minSimilarityRatio 0.8",
+    interpretor           => "python3",
+    check_program         => 1,
+    program               => "../SmallRNA/getFastqFromTrimmedPairendReads.py",
+    source_ref            => $source_ref,
+    source_arg            => "--read1",
+    source_join_delimiter => " --read2 ",
+    no_output             => 0,
+    output_to_same_folder => 1, 
+    output_arg            => "-o",
+    output_ext            => ".se.fastq.gz",
+    sh_direct             => 0,
+    use_tmp_folder        => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
+    },
+  };
+  push @$individual, ($extract_task);
+
+  get_result_file($config, $extract_task, "");
+
+  if ( $def->{perform_fastqc} ) {
+    addFastQC( $config, $def, $individual, $summary, $fastqc_task, [ $extract_task, ".se.fastq.gz" ], $preprocessing_dir );
+  }
 }
 
 1;

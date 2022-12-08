@@ -146,7 +146,9 @@ for(fileTitle in names(fileMap)) {
   fileName  = fileMap[[fileTitle]]
   cat(fileTitle, "\n")
   if(dir.exists(fileName)){
-    counts = Read10X(fileName)
+    feature.names <- read.delim(paste0(fileName, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
+    gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
+    counts = Read10X(fileName, gene.column=gene.column)
   } else if (grepl('.h5$', fileName)) {
     counts = Read10X_h5(fileName)
   } else if (grepl('.gz$', fileName)) {
@@ -248,37 +250,4 @@ if(length(rawobjs) == 1){
 }
 rm(rawobjs)
 
-writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
-
-saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
-
-png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
-par(mar = c(4, 8, 2, 1))
-C <- rawobj@assays$RNA@counts
-C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
-mc<-rowMedians(C)
-most_expressed <- order(mc, decreasing = T)[20:1]
-tm<-as.matrix(Matrix::t(C[most_expressed,]))
-boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
-        col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
-dev.off()
-
-draw_feature_qc(outFile, rawobj, "orig.ident")
-
-if(any(rawobj$orig.ident != rawobj$sample)){
-  draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
-}
-
-rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
-rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
-
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
-
-draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
-
-if(any(rawobj$orig.ident != rawobj$sample)){
-  draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
-}
-
+output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)

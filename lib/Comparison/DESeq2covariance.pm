@@ -16,8 +16,6 @@ use Comparison::DESeq2;
 
 our @ISA = qw(Comparison::DESeq2);
 
-my $directory;
-
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
@@ -38,7 +36,9 @@ sub perform {
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $covariance_file = get_option_file($config, $section, "covariance_file", 1);
-  my ($cov_table, $cov_names) = read_table($covariance_file, 0);
+  my ($cov_table, $cov_names) = read_table($covariance_file, get_option($config, $section, "covariance_name_index", 0));
+
+  #print(Dumper($cov_table));
 
   my $comparisonAttributes = get_raw_files_attributes( $config, $section );
   my $comparisonTitles = \@comparison_names;
@@ -97,7 +97,7 @@ sub perform {
   my $designfilename = "${task_name}.define";
   my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
-  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tdesignFormula\tcontrast\n";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tdesignFormula\tcontrast\tcollapse_by\n";
 
   for my $comparisonIndex ( 0 .. $#comparison_names ) {
     my $comparison_name = $comparison_names[$comparisonIndex];
@@ -123,11 +123,15 @@ sub perform {
 
     my $contrast="";
     my $designFormula="";
+    my $collapse_by="";
     if (exists($$comp_def{"designFormula"})) {
         $designFormula = ${$comp_def->{designFormula}}[0];
     }
     if (exists($$comp_def{"contrast"})) {
         $contrast = ${$comp_def->{contrast}}[0];
+    }
+    if (exists($$comp_def{"collapse_by"})) {
+        $collapse_by = $comp_def->{collapse_by};
     }
 
     #print( Dumper(@group_names) );
@@ -193,7 +197,7 @@ sub perform {
     if ( ref $curcountfile eq ref [] ) {
       $curcountfile = $curcountfile->[0];
     }
-    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$designFormula\t$contrast\n";
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$designFormula\t$contrast\t$collapse_by\n";
   }
   close($df);
 
@@ -256,7 +260,7 @@ libraryKey<-\"$libraryKey\"
   my $log_desc = $cluster->get_log_description($log);
 
   my $lastComparisonName = $comparison_names[-1];
-  my $final_file         = $lastComparisonName . $suffix . "_DESeq2_sig.csv";
+  my $final_file         = $lastComparisonName . $suffix . "_DESeq2_volcanoPlot.png";
   my $pbs                = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "R --vanilla -f $rfile \n";

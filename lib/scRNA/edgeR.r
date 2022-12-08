@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='PH_combine'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
-parFile2='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
+parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose/result/PH_combine.final.rds'
+parFile2='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose/result/PH_combine.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_byCell/result')
+setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
@@ -93,7 +93,7 @@ for (comp in comparisonNames){
   }
 
   if(bBetweenCluster){
-    prefix<-comp
+    prefix<-get_valid_path(comp)
     
     control_cells<-rownames(meta)[meta[,cluster_name] %in% control_names]  
     if("control_file_regex" %in% names(comp_options)){
@@ -156,7 +156,11 @@ for (comp in comparisonNames){
     }
   }else{
     cts = unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name])
-    prefixList<-gsub('[ /:_]+', '_', cts)
+    if(myoptions$DE_cluster_pattern != '*' & myoptions$DE_cluster_pattern != ''){
+      cts=cts[grepl(myoptions$DE_cluster_pattern, cts)]
+    }
+    
+    prefixList<-get_valid_path(cts)
 
     idx<-1
     for (idx in c(1:length(cts))){

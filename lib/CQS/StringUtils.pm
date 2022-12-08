@@ -8,11 +8,23 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw( merge_string print_hash filter_array string_combination string_repeat)] );
+our %EXPORT_TAGS = ( 'all' => [qw( capture_regex_groups merge_string print_hash filter_array string_combination string_repeat)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
+
+sub capture_regex_groups {
+  my ( $source, $pattern ) = @_;
+  $source =~ /$pattern/; # matches
+  my $result = "";
+  foreach my $exp (1..$#-) {
+    no strict 'refs';
+    $result = $result . $$exp;
+  }
+
+  return($result);
+}
 
 sub string_repeat {
   my ( $array, $repeatTime ) = @_;

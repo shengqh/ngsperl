@@ -63,7 +63,7 @@ sub perform {
   my ( $parameterSampleFile2, $parameterSampleFile2arg, $parameterSampleFile2JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile2" );
   my ( $parameterSampleFile3, $parameterSampleFile3arg, $parameterSampleFile3JoinDelimiter ) = get_parameter_sample_files( $config, $section, "parameterSampleFile3" );
 
-  $option = $option . " " . get_parameter_file_option($config, $section);
+  $option = get_parameter_file_option($config, $section, $option);
 
   my $iteration_map = get_iteration_map($config, $section, $parameterSampleFile1);
   my $max_length = int(get_option( $config, $section, "iteration_fill_length", 3));

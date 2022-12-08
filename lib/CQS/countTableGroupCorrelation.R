@@ -3,12 +3,14 @@ outFile=''
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
+parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2='/gpfs23/scratch/h_vangard_1/chenh19/exRNA/geo_se/result/GSE145767/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/GSE145767.Category.Table.csv'
-parFile3='/gpfs23/scratch/h_vangard_1/chenh19/exRNA/geo_se/result/GSE145767/preprocessing/fastqc_post_trim_summary/result/GSE145767.countInFastQcVis.Result.Reads.csv'
-useLeastGroups<-FALSE;showLabelInPCA<-FALSE;totalCountKey='Reads for Mapping';minMedian=0;minMedianInGroup=1;textSize=9;groupTextSize=10;
+parFile2=''
+parFile3=''
+parFile4='C:/projects/scratch/cqs/justin_balko_projects/20220907_rnaseq_7312_6295_mm10/covariance.txt'
+outputPdf<-TRUE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
 
-setwd('/scratch/cqs/shengq2/bugfix/orrelation')
+setwd("C:/projects/scratch/cqs/justin_balko_projects/20220907_rnaseq_7312_6295_mm10/genetable/result")
 
 ### Parameter setting end ###
 
@@ -20,8 +22,12 @@ library(DESeq2)
 library(RColorBrewer)
 library(colorRamps)
 library(genefilter)
+library(limma)
 
 is_one<-function(value){
+  if(is.na(value)){
+    return(FALSE)
+  }
   if(is.null(value)){
     return(FALSE)
   }
@@ -56,6 +62,15 @@ fixColorRange<-TRUE
 
 geneFile<-parFile1
 totalCountFile<-parFile3
+
+covarianceFile<-ifelse(exists("parFile4"), parFile4, "")
+if(file.exists((covarianceFile))){
+  covariances<-read.table(covarianceFile, sep="\t", header=T)
+  has_batch<-"batch" %in% colnames(covariances)
+  batch_map<-unlist(split(covariances$batch, covariances$Sample))
+}else{
+  has_batch<-FALSE
+}
 
 if(!exists("onlySamplesInGroup")){
   onlySamplesInGroup=TRUE
@@ -168,13 +183,16 @@ unByteCodeAssign(stats:::plotNode)
 # Now raise the interpreted code recursion limit (you may need to adjust this,
 #  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
 options(expressions=5e4)
-drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width=3000, height=3000){
+drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width=3000, height=3000,scalePCs=TRUE){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
     pca<-prcomp(t(rldmatrix))
     supca<-summary(pca)$importance
     pcadata<-data.frame(pca$x)
+    if (scalePCs) {
+      pcadata=as.data.frame(scale(pcadata))
+    }
     pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
     pcadata["sample"]<-row.names(pcadata)
     if(!is.na(groups[1])){
@@ -244,6 +262,7 @@ if(file.exists(succeed_file)){
 i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]
+  #countTableFile<-paste0("C:/projects", countTableFile)
 
   if(!file.exists(countTableFile)){
     missed_count_tables<-c(missed_count_tables, countTableFile)
@@ -329,7 +348,7 @@ for (i in 1:nrow(countTableFileAll)) {
 
   titles<-unique(sampleToGroup$V3)
   if(draw_all_groups_in_HCA){
-    allSamples<-unique(sampleToGroup$V1)
+    allSamples<-sort(unique(sampleToGroup$V1))
     conditionColors<-data.frame(Sample=allSamples)
     rownames(conditionColors)=allSamples
 
@@ -404,14 +423,32 @@ for (i in 1:nrow(countTableFileAll)) {
     } else {
       dds=DESeqDataSetFromMatrix(countData = validCountNum, colData = as.data.frame(rep(1,ncol(validCountNum))),design = ~1)
       dds<-try(myEstimateSizeFactors(dds))
-      vsdres<-try(temp<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
+      vsdres<-try(dds<-DESeq2::varianceStabilizingTransformation(dds, blind = TRUE))
       if (class(vsdres) == "try-error") {
         message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
         warning(message)
         writeLines(message,paste0(outputFilePrefix,curSuffix,".vsd.warning"))
         next;
       }
-      countNumVsd<-assay(temp)
+      
+      if(has_batch){
+        countNumVsd<-assay(dds)
+        colnames(countNumVsd)<-colnames(validCountNum)
+        write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.vsd.txt"),col.names=NA, quote=F, sep="\t")
+
+        dds$batch<-batch_map[colnames(dds)]
+        png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.png"), width=2000, height=2000, res=300)
+        g<-plotPCA(dds, "batch") + theme_bw3()
+        print(g)
+        dev.off()
+        assay(dds) <- limma::removeBatchEffect(assay(dds), dds$batch)
+        png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.png"), width=2000, height=2000, res=300)
+        g<-plotPCA(dds, "batch") + theme_bw3()
+        print(g)
+        dev.off()
+      }
+
+      countNumVsd<-assay(dds)
       colnames(countNumVsd)<-colnames(validCountNum)
       write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
       
@@ -441,11 +478,10 @@ for (i in 1:nrow(countTableFileAll)) {
         }
         conditionColors<-as.matrix(data.frame(Group=colors[groups]))
       }else{
+        cc<-conditionColors[validSampleToGroup$V1,]
         gname = ifelse(title == "all", "Group", title)
-        cnames=c(gname, colnames(conditionColors)[colnames(conditionColors) != gname])
-        conditionColors<-conditionColors[,cnames,drop=F]
-        colors<-unique(conditionColors[,title])
-        names(colors)<-unique(groups)
+        colors<-unique(cc[,gname])
+        names(colors)<-unique(validSampleToGroup$V2)
       }
     }else{
       groups<-NA
@@ -502,6 +538,8 @@ for (i in 1:nrow(countTableFileAll)) {
     print(paste0("Drawing PCA for ", title, " samples."))
     drawPCA(paste0(outputFilePrefix,curSuffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat, width=1600, height=1500)
     
+    
+    
     #hca plot
     hcaOption<-getHeatmapOption(countHT)
     if(!is.na(hasRowNames) & hasRowNames){
@@ -534,8 +572,7 @@ for (i in 1:nrow(countTableFileAll)) {
         }
         
         if(hasMultipleGroup){
-          gname = ifelse(title == "all", "Group", title)
-          curColSideColors<-conditionColors[,gname]
+          curColSideColors<-conditionColors[,1]
           heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=curColSideColors,cexCol=hcaOption$cexCol, ColSideLabs="")
         } else {
           heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
@@ -704,3 +741,5 @@ if(length(missed_count_tables) == 0){
 }else{
   writeLines(missed_count_tables, "count_table_missing.txt")
 }
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
+

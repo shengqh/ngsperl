@@ -166,17 +166,17 @@ sub result {
     my @result_files   = ();
     my $outputfile     = $self->get_file( $result_dir, $name, ".count", 0 );
     my $miniContigFile = $self->get_file( $result_dir, $name, ".minicontig.count", 0 );
-    my $readoutputfile = $self->get_file( $result_dir, $name, ".read.count", 0 );
     my $filelist       = $self->get_file( $pbs_dir, $name, ".filelist", 0 );
+    my $readoutputfile = $self->get_file( $result_dir, $name, ".read.count", 0 );
     push( @result_files, $outputfile );
     push( @result_files, $outputfile . ".fasta" );
     push( @result_files, $outputfile . ".details" );
+    push( @result_files, $filelist );
     push( @result_files, $miniContigFile );
     push( @result_files, $miniContigFile . ".fasta" );
     push( @result_files, $miniContigFile . ".details" );
     push( @result_files, $readoutputfile );
     push( @result_files, $readoutputfile . ".fasta" );
-    push( @result_files, $filelist );
     $result->{$name} = filter_array( \@result_files, $pattern, $canReturnEmpty );
   }
 

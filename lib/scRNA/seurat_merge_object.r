@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_merge_object/result')
+setwd('/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -52,6 +52,22 @@ for(fileTitle in names(fileMap)) {
     sobj<-subset(sobj, cells=cells)
   }
 
+  if(!('percent.mt' %in% colnames(sobj@meta.data))){
+    sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt")
+  }
+
+  if(!('percent.ribo' %in% colnames(sobj@meta.data))){
+    sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo")
+  }
+
+  if(!('percent.hb' %in% colnames(sobj@meta.data))){
+    sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")
+  }   
+
+  if(!('sample' %in% colnames(sobj@meta.data))){
+    sobj$sample=sobj$orig.ident
+  }
+
   rawobjs[[fileTitle]] = sobj
   rm(sobj)
 }
@@ -63,41 +79,6 @@ if(length(rawobjs) == 1){
 }
 rm(rawobjs)
 
-writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
-
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
-
-saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
-
-png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
-par(mar = c(4, 8, 2, 1))
-C <- rawobj@assays$RNA@counts
-C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
-mc<-rowMedians(C)
-most_expressed <- order(mc, decreasing = T)[20:1]
-tm<-as.matrix(Matrix::t(C[most_expressed,]))
-boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
-        col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
-dev.off()
-
-draw_feature_qc(outFile, rawobj, "orig.ident")
-
-if(any(rawobj$orig.ident != rawobj$sample)){
-  draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
-}
-
-rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
-rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
-
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
-rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
-
-draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
-
-if(any(rawobj$orig.ident != rawobj$sample)){
-  draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
-}
-
+#rawobj<-readRDS("PH_combine.rawobj.rds")
+output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')

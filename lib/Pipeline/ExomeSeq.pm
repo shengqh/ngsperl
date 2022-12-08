@@ -825,26 +825,7 @@ rm __OUTPUT__.tmp
   if($def->{perform_extract_bam}){
     my $extract_bam_locus = getValue($def, "extract_bam_locus");
     my $extract_bam_task = "extract_bam_locus";
-    $config->{$extract_bam_task} = {
-      class => "CQS::ProgramWrapperOneToOne",
-      target_dir => $target_dir . "/" . getNextFolderIndex($def) . $extract_bam_task,
-      interpretor => "",
-      check_program => 0,
-      option => "view -b -o __OUTPUT__ __FILE__ " . $extract_bam_locus . "; samtools index __OUTPUT__; ",
-      program => "samtools",
-      source_ref => [ $bam_input, ".bam\$" ],
-      output_arg => "",
-      output_file_prefix => ".bam",
-      output_file_ext => ".bam",
-      output_to_same_folder => 1,
-      sh_direct   => 1,
-      pbs => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "10gb"
-      }
-    };
-    push @$individual, ($extract_bam_task);
+    add_extract_bam_locus($config, $def, $individual, $target_dir, $extract_bam_task, $extract_bam_locus, [ $bam_input, ".bam\$" ] );
   }
 
   if($def->{perform_featureCounts}){
@@ -1974,7 +1955,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
 
   my $cnvMap = undef;
   if ( $def->{perform_cnv_gatk4_cohort} ) {
-    $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, $bam_input, $individual, $summary, $step3, $step4, $step5, $step6 );
+    $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, "", $individual, $summary, $step3, $step4, $step5, $step6 );
     if(defined $annovar_filter_geneannotation_name ) {
       my $combineTask = $cnvMap->{CombineGCNV};
       my $snvTop10cnvOncoPlotTask = "${bam_input}_SNV_top10_CNV_Oncoplot";

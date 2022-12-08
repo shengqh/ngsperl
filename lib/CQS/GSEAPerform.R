@@ -1,3 +1,20 @@
+rm(list=ls()) 
+outFile='PH_combine'
+parSampleFile1=''
+parSampleFile2=''
+parSampleFile3=''
+parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result/PH_combine.edgeR.files.csv'
+parFile2=''
+parFile3=''
+outputDirectory='.'
+gseaDb='C:/projects/database/gsea/v7.5.1/'; gseaJar='gsea-cli.bat'; gseaCategories=c('h.all.v7.5.1.symbols.gmt', 'c2.all.v7.5.1.symbols.gmt', 'c5.all.v7.5.1.symbols.gmt', 'c6.all.v7.5.1.symbols.gmt', 'c7.all.v7.5.1.symbols.gmt'); makeReport=0;
+
+setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_GSEA/result')
+
+### Parameter setting end ###
+
+library(stringr)
+
 ###############################################################################
 # Author: Shilin Zhao, Quanhu Sheng
 ###############################################################################
@@ -13,11 +30,15 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
 {
   fileToName=c("h"="HallmarkGeneSets","c1"="PositionalGeneSets","c2"="CuratedGeneSets","c3"="MotifGeneSets","c4"="ComputationalGeneSets","c5"="GOGeneSets","c6"="OncogenicGeneSets","c7"="ImmunologicGeneSets")
   
+  gsea_name=gsub("_min5_fdr.*", "", basename(preRankedGeneFile))
+  gsea_name=gsub("_GSEA.rnk", "", gsea_name)
   if (is.null(resultDir)) {
     gesaResultDir<-paste0(preRankedGeneFile,".gsea")
   } else {
-    gesaResultDir<-paste0(resultDir,"/",basename(preRankedGeneFile),".gsea")
+    gesaResultDir<-paste0(resultDir,"/",gsea_name, ".gsea")
   }
+  gesaResultDir<-str_replace_all(gesaResultDir, '[()]', '_')
+
   if (file.exists(gesaResultDir)) {
     warning(paste0(gesaResultDir," folder exists! Will delete all files in it and regenerate GSEA results."))
     unlink(gesaResultDir, recursive = TRUE)
@@ -35,7 +56,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
     }else{
       runCommand=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked") 
     }
-    runCommand = paste0(runCommand, " -gmx ",gseaDb,"/",gseaCategory, " -rnk ",preRankedGeneFile," -rpt_label ",gseaCategoryName," -scoring_scheme weighted -make_sets true -nperm 1000 -plot_top_x 20 -set_max 500 -set_min 15 -mode Abs_max_of_probes -zip_report false -norm meandiv -create_svgs false -include_only_symbols true -rnd_seed timestamp -out ", gesaResultDir)
+    runCommand = paste0(runCommand, " -gmx ",gseaDb,"/",gseaCategory, " -rnk \"",preRankedGeneFile,"\" -rpt_label ",gseaCategoryName," -scoring_scheme weighted -make_sets true -nperm 1000 -plot_top_x 20 -set_max 500 -set_min 15 -mode Abs_max_of_probes -zip_report false -norm meandiv -create_svgs false -include_only_symbols true -rnd_seed timestamp -out \"", gesaResultDir, "\"")
     
     if(!is.na(gseaChip)){
       runCommand=paste0(runCommand, " -collapse Collapse -chip ", gseaChip)
@@ -55,7 +76,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
   
   dt<-data.frame(Folder=newResultDirSubs)
   dt$GseaCategory<-gsub(paste0(gesaResultDir,"/"), "", dt$Folder)
-  write.csv(dt, file=paste0(basename(preRankedGeneFile),".gsea.csv"), row.names=F)
+  write.csv(dt, file=paste0(gsea_name,".gsea.csv"), row.names=F)
   
   if (makeReport) {
     library('rmarkdown')
@@ -85,7 +106,7 @@ for (i in 1:nrow(preRankedGeneFileTable)) {
   preRankedGeneFile=preRankedGeneFileTable[i,1]
   
   if(!file.exists(preRankedGeneFile)){
-    stop(paste0("File not exists: " + preRankedGeneFile))
+    stop(paste0("File not exists: ", preRankedGeneFile))
   }
 }
 

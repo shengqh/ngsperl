@@ -77,7 +77,7 @@ sub perform {
     for my $additional (@additional_rtemplates) {
       my $additional_rtempalte = dirname(__FILE__) . "/" . trim($additional);
       my $additional_rfile     = $result_dir . "/" . basename($additional);
-      copy( $additional_rtempalte, $additional_rfile ) or die "Copy failed: $!";
+      copy( $additional_rtempalte, $additional_rfile ) or die "Copy failed for $additional_rtempalte: $!";
     }
   }
   my $raw_file_list = get_raw_file_list( $config, $section, "parameterSampleFile1", 1 );

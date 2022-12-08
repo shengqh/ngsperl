@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='mouse_8363'
+outFile='PH_combine'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge/result/mouse_8363.final.rds'
-parFile2='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires/result/mouse_8363.meta.rds'
-parFile3='/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/essential_genes/result/mouse_8363.txt'
+parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony/result/PH_combine.final.rds'
+parFile2='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_01_call/result/PH_combine.meta.rds'
+parFile3='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/essential_genes/result/PH_combine.txt'
+parFile4='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_SignacX/result/PH_combine.meta.rds'
 
 
-setwd('/scratch/jbrown_lab/shengq2/projects/20220630_scRNA_8363_mouse/seurat_sct_merge_multires_subcluster.v2/result')
+setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_02_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -35,19 +36,22 @@ logfc.threshold=0.6
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
+by_sctransform<-is_one(myoptions$by_sctransform)
+by_integration<-is_one(myoptions$by_integration)
 reduction<-myoptions$reduction
+by_harmony<-reduction=="harmony"
+redo_harmony<-is_one(myoptions$redo_harmony, 0)
+assay=get_assay(by_sctransform, by_integration, by_harmony)
+
 npcs<-as.numeric(myoptions$pca_dims)
 
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
 remove_subtype<-myoptions$remove_subtype
-annotate_tcell<-ifelse(myoptions$annotate_tcell == "0", FALSE, TRUE)
+annotate_tcell<-is_one(myoptions$annotate_tcell)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
-assay=ifelse(by_sctransform, "SCT", "RNA")
-by_harmony<-reduction=="harmony"
-regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
+regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 
 min_markers<-20
 
@@ -156,38 +160,31 @@ for(pct in previous_celltypes){
   cur_npcs=min(pca_npcs, npcs)
   cur_pca_dims=1:cur_npcs
 
+  curreduction = reduction
+
   k_n_neighbors<-min(cur_npcs, 20)
   u_n_neighbors<-min(cur_npcs, 30)
   
   curprefix<-paste0(prefix, ".", gsub('[/\ ]', "_", pct))
-  
-  if(by_harmony){
-    cat(key, "harmony\n")
-    #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform and harmony, 
-    #so we will keep the old data structure
-    #subobj<-do_harmony(subobj, by_sctransform, regress_by_percent_mt, FALSE, "", pca_dims)
-    curreduction="harmony"
-  }else{
-    if (by_sctransform) {
-      cat(key, "sctransform\n")
-      #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform at individual sample level, 
-      #so we will keep the old data structure
-      #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
-    }else{
-      cat(key, "normalization\n")
-      subobj<-do_normalization(subobj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
-    }
-    cat(key, "RunPCA\n")
-    subobj<-RunPCA(subobj, npcs=cur_npcs)
-    curreduction="pca"
-  }
 
-  DefaultAssay(subobj)<-assay
-
-  cat(key, "FindClusters\n")
-  subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
-  subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
-  
+  subobj = sub_cluster(subobj, 
+                        assay, 
+                        by_sctransform, 
+                        by_harmony, 
+                        redo_harmony, 
+                        curreduction, 
+                        k_n_neighbors,
+                        u_n_neighbors,
+                        random.seed,
+                        resolutions,
+                        cur_npcs, 
+                        cur_pca_dims,
+                        vars.to.regress, 
+                        essential_genes, 
+                        key,
+                        do_umap = FALSE,
+                        umap_min_dist_map = NA,
+                        previous_layer = NA)
   
   g11<-DimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F)
   
@@ -204,21 +201,9 @@ for(pct in previous_celltypes){
     umap_key = paste0("UMAPnn", nn, "dist", min.dist * 100, "_")
     subobj<-RunUMAP(object = subobj, reduction=curreduction, reduction.key=umap_key, reduction.name=umap_name, n.neighbors=nn, min.dist=min.dist, dims=cur_pca_dims, verbose = FALSE)
   }
-# 
-#   g<-NULL
-#   for(umap_name in umap_names){  
-#     cat(umap_name, "\n")
-#     cg<-DimPlot(subobj, reduction = umap_name, group.by="orig.ident") + ggtitle(umap_name)
-#     if(is.null(g)){
-#       g<-cg
-#     }else{
-#       g<-g+cg
-#     }
-#   }
-#   g<-g+plot_layout(ncol=3)
-#   png(paste0(curprefix, ".iumap.png"), width=6600, height=6000, res=300)
-#   print(g)
-#   dev.off()
+  
+  reductions_rds = paste0(curprefix, ".reductions.rds")
+  saveRDS(subobj@reductions, reductions_rds)
   
   cat(key, "Find marker genes\n")
   cluster = clusters[1]
@@ -315,7 +300,7 @@ for(pct in previous_celltypes){
       g<-g+get_groups_dot(sxobj, "signacx_CellStates", "orig.ident")
     }
 
-    width=10000
+    width=8000
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
       #using global normalized data for bubblemap
       subobj2@meta.data <- subobj@meta.data
@@ -377,9 +362,13 @@ EFGH"
 #     print(gg)
 #     dev.off()
     
-    cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, umap_file, heatmap_file)), "type"=c("markers", "meta", "umap", "heatmap"), "resolution"=cur_resolution, "celltype"=pct)
+    cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
     filelist<-rbind(filelist, cur_df)
   }
 }
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+
+library('rmarkdown')
+rmarkdown::render("seurat_celltype_subcluster.v2.rmd",output_file=paste0(outFile,".html"))
+

@@ -81,12 +81,17 @@ sub perform {
     $thread_option = "-j $thread";
   }
 
+  my $ispairend = get_is_paired_end_option( $config, $section );
+
   my $hard_trim = get_option( $config, $section, "hard_trim", 0 );
 
   my $remove_bases_option = "";
   my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
   if ( $random_bases_remove_after_trim > 0 ) {
     $remove_bases_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
+    if($ispairend){
+      $remove_bases_option = $remove_bases_option . " -U $random_bases_remove_after_trim -U -$random_bases_remove_after_trim";
+    }
   }
   else {
     my $random_bases_remove_after_trim_5 = get_option( $config, $section, "random_bases_remove_after_trim_5", 0 );
@@ -95,7 +100,7 @@ sub perform {
     }
     my $random_bases_remove_after_trim_3 = get_option( $config, $section, "random_bases_remove_after_trim_3", 0 );
     if ( $random_bases_remove_after_trim_3 > 0 ) {
-      $remove_bases_option = $remove_bases_option . "-u -$random_bases_remove_after_trim_3";
+      $remove_bases_option = $remove_bases_option . " -u -$random_bases_remove_after_trim_3";
     }
   }
 
@@ -103,8 +108,6 @@ sub perform {
   if($trim_base_quality_after_adapter_trim > 0 && $remove_bases_option eq ""){
     $remove_bases_option = "-q " . $trim_base_quality_after_adapter_trim;
   }
-
-  my $ispairend = get_is_paired_end_option( $config, $section );
 
   my $limit_options   = '';
   my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
@@ -234,15 +237,18 @@ cutadapt $thread_option -l $hard_trim -o $temp_file $sample_file
       #pair-end data
       my $read1file = $sample_files[0];
       my $read2file = $sample_files[1];
+      my $failed_rm_files = "";
 
       my ( $read1name, $read2name, $finalShortFile_1, $finalShortFile_2, $finalLongFile_1, $finalLongFile_2 ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
       my $limit_file_options = $limit_options;
       if ($shortLimited) {
         $limit_file_options = $limit_file_options . " --too-short-output=$finalShortFile_1 --too-short-paired-output=$finalShortFile_2";
+        $failed_rm_files = $failed_rm_files . " $finalShortFile_1 $finalShortFile_2";
       }
       if ($longLimited) {
         $limit_file_options = $limit_file_options . " --too-long-output=$finalLongFile_1 --too-long-paired-output=$finalLongFile_2";
+        $failed_rm_files = $failed_rm_files . " $finalLongFile_1 $finalLongFile_2";
       }
 
       if ($remove_bases_option ne "") {    # remove top random bases
@@ -252,7 +258,7 @@ cutadapt $thread_option -l $hard_trim -o $temp_file $sample_file
 cutadapt $thread_option $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
 status=\$?
 if [[ \$status -eq 0 ]]; then
-  cutadapt $thread_option $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
+  cutadapt $remove_bases_option -o $read1name -p $read2name $limit_file_options $temp1_file $temp2_file 
   status=\$?
   rm $temp1_file $temp2_file
   if [[ \$status -eq 0 ]]; then
@@ -260,11 +266,11 @@ if [[ \$status -eq 0 ]]; then
     md5sum $read1name > ${read1name}.md5
     md5sum $read2name > ${read2name}.md5
   else
-    rm $read1name $read2name
+    rm $read1name $read2name $failed_rm_files
     touch ${sample_name}.failed
   fi
 else
-  rm $temp1_file $temp2_file
+  rm $temp1_file $temp2_file $failed_rm_files
   touch ${sample_name}.failed
 fi
 
@@ -279,7 +285,7 @@ if [[ \$status -eq 0 ]]; then
   md5sum $read1name > ${read1name}.md5
   md5sum $read2name > ${read2name}.md5
 else
-  rm $read1name $read2name
+  rm $read1name $read2name $failed_rm_files
   touch ${sample_name}.failed
 fi
 
@@ -289,12 +295,16 @@ fi
     else {#single end
       my ( $final_file, $finalShortFile, $finalLongFile ) = $self->get_final_files( $ispairend, $sample_name, $extension, $fastqextension );
 
+      my $failed_rm_files = "";
+
       my $limit_file_options = $limit_options;
       if ($shortLimited) {
         $limit_file_options = $limit_file_options . " --too-short-output=$finalShortFile";
+        $failed_rm_files = "$failed_rm_files $finalShortFile";
       }
       if ($longLimited) {
         $limit_file_options = $limit_file_options . " --too-long-output=$finalLongFile";
+        $failed_rm_files = "$failed_rm_files $finalLongFile";
       }
 
       if ($remove_bases_option ne "") {    #remove top random bases
@@ -321,6 +331,10 @@ if [[ \$status -eq 0 ]]; then
   if [[ \$status -eq 0 ]]; then
     cat temp.fastq >> $temp_file
     rm temp.fastq
+  else
+    rm temp.fastq $failed_rm_files
+    echo failed for $sample_file
+    exit \$status
   fi
 fi
 
@@ -330,17 +344,18 @@ fi
 
         print $pbs "
 if [[ \$status -eq 0 ]]; then
-  cutadapt $thread_option $remove_bases_option $limit_file_options -o $final_file $temp_file
+  cutadapt $remove_bases_option $limit_file_options -o tmp.${final_file} $temp_file
   status=\$?
   if [[ \$status -eq 0 ]]; then
     rm $temp_file
+    mv tmp.${final_file} ${final_file}
     touch ${sample_name}.succeed
   else
-    rm $final_file $temp_file
+    rm tmp.${final_file} $temp_file $failed_rm_files
     touch ${sample_name}.failed
   fi
 else
-  rm $temp_file
+  rm $temp_file $failed_rm_files
   touch ${sample_name}.failed
 fi
 ";
@@ -348,12 +363,13 @@ fi
       else {    #NOT remove top random bases
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
-cutadapt $thread_option $adapter_option $limit_file_options -o $final_file $sample_files[0]
+cutadapt $thread_option $adapter_option $limit_file_options -o tmp.${final_file} $sample_files[0]
 status=\$?
 if [[ \$status -eq 0 ]]; then
+  mv tmp.${final_file} ${final_file}
   touch ${sample_name}.succeed
 else
-  rm $final_file
+  rm tmp.${final_file} $failed_rm_files
   touch ${sample_name}.failed
 fi
 

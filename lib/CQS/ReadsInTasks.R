@@ -1,3 +1,18 @@
+rm(list=ls()) 
+outFile='CM_8643_bakeoff'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3='/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/preprocessing/fastqc_post_trim_summary/result/CM_8643_bakeoff.countInFastQcVis.Result.Reads.csv'
+textSize=9;groupTextSize=10;
+
+setwd('/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/data_visualization/reads_in_tasks/result')
+
+### Parameter setting end ###
+
+source("countTableVisFunctions.R")
 options(bitmapType='cairo')
 
 #############################
@@ -42,6 +57,8 @@ row.names(resultTable)<-gsub(".+.snRNA.count$","Host_genome_snRNA",row.names(res
 row.names(resultTable)<-gsub(".+.snoRNA.count$","Host_genome_snoRNA",row.names(resultTable))
 row.names(resultTable)<-gsub(".+.rRNA.count$","Host_genome_rRNA",row.names(resultTable))
 row.names(resultTable)<-gsub(".+.other.count$","Host_genome_other_smallRNA",row.names(resultTable))
+row.names(resultTable)<-gsub(".+.phylum.estimated.count$","bacteria_refseq",row.names(resultTable))
+
 write.csv(resultTable,paste0(resultFile,".TaskReads.csv"))
 
 tableBarplotToFile(dat=resultTable,fileName=paste0(resultFile,".TaskReads.Barplot.png"),
@@ -57,3 +74,4 @@ tableBarplotToFile(dat=resultTable,fileName=paste0(resultFile,".TaskReads.PerMil
 		totalCountFile=totalCountFile,maxCategory=NA,textSize=textSize,height=2500,
 		fill=NA,facet="Sample",x="Category",y="Reads",varName=c("Category","Sample","Reads"),proportionBar=FALSE)
 
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')

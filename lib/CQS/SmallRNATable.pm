@@ -150,6 +150,11 @@ sub addOutput {
       push( @$result_files, $self->get_file( $result_dir, $key, ".rRNA.read.count",  0 ) );
       push( @$result_files, $self->get_file( $result_dir, $key, ".other.count",      0 ) );
       push( @$result_files, $self->get_file( $result_dir, $key, ".other.read.count", 0 ) );
+      if ( $option =~ /exportERV/ ) {
+        push( @$result_files, $self->get_file( $result_dir, $key, ".ERV.count",          0 ) );
+        push( @$result_files, $self->get_file( $result_dir, $key, ".ERV.count.position", 0 ) );
+        push( @$result_files, $self->get_file( $result_dir, $key, ".ERV.read.count",     0 ) );
+      }
     }
   }
 }
