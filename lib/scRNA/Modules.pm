@@ -57,7 +57,6 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addEdgeRTask
   addComparison
   addDynamicCluster
-  addDynamicClusterSignacX
   addSubCluster
   addSubClusterChoose
   addClonotypeVis
@@ -1158,52 +1157,6 @@ sub addComparison {
   }
 }
 
-sub addDynamicClusterSignacX {
-  my ($config, $def, $summary, $target_dir, $dynamic_signacx_task, $obj_ref, $essential_gene_task, $reduction, $signacX_task) = @_;
-
-  $config->{$dynamic_signacx_task} = {
-    class                    => "CQS::UniqueR",
-    perform                  => 1,
-    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $dynamic_signacx_task,
-    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamicSignacX.r",
-    parameterFile1_ref => $obj_ref,
-    parameterFile3_ref => $essential_gene_task,
-    parameterFile4_ref => [ $signacX_task, ".meta.rds" ],
-    parameterSampleFile1     => {
-      pca_dims              => getValue( $def, "pca_dims" ),
-      by_sctransform        => getValue( $def, "by_sctransform" ),
-      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
-      reduction             => $reduction,
-      species               => getValue( $def, "species" ),
-      db_markers_file       => getValue( $def, "markers_file" ),
-      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
-      annotate_tcell        => getValue( $def, "annotate_tcell", 0),
-      remove_subtype        => getValue( $def, "remove_subtype", ""),
-      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
-      tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
-      bubblemap_file        => $def->{bubblemap_file},
-      bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
-      summary_layer_file => $def->{summary_layer_file},
-      best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
-      dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", "" ),
-    },
-    parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
-    parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
-    output_file_ext      => ".scDynamic.meta.rds",
-    output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png",
-    sh_direct            => 1,
-    pbs                  => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => getValue($def, "seurat_mem")
-    },
-  };
-  if ($def->{batch_for_integration}){
-    $config->{$dynamic_signacx_task}{parameterSampleFile3} = getValue($def, "batch_for_integration_groups");
-  }
-  push( @$summary, $dynamic_signacx_task );
-}
-
 sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction) = @_;
 
@@ -1211,10 +1164,12 @@ sub addDynamicCluster {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
-    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic.r",
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_one_layer_one_resolution.r",
+    rReportTemplate          => "../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.Rmd",
     parameterFile1_ref => [$seurat_task, ".rds"],
     parameterFile3_ref => $essential_gene_task,
     parameterSampleFile1     => {
+      task_name             => getValue( $def, "task_name" ),
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
@@ -1230,11 +1185,12 @@ sub addDynamicCluster {
       bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
       summary_layer_file => $def->{summary_layer_file},
       best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
-      dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", "" ),
+      dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", 1.5 ),
       redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
     },
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
+    parameterSampleFile4 => getValue($def, "dynamic_combine_cell_types", {}),
     output_file_ext      => ".scDynamic.meta.rds",
     output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png",
     sh_direct            => 1,
