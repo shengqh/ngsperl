@@ -31,7 +31,6 @@ outFile=myoptions$task_name
 
 resolutions<-read.csv(paste0(outFile, ".resolutions.csv"))
 
-
 getFigure<-function(filepath){
   return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
 }
@@ -39,6 +38,7 @@ getFigure<-function(filepath){
 resFile<-"resolutions.Rmd"
 figureRmd<-function(resolutions){
   result<-""
+  idx=1
   for(idx in c(1:nrow(resolutions))){
     res = resolutions$resolution[idx]
     cluster = resolutions$cluster[idx]
@@ -46,18 +46,32 @@ figureRmd<-function(resolutions){
     rawcelltype = resolutions$rawcelltype[idx]
 
     result<-paste0(result, paste0("\n\n# Resolution ", res, "\n\n"))
-    
-    result<-paste0(result, "## Cluster level\n\n")
-    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".seurat.png")))
+
+    result<-paste0(result, "## Seurat cluster\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".seurat.dot.png")))
+
+    result<-paste0(result, "## Raw cell type level\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".umap.png")))
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".dot.png")))
 
     result<-paste0(result, "## Cell type level\n\n")
-    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".png")))
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".umap.png")))
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".dot.png")))
     result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".cell.png")))
 
     result<-paste0(result, "## Summary type level\n\n")
-    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.png")))
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.umap.png")))
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.dot.png")))
     result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.cell.png")))
     result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.sample_cell.png")))
+
+    result<-paste0(result, "## Summary type / sample\n\n")
+    sample_csv=paste0(outFile, ".", celltype, "_summary.sample_celltype.csv")
+    sample_ct<-read.csv(sample_csv, row.names=1,check.names=F)
+    for(pct in colnames(sample_ct)){
+      pct_file = paste0(outFile, ".", celltype, "_summary.", gsub('[/\ ]', "_", pct), ".cell.png")
+      result<-paste0(result, getFigure(pct_file))
+    }
   }
   return(result)
 }

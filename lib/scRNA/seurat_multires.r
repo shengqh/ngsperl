@@ -156,39 +156,43 @@ for(cind in c(1:nrow(res_df))){
 
   meta<-meta[colnames(obj),]
   obj@meta.data = meta
-  
-  g<-get_dim_plot_labelby(obj, label.by=cur_celltype, reduction="umap")
-  g<-g+get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
-  layout<-"
-ABB
-"
-  g<-g+plot_layout(design = layout)
-  png(paste0(prefix, ".", cur_celltype, ".png"), width=6600, height=2000, res=300)
+
+  umap_width=2200
+  dot_width=4000
+
+  # raw cell type
+  g<-get_dim_plot_labelby(obj, label.by=raw_celltype, reduction="umap", legend.title="")
+  png(paste0(prefix, ".", raw_celltype, ".umap.png"), width=umap_width, height=2000, res=300)
   print(g)
   dev.off()
-  
-  g<-get_dim_plot(obj, group.by=cur_res, label.by=s_rawname, reduction="umap")
-  g<-g+get_bubble_plot(obj, cur_res=cur_res, raw_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
-  layout<-"
-ABB
-"
-  g<-g+plot_layout(design = layout)
-  png(paste0(prefix, ".", raw_celltype, ".seurat.png"), width=6600, height=2000, res=300)
+
+  g<-get_bubble_plot(obj, cur_res=NA, raw_celltype, bubblemap_file, assay="RNA", orderby_cluster = TRUE)
+  png(paste0(prefix, ".", raw_celltype, ".dot.png"), width=dot_width, height=get_dot_height(obj, raw_celltype), res=300)
   print(g)
   dev.off()
-  
-  g<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction="umap")
-  g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
-  layout<-"
-ABB
-"
-  g<-g+plot_layout(design = layout)
-  png(paste0(prefix, ".", cur_celltype, ".seurat.png"), width=6600, height=2000, res=300)
+
+  # cell type, all clusters
+  g<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction="umap", legend.title="")
+  png(paste0(prefix, ".", cur_celltype, ".seurat.umap.png"), width=umap_width, height=2000, res=300)
+  print(g)
+  dev.off()
+
+  g<-get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = FALSE)
+  png(paste0(prefix, ".", cur_celltype, ".seurat.dot.png"), width=dot_width, height=get_dot_height(obj, cur_res), res=300)
+  print(g)
+  dev.off()
+
+  # cell type
+  g<-get_dim_plot_labelby(obj, label.by=cur_celltype, reduction="umap", legend.title="")
+  png(paste0(prefix, ".", cur_celltype, ".umap.png"), width=umap_width, height=2000, res=300)
+  print(g)
+  dev.off()
+  g<-get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
+  png(paste0(prefix, ".", cur_celltype, ".dot.png"), width=dot_width, height=get_dot_height(obj, cur_celltype), res=300)
   print(g)
   dev.off()
   
   #draw_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, paste0(prefix, ".", cur_celltype, assay))
-  
   save_highlight_cell_plot(paste0(prefix, ".", cur_celltype, ".cell.png"), obj, group.by = cur_celltype, reduction = "umap")
 
   if(file.exists(parSampleFile2)){
@@ -199,6 +203,15 @@ ABB
     obj[[new_layer]] = new_celltype
 
     save_highlight_cell_plot(paste0(prefix, ".", new_layer, ".cell.png"), obj, group.by = new_layer, reduction = "umap")
+
+    meta = obj@meta.data
+    pcts = unlist(unique(obj[[new_layer]]))
+    for(pct in pcts){
+      cells<-rownames(meta)[meta[,new_layer] == pct]
+      subobj<-subset(obj, cells=cells)
+      curprefix<-paste0(prefix, ".", new_layer, ".", gsub('[/\ ]', "_", pct))
+      save_highlight_cell_plot(paste0(curprefix, ".cell.png"), subobj, group.by = "orig.ident", reduction = "umap", reorder=FALSE, title=pct)
+    }
 
     tb<-table(obj$orig.ident, obj@meta.data[,new_layer])
     write.csv(tb, file=paste0(prefix, ".", new_layer, ".sample_celltype.csv"))
@@ -240,13 +253,13 @@ ABB
       dev.off()
     }
 
-    g<-get_dim_plot_labelby(obj, label.by=new_layer, reduction="umap")
-    g<-g+get_bubble_plot(obj, cur_res=NA, new_layer, bubblemap_file, assay="RNA", orderby_cluster = T)
-    layout<-"
-ABB
-"
-    g<-g+plot_layout(design = layout)
-    png(paste0(prefix, ".", new_layer, ".png"), width=6600, height=2000, res=300)
+    g<-get_dim_plot_labelby(obj, label.by=new_layer, reduction="umap", legend.title="")
+    png(paste0(prefix, ".", new_layer, ".umap.png"), width=umap_width, height=2000, res=300)
+    print(g)
+    dev.off()
+
+    g<-get_bubble_plot(obj, cur_res=NA, new_layer, bubblemap_file, assay="RNA", orderby_cluster = T)
+    png(paste0(prefix, ".", new_layer, ".dot.png"), width=dot_width, height=get_dot_height(obj, new_layer), res=300)
     print(g)
     dev.off()
   }
