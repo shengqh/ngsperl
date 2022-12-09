@@ -182,7 +182,6 @@ for(pct in previous_celltypes){
                         key,
                         do_umap = TRUE,
                         reduction.name = subumap,
-                        umap_min_dist_map = NA,
                         previous_layer = NA)
   
   reductions_rds = paste0(curprefix, ".reductions.rds")
@@ -266,9 +265,9 @@ for(pct in previous_celltypes){
     bar_file=paste0(cluster_prefix, ".bar.png")
     gb<-get_groups_dot(subobj, "display_layer", "orig.ident")
     if(bHasCurrentSignacX){
-      gb<-gb+get_groups_dot(subobj, "display_layer", "orig.ident") + get_groups_dot(subobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
+      gb<-gb+get_groups_dot(subobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
     }
-    height=ifelse(bHasCurrentSignacX, 3000, 1500)
+    height=ifelse(bHasCurrentSignacX, 2200, 1100)
     png(bar_file, width=3000, height=height, res=300)
     print(gb)
     dev.off()
