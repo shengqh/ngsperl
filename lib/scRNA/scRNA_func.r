@@ -893,18 +893,36 @@ draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, 
   dev.off()
 }
 
-get_celltype_markers<-function(medianexp,cellType,weight){
+get_celltype_markers<-function(medianexp,cellType,weight,combined_ct=NA,layer_map=NA){
   exp_z<-scale(medianexp)
   genenames<-rownames(medianexp)   
   ctnames<-colnames(medianexp)
-  j=1
+  j=7
   
   res<-list()
   for (j in 1: dim(medianexp)[2]){
     clusterexp<-medianexp[,j] 
     clusterexp_z<-exp_z[,j]
     
-    ctgenes<-cellType[[ctnames[j]]]
+    if(all(is.na(combined_ct))){
+      orig_ctnames=ctnames[j]
+    }else{
+      orig_ctnames=c(ctnames[j], names(combined_ct)[combined_ct == ctnames[j]])
+    }
+
+    valid_ctnames=orig_ctnames[orig_ctnames %in% names(cellType)]
+    if(length(valid_ctnames) == 0){
+      if(!all(is.na(layer_map))){
+        valid_ctnames=names(layer_map)[layer_map%in%orig_ctnames]
+      }
+    }
+
+    if(length(valid_ctnames) == 0){
+      next
+    }
+    
+    ctgenes<-unique(unlist(cellType[valid_ctnames]))
+    stopifnot(length(ctgenes) > 0)
     
     weight_ss<-weight[names(weight)%in%ctgenes]
     ind<-match(names(weight_ss),genenames)
@@ -919,16 +937,29 @@ get_celltype_markers<-function(medianexp,cellType,weight){
   return(res)
 }
 
-get_celltype_marker_bubble_plot<-function(obj, group.by, cellType, weight, n_markers=5) {
+get_celltype_marker_bubble_plot<-function(obj, group.by, cellType, weight, n_markers=5, combined_ct=NA, layer_map=NA) {
   medianexp=get_seurat_average_expression(obj, group.by)
   medianexp<-medianexp[rowSums(medianexp)>0,]
   
-  markers<-get_celltype_markers(medianexp, cellType, weight)
+  markers<-get_celltype_markers(medianexp, cellType, weight, combined_ct=combined_ct, layer_map=layer_map)
   
-  gene_groups<-lapply(markers, function(x){
-    names(x[1:n_markers])
-  })
-  
+  while(TRUE){
+    gene_groups<-lapply(markers, function(x){
+      names(x[1:n_markers])
+    })
+
+    gc=table(unlist(gene_groups))
+    gc=gc[gc>1]
+    #print(gc)
+    if(length(gc) > 0){
+      markers<-lapply(markers, function(x){
+        x[!(names(x) %in% names(gc))]
+      })
+    }else{
+      break
+    }
+  }
+
   g<-get_dot_plot(obj, group.by, gene_groups)
   return(g)
 }
@@ -1148,9 +1179,11 @@ get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.ti
   return(g)
 }
 
-get_highlight_cell_plot<-function(obj, group.by, reduction="umap") {
+get_highlight_cell_plot<-function(obj, group.by, reduction="umap", reorder=TRUE) {
   cts<-table(obj[[group.by]])
-  cts<-cts[order(cts, decreasing = T)]
+  if(reorder){
+    cts<-cts[order(cts, decreasing = T)]
+  }
   
   g<-NULL
   for (ct in names(cts)){
@@ -1173,9 +1206,13 @@ add_x_y_axis<-function(g){
   return(g)
 }
 
-save_highlight_cell_plot<-function(filename, obj, group.by, reduction="umap"){
-  res<-get_highlight_cell_plot(obj, group.by = group.by, reduction = reduction)
+save_highlight_cell_plot<-function(filename, obj, group.by, reduction="umap", reorder=TRUE, title=""){
+  res<-get_highlight_cell_plot(obj, group.by = group.by, reduction = reduction, reorder=reorder)
   g<-res$g
+
+  if(title != ""){
+    g<-g+plot_annotation(title=title, theme = theme(plot.title = element_text(hjust = 0.5, size = 16)))
+  }
   cts<-res$cts
   
   ncol<-ceiling(sqrt(length(cts)))
@@ -1295,7 +1332,6 @@ sub_cluster<-function(subobj,
                      key = "",
                      do_umap = TRUE,
                      reduction.name = "umap",
-                     umap_min_dist_map = NA,
                      previous_layer = NA
 ){
   n_half_cell=round(ncol(subobj) / 2)
@@ -1346,13 +1382,15 @@ sub_cluster<-function(subobj,
   
   if(do_umap){
     cat(key, "RunUMAP\n")
-    if(!all(is.na(umap_min_dist_map))){
-      cur_min_dist = umap_min_dist_map[previous_layer]
-    }else{
-      cur_min_dist = 0.3
-    }
+    cur_min_dist = 0.3
     subobj<-RunUMAP(object = subobj, min.dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE, reduction.name=reduction.name)
   }
 
   return(subobj)    
+}
+
+get_dot_height<-function(obj, group.by){
+  ngroups = length(unique(unlist(obj[[group.by]])))
+  result = max(1500, ngroups * 90 + 200)
+  return(result)
 }
