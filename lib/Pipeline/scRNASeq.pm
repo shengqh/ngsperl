@@ -176,7 +176,7 @@ sub initializeScRNASeqDefaultOptions {
   
   initDefaultValue( $def, "perform_fix_resolution", 0 );
   #initDefaultValue( $def, "remove_subtype", "T cells,Fibroblasts,Neurons,Macrophages,Dendritic cells"),
-  initDefaultValue( $def, "remove_subtype", "T cells,B cells,Plasma cells, Fibroblasts,Neurons,Epithelial cells,Endothelial cells,Macrophages,Dendritic cells,Ciliated cells"),
+  initDefaultValue( $def, "remove_subtype", "T cells,B cells,Plasma cells,Fibroblasts,Neurons,Epithelial cells,Endothelial cells,Macrophages,Dendritic cells,Ciliated cells"),
   initDefaultValue( $def, "best_resolution_min_markers", 20);
 
   return $def;
@@ -423,13 +423,6 @@ sub getScRNASeqConfig {
               my $immunarch_task = addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch_tcell", $clonotype_consensus);
             }
 
-            if(getValue($def, "perform_dynamic_signacX")){
-              if(defined $signacX_task){
-                my $dynamic_signacx_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_signacX";
-                addDynamicClusterSignacX($config, $def, $summary, $target_dir, $dynamic_signacx_task, $obj_ref, $essential_gene_task, $reduction, $signacX_task);
-              }
-            }
-
             addComparison($config, $def, $summary, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type");
 
             $localization_ref = $obj_ref;
@@ -526,6 +519,7 @@ sub getScRNASeqConfig {
 
       if(getValue($def, "perform_multires", 0)){
         my $multiresKey = $seurat_task . "_multires";
+        $def->{$multiresKey} = 0;
         my $multires_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_call";
 
         my $obj_ref = [$seurat_task, ".rds"];
