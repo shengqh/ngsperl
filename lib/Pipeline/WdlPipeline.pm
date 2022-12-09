@@ -601,13 +601,18 @@ sub addEncodeATACseq {
   my $is_paired_end = is_paired_end($def);
   my $encode_option = getValue($def, "encode_option", "");
   my $folder_suffix = $encode_option =~ /slurm/ ? "_slurm" : "";
+  my $sh_direct = $encode_option =~ /slurm/ ? 1 : 0;
 
   my $task_folder = "${task}${folder_suffix}";
+
+  my $encode_atac_inputs = getValue($def, "encode_atac_inputs", {});
+
+  my $encode_cpu = getValue($def, "encode_atac_cpu", "16");
 
   $config->{$task} = {     
     "class" => "CQS::Wdl",
     #"option" => "--no-build-singularity",
-    "option" => getValue($def, "encode_option", ""),
+    "option" => $encode_option,
     "target_dir" => "${target_dir}/${task_folder}",
     "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
@@ -615,24 +620,28 @@ sub addEncodeATACseq {
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $pipeline->{"wdl_file"},
     "input_json_file" => $pipeline->{"input_file"},
-    "input_parameters" => {
+    "input_parameters" => merge_hash_left_precedent($encode_atac_inputs, {
       "atac.title" => "SAMPLE_NAME",
       "atac.description" => "SAMPLE_NAME",
       "atac.genome_tsv" => getValue($def, "encode_atacseq_genome_tsv"),
       "atac.paired_end" => $is_paired_end ? "true" : "false",
       "atac.adapter" => $adapter,
-      "atac.singularity" => getValue($def, "atac.singularity"),
-    },
+      "atac.align_cpu" => $encode_cpu,
+      "atac.align_mem_factor" => 2,
+      "atac.filter_cpu" => $encode_cpu,
+      "atac.filter_mem_factor" => 2,
+      "atac.bam2ta_mem_factor" => 1,
+    }),
     output_to_same_folder => 0,
     cromwell_finalOutputs => 0,
     check_output_file_pattern => "metadata.json",
     output_file_ext => "atac/",
     use_caper => 1,
-    sh_direct   => 1,
+    sh_direct   => $sh_direct,
     pbs=> {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => getValue($def, "encode_atac_walltime", "12"),
-      "mem"       => "40gb"
+      "nodes"     => "1:ppn=$encode_cpu",
+      "walltime"  => getValue($def, "encode_atac_walltime", "24"),
+      "mem"       => getValue($def, "encode_atac_men", "40gb"),
     },
   };
 
