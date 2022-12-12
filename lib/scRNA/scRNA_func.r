@@ -17,13 +17,35 @@ is_one<-function(value, defaultValue=FALSE){
   return(value == '1')
 }
 
-get_hue_colors<-function(n, random.seed=20220606){
+is_file_empty<-function(filepath){
+  if(is.na(filepath)){
+    return(TRUE)
+  }
+
+  if(is.null(filepath)){
+    return(TRUE)
+  }
+
+  if('' == filepath){
+    return(TRUE)
+  }
+
+  if(file.info(filepath)$size == 0){
+    return(TRUE)
+  }
+
+  return(FALSE)
+}
+
+get_hue_colors<-function(n, random_colors=TRUE, random.seed=20220606){
   ccolors<-hue_pal()(n)
-  x <- .Random.seed
-  set.seed(random.seed)
-  scolors<-sample(ccolors, size=n)
-  .Random.seed <- x
-  return(scolors)
+  if(random_colors){
+    x <- .Random.seed
+    set.seed(random.seed)
+    ccolors<-sample(ccolors, size=n)
+    .Random.seed <- x
+  }
+  return(ccolors)
 }
 
 theme_bw3 <- function (axis.x.rotate=F) { 
@@ -95,42 +117,11 @@ get_celltype_map<-function( root_celltypes, HLA_panglao5_file ){
   return(cmap)
 }
 
-read_cell_markers_file<-function(panglao5_file, species, remove_subtype_str="", HLA_panglao5_file="", curated_markers_file="", remove_subtype_by_map=FALSE){
+# 20221211, remove remove_subtype_str and HLA_panglao5_file parameters
+read_cell_markers_file<-function(panglao5_file, species, curated_markers_file=NULL){
   #preparing cell activity database
   marker<-data.frame(fread(panglao5_file))
-  celltype_map=c()
 
-  if(remove_subtype_str != ""){
-    remove_subtype_of<-unique(unlist(strsplit(remove_subtype_str, ",")))
-    if(remove_subtype_by_map){
-      celltype_map = get_celltype_map(remove_subtype_of, HLA_panglao5_file)
-    }else{
-      pangdb_ct <- read.table(HLA_panglao5_file,header = T,row.names = 1,sep = "\t",stringsAsFactors = F)
-      remove_subtype_of<-remove_subtype_of[remove_subtype_of %in% marker$cell.type]
-      layer="Layer2"
-      removed<-c()
-      for(layer in c("Layer1","Layer2", "Layer3")){
-        layer_ct<-unique(pangdb_ct[,layer])
-        for(rs in remove_subtype_of){
-          if(rs %in% removed){
-            next
-          }
-          
-          if(rs %in% layer_ct){
-            subdb<-rownames(pangdb_ct)[pangdb_ct[,layer]==rs]
-            if(rs %in% subdb){ 
-              subdb<-subdb[!(subdb %in% remove_subtype_of)]
-              marker<-marker[!(marker$cell.type %in% subdb),]
-            }else{
-              marker$cell.type[marker$cell.type %in% subdb] = rs
-            }
-            removed<-c(removed, rs)
-          }
-        }
-      }
-    }
-  }
-  
   hsind<-regexpr(species,marker$species)
   marker_species<-marker[hsind>0 & marker$ubiquitousness.index<0.05,]
   if (species=="Mm") {
@@ -143,22 +134,71 @@ read_cell_markers_file<-function(panglao5_file, species, remove_subtype_str="", 
   cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
   weight<-calc_weight(cellType)
   
-  if(!is.null(curated_markers_file) && curated_markers_file != ""){
+  if(!is_file_empty(curated_markers_file)){
     curated_markers_df<-read.table(curated_markers_file, sep="\t", header=F, stringsAsFactors=F)
     curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
     for(cmct in names(curated_markers_celltype)){
       cellType[[cmct]]=curated_markers_celltype[[cmct]]
-      #celltype_map[cmct] = cmct
     }
     weight=calc_weight(cellType)
   } 
 
-  for (ct in names(cellType)){
-    if (! ct %in% names(celltype_map)){
-      celltype_map[ct] = ct
+  return(list(cellType=cellType, weight=weight))
+}
+
+update_tiers<-function(tiers, celltype_map){
+  rownames(tiers)<-tiers$Celltype.name
+
+  update_layers=paste0("Layer", c(1,2,3,4))
+  tiers[names(celltype_map),update_layers]<-tiers[celltype_map,update_layers]
+
+  return(tiers)
+}
+
+read_tiers<-function(HLA_panglao5_file, remove_subtype_str = NULL){
+  tiers<-read.table(HLA_panglao5_file, sep="\t", header=T)
+  if(!is.null(remove_subtype_str)) {
+    remove_subtype_list<-unique(unlist(strsplit(remove_subtype_str, ",")))
+    if(length(remove_subtype_list) > 0){
+      celltype_map = get_celltype_map(remove_subtype_list, HLA_panglao5_file)
+      celltype_map = celltype_map[names(celltype_map) != celltype_map]
+      tiers = update_tiers(tiers, celltype_map)
     }
   }
-  return(list(cellType=cellType, weight=weight, celltype_map=celltype_map))
+
+  return(tiers)
+}
+
+get_summary_layer<-function(tiers, layer, remove_subtype_str=NULL){
+  result<-unlist(split(tiers[,layer], tiers$Celltype.name))
+
+  if(!is.null(remove_subtype_str)){
+    remove_subtype_list<-unique(unlist(strsplit(remove_subtype_str, ",")))
+    result[remove_subtype_list]<-remove_subtype_list
+  }
+
+  return(result)
+}
+
+init_celltype_markers<-function(panglao5_file, species, curated_markers_file=NULL, HLA_panglao5_file, layer="Layer4", remove_subtype_str=NULL, combined_celltype_file=NULL){
+  tiers<-read_tiers(HLA_panglao5_file, remove_subtype_str)
+
+  cell_activity_database<-read_cell_markers_file(panglao5_file=panglao5_file, 
+                                                 species=species, 
+                                                 curated_markers_file=curated_markers_file)
+
+  cell_activity_database$cellType=cell_activity_database$cellType[names(cell_activity_database$cellType) %in% tiers$Celltype.name]
+  tiers<-tiers[tiers$Celltype.name %in% names(cell_activity_database$cellType),]
+
+  celltype_map=get_summary_layer(tiers, layer, remove_subtype_str)
+
+  combined_celltypes=NA
+  if(!is_file_empty(combined_celltype_file)){
+    cts<-read.table(combined_celltype_file, header=F, sep="\t", stringsAsFactors = F)
+    combined_celltypes<-unlist(split(cts$V2, cts$V1))
+  }
+
+  return(list(tiers=tiers, cell_activity_database=cell_activity_database, celltype_map=celltype_map, combined_celltypes=combined_celltypes))
 }
 
 get_selfdefinedCelltype <- function(file, finalLayer="layer3"){
@@ -1143,14 +1183,14 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   return(list(obj=subobj, umap_names=umap_names))
 }
 
-get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, ...){
+get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, random_colors=TRUE, ...){
   labels<-obj@meta.data[,c(group.by, label.by)]
   labels<-labels[!duplicated(labels[,group.by]),]
   labels<-labels[order(labels[,group.by]),]
   cts<-as.character(labels[,label.by])
 
   ngroups<-length(unlist(unique(obj[[group.by]])))
-  scolors = get_hue_colors(ngroups)
+  scolors = get_hue_colors(ngroups, random_colors)
 
   g<-DimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by, ...)+ 
     scale_color_manual(legend.title, values=scolors, labels = cts, guide = guide_legend(ncol=ncol)) + ggtitle(title)
@@ -1394,3 +1434,81 @@ get_dot_height<-function(obj, group.by){
   result = max(1500, ngroups * 90 + 200)
   return(result)
 }
+
+output_barplot<-function(obj, sample_key, cell_key, filename){
+  cts<-unlist(obj[[cell_key]])
+  ct<-table(cts)
+  ct<-ct[order(ct, decreasing = T)]
+  ct_levels=names(ct)
+  
+  samples<-unlist(obj[[sample_key]])
+  
+  tbl<-data.frame(table(samples, cts))
+  colnames(tbl)<-c("Sample", "Cell_type", "Cell_count")
+  tbl$Cell_type<-factor(tbl$Cell_type, levels=ct_levels)
+  
+  g1<-ggplot(tbl, aes(Cell_type, Cell_count)) + geom_bar(aes(fill=Sample), stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("")
+  g2<-ggplot(tbl, aes(Cell_type, Cell_count)) + geom_bar(aes(fill=Sample), position="fill", stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  g<-g1+g2+plot_layout(ncol=1)
+  png(filename, width=2000, height=3000, res=300)
+  print(g)
+  dev.off()
+}
+
+output_celltype_figures<-function(obj, cell_identity, prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name=group.by, umap_width=2200, dot_width=4000){
+  if(group.by != "batch"){
+    g<-get_bubble_plot(obj, cur_res=NA, cell_identity, bubblemap_file=bubblemap_file, assay="RNA", orderby_cluster = T)
+    png(paste0(prefix, ".", cell_identity, ".dot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
+    print(g)
+    dev.off()
+
+    g<-get_dim_plot_labelby(obj, label.by=cell_identity, reduction="umap", legend.title="")
+    png(paste0(prefix, ".", cell_identity, ".umap.png"), width=umap_width, height=2000, res=300)
+    print(g)
+    dev.off()
+
+    g<-get_celltype_marker_bubble_plot( obj = obj, 
+                                        group.by = cell_identity, 
+                                        cellType = cell_activity_database$cellType,
+                                        weight = cell_activity_database$weight,
+                                        n_markers = 5, 
+                                        combined_ct=combined_ct)
+
+    png(paste0(prefix, ".", cell_identity, ".ct_markers.bubbleplot.png"), width=5500, height=3000, res=300)
+    print(g)
+    dev.off()
+  }
+
+  output_barplot(obj, sample_key = group.by, cell_key = cell_identity, paste0(prefix, ".", cell_identity, ".", group.by, ".png"))
+
+  save_highlight_cell_plot(paste0(prefix, ".", cell_identity, ".cell.png"), obj, group.by = cell_identity, reduction = "umap")
+
+  meta = obj@meta.data
+  pcts = unlist(unique(obj[[cell_identity]]))
+  for(pct in pcts){
+    cells<-rownames(meta)[meta[,cell_identity] == pct]
+    subobj<-subset(obj, cells=cells)
+    curprefix<-paste0(prefix, ".", cell_identity, ".", name, ".", gsub('[/\ ]', "_", pct))
+    save_highlight_cell_plot(paste0(curprefix, ".cell.png"), subobj, group.by = group.by, reduction = "umap", reorder=FALSE, title=pct)
+  }
+
+  tb<-table(meta[,group.by], meta[,cell_identity])
+  write.csv(tb, file=paste0(prefix, ".", cell_identity, ".", name,  "_celltype.csv"))
+
+  mtb<-reshape2::melt(tb)
+  colnames(mtb)<-c("Sample", "Celltype", "Cell")
+  g1<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+  g2<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+  g<-g1+g2+plot_layout(ncol=1)
+  png(paste0(prefix, ".", cell_identity, ".", name,  "_celltype.png"), width=3300, height=4000, res=300)
+  print(g)
+  dev.off()
+
+  g1<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+  g2<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
+  g<-g1+g2+plot_layout(ncol=1)
+  png(paste0(prefix, ".", cell_identity, ".celltype_", name, ".png"), width=3300, height=4000, res=300)
+  print(g)
+  dev.off()
+}
+
