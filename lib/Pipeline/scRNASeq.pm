@@ -155,9 +155,9 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_multires", 1 );
   
+  initDefaultValue( $def, "perform_dynamic_cluster", 1 );
+  initDefaultValue( $def, "dynamic_by_one_resolution", 0.2 );
 
-  initDefaultValue( $def, "perform_dynamic_cluster", 0 );
-  
   if(getValue($def, "species") ne "Hs"){
     if(getValue($def, "perform_SignacX", 0)){
       die "perform_SignacX should be 0 since the dataset is not from human species";
@@ -394,22 +394,27 @@ sub getScRNASeqConfig {
 
       if(getValue($def, "perform_dynamic_cluster")){
         my $dynamicKey = $seurat_task . "_dynamic";
-        my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call";
+        $def->{$dynamicKey} = 0;
+        my $res = "_res" . getValue($def, "dynamic_by_one_resolution");
+
+        my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . $res . "_call";
         addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction);
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
-        if(getValue($def, "perform_dynamic_subcluster", 1)){
-          my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_subcluster";
+        if(getValue($def, "perform_dynamic_subcluster")){
+          my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . $res . "_subcluster";
 
           my $cur_options = {
             reduction => $reduction, 
             celltype_layer => "layer4",
           };
 
-          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
+          my $rename_map = $def->{"dynamic_rename_map"};
+
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
 
           if(getValue($def, "perform_dynamic_choose")) {
-            my $choose_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_choose";
+            my $choose_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . $res . "_choose";
             my $table = getValue($def, "dynamic_subclusters_table");
             addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
             $obj_ref = [ $choose_task, ".final.rds" ];
@@ -428,7 +433,7 @@ sub getScRNASeqConfig {
             $localization_ref = $obj_ref;
 
             if(defined $def->{groups}){
-              my $group_umap_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_group_umap";
+              my $group_umap_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . $res .  "_group_umap";
               add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, [$choose_task, ".final.rds"]);
             }
 
@@ -552,6 +557,7 @@ sub getScRNASeqConfig {
             bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
             plot_width            => getValue($def, "multires_plot_width", 9900),
             plot_height           => getValue($def, "multires_plot_height", 6000),
+            layer                 => getValue($def, "multires_layer", "Layer4")
           },
           parameterSampleFile2    => getValue($def, "multires_combine_cell_types", {
             "NK/T cells" => ["NK cells", "T cells"],
@@ -587,7 +593,9 @@ sub getScRNASeqConfig {
             reduction => $reduction, 
             celltype_layer => $multires_celltype,
           };
-          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options);
+          my $rename_map = $def->{"multires_rename_map"};
+
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
 
           if(getValue($def, "perform_multires_choose", 0)) {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
