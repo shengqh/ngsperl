@@ -61,13 +61,16 @@ figureRmd<-function(files){
       result<-paste0(result, paste0("\n\n## ", pct, "\n\n"))
       pct_tbl = res_tbl[res_tbl$pct==pct,]
 
-      result<-paste0(result, "### UMAP\n\n")
-      umap=pct_tbl$fname[pct_tbl$type=="umap"]
-      result<-paste0(result, getFigure(umap))
-
       result<-paste0(result, "### Bubble plot\n\n")
       dot=pct_tbl$fname[pct_tbl$type=="dot"]
       result<-paste0(result, getFigure(dot))
+
+      result<-paste0(result, "### UMAP\n\n")
+      umap=pct_tbl$fname[pct_tbl$type=="old_umap"]
+      result<-paste0(result, getFigure(umap))
+
+      umap=pct_tbl$fname[pct_tbl$type=="new_umap"]
+      result<-paste0(result, getFigure(umap))
     }
 
     result<-paste0(result, getFigure(paste0(outFile, ".", to_layer, ".final.png")))
@@ -83,8 +86,35 @@ cat(figureRmd(files), file=resFile)
 
 # Final
 
-```{r}
+## Overview
+
+```{r, echo=FALSE}
 check_and_include_graphics(paste0(outFile, ".layer4.final.png"))
 check_and_include_graphics(paste0(outFile, ".layer4.ct_markers.bubbleplot.png"))
 check_and_include_graphics(paste0(outFile, ".layer4.cell.png"))
+check_and_include_graphics(paste0(outFile, ".layer4.heatmap.png"))
 ```
+
+```{r, include=FALSE, echo = FALSE}
+pctRmd<-function(outFile, cell_identity, pct_names){
+  result=""
+  for(group.by in c("sample", "batch")) {
+      if(file.exists(paste0(outFile, ".", cell_identity, ".", group.by, "_celltype.csv"))){
+      result<-paste0(result, paste0("\n\n## ", cell_identity, " / ", group.by, "\n\n"))
+      for(pct_name in pct_names){
+        result<-paste0(result, getFigure(paste0(outFile, ".", cell_identity, ".", group.by, ".", pct_name, ".cell.png")))
+      }
+    }
+  }
+  return(result)
+}
+pcts<-colnames(read.csv(paste0(outFile, ".layer4.sample_celltype.csv"), check.names=F, row.names=1))
+pct_names=gsub('[/\ ]', "_", pcts)
+pct_file<-"pct.Rmd"
+cat(pctRmd(outFile, "layer4", pct_names), file=pct_file)
+```
+
+```{r, child=pct_file} 
+```
+
+

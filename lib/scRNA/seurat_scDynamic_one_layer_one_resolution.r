@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='P9061'
+outFile='mouse_8870'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge/result/P9061.final.rds'
+parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_merge/result/mouse_8870.final.rds'
 parFile2=''
-parFile3='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/essential_genes/result/P9061.txt'
+parFile3='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/essential_genes/result/mouse_8870.txt'
 
 
-setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge_dynamic_01_call/result')
+setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_merge_dynamic_01_call/result')
 
 ### Parameter setting end ###
 
@@ -44,7 +44,7 @@ npcs<-as.numeric(myoptions$pca_dims)
 
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
-remove_subtype<-myoptions$remove_subtype
+remove_subtype_str<-myoptions$remove_subtype
 annotate_tcell<-is_one(myoptions$annotate_tcell)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
@@ -53,6 +53,9 @@ by_harmony<-reduction=="harmony"
 regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 redo_harmony<-is_one(myoptions$redo_harmony, 0)
 resolution=as.numeric(myoptions$dynamic_by_one_resolution)
+curated_markers_file=myoptions$curated_markers_file
+
+layer=ifelse(is.null(myoptions$layer), "Layer4", myoptions$layer)
 
 if(regress_by_percent_mt){
   vars.to.regress="percent.mt"
@@ -70,34 +73,25 @@ if(file.exists(parFile2)){
 }
 pca_dims<-1:npcs
 
-tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
-
-remove_subtype_of=remove_subtype
-cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file, curated_markers_file=myoptions$curated_markers_file)
-cell_activity_database$cellType=cell_activity_database$cellType[names(cell_activity_database$cellType) %in% tiers$Celltype.name]
-tiers<-tiers[tiers$Celltype.name %in% names(cell_activity_database$cellType),]
-
-if(file.info(parSampleFile4)$size > 0){
-  cts<-read.table(parSampleFile4, header=F, sep="\t", stringsAsFactors = F)
-  combined_ct<-unlist(split(cts$V2, cts$V1))
-}else{
-  combined_ct=NA
+if(!exists('parSampleFile4')){
+  parSampleFile4=""
 }
 
-get_layer2map<-function(tiers, remove_subtype_of, combined_ct){
-  layer2map<-split(tiers$Layer2, tiers$Celltype.name)
+ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
+                             species = species,
+                             curated_markers_file = curated_markers_file,
+                             HLA_panglao5_file = HLA_panglao5_file,
+                             layer=layer,
+                             remove_subtype_str = remove_subtype_str,
+                             combined_celltype_file = parSampleFile4)
 
-  remove_subtype_list=unlist(str_split(remove_subtype_of, ","))
+tiers<-ctdef$tiers
 
-  layer2map[remove_subtype_list] = remove_subtype_list
+cell_activity_database<-ctdef$cell_activity_database
 
-  if(!all(is.na(combined_ct))){
-    layer2map[names(combined_ct)] = combined_ct
-  }
-  return(layer2map)
-}
+layer2map<-ctdef$celltype_map
 
-layer2map=get_layer2map(tiers, remove_subtype_of, combined_ct)
+combined_ct<-ctdef$combined_celltypes
 
 prefix<-outFile
 
@@ -134,6 +128,8 @@ cbind_celltype<-function(subobj, data_norm, cluster, new_cluster_ids, cur_layerm
   
   oldcluster<-subobj[[cluster]][[1]]
   cur_cts$seurat_clusters=oldcluster
+  cur_cts$raw_cell_type<-new_cluster_ids[oldcluster]
+  cur_cts$raw_seurat_cell_type<-paste0(cur_cts$seurat_cluster, ": ", cur_cts$raw_cell_type) 
   cur_cts$cell_type<-layer_ids[oldcluster]
   cur_cts$seurat_cell_type<-paste0(cur_cts$seurat_cluster, ": ", cur_cts$cell_type)
 
@@ -204,9 +200,6 @@ iterate_celltype<-function(obj,
       next
     }
     
-    #g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
-    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
-
     subobj<-subset(obj, cells=cells)
 
     subobj[["oumap"]] = subobj[["umap"]]
@@ -264,7 +257,11 @@ iterate_celltype<-function(obj,
     
     cur_cts<-cbind_celltype(subobj, data_norm, cluster, new_cluster_ids, cur_layermap, cur_cts)
     stopifnot(all(colnames(subobj) == rownames(cur_cts)))
-    subobj = AddMetaData(subobj, cur_cts$cell_type, "layer")
+    subobj = AddMetaData(subobj, cur_cts$seurat_clusters, "seurat_clusters")
+    subobj = AddMetaData(subobj, cur_cts$cell_type, "cell_type")
+    subobj = AddMetaData(subobj, cur_cts$seurat_cell_type, "seurat_cell_type")
+    subobj = AddMetaData(subobj, cur_cts$raw_cell_type, "raw_cell_type")
+    subobj = AddMetaData(subobj, cur_cts$raw_seurat_cell_type, "raw_seurat_cell_type")
     
     if(check_pre_layer){
       pre_cts<-cbind_celltype(subobj, data_norm, cluster, new_cluster_ids, previous_layermap, pre_cts)
@@ -274,28 +271,32 @@ iterate_celltype<-function(obj,
     #using RNA assay for visualization
     DefaultAssay(subobj)<-assay
 
-    g2<-DimPlot(subobj, group.by = "layer", label=T) + ggtitle(paste0(pct, ": ", cur_layer))
-
-    if(check_pre_layer){
-      g1<-DimPlot(subobj, reduction="oumap", group.by = "pre_layer", label=T) + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle(paste0(pct, ": ", previous_layer, ": post"))
-      g3<-DimPlot(subobj, group.by = "pre_layer", label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": post"))
-      g<-g0+g1+g3+g2+plot_layout(ncol=2)
-      width=4500
-      height=4000
-    }else{
-      g<-g0+g2+plot_layout(ncol=2)
-      width=4500
-      height=2000
-    }
-
-    umap_file = paste0(curprefix, ".", pct_str, ".umap.png")
-    png(umap_file, width=width, height=height, res=300)
+    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    g1<-DimPlot(subobj, reduction="oumap", group.by = "cell_type", label=T) + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle("New cell type in old UMAP")
+    g2<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="raw_seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat raw cell type in old UMAP")
+    g3<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat cell type in old UMAP")
+    g<-g0+g1+g2+g3+plot_layout(nrow=2)
+    umap_celltype_file = paste0(curprefix, ".", pct_str, ".old_umap.png")
+    png(umap_celltype_file, width=4600, height=4000, res=300)
     print(g)
     dev.off()
-    files<-rbind(files, c(previous_layer, cur_layer, pct, "umap", umap_file))
+
+    files<-rbind(files, c(previous_layer, cur_layer, pct, "old_umap", umap_celltype_file))
+
+    if(pct != "Unassigned"){
+      g1<-get_dim_plot(subobj, group.by="seurat_clusters", label.by="raw_seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Raw cell type in new UMAP")
+      g2<-get_dim_plot(subobj, group.by="seurat_clusters", label.by="seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat cell type in new UMAP")
+
+      g<-g1+g2+plot_layout(nrow=1)
+      umap_cluster_file = paste0(curprefix, ".", pct_str, ".new_umap.png")
+      png(umap_cluster_file, width=4600, height=2000, res=300)
+      print(g)
+      dev.off()
+      files<-rbind(files, c(previous_layer, cur_layer, pct, "new_umap", umap_cluster_file))
+    }
 
     dot_width=4400
-    g<-get_bubble_plot(subobj, cur_res=cluster, "layer", bubblemap_file, assay="RNA", orderby_cluster = FALSE)
+    g<-get_bubble_plot(subobj, cur_res=cluster, "raw_cell_type", bubblemap_file, assay="RNA", orderby_cluster = FALSE)
     dot_file = paste0(curprefix, ".", pct_str, ".dot.png")
     png(dot_file, width=dot_width, height=get_dot_height(subobj, cluster), res=300)
     print(g)
@@ -373,6 +374,7 @@ layer_cluster_celltype<-function(obj,
       stopifnot(all(rownames(all_cur_cts) %in% colnames(obj)))
       obj[[iter_name]] = obj[[previous_layer]]
       obj@meta.data[rownames(all_cur_cts), iter_name]=unlist(all_cur_cts[, "cell_type"])
+      obj@meta.data[rownames(all_cur_cts), paste0(iter_name, "_clusters")]=unlist(all_cur_cts[, "seurat_clusters"])
       
       if(check_pre_layer){
         stopifnot(all(rownames(all_pre_cts) %in% colnames(obj)))
@@ -386,6 +388,7 @@ layer_cluster_celltype<-function(obj,
           previous_layer = iter_name
         }else{
           obj[[cur_layer]] = obj[[iter_name]]
+          obj[[paste0(cur_layer, "_clusters")]] = obj[[paste0(iter_name, "_clusters")]]
           write.csv(obj@meta.data, iter_meta_file)
           saveRDS(obj@meta.data, iter_meta_rds)
           break
@@ -393,6 +396,7 @@ layer_cluster_celltype<-function(obj,
         iter = iter + 1
       }else{
         obj[[cur_layer]] = obj[[iter_name]]
+        obj[[paste0(cur_layer, "_clusters")]] = obj[[paste0(iter_name, "_clusters")]]
         write.csv(obj@meta.data, iter_meta_file)
         saveRDS(obj@meta.data, iter_meta_rds)
         break
@@ -497,7 +501,7 @@ if(ncol(obj) > 5000){
   g<-DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10)
 }
 
-width<-max(3000, min(10000, length(unique(Idents(obj))) * 150 + 1000))
+width<-max(5000, min(10000, length(unique(Idents(obj))) * 400 + 1000))
 height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
 png(paste0(outFile, ".layer4.heatmap.png"), width=width, height=height, res=300)
 print(g)
@@ -523,25 +527,11 @@ output_barplot<-function(obj, sample_key, cell_key, filename){
   dev.off()
 }
 
-output_barplot(obj, "orig.ident", "layer4", paste0(outFile, ".ident_cluster.png"))
-
-g<-get_celltype_marker_bubble_plot( obj = obj, 
-                                    group.by = "layer4", 
-                                    cellType = cell_activity_database$cellType,
-                                    weight = cell_activity_database$weight,
-                                    n_markers = 5, 
-                                    combined_ct=combined_ct)
-
-png(paste0(outFile, ".layer4.ct_markers.bubbleplot.png"), width=5500, height=3000, res=300)
-print(g)
-dev.off()
-
+output_celltype_figures(obj, "layer4", outFile, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
 if("batch" %in% colnames(obj@meta.data)){
-  output_barplot(obj, "batch", "layer4", paste0(outFile, ".batch_cluster.png"))
+  output_celltype_figures(obj, "layer4", outFile, bubblemap_file, cell_activity_database, combined_ct, group.by="batch", name="batch")
 }
 
-save_highlight_cell_plot(paste0(prefix, ".", "layer4", ".cell.png"), obj, group.by = "layer4", reduction = "umap");
-
 library('rmarkdown')
-rmarkdown::render("seurat_scDynamic_one_layer_one_resolution.rmd",output_file=paste0(outFile,".html"))
+rmarkdown::render("seurat_scDynamic_one_layer_one_resolution.rmd",output_file=paste0(outFile,".dynamic.html"))
 
