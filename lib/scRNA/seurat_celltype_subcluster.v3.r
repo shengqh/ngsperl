@@ -336,4 +336,4 @@ for(pct in previous_celltypes){
 write.csv(filelist, paste0(outFile, ".files.csv"))
 
 library('rmarkdown')
-rmarkdown::render("seurat_celltype_subcluster.v3.rmd",output_file=paste0(outFile,".html"))
+rmarkdown::render("seurat_celltype_subcluster.v3.rmd",output_file=paste0(outFile,".subcluster.html"))
