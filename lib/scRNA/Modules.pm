@@ -1185,8 +1185,9 @@ sub addDynamicCluster {
       bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
       summary_layer_file => $def->{summary_layer_file},
       best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
-      dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", 1.5 ),
+      dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", 0.2 ),
       redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
+      layer                 => getValue( $def, "dynamic_layer", "Layer4"),
     },
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
@@ -1204,7 +1205,7 @@ sub addDynamicCluster {
 }
 
 sub addSubCluster {
-  my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options) = @_;
+  my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map) = @_;
 
   $config->{$subcluster_task} = {
     class                    => "CQS::UniqueR",
@@ -1239,6 +1240,7 @@ sub addSubCluster {
       best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
     }),
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
+    parameterSampleFile3 => $rename_map,
     output_file_ext      => ".files.csv",
     sh_direct            => 1,
     pbs                  => {
