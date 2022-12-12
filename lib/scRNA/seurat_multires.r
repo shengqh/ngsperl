@@ -52,6 +52,8 @@ HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
 curated_markers_file=myoptions$curated_markers_file
 
+layer=ifelse(is.null(myoptions$layer), "Layer4", myoptions$layer)
+
 bubblemap_file=myoptions$bubblemap_file
 
 if(file.exists(parFile2)){
@@ -59,21 +61,21 @@ if(file.exists(parFile2)){
 }
 pca_dims<-1:npcs
 
-if(file.exists(parSampleFile2)){
-  cts<-read.table(parSampleFile2, header=F, sep="\t", stringsAsFactors = F)
-  combined_ct<-unlist(split(cts$V2, cts$V1))
-}
+ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
+                             species = species,
+                             curated_markers_file = curated_markers_file,
+                             HLA_panglao5_file = HLA_panglao5_file,
+                             layer=layer,
+                             remove_subtype_str = remove_subtype_str,
+                             combined_celltype_file = parSampleFile2)
 
-tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
+tiers<-ctdef$tiers
 
-cell_activity_database<-read_cell_markers_file(
-  panglao5_file = markerfile, 
-  species = species, 
-  remove_subtype_str = remove_subtype_str, 
-  HLA_panglao5_file = HLA_panglao5_file, 
-  curated_markers_file=curated_markers_file, 
-  remove_subtype_by_map=TRUE)
-celltype_map<-cell_activity_database$celltype_map
+cell_activity_database<-ctdef$cell_activity_database
+
+celltype_map<-ctdef$celltype_map
+
+combined_ct<-ctdef$combined_celltypes
 
 prefix<-outFile
 
@@ -173,7 +175,7 @@ for(cind in c(1:nrow(res_df))){
 
   # cell type, all clusters
   g<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction="umap", legend.title="")
-  png(paste0(prefix, ".", cur_celltype, ".seurat.umap.png"), width=umap_width, height=2000, res=300)
+  png(paste0(prefix, ".", cur_celltype, ".seurat.umap.png"), width=umap_width + 1000, height=2000, res=300)
   print(g)
   dev.off()
 
@@ -182,86 +184,22 @@ for(cind in c(1:nrow(res_df))){
   print(g)
   dev.off()
 
-  # cell type
-  g<-get_dim_plot_labelby(obj, label.by=cur_celltype, reduction="umap", legend.title="")
-  png(paste0(prefix, ".", cur_celltype, ".umap.png"), width=umap_width, height=2000, res=300)
-  print(g)
-  dev.off()
-  g<-get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = T)
-  png(paste0(prefix, ".", cur_celltype, ".dot.png"), width=dot_width, height=get_dot_height(obj, cur_celltype), res=300)
-  print(g)
-  dev.off()
-  
-  #draw_bubble_plot(obj, cur_res, cur_celltype, bubblemap_file, paste0(prefix, ".", cur_celltype, assay))
-  save_highlight_cell_plot(paste0(prefix, ".", cur_celltype, ".cell.png"), obj, group.by = cur_celltype, reduction = "umap")
+  output_celltype_figures(obj, cur_celltype, prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
+  if("batch" %in% colnames(obj@meta.data)){
+    output_celltype_figures(obj, cur_celltype, prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="batch", name="batch")
+  }
 
-  if(file.exists(parSampleFile2)){
+  if(!is.na(combined_ct)){
     new_layer = paste0(cur_celltype, "_summary")
     new_celltype<-as.character(obj@meta.data[,cur_celltype])
     in_new_celltype<-new_celltype %in% names(combined_ct)
     new_celltype[in_new_celltype]<-combined_ct[new_celltype[in_new_celltype]]
     obj[[new_layer]] = new_celltype
 
-    save_highlight_cell_plot(paste0(prefix, ".", new_layer, ".cell.png"), obj, group.by = new_layer, reduction = "umap")
-
-    meta = obj@meta.data
-    pcts = unlist(unique(obj[[new_layer]]))
-    for(pct in pcts){
-      cells<-rownames(meta)[meta[,new_layer] == pct]
-      subobj<-subset(obj, cells=cells)
-      curprefix<-paste0(prefix, ".", new_layer, ".", gsub('[/\ ]', "_", pct))
-      save_highlight_cell_plot(paste0(curprefix, ".cell.png"), subobj, group.by = "orig.ident", reduction = "umap", reorder=FALSE, title=pct)
+    output_celltype_figures(obj, new_layer, prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
+    if("batch" %in% colnames(obj@meta.data)){
+      output_celltype_figures(obj, new_layer, prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="batch", name="batch")
     }
-
-    tb<-table(obj$orig.ident, obj@meta.data[,new_layer])
-    write.csv(tb, file=paste0(prefix, ".", new_layer, ".sample_celltype.csv"))
-
-    mtb<-reshape2::melt(tb)
-    colnames(mtb)<-c("Sample", "Celltype", "Cell")
-    g1<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
-    g2<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
-    g<-g1+g2+plot_layout(ncol=1)
-    png(paste0(prefix, ".", new_layer, ".sample_celltype.png"), width=3300, height=4000, res=300)
-    print(g)
-    dev.off()
-
-    g1<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
-    g2<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
-    g<-g1+g2+plot_layout(ncol=1)
-    png(paste0(prefix, ".", new_layer, ".celltype_sample.png"), width=3300, height=4000, res=300)
-    print(g)
-    dev.off()
-
-    if('batch' %in% colnames(obj@meta.data)){
-      tb<-table(obj$batch, obj@meta.data[,new_layer])
-      write.csv(tb, file=paste0(prefix, ".", new_layer, ".batch_celltype.csv"))
-
-      mtb<-reshape2::melt(tb)
-      colnames(mtb)<-c("Sample", "Celltype", "Cell")
-      g1<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
-      g2<-ggplot(mtb, aes(fill=Celltype, y=Cell, x=Sample)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
-      g<-g1+g2+plot_layout(ncol=1)
-      png(paste0(prefix, ".", new_layer, ".batch_celltype.png"), width=3300, height=4000, res=300)
-      print(g)
-      dev.off()
-
-      g1<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="stack", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
-      g2<-ggplot(mtb, aes(fill=Sample, y=Cell, x=Celltype)) + geom_bar(position="fill", stat="identity") + theme_bw3() + XAxisRotation() + xlab("")
-      g<-g1+g2+plot_layout(ncol=1)
-      png(paste0(prefix, ".", new_layer, ".celltype_batch.png"), width=3300, height=4000, res=300)
-      print(g)
-      dev.off()
-    }
-
-    g<-get_dim_plot_labelby(obj, label.by=new_layer, reduction="umap", legend.title="")
-    png(paste0(prefix, ".", new_layer, ".umap.png"), width=umap_width, height=2000, res=300)
-    print(g)
-    dev.off()
-
-    g<-get_bubble_plot(obj, cur_res=NA, new_layer, bubblemap_file, assay="RNA", orderby_cluster = T)
-    png(paste0(prefix, ".", new_layer, ".dot.png"), width=dot_width, height=get_dot_height(obj, new_layer), res=300)
-    print(g)
-    dev.off()
   }
 }
 
