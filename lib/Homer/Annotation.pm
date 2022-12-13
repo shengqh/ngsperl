@@ -57,7 +57,14 @@ sub perform {
       my $annoFile      = $output . ".annotation.txt";
       my $annoStatsFile = $output . ".annotation.stats";
       push(@lines, "");
-      push(@lines, "findMotifsGenome.pl $file $genome $outputFolder $option");
+      if ($file =~ /.gz/) {
+        my $unzip_file = basename($file);
+        $unzip_file =~ s/.gz//g;
+        push(@lines, "gunzip -c $file > $unzip_file");
+        push(@lines, "findMotifsGenome.pl $unzip_file $genome $outputFolder $option");
+      }else{
+        push(@lines, "findMotifsGenome.pl $file $genome $outputFolder $option");
+      }
       push(@lines, "annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile");
       push(@lines, "R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile");
       $final_file = "$outputFolder/$annoFile";
