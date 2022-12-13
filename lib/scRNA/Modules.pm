@@ -1193,7 +1193,7 @@ sub addDynamicCluster {
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
     parameterSampleFile4 => getValue($def, "dynamic_combine_cell_types", {}),
     output_file_ext      => ".scDynamic.meta.rds",
-    output_other_ext  => ".layer0_to_layer1.png,.layer1_to_layer2.png,.layer2_to_layer3.png,.layer3_to_layer4.png",
+    output_other_ext     => ".dynamic.html",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
