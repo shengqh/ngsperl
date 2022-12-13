@@ -159,7 +159,7 @@ for(cind in c(1:nrow(res_df))){
   meta<-meta[colnames(obj),]
   obj@meta.data = meta
 
-  umap_width=2200
+  umap_width=2300
   dot_width=4000
 
   # raw cell type
@@ -173,6 +173,17 @@ for(cind in c(1:nrow(res_df))){
   print(g)
   dev.off()
 
+  g<-get_celltype_marker_bubble_plot( obj = obj, 
+                                      group.by = raw_celltype, 
+                                      cellType = cell_activity_database$cellType,
+                                      weight = cell_activity_database$weight,
+                                      n_markers = 5, 
+                                      combined_ct=combined_ct)
+
+  png(paste0(prefix, ".", raw_celltype, ".ct_markers.bubbleplot.png"), width=dot_width, height=get_dot_height(obj, raw_celltype), res=300)
+  print(g)
+  dev.off()
+
   # cell type, all clusters
   g<-get_dim_plot(obj, group.by=cur_res, label.by=sname, reduction="umap", legend.title="")
   png(paste0(prefix, ".", cur_celltype, ".seurat.umap.png"), width=umap_width + 1000, height=2000, res=300)
@@ -183,6 +194,16 @@ for(cind in c(1:nrow(res_df))){
   png(paste0(prefix, ".", cur_celltype, ".seurat.dot.png"), width=dot_width, height=get_dot_height(obj, cur_res), res=300)
   print(g)
   dev.off()
+
+  for(pct in unique(unlist(obj[[cur_celltype]]))){
+    cells=colnames(obj)[obj[[cur_celltype]] == pct]
+    subobj=subset(obj, cells=cells)
+    g<-get_dim_plot(subobj, group.by=cur_res, label.by=s_rawname, reduction="umap", legend.title="")
+
+    png(paste0(prefix, ".", cur_celltype, ".", celltype_to_filename(pct), ".umap.png"), width=umap_width + 1000, height=2000, res=300)
+    print(g)
+    dev.off()
+  }
 
   output_celltype_figures(obj, cur_celltype, prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
   if("batch" %in% colnames(obj@meta.data)){

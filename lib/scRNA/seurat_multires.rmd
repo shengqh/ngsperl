@@ -1,5 +1,5 @@
 ---
-title: "Seurat multi-resolutions analysis"
+title: "Multi-resolutions analysis"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 ```
 
 ```{r data, echo = FALSE}
+source("scRNA_func.r")
 
 options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
@@ -35,7 +36,6 @@ getFigure<-function(filepath){
   return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
 }
 
-```{r, include=FALSE, echo = FALSE}
 pctRmd<-function(outFile, cell_identity, pct_names){
   result=""
   for(group.by in c("sample", "batch")) {
@@ -65,27 +65,50 @@ figureRmd<-function(resolutions){
     result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".seurat.dot.png")))
 
     result<-paste0(result, "## Raw cell type level\n\n")
+    result<-paste0(result, "### UMAP\n\n")
     result<-paste0(result, getFigure(paste0(outFile, ".", rawcelltype, ".umap.png")))
+    result<-paste0(result, "### User defined markers\n\n")
     result<-paste0(result, getFigure(paste0(outFile, ".", rawcelltype, ".dot.png")))
+    result<-paste0(result, "### Highly expressed database markers\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", rawcelltype, ".ct_markers.bubbleplot.png")))
 
     result<-paste0(result, "## Cell type level\n\n")
+    result<-paste0(result, "### UMAP\n\n")
     result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".umap.png")))
+    result<-paste0(result, "### User defined markers\n\n")
     result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".dot.png")))
+    result<-paste0(result, "### Highly expressed database markers\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".ct_markers.bubbleplot.png")))
+    result<-paste0(result, "### Highlighted cell type cells\n\n")
     result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".cell.png")))
 
-    result<-paste0(result, "## Summary type level\n\n")
-    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.umap.png")))
-    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.dot.png")))
-    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.cell.png")))
-    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.sample_celltype.png")))
-
-    result<-paste0(result, "## Summary type / sample\n\n")
-    sample_csv=paste0(outFile, ".", celltype, "_summary.sample_celltype.csv")
-
+    sample_csv=paste0(outFile, ".", celltype, ".sample_celltype.csv")
     sample_ct<-read.csv(sample_csv, row.names=1,check.names=F)
     for(pct in colnames(sample_ct)){
       result<-paste0(result, "### ", pct, "\n\n")
-      pct_file = paste0(outFile, ".", celltype, "_summary.sample.", gsub('[/\ ]', "_", pct), ".cell.png")
+      pct_file = paste0(outFile, ".", celltype, ".", celltype_to_filename(pct), ".umap.png")
+      result<-paste0(result, getFigure(pct_file))
+    }
+
+    result<-paste0(result, "## Summary type level\n\n")
+    result<-paste0(result, "### UMAP\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.umap.png")))
+    result<-paste0(result, "### User defined markers\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.dot.png")))
+    result<-paste0(result, "### Highly expressed database markers\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.ct_markers.bubbleplot.png")))
+    result<-paste0(result, "### Highlighted cell type cells\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.cell.png")))
+    result<-paste0(result, "### Sample/Cell type bar\n\n")
+    result<-paste0(result, getFigure(paste0(outFile, ".", celltype, "_summary.sample_celltype.png")))
+
+    result<-paste0(result, "## Summary type / sample\n\n")
+
+    sample_csv=paste0(outFile, ".", celltype, "_summary.sample_celltype.csv")
+    sample_ct<-read.csv(sample_csv, row.names=1,check.names=F)
+    for(pct in colnames(sample_ct)){
+      result<-paste0(result, "### ", pct, "\n\n")
+      pct_file = paste0(outFile, ".", celltype, "_summary.sample.", celltype_to_filename(pct), ".cell.png")
       result<-paste0(result, getFigure(pct_file))
     }
   }
