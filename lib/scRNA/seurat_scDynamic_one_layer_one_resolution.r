@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='mouse_8870'
+outFile='P9061'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_merge/result/mouse_8870.final.rds'
+parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge/result/P9061.final.rds'
 parFile2=''
-parFile3='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/essential_genes/result/mouse_8870.txt'
+parFile3='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/essential_genes/result/P9061.txt'
 
 
-setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_merge_dynamic_01_call/result')
+setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge_dynamic_01_res0.2_call/result')
 
 ### Parameter setting end ###
 
@@ -66,7 +66,7 @@ if(regress_by_percent_mt){
 essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
 
 bubblemap_file=myoptions$bubblemap_file
-has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
+has_bubblemap <- !is_file_empty(bubblemap_file)
 
 if(file.exists(parFile2)){
   npcs<-read.table(parFile2, row.names=1)$V2[1]
@@ -118,6 +118,8 @@ if(has_bubblemap){
 }
 
 obj[["layer0"]]<-"Unassigned"
+obj[["layer0_clusters"]]<-0
+obj[["layer0_raw"]]<-"Unassigned"
 
 cbind_celltype<-function(subobj, data_norm, cluster, new_cluster_ids, cur_layermap, cur_cts){
   if(is.null(cur_layermap)){
@@ -137,23 +139,11 @@ cbind_celltype<-function(subobj, data_norm, cluster, new_cluster_ids, cur_layerm
 }
 
 if(0){
-  previous_layer<-"layer2"
-  cur_layer="layer3"
-  previous_layermap=layer2map
-  cur_layermap=layer3map
-  previous_celltypes<-unique(obj@meta.data[[previous_layer]])
-  iter=1
-  check_pre_layer=TRUE
-}
-
-if(0){
   previous_layer<-"layer0"
-  cur_layer="layer2"
-  previous_layermap=NA
+  cur_layer="layer4"
   cur_layermap=layer2map
   previous_celltypes<-unique(obj@meta.data[[previous_layer]])
   iter=1
-  check_pre_layer=FALSE
 }
 
 get_empty_files<-function(){
@@ -168,7 +158,6 @@ get_empty_files<-function(){
 iterate_celltype<-function(obj, 
                            previous_celltypes, 
                            previous_layer, 
-                           previous_layermap, 
                            cur_layer, 
                            cur_layermap, 
                            npcs, 
@@ -178,23 +167,23 @@ iterate_celltype<-function(obj,
                            by_harmony, 
                            curprefix, 
                            iter, 
-                           check_pre_layer, 
-                           vars.to.regress){
+                           vars.to.regress,
+                           bubblemap_file, 
+                           essential_genes){
   meta = obj@meta.data
   
   assay=ifelse(by_sctransform, "SCT", "RNA")
 
   files = get_empty_files()
   
-  all_pre_cts<-NULL
   all_cur_cts<-NULL
   pct<-previous_celltypes[length(previous_celltypes)]
   
   #previous_celltypes<-c("Platelets")
   for(pct in previous_celltypes){
-    pct_str = gsub('[/\ ]', "_", pct)
+    pct_str = celltype_to_filename(pct)
 
-    key = paste0(previous_layer, ": iter", iter, ": ", pct, ":")
+    key = paste0("iter", iter, ": ", pct, ":")
     cells<-rownames(meta)[meta[,previous_layer] == pct]
     if(length(cells) == 0){#no cell left for this cell type
       next
@@ -230,12 +219,7 @@ iterate_celltype<-function(obj,
                             resolution,
                             cur_npcs, 
                             cur_pca_dims,
-                            vars.to.regress, 
-                            essential_genes, 
-                            key,
-                            do_umap = TRUE,
-                            reduction.name = "umap",
-                            previous_layer)
+                            vars.to.regress)
     }else{
       cat(key, "FindNeighbors\n")
       subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
@@ -245,7 +229,6 @@ iterate_celltype<-function(obj,
     }
     
     cat(key, "Cell type annotation\n")
-    pre_cts<-subobj[[previous_layer]]
     cur_cts<-subobj[[previous_layer]]
 
     cluster<-"seurat_clusters"
@@ -262,11 +245,6 @@ iterate_celltype<-function(obj,
     subobj = AddMetaData(subobj, cur_cts$seurat_cell_type, "seurat_cell_type")
     subobj = AddMetaData(subobj, cur_cts$raw_cell_type, "raw_cell_type")
     subobj = AddMetaData(subobj, cur_cts$raw_seurat_cell_type, "raw_seurat_cell_type")
-    
-    if(check_pre_layer){
-      pre_cts<-cbind_celltype(subobj, data_norm, cluster, new_cluster_ids, previous_layermap, pre_cts)
-      subobj = AddMetaData(subobj, pre_cts$cell_type, "pre_layer")
-    }
     
     #using RNA assay for visualization
     DefaultAssay(subobj)<-assay
@@ -303,21 +281,19 @@ iterate_celltype<-function(obj,
     dev.off()
     files<-rbind(files, c(previous_layer, cur_layer, pct, "dot", dot_file))
 
-    all_pre_cts<-rbind(all_pre_cts, pre_cts)
     all_cur_cts<-rbind(all_cur_cts, cur_cts)
     
-    if(previous_layer == "layer0"){
-      obj[['umap']] = subobj[['umap']]
-    }
+    # if(previous_layer == "layer0"){
+    #   obj[['umap']] = subobj[['umap']]
+    # }
     rm(subobj)
   }
   colnames(files)<-colnames(get_empty_files())
-  return(list("all_pre_cts"=all_pre_cts, "all_cur_cts"=all_cur_cts, "files"=files))
+  return(list("all_cur_cts"=all_cur_cts, "files"=files))
 }
 
 layer_cluster_celltype<-function(obj, 
                                  previous_layer, 
-                                 previous_layermap, 
                                  cur_layer, 
                                  cur_layermap, 
                                  npcs, 
@@ -326,8 +302,9 @@ layer_cluster_celltype<-function(obj,
                                  by_sctransform, 
                                  by_harmony, 
                                  prefix, 
-                                 check_pre_layer, 
-                                 vars.to.regress){
+                                 vars.to.regress,
+                                 bubblemap_file,
+                                 essential_genes){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -340,19 +317,18 @@ layer_cluster_celltype<-function(obj,
     while(TRUE){
       cat("Iteration ", iter, "\n")
       
-      iter_name=paste0(cur_layer, "_iter", iter)
+      iter_name=paste0("iter", iter)
 
       previous_celltypes<-previous_celltypes[order(previous_celltypes)]
       
-      iter_meta_file = paste0(prefix, ".", previous_layer, ".iter", iter, ".csv")
-      iter_meta_rds = paste0(prefix, ".", previous_layer, ".iter", iter, ".rds")
-      
-      curprefix = paste0(prefix, ".", gsub(".iter.+", "", previous_layer), ".iter", iter)
+      curprefix = paste0(prefix, ".iter", iter)
+
+      iter_meta_file = paste0(curprefix, ".csv")
+      iter_meta_rds = paste0(curprefix, ".rds")
 
       lst<-iterate_celltype(obj, 
                             previous_celltypes, 
                             previous_layer, 
-                            previous_layermap, 
                             iter_name, 
                             cur_layermap, 
                             npcs, 
@@ -362,41 +338,43 @@ layer_cluster_celltype<-function(obj,
                             by_harmony, 
                             curprefix, 
                             iter, 
-                            check_pre_layer, 
-                            vars.to.regress)
+                            vars.to.regress,
+                            bubblemap_file, 
+                            essential_genes)
 
-      all_pre_cts<-lst$all_pre_cts
       all_cur_cts<-lst$all_cur_cts
       cur_files<-lst$files
 
       files<-rbind(files, cur_files)
       
       stopifnot(all(rownames(all_cur_cts) %in% colnames(obj)))
-      obj[[iter_name]] = obj[[previous_layer]]
-      obj@meta.data[rownames(all_cur_cts), iter_name]=unlist(all_cur_cts[, "cell_type"])
-      obj@meta.data[rownames(all_cur_cts), paste0(iter_name, "_clusters")]=unlist(all_cur_cts[, "seurat_clusters"])
       
-      if(check_pre_layer){
-        stopifnot(all(rownames(all_pre_cts) %in% colnames(obj)))
-        pre_disagree<-all_pre_cts[all_pre_cts[, previous_layer] != all_pre_cts[,'cell_type'],,drop=F]
-        if(nrow(pre_disagree) > 0){
-          cat("Found unmatched cell type\n")
-          print(table(pre_disagree[,previous_layer], pre_disagree$cell_type))
-          write.csv(obj@meta.data, iter_meta_file)
-          saveRDS(obj@meta.data, iter_meta_rds)
-          previous_celltypes = unique(c(unlist(pre_disagree[,previous_layer]), unlist(pre_disagree$cell_type)))
-          previous_layer = iter_name
-        }else{
-          obj[[cur_layer]] = obj[[iter_name]]
-          obj[[paste0(cur_layer, "_clusters")]] = obj[[paste0(iter_name, "_clusters")]]
-          write.csv(obj@meta.data, iter_meta_file)
-          saveRDS(obj@meta.data, iter_meta_rds)
-          break
-        }
+      iter_clusters = paste0(iter_name, "_clusters")
+      iter_raw = paste0(iter_name, "_raw")
+
+      obj[[iter_name]] = obj[[previous_layer]]
+      obj[[iter_clusters]] = obj[[paste0(previous_layer, "_clusters")]]
+      obj[[iter_raw]] = obj[[paste0(previous_layer, "_raw")]]
+
+      obj@meta.data[rownames(all_cur_cts), iter_name]=unlist(all_cur_cts[, "cell_type"])
+      obj@meta.data[rownames(all_cur_cts), iter_clusters]=unlist(as.character(all_cur_cts[, "seurat_clusters"]))
+      obj@meta.data[rownames(all_cur_cts), iter_raw]=unlist(all_cur_cts[, "raw_cell_type"])
+      
+      pre_disagree<-all_cur_cts[all_cur_cts[, previous_layer] != all_cur_cts[,'cell_type'],,drop=F]
+      if(nrow(pre_disagree) > 0){
+        cat("Found unmatched cell type\n")
+        print(table(pre_disagree[,previous_layer], pre_disagree$cell_type))
+        write.csv(obj@meta.data, iter_meta_file)
+        saveRDS(obj@meta.data, iter_meta_rds)
+        previous_celltypes = unique(c(unlist(pre_disagree[,previous_layer]), unlist(pre_disagree$cell_type)))
+        previous_celltypes<-previous_celltypes[previous_celltypes %in% unlist(unique(obj[[iter_name]]))]
+        previous_layer = iter_name
         iter = iter + 1
+        next
       }else{
         obj[[cur_layer]] = obj[[iter_name]]
-        obj[[paste0(cur_layer, "_clusters")]] = obj[[paste0(iter_name, "_clusters")]]
+        obj[[paste0(cur_layer, "_clusters")]] = obj[[iter_clusters]]
+        obj[[paste0(cur_layer, "_raw")]] = obj[[iter_raw]]
         write.csv(obj@meta.data, iter_meta_file)
         saveRDS(obj@meta.data, iter_meta_rds)
         break
@@ -420,45 +398,26 @@ layer_cluster_celltype<-function(obj,
   }else{
     width=2400
   }
-  png(paste0(prefix, ".", previous_layer, "_to_", cur_layer, ".png"), width=width, height=2000, res=300)
+  png(paste0(prefix, ".", cur_layer, ".png"), width=width, height=2000, res=300)
   print(g)
   dev.off()
 
-  write.csv(obj@meta.data, file=paste0(prefix, ".", previous_layer, "_to_", cur_layer, ".meta.csv"))
-  saveRDS(obj@meta.data, file=paste0(prefix, ".", previous_layer, "_to_", cur_layer, ".meta.rds"))
+  write.csv(obj@meta.data, file=paste0(prefix, ".", cur_layer, ".meta.csv"))
+  saveRDS(obj@meta.data, file=paste0(prefix, ".", cur_layer, ".meta.rds"))
 
-  write.csv(all_cur_cts, file=paste0(prefix, ".", previous_layer, "_to_", cur_layer, ".details.csv"))
+  write.csv(all_cur_cts, file=paste0(prefix, ".", cur_layer, ".details.csv"))
   
   return(list(obj=obj, files=files))
 }
 
 if(0){
   previous_layer = "layer0"
-  previous_layermap = NULL 
-  cur_layer = "layer2"
+  cur_layer = "layer4"
   cur_layermap = layer2map
-  check_pre_layer = FALSE
 }
 
 reslist1<-layer_cluster_celltype(obj = obj,
                             previous_layer = "layer0", 
-                            previous_layermap = NULL, 
-                            cur_layer = "layer2", 
-                            cur_layermap = layer2map, 
-                            npcs = npcs, 
-                            resolution = resolution, 
-                            random.seed = random.seed, 
-                            by_sctransform = by_sctransform, 
-                            by_harmony = by_harmony, 
-                            prefix = prefix, 
-                            check_pre_layer = FALSE, 
-                            vars.to.regress = vars.to.regress)
-obj=reslist1$obj
-files1=reslist1$files
-
-reslist2<-layer_cluster_celltype(obj = obj,
-                            previous_layer = "layer2", 
-                            previous_layermap = layer2map, 
                             cur_layer = "layer4", 
                             cur_layermap = layer2map, 
                             npcs = npcs, 
@@ -467,14 +426,14 @@ reslist2<-layer_cluster_celltype(obj = obj,
                             by_sctransform = by_sctransform, 
                             by_harmony = by_harmony, 
                             prefix = prefix, 
-                            check_pre_layer = TRUE, 
-                            vars.to.regress = vars.to.regress)
-obj<-reslist2$obj
-files2=reslist2$files
-rm(reslist2)
+                            vars.to.regress = vars.to.regress,
+                            bubblemap_file = bubblemap_file,
+                            essential_genes = essential_genes)
+obj=reslist1$obj
+files=reslist1$files
+rm(reslist1)
                         
-all_files<-rbind(files1, files2)
-write.csv(all_files, paste0(prefix, ".iter_png.csv"))
+write.csv(files, paste0(prefix, ".iter_png.csv"))
 
 celltypes<-unique(obj$layer4)
 celltypes<-celltypes[order(celltypes)]
@@ -507,31 +466,22 @@ png(paste0(outFile, ".layer4.heatmap.png"), width=width, height=height, res=300)
 print(g)
 dev.off()
 
-output_barplot<-function(obj, sample_key, cell_key, filename){
-  cts<-unlist(obj[[cell_key]])
-  ct<-table(cts)
-  ct<-ct[order(ct, decreasing = T)]
-  ct_levels=names(ct)
-  
-  samples<-unlist(obj[[sample_key]])
-  
-  tbl<-data.frame(table(samples, cts))
-  colnames(tbl)<-c("Sample", "Cell_type", "Cell_count")
-  tbl$Cell_type<-factor(tbl$Cell_type, levels=ct_levels)
-  
-  g1<-ggplot(tbl, aes(Cell_type, Cell_count)) + geom_bar(aes(fill=Sample), stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("")
-  g2<-ggplot(tbl, aes(Cell_type, Cell_count)) + geom_bar(aes(fill=Sample), position="fill", stat="identity") + theme_bw() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-  g<-g1+g2+plot_layout(ncol=1)
-  png(filename, width=2000, height=3000, res=300)
-  print(g)
-  dev.off()
-}
-
 output_celltype_figures(obj, "layer4", outFile, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
 if("batch" %in% colnames(obj@meta.data)){
   output_celltype_figures(obj, "layer4", outFile, bubblemap_file, cell_activity_database, combined_ct, group.by="batch", name="batch")
 }
 
+cur_celltype="layer4"
+for(pct in unique(unlist(obj[[cur_celltype]]))){
+  cells=colnames(obj)[obj[[cur_celltype]] == pct]
+  subobj=subset(obj, cells=cells)
+  subobj$seurat_layer4=paste0(subobj$layer4_clusters, ": ", subobj$layer4_raw)
+  g<-get_dim_plot(subobj, group.by="layer4_clusters", label.by="seurat_layer4", reduction="umap", legend.title="")
+
+  png(paste0(prefix, ".", cur_celltype, ".", celltype_to_filename(pct), ".umap.png"), width=2400, height=2000, res=300)
+  print(g)
+  dev.off()
+}
+
 library('rmarkdown')
 rmarkdown::render("seurat_scDynamic_one_layer_one_resolution.rmd",output_file=paste0(outFile,".dynamic.html"))
-
