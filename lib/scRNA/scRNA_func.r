@@ -18,11 +18,11 @@ is_one<-function(value, defaultValue=FALSE){
 }
 
 is_file_empty<-function(filepath){
-  if(is.na(filepath)){
+  if(is.null(filepath)){
     return(TRUE)
   }
 
-  if(is.null(filepath)){
+  if(is.na(filepath)){
     return(TRUE)
   }
 
@@ -30,11 +30,19 @@ is_file_empty<-function(filepath){
     return(TRUE)
   }
 
+  if(!file.exists(filepath)){
+    return(TRUE)
+  }
+  
   if(file.info(filepath)$size == 0){
     return(TRUE)
   }
 
   return(FALSE)
+}
+
+celltype_to_filename<-function(pct){
+  return(gsub('[/\ ]', "_", pct))
 }
 
 get_hue_colors<-function(n, random_colors=TRUE, random.seed=20220606){
@@ -1474,7 +1482,7 @@ output_celltype_figures<-function(obj, cell_identity, prefix, bubblemap_file, ce
                                         n_markers = 5, 
                                         combined_ct=combined_ct)
 
-    png(paste0(prefix, ".", cell_identity, ".ct_markers.bubbleplot.png"), width=5500, height=3000, res=300)
+    png(paste0(prefix, ".", cell_identity, ".ct_markers.bubbleplot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
     print(g)
     dev.off()
   }
