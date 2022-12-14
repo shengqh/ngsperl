@@ -32,8 +32,9 @@ outFile=myoptions$task_name
 
 resolutions<-read.csv(paste0(outFile, ".resolutions.csv"))
 
-getFigure<-function(filepath){
-  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
+getFigure<-function(filepath, in_details=TRUE){
+  fname = ifelse(in_details, paste0("details/", basename(filepath)), basename(filepath))
+  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", fname, "')\n```\n\n"))
 }
 
 pctRmd<-function(outFile, cell_identity, pct_names){
@@ -82,7 +83,7 @@ figureRmd<-function(resolutions){
     result<-paste0(result, "### Highlighted cell type cells\n\n")
     result<-paste0(result, getFigure(paste0(outFile, ".", celltype, ".cell.png")))
 
-    sample_csv=paste0(outFile, ".", celltype, ".sample_celltype.csv")
+    sample_csv=paste0("details/", outFile, ".", celltype, ".sample_celltype.csv")
     sample_ct<-read.csv(sample_csv, row.names=1,check.names=F)
     for(pct in colnames(sample_ct)){
       result<-paste0(result, "### ", pct, "\n\n")
@@ -104,7 +105,7 @@ figureRmd<-function(resolutions){
 
     result<-paste0(result, "## Summary type / sample\n\n")
 
-    sample_csv=paste0(outFile, ".", celltype, "_summary.sample_celltype.csv")
+    sample_csv=paste0("details/", outFile, ".", celltype, "_summary.sample_celltype.csv")
     sample_ct<-read.csv(sample_csv, row.names=1,check.names=F)
     for(pct in colnames(sample_ct)){
       result<-paste0(result, "### ", pct, "\n\n")

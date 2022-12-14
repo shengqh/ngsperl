@@ -24,22 +24,24 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 ```
 
 ```{r data, echo = FALSE}
-
 options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
 
-files<-read.csv(paste0(outFile, ".iter_png.csv"), row.names=1)
+prefix=paste0("details/", outFile)
+
+files<-read.csv(paste0(prefix, ".iter_png.csv"), row.names=1)
 
 last_iter=files$cur_layer[nrow(files)]
 
-getFigure<-function(filepath){
-  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", basename(filepath), "')\n```\n\n"))
+getFigure<-function(filepath, in_details=TRUE){
+  fname = ifelse(in_details, paste0("details/", basename(filepath)), basename(filepath))
+  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", fname, "')\n```\n\n"))
 }
 
 resFile<-"cluster.Rmd"
-figureRmd<-function(files){
+figureRmd<-function(files, outFile){
   result<-""
   previous_layers<-unique(files$previous_layer)
 
@@ -72,15 +74,17 @@ figureRmd<-function(files){
       umap=pct_tbl$fname[pct_tbl$type=="old_umap"]
       result<-paste0(result, getFigure(umap))
 
-      umap=pct_tbl$fname[pct_tbl$type=="new_umap"]
-      result<-paste0(result, getFigure(umap))
+      if("new_umap" %in% pct_tbl$type){
+        umap=pct_tbl$fname[pct_tbl$type=="new_umap"]
+        result<-paste0(result, getFigure(umap))
+      }
     }
 
     result<-paste0(result, getFigure(paste0(outFile, ".", to_layer, ".final.png")))
   }
   return(result)
 }
-cat(figureRmd(files), file=resFile)
+cat(figureRmd(files, outFile), file=resFile)
 
 ```
 
@@ -124,22 +128,24 @@ check_and_include_graphics(paste0(outFile, ".layer4.heatmap.png"))
 ```{r, include=FALSE, echo = FALSE}
 pctRmd<-function(outFile, cell_identity, pcts, files){
   result=""
+  in_details=FALSE
   result<-paste0(result, paste0("\n\n## Cell type clusters\n\n"))
   for(pct in pcts){
     pct_name=celltype_to_filename(pct)
     result<-paste0(result, paste0("\n\n### ", pct, "\n\n"))
-    result<-paste0(result, getFigure(paste0(outFile, ".", cell_identity, ".", pct_name, ".umap.png")))
 
+    result<-paste0(result, paste0("\n\n#### UMAP\n\n"))
+    result<-paste0(result, getFigure(paste0(outFile, ".", cell_identity, ".", pct_name, ".umap.png"), in_details))
+
+    result<-paste0(result, paste0("\n\n#### User defined markers\n\n"))
     last_files<-files[files$pct==pct & files$type=="dot",]
     dot_file<-last_files$fname[nrow(last_files)]
-    result<-paste0(result, getFigure(dot_file))
-  }
-  for(group.by in c("sample", "batch")) {
-    if(file.exists(paste0(outFile, ".", cell_identity, ".", group.by, "_celltype.csv"))){
-      result<-paste0(result, paste0("\n\n## ", cell_identity, " / ", group.by, "\n\n"))
-      for(pct in pcts){
-        pct_name=celltype_to_filename(pct)
-        result<-paste0(result, getFigure(paste0(outFile, ".", cell_identity, ".", group.by, ".", pct_name, ".cell.png")))
+    result<-paste0(result, getFigure(dot_file, TRUE))
+
+    for(group.by in c("sample", "batch")) {
+      if(file.exists(paste0(outFile, ".", cell_identity, ".", group.by, "_celltype.csv"))){
+        result<-paste0(result, paste0("\n\n#### ", cell_identity, " / ", group.by, "\n\n"))
+        result<-paste0(result, getFigure(paste0(outFile, ".", cell_identity, ".", group.by, ".", pct_name, ".cell.png"), in_details))
       }
     }
   }

@@ -31,9 +31,9 @@ outFile=myoptions$task_name
 
 files<-read.csv(paste0(outFile, ".files.csv"))
 
-
-getFigure<-function(filepath){
-  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", basename(filepath), "')\n```\n\n"))
+getFigure<-function(filepath, in_details=TRUE){
+  fname = ifelse(in_details, paste0("details/", basename(filepath)), basename(filepath))
+  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", fname, "')\n```\n\n"))
 }
 
 resFile<-"subcluster.Rmd"
@@ -56,7 +56,7 @@ figureRmd<-function(files){
       res_tbl=ct_tbl[ct_tbl$resolution == res,]
 
       heatmap=res_tbl$file[res_tbl$type=="heatmap"]
-      if(file.info(heatmap)$size > 20000){
+      if(file.info(paste0("details/", basename(heatmap)))$size > 20000){
         result<-paste0(result, "### Marker genes\n\n")
         result<-paste0(result, getFigure(heatmap))
       }

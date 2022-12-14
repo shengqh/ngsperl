@@ -193,6 +193,13 @@ writeLines(ordered_celltypes, paste0(outFile, ".cell_types.txt"))
 
 DefaultAssay(obj)<-assay
 
+cur_folder = getwd()
+tmp_folder = paste0(cur_folder, "/details")
+if(!dir.exists(tmp_folder)){
+  dir.create(tmp_folder)
+}
+setwd(tmp_folder)
+
 filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
@@ -214,7 +221,7 @@ for(pct in previous_celltypes){
   k_n_neighbors<-min(cur_npcs, 20)
   u_n_neighbors<-min(cur_npcs, 30)
   
-  curprefix<-paste0(prefix, ".", celltype_to_filename=(pct))
+  curprefix<-paste0(prefix, ".", celltype_to_filename(pct))
 
   subumap = "subumap"
   subobj = sub_cluster(subobj, 
@@ -273,6 +280,7 @@ for(pct in previous_celltypes){
     subobj2@meta.data <- subobj@meta.data
 
     data.norm=get_seurat_average_expression(subobj2, cluster)
+
     predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
     layer_ids<-names(predict_celltype$max_cta)
     names(layer_ids) <- colnames(data.norm)
@@ -383,7 +391,11 @@ for(pct in previous_celltypes){
 
     filelist<-rbind(filelist, cur_df)
   }
+  rm(subobj2)
+  rm(subobj)
 }
+
+setwd(cur_folder)
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
 

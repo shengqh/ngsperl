@@ -102,6 +102,13 @@ if(identical(multi_res, character(0))){
   stop(paste0("cannot find resolution with prefix: ", res_prefix))
 }
 
+cur_folder = getwd()
+tmp_folder = paste0(cur_folder, "/details")
+if(!dir.exists(tmp_folder)){
+  dir.create(tmp_folder)
+}
+setwd(tmp_folder)
+
 cat("Predict cell type...\n")
 cur_res = multi_res[1]
 for(cur_res in multi_res){
@@ -224,10 +231,12 @@ for(cind in c(1:nrow(res_df))){
   }
 }
 
+setwd(cur_folder)
+
 saveRDS(obj@meta.data, paste0(prefix, ".meta.rds"))
 write.csv(obj@meta.data, paste0(prefix, ".meta.csv"))
 
 library('rmarkdown')
-rmarkdown::render("seurat_multires.rmd",output_file=paste0(outFile,".html"))
+rmarkdown::render("seurat_multires.rmd",output_file=paste0(outFile,".multires.html"))
 
 #saveRDS(obj, paste0(prefix, ".multires.rds"))

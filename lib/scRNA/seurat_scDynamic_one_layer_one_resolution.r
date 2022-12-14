@@ -416,6 +416,13 @@ if(0){
   cur_layermap = layer2map
 }
 
+cur_folder = getwd()
+tmp_folder = paste0(cur_folder, "/details")
+if(!dir.exists(tmp_folder)){
+  dir.create(tmp_folder)
+}
+setwd(tmp_folder)
+
 reslist1<-layer_cluster_celltype(obj = obj,
                             previous_layer = "layer0", 
                             cur_layer = "layer4", 
@@ -432,7 +439,9 @@ reslist1<-layer_cluster_celltype(obj = obj,
 obj=reslist1$obj
 files=reslist1$files
 rm(reslist1)
-                        
+
+setwd(cur_folder)
+
 write.csv(files, paste0(prefix, ".iter_png.csv"))
 
 celltypes<-unique(obj$layer4)
