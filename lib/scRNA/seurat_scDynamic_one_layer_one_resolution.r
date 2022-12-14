@@ -440,9 +440,9 @@ obj=reslist1$obj
 files=reslist1$files
 rm(reslist1)
 
-setwd(cur_folder)
-
 write.csv(files, paste0(prefix, ".iter_png.csv"))
+
+setwd(cur_folder)
 
 celltypes<-unique(obj$layer4)
 celltypes<-celltypes[order(celltypes)]
@@ -475,8 +475,10 @@ png(paste0(outFile, ".layer4.heatmap.png"), width=width, height=height, res=300)
 print(g)
 dev.off()
 
+has_batch<-ifelse("batch" %in% colnames(obj@meta.data), any(obj$batch != obj$orig.ident), FALSE)
+
 output_celltype_figures(obj, "layer4", outFile, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
-if("batch" %in% colnames(obj@meta.data)){
+if(has_batch){
   output_celltype_figures(obj, "layer4", outFile, bubblemap_file, cell_activity_database, combined_ct, group.by="batch", name="batch")
 }
 
