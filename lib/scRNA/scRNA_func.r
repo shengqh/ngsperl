@@ -652,7 +652,13 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   png(paste0(prefix, ".qc.1.png"), width=3300, height=1500, res=300)
   print(p)
   dev.off()
-  
+
+  nsample<-length(unique(mt$Sample))
+  ncol=ceiling(sqrt(nsample))
+  nrow=ceiling(nsample/ncol)
+  width=min(10000, ncol * 1200)
+  height=min(10000, nrow * 1000)
+
   mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
   g1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
@@ -662,8 +668,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
     ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  
-  png(paste0(prefix, ".qc.2.png"), width=3600, height=3000, res=300)
+  png(paste0(prefix, ".qc.2.png"), width=width, height=height, res=300)
   print(g1)
   dev.off()
   
@@ -676,7 +681,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
     ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  png(paste0(prefix, ".qc.3.png"), width=3600, height=3000, res=300)
+  png(paste0(prefix, ".qc.3.png"), width=width, height=height, res=300)
   print(g1)
   dev.off()
 
