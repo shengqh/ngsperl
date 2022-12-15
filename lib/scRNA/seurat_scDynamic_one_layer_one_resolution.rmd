@@ -98,7 +98,7 @@ cat(figureRmd(files, outFile), file=resFile)
 ### UMAP
 
 ```{r, echo=FALSE}
-check_and_include_graphics(paste0(outFile, ".layer4.final.png"))
+check_and_include_graphics(paste0(outFile, ".layer4.umap.png"))
 ```
 
 ### User defined markers
