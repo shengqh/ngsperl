@@ -3169,11 +3169,12 @@ sub add_gsea {
     perform                    => 1,
     target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
     rtemplate                  => "GSEAPerform.R",
+    parameterSampleFile1_ref   => $rnk_file_ref,
     output_to_result_directory => 1,
     output_perSample_file      => "parameterSampleFile1",
+    output_perSample_file_byName => 1,
     output_perSample_file_regex => "(.+?)[_min5_fdr|_GSEA.rnk]",
     output_perSample_file_ext  => ".gsea.csv;.gsea",
-    parameterSampleFile1_ref   => $rnk_file_ref,
     no_docker                  => getValue($def, "gsea_no_docker", 0),
     #has_empty_ext              => 1,
     sh_direct                  => 1,
@@ -3189,8 +3190,8 @@ sub add_gsea {
   my @gsea_report_files = ();
   my @gsea_report_names = ();
   my $pairs = $config->{pairs};
-  for my $key ( @$keys ) {
-    push( @gsea_report_files, $gseaTaskName, "/" . $key . $suffix . ".gsea.csv" );
+  for my $key (sort keys %$pairs ) {
+    push( @gsea_report_files, $gseaTaskName, $key . $suffix . ".gsea.csv" );
     push( @gsea_report_names, "gsea_" . $key );
   }
 
