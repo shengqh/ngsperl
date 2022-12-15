@@ -88,7 +88,7 @@ sub addPairedFastqToUnmappedBam {
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "2",
-      "mem"       => "40gb"
+      "mem"       => "80gb"
     },
   };
   push @$individual, $task;
@@ -132,7 +132,7 @@ sub addPairedFastqToProcessedBam {
     pbs=> {
       "nodes"     => "1:ppn=8",
       "walltime"  => "72",
-      "mem"       => getValue($def, "PreProcessingForVariantDiscovery_GATK4.memory", "70gb")
+      "mem"       => getValue($def, "PreProcessingForVariantDiscovery_GATK4.memory", "80gb")
     },
   };
 

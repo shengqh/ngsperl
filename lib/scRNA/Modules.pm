@@ -769,6 +769,54 @@ fi
   push(@$tasks, $task_name);
 }
 
+sub addCellRangerMulti {
+    my ( $config, $def, $tasks, $target_dir, $task_name, $fastq_folder, $count_source, $count_reference, $csv_config, $jobmode, $chemistry ) = @_;
+      
+    my $chemistry_arg = "";
+    if((defined $chemistry) and ($chemistry ne "")){
+        $chemistry_arg = "--chemistry=$chemistry";
+    }
+
+    my $job_arg = "";
+    if((defined $jobmode) and ($jobmode ne "")){
+    $job_arg = "--jobmode=$jobmode";
+    }
+
+    my $sh_direct = $job_arg =~ /slurm/;
+    $config->{$task_name} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => "${target_dir}/$task_name",
+        docker_prefix => "cellranger_",
+        program => "cellranger",
+        check_program => 0,
+        option => " multi --id=__NAME__ --csv=$csv_config
+        if [[ -s __NAME__/outs ]]; then
+          rm -rf __NAME__/SC_MULTI_CS
+          mkdir __NAME__/log
+          mv __NAME__/_* __NAME__/log   
+          mv __NAME__/outs/* __NAME__
+          rm -rf __NAME__/outs
+        fi
+        #__OUTPUT__
+        ",
+        source_arg => "",
+        source_ref => $count_source,
+        output_arg => "",
+        output_file_prefix => "/multi/count/raw_feature_bc_matrix.h5",
+        output_file_ext => "/multi/count/raw_feature_bc_matrix.h5",
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 0,
+        sh_direct   => $sh_direct,
+        pbs => {
+            "nodes"     => "1:ppn=" . getValue($def, "cellranger_count_cpu", 8),
+            "walltime"  => getValue($def, "cellranger_count_walltime", 48),
+            "mem"       => getValue($def, "cellranger_count_mem", "40gb"),
+        },
+    };
+
+    push(@$tasks, $task_name);
+}
+
 sub addDoubletFinder {
   my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref ) = @_;
   $config->{$task_name} = {
