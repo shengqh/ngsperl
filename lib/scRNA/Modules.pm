@@ -48,8 +48,11 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addCHETAH
   add_signacx_only
   addSignac
+  
   addCellRangerCount 
   addCellRangerVdj
+  addCellRangerMulti
+
   addDoubletFinder
   addAntibody
   addMarkerGenes
