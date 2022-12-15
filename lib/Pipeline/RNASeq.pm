@@ -47,6 +47,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_webgestaltHeatmap",    0 );
   initDefaultValue( $def, "perform_report",        1 );
+  initDefaultValue( $def, "perform_deconvolution", 0 );
 
   if ( not $def->{"perform_gsea"} ) {
     $def->{"perform_gsea"} = 0;
@@ -416,6 +417,59 @@ sub getRNASeqConfig {
     if ( $def->{perform_proteincoding_gene} || getValue( $def, "perform_proteincoding_gene_only", 0 ) ) {
       push @$count_file_ref, "genetable", ".proteincoding.count\$";
     }
+  }
+
+  if ( $def->{perform_deconvolution} ) {
+    my $cpm_task = "deconvolution_1_cpm";
+    my $basicMatrix_file = getValue($def, "deconvolution_basicMatrix");
+    $config->{$cpm_task} = {
+      class                 => "CQS::UniqueR",
+      perform               => 1,
+      target_dir            => "$target_dir/$cpm_task",
+      option                => "",
+      rtemplate             => "../Deconvolution/cpm.r",
+      parameterFile1_ref    => $count_file_ref,
+      parameterFile2        => $basicMatrix_file,
+      output_file_ext       => ".cpm.csv",
+      use_tmp_folder        => 0,
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+
+    my $deconvolution_task = "deconvolution_2_call";
+    $config->{$deconvolution_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "$target_dir/$deconvolution_task",
+      init_command          => "source activate " . getValue($def, "deconvolution_conda"),
+      option                => "-b $basicMatrix_file -n __NAME__",
+      interpretor           => "python3",
+      check_program         => 1,
+      program               => "../Deconvolution/do_deconvolve.py",
+      source_ref            => $source_ref,
+      source_arg            => "",
+      parameterFile1_arg    => "-i",
+      parameterFile1_ref    => [$cpm_task],
+      output_to_same_folder => 1,
+      no_input              => 1,
+      no_output             => 1,
+      output_arg            => "",
+      output_file_ext       => ".txt",
+      no_docker             => 1,
+      use_tmp_folder        => 0,
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"     => "1:ppn=8",
+        "walltime"  => "10",
+        "mem"       => "40gb"
+      },
+    };
+
+    push (@$summary, $deconvolution_task);
   }
 
   if ( $def->{perform_correlation} ) {
