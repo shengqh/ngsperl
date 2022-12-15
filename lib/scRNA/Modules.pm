@@ -773,13 +773,8 @@ fi
 }
 
 sub addCellRangerMulti {
-    my ( $config, $def, $tasks, $target_dir, $task_name, $fastq_folder, $count_source, $count_reference, $csv_config, $jobmode, $chemistry ) = @_;
+    my ( $config, $def, $tasks, $target_dir, $task_name, $count_source, $csv_config, $jobmode ) = @_;
       
-    my $chemistry_arg = "";
-    if((defined $chemistry) and ($chemistry ne "")){
-        $chemistry_arg = "--chemistry=$chemistry";
-    }
-
     my $job_arg = "";
     if((defined $jobmode) and ($jobmode ne "")){
     $job_arg = "--jobmode=$jobmode";
@@ -792,7 +787,7 @@ sub addCellRangerMulti {
         docker_prefix => "cellranger_",
         program => "cellranger",
         check_program => 0,
-        option => " multi --id=__NAME__ --csv=$csv_config
+        option => " multi --disable-ui --id=__NAME__ --csv=$csv_config $job_arg
         if [[ -s __NAME__/outs ]]; then
           rm -rf __NAME__/SC_MULTI_CS
           mkdir __NAME__/log

@@ -54,18 +54,32 @@ sub getConfig {
   $config->{count_files} = $def->{count_files};
   $config->{vdj_files} = $def->{vdj_files};
 
-  my $count_jobmode = getValue($def, "count_jobmode", "local");
-  my $count_task_name = (defined $def->{count_chemistry}) ? "count_chemistry_$count_jobmode" : "count_$count_jobmode";
-  addCellRangerCount($config, 
-    $def, 
-    $individual, 
-    $target_dir, 
-    $count_task_name, 
-    getValue($def, "count_fastq_folder"),
-    "count_files", 
-    getValue($def, "count_reference"),
-    $count_jobmode,
-    $def->{count_chemistry});
+  if(getValue($def, "cellranger_multi_mode", 0)){
+    my $multi_jobmode = getValue($def, "multi_jobmode", "local");
+    my $multi_task_name = "multi_${multi_jobmode}";
+    addCellRangerMulti($config, 
+      $def, 
+      $individual, 
+      $target_dir, 
+      $multi_task_name, 
+      getValue($def, "count_fastq_folder"),
+      "count_files", 
+      getValue($def, "csv_config"),
+      $multi_jobmode);
+  }else{
+    my $count_jobmode = getValue($def, "count_jobmode", "local");
+    my $count_task_name = (defined $def->{count_chemistry}) ? "count_chemistry_$count_jobmode" : "count_$count_jobmode";
+    addCellRangerCount($config, 
+      $def, 
+      $individual, 
+      $target_dir, 
+      $count_task_name, 
+      getValue($def, "count_fastq_folder"),
+      "count_files", 
+      getValue($def, "count_reference"),
+      $count_jobmode,
+      $def->{count_chemistry});
+  }
 
   if (defined $def->{vdj_files}) {
     my $vdj_jobmode = getValue($def, "vdj_jobmode", "local");
