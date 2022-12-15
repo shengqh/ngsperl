@@ -47,8 +47,9 @@ sub perform {
   my $output_to_folder = get_option( $config, $section, "output_to_folder", 0 );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix", (!$output_to_folder) );
-  my $output_arg            = get_option( $config, $section, "output_arg" );
+  my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $no_output            = get_option( $config, $section, "no_output", 0 );
+  my $no_input            = get_option( $config, $section, "no_input", 0 );
   
   my $other_localization_ext_array = get_option( $config, $section, "other_localization_ext_array", [] );
 
@@ -122,16 +123,18 @@ fi
       $curOption =~ s/__NAME__/$sample_name/g;
     }
 
-    if ($curOption =~ /__FILE__/){
-      my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
-      #print("delimiter=" . $parameterSampleFile1JoinDelimiter . "\n");
-      $curOption =~ s/__FILE__/$param_option1/g;
-    } elsif (option_contains_arg($curOption, $parameterSampleFile1arg)) {
-    } else{
-      my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
-      $curOption = $curOption . " " . $param_option1;
+    if (! $no_input) {
+      if ($curOption =~ /__FILE__/){
+        my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
+        #print("delimiter=" . $parameterSampleFile1JoinDelimiter . "\n");
+        $curOption =~ s/__FILE__/$param_option1/g;
+      } elsif (option_contains_arg($curOption, $parameterSampleFile1arg)) {
+      } else{
+        my $param_option1 = get_program_param( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
+        $curOption = $curOption . " " . $param_option1;
+      }
     }
-
+    
     my $ignored_map = {};
     for my $index (2..10){
       my $key = "parameterSampleFile" . $index;
