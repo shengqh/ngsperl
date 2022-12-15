@@ -769,8 +769,6 @@ sub addHomerAnnotation {
     can_result_be_empty_file => 1,
     sh_direct    => 1,
     pbs          => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "10gb"

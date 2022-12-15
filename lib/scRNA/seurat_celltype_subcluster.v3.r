@@ -1,15 +1,14 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='P9061'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
-parSampleFile3=''
-parFile1='/nobackup/h_turner_lab/shengq2/20221202_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20221202_7114_8822_scRNA_hg38/seurat_sct_merge_multires_01_call/result/crs.meta.rds'
-parFile3='/nobackup/h_turner_lab/shengq2/20221202_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
-parFile4='/nobackup/h_turner_lab/shengq2/20221202_7114_8822_scRNA_hg38/seurat_sct_merge_SignacX/result/crs.meta.rds'
+parSampleFile2=''
+parSampleFile3='fileList3.txt'
+parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge/result/P9061.final.rds'
+parFile2='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge_multires_01_call/result/P9061.meta.rds'
+parFile3='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/essential_genes/result/P9061.txt'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20221202_7114_8822_scRNA_hg38/seurat_sct_merge_multires_02_subcluster/result')
+setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge_multires_02_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -47,7 +46,6 @@ npcs<-as.numeric(myoptions$pca_dims)
 
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
-remove_subtype<-myoptions$remove_subtype
 annotate_tcell<-is_one(myoptions$annotate_tcell)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
@@ -56,6 +54,8 @@ regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 min_markers<-20
 
 previous_layer<-myoptions$celltype_layer
+previous_cluster<-myoptions$celltype_cluster
+
 cur_layer<-myoptions$output_layer
 seurat_cur_layer=paste0("seurat_", cur_layer)
 
@@ -72,10 +72,17 @@ has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
 pca_dims<-1:npcs
 
-tiers<-read.table(myoptions$HLA_panglao5_file, sep="\t", header=T)
+ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
+                             species = species,
+                             curated_markers_file = myoptions$curated_markers_file,
+                             HLA_panglao5_file = HLA_panglao5_file,
+                             layer="Layer4",
+                             remove_subtype_str = "",
+                             combined_celltype_file = NULL)
 
-remove_subtype_of=remove_subtype
-cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file, curated_markers_file=myoptions$curated_markers_file)
+tiers = ctdef$tiers
+
+cell_activity_database<-ctdef$cell_activity_database
 
 prefix<-outFile
 
@@ -84,12 +91,57 @@ if(!exists("obj")){
   Idents(obj)<-previous_layer
 }
 
-if(parSampleFile2 != ""){
+if(!is_file_empty(parSampleFile2)){
   ignore_gene_files=read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
   ignore_genes=unlist(lapply(ignore_gene_files$V1, function(x){
     readLines(x)
   }))
   obj<-obj[!(rownames(obj) %in% ignore_genes),]
+}
+
+if(!is_file_empty(parSampleFile3)){
+  rename_map = read.table(parSampleFile3, sep="\t", header=F)
+
+  meta<-obj@meta.data
+
+  keys = unique(rename_map$V3)
+  if("from" %in% rename_map$V2){
+    rname = keys[1]
+    for(rname in keys){
+      rmap = rename_map[rename_map$V3 == rname]
+      from = rmap$V1[rmap$V2=="from"]
+      cluster = rmap$V1[rmap$V2=="cluster"]
+      to = rmap$V1[rmap$V2=="to"]
+
+      if(!(from %in% unlist(meta[,previous_layer]))){
+        stop(paste0("Cannot find ", from, " in obj cell type layer ", previous_layer))
+      }
+      submeta<-meta[meta[,previous_layer] == from,]
+
+      if(!(cluster %in% unlist(submeta[,previous_cluster]))){
+        stop(paste0("Cannot find cluster ", cluster, " in cell type ", from, " of cluster ", previous_cluster))
+      }
+
+      cells<-rownames(submeta)[submeta[,previous_cluster]==cluster]
+      meta[cells,previous_layer]<-to
+    }
+  }else{
+    rname = keys[1]
+    for(rname in keys){
+      rmap = rename_map[rename_map$V3 == rname]
+      cluster = rmap$V1[rmap$V2=="cluster"]
+      to = rmap$V1[rmap$V2=="to"]
+
+      if(!(cluster %in% unlist(meta[,previous_cluster]))){
+        stop(paste0("Cannot find cluster ", cluster, " in obj cell type cluster ", previous_cluster))
+      }
+
+      cells<-rownames(meta)[meta[,previous_cluster]==cluster]
+      meta[cells,previous_layer]<-to
+    }
+  }
+
+  obj@meta.data<-meta
 }
 
 bHasSignacX<-FALSE
@@ -141,6 +193,13 @@ writeLines(ordered_celltypes, paste0(outFile, ".cell_types.txt"))
 
 DefaultAssay(obj)<-assay
 
+cur_folder = getwd()
+tmp_folder = paste0(cur_folder, "/details")
+if(!dir.exists(tmp_folder)){
+  dir.create(tmp_folder)
+}
+setwd(tmp_folder)
+
 filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
@@ -162,7 +221,7 @@ for(pct in previous_celltypes){
   k_n_neighbors<-min(cur_npcs, 20)
   u_n_neighbors<-min(cur_npcs, 30)
   
-  curprefix<-paste0(prefix, ".", gsub('[/\ ]', "_", pct))
+  curprefix<-paste0(prefix, ".", celltype_to_filename(pct))
 
   subumap = "subumap"
   subobj = sub_cluster(subobj, 
@@ -182,7 +241,6 @@ for(pct in previous_celltypes){
                         key,
                         do_umap = TRUE,
                         reduction.name = subumap,
-                        umap_min_dist_map = NA,
                         previous_layer = NA)
   
   reductions_rds = paste0(curprefix, ".reductions.rds")
@@ -222,6 +280,7 @@ for(pct in previous_celltypes){
     subobj2@meta.data <- subobj@meta.data
 
     data.norm=get_seurat_average_expression(subobj2, cluster)
+
     predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
     layer_ids<-names(predict_celltype$max_cta)
     names(layer_ids) <- colnames(data.norm)
@@ -266,9 +325,9 @@ for(pct in previous_celltypes){
     bar_file=paste0(cluster_prefix, ".bar.png")
     gb<-get_groups_dot(subobj, "display_layer", "orig.ident")
     if(bHasCurrentSignacX){
-      gb<-gb+get_groups_dot(subobj, "display_layer", "orig.ident") + get_groups_dot(subobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
+      gb<-gb+get_groups_dot(subobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
     }
-    height=ifelse(bHasCurrentSignacX, 3000, 1500)
+    height=ifelse(bHasCurrentSignacX, 2200, 1100)
     png(bar_file, width=3000, height=height, res=300)
     print(gb)
     dev.off()
@@ -332,9 +391,14 @@ for(pct in previous_celltypes){
 
     filelist<-rbind(filelist, cur_df)
   }
+  rm(subobj2)
+  rm(subobj)
 }
+
+setwd(cur_folder)
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
 
 library('rmarkdown')
-rmarkdown::render("seurat_celltype_subcluster.v3.rmd",output_file=paste0(outFile,".html"))
+rmarkdown::render("seurat_celltype_subcluster.v3.rmd",output_file=paste0(outFile,".subcluster.html"))
+
