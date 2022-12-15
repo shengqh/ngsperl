@@ -531,10 +531,12 @@ do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE) {
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
     #https://github.com/satijalab/seurat/issues/2814
     VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
+    rm(objs)
+    return(obj)
   }else{
-    obj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
+    rawobj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
+    return(rawobj)
   }
-  return(obj)
 }
 
 do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch_file, pca_dims, essential_genes=NULL){
@@ -653,13 +655,14 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   print(p)
   dev.off()
 
+  mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
+
   nsample<-length(unique(mt$Sample))
   ncol=ceiling(sqrt(nsample))
   nrow=ceiling(nsample/ncol)
   width=min(10000, ncol * 1200)
   height=min(10000, nrow * 1000)
 
-  mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
   g1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
