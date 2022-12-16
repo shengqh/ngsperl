@@ -79,7 +79,7 @@ if [[ ! -s $final_file || ! -d $final_file ]]; then
   if [[ -f $inputFile ]]; then
     if [[ -s $inputFile ]]; then
       R --vanilla -f $script --args $organism $sample_name $inputFile . $interestGeneType $referenceSet
-      rm */*/*.zip
+      rm -f */*/*.zip
     else
       echo \"Empty gene file\" > ${sample_name}.empty
     fi 
