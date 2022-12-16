@@ -289,6 +289,7 @@ sub addMutect2Wdl {
     "use_filename_in_result" => 1,
     "input_parameters" => {
       "Mutect2.m2_extra_args" => $mutect2_option,
+      "Mutect2.m2_extra_filtering_args" => getValue($def, "Mutect2.m2_extra_filtering_args",""),
       "Mutect2.intervals" => $def->{covered_bed},
       "Mutect2.ref_fasta" => $def->{ref_fasta},
       "Mutect2.ref_dict" => $def->{ref_fasta_dict},
