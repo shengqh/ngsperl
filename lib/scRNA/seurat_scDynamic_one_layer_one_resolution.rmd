@@ -28,6 +28,7 @@ options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors 
 myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
+by_individual_sample=is_one(myoptions$by_individual_sample)
 
 prefix=paste0("details/", outFile)
 
@@ -142,10 +143,12 @@ pctRmd<-function(outFile, cell_identity, pcts, files){
     dot_file<-last_files$fname[nrow(last_files)]
     result<-paste0(result, getFigure(dot_file, TRUE))
 
-    for(group.by in c("sample", "batch")) {
-      if(file.exists(paste0(outFile, ".", cell_identity, ".", group.by, "_celltype.csv"))){
-        result<-paste0(result, paste0("\n\n#### ", cell_identity, " / ", group.by, "\n\n"))
-        result<-paste0(result, getFigure(paste0(outFile, ".", cell_identity, ".", group.by, ".", pct_name, ".cell.png"), in_details))
+    if(!by_individual_sample){
+      for(group.by in c("sample", "batch")) {
+        if(file.exists(paste0(outFile, ".", cell_identity, ".", group.by, "_celltype.csv"))){
+          result<-paste0(result, paste0("\n\n#### ", cell_identity, " / ", group.by, "\n\n"))
+          result<-paste0(result, getFigure(paste0(outFile, ".", cell_identity, ".", group.by, ".", pct_name, ".cell.png"), in_details))
+        }
       }
     }
   }

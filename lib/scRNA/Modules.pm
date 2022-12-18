@@ -1204,14 +1204,14 @@ sub addComparison {
 }
 
 sub addDynamicCluster {
-  my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction) = @_;
+  my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
 
   $config->{$scDynamic_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_one_layer_one_resolution.r",
-    rReportTemplate          => "../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.Rmd",
+    rReportTemplate          => "../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.Rmd",
     parameterFile1_ref => [$seurat_task, ".rds"],
     parameterFile3_ref => $essential_gene_task,
     parameterSampleFile1     => {
@@ -1219,7 +1219,6 @@ sub addDynamicCluster {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
-      reduction             => $reduction,
       species               => getValue( $def, "species" ),
       db_markers_file       => getValue( $def, "markers_file" ),
       curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
@@ -1234,6 +1233,8 @@ sub addDynamicCluster {
       dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", 0.2 ),
       redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
       layer                 => getValue( $def, "dynamic_layer", "Layer4"),
+      reduction             => $reduction,
+      by_individual_sample  => $by_individual_sample,
     },
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
@@ -1247,6 +1248,7 @@ sub addDynamicCluster {
       "mem"       => getValue($def, "seurat_mem")
     },
   };
+
   push( @$summary, $scDynamic_task );
 }
 

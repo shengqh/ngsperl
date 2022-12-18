@@ -392,13 +392,19 @@ sub getScRNASeqConfig {
       my $celltype_task = undef;
       my $celltype_name = undef;
 
+      if(getValue($def, "perform_individual_dynamic_cluster", 0)){
+        my $res = "_res" . getValue($def, "dynamic_by_one_resolution");
+        my $individual_scDynamic_task = $seurat_task . "_individual_dynamic" . $res;
+        addDynamicCluster($config, $def, $summary, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1);
+      }
+
       if(getValue($def, "perform_dynamic_cluster")){
         my $dynamicKey = $seurat_task . "_dynamic";
         $def->{$dynamicKey} = 0;
         my $res = "_res" . getValue($def, "dynamic_by_one_resolution");
 
         my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . $res . "_call";
-        addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction);
+        addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, 0);
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
         if(getValue($def, "perform_dynamic_subcluster")){

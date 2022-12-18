@@ -4,12 +4,12 @@ parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge/result/P9061.final.rds'
+parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony/result/P9061.final.rds'
 parFile2=''
 parFile3='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/essential_genes/result/P9061.txt'
 
 
-setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge_dynamic_01_res0.2_call/result')
+setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_individual_dynamic_res0.2/result')
 
 ### Parameter setting end ###
 
@@ -29,6 +29,7 @@ library(stringr)
 library(htmltools)
 library(patchwork)
 library(glmGamPoi)
+library('rmarkdown')
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -54,6 +55,11 @@ regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 redo_harmony<-is_one(myoptions$redo_harmony, 0)
 resolution=as.numeric(myoptions$dynamic_by_one_resolution)
 curated_markers_file=myoptions$curated_markers_file
+by_individual_sample=is_one(myoptions$by_individual_sample)
+
+if(by_individual_sample){
+  by_harmony<-FALSE
+}
 
 layer=ifelse(is.null(myoptions$layer), "Layer4", myoptions$layer)
 
@@ -416,83 +422,208 @@ if(0){
   cur_layermap = layer2map
 }
 
-cur_folder = getwd()
-tmp_folder = paste0(cur_folder, "/details")
-if(!dir.exists(tmp_folder)){
-  dir.create(tmp_folder)
-}
-setwd(tmp_folder)
+do_analysis<-function(tmp_folder,
+                      cur_folder,
+                      obj, 
+                      layer2map, 
+                      npcs, 
+                      resolution, 
+                      random.seed, 
+                      by_sctransform, 
+                      by_harmony, 
+                      prefix, 
+                      vars.to.regress, 
+                      bubblemap_file, 
+                      essential_genes,
+                      by_individual_sample ) {
+  setwd(tmp_folder)
+  reslist1<-layer_cluster_celltype(obj = obj,
+                              previous_layer = "layer0", 
+                              cur_layer = "layer4", 
+                              cur_layermap = layer2map, 
+                              npcs = npcs, 
+                              resolution = resolution, 
+                              random.seed = random.seed, 
+                              by_sctransform = by_sctransform, 
+                              by_harmony = by_harmony, 
+                              prefix = prefix, 
+                              vars.to.regress = vars.to.regress,
+                              bubblemap_file = bubblemap_file,
+                              essential_genes = essential_genes)
+  obj=reslist1$obj
+  files=reslist1$files
+  rm(reslist1)
 
-reslist1<-layer_cluster_celltype(obj = obj,
-                            previous_layer = "layer0", 
-                            cur_layer = "layer4", 
-                            cur_layermap = layer2map, 
-                            npcs = npcs, 
-                            resolution = resolution, 
-                            random.seed = random.seed, 
-                            by_sctransform = by_sctransform, 
-                            by_harmony = by_harmony, 
-                            prefix = prefix, 
-                            vars.to.regress = vars.to.regress,
-                            bubblemap_file = bubblemap_file,
-                            essential_genes = essential_genes)
-obj=reslist1$obj
-files=reslist1$files
-rm(reslist1)
+  write.csv(files, paste0(prefix, ".iter_png.csv"))
 
-write.csv(files, paste0(prefix, ".iter_png.csv"))
+  setwd(cur_folder)
 
-setwd(cur_folder)
+  celltypes<-unique(obj$layer4)
+  celltypes<-celltypes[order(celltypes)]
+  ctdf<-data.frame("celltype"=celltypes, "resolution"=0.01)
+  write.table(ctdf, paste0(prefix, ".scDynamic.celltype_res.txt"), row.names=F, sep="\t", quote=F)
 
-celltypes<-unique(obj$layer4)
-celltypes<-celltypes[order(celltypes)]
-ctdf<-data.frame("celltype"=celltypes, "resolution"=0.01)
-write.table(ctdf, paste0(prefix, ".scDynamic.celltype_res.txt"), row.names=F, sep="\t", quote=F)
+  obj<-factorize_layer(obj, "layer4")
+  Idents(obj)<-"layer4"
 
-obj<-factorize_layer(obj, "layer4")
-Idents(obj)<-"layer4"
+  saveRDS(obj@meta.data, paste0(prefix, ".scDynamic.meta.rds"))
+  write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
 
-saveRDS(obj@meta.data, paste0(prefix, ".scDynamic.meta.rds"))
-write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
+  #find markers for all cell types
+  all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  all_top10<-get_top10_markers(all_markers)
+  all_top10<-unique(all_top10$gene)
 
-#find markers for all cell types
-all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
-all_top10<-get_top10_markers(all_markers)
-all_top10<-unique(all_top10$gene)
+  obj<-myScaleData(obj, all_top10, "RNA")
+  if(ncol(obj) > 5000){
+    subsampled <- obj[, sample(colnames(obj), size=5000, replace=F)]
+    g<-DoHeatmap(subsampled, assay="RNA", group.by="layer4", features=all_top10)
+    rm(subsampled)
+  }else{
+    g<-DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10)
+  }
 
-obj<-myScaleData(obj, all_top10, "RNA")
-if(ncol(obj) > 5000){
-  subsampled <- obj[, sample(colnames(obj), size=5000, replace=F)]
-  g<-DoHeatmap(subsampled, assay="RNA", group.by="layer4", features=all_top10)
-  rm(subsampled)
-}else{
-  g<-DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10)
-}
-
-width<-max(5000, min(10000, length(unique(Idents(obj))) * 400 + 1000))
-height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
-png(paste0(outFile, ".layer4.heatmap.png"), width=width, height=height, res=300)
-print(g)
-dev.off()
-
-has_batch<-ifelse("batch" %in% colnames(obj@meta.data), any(obj$batch != obj$orig.ident), FALSE)
-
-output_celltype_figures(obj, "layer4", outFile, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
-if(has_batch){
-  output_celltype_figures(obj, "layer4", outFile, bubblemap_file, cell_activity_database, combined_ct, group.by="batch", name="batch")
-}
-
-cur_celltype="layer4"
-for(pct in unique(unlist(obj[[cur_celltype]]))){
-  cells=colnames(obj)[obj[[cur_celltype]] == pct]
-  subobj=subset(obj, cells=cells)
-  subobj$seurat_layer4=paste0(subobj$layer4_clusters, ": ", subobj$layer4_raw)
-  g<-get_dim_plot(subobj, group.by="layer4_clusters", label.by="seurat_layer4", reduction="umap", legend.title="")
-
-  png(paste0(prefix, ".", cur_celltype, ".", celltype_to_filename(pct), ".umap.png"), width=2400, height=2000, res=300)
+  width<-max(5000, min(10000, length(unique(Idents(obj))) * 400 + 1000))
+  height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
+  png(paste0(prefix, ".layer4.heatmap.png"), width=width, height=height, res=300)
   print(g)
   dev.off()
+
+  output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
+
+  if(!by_individual_sample){
+    has_batch<-FALSE
+    if("batch" %in% colnames(obj@meta.data)){
+      if("sample" %in% colnames(obj@meta.data)){
+        has_batch=any(obj$batch != obj$sample)
+      }else{
+        has_batch=any(obj$batch != obj$orig.ident)
+      }
+    }
+    if(has_batch){
+      output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="batch", name="batch")
+    }
+  }
+
+  cur_celltype="layer4"
+  for(pct in unique(unlist(obj[[cur_celltype]]))){
+    cells=colnames(obj)[obj[[cur_celltype]] == pct]
+    subobj=subset(obj, cells=cells)
+    subobj$seurat_layer4=paste0(subobj$layer4_clusters, ": ", subobj$layer4_raw)
+    g<-get_dim_plot(subobj, group.by="layer4_clusters", label.by="seurat_layer4", reduction="umap", legend.title="")
+
+    png(paste0(prefix, ".", cur_celltype, ".", celltype_to_filename(pct), ".umap.png"), width=2400, height=2000, res=300)
+    print(g)
+    dev.off()
+  }
+
+  tb=data.frame("cell"=colnames(obj), "cell_type"=obj$layer4, category=prefix)
+
+  output_file=paste0(prefix,".dynamic.html")
+  rmdfile = "seurat_scDynamic_one_layer_one_resolution.rmd"
+  rmarkdown::render(rmdfile, output_file=output_file)
+  return(list(html=output_file, ct_count=tb))
 }
 
-library('rmarkdown')
-rmarkdown::render("seurat_scDynamic_one_layer_one_resolution.rmd",output_file=paste0(outFile,".dynamic.html"))
+if(by_individual_sample){
+  if("harmony" %in% names(obj@reductions)){
+    obj@reductions["harmony"]<-NULL
+  }
+  if("umap" %in% names(obj@reductions)){
+    obj@reductions["umap"]<-NULL
+  }
+  if("pca" %in% names(obj@reductions)){
+    obj@reductions["pca"]<-NULL
+  }
+  root_folder = getwd()
+  samples <- unique(obj$orig.ident)
+  result_list = c()
+  all_ct_counts = NULL
+
+  sample=samples[1]
+  for (sample in samples){
+    cat("processing ", sample, "...\n")
+    cur_folder = paste0(root_folder, "/", sample)
+    if(!dir.exists(cur_folder)){
+      dir.create(cur_folder)
+    }
+    tmp_folder = paste0(cur_folder, "/details")
+    if(!dir.exists(tmp_folder)){
+      dir.create(tmp_folder)
+    }
+    
+    f1<-read.table(paste0(root_folder, "/fileList1.txt"), sep="\t")
+    f1$V1[f1$V2=="task_name"] = sample
+    write.table(f1, paste0(cur_folder, "/fileList1.txt"), sep="\t", row.names=F)
+
+    file.copy(paste0(root_folder, "/scRNA_func.r"), paste0(cur_folder, "/scRNA_func.r"), overwrite = TRUE)
+    file.copy(paste0(root_folder, "/seurat_scDynamic_one_layer_one_resolution.rmd"), paste0(cur_folder, "/seurat_scDynamic_one_layer_one_resolution.rmd"), overwrite = TRUE)
+    file.copy(paste0(root_folder, "/reportFunctions.Rmd"), paste0(cur_folder, "/reportFunctions.Rmd"), overwrite = TRUE)
+
+    subobj<-subset(obj, cells=colnames(obj)[obj@meta.data$orig.ident==sample])
+
+    if(0){#for test
+      subobj=subset(subobj, cells=colnames(subobj)[1:2000])
+    }
+
+    #for each sample, do its own PCA, FindClusters and UMAP first
+    subobj = sub_cluster(subobj, 
+                          assay, 
+                          by_sctransform, 
+                          by_harmony=FALSE, 
+                          redo_harmony=FALSE, 
+                          curreduction="pca", 
+                          k_n_neighbors=min(npcs, 20),
+                          u_n_neighbors=min(npcs, 30),
+                          random.seed,
+                          resolution,
+                          cur_npcs=npcs, 
+                          cur_pca_dims=c(1:npcs),
+                          vars.to.regress)    
+
+    res_list = do_analysis(tmp_folder,
+                            cur_folder,
+                            subobj, 
+                            layer2map, 
+                            npcs, 
+                            resolution, 
+                            random.seed, 
+                            by_sctransform, 
+                            0, 
+                            sample, 
+                            vars.to.regress, 
+                            bubblemap_file, 
+                            essential_genes,
+                            1)
+    result_list<-c(result_list, res_list$html)
+    all_ct_counts<-rbind(all_ct_counts, res_list$ct_count)
+  }
+  setwd(root_folder)
+  writeLines(result_list, paste0(prefix, ".samples.list"))
+  write.table(all_ct_counts, paste0(prefix, ".ct_count.tsv"), sep="\t", row.names=T)
+
+  output_file=paste0(prefix,".dynamic.html")
+  rmdfile = "seurat_scDynamic_one_layer_one_resolution_summary.rmd"
+  rmarkdown::render(rmdfile, output_file=output_file)
+}else{
+  cur_folder = getwd()
+  tmp_folder = paste0(cur_folder, "/details")
+  if(!dir.exists(tmp_folder)){
+    dir.create(tmp_folder)
+  }
+  do_analysis(tmp_folder,
+              cur_folder,
+              obj, 
+              layer2map, 
+              npcs, 
+              resolution, 
+              random.seed, 
+              by_sctransform, 
+              by_harmony, 
+              prefix, 
+              vars.to.regress, 
+              bubblemap_file, 
+              essential_genes,
+              0);
+}
+
