@@ -3,14 +3,12 @@ outFile=''
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2=''
-parFile3=''
-parFile4='C:/projects/scratch/cqs/justin_balko_projects/20220907_rnaseq_7312_6295_mm10/covariance.txt'
-outputPdf<-TRUE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
+parFile2='/scratch/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/9074_ES.Category.Table.csv'
+parFile3='/scratch/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/preprocessing/fastqc_post_trim_summary/result/9074_ES.countInFastQcVis.Result.Reads.csv'
+useLeastGroups<-FALSE;showLabelInPCA<-FALSE;totalCountKey='Reads for Mapping';minMedian=0;minMedianInGroup=1;textSize=9;groupTextSize=10;
 
-setwd("C:/projects/scratch/cqs/justin_balko_projects/20220907_rnaseq_7312_6295_mm10/genetable/result")
+setwd('/scratch/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/data_visualization/count_table_correlation_TotalReads/result')
 
 ### Parameter setting end ###
 
@@ -698,6 +696,12 @@ for (i in 1:nrow(countTableFileAll)) {
           axis(1,at=c(1,length(colAll)/2,length(colAll)),labels=colAllLabel)
         }
         
+        ## Complete cases only, if NA present hclust fails, remove groups with NA
+        countNumCor.lower <- countNumCor
+        countNumCor.na <- ifelse(lower.tri(countNumCor.lower) ==T, countNumCor, "upper")
+        completecases <- rownames(countNumCor)[which(complete.cases(countNumCor.na) ==T)]
+        countNumCor <- countNumCor[completecases, completecases]
+        
         hcaOption<-getHeatmapOption(countNumCor, TRUE)
         for(format in outputFormat){
           if("PDF" == format){
@@ -714,6 +718,11 @@ for (i in 1:nrow(countTableFileAll)) {
         } else {
           if (length(table(countNumCor))==1) {
             saveInError(paste0("Correlation for groups all equal to 1. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
+            next;
+          }
+        	## If one group has correlation =1 with all other groups, hclust fails, continue to next
+          if (any(rowMeans(countNumCor) == 1)) {
+            saveInError(paste0("Correlation for a group equal to 1. Can't do correlation clustering analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
             next;
           }
           for(format in outputFormat){
@@ -741,5 +750,3 @@ if(length(missed_count_tables) == 0){
 }else{
   writeLines(missed_count_tables, "count_table_missing.txt")
 }
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
-
