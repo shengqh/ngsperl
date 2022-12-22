@@ -15,6 +15,14 @@ use Alignment::AlignmentUtils;
 
 our @ISA = qw(CQS::Task);
 
+sub new {
+  my ($class) = @_;
+  my $self = $class->SUPER::new();
+  $self->{_final_file_in_last} = 0;
+  bless $self, $class;
+  return $self;
+}
+
 sub getOutputToSameFolder {
   my ( $self, $config, $section ) = @_;
   return get_option( $config, $section, "output_to_same_folder", 1 );
