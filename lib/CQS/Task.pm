@@ -25,6 +25,7 @@ sub new {
     _forbid_tmp_folder  => 0,
     _use_tmp_folder => 0,
     _localize_to_local_folder => 0,
+    _final_file_in_last => 1,
   };
   bless $self, $class;
   return $self;
@@ -46,8 +47,9 @@ sub name {
 sub perform {
 }
 
-sub get_final_file {
-  my ( $self, $config, $section, $result_dir, $sample ) = @_;
+
+sub get_absolute_final_file {
+  my ( $self, $config, $section, $sample ) = @_;
   my $expect = $self->result( $config, $section );
 
   if ( not defined $sample ) {
@@ -58,7 +60,17 @@ sub get_final_file {
 
   my $final_files_ref = $expect->{$sample};
   my @final_files     = @$final_files_ref;
-  my $result          = $final_files[-1];
+
+  my @no_filelists = grep(!/.filelist$/, @final_files);
+  my $result          = $self->{_final_file_in_last} ? $no_filelists[-1] :  $no_filelists[0];
+
+  return ($result);
+}
+
+sub get_final_file {
+  my ( $self, $config, $section, $result_dir, $sample ) = @_;
+
+  my $result          = $self->get_absolute_final_file($config, $section, $sample);
 
   if ( rindex( $result, $result_dir ) == 0 ) {
     $result = substr( $result, length($result_dir) );
@@ -67,9 +79,9 @@ sub get_final_file {
       $result = substr( $result, 1 );
     }
   }
+
   return ($result);
 }
-
 
 sub get_result_files {
   my ( $self, $config, $section, $result_dir, $sample_name ) = @_;
