@@ -48,6 +48,10 @@ with open(args.mapped, "rt") as fin:
         if read not in mapped:
           mapped.add(read)
 
+#in case fastq file and count file is not matched, record the mapped and unmapped reads from fastq file
+cur_mapped = set()
+cur_unmapped = set()
+
 logger.info("writing unmapped reads to " + args.output + " ...")
 with gzip.open(args.output, "wt") as fout:
   with gzip.open(args.input, "rt") as fin:
@@ -69,12 +73,18 @@ with gzip.open(args.output, "wt") as fout:
       line4 = fin.readline()
 
       if sequence in mapped:
+        cur_mapped.add(sequence)
         continue
+
+      cur_unmapped.add(sequence)
 
       fout.write(header)
       fout.write(f"{sequence}\n")
       fout.write(line3)
       fout.write(line4)
+
+mapped = 0
+unmapped = 0
 
 dupcount = re.sub(".gz$", ".dupcount", args.output)
 logger.info("writing unmapped reads to " + dupcount + " ...")
@@ -88,8 +98,20 @@ with open(dupcount, "wt") as fout:
         logger.info(icount)
 
       parts = line.rstrip().split('\t')
-      if parts[2] in mapped:
+      if parts[2] in cur_mapped:
+        mapped += int(parts[1])
         continue
-      fout.write(line)
+        
+      if parts[2] in cur_unmapped:
+        unmapped += int(parts[1])
+        fout.write(line)
+
+info_file = args.output + ".info"
+with open(info_file, "wt") as fout:
+  fout.write("Category\tCount\n")
+  fout.write(f"TotalReads\t{mapped + unmapped}\n")
+  fout.write(f"FeatureReads\t{mapped}\n")
+  fout.write(f"UnmappedReads\t{unmapped}\n")
+
 
 logger.info("done")

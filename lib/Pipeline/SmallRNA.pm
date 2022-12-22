@@ -2081,26 +2081,9 @@ fi
     }
 
     $config->{final_unmapped_reads} = {
-      class            => "CQS::Perl",
-      perform          => 1,
-      target_dir       => $nonhost_blast_dir . "/final_unmapped_reads",
-      perlFile         => "unmappedReadsToFastq.pl",
-      source_ref       => $identical_ref,
-      source2_ref      => $nonhost_count,
-      output_ext       => "_clipped_identical.unmapped.fastq.gz",
-      output_other_ext => "_clipped_identical.unmapped.fastq.dupcount,_clipped_identical.unmapped.fastq.gz.info",
-      sh_direct        => 1,
-      pbs              => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
-    };
-
-    $config->{final_unmapped_reads_python} = {
       class            => "CQS::ProgramWrapperOneToOne",
       perform          => 1,
-      target_dir       => $nonhost_blast_dir . "/final_unmapped_reads_python",
+      target_dir       => $nonhost_blast_dir . "/final_unmapped_reads",
       option           => "-o __NAME__.unmapped.fastq.gz",
       interpretor      => "python3",
       program          => "../SmallRNA/unmappedReadsToFastq.py",
@@ -2112,7 +2095,7 @@ fi
       parameterSampleFile3_ref      => $identical_count_ref,
       output_to_same_folder => 1,
       output_arg       => "-o",
-      output_file_ext  => ".unmapped.fastq.gz,.unmapped.fastq.dupcount",
+      output_file_ext  => ".unmapped.fastq.gz,.unmapped.fastq.dupcount,.unmapped.fastq.gz.info",
       sh_direct        => 1,
       pbs              => {
         "nodes"    => "1:ppn=1",
@@ -2128,8 +2111,6 @@ fi
       option     => "",
       sh_direct  => 1,
       pbs        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "1",
         "mem"       => "40gb"
@@ -2150,8 +2131,6 @@ fi
         source_ref => \@name_for_mapPercentage,
         sh_direct  => 0,
         pbs        => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "12",
           "mem"       => "10gb"
