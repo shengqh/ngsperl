@@ -299,7 +299,9 @@ sub perform {
 
         $final_index = $final_index + 1;
 
-        my $expect_file = get_final_file_by_task_name($expect_file_map, $sample);
+        my $expect_file = $myclass->get_absolute_final_file($config, $task_section, $sample);
+        
+        #get_final_file_by_task_name($expect_file_map, $sample);
           
         if(not defined $expect_file){
           print "Found error";
