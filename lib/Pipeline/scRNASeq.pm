@@ -427,6 +427,8 @@ sub getScRNASeqConfig {
             $obj_ref = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
+            $celltype_task = $choose_task;
+
             if(defined $clonotype_convert) {
               if( getValue($def, "perform_gliph2", 0) ) {
                 my $gliph2_task = add_gliph2($config, $def, $summary, $target_dir, $meta_ref, $clonotype_convert, $hla_merge);
@@ -610,6 +612,8 @@ sub getScRNASeqConfig {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
             my $table = getValue($def, "multires_subclusters_table");
             addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
+
+            $celltype_task = $choose_task;
 
             my $obj_ref = [$choose_task, ".final.rds"];
             if(defined $def->{groups}){
