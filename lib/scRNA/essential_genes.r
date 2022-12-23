@@ -27,7 +27,7 @@ species=myoptions$species
 markerfile<-myoptions$db_markers_file
 HLA_panglao5_file=myoptions$HLA_panglao5_file
 remove_subtype_of=myoptions$remove_subtype
-cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file, curated_markers_file=myoptions$curated_markers_file)
+cell_activity_database<-read_cell_markers_file(markerfile, species, curated_markers_file=myoptions$curated_markers_file)
 genes<-unlist(cell_activity_database$cellType)
 
 bubblemap_file=myoptions$bubblemap_file
