@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='P9061'
+outFile='scar_normal'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony/result/P9061.final.rds'
+parFile1='/data/h_gelbard_lab/projects/20221223_scar_normal_scRNA/seurat_sct_harmony/result/scar_normal.final.rds'
 parFile2=''
-parFile3='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/essential_genes/result/P9061.txt'
+parFile3='/data/h_gelbard_lab/projects/20221223_scar_normal_scRNA/essential_genes/result/scar_normal.txt'
 
 
-setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_individual_dynamic_res0.2/result')
+setwd('/data/h_gelbard_lab/projects/20221223_scar_normal_scRNA/seurat_sct_harmony_dynamic_01_res0.2_call/result')
 
 ### Parameter setting end ###
 
@@ -91,13 +91,18 @@ ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
                              remove_subtype_str = remove_subtype_str,
                              combined_celltype_file = parSampleFile4)
 
-tiers<-ctdef$tiers
-
 cell_activity_database<-ctdef$cell_activity_database
 
 layer2map<-ctdef$celltype_map
 
 combined_ct<-ctdef$combined_celltypes
+combined_ct_in_layer<-unique(combined_ct[combined_ct %in% names(layer2map)])
+combined_ct[combined_ct_in_layer]<-combined_ct_in_layer
+
+layer2map[layer2map %in% names(combined_ct)]<-combined_ct[layer2map[layer2map %in% names(combined_ct)]]
+
+combined_ct_source<-split(names(combined_ct), combined_ct)
+rm(combined_ct)
 
 prefix<-outFile
 
@@ -469,6 +474,8 @@ do_analysis<-function(tmp_folder,
   saveRDS(obj@meta.data, paste0(prefix, ".scDynamic.meta.rds"))
   write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
 
+  save_umap(paste0(prefix, ".scDynamic.umap"), obj)
+
   #find markers for all cell types
   all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
   all_top10<-get_top10_markers(all_markers)
@@ -489,7 +496,7 @@ do_analysis<-function(tmp_folder,
   print(g)
   dev.off()
 
-  output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name="sample")
+  output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="orig.ident", name="sample")
 
   if(!by_individual_sample){
     has_batch<-FALSE
@@ -501,7 +508,7 @@ do_analysis<-function(tmp_folder,
       }
     }
     if(has_batch){
-      output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="batch", name="batch")
+      output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="batch", name="batch")
     }
   }
 
@@ -567,7 +574,7 @@ if(by_individual_sample){
     }
 
     #for each sample, do its own PCA, FindClusters and UMAP first
-    subobj = sub_cluster(subobj, 
+    subobj = sub_cluster( subobj, 
                           assay, 
                           by_sctransform, 
                           by_harmony=FALSE, 
@@ -581,20 +588,21 @@ if(by_individual_sample){
                           cur_pca_dims=c(1:npcs),
                           vars.to.regress)    
 
-    res_list = do_analysis(tmp_folder,
-                            cur_folder,
-                            subobj, 
-                            layer2map, 
-                            npcs, 
-                            resolution, 
-                            random.seed, 
-                            by_sctransform, 
-                            0, 
-                            sample, 
-                            vars.to.regress, 
-                            bubblemap_file, 
-                            essential_genes,
-                            1)
+    res_list = do_analysis( tmp_folder = tmp_folder,
+                            cur_folder = cur_folder,
+                            obj = subobj, 
+                            layer2map = layer2map, 
+                            npcs = npcs, 
+                            resolution = resolution, 
+                            random.seed = random.seed, 
+                            by_sctransform = by_sctransform, 
+                            by_harmony = 0, 
+                            prefix = sample, 
+                            vars.to.regress = vars.to.regress, 
+                            bubblemap_file = bubblemap_file, 
+                            essential_genes = essential_genes,
+                            by_individual_sample = 1)
+
     result_list<-c(result_list, res_list$html)
     all_ct_counts<-rbind(all_ct_counts, res_list$ct_count)
   }
@@ -611,19 +619,19 @@ if(by_individual_sample){
   if(!dir.exists(tmp_folder)){
     dir.create(tmp_folder)
   }
-  do_analysis(tmp_folder,
-              cur_folder,
-              obj, 
-              layer2map, 
-              npcs, 
-              resolution, 
-              random.seed, 
-              by_sctransform, 
-              by_harmony, 
-              prefix, 
-              vars.to.regress, 
-              bubblemap_file, 
-              essential_genes,
-              0);
+  res_list <- do_analysis(tmp_folder = tmp_folder,
+                          cur_folder = cur_folder,
+                          obj = obj, 
+                          layer2map = layer2map, 
+                          npcs = npcs, 
+                          resolution = resolution, 
+                          random.seed = random.seed, 
+                          by_sctransform = by_sctransform, 
+                          by_harmony = by_harmony, 
+                          prefix = prefix, 
+                          vars.to.regress = vars.to.regress, 
+                          bubblemap_file = bubblemap_file, 
+                          essential_genes = essential_genes,
+                          by_individual_sample = 0);
 }
 
