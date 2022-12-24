@@ -949,7 +949,7 @@ draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, 
   dev.off()
 }
 
-get_celltype_markers<-function(medianexp,cellType,weight,combined_ct=NA,layer_map=NA){
+get_celltype_markers<-function(medianexp,cellType,weight,combined_ct_source=NA,layer_map=NA){
   exp_z<-scale(medianexp)
   genenames<-rownames(medianexp)   
   ctnames<-colnames(medianexp)
@@ -960,10 +960,10 @@ get_celltype_markers<-function(medianexp,cellType,weight,combined_ct=NA,layer_ma
     clusterexp<-medianexp[,j] 
     clusterexp_z<-exp_z[,j]
     
-    if(all(is.na(combined_ct))){
+    if(all(is.na(combined_ct_source))){
       orig_ctnames=ctnames[j]
     }else{
-      orig_ctnames=c(ctnames[j], names(combined_ct)[combined_ct == ctnames[j]])
+      orig_ctnames=unique(c(ctnames[j], combined_ct_source[[ctnames[j]]]))
     }
 
     valid_ctnames=orig_ctnames[orig_ctnames %in% names(cellType)]
@@ -993,11 +993,12 @@ get_celltype_markers<-function(medianexp,cellType,weight,combined_ct=NA,layer_ma
   return(res)
 }
 
-get_celltype_marker_bubble_plot<-function(obj, group.by, cellType, weight, n_markers=5, combined_ct=NA, layer_map=NA) {
+get_celltype_marker_bubble_plot<-function(obj, group.by, cellType, weight, n_markers=5, combined_ct_source=NA, layer_map=NA) {
   medianexp=get_seurat_average_expression(obj, group.by)
   medianexp<-medianexp[rowSums(medianexp)>0,]
+  #medianexp<-medianexp[,colnames(medianexp)[order(colnames(medianexp))]]
   
-  markers<-get_celltype_markers(medianexp, cellType, weight, combined_ct=combined_ct, layer_map=layer_map)
+  markers<-get_celltype_markers(medianexp, cellType, weight, combined_ct_source=combined_ct_source, layer_map=layer_map)
   
   while(TRUE){
     gene_groups<-lapply(markers, function(x){
@@ -1471,7 +1472,7 @@ output_barplot<-function(obj, sample_key, cell_key, filename){
   dev.off()
 }
 
-output_celltype_figures<-function(obj, cell_identity, prefix, bubblemap_file, cell_activity_database, combined_ct, group.by="orig.ident", name=group.by, umap_width=2200, dot_width=4000){
+output_celltype_figures<-function(obj, cell_identity, prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="orig.ident", name=group.by, umap_width=2200, dot_width=4000){
   if(group.by != "batch"){
     g<-get_bubble_plot(obj, cur_res=NA, cell_identity, bubblemap_file=bubblemap_file, assay="RNA", orderby_cluster = T)
     png(paste0(prefix, ".", cell_identity, ".dot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
@@ -1488,7 +1489,7 @@ output_celltype_figures<-function(obj, cell_identity, prefix, bubblemap_file, ce
                                         cellType = cell_activity_database$cellType,
                                         weight = cell_activity_database$weight,
                                         n_markers = 5, 
-                                        combined_ct=combined_ct)
+                                        combined_ct_source=combined_ct_source)
 
     png(paste0(prefix, ".", cell_identity, ".ct_markers.bubbleplot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
     print(g)
@@ -1528,3 +1529,8 @@ output_celltype_figures<-function(obj, cell_identity, prefix, bubblemap_file, ce
   dev.off()
 }
 
+save_umap<-function(file_prefix, obj, umap_names=c("UMAP_1", "UMAP_2") ){
+  umap<-FetchData(obj, umap_names)
+  saveRDS(umap, paste0(file_prefix, ".rds"))
+  write.csv(umap, paste0(file_prefix, ".csv"))
+}
