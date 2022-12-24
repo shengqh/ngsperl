@@ -379,7 +379,7 @@ sub addConsensusToImmunarch {
     rtemplate                => "../CQS/Functions.Rmd;../scRNA/immunarch.Rmd;../scRNA/immunarch.r",
     use_vanilla              => 0,
     parameterFile1_ref => $source_ref,
-    output_file_ext          => ".html",
+    output_file_ext          => ".all.html",
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",
