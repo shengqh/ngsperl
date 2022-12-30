@@ -392,23 +392,30 @@ sub getScRNASeqConfig {
       my $celltype_task = undef;
       my $celltype_name = undef;
 
-      if(getValue($def, "perform_individual_dynamic_cluster", 0)){
-        my $res = "_res" . getValue($def, "dynamic_by_one_resolution");
-        my $individual_scDynamic_task = $seurat_task . "_individual_dynamic" . $res;
-        addDynamicCluster($config, $def, $summary, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1);
-      }
-
       if(getValue($def, "perform_dynamic_cluster")){
-        my $dynamicKey = $seurat_task . "_dynamic";
-        $def->{$dynamicKey} = 0;
-        my $res = "_res" . getValue($def, "dynamic_by_one_resolution");
+        my $raw_dynamicKey = $seurat_task . "_dr" . getValue($def, "dynamic_by_one_resolution");
 
-        my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . $res . "_call";
+        my $dynamicKey = $raw_dynamicKey;
+        if(getValue( $def, "by_integration" ) & (getValue($def, "integration_by_harmony"))) {
+          $dynamicKey = $dynamicKey . (getValue($def, "subcluster_redo_harmony") ? "_rh": "_nrh");
+        }
+
+        $def->{$dynamicKey} = 0;
+
+        my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call";
         addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, 0);
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
+        if(getValue($def, "perform_individual_dynamic_cluster", 0)){
+          my $individual_scDynamic_task = $raw_dynamicKey . "_individual";
+          addDynamicCluster($config, $def, $summary, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1);
+
+          my $clustree_task = $dynamicKey . "_clustree";
+          add_clustree_rmd($config, $def, $summary, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task);
+        }
+
         if(getValue($def, "perform_dynamic_subcluster")){
-          my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . $res . "_subcluster";
+          my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_subcluster";
 
           my $cur_options = {
             reduction => $reduction, 
@@ -421,7 +428,7 @@ sub getScRNASeqConfig {
           addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
 
           if(getValue($def, "perform_dynamic_choose")) {
-            my $choose_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . $res . "_choose";
+            my $choose_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_choose";
             my $table = getValue($def, "dynamic_subclusters_table");
             addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
             $obj_ref = [ $choose_task, ".final.rds" ];
@@ -442,7 +449,7 @@ sub getScRNASeqConfig {
             $localization_ref = $obj_ref;
 
             if(defined $def->{groups}){
-              my $group_umap_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . $res .  "_group_umap";
+              my $group_umap_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_group_umap";
               add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, [$choose_task, ".final.rds"]);
             }
 
@@ -456,7 +463,7 @@ sub getScRNASeqConfig {
             }
 
             if(defined $df_task){
-              my $doublet_check_task = $seurat_task . "_dynamic" . get_next_index($def, $dynamicKey) . "_doublet_check";
+              my $doublet_check_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_doublet_check";
               add_doublet_check($config, $def, $summary, $target_dir, $doublet_check_task, $obj_ref, $df_task );
             }
           }

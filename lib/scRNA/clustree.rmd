@@ -1,0 +1,109 @@
+---
+title: "Clustree and adjustedRandIndex analysis"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=12, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, child="reportFunctions.Rmd", include=FALSE} 
+```
+
+```{r data, echo = FALSE}
+source("scRNA_func.r")
+library("Seurat")
+library("clustree")
+library("dplyr")
+library("mclust")
+
+options_table = read.table("fileList1.txt", sep="\t")
+myoptions = split(options_table$V1, options_table$V2)
+outFile=myoptions$outFile
+
+wHarm<-readRDS(read.table("fileList2.txt")$V1[1])
+samples<-unique(wHarm$orig.ident)
+samples<-samples[order(samples)]
+
+#Matching up, only keeping layer4 
+tog<-as.data.frame(matrix(nrow = nrow(wHarm), ncol = 4))
+names(tog)<-c("cellName", "sample", "layer4_Individual","layer4_Integrated")
+tog$cellName<-row.names(wHarm)
+tog$layer4_Integrated<-as.character(wHarm$layer4)
+
+individual_dir = dirname(read.table("fileList3.txt")$V1[1])
+sample<-samples[1]
+for(sample in samples){
+    meta_file<-file.path(individual_dir, sample, paste0(sample, ".scDynamic.meta.rds"))
+    meta<-readRDS(meta_file)
+    tog$layer4_Individual[match(row.names(meta), tog$cellName)]<-as.character(meta$layer4)
+    tog$sample[match(row.names(meta), tog$cellName)]<-sample
+}
+
+total_ari=tog %>% dplyr::summarise(sample="All_Samples", ari=adjustedRandIndex(layer4_Individual, layer4_Integrated))
+individual_ari=tog %>% dplyr::group_by(sample) %>% dplyr::summarise(ari=adjustedRandIndex(layer4_Individual, layer4_Integrated))
+ari<-rbind(total_ari, individual_ari)
+write.csv(ari, paste0(outFile, ".ari.csv"), row.names=F)
+ari_map=unlist(split(format(round(ari$ari, 2), nsmall = 2), ari$sample))
+
+#Making the plotting compatible version (To plot columns have to have the same prefix followed by a number)
+tog_all<-tog[,c(1,3,4)]
+names(tog_all)<-c("cellName", "All_Samples0","All_Samples1")
+
+writeLines(capture.output(sessionInfo()), paste0(outFile, '.sessionInfo.txt'))
+```
+
+# adjustedRandIndex between individual and integrated analysis
+
+```{r, echo = FALSE}
+print(kable_styling(kable(ari, caption=tabRef("ari", "Adjusted Rand Index"))))
+```
+
+```{r, echo = FALSE, fig.width=4, fig.height = 5}
+g<-ggplot(data=individual_ari, aes(x="", y=ari)) + geom_violin() + 
+    geom_jitter(width = 0.2) + xlab("") + ylab("adjustedRandIndex") +
+    theme_bw()
+print(g)
+```
+
+# clustree from individual to integrated analysis
+
+```{r, echo = FALSE}
+
+draw_clustree<-function(tog_data, sample, ari_map) {
+    cat('\n\n## ', sample, "\n\n")
+    g_filtered<-clustree(tog_data, prefix = sample, layout="sugiyama", node_text_angle = 45) + 
+        ggtitle(paste(sample, ", adjustedRandIndex=", ari_map[sample], ", proportion threshold=0.1")) +
+        theme(plot.title = element_text(hjust = 0.5)) + guides(color = "none")
+    print(g_filtered)
+
+    g_unfiltered<-clustree(tog_data, prefix = sample, layout = "sugiyama", node_text_angle = 45, count_filter = 0, prop_filter = 0) + 
+        ggtitle(paste(sample, ", adjustedRandIndex=", ari_map[sample])) +
+        theme(plot.title = element_text(hjust = 0.5)) + guides(color = "none")
+    print(g_unfiltered)
+}
+
+draw_clustree(tog_all, "All_Samples", ari_map)
+
+for(sample in samples){
+    #Separating out the individual samples
+    tog_sample<-tog[which(tog$sample == sample), c(1,3,4)]
+
+    #Naming them something to make sure the sample name is included on the plot (in legend)
+    names(tog_sample)<-c("cellName", paste0(sample, "0"), paste0(sample, "1"))
+
+    draw_clustree(tog_sample, sample, ari_map)
+}
+```

@@ -66,6 +66,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addClonotypeDB
   addClonotypeCluster
   add_strelka2
+
+  add_clustree_rmd
 )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -1206,6 +1208,7 @@ sub addComparison {
 sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
 
+  my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".scDynamic.meta.rds";
   $config->{$scDynamic_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -1239,7 +1242,7 @@ sub addDynamicCluster {
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
     parameterSampleFile4 => getValue($def, "dynamic_combine_cell_types", {}),
-    output_file_ext      => ".scDynamic.meta.rds",
+    output_file_ext      => $output_file_ext,
     output_other_ext     => ".dynamic.html",
     sh_direct            => 1,
     pbs                  => {
@@ -2063,7 +2066,32 @@ configureStrelkaGermlineWorkflow.py --rna \\
     },
   };
   push( @$summary, $combined_task );
+}
 
+sub add_clustree_rmd {
+  my ($config, $def, $summary, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task) = @_;
+  $config->{$clustree_task} = {
+    class => "CQS::UniqueRmd",
+    target_dir => "${target_dir}/$clustree_task",
+    report_rmd_file => "../scRNA/clustree.rmd",
+    additional_rmd_files => "../scRNA/scRNA_func.r;reportFunctions.Rmd",
+    option => "",
+    parameterSampleFile1 => {
+      outFile => getValue($def, "task_name")
+    },
+    parameterSampleFile2_ref => [$scDynamic_task, ".scDynamic.meta.rds"],
+    parameterSampleFile3_ref => [$individual_scDynamic_task, ".celltype_cell_num.csv"],
+    output_file_ext => ".html",
+    output_no_name => 1,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "20gb"
+    },
+  };
+  push( @$summary, $clustree_task );
 }
 
 1;
