@@ -99,6 +99,7 @@ our %EXPORT_TAGS = (
     addGeneCoverage
     get_next_index
     add_extract_bam_locus
+    has_comparison
     )
   ]
 );
@@ -3306,6 +3307,11 @@ samtools index __OUTPUT__
     }
   };
   push @$tasks, ($task_name);
+}
+
+sub has_comparison {
+  my $def = shift;
+  return ((defined $def->{pairs}) || (defined $def->{pairs_config}));
 }
 
 1;
