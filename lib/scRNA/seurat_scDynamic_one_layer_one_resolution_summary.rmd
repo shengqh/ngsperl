@@ -77,7 +77,7 @@ ct_count<-get_celltype_count(samples)
 colnames(ct_count)<-c("cell_type", "cell_num", "sample")
 
 sct_count<-acast(ct_count, cell_type ~ sample, value.var = "cell_num", fill=0)
-write.csv(sct_count, file=paste0(outFile, ".celltype_cell_num.csv"), row.names=F)
+write.csv(sct_count, file=paste0(outFile, ".celltype_cell_num.csv"), row.names=T)
 
 ct_perc <- ct_count %>%
   group_by(sample) %>%
