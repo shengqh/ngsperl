@@ -34,6 +34,9 @@ sub perform {
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   $self->{_task_suffix} = $task_suffix;
 
+  my $init_command = get_option( $config, $section, "init_command", "" );
+  my $post_command = get_option( $config, $section, "post_command", "" );
+
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program     = get_program( $config, $section );
 
@@ -167,8 +170,11 @@ fi
     }
 
     print $pbs "
+$init_command
+
 $interpretor $program $curOption $output_option
 
+$post_command
 ";
     $self->close_pbs( $pbs, $pbs_file );
   }
