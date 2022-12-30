@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P9061'
+outFile='mouse_8870'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge/result/P9061.final.rds'
-parFile2='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge_multires_01_call/result/P9061.meta.rds'
-parFile3='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/essential_genes/result/P9061.txt'
+parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony/result/mouse_8870.final.rds'
+parFile2='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dynamic_01_res0.2_call/result/mouse_8870.scDynamic.meta.rds'
+parFile3='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/essential_genes/result/mouse_8870.txt'
 
 
-setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_merge_multires_02_subcluster/result')
+setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dynamic_02_res0.2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -103,12 +103,13 @@ if(!is_file_empty(parSampleFile3)){
   rename_map = read.table(parSampleFile3, sep="\t", header=F)
 
   meta<-obj@meta.data
+  meta[,previous_layer]<-as.character(meta[,previous_layer])
 
   keys = unique(rename_map$V3)
   if("from" %in% rename_map$V2){
     rname = keys[1]
     for(rname in keys){
-      rmap = rename_map[rename_map$V3 == rname]
+      rmap = rename_map[rename_map$V3 == rname,]
       from = rmap$V1[rmap$V2=="from"]
       cluster = rmap$V1[rmap$V2=="cluster"]
       to = rmap$V1[rmap$V2=="to"]
@@ -128,7 +129,7 @@ if(!is_file_empty(parSampleFile3)){
   }else{
     rname = keys[1]
     for(rname in keys){
-      rmap = rename_map[rename_map$V3 == rname]
+      rmap = rename_map[rename_map$V3 == rname,]
       cluster = rmap$V1[rmap$V2=="cluster"]
       to = rmap$V1[rmap$V2=="to"]
 
@@ -140,8 +141,23 @@ if(!is_file_empty(parSampleFile3)){
       meta[cells,previous_layer]<-to
     }
   }
+  tb<-table(meta[,previous_layer])
+  tb<-tb[order(tb, decreasing=T)]
+  meta[,previous_layer]<-factor(meta[,previous_layer], levels=names(tb))
 
+  g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", legend.title="")
+  png(paste0(outFile, ".pre_rename.umap.png"), width=2400, height=2000, res=300)
+  print(g)
+  dev.off()
+  png()
+
+  saveRDS(meta, paste0(outFile, ".post_rename.meta.rds"))
   obj@meta.data<-meta
+
+  g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", legend.title="")
+  png(paste0(outFile, ".post_rename.umap.png"), width=2400, height=2000, res=300)
+  print(g)
+  dev.off()
 }
 
 bHasSignacX<-FALSE
@@ -401,4 +417,3 @@ write.csv(filelist, paste0(outFile, ".files.csv"))
 
 library('rmarkdown')
 rmarkdown::render("seurat_celltype_subcluster.v3.rmd",output_file=paste0(outFile,".subcluster.html"))
-
