@@ -13,6 +13,8 @@ use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
 use Data::Dumper;
+use SmallRNA::exceRpt;
+use Pipeline::SmallRNAUtils;
 use Hash::Merge qw( merge );
 
 require Exporter;
@@ -54,6 +56,8 @@ sub getConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  my $tasks = [@$individual, @$summary];
+
   my $target_dir      = $def->{target_dir};
 
   my $exceRpt_DB = getValue($def, "exceRpt_DB");
@@ -67,7 +71,7 @@ sub getConfig {
   my $MIN_READ_LENGTH = getValue($def, "MIN_READ_LENGTH");
 
   $config->{"exceRpt"} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
+    class                 => "SmallRNA::exceRpt",
     perform               => 1,
     target_dir            => "$target_dir/exceRpt",
     option                => "
@@ -113,9 +117,10 @@ singularity run \\
     output_to_same_folder => 0,
     output_arg            => "",
     output_file_prefix    => "",
-    output_file_ext       => ".extracted.1.fq.gz",
-    output_other_ext      => ".extracted.2.fq.gz",
+    output_file_ext       => "__NAME__/__FILE____NAME__/EXOGENOUS_rRNA/unaligned.fq.gz",
+    output_other_ext      => "",
     no_output             => 1, #no output defined in command
+    no_docker             => 1,
     sh_direct             => 0,
     pbs                   => {
       "nodes"     => "1:ppn=8",
@@ -124,13 +129,22 @@ singularity run \\
     },
   };
 
+  push(@$tasks, "exceRpt");
+
+  if($def->{perform_refseq_bacteria}){
+    my ($identical_ref, $identical_count_ref) = add_identical($config, $def, $tasks, $target_dir, ["exceRpt", "unaligned.fq.gz"]);
+
+    add_refseq_bacteria($config, $def, $tasks, $tasks, $target_dir, $target_dir, $target_dir,
+        $identical_ref, $identical_count_ref);
+  }
+
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      tasks => ["exceRpt"],
+      tasks => $tasks,
     },
     sh_direct => 0,
     cluster   => $cluster,
