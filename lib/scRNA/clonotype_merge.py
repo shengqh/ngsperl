@@ -68,7 +68,7 @@ def merge(json_file_list, output_file, logger):
         finaldata.append(record)
 
         cdr3=record['cdr3']
-        if cdr3 == None:
+        if cdr3 is None:
           continue
 
         for ann in record['annotations']:

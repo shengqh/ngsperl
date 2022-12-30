@@ -140,7 +140,7 @@ for name in sample_names:
       values[2] = item.QUAL
     values[3][name] = item.SNV
 
-  if vcf1 == None:
+  if vcf1 is None:
     vcf1 = vf
     itemFormat = vcf1.Items[0].FORMAT
     vf.Items.clear()

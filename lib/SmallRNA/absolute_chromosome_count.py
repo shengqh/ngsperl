@@ -39,7 +39,7 @@ logger.info("Reading counts from " + countFile)
 queries = readDupCountQueries(countFile, 0)
 query_map = {q.Name:q for q in queries}
 
-if name_map_file == None:
+if name_map_file is None:
   name_map = None
 else:
   name_map = {}

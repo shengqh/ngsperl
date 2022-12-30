@@ -113,7 +113,7 @@ class MutectResult:
       self.NormalSampleName = None
       for line in fin:
         if line.startswith("##"):
-          if line.startswith("##GATKCommandLine") and (self.TumorSampleName == None):
+          if line.startswith("##GATKCommandLine") and (self.TumorSampleName is None):
             #print(line)
             if "ID=Mutect2" in line:
               self.TumorSampleName = self.findMutect2SampleName(line, "--tumor-sample", True)

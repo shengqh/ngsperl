@@ -46,7 +46,7 @@ def main():
         if parts[4] == locusName:
           locusString = parts[0] + ":" + parts[1] + "-" + parts[2]
           break
-    if locusString == None:
+    if locusString is None:
       raise Exception(f'No gene {locusName} found in file {args.locus}')
   else:
     locusString = args.locus    

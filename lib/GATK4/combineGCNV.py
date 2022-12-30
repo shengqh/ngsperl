@@ -141,7 +141,7 @@ with open(annovarInputFile, "w") as fav:
         fout.write("%s\t%d\t%d\t%s\t\t\t%s\n" % (chrom, start, end, annotation, "\t".join(values)))
         fav.write("%s\t%d\t%d\t0\t0\n" % (chrom, start, end))
 
-if args.annovar_db == None:
+if args.annovar_db is None:
   if os.path.isfile(args.output):
     os.remove(args.output)
   os.rename(combinedFile, args.output)

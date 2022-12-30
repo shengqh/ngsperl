@@ -70,7 +70,7 @@ try:
       name = header.split(' ')[0]
       sequence = ccs.pop(name, None)
 
-      if sequence == None:
+      if sequence is None:
         continue
 
       ccCount = ccCount + 1

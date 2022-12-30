@@ -91,7 +91,7 @@ if os.path.isfile(annovar_outputfile):
           if a != 'UNKNOWN':
             aparts = a.split(':')
             ma = prog.match(aparts[-1])
-            if ma == None:
+            if ma is None:
               print(line)
             else:
               anno[aparts[1]] = ':'.join(aparts[0:3]) + ':p.X' + ma.group(1) + 'X'

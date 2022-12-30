@@ -157,7 +157,7 @@ def main():
   logger = logging.getLogger('fastq_validator')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
-  if args.input2 == None:
+  if args.input2 is None:
     return(validate1(logger, args.input, args.output))
   else:
     return(validate2(logger, args.input, args.input2, args.output))
