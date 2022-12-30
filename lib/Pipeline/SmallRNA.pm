@@ -233,7 +233,7 @@ sub getSmallRNAConfig {
   }
 
   #print(Dumper($def->{pairs_config}));
-  my $do_comparison = (defined $def->{pairs}) || (defined $def->{pairs_config});
+  my $do_comparison = has_comparison($def);
   print("do_comparison=" . $do_comparison . "\n");
   if ($do_comparison) {
     my $pairs = $def->{pairs};
