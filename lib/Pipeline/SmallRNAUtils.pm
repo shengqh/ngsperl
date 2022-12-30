@@ -15,6 +15,7 @@ require Exporter;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [qw(initializeSmallRNADefaultOptions 
+  add_identical
   getSmallRNADefinition 
   getPrepareConfig 
   isVersion3 
@@ -22,6 +23,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(initializeSmallRNADefaultOptions
   addPositionVis 
   addNonhostVis
   add_search_fasta
+  add_refseq_bacteria
   )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -433,6 +435,30 @@ sub getSmallRNADefinition {
   return $def;
 }
 
+sub add_identical {
+  my ($config, $def, $individual, $preprocessing_dir, $source_ref) = @_;
+
+  $config->{identical} = {
+    class      => "CQS::FastqIdentical",
+    perform    => 1,
+    target_dir => $preprocessing_dir . "/identical",
+    option     => "-l " . getValue($def, "min_read_length"),
+    source_ref => $source_ref,
+    extension  => "_clipped_identical.fastq.gz",
+    sh_direct  => 1,
+    use_first_read_after_trim => getValue($def, "use_first_read_after_trim"),
+    pbs        => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "24",
+      "mem"      => "20gb"
+    },
+  };
+  push @$individual, ("identical");
+  my $identical_ref = [ 'identical', '.fastq.gz$' ];
+  my $identical_count_ref = [ 'identical', '.dupcount$' ];
+  return($identical_ref, $identical_count_ref);
+}
+
 sub getPrepareConfig {
   my ($def) = @_;
 
@@ -697,6 +723,174 @@ sub add_search_fasta {
   push (@$summary, $bowtie1TableTask);
 
   return($bowtie1Task, $bowtie1CountTask, $bowtie1TableTask);
+}
+
+sub add_refseq_bacteria {
+  my ($config, $def, $individual_ref, $summary_ref, $host_intermediate_dir, $nonhost_genome_dir, $data_visualization_dir,
+      $identical_ref, $identical_count_ref, $libraryFile) = @_;
+
+  my $refseq_bacteria_bowtie = "refseq_bacteria_bowtie";
+  $config->{"refseq_bacteria_bowtie_index"} = getValue($def, "refseq_bacteria_bowtie_index");
+  $config->{$refseq_bacteria_bowtie} = {
+    class => "CQS::ProgramWrapperOneToManyScatter",
+    target_dir => "$host_intermediate_dir/$refseq_bacteria_bowtie",
+    interpretor => "",
+    program => "",
+    check_program => 0,
+    option => "
+rm -f __NAME_____SCATTERNAME__.failed
+
+bowtie -a --best -m 10000 --strata -v 0 -p 8 -x __SCATTER__ __FILE__ __OUTPUT__.tmp
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME_____SCATTERNAME__.failed
+  rm __OUTPUT__.tmp
+else
+  cut -f1-4 __OUTPUT__.tmp > __OUTPUT__
+  gzip __OUTPUT__
+  rm __OUTPUT__.tmp
+fi
+",
+    source_arg => "-x",
+    source_ref => $identical_ref,
+    scatter_arg => "",
+    scatter_ref => "refseq_bacteria_bowtie_index",
+    output_arg => "",
+    output_file_prefix => ".txt",
+    output_file_ext => ".txt.gz",
+    output_to_same_folder => 0,
+    can_result_be_empty_file => 0,
+    use_tmp_folder => getValue($def, "use_tmp_folder", 0),
+    sh_direct   => 0,
+    pbs => {
+      "nodes"     => "1:ppn=" . getValue($def, "${refseq_bacteria_bowtie}_nodes", "8"),,
+      "walltime"  => getValue($def, "${refseq_bacteria_bowtie}_walltime", "4"),
+      "mem"       => getValue($def, "${refseq_bacteria_bowtie}_mem", "20gb"),
+    },
+  };
+
+  push( @$individual_ref, $refseq_bacteria_bowtie );
+
+  my $refseq_bacteria_bowtie_count = "refseq_bacteria_bowtie_count";
+  $config->{$refseq_bacteria_bowtie_count} = {
+    class => "CQS::ProgramWrapperManyToOneGather",
+    target_dir => "$host_intermediate_dir/$refseq_bacteria_bowtie_count",
+    interpretor => "",
+    init_command => "",
+    post_command => "",
+    program => getValue($def, "spcount", "spcount"),
+    check_program => 0,
+    option => "bowtie_count --species_column " . getValue($def, "species_column", "species"),
+    source_arg => "-i",
+    source_ref => $identical_ref,
+    parameterSampleFile2_arg => "-c",
+    parameterSampleFile2_ref => $identical_count_ref,
+    sample_scatter_ref => $refseq_bacteria_bowtie,
+    scatter_ref => "refseq_bacteria_bowtie_index",
+    parameterFile1_arg => "-s",
+    parameterFile1 => getValue($def, "refseq_bacteria_species"),
+    output_arg => "-o",
+    output_file_prefix => ".txt.gz",
+    output_file_ext => ".txt.gz",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 0,
+    #no_docker => 1,
+    use_tmp_folder => getValue($def, "use_tmp_folder", 0),
+    sh_direct   => 0,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "${refseq_bacteria_bowtie_count}_walltime", "2"),
+      "mem"       => getValue($def, "${refseq_bacteria_bowtie_count}_mem", "20gb"),
+    },
+  };
+
+  push( @$individual_ref, $refseq_bacteria_bowtie_count );
+
+  my $categories = ["species", "genus", "family", "order", "class", "phylum" ];
+  my $file_exts = [];
+  for my $cat (@$categories){
+    push(@$file_exts, ".${cat}.query.count");
+    push(@$file_exts, ".${cat}.estimated.count");
+    push(@$file_exts, ".${cat}.aggregated.count");
+  }
+  my $file_ext_str = ".read.count,.tree.count," . join(",", @$file_exts);
+
+  my $refseq_bacteria_table = "refseq_bacteria_table";
+  $config->{$refseq_bacteria_table} = {
+    class => "CQS::ProgramWrapper",
+    target_dir => "$nonhost_genome_dir/$refseq_bacteria_table",
+    interpretor => "",
+    program => getValue($def, "spcount", "spcount"),
+    check_program => 0,
+    option => "count_table -o __NAME__ --species_column " . getValue($def, "species_column", "species"),
+    source_arg => "-i",
+    source_ref => $refseq_bacteria_bowtie_count,
+    parameterFile1_arg => "-s",
+    parameterFile1 => getValue($def, "refseq_bacteria_species"),
+    parameterFile2_arg => "-t",
+    parameterFile2 => getValue($def, "refseq_taxonomy"),
+    output_arg => "-o",
+    output_file_ext => $file_ext_str,
+    #no_docker => 1,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "${refseq_bacteria_table}_walltime", "24"),
+      "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "100gb"),
+    },
+  };
+
+  push( @$summary_ref, $refseq_bacteria_table );  
+
+  my @file_exts = ();
+
+  my $task_name = $def->{task_name};
+  my $files = $def->{files};
+  my $groups = $def->{groups};
+  for my $sample (sort keys %$files){
+    push(@file_exts, ".${sample}.html");
+  }
+  for my $gname (sort keys %$groups){
+    push(@file_exts, ".${gname}.html");
+  }
+
+  my $krona_count_table = getValue($def, "krona_count_table", "estimated");
+  my $refseq_bacteria_krona = "refseq_bacteria_krona_" . $krona_count_table;
+  my $krona_ref;
+  if ($krona_count_table eq "estimated"){
+    $krona_ref = [$refseq_bacteria_table, ".species.estimated.count"];
+  }elsif($krona_count_table eq "aggregated"){
+    $krona_ref = [$refseq_bacteria_table, ".tree.count"];
+  }else{
+    die "krona_count_table should be either estimated or aggregated, now is " . $krona_count_table;
+  }
+
+  $config->{$refseq_bacteria_krona} = {
+    class => "CQS::ProgramWrapper",
+    target_dir => "$data_visualization_dir/$refseq_bacteria_krona",
+    interpretor => "",
+    program => getValue($def, "spcount", "spcount"),
+    check_program => 0,
+    option => "krona -o __NAME__ ",
+    post_command => "rm -rf *.html.files .cache .config",
+    parameterSampleFile1_arg => "-g",
+    parameterSampleFile1 => $groups,
+    parameterFile1_arg => "-i",
+    parameterFile1_ref => $krona_ref,
+    parameterFile2_arg => "-t",
+    parameterFile2     => getValue($def, "krona_taxonomy_folder"),
+    output_arg => "-o",
+    output_file_ext => join(",", @file_exts),
+    #no_docker => 1,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "${refseq_bacteria_krona}_walltime", "10"),
+      "mem"       => getValue($def, "${refseq_bacteria_krona}_mem", "20gb"),
+    },
+  };
+  push( @$summary_ref, $refseq_bacteria_krona );  
 }
 
 1;
