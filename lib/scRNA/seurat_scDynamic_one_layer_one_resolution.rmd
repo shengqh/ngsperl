@@ -96,6 +96,12 @@ cat(figureRmd(files, outFile), file=resFile)
 
 ## Overview
 
+### Sample / Cell type
+```{r, echo=FALSE}
+scts<-read.csv(paste0(outFile, ".layer4.sample_celltype.csv"), check.names=F, row.names=1)
+print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type of each sample"))))
+```
+
 ### UMAP
 
 ```{r, echo=FALSE}
@@ -154,12 +160,11 @@ pctRmd<-function(outFile, cell_identity, pcts, files){
   }
   return(result)
 }
-pcts<-colnames(read.csv(paste0(outFile, ".layer4.sample_celltype.csv"), check.names=F, row.names=1))
+
+pcts<-colnames(scts)
 pct_file<-"pct.Rmd"
 cat(pctRmd(outFile, "layer4", pcts, files), file=pct_file)
 ```
 
 ```{r, child=pct_file} 
 ```
-
-

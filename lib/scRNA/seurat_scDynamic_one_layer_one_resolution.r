@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='scar_normal'
+outFile='crs'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/data/h_gelbard_lab/projects/20221223_scar_normal_scRNA/seurat_sct_harmony/result/scar_normal.final.rds'
+parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_harmony/result/crs.final.rds'
 parFile2=''
-parFile3='/data/h_gelbard_lab/projects/20221223_scar_normal_scRNA/essential_genes/result/scar_normal.txt'
+parFile3='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
 
 
-setwd('/data/h_gelbard_lab/projects/20221223_scar_normal_scRNA/seurat_sct_harmony_dynamic_01_res0.2_call/result')
+setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_harmony_dynamic_01_res0.2_call/result')
 
 ### Parameter setting end ###
 
@@ -96,14 +96,17 @@ cell_activity_database<-ctdef$cell_activity_database
 layer2map<-ctdef$celltype_map
 
 combined_ct<-ctdef$combined_celltypes
-combined_ct_in_layer<-unique(combined_ct[combined_ct %in% names(layer2map)])
-combined_ct[combined_ct_in_layer]<-combined_ct_in_layer
+if(!all(is.na(combined_ct))){
+  combined_ct_in_layer<-unique(combined_ct[combined_ct %in% names(layer2map)])
+  combined_ct[combined_ct_in_layer]<-combined_ct_in_layer
 
-layer2map[layer2map %in% names(combined_ct)]<-combined_ct[layer2map[layer2map %in% names(combined_ct)]]
+  layer2map[layer2map %in% names(combined_ct)]<-combined_ct[layer2map[layer2map %in% names(combined_ct)]]
 
-combined_ct_source<-split(names(combined_ct), combined_ct)
-rm(combined_ct)
-
+  combined_ct_source<-split(names(combined_ct), combined_ct)
+  rm(combined_ct)
+}else{
+  combined_ct_source<-NA
+}
 prefix<-outFile
 
 if(!exists('obj')){
@@ -218,19 +221,21 @@ iterate_celltype<-function(obj,
     curreduction=ifelse(by_harmony, "harmony", "pca")
 
     if(pct != "Unassigned") {
-      subobj = sub_cluster(subobj, 
-                            assay, 
-                            by_sctransform, 
-                            by_harmony, 
-                            redo_harmony, 
-                            curreduction, 
-                            k_n_neighbors,
-                            u_n_neighbors,
-                            random.seed,
-                            resolution,
-                            cur_npcs, 
-                            cur_pca_dims,
-                            vars.to.regress)
+      subobj = sub_cluster(subobj = subobj, 
+                            assay =  assay, 
+                            by_sctransform = by_sctransform, 
+                            by_harmony = by_harmony, 
+                            redo_harmony = redo_harmony,
+                            curreduction = curreduction, 
+                            k_n_neighbors = k_n_neighbors,
+                            u_n_neighbors = u_n_neighbors,
+                            random.seed = random.seed,
+                            resolutions = resolution,
+                            cur_npcs = cur_npcs, 
+                            cur_pca_dims = cur_pca_dims,
+                            vars.to.regress = vars.to.regress,
+                            essential_genes = essential_genes
+                            )
     }else{
       cat(key, "FindNeighbors\n")
       subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
@@ -574,19 +579,20 @@ if(by_individual_sample){
     }
 
     #for each sample, do its own PCA, FindClusters and UMAP first
-    subobj = sub_cluster( subobj, 
-                          assay, 
-                          by_sctransform, 
-                          by_harmony=FALSE, 
-                          redo_harmony=FALSE, 
-                          curreduction="pca", 
-                          k_n_neighbors=min(npcs, 20),
-                          u_n_neighbors=min(npcs, 30),
-                          random.seed,
-                          resolution,
-                          cur_npcs=npcs, 
-                          cur_pca_dims=c(1:npcs),
-                          vars.to.regress)    
+    subobj = sub_cluster( subobj = subobj, 
+                          assay = assay, 
+                          by_sctransform = by_sctransform, 
+                          by_harmony = FALSE, 
+                          redo_harmony = FALSE, 
+                          curreduction = "pca", 
+                          k_n_neighbors = min(npcs, 20),
+                          u_n_neighbors = min(npcs, 30),
+                          random.seed = random.seed,
+                          resolutions = resolution,
+                          cur_npcs = npcs, 
+                          cur_pca_dims = c(1:npcs),
+                          vars.to.regress = vars.to.regress,
+                          essential_genes = essential_genes)    
 
     res_list = do_analysis( tmp_folder = tmp_folder,
                             cur_folder = cur_folder,
