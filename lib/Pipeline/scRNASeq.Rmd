@@ -148,4 +148,3 @@ DimPlot(object = pbmc, reduction = 'tsne', label=FALSE, group.by="orig.ident")
 VlnPlot(pbmc, features = c("CCR7", "TCF7", "FOXP3", "CD25", "GZMA", "PRF1", "PD1", "LAG3", "TIGIT", "CTLA4"), 
     pt.size = 0.2, ncol = 4)
 ```
-}
