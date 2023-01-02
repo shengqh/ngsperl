@@ -2082,7 +2082,7 @@ sub add_clustree_rmd {
     parameterSampleFile2_ref => [$scDynamic_task, ".scDynamic.meta.rds"],
     parameterSampleFile3_ref => [$individual_scDynamic_task, ".celltype_cell_num.csv"],
     output_file_ext => ".html",
-    output_no_name => 1,
+    output_no_name => 0,
     can_result_be_empty_file => 0,
     sh_direct   => 1,
     pbs => {
