@@ -265,8 +265,23 @@ sub getScRNASeqConfig {
       #print("hto_files=" . Dumper($hto_files));
     }
 
+    my $hto_raw_file_ref = undef;
+    my $raw_files = $def->{raw_files};
+    if(defined $raw_files){
+      $hto_raw_file_ref = "raw_files";
+      if(defined $hto_file_names){
+        my $hto_raw_files = {};
+        for my $hto_name (@$hto_file_names){
+          $hto_raw_files->{$hto_name} = $raw_files->{$hto_name};
+        }
+        $config->{hto_raw_files} = $hto_raw_files;
+        $hto_raw_file_ref = "hto_raw_files";
+      }
+    }
+
+
     if( $perform_split_hto_samples ) {
-      my $preparation_task = add_hto_samples_preparation($config, $def, $summary, $target_dir, $hto_file_ref);
+      my $preparation_task = add_hto_samples_preparation($config, $def, $summary, $target_dir, $hto_file_ref, $hto_raw_file_ref);
       $hto_file_ref = [ $preparation_task, ".hto.rds"];
 
       if(defined $def->{HTO_samples}){
