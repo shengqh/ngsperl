@@ -1,3 +1,18 @@
+rm(list=ls()) 
+outFile='P9061'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_byCell/result/P9061.edgeR.files.csv'
+parFile2=''
+parFile3=''
+
+
+setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_byCell_WebGestalt/result')
+
+### Parameter setting end ###
+
+source("WebGestaltReportFunctions.r")
 options(bitmapType='cairo')
 
 library(WebGestaltR)
@@ -6,11 +21,11 @@ sigGeneList<-read.csv(parFile1)
 sigGeneList$sigGenenameFile<-paste0(dirname(parFile1), "/", sigGeneList$sigGenenameFile)
 
 params_def=read.table(parSampleFile1, sep="\t", stringsAsFactors = F)
-params <- setNames(as.character(params_def$V1), params_def$V2)
+params <- split(params_def$V1, params_def$V2)
 
-organism=params['organism']
-interestGeneType=params['interestGeneType']
-referenceSet=params['referenceSet']
+organism=params$organism
+interestGeneType=params$interestGeneType
+referenceSet=params$referenceSet
 outputDirectory = getwd()
 
 cat("organism=", organism, "\n")
@@ -29,7 +44,7 @@ cat("referenceSet=", referenceSet, "\n")
 allres=NULL
 idx=1
 for(idx in c(1:nrow(sigGeneList))) {
-  sampleName = sigGeneList$comparison[idx]
+  sampleName = sigGeneList$prefix[idx]
   geneFile = sigGeneList$sigGenenameFile[idx]
   
   cat("sampleName=", sampleName, "\n")
