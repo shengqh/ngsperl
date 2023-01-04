@@ -153,7 +153,7 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_CHETAH", 0 );
 
-  initDefaultValue( $def, "perform_multires", 1 );
+  initDefaultValue( $def, "perform_multires", 0 );
   
   initDefaultValue( $def, "perform_dynamic_cluster", 1 );
   initDefaultValue( $def, "dynamic_by_one_resolution", 0.2 );
