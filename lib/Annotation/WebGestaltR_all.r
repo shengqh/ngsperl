@@ -73,21 +73,26 @@ for(idx in c(1:nrow(sigGeneList))) {
   }
   genes=unique(genes)
   
+  if (length(genes) < 5){
+    warning(paste0("WARNING: less than 5 genes for ", sampleName, ", ignore."))
+    next
+  }
   
-  enrichDatabases<-c("geneontology_Biological_Process_noRedundant", 
-                     "geneontology_Cellular_Component_noRedundant", 
+  enrichDatabases<-c("geneontology_Biological_Process_noRedundant",
+                     "geneontology_Cellular_Component_noRedundant",
                      "geneontology_Molecular_Function_noRedundant",
-                     "pathway_KEGG" 
-                     #"pathway_Wikipathway", 
+                     "pathway_KEGG"
+                     #"pathway_Wikipathway",
                      #"network_miRNA_target",
-                     #"network_PPI_BIOGRID", 
+                     #"network_PPI_BIOGRID",
                      #"network_Transcription_Factor_target"
   )
   names(enrichDatabases)<-c("GO_BP_nr","GO_CC_nr","GO_MF_nr", "KEGG")
-  
+
+  dbName=names(enrichDatabases)[1]
   for(dbName in names(enrichDatabases)){
     enrichDatabase = enrichDatabases[dbName]
-    projectName=paste0(sampleName, "_", dbName)
+    projectName=paste0(gsub("\\.","_",sampleName), "_", dbName)
     subdir = paste0(outputDirectory, "/Project_", projectName)
     resultFile=paste0(subdir, "/enrichment_results_", projectName, ".txt")
     allres=rbind(allres, data.frame("File"=resultFile, "Database"=enrichDatabase, "Comparison"=sampleName))
