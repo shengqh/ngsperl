@@ -14,6 +14,11 @@ is_one<-function(value){
   return(value == '1')
 }
 
+read_map<-function(map_file){
+  tbl=read.table(map_file, sep="\t")
+  result=split(tbl$V1, tbl$V2)
+}
+
 save_to_matrix<-function(counts, target_folder) {
   if(!dir.exists(target_folder)){
     dir.create(target_folder)
@@ -50,6 +55,7 @@ rename_tags<-function(tags){
   return(result)
 }
 
+#read raw hto file
 read_hto_file<-function(cname, cfiles){
   if(length(cfiles) == 1){
     cat("preparing", cname, ":", cfiles, " ...\n")
@@ -124,6 +130,7 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1)
   grid.arrange(grobs=gfinal, nrow=n_row)
 }
 
+#read prepared hto object
 read_hto<-function(rdsfile, output_prefix, cur_tags=NULL) {
   htos<-readRDS(rdsfile)
   if(!all(is.null(cur_tags))){
@@ -187,8 +194,11 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
   
   if(length(tagnames) >= 2) {
     VariableFeatures(obj)<-tagnames
+
+    cat("ScaleData...\n")
     obj<-ScaleData(obj)
 
+    cat("RunUMAP...\n")
     #https://jlmelville.github.io/uwot/abparams.html
     #adjust param for umap
     obj<-RunUMAP(obj, features=tagnames, slot="scale.data", min.dist=umap_min_dist, n.neighbors=umap_num_neighbors)
