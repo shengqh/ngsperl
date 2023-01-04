@@ -1474,7 +1474,7 @@ sub add_scRNABatchQC{
 }
 
 sub add_hto_samples_preparation {
-  my ($config, $def, $summary, $target_dir, $hto_file_ref) = @_;
+  my ($config, $def, $summary, $target_dir, $hto_file_ref, $hto_raw_file_ref) = @_;
   my $preparation_task = "hto_samples_preparation";
   $config->{$preparation_task} = {
     class => "CQS::UniqueR",
@@ -1486,7 +1486,10 @@ sub add_hto_samples_preparation {
       hto_regex => getValue($def, "hto_regex", ""),
       nFeature_cutoff_min => getValue($def, "nFeature_cutoff_min"),
       hto_non_zero_percentage => getValue($def, "hto_non_zero_percentage", 0.2),
+      hto_filter_by_exp => getValue($def, "hto_filter_by_exp", 1),
+      hto_min_count => getValue($def, "hto_min_count", 2),
     },
+    parameterSampleFile3_ref => $hto_raw_file_ref,
     output_perSample_file => "parameterSampleFile1",
     output_perSample_file_byName => 1,
     output_perSample_file_ext => ".hto.rds;.barcodes.tsv",
@@ -1505,6 +1508,39 @@ sub add_hto_samples_preparation {
 
 sub add_hto {
   my ($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file) = @_;
+
+  if(getValue($def, "split_hto_samples_by_GMM_demux", 0)){
+    my $hto_gmm_task = "hto_samples_gmm_demux";
+    my $gmm_demux_option = getValue($def, "gmm_demux_option");
+    $config->{$hto_gmm_task} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => "${target_dir}/$hto_gmm_task",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      option => "
+res_dir=\$( dirname __FILE__ )
+GMM-demux \$res_dir/__NAME__ $gmm_demux_option -f __NAME__ -o __NAME__
+",
+      source_arg => "-f",
+      source_ref => $hto_file_ref,
+      output_arg => "-o",
+      output_file_prefix => "",
+      output_no_name => 1,
+      output_file_ext => "clusters.tsv",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 0,
+      sh_direct => 0,
+      no_docker => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "20gb"
+      },
+    };
+    push( @$summary, $hto_gmm_task );
+  }
+
   my $hto_task;
   my $r_script = undef;
   if ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
