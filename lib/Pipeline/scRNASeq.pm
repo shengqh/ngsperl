@@ -288,6 +288,11 @@ sub getScRNASeqConfig {
         $hto_sample_file = write_HTO_sample_file($def);
       }
 
+      if(getValue($def, "split_hto_samples_by_GMM_demux", 0)){
+        my $gmm_demux_task = add_hto_gmm_demux($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
+        my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, [$gmm_demux_task, ".HTO.csv"]);
+      }
+
       my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
       $hto_ref = [ $hto_task, ".HTO.csv" ];
 

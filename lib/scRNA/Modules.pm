@@ -19,6 +19,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_scRNABatchQC
 
   add_hto_samples_preparation  
+  add_hto_gmm_demux
   add_hto
   add_hto_summary
 
@@ -1506,40 +1507,71 @@ sub add_hto_samples_preparation {
   return($preparation_task);
 }
 
-sub add_hto {
-  my ($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file) = @_;
+sub add_hto_gmm_demux {
+  my ($config, $def, $tasks, $target_dir, $hto_file_ref, $hto_sample_file) = @_;
 
-  if(getValue($def, "split_hto_samples_by_GMM_demux", 0)){
-    my $hto_gmm_task = "hto_samples_gmm_demux";
-    my $gmm_demux_option = getValue($def, "gmm_demux_option");
-    $config->{$hto_gmm_task} = {
-      class => "CQS::ProgramWrapperOneToOne",
-      target_dir => "${target_dir}/$hto_gmm_task",
-      interpretor => "",
-      program => "",
-      check_program => 0,
-      option => "
+  my $hto_gmm_task = "hto_samples_gmm_demux";
+  my $gmm_demux_option = getValue($def, "gmm_demux_option");
+  $config->{$hto_gmm_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$hto_gmm_task",
+    interpretor => "",
+    program => "",
+    check_program => 0,
+    option => "
 res_dir=\$( dirname __FILE__ )
 GMM-demux \$res_dir/__NAME__ $gmm_demux_option -f __NAME__ -o __NAME__
 ",
-      source_arg => "-f",
-      source_ref => $hto_file_ref,
-      output_arg => "-o",
-      output_file_prefix => "",
-      output_no_name => 0,
-      output_file_ext => "__NAME__/GMM_full.csv",
-      output_to_same_folder => 1,
-      can_result_be_empty_file => 0,
-      sh_direct => 0,
-      no_docker => 1,
-      pbs => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "20gb"
-      },
-    };
-    push( @$summary, $hto_gmm_task );
-  }
+    source_arg => "-f",
+    source_ref => $hto_file_ref,
+    output_arg => "-o",
+    output_file_prefix => "",
+    output_no_name => 0,
+    output_file_ext => "__NAME__/GMM_full.csv,__NAME__/GMM_full.config",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 0,
+    sh_direct => 0,
+    no_docker => 0,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "20gb"
+    },
+  };
+  push( @$tasks, $hto_gmm_task );
+
+  my $hto_task = "hto_samples_gmm_demux_merge";
+
+  $config->{$hto_task} = {
+    class => "CQS::UniqueR",
+    target_dir => "${target_dir}/$hto_gmm_task",
+    rtemplate => "../scRNA/split_samples_utils.r,../scRNA/split_samples_gmm_demux_merge.r",
+    option => "",
+    parameterFile1 => $hto_sample_file,
+    parameterSampleFile1_ref => [$hto_gmm_task, "GMM_full.csv"],
+    parameterSampleFile2_ref => [$hto_gmm_task, "GMM_full.config"],
+    parameterSampleFile3 => {
+      umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),
+      umap_num_neighbors => getValue($def, "hto_umap_num_neighbors", 30),
+    },
+    parameterSampleFile4 => $def->{"HTO_tags"},
+    parameterSampleFile5_ref => $hto_file_ref,
+    output_perSample_file => "parameterSampleFile1",
+    output_perSample_file_byName => 1,
+    output_perSample_file_ext => ".HTO.umap.class.png;.HTO.csv;.HTO.data.csv;.HTO.umap.rds",
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $hto_task );
+  return($hto_task);
+}
+
+sub add_hto {
+  my ($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file) = @_;
 
   my $hto_task;
   my $r_script = undef;
