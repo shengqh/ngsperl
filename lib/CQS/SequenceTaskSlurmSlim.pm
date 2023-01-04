@@ -304,7 +304,11 @@ sub perform {
         #get_final_file_by_task_name($expect_file_map, $sample);
           
         if(not defined $expect_file){
-          print "Found error";
+          if($sample eq $task_name) {
+            $expect_file = $myclass->get_absolute_final_file($config, $task_section);
+          }else{
+            print "Found error, $sample not in result list of $task_section\n";
+          }
         }
         print $final_submit "if [[ (1 -eq \$1) || ((! -s $expect_file) && (! -d $expect_file)) ]]; then \n";
         print $final_submit "  jid" . $final_index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}') \n";
