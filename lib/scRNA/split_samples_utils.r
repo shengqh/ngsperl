@@ -4,6 +4,91 @@ library(Seurat)
 library(gridExtra)
 library(ggExtra)
 
+is_one<-function(value){
+  if(is.na(value)){
+    return(FALSE)
+  }
+  if(is.null(value)){
+    return(FALSE)
+  }
+  return(value == '1')
+}
+
+save_to_matrix<-function(counts, target_folder) {
+  if(!dir.exists(target_folder)){
+    dir.create(target_folder)
+  }
+  
+  bar_file=paste0(target_folder, "/barcodes.tsv")
+  writeLines(colnames(counts), bar_file)
+  gzip(bar_file, overwrite=T)
+  
+  feature_file=paste0(target_folder, "/features.tsv")
+  writeLines(rownames(counts), feature_file)
+  gzip(feature_file, overwrite=T)
+  
+  matrix_file=paste0(target_folder, "/matrix.mtx")
+  writeMM(counts, matrix_file)
+  gzip(matrix_file, overwrite=T)
+}
+
+output_tag_dist<-function(obj, filename){
+  tagnames=rownames(obj[["HTO"]])
+  n_col=ceiling(sqrt(length(tagnames)))
+  n_row=ceiling(length(tagnames) / n_col)
+  width=max(3200, n_col * 3000 + 200)
+  height=max(3000, n_row * 3000)
+  png(filename, width=width, height=height, res=300)
+  rplot(object=obj, assay="HTO", features = tagnames, identName="orig.ident", n_row=n_row)
+  dev.off()
+}
+
+rename_tags<-function(tags){
+  result<-gsub("^TotalSeqC_", "", tags)
+  result<-gsub("^TotalSeq_", "", result)
+  result<-gsub('.TotalSeqC$', "", result)
+  return(result)
+}
+
+read_hto_file<-function(cname, cfiles){
+  if(length(cfiles) == 1){
+    cat("preparing", cname, ":", cfiles, " ...\n")
+    if(grepl('.h5$', cfiles)){
+      sdata<-Read10X_h5(cfiles)
+      exp<-sdata[[1]]
+      writeLines(colnames(exp),con = paste0(cname, ".barcodes.tsv"))
+      htos<-sdata[[2]]
+      htos<-as.matrix(htos)
+    }else{
+      stop(paste0("Unknown file format:", cfiles))
+    }
+  }else{
+    hfile=cfiles[[1]]
+    cat("preparing", cname, ":", hfile, " ...\n")
+    efile=cfiles[[2]]
+    if(grepl('hto_mtx.rds$', hfile)){
+      htos<-readRDS(hfile)
+      htos<-as.matrix(htos)
+      #tag number should less than cell number
+      if(ncol(htos) < nrow(htos)){
+        htos=t(htos)
+      }
+      exp<-readRDS(efile)
+      cells.use <- intersect(colnames(exp), colnames(htos))
+      exp<-exp[, cells.use]
+      htos<-htos[, cells.use]
+    }else{
+      stop(paste0("Unknown file format:", cfiles))
+    }
+  }
+
+  cat("Before name clean: ", paste(rownames(htos), collapse=","), "\n")
+  rownames(htos)<-rename_tags(rownames(htos))
+  cat("After name clean: ", paste(rownames(htos), collapse=","), "\n")
+
+  return(list(exp=exp, htos=htos))
+}
+
 rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1){
   DefaultAssay(object = object) <- assay
   data <- FetchData(object = object, vars = c(features, identName))
@@ -41,18 +126,27 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1)
 
 read_hto<-function(rdsfile, output_prefix, cur_tags=NULL) {
   htos<-readRDS(rdsfile)
-
   if(!all(is.null(cur_tags))){
     if(!all(cur_tags %in% rownames(htos))){
       stop(paste0("Not all tags ", paste0(cur_tags, collapse = ","), " in tag names: ", paste0(rownames(htos), collapse = ",")))
     }
-    htos<-htos[cur_tags,]
   }
 
-  obj <- CreateSeuratObject(counts = htos, assay="HTO")
-  # Normalize HTO data, here we use centered log-ratio (CLR) transformation
-  obj <- NormalizeData(obj, assay = "HTO", normalization.method = "CLR")
-  DefaultAssay(object = obj) <- "HTO"
+  if('Seurat' %in% class(htos)){
+    obj<-htos
+    if(!all(is.null(cur_tags))){
+      obj<-subset(obj, features=cur_tags)
+    }
+  }else{
+    if(!all(is.null(cur_tags))){
+      htos<-htos[cur_tags,]
+    }
+    obj <- CreateSeuratObject(counts = htos, assay="HTO")
+    obj <- subset(obj, nCount_HTO > 0)
+    # Normalize HTO data, here we use centered log-ratio (CLR) transformation
+    obj <- NormalizeData(obj, assay = "HTO", normalization.method = "CLR")
+    DefaultAssay(object = obj) <- "HTO"
+  }
 
   return(obj)
 }
