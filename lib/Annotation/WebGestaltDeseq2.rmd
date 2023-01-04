@@ -112,6 +112,10 @@ deseq2<-plotData$deseq2
 
 cat(paste0("### ", tabRef("enriched", plotData$category), "\n\n"))
 
+if(all(enriched$FDR >= 0.05)){
+	cat(paste0('\n#### <span style="color:red">WARNING: no geneset is significantly enriched, display top 10.</span>\n\n'))
+}
+
 enriched<-updateEnrichedTable(enriched)
 
 rowCount<-nrow(enriched)
@@ -124,14 +128,14 @@ curTable=enriched
 
 if (("geneUp" %in% colnames(curTable)) & ("geneDown" %in% colnames(curTable)) ) {
   curTable<-enriched[c(1:rowCount),c(1:9, 12,13)]
-  print(kable(curTable) %>%
+  print(kable(curTable, row.names=F) %>%
 	  kable_styling() %>%
 	  row_spec(which(curTable$geneUp > curTable$geneDown), color = "black", background = "bisque") %>%
 	  row_spec(which(curTable$geneUp < curTable$geneDown), color = "black", background = "honeydew") %>%
 	  htmltools::HTML())
 } else {
   curTable<-enriched[c(1:rowCount),c(1:9)]
-  print(kable(curTable) %>%
+  print(kable(curTable, row.names=F) %>%
 	  kable_styling() %>%
 	  htmltools::HTML())
 }
@@ -149,13 +153,13 @@ for(idx in c(1:rowCount)){
 	# 	row_spec(which(entryTable[,diffCol] > diffCenterValue), color = "black", background = "bisque") %>% 
 	# 	row_spec(which(entryTable[,diffCol] < diffCenterValue), color = "black", background = "honeydew") %>%
 	# 	htmltools::HTML())
-	temp=kable(entryTable) %>%		kable_styling()
-  if (!is.null(diffCol)) {
-    temp=temp %>% 
-	  	row_spec(which(entryTable[,diffCol] > diffCenterValue), color = "black", background = "bisque") %>% 
-	  	row_spec(which(entryTable[,diffCol] < diffCenterValue), color = "black", background = "honeydew")
-  }
-  print(temp %>% htmltools::HTML())
+	temp=kable(entryTable, row.names=F) %>%	kable_styling()
+	if (!is.null(diffCol)) {
+		temp=temp %>% 
+			row_spec(which(entryTable[,diffCol] > diffCenterValue), color = "black", background = "bisque") %>% 
+			row_spec(which(entryTable[,diffCol] < diffCenterValue), color = "black", background = "honeydew")
+	}
+	print(temp %>% htmltools::HTML())
 	cat("\n\n<hr>")
 }
 

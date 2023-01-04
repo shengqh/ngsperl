@@ -14,7 +14,8 @@ readFilesAndFormat=function(compDeseq2File) {
     deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
   }else if(all(c("logFC", "logCPM", "F", "PValue", "FDR") %in% colnames(deseq2))) {
     deseq2$GENE<-rownames(deseq2)
-    deseq2=deseq2[c("GENE", "logFC", "logCPM", "F", "PValue", "FDR")]
+    deseq2$FoldChange=2**deseq2$logFC
+    deseq2=deseq2[c("GENE", "logFC", "logCPM", "F", "PValue", "FDR", "FoldChange")]
   }
   return(deseq2)
 }
