@@ -50,11 +50,16 @@ sub perform {
 
 sub get_absolute_final_file {
   my ( $self, $config, $section, $sample ) = @_;
-  my $expect = $self->result( $config, $section );
+  my $expect = $self->result( $config, $section, "(?<!version)\$", 1 );
+
+  my @samples = sort keys %$expect;
+  @samples = sort { $b cmp $a } @samples;
 
   if ( not defined $sample ) {
-    my @samples = sort keys %$expect;
-    @samples = sort { $b cmp $a } @samples;
+    $sample  = $samples[0];
+  }
+
+  if (not defined $expect->{$sample}){
     $sample  = $samples[0];
   }
 
@@ -62,6 +67,10 @@ sub get_absolute_final_file {
   my @final_files     = @$final_files_ref;
 
   my @no_filelists = grep(!/.filelist$/, @final_files);
+  if(scalar(@no_filelists) == 0){
+    die "Cannot find final file of $sample in section $section";
+  }
+
   my $result          = $self->{_final_file_in_last} ? $no_filelists[-1] :  $no_filelists[0];
 
   return ($result);
@@ -90,7 +99,7 @@ sub get_result_files {
 }
 
 sub result {
-  my ( $self, $config, $section ) = @_;
+  my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section );
 
@@ -99,7 +108,9 @@ sub result {
   my $raw_files = get_raw_files($config, $section);
   for my $sample_name (sort keys %$raw_files){
     if ( $self->acceptSample( $config, $section, $sample_name ) ) {
-      $result->{$sample_name} = $self->get_result_files( $config, $section, $result_dir, $sample_name );
+      my $result_files = $self->get_result_files( $config, $section, $result_dir, $sample_name );
+      my $filtered_files = filter_array( $result_files, $pattern, 1 );
+      $result->{$sample_name} = $filtered_files;
     }
   }
 
