@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='PH_combine'
+outFile='P9061'
 parSampleFile1=''
 parSampleFile2=''
 parSampleFile3=''
-parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result/PH_combine.edgeR.files.csv'
+parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_byCell/result/P9061.edgeR.files.csv'
 parFile2=''
 parFile3=''
 outputDirectory='.'
-gseaDb='C:/projects/database/gsea/v7.5.1/'; gseaJar='gsea-cli.bat'; gseaCategories=c('h.all.v7.5.1.symbols.gmt', 'c2.all.v7.5.1.symbols.gmt', 'c5.all.v7.5.1.symbols.gmt', 'c6.all.v7.5.1.symbols.gmt', 'c7.all.v7.5.1.symbols.gmt'); makeReport=0;
+gseaDb='/data/cqs/references/gsea/v2022.1.Mm'; gseaJar='gsea-cli.sh'; gseaCategories=c('mh.all.v2022.1.Mm.symbols.gmt', 'm2.all.v2022.1.Mm.symbols.gmt', 'm5.all.v2022.1.Mm.symbols.gmt', 'm8.all.v2022.1.Mm.symbols.gmt'); makeReport=0;
 
-setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_GSEA/result')
+setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_byCell_GSEA/result')
 
 ### Parameter setting end ###
 
@@ -28,7 +28,22 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
                   gseaChip
 )
 {
-  fileToName=c("h"="HallmarkGeneSets","c1"="PositionalGeneSets","c2"="CuratedGeneSets","c3"="MotifGeneSets","c4"="ComputationalGeneSets","c5"="GOGeneSets","c6"="OncogenicGeneSets","c7"="ImmunologicGeneSets")
+  fileToName=c(
+    "h"="HallmarkGeneSets",
+    "c1"="PositionalGeneSets",
+    "c2"="CuratedGeneSets",
+    "c3"="RegulatoryTargetGeneSets",
+    "c4"="ComputationalGeneSets",
+    "c5"="OntologyGeneSets",
+    "c6"="OncogenicSignatureGeneSets",
+    "c7"="ImmunologicSignatureGeneSets",
+    "c8"="CellTypeSignatureGeneSets",
+    "mh"="HallmarkGeneSets",
+    "m1"="PositionalGeneSets",
+    "m2"="CuratedGeneSets",
+    "m3"="RegulatoryTargetGeneSets",
+    "m5"="OntologyGeneSets",
+    "m8"="CellTypeSignatureGeneSets")
   
   gsea_name=gsub("_min5_fdr.*", "", basename(preRankedGeneFile))
   gsea_name=gsub("_GSEA.rnk", "", gsea_name)
@@ -88,8 +103,8 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
 
 if(file.exists(parFile1)){
   preRankedGeneFileTable=read.csv(parFile1,header=T,as.is=T,row.names=1)
-  preRankedGeneFileTable$V1 = paste0(dirname(parFile1), "/", preRankedGeneFileTable$gseaFile)
-  preRankedGeneFileTable$V2 = paste0(preRankedGeneFileTable$celltype, "_", preRankedGeneFileTable$comparison)
+  preRankedGeneFileTable$V1 = file.path(dirname(parFile1), preRankedGeneFileTable$gseaFile)
+  preRankedGeneFileTable$V2 = preRankedGeneFileTable$prefix
   preRankedGeneFileTable<-preRankedGeneFileTable[c("V1", "V2")]
 }else{
   preRankedGeneFileTable=read.delim(parSampleFile1,header=F,as.is=T)

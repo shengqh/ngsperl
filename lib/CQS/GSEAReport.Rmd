@@ -1,18 +1,26 @@
 ---
 title: "GSEA Report"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
-  html_document:
-    toc: true
-    toc_depth: 4
+  rmdformats::html_clean:
+    toc_depth: 3
 ---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
 
 <style type="text/css">
     div.datatables { height: auto !important;}
 </style>
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
 ```{r, child="Functions.Rmd"} 
 ```
@@ -41,5 +49,5 @@ if(nrow(files) == 1 & files$V2[1] == 'gsea'){
 ```
  
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
-display_gsea(files)
+display_gsea(files, "")
 ``` 
