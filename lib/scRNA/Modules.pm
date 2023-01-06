@@ -1034,7 +1034,7 @@ sub addEdgeRTask {
     parameterFile1_ref => [ $cluster_task, ".final.rds" ],
     parameterFile2_ref => [$edgeRtaskname],
     parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
-    output_file_ext    => ".edgeRvis.files.csv",
+    output_file_ext    => ".vis.files.csv",
     parameterSampleFile1 => {
       "cluster_name" => $curClusterName,
       "bBetweenCluster" => $bBetweenCluster,
@@ -1126,6 +1126,10 @@ sub addEdgeRTask {
     my $gsea_jar        = $def->{gsea_jar}        or die "Define gsea_jar at definition first";
     my $gsea_db         = $def->{gsea_db}         or die "Define gsea_db at definition first";
     my $gsea_categories = $def->{gsea_categories} or die "Define gsea_categories at definition first";
+
+    my $gsea_chip = $def->{gsea_chip};
+    my $gsea_chip_str = defined $gsea_chip ? "gseaChip='$gsea_chip';" : "";
+
     my $gsea_makeReport = getValue($def, "gsea_makeReport", 0);
 
     my $gseaTaskName = $edgeRtaskname . "_GSEA";
@@ -1142,7 +1146,7 @@ sub addEdgeRTask {
       output_file_ext            => ".gsea.files.csv",
       parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
       sh_direct                  => 1,
-      rCode                      => "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
+      rCode                      => "$gsea_chip_str gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
       pbs                        => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
