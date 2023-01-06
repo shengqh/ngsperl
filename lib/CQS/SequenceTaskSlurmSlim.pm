@@ -299,17 +299,18 @@ sub perform {
 
         $final_index = $final_index + 1;
 
-        my $expect_file = $myclass->get_absolute_final_file($config, $task_section, $sample);
-        
-        #get_final_file_by_task_name($expect_file_map, $sample);
-          
-        if(not defined $expect_file){
-          if($sample eq $task_name) {
-            $expect_file = $myclass->get_absolute_final_file($config, $task_section);
-          }else{
-            print "Found error, $sample not in result list of $task_section\n";
-          }
+        my $expect_file = undef;
+        if(defined $expect_file_map->{$sample}){
+          $expect_file = $myclass->get_absolute_final_file($config, $task_section, $sample);
+        }elsif($sample eq $task_name){ #one pbs, multiple result
+          $expect_file = $myclass->get_absolute_final_file($config, $task_section);
         }
+        
+        if(!defined $expect_file){
+          print(Dumper($expect_file_map));          
+          die "Found error, $sample not in result list of $task_section\n";
+        }
+        
         print $final_submit "if [[ (1 -eq \$1) || ((! -s $expect_file) && (! -d $expect_file)) ]]; then \n";
         print $final_submit "  jid" . $final_index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}') \n";
         print $final_submit "else \n";
