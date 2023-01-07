@@ -628,6 +628,12 @@ sub getRNASeqConfig {
     if ( getValue( $def, "perform_gsea" ) ) {
       $gseaTaskName = $deseq2taskname . "_GSEA";
 
+      if(getValue($def, "use_mouse_gsea_db", 0)){
+        $gseaTaskName = $gseaTaskName . "_Mm";
+      }else{
+        $gseaTaskName = $gseaTaskName . "_Hs";
+      }
+
       my $pairs = $config->{pairs};
       my $keys = [keys %$pairs];
       #my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
