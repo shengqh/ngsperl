@@ -1322,11 +1322,17 @@ sub addSubClusterChoose {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $choose_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.choose.r",
+    
+    rReportTemplate          => "../scRNA/seurat_celltype_subcluster.choose.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
+    rmd_ext => ".choose.html",
+
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
     parameterFile4_ref => [$subcluster_task, ".files.csv"],
     parameterSampleFile1     => merge_hash_left_precedent($cur_options, {
+      task_name => getValue( $def, "task_name" ),
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
@@ -1691,6 +1697,11 @@ sub add_souporcell {
     check_program => 0,
     docker_prefix => "souporcell_",
     option => "-i __FILE__ -b __FILE2__ -t $souporcell_thread -o . -k __FILE3__ $skip_remap_option",
+    post_command => "
+if [[ -s clusters.tsv ]]; then
+  rm -f souporcell_minimap_tagged_sorted.bam.* alt.mtx ref.mtx common_variants* *.done clusters_tmp.tsv depth_merged.bed minimap.err retag.err clusters.err
+fi
+",
     source_arg => "-i",
     source => $souporcell_bam_files,
     parameterSampleFile2_arg => "-b",
@@ -1726,8 +1737,8 @@ sub add_souporcell_integration {
   $config->{$hto_integration_task} = {
     class                     => "CQS::UniqueR",
     target_dir                => "${target_dir}/${hto_integration_task}",
-    rtemplate                 => "../scRNA/hto_soupercell_integration.r",
-    rReportTemplate           => "../scRNA/hto_soupercell_integration.rmd;reportFunctions.Rmd",
+    rtemplate                 => "../scRNA/hto_souporcell_integration.r",
+    rReportTemplate           => "../scRNA/hto_souporcell_integration.rmd;reportFunctions.Rmd",
     option                    => "",
     parameterSampleFile1_ref  => $hto_souporcell_task,
     parameterSampleFile2_ref  => $hto_ref,
