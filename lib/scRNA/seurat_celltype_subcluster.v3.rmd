@@ -29,6 +29,8 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
 
+post_file=paste0(outFile, ".post_rename.umap.png")
+
 files<-read.csv(paste0(outFile, ".files.csv"))
 
 getFigure<-function(filepath, in_details=TRUE){
@@ -80,6 +82,11 @@ figureRmd<-function(files){
 }
 cat(figureRmd(files), file=resFile)
 
+```
+
+```{r, echo=FALSE, eval=file.exists(post_file)}
+cat("\n\n# Post renaming cell type, before sub-clustering\n\n")
+include_graphics(post_file)
 ```
 
 ```{r, child=resFile} 
