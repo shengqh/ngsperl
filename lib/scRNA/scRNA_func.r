@@ -42,7 +42,7 @@ is_file_empty<-function(filepath){
 }
 
 celltype_to_filename<-function(pct){
-  return(gsub('[/\ ]', "_", pct))
+  return(gsub('[/:()\ ]+', "_", pct))
 }
 
 get_hue_colors<-function(n, random_colors=TRUE, random.seed=20220606){
@@ -72,6 +72,16 @@ theme_bw3 <- function (axis.x.rotate=F) {
 
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
+
+MyDoHeatMap<-function(object, max_cell=5000, ...){
+  if(ncol(obj) > max_cell){
+    subsampled <- obj[, sample(colnames(obj), size=max_cell, replace=F)]
+    g<-DoHeatmap(subsampled, ...)
+  }else{
+    g<-DoHeatmap(object, ...)
+  }
+  return(g)
+}
 
 MyFeaturePlot<-function(object, assay="RNA", ...){
   old_assay=DefaultAssay(object)
@@ -200,13 +210,20 @@ init_celltype_markers<-function(panglao5_file, species, curated_markers_file=NUL
 
   celltype_map=get_summary_layer(tiers, layer, remove_subtype_str)
 
-  combined_celltypes=NA
+  combined_ct=NA
+  combined_ct_source<-NA
   if(!is_file_empty(combined_celltype_file)){
     cts<-read.table(combined_celltype_file, header=F, sep="\t", stringsAsFactors = F)
-    combined_celltypes<-unlist(split(cts$V2, cts$V1))
+    combined_ct<-unlist(split(cts$V2, cts$V1))
+
+    layer2map<-celltype_map
+    combined_ct_in_layer<-unique(combined_ct[combined_ct %in% names(layer2map)])
+    combined_ct[combined_ct_in_layer]<-combined_ct_in_layer
+    layer2map[layer2map %in% names(combined_ct)]<-combined_ct[layer2map[layer2map %in% names(combined_ct)]]
+    combined_ct_source<-split(names(combined_ct), combined_ct)
   }
 
-  return(list(tiers=tiers, cell_activity_database=cell_activity_database, celltype_map=celltype_map, combined_celltypes=combined_celltypes))
+  return(list(tiers=tiers, cell_activity_database=cell_activity_database, celltype_map=celltype_map, combined_celltypes=combined_ct, combined_celltype_source=combined_ct_source))
 }
 
 get_selfdefinedCelltype <- function(file, finalLayer="layer3"){
@@ -894,49 +911,51 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   return(g)
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
   gene_groups=split(genes_df$gene, genes_df$cell_type)
 
-  if(is.na(cur_res)){
-    cur_res = paste0(cur_celltype, "_cluster")
-    obj<-build_dummy_cluster(obj, label.by=cur_celltype, new_cluster_name=cur_res)
+  if(is.null(group.by)){
+    if(is.null(cur_res) || is.na(cur_res)){
+      cur_res = paste0(cur_celltype, "_cluster")
+      obj<-build_dummy_cluster(obj, label.by=cur_celltype, new_cluster_name=cur_res)
+    }
+
+    cell_type=obj@meta.data
+    cell_type$cell_type <- cell_type[,cur_celltype]
+
+    # ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Dendritic cells", "Monocytes", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
+    # ct<-cell_type[!duplicated(cell_type$cell_type),]
+    # missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
+    # if(length(missed) > 0){
+    #   ct_levels = c(ct_levels, as.character(missed))
+    # }
+    # ct_levels = ct_levels[ct_levels %in% ct$cell_type]
+    # cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
+
+    if (! is.null(split.by)){ 
+      if(orderby_cluster){
+        cell_type<-cell_type[order(cell_type[,cur_res], cell_type[,split.by]),]
+      }else{
+        cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res], cell_type[,split.by]),]
+      }
+      cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], ": ", cell_type$cell_type, ": ", cell_type[,split.by])
+    }else{
+      if(orderby_cluster){
+        cell_type<-cell_type[order(cell_type[,cur_res]),]
+      }else{
+        cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
+      }
+      cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], ": ", cell_type$cell_type)
+    }
+    cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
+    group.by="seurat_celltype_clusters"
+    
+    cell_type<-cell_type[colnames(obj),]
+    obj@meta.data<-cell_type
   }
 
-  cell_type=obj@meta.data
-  cell_type$cell_type <- cell_type[,cur_celltype]
-
-  # ct_levels<-c("B cells", "Plasma cells", "NK cells", "T cells", "Macrophages", "Dendritic cells", "Monocytes", "Mast cells", "Endothelial cells", "Fibroblasts", "Epithelial cells", "Basal cells", "Olfactory epithelial cells", "Ciliated cells")
-  # ct<-cell_type[!duplicated(cell_type$cell_type),]
-  # missed = ct$cell_type[!(ct$cell_type %in% ct_levels)]
-  # if(length(missed) > 0){
-  #   ct_levels = c(ct_levels, as.character(missed))
-  # }
-  # ct_levels = ct_levels[ct_levels %in% ct$cell_type]
-  # cell_type$cell_type<-factor(cell_type$cell_type, levels=ct_levels)
-
-  if (! is.null(split.by)){ 
-    if(orderby_cluster){
-      cell_type<-cell_type[order(cell_type[,cur_res], cell_type[,split.by]),]
-    }else{
-      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res], cell_type[,split.by]),]
-    }
-    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], ": ", cell_type$cell_type, ": ", cell_type[,split.by])
-  }else{
-    if(orderby_cluster){
-      cell_type<-cell_type[order(cell_type[,cur_res]),]
-    }else{
-      cell_type<-cell_type[order(cell_type$cell_type, cell_type[,cur_res]),]
-    }
-    cell_type$seurat_celltype_clusters=paste0(cell_type[,cur_res], ": ", cell_type$cell_type)
-  }
-  cell_type$seurat_celltype_clusters=factor(cell_type$seurat_celltype_clusters, levels=unique(cell_type$seurat_celltype_clusters))
-  group.by="seurat_celltype_clusters"
-  
-  cell_type<-cell_type[colnames(obj),]
-  obj@meta.data<-cell_type
-  
   g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title)
   
   return(g)
@@ -1226,11 +1245,13 @@ build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_
   return(obj)
 }
 
-get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1){
+get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, label_has_cluster=FALSE){
   group.by="dummy_cluster"
   group.label="dummy_label"
 
   obj<-build_dummy_cluster(obj, label.by, group.by, group.label)
+
+  group.label=ifelse(label_has_cluster, label.by, group.label)
 
   g<-get_dim_plot(obj, group.by=group.by, label.by=group.label, label=label, title=title, legend.title=legend.title, reduction=reduction, split.by=split.by, ncol=ncol)
   return(g)
@@ -1472,40 +1493,86 @@ output_barplot<-function(obj, sample_key, cell_key, filename){
   dev.off()
 }
 
-output_celltype_figures<-function(obj, cell_identity, prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="orig.ident", name=group.by, umap_width=2200, dot_width=4000){
+output_celltype_figures<-function(obj, 
+                                  cell_identity, 
+                                  prefix, 
+                                  bubblemap_file, 
+                                  cell_activity_database, 
+                                  combined_ct_source, 
+                                  group.by="orig.ident", 
+                                  name=group.by, 
+                                  umap_width=2600, 
+                                  dot_width=4000, 
+                                  cell_identity_order=NULL){
   if(group.by != "batch"){
-    g<-get_bubble_plot(obj, cur_res=NA, cell_identity, bubblemap_file=bubblemap_file, assay="RNA", orderby_cluster = T)
+    if(is.null(cell_identity_order)){
+      g<-get_bubble_plot( obj = obj, 
+                          cur_res = NULL, 
+                          cur_celltype = cell_identity, 
+                          bubblemap_file = bubblemap_file, 
+                          assay = "RNA", 
+                          orderby_cluster = T)
+    }else{
+      g<-get_bubble_plot( obj = obj, 
+                          cur_res = NULL, 
+                          cur_celltype = cell_identity, 
+                          bubblemap_file = bubblemap_file, 
+                          assay = "RNA", 
+                          orderby_cluster = FALSE,
+                          group.by = cell_identity)
+    }
+
     png(paste0(prefix, ".", cell_identity, ".dot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
     print(g)
     dev.off()
 
-    g<-get_dim_plot_labelby(obj, label.by=cell_identity, reduction="umap", legend.title="")
+    if(is.null(cell_identity_order)){
+      g<-get_dim_plot_labelby(obj = obj, 
+                              label.by = cell_identity, 
+                              title = "",
+                              reduction = "umap", 
+                              legend.title = "")
+    }else{
+      g<-get_dim_plot(obj = obj,
+                      group.by = cell_identity_order,
+                      label.by = cell_identity, 
+                      title = "",
+                      reduction = "umap", 
+                      legend.title = "")
+    }
     png(paste0(prefix, ".", cell_identity, ".umap.png"), width=umap_width, height=2000, res=300)
     print(g)
     dev.off()
 
-    g<-get_celltype_marker_bubble_plot( obj = obj, 
-                                        group.by = cell_identity, 
-                                        cellType = cell_activity_database$cellType,
-                                        weight = cell_activity_database$weight,
-                                        n_markers = 5, 
-                                        combined_ct_source=combined_ct_source)
+    if(!all(is.na(cell_activity_database))){
+      g<-get_celltype_marker_bubble_plot( obj = obj, 
+                                          group.by = cell_identity, 
+                                          cellType = cell_activity_database$cellType,
+                                          weight = cell_activity_database$weight,
+                                          n_markers = 5, 
+                                          combined_ct_source=combined_ct_source)
 
-    png(paste0(prefix, ".", cell_identity, ".ct_markers.bubbleplot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
-    print(g)
-    dev.off()
+      png(paste0(prefix, ".", cell_identity, ".ct_markers.bubbleplot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
+      print(g)
+      dev.off()
+    }
   }
 
   output_barplot(obj, sample_key = group.by, cell_key = cell_identity, paste0(prefix, ".", cell_identity, ".", group.by, ".png"))
 
-  save_highlight_cell_plot(paste0(prefix, ".", cell_identity, ".cell.png"), obj, group.by = cell_identity, reduction = "umap")
+  save_highlight_cell_plot(filename = paste0(prefix, ".", cell_identity, ".cell.png"), 
+                           obj = obj, 
+                           group.by = cell_identity, 
+                           reduction = "umap",
+                           reorder = is.null(cell_identity_order))
 
   meta = obj@meta.data
   pcts = unlist(unique(obj[[cell_identity]]))
   for(pct in pcts){
+    pct_str = celltype_to_filename(pct)
     cells<-rownames(meta)[meta[,cell_identity] == pct]
     subobj<-subset(obj, cells=cells)
-    curprefix<-paste0(prefix, ".", cell_identity, ".", name, ".", gsub('[/\ ]', "_", pct))
+    curprefix<-paste0(prefix, ".", cell_identity, ".", name, ".", pct_str)
     save_highlight_cell_plot(paste0(curprefix, ".cell.png"), subobj, group.by = group.by, reduction = "umap", reorder=FALSE, title=pct)
   }
 
