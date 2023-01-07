@@ -1,15 +1,14 @@
 rm(list=ls()) 
-outFile='AG_integrated'
+outFile='P9270'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20220803_integrated_project/seurat_rawdata/result')
+setwd('/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -142,6 +141,7 @@ rawobjs = list()
 fidx=3
 fileMap<-split(filelist1$V1, filelist1$V2)
 
+fileTitle = names(fileMap)[1]
 for(fileTitle in names(fileMap)) {
   fileName  = fileMap[[fileTitle]]
   cat(fileTitle, "\n")
@@ -149,6 +149,11 @@ for(fileTitle in names(fileMap)) {
     feature.names <- read.delim(paste0(fileName, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
     gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
     counts = Read10X(fileName, gene.column=gene.column)
+    if(is.list(counts)){
+      if("protein_coding" %in% names(counts)){
+        counts<-do.call(rbind, counts)
+      }
+    }
   } else if (grepl('.h5$', fileName)) {
     counts = Read10X_h5(fileName)
   } else if (grepl('.gz$', fileName)) {
