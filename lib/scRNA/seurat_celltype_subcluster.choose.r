@@ -123,9 +123,12 @@ if(length(remove_cts) > 0){
 
 if(output_heatmap){
   #find markers for cell types
+  cat("FindAllMarkers ...\n")
   ct_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+  write.csv(ct_markers, paste0(outFile, ".markers.csv"))
   ct_top10<-get_top10_markers(ct_markers)
   ct_top10_map<-split(ct_top10$gene, ct_top10$cluster)
+  cat("FindAllMarkers done ...\n")
 }
 
 meta = obj@meta.data
@@ -286,6 +289,30 @@ if(output_heatmap){
 }
 saveRDS(obj, paste0(outFile, ".final.rds"))
 
+output_celltype_figures(
+  obj = obj, 
+  cell_identity = cur_layer, 
+  prefix = prefix, 
+  bubblemap_file = bubblemap_file,
+  cell_activity_database = NULL,
+  combined_ct_source = NULL, 
+  group.by="orig.ident", 
+  name="sample",
+  umap_width=2600
+  cell_identity_order=NULL)
+
+output_celltype_figures(
+  obj = obj, 
+  cell_identity = seurat_cur_layer, 
+  prefix = prefix, 
+  bubblemap_file = bubblemap_file,
+  cell_activity_database = NULL,
+  combined_ct_source = NULL, 
+  group.by="orig.ident", 
+  name="sample",
+  umap_width=3200,
+  cell_identity_order="seurat_clusters")
+
 write.csv(obj[["umap"]]@cell.embeddings, paste0(outFile, ".umap.csv"))
 
 nclusters<-length(unique(obj$seurat_clusters))
@@ -294,7 +321,7 @@ if(output_heatmap){
   width<-max(3000, min(10000, nclusters * 150 + 1000))
   height<-max(3000, min(20000, length(allmarkers) * 60 + 1000))
 
-  g<-DoHeatmap(obj, assay="RNA", features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
+  g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
   png(paste0(prefix, ".top10.heatmap.png"), width=width, height=height, res=300)
   print(g)
   dev.off()
@@ -333,14 +360,14 @@ height<-max(3000, min(20000, length(top10genes) * 60 + 1000))
 
 nclusters<-length(unique(obj$cell_type))
 width<-max(3000, min(10000, nclusters * 300 + 1000))
-g<-DoHeatmap(obj, assay="RNA", features = top10genes, group.by = "cell_type", angle = 90) + NoLegend()
+g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, group.by = "cell_type", angle = 90) + NoLegend()
 png(paste0(prefix, ".cell_type.top10.heatmap.png"), width=width, height=height, res=300)
 print(g)
 dev.off()
 
 nclusters<-length(unique(obj$seurat_cell_type))
 width<-max(3000, min(10000, nclusters * 300 + 1000))
-g<-DoHeatmap(obj, assay="RNA", features = top10genes, group.by = "seurat_cell_type", angle = 90) + NoLegend()
+g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, group.by = "seurat_cell_type", angle = 90) + NoLegend()
 png(paste0(prefix, ".seurat_cell_type.top10.heatmap.png"), width=width, height=height, res=300)
 print(g)
 dev.off()

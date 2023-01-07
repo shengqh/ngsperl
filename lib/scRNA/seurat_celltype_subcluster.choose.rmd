@@ -1,0 +1,102 @@
+---
+title: "Seurat optimal resolution result"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, child="reportFunctions.Rmd", include=FALSE} 
+```
+
+```{r data, echo = FALSE}
+options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outFile=myoptions$task_name
+```
+
+# Cell type level
+
+## UMAP
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".cell_type.umap.png"))
+```
+
+## Marker genes
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".cell_type.dot.png"))
+```
+
+## Sample / Cell type
+
+```{r, echo=FALSE}
+scts<-read.csv(paste0(outFile, ".cell_type.sample_celltype.csv"), check.names=F, row.names=1)
+print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type of each sample"))))
+```
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".cell_type.sample_celltype.png"))
+```
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".cell_type.celltype_sample.png"))
+```
+
+## Cell type individual UMAP 
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".cell_type.cell.png"))
+```
+
+## Cell type top 10 heatmap
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
+```
+
+# Sub cluster level
+
+## UMAP
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".seurat_cell_type.umap.png"))
+```
+
+## Marker genes
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".seurat_cell_type.dot.png"))
+```
+
+## Sample / Cell type
+
+```{r, echo=FALSE}
+scts<-read.csv(paste0(outFile, ".seurat_cell_type.sample_celltype.csv"), check.names=F, row.names=1)
+print(kable_styling(kable(t(scts), caption=tabRef("sct_count_sub", "Cell count in each sub cluster of each sample"))))
+```
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".seurat_cell_type.sample_celltype.png"))
+```
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".seurat_cell_type.celltype_sample.png"))
+```
+
+## Cell type individual UMAP 
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".seurat_cell_type.cell.png"))
+```
