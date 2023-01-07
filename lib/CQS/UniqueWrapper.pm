@@ -29,7 +29,11 @@ sub new {
 }
 
 sub result {
-  my ( $self, $config, $section, $pattern,$removeEmpty ) = @_;
+  my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
+
+  if(!defined $removeEmpty){
+    $removeEmpty = 1;
+  }
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
