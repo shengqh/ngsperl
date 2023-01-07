@@ -80,7 +80,7 @@ processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLin
   return(rawTableOut)
 }
 
-print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
+print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive, maxCategory=5){
   pstr = ifelse(is_positive, "pos", "neg")
   title = ifelse(is_positive, "Positive-regulated", "Negative-regulated")
   pattern = paste0("gsea_report_for_na_", pstr, '_\\d+\\.(tsv|xls)$')
@@ -91,7 +91,7 @@ print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
     warning(paste("Can't find ", title, "GSEA table file in", resultDirSub))
     return(NULL)
   }else{
-    rawTableOut<-processGseaTable(gseaTableFile)
+    rawTableOut<-processGseaTable(gseaTableFile, maxCategory=maxCategory)
     if(!is.null(rawTableOut)){
       ename<-paste(gname, gseaCategory, title)
       print(kable(rawTableOut, caption=tabRef(ename, ename)) %>%
@@ -121,14 +121,17 @@ print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
   }
 }
 
-display_gsea=function(files, target_folder="") {
-  cat(paste0("  \n## GSEA  \n"))
+display_gsea=function(files, target_folder="", gsea_prefix="#") {
+  cat(paste0("\n\n", gsea_prefix, "# GSEA\n\n"))
   
   is_singlecell<-"compName" %in% colnames(files)
+
+  maxCategory=ifelse(is_singlecell, 10, 5)
   
   if(is_singlecell){
     gsea_files<-files
-    comparisons<-unique(gsea_files$Comparisons)
+    gsea_files$Comparisons<-gsea_files$compName
+    comparisons<-rev(unique(gsea_files$Comparisons))
   }else{
     gsea_files<-files[grepl("gsea_", rownames(files)),]
     gsea_files$Comparisons<-gsub("gsea_", "", gsea_files$V2)
@@ -138,7 +141,9 @@ display_gsea=function(files, target_folder="") {
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
     comp_files<-gsea_files[gsea_files$Comparisons == comparison,]
-    cat(paste0("  \n### ", comparison, "  \n"))
+
+    has_enriched = FALSE
+    cat(paste0("\n\n", gsea_prefix, "## ", comparison, "\n\n"))
   
     i=1
     for (i in 1:nrow(comp_files)){
@@ -155,8 +160,8 @@ display_gsea=function(files, target_folder="") {
       for (k in 1:nrow(gfolders)){
         resultDirSub<-gfolders$Folder[k]
         gseaCategory<-gfolders$GseaCategory[k]
-        pos = print_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE)
-        neg = print_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE)
+        pos = print_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE, maxCategory=maxCategory)
+        neg = print_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE, maxCategory=maxCategory)
         if (is.null(pos) & is.null(neg)){
           next
         }
@@ -173,6 +178,8 @@ display_gsea=function(files, target_folder="") {
           next
         }
 
+        has_enriched = TRUE
+
         sig_file=paste0(target_folder, gname, ".", gseaCategory, ".csv" )
         write.csv(final, sig_file, row.names=F)
 
@@ -188,6 +195,8 @@ display_gsea=function(files, target_folder="") {
         png(pngfile, width=width, height=height, res=300)
         print(g)
         dev.off()
+
+        cat(paste0("\n\n<img src='", pngfile, "'>\n\n"))
         #include_graphics(file_path_as_absolute(pngfile))
         #cat("\n\n")
       }
@@ -196,6 +205,10 @@ display_gsea=function(files, target_folder="") {
         break
       }
     }  
+
+    if(!has_enriched){
+    	cat(paste0('\n#### <span style="color:red">WARNING: no geneset is significantly enriched.</span>\n\n'))
+    }
   }
 }
 
