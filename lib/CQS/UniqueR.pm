@@ -43,6 +43,9 @@ sub perform {
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
 
+  my $run_rmd_independent = get_option( $config, $section, "run_rmd_independent", 0 );
+  my $rmd_ext = get_option( $config, $section, "rmd_ext", ".html" );
+
   my $use_vanilla = get_option( $config, $section, "use_vanilla", 1 );
 
   my $copy_template = get_option( $config, $section, "copy_template", 1 );
@@ -184,6 +187,7 @@ sub perform {
 
   close($rf);
 
+  my $rmd_file = undef;
   my $rReportTemplates = get_option( $config, $section, "rReportTemplate", "" );
   if ( $rReportTemplates ne "" ) {
     my @rReportTemplates = split( ",|;", $rReportTemplates );
@@ -198,6 +202,10 @@ sub perform {
 
       my $remote_r = $result_dir . "/" . basename($rtemplate);
       copy($rtemplate, $remote_r);
+
+      if(!defined $rmd_file){
+        $rmd_file = basename($rtemplate);
+      }
     }
   }
 
@@ -246,6 +254,12 @@ sub perform {
   }
   else {
     print $pbs "$rscript $vanilla_option " . basename($rfile);
+  }
+
+  if($run_rmd_independent){
+    if(defined $rmd_file){
+      print $pbs "\n\n$rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='${task_name}${rmd_ext}')\"\n";
+    }
   }
   $self->close_pbs( $pbs, $pbs_file );
 }
