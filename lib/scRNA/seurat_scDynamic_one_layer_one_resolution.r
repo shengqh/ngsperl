@@ -96,17 +96,8 @@ cell_activity_database<-ctdef$cell_activity_database
 layer2map<-ctdef$celltype_map
 
 combined_ct<-ctdef$combined_celltypes
-if(!all(is.na(combined_ct))){
-  combined_ct_in_layer<-unique(combined_ct[combined_ct %in% names(layer2map)])
-  combined_ct[combined_ct_in_layer]<-combined_ct_in_layer
+combined_ct_source<-ctdef$combined_celltype_source
 
-  layer2map[layer2map %in% names(combined_ct)]<-combined_ct[layer2map[layer2map %in% names(combined_ct)]]
-
-  combined_ct_source<-split(names(combined_ct), combined_ct)
-  rm(combined_ct)
-}else{
-  combined_ct_source<-NA
-}
 prefix<-outFile
 
 if(!exists('obj')){
@@ -528,6 +519,14 @@ do_analysis<-function(tmp_folder,
     print(g)
     dev.off()
   }
+
+  obj$ct_cluster<-paste0(obj$layer4, ":", obj$layer4_clusters)
+  dot_width=4400
+  g<-get_bubble_plot(obj, cur_res="layer4_clusters", "layer4", bubblemap_file, assay="RNA", orderby_cluster = FALSE)
+  dot_file = paste0(prefix, ".layer4.dot.sub.png")
+  png(dot_file, width=dot_width, height=get_dot_height(obj, "ct_cluster"), res=300)
+  print(g)
+  dev.off()
 
   tb=data.frame("cell"=colnames(obj), "cell_type"=obj$layer4, category=prefix)
 
