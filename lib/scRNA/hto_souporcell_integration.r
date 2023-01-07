@@ -287,5 +287,5 @@ for (sample_name in rownames(souporcell_tb)){
 }
 
 library('rmarkdown')
-rmarkdown::render("hto_soupercell_integration.rmd",output_file=paste0(outFile,".html"))
+rmarkdown::render("hto_souporcell_integration.rmd",output_file=paste0(outFile,".html"))
 
