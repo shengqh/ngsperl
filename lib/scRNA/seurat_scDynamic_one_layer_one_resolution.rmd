@@ -110,8 +110,16 @@ check_and_include_graphics(paste0(outFile, ".layer4.umap.png"))
 
 ### User defined markers
 
+#### Cell type
+
 ```{r, echo=FALSE}
 check_and_include_graphics(paste0(outFile, ".layer4.dot.png"))
+```
+
+#### Sub cluster
+
+```{r, echo=FALSE}
+check_and_include_graphics(paste0(outFile, ".layer4.dot.sub.png"))
 ```
 
 ### Highly expressed database markers
@@ -167,4 +175,6 @@ cat(pctRmd(outFile, "layer4", pcts, files), file=pct_file)
 ```
 
 ```{r, child=pct_file} 
+```
+
 ```
