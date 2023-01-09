@@ -1,0 +1,73 @@
+---
+title: "Seurat raw data"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, child="reportFunctions.Rmd", include=FALSE} 
+```
+
+```{r data, echo = FALSE}
+options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outFile=myoptions$task_name
+```
+
+# Sample cells
+
+```{r, results="asis", echo=FALSE}
+cell_count<-read.table(paste0(outFile, ".cell.txt"), sep="\t", header=T)
+print(kable_styling(kable(cell_count)))
+```
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".cell.bar.png"))
+```
+
+# QC characters
+
+## Scatter plot
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".qc.png"))
+```
+
+## Violin plot
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".qc.violin.png"))
+```
+
+## Individual samples
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".qc.read.png"))
+```
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".qc.feature.png"))
+```
+
+## Top 20 genes
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".top20.png"))
+```
+
+

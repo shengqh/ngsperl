@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='P9270'
+outFile='P9112'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
+parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/seurat_rawdata/result')
+setwd('/data/h_gelbard_lab/projects/20221129_9112_scRNA_human/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
