@@ -722,9 +722,9 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   colnames(qcsummary)<-c("Sample", "RawCell", "ValidCell")
   qcsummary$DiscardCell<-qcsummary$RawCell-qcsummary$ValidCell
   qcsummary$DiscardRate<-qcsummary$DiscardCell / qcsummary$RawCell
-  write.csv(qcsummary, file=paste0(prefix, ".sample_cell.csv"), row.names=F)
+  write.csv(qcsummary, file=paste0(prefix, ".filtered.cell.csv"), row.names=F)
   
-  g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"), group.by="sample")
+  g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"), group.by="orig.ident")
   png(paste0(prefix, ".qc.4.png"), width=3600, height=1600, res=300)
   print(g)
   dev.off()
@@ -762,26 +762,26 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
                 Sample=obj$sample,
                 Ident=obj$orig.ident)
   if(has_batch_file){
-    if(!all(obj$sample == obj$batch)){
+    if(!all(obj$orig.ident == obj$batch)){
       mt$batch=obj$batch
     }else{
       has_batch_file=FALSE
     }
   }
 
-  nSplit = length(unique(mt[,"Sample"]))
+  nSplit = length(unique(mt[,"Ident"]))
   nWidth=ceiling(sqrt(nSplit))
   nHeight=ceiling(nSplit / nWidth)
   width=nWidth * 600 + 200
   height=nHeight*600
   
   cat("draw pictures ... ")
-  draw_feature_qc(paste0(outFile, ".sample"), obj, "sample")
+  draw_feature_qc(paste0(outFile, ".Ident"), obj, "orig.ident")
 
-  p<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
+  p<-draw_dimplot(mt, paste0(outFile, ".Ident.png"), "Ident")
   if(!all(mt$Sample == mt$Ident)){
-    draw_feature_qc(paste0(outFile, ".Ident"), obj, "orig.ident")
-    p1<-draw_dimplot(mt, paste0(outFile, ".Ident.png"), "Ident")
+    draw_feature_qc(paste0(outFile, ".sample"), obj, "sample")
+    p1<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
     p<-p+p1
     width=width + nWidth * 600
   }
@@ -1115,9 +1115,18 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   dev.off()
 
   if('umap' %in% names(rawobj@reductions)){
-    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap")
-    width = length(unique(unlist(rawobj[[ident_name]]))) * 800
-    height = length(feats) * 700
+    nsample<-length(unique(unlist(rawobj[[ident_name]])))
+    nfeature<-length(feats)
+
+    by.col=nfeature>=nsample
+    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col)
+    if(by.col){
+      width = nsample * 800
+      height = nfeature * 700
+    }else{
+      width = nfeature * 800
+      height = nsample * 700
+    }
 
     png(paste0(prefix, ".qc.exp.png"), width=width, height=height, res=300)
     print(g)
@@ -1135,27 +1144,44 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   nsample=length(unique(mt$Sample))
   nwidth=ceiling(sqrt(nsample))
   nheight=ceiling(nsample/nwidth)
-  png(file=paste0(prefix, ".qc.individual.png"), width=min(20000, max(2000, 1000 * nwidth) + 300), height=min(20000, 2 * max(2000, 1000*nheight)), res=300)
+  
+  png(file=paste0(prefix, ".qc.read.png"), width=min(20000, max(2000, 1000 * nwidth) + 300), height=min(10000, max(2000, 1000*nheight)), res=300)
   p1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  print(p1)
+  dev.off()
+
+  png(file=paste0(prefix, ".qc.feature.png"), width=min(20000, max(2000, 1000 * nwidth) + 300), height=min(10000, max(2000, 1000*nheight)), res=300)
   p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  p<-p1+p2+plot_layout(ncol=1)
-  print(p)
+  print(p2)
   dev.off()
 
   ct<-as.data.frame(table(rawobj[[ident_name]]))
   colnames(ct)<-c("Sample","Cell")
+  has_sample = "sample" %in% colnames(rawobj@meta.data) & any(rawobj$sample != rawobj$orig.ident)
+  if(has_sample){
+    meta<-rawobj@meta.data
+    meta<-meta[!duplicated(meta$orig.ident),,drop=F]
+    smap=split(as.character(meta$sample), as.character(meta$orig.ident))
+    ct$Set=unlist(smap[ct$Sample])
+  }
   write.table(ct, paste0(prefix, ".cell.txt"), sep="\t", row.names=F)
-  g<-ggplot(ct, aes(x=Sample, y=Cell)) + geom_bar(stat="identity") + theme_bw3(axis.x.rotate = T)
+  
+  if(has_sample){
+    g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Set))
+  }else{
+    g<-ggplot(ct, aes(x=Sample, y=Cell))
+  }
+  g<-g + geom_bar(stat="identity") + theme_bw3(axis.x.rotate = T)
   png(paste0(prefix, ".cell.bar.png"), width=3000, height=2000, res=300)
   print(g)
   dev.off()
