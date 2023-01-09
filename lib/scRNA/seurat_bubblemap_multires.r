@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='PL_7114_human'
+outFile='GPA_NML'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='C:/projects/nobackup/h_turner_lab/shengq2/20220805_7114_scRNA_human/seurat_sct_harmony_multires_03_choose/result/PL_7114_human.final.rds'
-parFile2=''
+parFile1='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_harmony/result/GPA_NML.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_harmony_dr0.5_nrh_01_call/result/GPA_NML.scDynamic.meta.rds'
 parFile3=''
 
 
-setwd('C:/projects/nobackup/h_turner_lab/shengq2/20220805_7114_scRNA_human/seurat_sct_harmony_multires_06_bubblemap/result')
+setwd('/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_harmony_dr0.5_nrh_01_call_bubblemap/result')
 
 ### Parameter setting end ###
 
@@ -20,14 +20,16 @@ library(ggplot2)
 bubble_files=read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
-myoptions<-unlist(split(options_table$V1, options_table$V2))
+myoptions<-split(options_table$V1, options_table$V2)
+cluster_name = ifelse(is.null(myoptions$cluster_name), "seurat_clusters", myoptions$cluster_name)
+celltype_name = ifelse(is.null(myoptions$celltype_name), "cell_type", myoptions$celltype_name)
 
 if(!exists('obj')){
-  obj<-read_object(parFile1)
+  obj<-read_object(parFile1, parFile2)
 }
 
 bnames=unique(bubble_files$V3)
-bn=bnames[3]
+bn=bnames[1]
 for(bn in bnames){
   cat(bn, "\n")
   cluster_pattern=bubble_files$V1[bubble_files$V2 == "cluster_pattern" & bubble_files$V3 == bn][1]
@@ -37,17 +39,28 @@ for(bn in bnames){
   width=as.numeric(bubble_files$V1[bubble_files$V2 == "width" & bubble_files$V3 == bn][1])
   height=as.numeric(bubble_files$V1[bubble_files$V2 == "height" & bubble_files$V3 == bn][1])
   
-  if(cluster_pattern == "" | cluster_pattern == "*"){
-    subobj=obj
-  }else{
+  if(cluster_pattern != "" & cluster_pattern != "*"){
     cells = colnames(obj)[grepl(cluster_pattern, obj$cell_type, ignore.case = ignore.case)]
     subobj=subset(obj, cells=cells)
+  }else{
+    subobj=obj
   }
-  g=get_bubble_plot(subobj, "seurat_clusters", "cell_type", bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=rotate.title) + scale_color_gradient2(low="blue", mid="yellow", high="red")
-  
-  png(paste0(outFile, ".", bn, ".bubblemap.png"), width=width, height=height,res=300)
+
+  g=get_bubble_plot(subobj, cluster_name, celltype_name, bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=rotate.title) + scale_color_gradient2(low="blue", mid="yellow", high="red")
+  subobj$dump_cluster = paste0(unlist(subobj[[cluster_name]]), ":", unlist(subobj[[celltype_name]]))
+  png(paste0(outFile, ".", bn, ".bubblemap.png"), width=width, height=get_dot_height(subobj, "dump_cluster"),res=300)
+  print(g)
+  dev.off()
+
+  g=get_bubble_plot(subobj, cluster_name, "orig.ident", bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=rotate.title) + scale_color_gradient2(low="blue", mid="yellow", high="red")
+  subobj$dump_cluster = paste0(unlist(subobj[[cluster_name]]), ":", unlist(subobj[["orig.ident"]]))
+  png(paste0(outFile, ".", bn, ".bubblemap.ct_ident.png"), width=width, height=get_dot_height(subobj, "dump_cluster"),res=300)
+  print(g)
+  dev.off()
+
+  g=get_bubble_plot(subobj, "orig.ident", cluster_name, bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=rotate.title) + scale_color_gradient2(low="blue", mid="yellow", high="red")
+  subobj$dump_cluster = paste0(unlist(subobj[["orig.ident"]]), ":", unlist(subobj[[cluster_name]]))
+  png(paste0(outFile, ".", bn, ".bubblemap.ident_ct.png"), width=width, height=get_dot_height(subobj, "dump_cluster"),res=300)
   print(g)
   dev.off()
 }
-
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
