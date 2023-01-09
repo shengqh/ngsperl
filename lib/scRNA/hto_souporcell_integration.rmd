@@ -1,5 +1,5 @@
 ---
-title: "Seurat data preparation"
+title: "Souporcell/HTO integration"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
@@ -27,6 +27,15 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 files<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 samples<-files$V2
 
+printTable<-function(filepath){
+  tbl<-read.csv(filepath, check.names=F, row.names=1)
+  print(kable_styling(kable(tbl)))
+}
+
+getTable<-function(filepath){
+  return(paste0("```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "')\n```\n\n"))
+}
+
 getFigure<-function(filepath){
   return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", basename(filepath), "')\n```\n\n"))
 }
@@ -36,11 +45,14 @@ figureRmd<-function(samples){
   result<-""
   sample = samples[1]
   for(sample in samples){
-    soupor = read.csv(paste0(sample, ".HTO_soupor.csv"), check.names = F, row.names=1)
+    soupor_file = paste0(sample, ".HTO_soupor.csv")
+    soupor = read.csv(soupor_file, check.names = F, row.names=1)
 
     tagnames = rownames(soupor)[!(rownames(soupor) %in% c("Negative", "Doublet"))]
     result<-paste0(result, paste0("\n\n# ", sample, "\n\n"))
-    
+
+    result<-paste0(result, getTable(soupor_file))
+
     soupor_clusters = colnames(soupor)[!(colnames(soupor) %in% c("unassigned", "doublet"))]
     for(sc in soupor_clusters){
       result<-paste0(result, paste0("\n\n## Souporcell cluster ", sc, "\n\n"))
