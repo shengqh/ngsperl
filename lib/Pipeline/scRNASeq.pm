@@ -426,6 +426,11 @@ sub getScRNASeqConfig {
         addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, 0);
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
+        if(defined $def->{bubble_plots}){
+          my $bubble_task = $scDynamic_task . "_bubblemap";
+          add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $seurat_task, $meta_ref, "layer4", "layer4_clusters" );
+        }
+
         if(getValue($def, "perform_individual_dynamic_cluster", 0)){
           my $individual_scDynamic_task = $raw_dynamicKey . "_individual";
           addDynamicCluster($config, $def, $summary, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1);
@@ -445,7 +450,7 @@ sub getScRNASeqConfig {
 
           my $rename_map = $def->{"dynamic_rename_map"};
 
-          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
+          $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
 
           if(getValue($def, "perform_dynamic_choose")) {
             my $choose_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_choose";
@@ -455,6 +460,11 @@ sub getScRNASeqConfig {
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
             $celltype_task = $choose_task;
+
+            if(defined $def->{bubble_plots}){
+              my $bubble_task = $choose_task . "_bubblemap";
+              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task);
+            }
 
             if(defined $clonotype_convert) {
               if( getValue($def, "perform_gliph2", 0) ) {
@@ -654,26 +664,8 @@ sub getScRNASeqConfig {
             add_pseudo_count($config, $def, $summary, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
 
             if(defined $def->{bubble_plots}){
-              my $bubblemap_name = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_bubblemap";
-              $config->{$bubblemap_name} = {
-                class                => "CQS::UniqueR",
-                perform              => 1,
-                target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubblemap_name,
-                rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multires.r",
-                parameterSampleFile1 => $def->{bubble_plots},
-                parameterSampleFile2 => {
-                  celltype_name => $celltype_name,
-                },
-                parameterFile1_ref   => [ $choose_task, ".final.rds" ],
-                output_file_ext      => ".bubblemap.png",
-                sh_direct            => 1,
-                pbs                  => {
-                  "nodes"     => "1:ppn=1",
-                  "walltime"  => "1",
-                  "mem"       => "10gb"
-                },
-              };
-              push( @$summary, $bubblemap_name );
+              my $bubble_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_bubblemap";
+              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task);
             }
 
             if ( $perform_comparison ) {
