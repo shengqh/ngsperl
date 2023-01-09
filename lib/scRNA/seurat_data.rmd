@@ -37,6 +37,17 @@ outFile=myoptions$task_name
 include_graphics(paste0(outFile,".elbowplot.pca.png"))
 ```
 
+# Sample cells
+
+```{r, results="asis", echo=FALSE}
+tbl<-read.csv(paste0(outFile, ".filtered.cell.csv"))
+print(kable(tbl, row.names=F) %>%	kable_styling())
+```
+
+```{r, results="asis", echo=FALSE}
+include_graphics(paste0(outFile,".Ident.cell.bar.png"))
+```
+
 # Filtering cutoffs
 
 ```{r, results="asis", echo=FALSE}
@@ -61,27 +72,14 @@ include_graphics(paste0(outFile,".qc.3.png"))
 include_graphics(paste0(outFile,".qc.4.png"))
 ```
 
-# Sample cells
-
-```{r, results="asis", echo=FALSE}
-include_graphics(paste0(outFile,".sample.cell.bar.png"))
-```
-
-```{r, results="asis", echo=FALSE}
-tbl<-read.csv(paste0(outFile, ".sample_cell.csv"))
-print(kable(tbl, row.names=F) %>%	
-  kable_styling())
-
-```
-
 # Sample UMAP
 
 ```{r, results="asis", echo=FALSE}
-include_graphics(paste0(outFile,".sample.png"))
+include_graphics(paste0(outFile,".Ident.png"))
 ```
 
 # Sample exp UMAP
 
 ```{r, results="asis", echo=FALSE}
-include_graphics(paste0(outFile,".sample.qc.exp.png"))
+include_graphics(paste0(outFile,".Ident.qc.exp.png"))
 ```
