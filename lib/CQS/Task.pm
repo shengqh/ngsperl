@@ -79,7 +79,7 @@ sub get_absolute_final_file {
 sub get_final_file {
   my ( $self, $config, $section, $result_dir, $sample ) = @_;
 
-  my $result          = $self->get_absolute_final_file($config, $section, $sample);
+  my $result = $self->get_absolute_final_file($config, $section, $sample);
 
   if ( rindex( $result, $result_dir ) == 0 ) {
     $result = substr( $result, length($result_dir) );
