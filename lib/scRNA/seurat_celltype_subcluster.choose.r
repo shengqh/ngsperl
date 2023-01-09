@@ -298,7 +298,7 @@ output_celltype_figures(
   combined_ct_source = NULL, 
   group.by="orig.ident", 
   name="sample",
-  umap_width=2600
+  umap_width=2600,
   cell_identity_order=NULL)
 
 output_celltype_figures(
