@@ -726,7 +726,14 @@ sub get_raw_file_list {
   die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
 }
 
-sub do_get_unsorted_raw_files {
+sub get_ignore_sample_map {
+  my ($config, $section) = @_;
+  my $ignore_samples = get_option($config, $section, "ignore_samples", []);
+  my %ignore_map = map { $_ => 1 } @$ignore_samples;
+  return(\%ignore_map);
+}
+
+sub do_get_unsorted_raw_files_no_ignored {
   my ( $config, $section, $returnself, $mapname, $pattern, $removeEmpty ) = @_;
 
   my $curSection = get_config_section( $config, $section );
@@ -769,7 +776,7 @@ sub do_get_unsorted_raw_files {
         %myres = %{ $myclass->result( $targetConfig, $section, $pattern, $removeEmpty ) };
       }
       else {
-        my ( $res, $issource ) = do_get_unsorted_raw_files( $targetConfig, $section, 1, undef, $pattern, $removeEmpty );
+        my ( $res, $issource ) = do_get_unsorted_raw_files_no_ignored( $targetConfig, $section, 1, undef, $pattern, $removeEmpty );
         %myres = %{$res};
       }
 
@@ -838,6 +845,27 @@ sub do_get_unsorted_raw_files {
   else {
     die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
   }
+}
+
+sub do_get_unsorted_raw_files {
+  my ( $config, $section, $returnself, $mapname, $pattern, $removeEmpty ) = @_;
+
+  my ($res, $is_source) = do_get_unsorted_raw_files_no_ignored($config, $section, $returnself, $mapname, $pattern, $removeEmpty);
+
+  if (is_hash($res)){
+    my $ignored = get_ignore_sample_map($config, $section);
+    if (%$ignored){
+      my $newres = {};
+      for my $key (keys %$res){
+        if(!exists($ignored->{$key})){
+          $newres->{$key} = $res->{$key};
+        }
+      }
+      return($newres, $is_source);
+    }
+  }
+
+  return($res, $is_source);
 }
 
 sub get_ref_section_pbs {
