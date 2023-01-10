@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='PH_scRNA'
+outFile='crs'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/seurat_merge/result/PH_scRNA.final.rds'
-parFile2='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/seurat_merge_multires_01_call/result/PH_scRNA.meta.rds'
-parFile3='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/essential_genes/result/PH_scRNA.txt'
-parFile4='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/seurat_merge_multires_02_subcluster/result/PH_scRNA.files.csv'
+parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
+parFile3='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
+parFile4='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result/crs.files.csv'
 
 
-setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220802_scRNA_7467_hg38/seurat_merge_multires_03_choose/result')
+setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result')
 
 ### Parameter setting end ###
 
@@ -141,6 +141,7 @@ tblct<-table(as.character(celltypes))
 tblct<-tblct[order(tblct, decreasing = T)]
 
 previous_celltypes<-names(tblct)
+writeLines(previous_celltypes, paste0(outFile, ".orig_cell_types.txt"))
 #previous_celltypes<-c("B cells")
 
 DefaultAssay(obj)<-assay
@@ -150,7 +151,7 @@ if(output_heatmap){
 }
 
 cluster_index=0
-pct<-previous_celltypes[8]
+pct<-previous_celltypes[2]
 for(pct in previous_celltypes){
   cat(pct, "\n")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -185,16 +186,17 @@ for(pct in previous_celltypes){
   }
   
   cur_res_files = subset(pct_res_files, resolution==best_res)
-  file_map = unlist(split(cur_res_files$file, cur_res_files$type))
+  file_map = split(cur_res_files$file, cur_res_files$type)
 
   #cat(file_map, "\n")
 
-  meta_rds = file_map['meta']
+  meta_rds = file_map$meta
   if(!file.exists(meta_rds)){
     stop(meta_rds)
   }
   cur_meta<-readRDS(meta_rds)
   cur_meta$seurat_clusters=as.numeric(as.character(cur_meta$seurat_clusters))
+  cur_meta$old_seurat_clusters<-cur_meta$seurat_clusters
 
   ncluster=length(unique(cur_meta$seurat_clusters))
   cat("  best resolution", best_res, "with", ncluster, "clusters\n")
@@ -255,11 +257,37 @@ for(pct in previous_celltypes){
   meta[rownames(cur_meta), cur_layer] = cur_meta$cur_layer
 
   if(output_heatmap){
-    markers_file = file_map['markers']  
+    markers_file = file_map$markers
     cur_markers=read.csv(markers_file, header=T, row.names=1)
     cur_top10 = get_top10_markers(cur_markers)
     allmarkers=c(allmarkers, cur_top19$gene)
   }
+
+  valid_meta<-cur_meta[cur_meta$seurat_clusters >= 0,]
+  subobj<-subset(obj, cells=rownames(valid_meta))
+  valid_meta<-valid_meta[colnames(subobj),,drop=F]
+  reductions_rds = file_map$reductions
+  reductions<-readRDS(reductions_rds)
+  embeddings<-reductions$subumap@cell.embeddings
+  embeddings<-embeddings[colnames(subobj),,drop=F]
+  colnames(embeddings)<-c("UMAP_1", "UMAP_2")
+  subobj@reductions$umap@cell.embeddings<-embeddings
+  subobj@meta.data<-valid_meta
+
+  g<-get_dim_plot(obj = subobj, 
+                  group.by = "old_seurat_clusters", 
+                  label.by = "display_layer", 
+                  label=T, 
+                  title=pct, 
+                  legend.title="", 
+                  reduction="umap", 
+                  ncol=1, 
+                  random_colors=TRUE)
+
+  g<-g+theme(text = element_text(size = 20))
+  png(paste0(outFile,".umap.", celltype_to_filename(pct), ".png"), width=2500, height=2000, res=300)
+  print(g)
+  dev.off()
 }
 
 obj@meta.data<-meta
@@ -287,8 +315,11 @@ if(output_heatmap){
   allmarkers<-unique(allmarkers)
   obj<-myScaleData(obj, allmarkers, "RNA")
 }
+
+cat("saving final object ...\n")
 saveRDS(obj, paste0(outFile, ".final.rds"))
 
+cat("output figures ...\n")
 output_celltype_figures(
   obj = obj, 
   cell_identity = cur_layer, 
@@ -371,3 +402,5 @@ g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, group.b
 png(paste0(prefix, ".seurat_cell_type.top10.heatmap.png"), width=width, height=height, res=300)
 print(g)
 dev.off()
+
+cat("done ...\n")

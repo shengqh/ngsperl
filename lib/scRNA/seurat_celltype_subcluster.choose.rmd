@@ -11,6 +11,7 @@ library(knitr)
 library(dplyr)
 library(kableExtra)
 knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+source("scRNA_func.r")
 ```
 
 ```{css, echo=FALSE}
@@ -28,6 +29,44 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
 ```
+
+# Sub clustering UMAP
+
+```{r, echo=FALSE}
+cts<-readLines(paste0(outFile, ".orig_cell_types.txt"))
+
+getFigure<-function(filepath){
+  return(paste0("```{r,echo=FALSE,results='asis'}\ninclude_graphics('", filepath, "')\n```\n\n"))
+}
+
+resFile<-"subcluster.Rmd"
+figureRmd<-function(cts){
+  result<-""
+  ct<-cts[1]
+  for(ct in cts){
+    result<-paste0(result, paste0("\n\n## ", ct, "\n\n"))
+
+    ct_png<-paste0(outFile, ".umap.", celltype_to_filename(ct), ".png")
+    if(file.exists(ct_png)){
+      result<-paste0(result, getFigure(ct_png))
+    }else{
+      result<-paste0(result, "\n\tNo sub clustering UMAP\n\n")
+    }
+  }
+  return(result)
+}
+cat(figureRmd(cts), file=resFile)
+
+```
+```{r, child=resFile} 
+```
+
+## Cell type top 10 heatmap
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
+```
+
 
 # Cell type level
 
@@ -60,12 +99,6 @@ include_graphics(paste0(outFile, ".cell_type.celltype_sample.png"))
 
 ```{r, echo=FALSE}
 include_graphics(paste0(outFile, ".cell_type.cell.png"))
-```
-
-## Cell type top 10 heatmap
-
-```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
 ```
 
 # Sub cluster level
