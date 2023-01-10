@@ -2237,29 +2237,32 @@ sub add_clustree_rmd {
 }
 
 sub add_bubble_plots {
-  my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $cluster_name, $celltype_name) = @_;
-
+  my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name) = @_;
+  my $p2key = (-e $meta_ref) ? "parameterFile2" : "parameterFile2_ref";
   $config->{$bubble_task} = {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubble_task,
-    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multires.r",
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multi.r",
+    rReportTemplate           => "../scRNA/seurat_bubblemap_multi.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
+    parameterFile1_ref   => [ $choose_task, ".final.rds" ],
+    $p2key  => $meta_ref,
     parameterSampleFile1 => $def->{bubble_plots},
     parameterSampleFile2 => {
       task_name => getValue($def, "task_name"),
       cluster_name => $cluster_name,
       celltype_name => $celltype_name 
     },
-    parameterFile1_ref   => [ $choose_task, ".final.rds" ],
-    parameterFile2_ref   => $meta_ref,
-    output_file_ext      => ".bubblemap.png",
+    output_file_ext      => ".html",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "6",
+      "mem"       => "40gb"
     },
   };
+
   push( @$summary, $bubble_task );
 }
 
