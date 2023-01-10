@@ -1,0 +1,97 @@
+---
+title: "Marker gene report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, child="reportFunctions.Rmd", include=FALSE} 
+```
+
+```{r data, echo = FALSE}
+source("scRNA_func.r")
+
+files<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+categories<-unique(files$V3)
+
+options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outfile<-myoptions$task_name
+
+samples<-readLines(paste0(outfile, ".sample.txt"))
+cts<-readLines(paste0(outfile, ".cell_type.txt"))
+
+printTable<-function(filepath){
+  tbl<-read.csv(filepath, check.names=F, row.names=1)
+  print(kable_styling(kable(tbl)))
+}
+
+getTable<-function(filepath){
+  return(paste0("```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "')\n```\n\n"))
+}
+
+getFigure<-function(filepath){
+  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
+}
+
+resFile<-"sub.Rmd"
+figureRmd<-function(categories, samples, cell_types){
+  result<-""
+  category = categories[1]
+  for(category in categories){
+    result<-paste0(result, paste0("\n\n# ", category, "\n\n"))
+
+    result<-paste0(result, paste0("\n\n## Celltype / cluster\n\n"))
+    result<-paste0(result, getFigure(paste0(outfile, ".", category, ".bubblemap.ct_cluster.png")))
+
+    ct = cts[1]
+    for(ct in cts){
+      result<-paste0(result, paste0("\n\n### ", ct, "\n\n"))
+      ct_str = celltype_to_filename(ct)
+      result<-paste0(result, getFigure(paste0("details/", outfile, ".", category, ".bubblemap.ct_cluster.", ct_str, ".png")))
+    }
+
+    result<-paste0(result, paste0("\n\n## Celltype / sample\n\n"))
+    result<-paste0(result, getFigure(paste0(outfile, ".", category, ".bubblemap.ct_ident.png")))
+
+    ct = cts[1]
+    for(ct in cts){
+      result<-paste0(result, paste0("\n\n### ", ct, "\n\n"))
+      ct_str = celltype_to_filename(ct)
+      result<-paste0(result, getFigure(paste0("details/", outfile, ".", category, ".bubblemap.ct_ident.", ct_str, ".png")))
+    }
+
+
+    result<-paste0(result, paste0("\n\n## Sample / celltype\n\n"))
+    result<-paste0(result, getFigure(paste0(outfile, ".", category, ".bubblemap.ident_ct.png")))
+
+    sample = samples[1]
+    for(sample in samples){
+      result<-paste0(result, paste0("\n\n### ", sample, "\n\n"))
+      result<-paste0(result, getFigure(paste0("details/", outfile, ".", category, ".bubblemap.ident_ct.", sample, ".png")))
+    }
+  }
+  return(result)
+}
+cat(figureRmd(categories, samples, cell_types), file=resFile)
+
+```
+
+```{r, child=resFile} 
+```
+
