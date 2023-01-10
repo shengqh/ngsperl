@@ -151,7 +151,7 @@ if(output_heatmap){
 }
 
 cluster_index=0
-pct<-previous_celltypes[2]
+pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   cat(pct, "\n")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -196,7 +196,6 @@ for(pct in previous_celltypes){
   }
   cur_meta<-readRDS(meta_rds)
   cur_meta$seurat_clusters=as.numeric(as.character(cur_meta$seurat_clusters))
-  cur_meta$old_seurat_clusters<-cur_meta$seurat_clusters
 
   ncluster=length(unique(cur_meta$seurat_clusters))
   cat("  best resolution", best_res, "with", ncluster, "clusters\n")
@@ -249,6 +248,7 @@ for(pct in previous_celltypes){
     }
   }
 
+  cur_meta$selected_clusters<-cur_meta$seurat_clusters
   cur_meta$seurat_clusters<-cur_meta$seurat_clusters + cluster_index
   cluster_index = max(cur_meta$seurat_clusters) + 1
 
@@ -263,7 +263,7 @@ for(pct in previous_celltypes){
     allmarkers=c(allmarkers, cur_top19$gene)
   }
 
-  valid_meta<-cur_meta[cur_meta$seurat_clusters >= 0,]
+  valid_meta<-cur_meta[cur_meta$selected_clusters >= 0,]
   subobj<-subset(obj, cells=rownames(valid_meta))
   valid_meta<-valid_meta[colnames(subobj),,drop=F]
   reductions_rds = file_map$reductions
@@ -273,9 +273,10 @@ for(pct in previous_celltypes){
   colnames(embeddings)<-c("UMAP_1", "UMAP_2")
   subobj@reductions$umap@cell.embeddings<-embeddings
   subobj@meta.data<-valid_meta
+  subobj$display_layer<-paste0(subobj$selected_clusters, ":", subobj$cur_layer)
 
   g<-get_dim_plot(obj = subobj, 
-                  group.by = "old_seurat_clusters", 
+                  group.by = "selected_clusters", 
                   label.by = "display_layer", 
                   label=T, 
                   title=pct, 
