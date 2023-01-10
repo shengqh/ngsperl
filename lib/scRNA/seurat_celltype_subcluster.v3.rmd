@@ -31,6 +31,8 @@ outFile=myoptions$task_name
 
 post_file=paste0(outFile, ".post_rename.umap.png")
 
+cts<-readLines(paste0(outFile, ".cell_types.txt"))
+
 files<-read.csv(paste0(outFile, ".files.csv"))
 
 getFigure<-function(filepath, in_details=TRUE){
@@ -39,15 +41,21 @@ getFigure<-function(filepath, in_details=TRUE){
 }
 
 resFile<-"subcluster.Rmd"
-figureRmd<-function(files){
+figureRmd<-function(cts, files){
   result<-""
   celltypes<-rev(unique(files$celltype))
+  celltypes<-unique(c(celltypes, cts))
   idx=1
   for(idx in c(1:length(celltypes))){
     celltype=celltypes[idx]
     result<-paste0(result, paste0("\n\n# ", celltype, "\n\n"))
 
     ct_tbl<-files[files$celltype==celltype,]
+    if(nrow(ct_tbl) == 0){
+      result<-paste0(result, "\n\nAll resolutions have only 1 cluster. Set resolution to 0 in selection table.\n\n")
+      next
+    }
+
     resolutions<-unique(ct_tbl$resolution)
     
     idy = 1
@@ -80,7 +88,7 @@ figureRmd<-function(files){
   }
   return(result)
 }
-cat(figureRmd(files), file=resFile)
+cat(figureRmd(cts, files), file=resFile)
 
 ```
 
