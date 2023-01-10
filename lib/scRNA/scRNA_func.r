@@ -917,6 +917,9 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   gene_groups=split(genes_df$gene, genes_df$cell_type)
 
   if(is.null(group.by)){
+    if(is.null(cur_celltype)){
+      stop("cur_celltype cannot be null in get_bubble_plot if group.by is null.")
+    }
     if(is.null(cur_res) || is.na(cur_res)){
       cur_res = paste0(cur_celltype, "_cluster")
       obj<-build_dummy_cluster(obj, label.by=cur_celltype, new_cluster_name=cur_res)
@@ -1493,10 +1496,14 @@ sub_cluster<-function(subobj,
   return(subobj)    
 }
 
-get_dot_height<-function(obj, group.by){
-  ngroups = length(unique(unlist(obj[[group.by]])))
+get_dot_height_vec<-function(vec){
+  ngroups = length(unique(vec))
   result = max(1500, ngroups * 90 + 200)
   return(result)
+}
+
+get_dot_height<-function(obj, group.by){
+  return(get_dot_height_vec(unlist(obj[[group.by]])))
 }
 
 output_barplot<-function(obj, sample_key, cell_key, filename){
