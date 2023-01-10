@@ -61,13 +61,6 @@ cat(figureRmd(cts), file=resFile)
 ```{r, child=resFile} 
 ```
 
-## Cell type top 10 heatmap
-
-```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
-```
-
-
 # Cell type level
 
 ## UMAP
@@ -99,6 +92,12 @@ include_graphics(paste0(outFile, ".cell_type.celltype_sample.png"))
 
 ```{r, echo=FALSE}
 include_graphics(paste0(outFile, ".cell_type.cell.png"))
+```
+
+## Cell type top 10 heatmap
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
 ```
 
 # Sub cluster level
