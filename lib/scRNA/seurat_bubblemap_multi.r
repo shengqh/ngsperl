@@ -89,7 +89,9 @@ for(bn in bnames){
   width=as.numeric(bn_map$width)
   #height=as.numeric(bn_map$height)
   
-  if(cell_type_pattern != "" & cell_type_pattern != "*"){
+  if(is.null(cell_type_pattern)){
+    subobj=obj
+  }else if (cell_type_pattern != "" & cell_type_pattern != "*"){
     cells = colnames(obj)[grepl(cell_type_pattern, unlist(obj[[celltype_name]]), ignore.case = ignore.case)]
     subobj=subset(obj, cells=cells)
   }else{
