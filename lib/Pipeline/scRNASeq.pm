@@ -427,8 +427,8 @@ sub getScRNASeqConfig {
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
         if(defined $def->{bubble_plots}){
-          my $bubble_task = $scDynamic_task . "_bubblemap";
-          add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $seurat_task, $meta_ref, "layer4", "layer4_clusters" );
+          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters" );
+          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_final", $seurat_task, $meta_ref, "layer4", "layer4_clusters" );
         }
 
         if(getValue($def, "perform_individual_dynamic_cluster", 0)){
