@@ -98,6 +98,9 @@ layer2map<-ctdef$celltype_map
 combined_ct<-ctdef$combined_celltypes
 combined_ct_source<-ctdef$combined_celltype_source
 
+replace_cts=layer2map %in% names(combined_ct)
+layer2map[replace_cts] = combined_ct[layer2map[replace_cts]]
+
 prefix<-outFile
 
 if(!exists('obj')){
@@ -495,6 +498,28 @@ do_analysis<-function(tmp_folder,
   output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="orig.ident", name="sample")
 
   if(!by_individual_sample){
+    #output individual sample dot plot, with global scaled average gene expression.
+    obj$sample_layer4<-paste0(obj$orig.ident, ":", obj$layer4)
+    g<-get_bubble_plot( obj = obj, 
+                    cur_res = NA, 
+                    cur_celltype = "sample_layer4", 
+                    bubblemap_file = bubblemap_file, 
+                    assay = "RNA", 
+                    orderby_cluster = F)
+    gdata<-g$data
+    gdata$id<-gsub(".+: ","",gdata$id)
+    gdata$sample<-gsub(":.+","",gdata$id)
+    gdata$id<-gsub(".+:","",gdata$id)
+
+    for(sample in unique(gdata$sample)){
+      sdata<-gdata[gdata$sample == sample,]
+      g$data=sdata
+      dot_file = paste0(prefix, ".layer4.", sample, ".dot.png")
+      png(dot_file, width=4000, height=get_dot_height(obj, "layer4"), res=300)
+      print(g)
+      dev.off()
+    }
+
     has_batch<-FALSE
     if("batch" %in% colnames(obj@meta.data)){
       if("sample" %in% colnames(obj@meta.data)){

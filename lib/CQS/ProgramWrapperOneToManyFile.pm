@@ -223,6 +223,37 @@ sub result {
   return $result;
 }
 
+sub get_absolute_final_file {
+  my ( $self, $config, $section, $sample ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
+
+  my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
+
+  my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
+  my $output_exts = get_output_ext_list( $config, $section );
+
+  my $namemap = $self->get_output_name_map($config, $section);
+  #print(Dumper($namemap));
+
+  my $result = {};
+  foreach my $sample_name ( keys %$namemap ) {
+    if( $sample eq $sample_name) {
+      my $curnames = $namemap->{$sample_name};
+
+      for my $curname (@$curnames) {
+        my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$curname";
+
+        foreach my $cur_ext (@$output_exts) {
+          my $final_file = $samplename_in_result ? $curname . $cur_ext : $cur_ext;
+          return($final_file);
+        }
+      }
+    }
+  }
+}
+
 #get current pbs and its dependent sample names
 #TODO: consider other ref links
 sub get_pbs_source {

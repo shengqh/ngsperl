@@ -69,6 +69,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_strelka2
 
   add_clustree_rmd
+
+  add_bubble_plots
 )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -105,8 +107,11 @@ sub add_seurat_rawdata {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
     rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_rawdata.r",
+    rReportTemplate => "../scRNA/seurat_rawdata.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
     parameterSampleFile1_ref => "files",
     parameterSampleFile2     => {
+      task_name => getValue($def, "task_name"),
       Mtpattern             => getValue( $def, "Mtpattern" ),
       rRNApattern           => getValue( $def, "rRNApattern" ),
       hemoglobinPattern     => getValue( $def, "hemoglobinPattern" ),
@@ -135,6 +140,8 @@ sub add_seurat_merge_object {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
     rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_merge_object.r",
+    rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
     parameterSampleFile1_ref => $source_ref,
     parameterSampleFile2     => {
       Mtpattern             => getValue( $def, "Mtpattern" ),
@@ -189,6 +196,7 @@ sub add_seurat {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_task,
     rtemplate                => "../scRNA/scRNA_func.r;$preprocessing_rscript",
     rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
     parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
     parameterFile2_ref => $essential_gene_task,
     parameterSampleFile1     => {
@@ -430,6 +438,7 @@ rm __NAME__.bam.bai
     interpretor           => "",
     check_program         => 0,
     program               => "",
+    ignore_samples        => getValue($def, "arcasHLA_ignore_samples", []),
     source_ref            => $source_ref,
     source_arg            => "-v",
     source_join_delimiter => "",
@@ -1263,12 +1272,41 @@ sub addDynamicCluster {
 sub addSubCluster {
   my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map) = @_;
 
+  my $by_integration;
+  my $integration_by_harmony;
+  my $subcluster_redo_harmony;
+  if(defined $def->{"subcluster_by_harmony"}){
+    if($def->{"subcluster_by_harmony"}){
+      $by_integration = 1;
+      $integration_by_harmony = 1;
+      if(getValue($def, "subcluster_redo_harmony", 0)){
+        $subcluster_redo_harmony = 1;
+      }else{
+        $subcluster_redo_harmony = !getValue( $def, "integration_by_harmony" );
+      }
+
+      if (!($subcluster_task =~ /rh_/)){
+        $subcluster_task = $subcluster_task . "_rh";
+      }
+      $cur_options->{reduction} = "harmony";
+    }else{
+      $by_integration = getValue( $def, "by_integration" );
+      $integration_by_harmony = 0;
+      $subcluster_redo_harmony = 0;
+    }
+  }else{
+      $by_integration = getValue( $def, "by_integration" );
+      $integration_by_harmony = getValue( $def, "integration_by_harmony" );
+      $subcluster_redo_harmony = getValue( $def, "subcluster_redo_harmony", 0 );
+  }
+
   $config->{$subcluster_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v3.r",
     rReportTemplate          => "../scRNA/seurat_celltype_subcluster.v3.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
@@ -1276,8 +1314,8 @@ sub addSubCluster {
       task_name             => getValue( $def, "task_name" ),
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
-      by_integration        => getValue( $def, "by_integration" ),
-      by_harmony            => getValue( $def, "integration_by_harmony" ),
+      by_integration        => $by_integration,
+      by_harmony            => $integration_by_harmony,
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
       species               => getValue( $def, "species" ),
       db_markers_file       => getValue( $def, "markers_file" ),
@@ -1287,7 +1325,7 @@ sub addSubCluster {
       #remove_subtype        => getValue( $def, "remove_subtype", ""),
       HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
-      redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
+      redo_harmony          => $subcluster_redo_harmony,
       bubblemap_file        => $def->{bubblemap_file},
       bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
       summary_layer_file    => $def->{summary_layer_file},
@@ -1312,6 +1350,8 @@ sub addSubCluster {
   }
 
   push( @$summary, $subcluster_task );
+
+  return($subcluster_task);
 }
 
 sub addSubClusterChoose {
@@ -1491,9 +1531,12 @@ sub add_hto_samples_preparation {
     class => "CQS::UniqueR",
     target_dir => "${target_dir}/$preparation_task",
     rtemplate => "../scRNA/split_samples_utils.r,../scRNA/split_samples_preparation.r",
+    rReportTemplate => "../scRNA/split_samples_preparation.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
     option => "",
     parameterSampleFile1_ref => $hto_file_ref,
     parameterSampleFile2 => {
+      task_name => getValue($def, "task_name"),
       hto_regex => getValue($def, "hto_regex", ""),
       nFeature_cutoff_min => getValue($def, "nFeature_cutoff_min"),
       hto_non_zero_percentage => getValue($def, "hto_non_zero_percentage", 0.2),
@@ -1698,9 +1741,9 @@ sub add_souporcell {
     docker_prefix => "souporcell_",
     option => "-i __FILE__ -b __FILE2__ -t $souporcell_thread -o . -k __FILE3__ $skip_remap_option",
     post_command => "
-if [[ -s clusters.tsv ]]; then
-  rm -f souporcell_minimap_tagged_sorted.bam.* alt.mtx ref.mtx common_variants* *.done clusters_tmp.tsv depth_merged.bed minimap.err retag.err clusters.err
-fi
+#if [[ -s clusters.tsv ]]; then
+#  rm -f souporcell_minimap_tagged_sorted.bam.* clusters_tmp.tsv depth_merged.bed minimap.err retag.err clusters.err
+#fi
 ",
     source_arg => "-i",
     source => $souporcell_bam_files,
@@ -1733,7 +1776,7 @@ fi
 sub add_souporcell_integration {
   my ($config, $def, $summary, $target_dir, $hto_souporcell_task, $hto_ref) = @_;
   my $hto_task = $hto_ref->[0];
-  my $hto_integration_task = $hto_souporcell_task . "_cutoff_integration";
+  my $hto_integration_task = $hto_task . "_souporcell_integration";
   $config->{$hto_integration_task} = {
     class                     => "CQS::UniqueR",
     target_dir                => "${target_dir}/${hto_integration_task}",
@@ -1761,16 +1804,26 @@ sub add_souporcell_integration {
 sub add_hto_bam {
   my ($config, $def, $individual, $target_dir, $hto_ref) = @_;
 
-  if ( not defined $def->{bam_files}){
+  my $bam_files = $def->{bam_files};
+  my $HTO_samples = $def->{HTO_samples};
+
+  if ( not defined $bam_files){
     die "Define bam_files for perform_arcasHLA";
   }
 
-  if (not defined $def->{HTO_samples}) {
+  if (not defined $HTO_samples) {
     die "Define HTO_samples for split bam files";
   }
 
-  $config->{HTO_samples} = $def->{HTO_samples};
-  $config->{bam_files} = $def->{bam_files};
+  $config->{HTO_samples} = $HTO_samples;
+  $config->{bam_files} = $bam_files;
+
+  my $not_hto_bam = {};
+  for my $key (sort keys %$bam_files ){
+    if(!defined $HTO_samples->{$key}){
+      $not_hto_bam->{$key} = $bam_files->{$key};
+    }
+  }
 
   my $hto_bam_task = "hto_bam";
   $config->{$hto_bam_task} = {
@@ -1801,7 +1854,13 @@ sub add_hto_bam {
     },
   };
   push( @$individual, $hto_bam_task );
-  return($hto_bam_task);
+
+  if(%$not_hto_bam){
+    $config->{not_hto_bam} = $not_hto_bam;
+    return [$hto_bam_task, "not_hto_bam"];
+  }else{
+    return($hto_bam_task);
+  }
 }
 
 sub add_clonotype_split {
@@ -2164,7 +2223,7 @@ sub add_clustree_rmd {
     },
     parameterSampleFile2_ref => [$scDynamic_task, ".scDynamic.meta.rds"],
     parameterSampleFile3_ref => [$individual_scDynamic_task, ".celltype_cell_num.csv"],
-    output_file_ext => ".html",
+    output_file_ext => "_ur.html",
     output_no_name => 0,
     can_result_be_empty_file => 0,
     sh_direct   => 1,
@@ -2175,6 +2234,36 @@ sub add_clustree_rmd {
     },
   };
   push( @$summary, $clustree_task );
+}
+
+sub add_bubble_plots {
+  my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name) = @_;
+  my $p2key = (-e $meta_ref) ? "parameterFile2" : "parameterFile2_ref";
+  $config->{$bubble_task} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubble_task,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multi.r",
+    rReportTemplate           => "../scRNA/seurat_bubblemap_multi.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
+    parameterFile1_ref   => [ $choose_task, ".final.rds" ],
+    $p2key  => $meta_ref,
+    parameterSampleFile1 => $def->{bubble_plots},
+    parameterSampleFile2 => {
+      task_name => getValue($def, "task_name"),
+      cluster_name => $cluster_name,
+      celltype_name => $celltype_name 
+    },
+    output_file_ext      => ".html",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "6",
+      "mem"       => "40gb"
+    },
+  };
+
+  push( @$summary, $bubble_task );
 }
 
 1;

@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='mouse_8870'
+outFile='GPA_NML'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
-parSampleFile3='fileList3.txt'
-parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony/result/mouse_8870.final.rds'
-parFile2='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dynamic_01_res0.2_call/result/mouse_8870.scDynamic.meta.rds'
-parFile3='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/essential_genes/result/mouse_8870.txt'
+parSampleFile3=''
+parFile1='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_merge/result/GPA_NML.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_merge_dr0.5_01_call/result/GPA_NML.scDynamic.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/essential_genes/result/GPA_NML.txt'
+parFile4='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_merge_SignacX/result/GPA_NML.meta.rds'
 
 
-setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dynamic_02_res0.2_subcluster/result')
+setwd('/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -89,6 +90,12 @@ prefix<-outFile
 if(!exists("obj")){
   obj<-read_object(parFile1, parFile2)
   Idents(obj)<-previous_layer
+}
+
+if(by_harmony){
+  if(!('batch' %in% colnames(obj@meta.data))){
+    obj$batch<-obj$orig.ident
+  }
 }
 
 if(!is_file_empty(parSampleFile2)){
@@ -203,7 +210,6 @@ tblct<-table(celltypes)
 tblct<-tblct[order(tblct, decreasing = F)]
 
 previous_celltypes<-names(tblct)
-ordered_celltypes<-previous_celltypes[order(previous_celltypes)]
 writeLines(ordered_celltypes, paste0(outFile, ".cell_types.txt"))
 #previous_celltypes<-c("B cells")
 
@@ -415,5 +421,3 @@ setwd(cur_folder)
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
 
-library('rmarkdown')
-rmarkdown::render("seurat_celltype_subcluster.v3.rmd",output_file=paste0(outFile,".subcluster.html"))

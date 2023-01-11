@@ -1,5 +1,5 @@
 ---
-title: "Souporcell/HTO integration"
+title: "HTO preparation"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
@@ -23,9 +23,13 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 ```
 
 ```{r data, echo = FALSE}
+options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
 
-files<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
-samples<-files$V2
+outFile=myoptions$task_name
+
+sample_files<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+samples<-sample_files$V2
 
 printTable<-function(filepath){
   tbl<-read.csv(filepath, check.names=F, row.names=1)
@@ -45,28 +49,13 @@ figureRmd<-function(samples){
   result<-""
   sample = samples[1]
   for(sample in samples){
-    soupor_file = paste0(sample, ".HTO_soupor.csv")
-    soupor = read.csv(soupor_file, check.names = F, row.names=1)
-
-    tagnames = rownames(soupor)[!(rownames(soupor) %in% c("Negative", "Doublet"))]
     result<-paste0(result, paste0("\n\n# ", sample, "\n\n"))
 
-    result<-paste0(result, getTable(soupor_file))
-
-    soupor_clusters = colnames(soupor)[!(colnames(soupor) %in% c("unassigned", "doublet"))]
-    for(sc in soupor_clusters){
-      result<-paste0(result, paste0("\n\n## Souporcell cluster ", sc, "\n\n"))
-      result<-paste0(result, getFigure(paste0(sample, ".soupor_cluster", sc, ".png")))
-    }
+    result<-paste0(result, paste0("\n\n## All raw tags\n\n"))
+    result<-paste0(result, getFigure(paste0(sample, ".raw.alltags.png")))
     
-    tagname=tagnames[1]
-    for(tagname in tagnames){
-      result<-paste0(result, paste0("\n\n## ", tagname, "\n\n"))
-      result<-paste0(result, getFigure(paste0(sample, ".", tagname, ".png")))
-    }
-    
-    result<-paste0(result, paste0("\n\n## Integration\n\n"))
-    result<-paste0(result, getFigure(paste0(sample, ".HTO.png")))
+    result<-paste0(result, paste0("\n\n## Filtered tags\n\n"))
+    result<-paste0(result, getFigure(paste0(sample, ".tag.dist.png")))
   }
   return(result)
 }

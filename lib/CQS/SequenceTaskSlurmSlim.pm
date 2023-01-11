@@ -299,10 +299,8 @@ sub perform {
 
         $final_index = $final_index + 1;
 
-        my $expect_file = undef;
-        if(defined $expect_file_map->{$sample}){
-          $expect_file = $myclass->get_absolute_final_file($config, $task_section, $sample);
-        }elsif($sample eq $task_name){ #one pbs, multiple result
+        my $expect_file = $myclass->get_absolute_final_file($config, $task_section, $sample);
+        if(!defined $expect_file && $sample eq $task_name){ #one pbs, multiple result
           $expect_file = $myclass->get_absolute_final_file($config, $task_section);
         }
         
