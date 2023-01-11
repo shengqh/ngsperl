@@ -27,6 +27,10 @@ options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors 
 myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
+
+include_graphics_in_details<-function(filepath){
+  include_graphics(paste0("details/", filepath))
+}
 ```
 
 # Cell type level
@@ -34,13 +38,13 @@ outFile=myoptions$task_name
 ## UMAP
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".cell_type.umap.png"))
+include_graphics_in_details(paste0(outFile, ".cell_type.umap.png"))
 ```
 
 ## Marker genes
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".cell_type.dot.png"))
+include_graphics_in_details(paste0(outFile, ".cell_type.dot.png"))
 ```
 
 ## Sample / Cell type
@@ -50,22 +54,22 @@ scts<-read.csv(paste0(outFile, ".cell_type.sample_celltype.csv"), check.names=F,
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type of each sample"))))
 ```
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".cell_type.sample_celltype.png"))
+include_graphics_in_details(paste0(outFile, ".cell_type.sample_celltype.png"))
 ```
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".cell_type.celltype_sample.png"))
+include_graphics_in_details(paste0(outFile, ".cell_type.celltype_sample.png"))
 ```
 
 ## Cell type individual UMAP 
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".cell_type.cell.png"))
+include_graphics_in_details(paste0(outFile, ".cell_type.cell.png"))
 ```
 
 ## Cell type top 10 heatmap
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
+include_graphics_in_details(paste0(outFile, ".cell_type.top10.heatmap.png"))
 ```
 
 # Sub cluster level
@@ -73,13 +77,13 @@ include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
 ## UMAP
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".seurat_cell_type.umap.png"))
+include_graphics_in_details(paste0(outFile, ".seurat_cell_type.umap.png"))
 ```
 
 ## Marker genes
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".seurat_cell_type.dot.png"))
+include_graphics_in_details(paste0(outFile, ".seurat_cell_type.dot.png"))
 ```
 
 ## Sample / Cell type
@@ -89,14 +93,14 @@ scts<-read.csv(paste0(outFile, ".seurat_cell_type.sample_celltype.csv"), check.n
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count_sub", "Cell count in each sub cluster of each sample"))))
 ```
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".seurat_cell_type.sample_celltype.png"))
+include_graphics_in_details(paste0(outFile, ".seurat_cell_type.sample_celltype.png"))
 ```
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".seurat_cell_type.celltype_sample.png"))
+include_graphics_in_details(paste0(outFile, ".seurat_cell_type.celltype_sample.png"))
 ```
 
 ## Cell type individual UMAP 
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".seurat_cell_type.cell.png"))
+include_graphics_in_details(paste0(outFile, ".seurat_cell_type.cell.png"))
 ```

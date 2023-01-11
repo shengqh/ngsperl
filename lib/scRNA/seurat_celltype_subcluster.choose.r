@@ -289,6 +289,13 @@ if(output_heatmap){
 }
 saveRDS(obj, paste0(outFile, ".final.rds"))
 
+cur_folder = getwd()
+tmp_folder = paste0(cur_folder, "/details")
+if(!dir.exists(tmp_folder)){
+  dir.create(tmp_folder)
+}
+setwd(tmp_folder)
+
 output_celltype_figures(
   obj = obj, 
   cell_identity = cur_layer, 
@@ -312,6 +319,8 @@ output_celltype_figures(
   name="sample",
   umap_width=3200,
   cell_identity_order="seurat_clusters")
+
+setwd(cur_folder)
 
 write.csv(obj[["umap"]]@cell.embeddings, paste0(outFile, ".umap.csv"))
 
