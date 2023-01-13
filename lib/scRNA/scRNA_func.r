@@ -42,7 +42,7 @@ is_file_empty<-function(filepath){
 }
 
 celltype_to_filename<-function(pct){
-  return(gsub('[/:()\ ]+', "_", pct))
+  return(gsub('[/:()?\ ]+', "_", pct))
 }
 
 get_hue_colors<-function(n, random_colors=TRUE, random.seed=20220606){
@@ -911,7 +911,7 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   return(g)
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL, use_blue_yellow_red=TRUE){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
   gene_groups=split(genes_df$gene, genes_df$cell_type)
@@ -960,6 +960,10 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   }
 
   g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title)
+  
+  if(use_blue_yellow_red){
+    g <- g + scale_color_gradient2(low="blue", mid="yellow", high="red")
+  }
   
   return(g)
 }
@@ -1266,11 +1270,11 @@ build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_
   groups<-as.character(obj@meta.data[,label.by])
   gt<-table(groups)
   gt<-gt[order(gt, decreasing=T)]
-  dummy_cluster<-c(1:length(gt))
+  dummy_cluster<-c(0:(length(gt)-1))
   names(dummy_cluster)<-names(gt)
   dc<-factor(dummy_cluster[groups], levels=dummy_cluster)
   obj[[new_cluster_name]]<-dc
-  obj[[new_cluster_name_label]]<-paste0(obj@meta.data$dummy_cluster, ": ", groups)
+  obj[[new_cluster_name_label]]<-paste0(obj@meta.data[,new_cluster_name], ": ", groups)
   return(obj)
 }
 
@@ -1297,7 +1301,7 @@ get_highlight_cell_plot<-function(obj, group.by, reduction="umap", reorder=TRUE)
     ct_count<-cts[ct]
     pct<-paste0(ct, "(", ct_count, ")")
     cells<-colnames(obj)[obj[[group.by]] == ct]
-    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", ct)) + NoLegend()
+    g0<-DimPlot(obj, label=F, cells.highlight =cells, reduction = reduction) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", ct)) + NoLegend()
     if(is.null(g)){
       g<-g0
     }else{
@@ -1526,6 +1530,25 @@ output_barplot<-function(obj, sample_key, cell_key, filename){
   dev.off()
 }
 
+output_highlight_cell_by_cell_identity<-function(obj,
+                                                 cell_identity,
+                                                 prefix,
+                                                 group.by="orig.ident",
+                                                 name=group.by,
+                                                 umap_width=2600,
+                                                 cell_identity_umap="umap"){
+  
+  meta = obj@meta.data
+  pcts = unlist(unique(obj[[cell_identity]]))
+  for(pct in pcts){
+    pct_str = celltype_to_filename(pct)
+    cells<-rownames(meta)[meta[,cell_identity] == pct]
+    subobj<-subset(obj, cells=cells)
+    curprefix<-paste0(prefix, ".", cell_identity, ".", name, ".", pct_str)
+    save_highlight_cell_plot(paste0(curprefix, ".cell.png"), subobj, group.by = group.by, reduction = cell_identity_umap, reorder=FALSE, title=pct)
+  }
+}
+
 output_celltype_figures<-function(obj, 
                                   cell_identity, 
                                   prefix, 
@@ -1536,7 +1559,9 @@ output_celltype_figures<-function(obj,
                                   name=group.by, 
                                   umap_width=2600, 
                                   dot_width=4000, 
-                                  cell_identity_order=NULL){
+                                  cell_identity_order=NULL,
+                                  all_umap="umap",
+                                  cell_identity_umap="umap"){
   if(group.by != "batch"){
     if(is.null(cell_identity_order)){
       g<-get_bubble_plot( obj = obj, 
@@ -1563,14 +1588,14 @@ output_celltype_figures<-function(obj,
       g<-get_dim_plot_labelby(obj = obj, 
                               label.by = cell_identity, 
                               title = "",
-                              reduction = "umap", 
+                              reduction = all_umap, 
                               legend.title = "")
     }else{
       g<-get_dim_plot(obj = obj,
                       group.by = cell_identity_order,
                       label.by = cell_identity, 
                       title = "",
-                      reduction = "umap", 
+                      reduction = all_umap, 
                       legend.title = "")
     }
     png(paste0(prefix, ".", cell_identity, ".umap.png"), width=umap_width, height=2000, res=300)
@@ -1596,19 +1621,18 @@ output_celltype_figures<-function(obj,
   save_highlight_cell_plot(filename = paste0(prefix, ".", cell_identity, ".cell.png"), 
                            obj = obj, 
                            group.by = cell_identity, 
-                           reduction = "umap",
+                           reduction = all_umap,
                            reorder = is.null(cell_identity_order))
 
+  output_highlight_cell_by_cell_identity(obj = obj,
+                                         cell_identity = cell_identity,
+                                         prefix = prefix,
+                                         group.by = group.by,
+                                         name = name,
+                                         umap_width = umap_width,
+                                         cell_identity_umap = cell_identity_umap)
+  
   meta = obj@meta.data
-  pcts = unlist(unique(obj[[cell_identity]]))
-  for(pct in pcts){
-    pct_str = celltype_to_filename(pct)
-    cells<-rownames(meta)[meta[,cell_identity] == pct]
-    subobj<-subset(obj, cells=cells)
-    curprefix<-paste0(prefix, ".", cell_identity, ".", name, ".", pct_str)
-    save_highlight_cell_plot(paste0(curprefix, ".cell.png"), subobj, group.by = group.by, reduction = "umap", reorder=FALSE, title=pct)
-  }
-
   tb<-table(meta[,group.by], meta[,cell_identity])
   write.csv(tb, file=paste0(prefix, ".", cell_identity, ".", name,  "_celltype.csv"))
 
