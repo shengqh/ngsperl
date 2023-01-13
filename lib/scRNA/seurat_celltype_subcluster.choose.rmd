@@ -28,111 +28,113 @@ options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors 
 myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
-
-include_graphics_in_details<-function(filepath){
-  include_graphics(paste0("details/", filepath))
-}
+detailFile=paste0("details/", outFile)
 ```
 
-# Sub clustering UMAP
+# Pre selection
+
+## Cell type UMAP
+
+```{r, echo=FALSE}
+check_and_include_graphics(paste0(outFile, ".old.umap.png"))
+```
+
+# Post selection
+
+## sub-clustering UMAP
 
 ```{r, echo=FALSE}
 cts<-readLines(paste0(outFile, ".orig_cell_types.txt"))
 
-getFigure<-function(filepath){
-  return(paste0("```{r,echo=FALSE,results='asis'}\ninclude_graphics('", filepath, "')\n```\n\n"))
-}
-
-resFile<-"subcluster.Rmd"
+resFile<-"sub_umap.Rmd"
 figureRmd<-function(cts){
   result<-""
   ct<-cts[1]
   for(ct in cts){
-    result<-paste0(result, paste0("\n\n## ", ct, "\n\n"))
+    result<-paste0(result, paste0("\n\n### ", ct, "\n\n"))
 
-    ct_png<-paste0(outFile, ".umap.", celltype_to_filename(ct), ".png")
-    if(file.exists(ct_png)){
-      result<-paste0(result, getFigure(ct_png))
-    }else{
-      result<-paste0(result, "\n\tNo sub clustering UMAP\n\n")
-    }
+    umap_png<-paste0(outFile, ".", celltype_to_filename(ct), ".umap.png")
+    dot_png<-paste0(outFile, ".", celltype_to_filename(ct), ".dot.png")
+
+    result<-paste0(result, getFigure(umap_png, TRUE))
+    result<-paste0(result, getFigure(dot_png, TRUE))
   }
   return(result)
 }
 cat(figureRmd(cts), file=resFile)
-
 ```
+
 ```{r, child=resFile} 
 ```
 
-# Cell type level
+## Cell type level
 
-## UMAP
+### UMAP
 
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".cell_type.umap.png"))
+include_graphics(paste0(detailFile, ".cell_type.umap.png"))
 ```
 
-## Marker genes
+### Marker genes
 
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".cell_type.dot.png"))
+include_graphics(paste0(detailFile, ".cell_type.dot.png"))
 ```
 
-## Sample / Cell type
+### Sample / Cell type
 
 ```{r, echo=FALSE}
-scts<-read.csv(paste0(outFile, ".cell_type.sample_celltype.csv"), check.names=F, row.names=1)
+scts<-read.csv(paste0(detailFile, ".cell_type.sample_celltype.csv"), check.names=F, row.names=1)
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type of each sample"))))
 ```
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".cell_type.sample_celltype.png"))
+include_graphics(paste0(detailFile, ".cell_type.sample_celltype.png"))
 ```
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".cell_type.celltype_sample.png"))
+include_graphics(paste0(detailFile, ".cell_type.celltype_sample.png"))
 ```
 
-## Cell type individual UMAP 
+### Cell type individual UMAP 
 
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".cell_type.cell.png"))
+include_graphics(paste0(detailFile, ".cell_type.cell.png"))
 ```
 
-## Cell type top 10 heatmap
+### Cell type top 10 heatmap
 
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".cell_type.top10.heatmap.png"))
+include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
 ```
 
-# Sub cluster level
+## Sub cluster level
 
-## UMAP
+### UMAP
 
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".seurat_cell_type.umap.png"))
+include_graphics(paste0(detailFile, ".seurat_cell_type.umap.png"))
 ```
 
-## Marker genes
+### Marker genes
 
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".seurat_cell_type.dot.png"))
+include_graphics(paste0(detailFile, ".seurat_cell_type.dot.png"))
 ```
 
-## Sample / Cell type
+### Sample / cell subtype
 
 ```{r, echo=FALSE}
-scts<-read.csv(paste0(outFile, ".seurat_cell_type.sample_celltype.csv"), check.names=F, row.names=1)
+scts<-read.csv(paste0(detailFile, ".seurat_cell_type.sample_celltype.csv"), check.names=F, row.names=1)
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count_sub", "Cell count in each sub cluster of each sample"))))
 ```
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".seurat_cell_type.sample_celltype.png"))
+include_graphics(paste0(detailFile, ".seurat_cell_type.sample_celltype.png"))
 ```
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".seurat_cell_type.celltype_sample.png"))
+include_graphics(paste0(detailFile, ".seurat_cell_type.celltype_sample.png"))
 ```
 
-## Cell type individual UMAP 
+### Cell subtype individual UMAP 
 
 ```{r, echo=FALSE}
-include_graphics_in_details(paste0(outFile, ".seurat_cell_type.cell.png"))
+include_graphics(paste0(detailFile, ".seurat_cell_type.cell.png"))
 ```

@@ -3,13 +3,13 @@ outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
-parFile3='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
-parFile4='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result/crs.files.csv'
+parFile1='c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
+parFile2='c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
+parFile3='c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
+parFile4='c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result/crs.files.csv'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result')
+setwd('c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result')
 
 ### Parameter setting end ###
 
@@ -50,9 +50,11 @@ seurat_cur_layer=paste0("seurat_", cur_layer)
 resolution_col = "resolution"
 
 essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
+essential_genes<-""
 
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
+bubble_width <-ifelse(is.null(myoptions$bubble_width), 6000, as.numeric(myoptions$bubble_width))
 
 prefix<-outFile
 
@@ -61,11 +63,29 @@ if(!exists("obj")){
   obj<-factorize_layer(obj, previous_layer)
   Idents(obj)<-previous_layer
 }
+# obj<-readRDS("crs.final.rds")
+
+obj<-build_dummy_cluster(obj, label.by=previous_layer, new_cluster_name = "old_clusters")
+g<-get_dim_plot(obj, group.by ="old_clusters", label.by="old_clusters_label", label.size = 8, legend.title="") + 
+  theme(legend.text = element_text(size = 20)) + ggtitle("")
+png(paste0(prefix, ".pre.umap.png"), width=3200, height=2000, res=300)
+print(g)
+dev.off()
+
+obj$old_clusters<-NULL
+obj$old_clusters_label<-NULL
 
 obj<-AddMetaData(obj, obj[[previous_layer]], col.name = cur_layer)
 obj<-unfactorize_layer(obj, cur_layer)
 obj<-AddMetaData(obj, -1, col.name = seurat_clusters)
 obj<-AddMetaData(obj, -1, col.name = resolution_col)
+obj<-AddMetaData(obj, 0, col.name = "sub_clusters")
+
+#set the subuamp using default umap
+#it would be replaced cell type by cell type using real sub umap in subclustering
+subumap<-Embeddings(obj, reduction = "umap")
+colnames(subumap)<-c("SUBUMAP_1", "SUBUMAP_2")
+obj[["subumap"]] <- CreateDimReducObject(embeddings = subumap, key = "SUBUMAP_", assay = DefaultAssay(obj))
 
 clcounts<-table(obj[[cur_layer]])
 
@@ -86,6 +106,9 @@ if(has_bubblemap){
 best_res_tbl<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
 
 res_files<-read.csv(parFile4, header=T)
+
+res_files$file<-gsub("/gpfs52", "c:/projects", res_files$file)
+
 if(!("type" %in% colnames(res_files))){
   res_files$type<-unlist(apply(res_files, 1, function(x){
     if(grepl('heatmap', x['file'])){
@@ -150,6 +173,13 @@ if(output_heatmap){
   allmarkers<-NULL
 }
 
+cur_folder = getwd()
+tmp_folder = paste0(cur_folder, "/details")
+if(!dir.exists(tmp_folder)){
+  dir.create(tmp_folder)
+}
+setwd(tmp_folder)
+
 cluster_index=0
 pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
@@ -161,8 +191,9 @@ for(pct in previous_celltypes){
   }else{
     best_res=0
   }
-
+  
   pct_res_files<-subset(res_files, celltype == pct)
+  #cat("  nrow(meta)=", nrow(meta), "\n")
   
   if((best_res == 0) | (nrow(pct_res_files) == 0) | (!best_res %in% pct_res_files$resolution)){
     #no corresponding files, which means only one sub cluster
@@ -177,43 +208,60 @@ for(pct in previous_celltypes){
         meta[cells, cur_layer] = rename_row$V1[1]
       }
     }
-
+    
     if(output_heatmap){
       allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
     }
-
+    
     next
   }
   
   cur_res_files = subset(pct_res_files, resolution==best_res)
   file_map = split(cur_res_files$file, cur_res_files$type)
-
+  
   #cat(file_map, "\n")
-
+  
   meta_rds = file_map$meta
   if(!file.exists(meta_rds)){
     stop(meta_rds)
   }
-  cur_meta<-readRDS(meta_rds)
-  cur_meta$seurat_clusters=as.numeric(as.character(cur_meta$seurat_clusters))
+  all_meta<-readRDS(meta_rds)
+  subobj<-subset(obj, cells=rownames(all_meta))
+  
+  reductions_rds = file_map$reductions
+  reductions<-readRDS(reductions_rds)
+  subobj@reductions<-reductions
+  
+  subumap<-as.data.frame(reductions$subumap@cell.embeddings)
+  subumap<-subumap[rownames(subumap) %in% colnames(obj),,drop=FALSE]
+  obj@reductions$subumap@cell.embeddings[rownames(subumap), "SUBUMAP_1"] = subumap$subumap_1
+  obj@reductions$subumap@cell.embeddings[rownames(subumap), "SUBUMAP_2"] = subumap$subumap_2
 
-  ncluster=length(unique(cur_meta$seurat_clusters))
+  cell_filename = paste0(outFile, ".pre.", celltype_to_filename(pct), ".cell.png")
+  save_highlight_cell_plot(cell_filename, subobj, group.by="orig.ident", reduction="subumap", reorder = FALSE) 
+  rm(subobj)
+  
+  all_meta$seurat_clusters_str<-as.character(all_meta$seurat_clusters)
+  ncluster=length(unique(all_meta$seurat_clusters))
+  
   cat("  best resolution", best_res, "with", ncluster, "clusters\n")
-
+  
+  cur_meta<-all_meta[rownames(all_meta) %in% colnames(obj),,drop=F]
+  cur_meta$seurat_clusters=as.numeric(as.character(cur_meta$seurat_clusters))
+  
   ct_tbl=subset(best_res_row, V2 != "resolution")
   if(nrow(ct_tbl) > 0){
-    cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
     ct_tbl$V1<-as.character(ct_tbl$V1)
     ct_tbl$V2<-as.character(ct_tbl$V2)
     
-    valid=(ct_tbl$V1 %in% cur_meta$seurat_clusters_str) | (ct_tbl$V2 %in% cur_meta$seurat_clusters_str)
+    valid=(ct_tbl$V1 %in% all_meta$seurat_clusters_str) | (ct_tbl$V2 %in% all_meta$seurat_clusters_str)
     invalid=ct_tbl[!valid,,drop=F]
     
     if(nrow(invalid) > 0){
       print(invalid)
       stop("Either first column be cluster for merge, or second column be cluster for rename. ")
     }
-
+    
     rename_tbl=ct_tbl[ct_tbl$V2 %in% cur_meta$seurat_clusters_str,,drop=F]
     if(nrow(rename_tbl) > 0){
       for(idx in c(1:nrow(rename_tbl))){
@@ -222,7 +270,7 @@ for(pct in previous_celltypes){
         cur_meta[cur_meta$seurat_clusters_str==sc, "cur_layer"] = scname
       }
     }
-  
+    
     merge_tbl=ct_tbl[ct_tbl$V1 %in% cur_meta$seurat_clusters_str,,drop=F]
     if(nrow(merge_tbl) > 0){
       max_index = max(cur_meta$seurat_clusters) + 1
@@ -247,55 +295,31 @@ for(pct in previous_celltypes){
       cur_meta$seurat_clusters[valid_clusters] = newnames[as.character(cur_meta$seurat_clusters[valid_clusters])]
     }
   }
-
-  cur_meta$selected_clusters<-cur_meta$seurat_clusters
+  
+  cur_meta$sub_clusters<-cur_meta$seurat_clusters
   cur_meta$seurat_clusters<-cur_meta$seurat_clusters + cluster_index
   cluster_index = max(cur_meta$seurat_clusters) + 1
-
+  
   meta[rownames(cur_meta), resolution_col] = best_res
   meta[rownames(cur_meta), seurat_clusters] = cur_meta$seurat_clusters
   meta[rownames(cur_meta), cur_layer] = cur_meta$cur_layer
-
+  meta[rownames(cur_meta), "sub_clusters"] = cur_meta$sub_clusters
+  
   if(output_heatmap){
     markers_file = file_map$markers
     cur_markers=read.csv(markers_file, header=T, row.names=1)
     cur_top10 = get_top10_markers(cur_markers)
     allmarkers=c(allmarkers, cur_top19$gene)
   }
-
-  valid_meta<-cur_meta[cur_meta$selected_clusters >= 0,]
-  subobj<-subset(obj, cells=rownames(valid_meta))
-  valid_meta<-valid_meta[colnames(subobj),,drop=F]
-  reductions_rds = file_map$reductions
-  reductions<-readRDS(reductions_rds)
-  embeddings<-reductions$subumap@cell.embeddings
-  embeddings<-embeddings[colnames(subobj),,drop=F]
-  colnames(embeddings)<-c("UMAP_1", "UMAP_2")
-  subobj@reductions$umap@cell.embeddings<-embeddings
-  subobj@meta.data<-valid_meta
-  subobj$display_layer<-paste0(subobj$selected_clusters, ":", subobj$cur_layer)
-
-  g<-get_dim_plot(obj = subobj, 
-                  group.by = "selected_clusters", 
-                  label.by = "display_layer", 
-                  label=T, 
-                  title=pct, 
-                  legend.title="", 
-                  reduction="umap", 
-                  ncol=1, 
-                  random_colors=TRUE)
-
-  g<-g+theme(text = element_text(size = 20))
-  png(paste0(outFile,".umap.", celltype_to_filename(pct), ".png"), width=2500, height=2000, res=300)
-  print(g)
-  dev.off()
 }
 
+setwd(cur_folder)
+
 obj@meta.data<-meta
-cells<-colnames(obj)[obj$seurat_clusters>=0]
 
 if(any(obj$seurat_clusters<0)){
   #there are cells deleted
+  cells<-colnames(obj)[obj$seurat_clusters>=0]
   obj<-subset(obj, cells=cells)
 }
 
@@ -317,27 +341,61 @@ if(output_heatmap){
   obj<-myScaleData(obj, allmarkers, "RNA")
 }
 
-cat("saving final object ...\n")
+#cat("saving final object ...\n")
 saveRDS(obj, paste0(outFile, ".final.rds"))
 
-cur_folder = getwd()
-tmp_folder = paste0(cur_folder, "/details")
-if(!dir.exists(tmp_folder)){
-  dir.create(tmp_folder)
-}
+cat("output figures ...\n")
+
 setwd(tmp_folder)
 
+obj$display_layer<-paste0(obj$sub_clusters, ": ", unlist(obj[[cur_layer]]))
+gdot=get_bubble_plot(obj, NULL, NULL, bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=TRUE, group.by=seurat_cur_layer)
+galldata<-gdot$data
+
+pre_layer<-unlist(obj[[previous_layer]])
+
+pcts<-unique(pre_layer)
+pct<-pcts[1]
+for(pct in pcts){
+  cells<-colnames(obj)[pre_layer == pct]
+  subobj<-subset(obj, cells=cells)
+  
+  g<-get_dim_plot(obj = subobj, 
+                  group.by = "sub_clusters", 
+                  label.by = "display_layer", 
+                  label=T, 
+                  title=pct, 
+                  legend.title="", 
+                  reduction="subumap", 
+                  ncol=1, 
+                  random_colors=TRUE)
+  
+  g<-g+theme(text = element_text(size = 20))
+  png(paste0(outFile,".", celltype_to_filename(pct), ".umap.png"), width=2500, height=2000, res=300)
+  print(g)
+  dev.off()
+  
+  g_data<-galldata[galldata$id %in% unlist(subobj[[seurat_cur_layer]]),]
+  gdot$data<-g_data
+  png(paste0(outFile, ".", celltype_to_filename(pct), ".dot.png"), width=bubble_width, height=get_dot_height_vec(g_data$id),res=300)
+  print(gdot)
+  dev.off()
+}
+
 output_celltype_figures(
-  obj = obj, 
-  cell_identity = cur_layer, 
-  prefix = prefix, 
+  obj = obj,
+  cell_identity = cur_layer,
+  prefix = prefix,
   bubblemap_file = bubblemap_file,
   cell_activity_database = NULL,
-  combined_ct_source = NULL, 
-  group.by="orig.ident", 
+  combined_ct_source = NULL,
+  group.by="orig.ident",
   name="sample",
   umap_width=2600,
-  cell_identity_order=NULL)
+  dot_width = bubble_width,
+  cell_identity_order=NULL,
+  all_umap = "umap",
+  cell_identity_umap = "subumap")
 
 output_celltype_figures(
   obj = obj, 
@@ -349,37 +407,40 @@ output_celltype_figures(
   group.by="orig.ident", 
   name="sample",
   umap_width=3200,
-  cell_identity_order="seurat_clusters")
+  dot_width = bubble_width,
+  cell_identity_order="seurat_clusters",
+  all_umap = "umap",
+  cell_identity_umap = "subumap")
 
 setwd(cur_folder)
 
 write.csv(obj[["umap"]]@cell.embeddings, paste0(outFile, ".umap.csv"))
+write.csv(obj[["subumap"]]@cell.embeddings, paste0(outFile, ".subumap.csv"))
 
 nclusters<-length(unique(obj$seurat_clusters))
 
 if(output_heatmap){
   width<-max(3000, min(10000, nclusters * 150 + 1000))
   height<-max(3000, min(20000, length(allmarkers) * 60 + 1000))
-
+  
   g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
   png(paste0(prefix, ".top10.heatmap.png"), width=width, height=height, res=300)
   print(g)
   dev.off()
 }
 
-g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_cur_layer, label.size = 8) + theme(legend.text = element_text(size = 20))
-if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-  g<-g+get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA", orderby_cluster=TRUE)
-  g<-g+plot_layout(ncol = 2, widths = c(4, 6))
-  width=11000
-}else{
-  width=4300
-}
-
-g<-g+theme(text = element_text(size = 20)) 
-png(paste0(prefix, ".umap.png"), width=width, height=4000, res=300)
+g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_cur_layer, label.size = 8, legend.title="") + 
+  theme(legend.text = element_text(size = 20)) + ggtitle("") 
+png(paste0(prefix, ".umap.png"), width=4400, height=2000, res=300)
 print(g)
 dev.off()
+
+if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
+  g<-get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA", orderby_cluster=TRUE)
+  png(paste0(prefix, ".dot.png"), width=bubble_width, height=get_dot_height(obj, "seurat_clusters"), res=300)
+  print(g)
+  dev.off()
+}
 
 write.csv(table(obj$cell_type, obj$orig.ident), paste0(outFile, ".ct_orig.ident.csv"))
 if(!all(obj$orig.ident == obj$sample)){
