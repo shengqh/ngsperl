@@ -93,6 +93,14 @@ check_and_include_graphics<-function(graphicFile) {
   }
 }
 
+getFigure<-function(filepath, in_details=FALSE){
+  if(in_details){
+    return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('details/", filepath, "')\n```\n\n"))
+  }else{
+    return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
+  }
+}
+
 find_module_folder=function(files,pattern) {
   moduleFolders=sapply(strsplit(files[,1],"\\/"), function(x) {ind=which(x=="result");x[ind-1]})
   interestedModuleInd=grep(pattern,moduleFolders)
