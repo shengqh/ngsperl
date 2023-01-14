@@ -148,7 +148,8 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "DE_by_sample_filter_minTPM",         1 );
   initDefaultValue( $def, "DE_by_sample_filter_cellPercentage", 0.5 );
-
+  initDefaultValue( $def, "DE_by_sample_min_cell_per_sample", 5 );
+  
   initDefaultValue( $def, "perform_webgestalt", 0 );
 
   initDefaultValue( $def, "perform_CHETAH", 0 );
@@ -479,7 +480,7 @@ sub getScRNASeqConfig {
             $localization_ref = $obj_ref;
 
             if(defined $def->{groups}){
-              my $group_umap_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_group_umap";
+              my $group_umap_task = $choose_task . "_group_umap";
               add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, [$choose_task, ".final.rds"]);
             }
 
