@@ -36,7 +36,7 @@ detailFile=paste0("details/", outFile)
 ## Cell type UMAP
 
 ```{r, echo=FALSE}
-check_and_include_graphics(paste0(outFile, ".old.umap.png"))
+check_and_include_graphics(paste0(outFile, ".pre.umap.png"))
 ```
 
 # Post selection
@@ -55,9 +55,11 @@ figureRmd<-function(cts){
 
     umap_png<-paste0(outFile, ".", celltype_to_filename(ct), ".umap.png")
     dot_png<-paste0(outFile, ".", celltype_to_filename(ct), ".dot.png")
+    sample_png<-paste0(outFile, ".pre.", celltype_to_filename(ct), ".cell.png")
 
     result<-paste0(result, getFigure(umap_png, TRUE))
     result<-paste0(result, getFigure(dot_png, TRUE))
+    result<-paste0(result, getFigure(sample_png, TRUE))
   }
   return(result)
 }
