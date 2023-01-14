@@ -107,7 +107,7 @@ best_res_tbl<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = 
 
 res_files<-read.csv(parFile4, header=T)
 
-res_files$file<-gsub("/gpfs52", "c:/projects", res_files$file)
+#res_files$file<-gsub("/gpfs52", "c:/projects", res_files$file)
 
 if(!("type" %in% colnames(res_files))){
   res_files$type<-unlist(apply(res_files, 1, function(x){
@@ -173,6 +173,8 @@ if(output_heatmap){
   allmarkers<-NULL
 }
 
+sub_dir<-dirname(parFile4)
+
 cur_folder = getwd()
 tmp_folder = paste0(cur_folder, "/details")
 if(!dir.exists(tmp_folder)){
@@ -194,6 +196,20 @@ for(pct in previous_celltypes){
   
   pct_res_files<-subset(res_files, celltype == pct)
   #cat("  nrow(meta)=", nrow(meta), "\n")
+
+  reductions_rds = file.path(sub_dir, "details", paste0(outFile, ".", celltype_to_filename(pct), ".reductions.rds"))
+  reductions<-readRDS(reductions_rds)
+  subobj<-subset(obj, cells=rownames(reductions$umap))
+  subobj@reductions<-reductions
+  
+  subumap<-as.data.frame(reductions$subumap@cell.embeddings)
+  subumap<-subumap[rownames(subumap) %in% colnames(obj),,drop=FALSE]
+  obj@reductions$subumap@cell.embeddings[rownames(subumap), "SUBUMAP_1"] = subumap$subumap_1
+  obj@reductions$subumap@cell.embeddings[rownames(subumap), "SUBUMAP_2"] = subumap$subumap_2
+
+  cell_filename = paste0(outFile, ".pre.", celltype_to_filename(pct), ".cell.png")
+  save_highlight_cell_plot(cell_filename, subobj, group.by="orig.ident", reduction="subumap", reorder = FALSE) 
+  rm(subobj)
   
   if((best_res == 0) | (nrow(pct_res_files) == 0) | (!best_res %in% pct_res_files$resolution)){
     #no corresponding files, which means only one sub cluster
@@ -226,21 +242,6 @@ for(pct in previous_celltypes){
     stop(meta_rds)
   }
   all_meta<-readRDS(meta_rds)
-  subobj<-subset(obj, cells=rownames(all_meta))
-  
-  reductions_rds = file_map$reductions
-  reductions<-readRDS(reductions_rds)
-  subobj@reductions<-reductions
-  
-  subumap<-as.data.frame(reductions$subumap@cell.embeddings)
-  subumap<-subumap[rownames(subumap) %in% colnames(obj),,drop=FALSE]
-  obj@reductions$subumap@cell.embeddings[rownames(subumap), "SUBUMAP_1"] = subumap$subumap_1
-  obj@reductions$subumap@cell.embeddings[rownames(subumap), "SUBUMAP_2"] = subumap$subumap_2
-
-  cell_filename = paste0(outFile, ".pre.", celltype_to_filename(pct), ".cell.png")
-  save_highlight_cell_plot(cell_filename, subobj, group.by="orig.ident", reduction="subumap", reorder = FALSE) 
-  rm(subobj)
-  
   all_meta$seurat_clusters_str<-as.character(all_meta$seurat_clusters)
   ncluster=length(unique(all_meta$seurat_clusters))
   
@@ -341,7 +342,7 @@ if(output_heatmap){
   obj<-myScaleData(obj, allmarkers, "RNA")
 }
 
-#cat("saving final object ...\n")
+cat("saving final object ...\n")
 saveRDS(obj, paste0(outFile, ".final.rds"))
 
 cat("output figures ...\n")
@@ -448,6 +449,8 @@ if(!all(obj$orig.ident == obj$sample)){
 }
 
 #obj<-readRDS("mouse_8363.final.rds")
+
+cat("FindAllMarkers for cell type ...\n")
 
 Idents(obj)<-"cell_type"
 markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
