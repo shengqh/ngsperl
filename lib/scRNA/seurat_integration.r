@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='PH_combine'
+outFile='crs'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3=''
-parFile1='/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_rawdata/result/PH_combine.rawobj.rds'
-parFile2='/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/essential_genes/result/PH_combine.txt'
+parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_rawdata/result/crs.rawobj.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
 parFile3=''
 
 
-setwd('/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg38/seurat_sct_integration/result')
+setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_integration/result')
 
 ### Parameter setting end ###
 
@@ -48,9 +48,14 @@ finalList<-preprocessing_rawobj(rawobj, myoptions, prefix)
 rawobj<-finalList$rawobj
 finalList$rawobj<-NULL
 
-poolmap = get_batch_samples(parSampleFile2, unique(rawobj$orig.ident))
+if(has_batch_file){
+  cat("Setting batch ...\n")
+  poolmap = get_batch_samples(parSampleFile2, unique(rawobj$sample))
+  rawobj$batch <- unlist(poolmap[rawobj$sample])
+}else if(!("batch" %in% colnames(rawobj@meta.data))){
+  rawobj$batch <- rawobj$sample
+}
 
-rawobj$batch=unlist(poolmap[rawobj$sample])
 objs<-SplitObject(object = rawobj, split.by = "batch")
 rm(rawobj)
 
@@ -126,6 +131,8 @@ finalList$obj<-obj
 
 finalListFile<-paste0(outFile, ".final.rds")
 saveRDS(finalList, file=finalListFile)
+
+rm(finalList)
 
 cat("output_integration_dimplot ... \n")
 output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
