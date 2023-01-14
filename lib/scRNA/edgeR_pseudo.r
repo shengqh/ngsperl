@@ -1,14 +1,14 @@
-#rm(list=ls()) 
-outFile='AK6383'
+rm(list=ls()) 
+outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
-parFile2='C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
+parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.final.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.meta.rds'
 parFile3=''
 
 
-setwd('C:/projects/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_bySample/result')
+setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -21,18 +21,21 @@ library(testit)
 
 options_table<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
-bBetweenCluster<-ifelse(myoptions$bBetweenCluster == "0", FALSE, TRUE)
+bBetweenCluster<-is_one(myoptions$bBetweenCluster)
 filter_cellPercentage<-as.numeric(myoptions$filter_cellPercentage)
 filter_minTPM<-as.numeric(myoptions$filter_minTPM)
 pvalue<-as.numeric(myoptions$pvalue)
 foldChange<-as.numeric(myoptions$foldChange)
-useRawPvalue<-ifelse(myoptions$useRawPvalue == "0", FALSE, TRUE)
+useRawPvalue<-is_one(myoptions$useRawPvalue)
 cluster_name=myoptions$cluster_name
+min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
 
 if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
 }
-sample_count_df<-get_seurat_sum_count(obj, cluster_name)
+sample_count_df<-get_seurat_sum_count(obj = obj, 
+                                      cluster_name = cluster_name, 
+                                      min_cell_per_sample = min_cell_per_sample)
 
 cts<-sample_count_df$cluster
 cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
