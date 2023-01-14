@@ -210,7 +210,7 @@ tblct<-table(celltypes)
 tblct<-tblct[order(tblct, decreasing = F)]
 
 previous_celltypes<-names(tblct)
-writeLines(ordered_celltypes, paste0(outFile, ".cell_types.txt"))
+writeLines(previous_celltypes, paste0(outFile, ".cell_types.txt"))
 #previous_celltypes<-c("B cells")
 
 DefaultAssay(obj)<-assay
