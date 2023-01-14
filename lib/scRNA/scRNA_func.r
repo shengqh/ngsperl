@@ -1345,10 +1345,10 @@ sumcount<-function(ct_count, groupings){
   return(rescount)
 }
 
-get_seurat_sum_count<-function(obj, cluster_name){
+get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1){
   clusterDf<-obj@meta.data
   cts = as.character(unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name]))
-  prefixList<-gsub('[ /:_]+', '_', cts)
+  prefixList<-celltype_to_filename(cts)
 
   res_files=c()
 
@@ -1361,6 +1361,15 @@ get_seurat_sum_count<-function(obj, cluster_name){
     
     clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
     de_obj<-subset(obj, cells=rownames(clusterCt))
+
+    dtb<-table(de_obj$orig.ident)
+
+    snames<-names(dtb)[dtb < min_cell_per_sample]
+    if(length(snames) > 0){
+      cat("those samples were excluded due to cell less than", min_cell_per_sample, ": ", paste(snames, collapse = ","), "\n")
+      dtb<-dtb[dtb >= min_cell_per_sample]
+      de_obj<-subset(de_obj, orig.ident %in% names(dtb))
+    }
 
     ct_count<-de_obj@assays$RNA@counts
     groupings<-unlist(de_obj$orig.ident)
