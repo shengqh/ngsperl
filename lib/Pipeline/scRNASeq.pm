@@ -291,7 +291,7 @@ sub getScRNASeqConfig {
 
       if(getValue($def, "split_hto_samples_by_GMM_demux", 0)){
         my $gmm_demux_task = add_hto_gmm_demux($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
-        my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, [$gmm_demux_task, ".HTO.csv"]);
+        #my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, [$gmm_demux_task, ".HTO.csv"]);
       }
 
       my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
@@ -299,10 +299,10 @@ sub getScRNASeqConfig {
 
       my $hto_bam_ref = $hto_ref;
 
-      my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, $hto_ref);
+      #my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, $hto_ref);
 
-      push (@report_files, ($hto_summary_task, ".HTO.summary.global.png"));
-      push (@report_names, "hto_summary_png");
+      #push (@report_files, ($hto_summary_task, ".HTO.summary.global.png"));
+      #push (@report_names, "hto_summary_png");
 
       my $perform_souporcell = getValue($def, "perform_souporcell", 0);
       if($perform_souporcell) {
@@ -475,7 +475,7 @@ sub getScRNASeqConfig {
               my $immunarch_task = addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch_tcell", $clonotype_consensus);
             }
 
-            addComparison($config, $def, $summary, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type");
+            addComparison($config, $def, $summary, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type", "subumap");
 
             $localization_ref = $obj_ref;
 
