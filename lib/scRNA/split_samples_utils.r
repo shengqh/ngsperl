@@ -165,7 +165,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
     tagnames=rownames(obj[["HTO"]])
   }
   
-  hto_names=unique(obj$HTO_classification)
+  hto_names=unique(as.character(obj$HTO_classification))
   a_hto_names=hto_names[!(hto_names %in% c("Doublet","Negative"))]
   a_hto_names=a_hto_names[order(a_hto_names)]
   hto_names=c(a_hto_names, "Negative", "Doublet")
@@ -191,7 +191,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
   print(RidgePlot(obj, assay = "HTO", features = tagnames, ncol = length(tagnames)))
   dev.off()
   
-  png(paste0(output_prefix, ".class.dist.png"), width=width, height=max(1400, (length(tagnames) + 2) * 500), res=300)
+  png(paste0(output_prefix, ".class.dist.png"), width=width, height=(length(tagnames) + 2) * 800, res=300)
   old_levels=levels(obj$HTO_classification)
   obj$HTO_classification<-factor(obj$HTO_classification, levels=rev(old_levels))
   rplot(obj, assay = "HTO", features = tagnames, identName="HTO_classification")
