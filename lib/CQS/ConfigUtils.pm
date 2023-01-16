@@ -735,8 +735,13 @@ sub get_ignore_sample_map {
   if($config->{ignore_samples}){
     if(!get_option($config, $section, "use_all_samples", 0)){
       my $ignore_samples = $config->{ignore_samples};
-      my %ignore_map = map { $_ => 1 } @$ignore_samples;
-      $result = \%ignore_map;
+      if(defined $ignore_samples){
+        #print(Dumper($ignore_samples));
+        if(is_array($ignore_samples)){
+          my %ignore_map = map { $_ => 1 } @$ignore_samples;
+          $result = \%ignore_map;
+        }
+      }
     }
   }
   
