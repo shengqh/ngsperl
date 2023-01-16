@@ -254,11 +254,11 @@ sub getPreprocessionConfig {
 
     my %ignore_sample_map = map { $_ => 1 } @$ignore_samples;
     
-    my $files = $def->{files};
-    for my $ignore_sample (@$ignore_samples){
-      delete $files->{$ignore_sample};
-    }
-    $def->{files} = $files;
+    # my $files = $def->{files};
+    # for my $ignore_sample (@$ignore_samples){
+    #   delete $files->{$ignore_sample};
+    # }
+    # $def->{files} = $files;
 
     my $groups = $def->{groups};
     if(defined $groups){
@@ -362,6 +362,7 @@ sub getPreprocessionConfig {
       localize_to_local_folder => getValue($def, "localize_to_local_folder", 0),
       use_tmp_folder => getValue($def, "use_tmp_folder", 0),
     },
+    ignore_samples => $def->{ignore_samples},
     files                => $def->{files},
     groups               => $def->{groups},
     deseq2_groups        => $def->{deseq2_groups},
