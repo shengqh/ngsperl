@@ -41,19 +41,19 @@ output_tag_dist<-function(obj, filename){
   tagnames=rownames(obj[["HTO"]])
   n_col=ceiling(sqrt(length(tagnames)))
   n_row=ceiling(length(tagnames) / n_col)
-  width=max(3200, n_col * 3000 + 200)
-  height=max(3000, n_row * 3000)
+  width=min(20000, n_col * 3000 + 200)
+  height=min(20000, n_row * 1500)
   png(filename, width=width, height=height, res=300)
   rplot(object=obj, assay="HTO", features = tagnames, identName="orig.ident", n_row=n_row)
   dev.off()
 }
 
-rename_tags<-function(tags){
-  result<-gsub("^TotalSeqC_", "", tags)
-  result<-gsub("^TotalSeq_", "", result)
-  result<-gsub('.TotalSeqC$', "", result)
-  return(result)
-}
+# rename_tags<-function(tags){
+#   result<-gsub("^TotalSeqC_", "", tags)
+#   result<-gsub("^TotalSeq_", "", result)
+#   result<-gsub('.TotalSeqC$', "", result)
+#   return(result)
+# }
 
 #read raw hto file
 read_hto_file<-function(cname, cfiles){
@@ -88,9 +88,11 @@ read_hto_file<-function(cname, cfiles){
     }
   }
 
-  cat("Before name clean: ", paste(rownames(htos), collapse=","), "\n")
-  rownames(htos)<-rename_tags(rownames(htos))
-  cat("After name clean: ", paste(rownames(htos), collapse=","), "\n")
+  cat("Original tag names: ", paste(rownames(htos), collapse=","), "\n")
+
+  # cat("Before name clean: ", paste(rownames(htos), collapse=","), "\n")
+  # rownames(htos)<-rename_tags(rownames(htos))
+  # cat("After name clean: ", paste(rownames(htos), collapse=","), "\n")
 
   return(list(exp=exp, htos=htos))
 }
@@ -109,7 +111,7 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1)
   for(feature in features){
     ddata=mdata[mdata$variable==feature,]
     mvalue=ceiling(max(ddata$value))
-    breaks = seq(0, mvalue, 0.2)
+    breaks = seq(0, mvalue, 0.5)
     
     g<-ggplot(ddata, aes_string(x="value")) + 
       geom_histogram(aes(y=..density..), bins=50, colour="black", fill="white", position="identity") + 
@@ -168,6 +170,19 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
   a_hto_names=a_hto_names[order(a_hto_names)]
   hto_names=c(a_hto_names, "Negative", "Doublet")
   obj$HTO_classification=factor(obj$HTO_classification, levels=hto_names)
+
+  tbl<-as.data.frame(table(obj$HTO_classification))
+  colnames(tbl)<-c("Tagname", "Cell")
+
+  if(length(unique(obj$orig.ident)) > 1){
+    sdata<-unique(FetchData(obj, c("orig.ident", "HTO_classification")))
+    if(nrow(sdata) == length(hto_names)){
+      name_map = unlist(split(sdata$orig.ident, sdata$HTO_classification))
+      tbl$Sample = unlist(name_map[tbl$Tagname])
+    }
+  }
+  cat_file=paste0(output_prefix, ".tag_cell.csv")
+  write.csv(tbl, cat_file)
   
   width=max(1800, length(tagnames) * 1500 + 300)
   
@@ -176,8 +191,11 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
   print(RidgePlot(obj, assay = "HTO", features = tagnames, ncol = length(tagnames)))
   dev.off()
   
-  png(paste0(output_prefix, ".class.dist.png"), width=width, height=max(1400, (length(tagnames) + 2) * 1000), res=300)
+  png(paste0(output_prefix, ".class.dist.png"), width=width, height=max(1400, (length(tagnames) + 2) * 500), res=300)
+  old_levels=levels(obj$HTO_classification)
+  obj$HTO_classification<-factor(obj$HTO_classification, levels=rev(old_levels))
   rplot(obj, assay = "HTO", features = tagnames, identName="HTO_classification")
+  obj$HTO_classification<-factor(obj$HTO_classification, levels=old_levels)
   dev.off()
   
   if (length(tagnames) == 2) {
