@@ -35,8 +35,8 @@ sub perform {
   
   my $groups = get_raw_files( $config, $section, "groups" );
 
-  my $covariance_file = get_option_file($config, $section, "covariance_file", 1);
-  my ($cov_table, $cov_names) = read_table($covariance_file, get_option($config, $section, "covariance_name_index", 0));
+  my $covariate_file = get_option_file($config, $section, "covariance_file", 1);
+  my ($cov_table, $cov_names) = read_table($covariate_file, get_option($config, $section, "covariance_name_index", 0));
 
   #print(Dumper($cov_table));
 
@@ -108,23 +108,33 @@ sub perform {
     print "$comparison_name\n";
 
     my $group_names;
-    my $covariance_names;
+    my $covariate_names;
     my $contrast="";
     my $designFormula="";
     my $collapse_by="";
     if (is_array($comp_def)){
       $group_names = $comp_def;
-      $covariance_names = [];
+      $covariate_names = [];
     }elsif (is_hash($comp_def)){
       $group_names = $comp_def->{"groups"};
-      $covariance_names = $comp_def->{covariances};
-      if (exists($$comp_def{"designFormula"})) {
-          $designFormula = ${$comp_def->{designFormula}}[0];
+      $covariate_names = $comp_def->{covariances};
+      if (defined $comp_def->{"designFormula"}) {
+        my $formula = $comp_def->{"designFormula"};
+        if(is_array($formula)){
+          $designFormula = $formula->[0];
+        }else{
+          $designFormula = $formula;
+        }
       }
-      if (exists($$comp_def{"contrast"})) {
-          $contrast = ${$comp_def->{contrast}}[0];
+      if (defined $comp_def->{"contrast"}) {
+        my $cons = $comp_def->{"contrast"};
+        if(is_array($cons)){
+          $contrast = $cons->[0];
+        }else{
+          $contrast = $cons;
+        }
       }
-      if (exists($$comp_def{"collapse_by"})) {
+      if (defined $comp_def->{"collapse_by"}) {
           $collapse_by = $comp_def->{collapse_by};
       }
     }else{
@@ -139,12 +149,12 @@ sub perform {
       die "Comparison of $comparison_name should contains and only contains two groups!";
     }
 
-    for my $covariance (@$covariance_names){
+    for my $covariance (@$covariate_names){
       if (not defined $cov_names->{$covariance}){
-        die "Cannot find covariance $covariance of comparison $comparison_name in covariance file $covariance_file";
+        die "Cannot find covariate $covariance of comparison $comparison_name in covarite file $covariate_file";
       }
     }
-    my @covariances_keys = @$covariance_names;
+    my @covariate_keys = @$covariate_names;
 
     #print( Dumper(@group_names) );
 
@@ -157,13 +167,13 @@ sub perform {
     
     for my $s11 (@s1){
       if (not defined $cov_table->{$s11}){
-        die "Cannot find sample $s11 of group $g1 of comparison $comparison_name in covariance file $covariance_file";
+        die "Cannot find sample $s11 of group $g1 of comparison $comparison_name in covariance file $covariate_file";
       }
     }
     
     for my $s22 (@s2){
       if (not defined $cov_table->{$s22}){
-        die "Cannot find sample $s22 of group $g2 of comparison $comparison_name in covariance file $covariance_file";
+        die "Cannot find sample $s22 of group $g2 of comparison $comparison_name in covariance file $covariate_file";
       }
     }
 
@@ -173,8 +183,8 @@ sub perform {
 
     my $cdfile = $result_dir . "/$filename";
     open( my $cd, ">$cdfile" ) or die "Cannot create $cdfile";
-    if ( scalar(@covariances_keys) > 0 ) {
-      print $cd "Sample\tCondition\t", join( "\t", @covariances_keys ), "\n";
+    if ( scalar(@covariate_keys) > 0 ) {
+      print $cd "Sample\tCondition\t", join( "\t", @covariate_keys ), "\n";
     }
     else {
       print $cd "Sample\tCondition\n";
@@ -182,8 +192,8 @@ sub perform {
     for my $i ( 0 .. $#s1 ) {
       my $sname = $s1[$i];
       print $cd "${sname}\t${g1}";
-      if ( scalar(@covariances_keys) > 0 ) {
-        for my $key (@covariances_keys) {
+      if ( scalar(@covariate_keys) > 0 ) {
+        for my $key (@covariate_keys) {
           print $cd "\t" . $cov_table->{$sname}{$key};
         }
       }
@@ -192,8 +202,8 @@ sub perform {
     for my $i ( 0 .. $#s2 ) {
       my $sname = $s2[$i];
       print $cd "${sname}\t${g2}";
-      if ( scalar(@covariances_keys) > 0 ) {
-        for my $key (@covariances_keys) {
+      if ( scalar(@covariate_keys) > 0 ) {
+        for my $key (@covariate_keys) {
           print $cd "\t" . $cov_table->{$sname}{$key};
         }
       }
