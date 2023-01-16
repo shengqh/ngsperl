@@ -24,6 +24,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw(
+      get_ignore_sample_map
       print_trace
       is_string
       is_array
@@ -48,6 +49,7 @@ our %EXPORT_TAGS = (
       parse_param_file
       has_raw_files
       get_raw_files_and_keys
+      do_get_unsorted_raw_files
       get_raw_files
       get_raw_files_keys
       get_raw_files_attributes
@@ -728,9 +730,17 @@ sub get_raw_file_list {
 
 sub get_ignore_sample_map {
   my ($config, $section) = @_;
-  my $ignore_samples = get_option($config, $section, "ignore_samples", []);
-  my %ignore_map = map { $_ => 1 } @$ignore_samples;
-  return(\%ignore_map);
+
+  my $result = {};
+  if($config->{ignore_samples}){
+    if(!get_option($config, $section, "use_all_samples", 0)){
+      my $ignore_samples = $config->{ignore_samples};
+      my %ignore_map = map { $_ => 1 } @$ignore_samples;
+      $result = \%ignore_map;
+    }
+  }
+  
+  return($result)
 }
 
 sub do_get_unsorted_raw_files_no_ignored {
