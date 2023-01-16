@@ -1710,6 +1710,7 @@ sub add_hto {
       task_name => getValue($def, "task_name"),
       email => getValue($def, "email"),
       method => $method,
+      cutoff_startval => getValue($def, "scDemultiplex_cutoff_startval", "0"),
       hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
       cutoff_file => getValue($def, "cutoff_file", ""),
       umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),
