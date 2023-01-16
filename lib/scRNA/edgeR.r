@@ -43,6 +43,11 @@ if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
 }
 
+meta<-obj@meta.data
+mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
+colnames(mt)<-c("cell_type", "sample", "num_cell")
+write.csv(mt, paste0(outFile, ".num_cell.csv"), row.names=F)
+
 clusterDf<-obj@meta.data
 
 comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
