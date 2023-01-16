@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P9240'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20220103_9240_scRNA_hg38/hto_samples_preparation/result')
+setwd('/data/wanjalla_lab/shengq2/20230115_combined_scRNA_hg38/hto_samples_preparation/result')
 
 ### Parameter setting end ###
 
@@ -42,7 +42,7 @@ for(cname in names(files)){
   htos=res_lst$htos
   exp=res_lst$exp
   rm(res_lst)
-  write.csv(htos, paste0(cname, ".raw.alltags.csv"), row.names=T)
+  write.csv(htos, paste0(cname, ".alltags_raw.csv"), row.names=T)
 
   if(has_raw_files){
     raw_lst = read_hto_file(cname, raw_files[[cname]])
@@ -59,11 +59,16 @@ for(cname in names(files)){
   }
 
   obj <- CreateSeuratObject(counts = htos, assay="HTO")
+
+  htos <- obj@assays$HTO@counts
+
+  cat("Final tagnames:", paste0(rownames(htos), collapse = ", "), "\n")
+  
   # Normalize HTO data, here we use centered log-ratio (CLR) transformation
   obj <- NormalizeData(obj, assay = "HTO", normalization.method = "CLR")
   DefaultAssay(object = obj) <- "HTO"
 
-  output_tag_dist(obj, paste0(cname, ".raw.alltags.png"))
+  output_tag_dist(obj, paste0(cname, ".alltags_raw.png"))
 
   if(params$hto_filter_by_exp){
     hto.exp <- CreateSeuratObject(counts = exp, min.features = params$nFeature_cutoff_min)
@@ -78,6 +83,12 @@ for(cname in names(files)){
   if(params$hto_non_zero_percentage > 0){
     rowsum<-apply(htos>0, 1, sum)
     htos<-htos[rowsum > (ncol(htos) * params$hto_non_zero_percentage),]
+
+    if(nrow(htos) == 0){
+      cat("After zero count filter, no tag left, ignored\n")
+      next
+    }
+
     cat("After zero count filter: ", paste(rownames(htos), collapse=","), "\n")
     obj<-subset(obj, features=rownames(htos))
   }
@@ -88,18 +99,16 @@ for(cname in names(files)){
   
   cutoff_tbl<-rbind(cutoff_tbl, data.frame("cutoff"=0, "tagname"=tagnames, "filename"=cname))
 
+  n_col=ceiling(sqrt(length(tagnames)))
+  n_row=ceiling(length(tagnames) / n_col)
   if(has_raw_files){
-    n_col=length(tagnames)
-    n_row=2
     identName='filtered'
   }else{
-    n_col=ceiling(sqrt(length(tagnames)))
-    n_row=ceiling(length(tagnames) / n_col)
     identName='orig.ident'
   }
 
-  width=max(2200, n_col * 2000 + 200)
-  height=max(2000, n_row * 2000)
+  width=min(20000, n_col * 3000 + 200)
+  height=min(20000, n_row * 1500 * ifelse(has_raw_files, 2, 1))
   png(paste0(cname, ".tag.dist.png"), width=width, height=height, res=300)
   rplot(object=obj, assay="HTO", features = tagnames, identName=identName, n_row=n_row)
   dev.off()
@@ -118,6 +127,8 @@ for(cname in names(files)){
   #              batch=obj$batch)
 
   saveRDS(obj, paste0(cname, ".hto.rds"))
+
+  writeLines(colnames(obj), paste0(cname, ".barcodes.tsv"))
 
   counts=as.sparse(htos)
 
