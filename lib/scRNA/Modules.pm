@@ -11,6 +11,8 @@ use Pipeline::PipelineUtils;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [qw(
+  get_gmm_demux_option_map
+
   get_marker_gene_dict
   add_seurat_rawdata
   add_seurat_merge_object
@@ -959,14 +961,21 @@ sub addGeneTask {
 }
 
 sub addEdgeRTask {
-  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell ) = @_;
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
+
+  if(!defined $reduction){
+    $reduction = "umap";
+  }
+
   my $rCodeDic = {
+    "task_name" => getValue( $def, "task_name" ),
     "pvalue" => getValue( $def, "DE_pvalue" ),
     "useRawPvalue" => getValue( $def, "DE_use_raw_pvalue" ),
     "foldChange" => getValue( $def, "DE_fold_change" ),
     "bBetweenCluster" => $bBetweenCluster,
     "DE_by_cell" => $DE_by_cell,
-    "covariance_file" => $def->{covariance_file}
+    "covariance_file" => $def->{covariance_file},
+    "reduction" => $reduction,
   };
 
   my $edgeRtaskname  = $celltype_task . "_edgeR";
@@ -976,6 +985,8 @@ sub addEdgeRTask {
   my $curClusterDisplayName = undef;
 
   my $edgeRscript = "../scRNA/edgeR.r";
+  my $edgeRmd =  "../scRNA/edgeR.rmd";
+  my $rmd_ext = "_edgeR_by_cell.html";
   if ($bBetweenCluster) {
     $edgeRtaskname  = $edgeRtaskname . "_betweenCluster_byCell";
     $curClusterName = getValue( $def, "DE_cluster_name" );
@@ -1006,6 +1017,8 @@ sub addEdgeRTask {
       $rCodeDic->{"filter_min_cell_per_sample"}=getValue( $def, "DE_by_sample_min_cell_per_sample" );
       $edgeRtaskname = $edgeRtaskname . "_bySample";
       $edgeRscript = "../scRNA/edgeR_pseudo.r";
+      $edgeRmd =  "../scRNA/edgeR_pseudo.rmd";
+      $rmd_ext = "_edgeR_by_sample.html";
     }
 
     $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
@@ -1020,6 +1033,9 @@ sub addEdgeRTask {
     perform              => 1,
     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $edgeRtaskname,
     rtemplate            => "../scRNA/scRNA_func.r,${edgeRscript}",
+    rReportTemplate      => "$edgeRmd;reportFunctions.Rmd",
+    rmd_ext => $rmd_ext,     
+    run_rmd_independent => 1,
     parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
     parameterFile2_ref   => [ $celltype_task, $celltype_cluster_file ],
     parameterSampleFile1 => $groups,
@@ -1049,6 +1065,7 @@ sub addEdgeRTask {
       "cluster_name" => $curClusterName,
       "bBetweenCluster" => $bBetweenCluster,
       "DE_by_cell" => $DE_by_cell,
+      "reduction" => $reduction,
     },
     sh_direct          => 1,
     pbs                => {
@@ -1151,10 +1168,15 @@ sub addEdgeRTask {
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
       docker_prefix              => "gsea_",
       rtemplate                  => "GSEAPerform.R",
-      rReportTemplate            => "GSEAReport.Rmd",
+      rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.Rmd;Functions.Rmd",
+      run_rmd_independent => 1,
+      rmd_ext => ".gsea.html",
       output_to_result_directory => 1,
       output_file_ext            => ".gsea.files.csv",
       parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
+      parameterSampleFile1         => {
+        task_name => getValue($def, "task_name")
+      },
       sh_direct                  => 1,
       rCode                      => "$gsea_chip_str gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
       pbs                        => {
@@ -1189,7 +1211,7 @@ sub addEdgeRTask {
 }
 
 sub addComparison {
-  my ($config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name) = @_;
+  my ($config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $reduction) = @_;
   my $perform_comparison = getValue( $def, "perform_comparison", 0 );
   if(getValue( $def, "perform_edgeR" )){
     $perform_comparison = 1;
@@ -1210,12 +1232,12 @@ sub addComparison {
   
   if ( $perform_comparison ) {
     if ( defined $def->{"DE_cluster_pairs"} ) {
-      addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell );
+      addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell, $reduction );
     }
 
     for my $deByOption (@deByOptions) {
       my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-      addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
+      addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
     }
   }
 }
@@ -1534,10 +1556,12 @@ sub add_hto_samples_preparation {
     rtemplate => "../scRNA/split_samples_utils.r,../scRNA/split_samples_preparation.r",
     rReportTemplate => "../scRNA/split_samples_preparation.rmd;reportFunctions.Rmd",
     run_rmd_independent => 1,
+    rmd_ext => ".hto_preparation.html",
     option => "",
     parameterSampleFile1_ref => $hto_file_ref,
     parameterSampleFile2 => {
       task_name => getValue($def, "task_name"),
+      email => getValue($def, "email"),
       hto_regex => getValue($def, "hto_regex", ""),
       nFeature_cutoff_min => getValue($def, "nFeature_cutoff_min"),
       hto_non_zero_percentage => getValue($def, "hto_non_zero_percentage", 0.2),
@@ -1561,11 +1585,25 @@ sub add_hto_samples_preparation {
   return($preparation_task);
 }
 
+sub get_gmm_demux_option_map {
+  my $def = shift;
+  my $HTO_samples = getValue($def, "HTO_samples");
+  my $result = {};
+  for my $sample (sort keys %$HTO_samples){
+    my $sample_tags = $HTO_samples->{$sample};
+    my $tags = [sort keys %$sample_tags];
+    my $tag_str = join(',', @$tags);
+    $result->{$sample} = $tag_str;
+  }
+  return($result)
+}
+
 sub add_hto_gmm_demux {
   my ($config, $def, $tasks, $target_dir, $hto_file_ref, $hto_sample_file) = @_;
 
   my $hto_gmm_task = "hto_samples_gmm_demux";
-  my $gmm_demux_option = getValue($def, "gmm_demux_option");
+  my $gmm_demux_option_map = get_gmm_demux_option_map($def);
+
   $config->{$hto_gmm_task} = {
     class => "CQS::ProgramWrapperOneToOne",
     target_dir => "${target_dir}/$hto_gmm_task",
@@ -1574,17 +1612,19 @@ sub add_hto_gmm_demux {
     check_program => 0,
     option => "
 res_dir=\$( dirname __FILE__ )
-GMM-demux \$res_dir/__NAME__ $gmm_demux_option -f __NAME__ -o __NAME__
+GMM-demux \$res_dir/__NAME__ __FILE2__ -f __NAME__ -o __NAME__
 ",
     source_arg => "-f",
     source_ref => $hto_file_ref,
+    parameterSampleFile2_arg => "",
+    parameterSampleFile2 => $gmm_demux_option_map,
     output_arg => "-o",
     output_file_prefix => "",
     output_no_name => 0,
     output_file_ext => "__NAME__/GMM_full.csv,__NAME__/GMM_full.config",
     output_to_same_folder => 1,
     can_result_be_empty_file => 0,
-    sh_direct => 0,
+    sh_direct => 1,
     no_docker => 0,
     pbs => {
       "nodes"     => "1:ppn=1",
@@ -1600,11 +1640,18 @@ GMM-demux \$res_dir/__NAME__ $gmm_demux_option -f __NAME__ -o __NAME__
     class => "CQS::UniqueR",
     target_dir => "${target_dir}/$hto_gmm_task",
     rtemplate => "../scRNA/split_samples_utils.r,../scRNA/split_samples_gmm_demux_merge.r",
+    rReportTemplate => "../scRNA/split_samples_summary.rmd;reportFunctions.R",
+    run_rmd_independent => 1,
+    rmd_ext => ".gmm_demux.html",
     option => "",
     parameterFile1 => $hto_sample_file,
     parameterSampleFile1_ref => [$hto_gmm_task, "GMM_full.csv"],
     parameterSampleFile2_ref => [$hto_gmm_task, "GMM_full.config"],
     parameterSampleFile3 => {
+      task_name => getValue($def, "task_name"),
+      email => getValue($def, "email"),
+      method => "GMM_Demux",
+      hto_sample_file => $hto_sample_file,
       umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),
       umap_num_neighbors => getValue($def, "hto_umap_num_neighbors", 30),
     },
@@ -1628,29 +1675,41 @@ sub add_hto {
   my ($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file) = @_;
 
   my $hto_task;
+  my $rmd_ext;
+  my $method = "";
   my $r_script = undef;
-  if ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
-    if(getValue($def, "use_cutoff_v2", 0)){
-      $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all_v2.r";
-      $hto_task = "hto_samples_cutoff_all_v2";
-    }else{
-      $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
-      $hto_task = "hto_samples_cutoff_all";
-    }
+  if ( getValue($def, "split_hto_samples_by_scDemultiplex", 0)){
+    $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_scDemultiplex.r";
+    $hto_task = "hto_samples_scDemultiplex";
+    $rmd_ext = ".scDemultiplex.html";
+    $method = "scDemultiplex";
+  } elsif ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
+    $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
+    $hto_task = "hto_samples_cutoff_all";
+    $rmd_ext = ".cutoff.html";
+    $method = "cutoff";
   } else {
     $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_seurat_all.r";
     $hto_task = "hto_samples_HTODemux_all";
+    $rmd_ext = ".HTODemux.html";
+    $method = "HTODemux";
   }
 
   $config->{$hto_task} = {
     class => "CQS::UniqueR",
     target_dir => "${target_dir}/$hto_task",
     rtemplate => $r_script,
+    rReportTemplate => "../scRNA/split_samples_summary.rmd;reportFunctions.R",
+    rmd_ext => $rmd_ext,
+    run_rmd_independent => 1,
     option => "",
     parameterFile1 => $hto_sample_file,
     parameterSampleFile1_ref => $hto_file_ref,
     parameterSampleFile2 => $def->{split_hto_samples_cutoff_point},
     parameterSampleFile3 => {
+      task_name => getValue($def, "task_name"),
+      email => getValue($def, "email"),
+      method => $method,
       hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
       cutoff_file => getValue($def, "cutoff_file", ""),
       umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),
@@ -1663,11 +1722,12 @@ sub add_hto {
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "walltime"  => "20",
+      "mem"       => "20gb"
     },
   };
   push( @$summary, $hto_task );
+
   return($hto_task);
 }
 
@@ -1783,6 +1843,8 @@ sub add_souporcell_integration {
     target_dir                => "${target_dir}/${hto_integration_task}",
     rtemplate                 => "../scRNA/hto_souporcell_integration.r",
     rReportTemplate           => "../scRNA/hto_souporcell_integration.rmd;reportFunctions.Rmd",
+    run_rmd_independent => 1,
+    rmd_ext => ".souporcell.html",
     option                    => "",
     parameterSampleFile1_ref  => $hto_souporcell_task,
     parameterSampleFile2_ref  => $hto_ref,
