@@ -4,6 +4,7 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 2
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}

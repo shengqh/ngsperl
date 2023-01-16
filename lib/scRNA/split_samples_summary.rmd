@@ -1,0 +1,76 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+source('reportFunctions.R')
+
+options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+outFile=myoptions$task_name
+method=myoptions$method
+email=myoptions$email
+
+files_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+samples<-files_table$V2
+
+```
+
+```{r echo=FALSE}
+resFile<-"sub.Rmd"
+figureRmd<-function(samples, hto_samples){
+  result<-""
+  sample = samples[1]
+  for(sample in samples){
+    result<-paste0(result, paste0("\n\n# ", sample, "\n\n"))
+
+    hto_file = paste0(sample, ".HTO.csv")
+    htos = read.csv(hto_file, check.names = F, row.names=1)
+
+    result<-paste0(result, paste0("\n\n## Hashtag/Cell table\n\n"))
+    result<-paste0(result, getTable(paste0(sample, ".HTO.tag_cell.csv")))
+
+    result<-paste0(result, paste0("\n\n## Hashtag Abundance Distribution\n\n"))
+    result<-paste0(result, getFigure(paste0(sample, ".HTO.class.dist.png")))
+
+    result<-paste0(result, getFigure(paste0(sample, ".HTO.class.ridge.png")))
+
+    result<-paste0(result, paste0("\n\n## Demultiplex UMAP\n\n"))
+    result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.class.png")))
+
+    result<-paste0(result, paste0("\n\n## Doublet/Negative UMAP\n\n"))
+    result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.all.png")))
+
+    result<-paste0(result, paste0("\n\n## Hashtag UMAP\n\n"))
+    result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.tag.png")))
+  }
+  return(result)
+}
+cat(figureRmd(samples, hto_samples), file=resFile)
+
+```
+
+```{r, child=resFile} 
+```
+
+---
+title: "Demultiplex by `r method`"
+author: "`r email`"
+---

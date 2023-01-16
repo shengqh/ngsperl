@@ -4,12 +4,14 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 2
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
 library(knitr)
 library(dplyr)
 library(kableExtra)
+library(data.table)
 knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
 
@@ -26,7 +28,15 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
+opt_tbl<-options_table[,c(2,1)]
+colnames(opt_tbl)<-c("Parameter", "Value")
+
 outFile=myoptions$task_name
+
+cutoff_template_file=paste0(outFile, ".cutoff_template.txt")
+cutoffs=read.table(cutoff_template_file, sep='\t', header=F)
+cutoffs=cutoffs[,c(3,2)]
+colnames(cutoffs)<-c("Sample", "Tagname")
 
 sample_files<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 samples<-sample_files$V2
@@ -49,18 +59,34 @@ figureRmd<-function(samples){
   result<-""
   sample = samples[1]
   for(sample in samples){
-    result<-paste0(result, paste0("\n\n# ", sample, "\n\n"))
+    barcodes_file<-paste0(sample, "/barcodes.tsv.gz")
+    barcodes<-fread(barcodes_file, header=F)
+    raw_tags<-fread(paste0(sample, ".alltags_raw.csv"), nrows=1)
+    filtered_tags<-fread(paste0(sample, ".alltags.csv"), nrows=1)
 
-    result<-paste0(result, paste0("\n\n## All raw tags\n\n"))
-    result<-paste0(result, getFigure(paste0(sample, ".raw.alltags.png")))
+    result<-paste0(result, paste0("\n\n# ", sample, " : ", nrow(barcodes), " valid cells\n\n"))
+
+    result<-paste0(result, paste0("\n\n## All raw tags, ", ncol(raw_tags) - 1, " cells \n\n"))
+    result<-paste0(result, getFigure(paste0(sample, ".alltags_raw.png")))
     
-    result<-paste0(result, paste0("\n\n## Filtered tags\n\n"))
+    result<-paste0(result, paste0("\n\n## Filtered tags, ", ncol(filtered_tags)- 1, " cells \n\n"))
     result<-paste0(result, getFigure(paste0(sample, ".tag.dist.png")))
   }
   return(result)
 }
 cat(figureRmd(samples), file=resFile)
 
+```
+
+# Parameters
+
+```{r, echo=FALSE}
+print(kable_styling(kable(opt_tbl)))
+```
+
+# Sample/Tagname
+```{r, echo=FALSE}
+print(kable_styling(kable(cutoffs)))
 ```
 
 ```{r, child=resFile} 
