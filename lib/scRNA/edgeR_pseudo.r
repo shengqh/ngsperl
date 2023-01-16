@@ -33,6 +33,12 @@ min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
 if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
 }
+
+meta<-obj@meta.data
+mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
+colnames(mt)<-c("cell_type", "sample", "num_cell")
+write.csv(mt, paste0(outFile, ".num_cell.csv"), row.names=F)
+
 sample_count_df<-get_seurat_sum_count(obj = obj, 
                                       cluster_name = cluster_name, 
                                       min_cell_per_sample = min_cell_per_sample)
