@@ -1,16 +1,15 @@
 rm(list=ls()) 
-outFile='P9240'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/data/wanjalla_lab/projects/20220103_9240_scRNA_hg38/hto_samples.txt'
+parFile1='/data/wanjalla_lab/shengq2/20230115_combined_scRNA_hg38/hto_samples.txt'
 parFile2=''
 parFile3=''
 
 
-
-setwd('/data/wanjalla_lab/projects/20220103_9240_scRNA_hg38/hto_samples_gmm_demux/result')
+setwd('/data/wanjalla_lab/shengq2/20230115_combined_scRNA_hg38/hto_samples_gmm_demux/result')
 
 ### Parameter setting end ###
 
@@ -41,8 +40,7 @@ if(exists('parSampleFile4')){
 }
 if(!has_hto_samples & (parFile1 != "")){
   has_hto_samples=TRUE
-  hto_samples_tbl = read.table(parFile1, sep="\t", header=T)
-  hto_samples = split(hto_samples_tbl$Tagname, hto_samples_tbl$File)
+  hto_samples = read.table(parFile1, sep="\t", header=T)
 }
 
 idx=1
@@ -65,7 +63,11 @@ for(idx in c(1:length(full_files))){
   cat(fname, ":", hto_file, " ...\n")
 
   if (has_hto_samples){
-    cur_tags = hto_samples[[fname]]
+    sample_tbl=subset(hto_samples, File==fname)
+    cur_tags=sample_tbl$Tagname
+    tag_sample_map=unlist(split(sample_tbl$Sample, sample_tbl$Tagname))
+    tag_sample_map$Doublet<-"Doublet"
+    tag_sample_map$Negative<-"Negative"
   }else{
     cur_tags = NULL
   }
@@ -104,6 +106,10 @@ for(idx in c(1:length(full_files))){
   
   obj[["HTO_classification"]] = full$HTO_classification
   obj[["HTO_classification.global"]] = full$HTO_classification.global
+
+  if(has_hto_samples){
+    obj$orig.ident<-unlist(tag_sample_map[obj$HTO_classification])
+  }
 
   saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))
   
