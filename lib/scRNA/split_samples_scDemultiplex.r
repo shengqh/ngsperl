@@ -16,7 +16,7 @@ source("split_samples_utils.r")
 library(Seurat)
 library(ggplot2)
 library(scDemultiplex)
-#library(tictoc)
+library(tictoc)
 
 files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
@@ -24,6 +24,7 @@ files=split(files_lines$V1, files_lines$V2)
 params_lines=read.table(parSampleFile3, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
+cutoff_startval=ifelse(is.null(params$cutoff_startval), 0, ifelse(params$cutoff_startval == "", 0, as.numeric(params$cutoff_startval)))
 
 has_valid_tag = exists("parSampleFile4")
 if(has_valid_tag){
@@ -56,20 +57,31 @@ for(idx in c(1:length(files))){
 
   p.cut=0.001
 
-  tic(paste0("starting ", fname, "...\n"))
-  obj<-demulti_cutoff(obj, output_prefix, 0)
-  toc1=toc()
-  saveRDS(obj@meta.data, paste0(fname, ".scDemultiplex.cutoff.rds"))
+  refine_rds<-paste0(fname, ".scDemultiplex.refine.rds")
+  if(!file.exists(refine_rds)){
+    cutoff_rds<-paste0(fname, ".scDemultiplex.cutoff.startval_", cutoff_startval, ".rds")
+    if(!file.exists(cutoff_rds)){
+      tic(paste0("starting ", fname, "...\n"))
+      obj<-demulti_cutoff(obj, output_prefix, cutoff_startval)
+      toc1=toc()
+      saveRDS(obj, cutoff_rds)
+    }else{
+      obj<-readRDS(cutoff_rds)
+      toc1<-NA
+    }
 
-  tic(paste0("refining", fname, "...\n"))
-  obj<-demulti_refine(obj, p.cut)
-  toc2=toc()
-  saveRDS(obj@meta.data, paste0(fname, ".scDemultiplex.refine.rds"))
+    tic(paste0("refining", fname, "...\n"))
+    obj<-demulti_refine(obj, p.cut)
+    toc2=toc()
+    saveRDS(obj@meta.data, refine_rds)
 
-  saveRDS(list("cutoff"=toc1, "refine"=toc2), paste0(output_prefix, ".scDemultiplex.tictoc.rds"))
+    saveRDS(list("cutoff"=toc1, "refine"=toc2), paste0(output_prefix, ".scDemultiplex.tictoc.rds"))
+  }else{
+    obj@meta.data<-readRDS(refine_rds)
+  }
 
-  obj$HTO_classification = obj$scDemultiplex
-  obj$HTO_classification.global = obj$scDemultiplex.global
+  obj$HTO_classification<-obj$scDemultiplex
+  obj$HTO_classification.global<-obj$scDemultiplex.global
 
   cat(paste0("output result...\n"))
   output_post_classification(obj, output_prefix)
