@@ -23,9 +23,10 @@ library(patchwork)
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
-bBetweenCluster<-ifelse(myoptions$bBetweenCluster == "0", FALSE, TRUE)
+bBetweenCluster<-is_one(myoptions$bBetweenCluster)
 cluster_name=myoptions$cluster_name
-DE_by_cell=ifelse(myoptions$DE_by_cell == '1', TRUE, FALSE)
+DE_by_cell=is_one(myoptions$DE_by_cell)
+reduction=myoptions$reduction
 
 if(!exists("obj")){
   obj<-read_object(parFile1, parFile3, cluster_name)
@@ -101,7 +102,10 @@ for (prefix in rownames(edgeRres)){
         melt_cpm$Group<-factor(gdismap[as.character(melt_cpm$Sample)], levels=names(groupColors))
       }
       
-      coords<-data.frame(cell_obj@reductions$umap@cell.embeddings)
+      coords<-data.frame(Embeddings(cell_obj, reduction=reduction))
+
+      colnames(coords)<-c("UMAP_1", "UMAP_2")
+
       xlim<-c(min(coords$UMAP_1-0.1), max(coords$UMAP_1+0.1))
       ylim<-c(min(coords$UMAP_2-0.1), max(coords$UMAP_2+0.1))
       
@@ -139,7 +143,7 @@ for (prefix in rownames(edgeRres)){
             scale_color_manual(values = groupColors) +
             NoLegend() + xlab("") + ylab("Gene Expression") + theme(strip.background=element_blank())
           
-          p1<-DimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
+          p1<-DimPlot(cell_obj, reduction = reduction, label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
           
           p2<-MyFeaturePlot(object = cell_obj, features=as.character(siggene), order=T)
           p<-p0+p1+p2+plot_layout(design="AA
@@ -198,7 +202,7 @@ write.csv(result, file=paste0(outFile, ".vis.files.csv"), quote=F)
 result$sigRate<-result$sigGene * 100.0 / result$totalGene
 
 if(!bBetweenCluster){
-  allcoords<-data.frame(obj@reductions$umap@cell.embeddings)
+  allcoords<-data.frame(Embeddings(obj, reduction="umap"))
   allcoords$Cluster=obj[[cluster_name]]
   
   comp=unique(result$comparison)[1]
