@@ -251,6 +251,10 @@ sub getPreprocessionConfig {
 
   if(defined $def->{ignore_samples}){
     my $ignore_samples = $def->{ignore_samples};
+    
+    if(! is_array($ignore_samples)){
+      die("ignore_samples should be array.")
+    }
 
     my %ignore_sample_map = map { $_ => 1 } @$ignore_samples;
     
