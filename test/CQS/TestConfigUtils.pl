@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 42;
+use Test::More tests => 47;
 
 { #test is_string
   ok(is_string("string"));
@@ -237,16 +237,18 @@ my $def3 = {
 
 $def3->{groups_pattern} = "(v\\d)";
 my $groups = get_groups_by_pattern($def3);
+
+#only the sample with group pattern will be return
 my $expect_groups = {
-          'negctrl' => [
-                         'negctrl'
-                       ],
+          # 'negctrl' => [
+          #                'negctrl'
+          #              ],
           'v2' => [
                     'MB02v2'
                   ],
-          'posJFS' => [
-                        'posJFS'
-                      ],
+          # 'posJFS' => [
+          #               'posJFS'
+          #             ],
           'v1' => [
                     'MB02v1'
                   ]
@@ -534,6 +536,104 @@ is_deeply( $cov_map, $cov_expect );
                         ]        
       },
     });
+}
+
+{
+  #test do_get_unsorted_raw_files, no ignore_samples
+  my $config = {
+    files => {                                       
+      'LDLR_PEL_01' => [ '1' ],
+      'LDLR_PEL_02' => [ '2' ],
+      'LDLR_PEL_03' => [ '3' ],
+    },
+    "test_section" => {
+      test_key_ref =>"files"
+    },
+  };
+  
+  my ($res, $is_source) = do_get_unsorted_raw_files($config, "test_section", 1, "test_key", "", 1);
+  is_deeply( $res, $config->{files} );
+}
+
+{#test get_ignore_sample_map, no exception
+  my $config = {
+    ignore_samples => ["LDLR_PEL_01"],
+    files => {                                       
+      'LDLR_PEL_01' => [ '1' ],
+      'LDLR_PEL_02' => [ '2' ],
+      'LDLR_PEL_03' => [ '3' ],
+    },
+    "test_section" => {
+      test_key_ref =>"files"
+    },
+  };
+  my $ignored = get_ignore_sample_map($config, "test_section");
+  is_deeply( $ignored, {                                       
+                        'LDLR_PEL_01' => 1
+                       });
+}
+
+{#test get_ignore_sample_map, no exception
+  my $config = {
+    ignore_samples => ["LDLR_PEL_01"],
+    files => {                                       
+      'LDLR_PEL_01' => [ '1' ],
+      'LDLR_PEL_02' => [ '2' ],
+      'LDLR_PEL_03' => [ '3' ],
+    },
+    "test_section" => {
+      test_key_ref =>"files",
+      use_all_samples => 1,
+    },
+  };
+  my $ignored = get_ignore_sample_map($config, "test_section");
+  is_deeply( $ignored, {});
+}
+
+{
+  #test do_get_unsorted_raw_files, with ignore_samples
+  my $config = {
+    ignore_samples => ["LDLR_PEL_01"],
+    files => {                                       
+      'LDLR_PEL_01' => [ '1' ],
+      'LDLR_PEL_02' => [ '2' ],
+      'LDLR_PEL_03' => [ '3' ],
+    },
+    "test_section" => {
+      test_key_ref =>"files"
+    },
+  };
+  
+  my ($res, $is_source) = do_get_unsorted_raw_files($config, "test_section", 1, "test_key", "", 1);
+  is_deeply( $res, {                                       
+                    'LDLR_PEL_02' => [ '2' ],
+                    'LDLR_PEL_03' => [ '3' ],
+                   }
+  );
+}
+
+{
+  #test do_get_unsorted_raw_files, with ignore_samples exception
+  my $config = {
+    ignore_samples => ["LDLR_PEL_01"],
+    files => {                                       
+      'LDLR_PEL_01' => [ '1' ],
+      'LDLR_PEL_02' => [ '2' ],
+      'LDLR_PEL_03' => [ '3' ],
+    },
+    "test_section" => {
+      test_key_ref =>"files",
+      use_all_samples => 1,
+    },
+  };
+  
+  my ($res, $is_source) = do_get_unsorted_raw_files($config, "test_section", 1, "test_key", "", 1);
+  is_deeply( $res, {                                       
+                    'LDLR_PEL_01' => [ '1' ],
+                    'LDLR_PEL_02' => [ '2' ],
+                    'LDLR_PEL_03' => [ '3' ],
+                   }
+  );
 }
 
 1;
