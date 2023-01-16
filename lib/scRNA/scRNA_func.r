@@ -1174,16 +1174,33 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
 
   ct<-as.data.frame(table(rawobj[[ident_name]]))
   colnames(ct)<-c("Sample","Cell")
-  has_sample = "sample" %in% colnames(rawobj@meta.data) & any(rawobj$sample != rawobj$orig.ident)
-  if(has_sample){
+
+  if("sample" %in% colnames(rawobj@meta.data)){
+    ident_sample_map<-lapply(split(rawobj$sample, rawobj$orig.ident), unique)
+    is_merged<-any(lapply(ident_sample_map, length) > 1)
+
+    sample_ident_map<-lapply(split(rawobj$orig.ident, rawobj$sample), unique)
+    is_hto<-any(lapply(sample_ident_map, length) > 1)
+  }else{
+    is_merged=FALSE
+    is_hto=FALSE
+  }
+
+  if(ident_name == "orig.ident" & is_hto){
     meta<-rawobj@meta.data
     meta<-meta[!duplicated(meta$orig.ident),,drop=F]
     smap=split(as.character(meta$sample), as.character(meta$orig.ident))
     ct$Set=unlist(smap[ct$Sample])
   }
+  if(ident_name == "sample" & is_merged){
+    meta<-rawobj@meta.data
+    meta<-meta[!duplicated(meta$sample),,drop=F]
+    smap=split(as.character(meta$orig.ident), as.character(meta$sample))
+    ct$Set=unlist(smap[ct$Sample])
+  }
   write.table(ct, paste0(prefix, ".cell.txt"), sep="\t", row.names=F)
   
-  if(has_sample){
+  if("Set" %in% colnames(ct)){
     g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Set))
   }else{
     g<-ggplot(ct, aes(x=Sample, y=Cell))
