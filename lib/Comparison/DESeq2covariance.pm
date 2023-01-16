@@ -88,7 +88,7 @@ sub perform {
 
   my $countfiles = defined $config->{$section}{"countfile"} ? {} : get_raw_files( $config, $section, "countfile" );
   my $single_count_file = 1;
-  if ( ref $countfiles eq ref {} ) {
+  if ( is_hash($countfiles) ) {
     if ( scalar( keys %$countfiles ) > 1 ) {
       $single_count_file = 0;
     }
@@ -106,33 +106,45 @@ sub perform {
 
     my $comp_def = $comparisons->{$comparison_name};
     print "$comparison_name\n";
-    my $group_names = $comp_def->{"groups"};
+
+    my $group_names;
+    my $covariance_names;
+    my $contrast="";
+    my $designFormula="";
+    my $collapse_by="";
+    if (is_array($comp_def)){
+      $group_names = $comp_def;
+      $covariance_names = [];
+    }elsif (is_hash($comp_def)){
+      $group_names = $comp_def->{"groups"};
+      $covariance_names = $comp_def->{covariances};
+      if (exists($$comp_def{"designFormula"})) {
+          $designFormula = ${$comp_def->{designFormula}}[0];
+      }
+      if (exists($$comp_def{"contrast"})) {
+          $contrast = ${$comp_def->{contrast}}[0];
+      }
+      if (exists($$comp_def{"collapse_by"})) {
+          $collapse_by = $comp_def->{collapse_by};
+      }
+    }else{
+      die("Comparison $comparison_name is not defined correctly, check your configuration");
+    }
+
+    if(!is_array($group_names)){
+      die("groups of comparison $comparison_name is not array, check your configuration");
+    }
 
     if ( scalar(@$group_names) != 2 ) {
       die "Comparison of $comparison_name should contains and only contains two groups!";
     }
 
-    my $covariance_names = $comp_def->{covariances};
-    
     for my $covariance (@$covariance_names){
       if (not defined $cov_names->{$covariance}){
         die "Cannot find covariance $covariance of comparison $comparison_name in covariance file $covariance_file";
       }
     }
     my @covariances_keys = @$covariance_names;
-
-    my $contrast="";
-    my $designFormula="";
-    my $collapse_by="";
-    if (exists($$comp_def{"designFormula"})) {
-        $designFormula = ${$comp_def->{designFormula}}[0];
-    }
-    if (exists($$comp_def{"contrast"})) {
-        $contrast = ${$comp_def->{contrast}}[0];
-    }
-    if (exists($$comp_def{"collapse_by"})) {
-        $collapse_by = $comp_def->{collapse_by};
-    }
 
     #print( Dumper(@group_names) );
 
