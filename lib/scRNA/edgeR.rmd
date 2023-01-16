@@ -1,0 +1,92 @@
+---
+title: "edgeR differential expression analysis"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, child="reportFunctions.Rmd", include=FALSE} 
+```
+
+```{r data, echo = FALSE}
+library(knitr)
+
+options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outFile<-myoptions$task_name
+
+group_def<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+colnames(group_def)<-c("Sample", "Group")
+
+comp_def<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+colnames(comp_def)<-c("Group", "Category", "Comparison")
+
+edgeR_files<-read.csv(paste0(outFile, ".edgeR.files.csv"), row.names=1)
+comparisons<-unique(edgeR_files$comparison)
+
+num_cell<-read.csv(paste0(outFile, ".num_cell.csv"))
+
+```
+
+```{r, echo=FALSE}
+print(kable_styling(kable(group_def, caption = "Group definition")))
+print(kable_styling(kable(comp_def, caption = "Comparison definition")))
+```
+
+```{r, echo=FALSE}
+comp=comparisons[1]
+for(comp in comparisons){
+  cat("# ", comp, "\n\n")
+  comp_files<-subset(edgeR_files, comparison == comp)
+  cts = rev(comp_files$cellType)
+  ct<-cts[1]
+
+  sig_list=list()
+  for(ct in cts){
+    ct_files<-subset(comp_files, cellType == ct)
+    sig_file=ct_files$sigFile[1]
+    sig_data<-read.csv(sig_file, row.names=1)
+    sig_list[[ct]] = sig_data
+  }
+  gene_count_df<-data.frame("cell_type" = cts, "num_sig_gene"=unlist(lapply(sig_list, nrow)))
+  print(kable_styling(kable(gene_count_df, row.names = F)))
+
+  for(ct in cts){
+    cat("## ", ct, "\n\n")
+    ct_files<-subset(comp_files, cellType == ct)
+    
+    design_file=ct_files$designFile[1]
+    design_data=read.csv(design_file)
+
+    ct_num_cell<-subset(num_cell, cell_type == ct)
+    ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
+
+    design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+
+    cat("### design table\n\n")
+    print(kable_styling(kable(design_data, row.names = F)))
+
+    sig_data<-sig_list[[ct]]
+    n_genes = min(10, nrow(sig_data))
+    cat("### top", n_genes, "significantly differential expressed genes (total", nrow(sig_data),"DE genes)\n\n")
+    print(kable_styling(kable(head(sig_data, 10))))
+  }
+}
+```
+
