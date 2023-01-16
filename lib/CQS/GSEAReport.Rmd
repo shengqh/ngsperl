@@ -42,6 +42,11 @@ if(nrow(files) == 1 & files$V2[1] == 'gsea'){
   #single cell GSEA result
   files<-read.csv(files$V1[1])
   files$Comparisons<-basename(dirname(files$Folder))
+}else if ("task_name" %in% files$V2) {
+  task_name<-files$V1[files$V2 == "task_name"]
+  gsea_file<-paste0(task_name, ".gsea.files.csv")
+  files<-read.csv(gsea_file)
+  files$Comparisons<-gsub(".gsea$", "", basename(dirname(files$Folder)))
 }else{
   rownames(files)<-files$V2
 }
