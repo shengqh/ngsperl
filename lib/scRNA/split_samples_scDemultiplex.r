@@ -24,6 +24,8 @@ files=split(files_lines$V1, files_lines$V2)
 params_lines=read.table(parSampleFile3, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
+
+init_by_HTO_demux=is_one(params$init_by_HTO_demux)
 cutoff_startval=ifelse(is.null(params$cutoff_startval), 0, ifelse(params$cutoff_startval == "", 0, as.numeric(params$cutoff_startval)))
 
 has_valid_tag = exists("parSampleFile4")
@@ -59,19 +61,34 @@ for(idx in c(1:length(files))){
 
   refine_rds<-paste0(fname, ".scDemultiplex.refine.rds")
   if(!file.exists(refine_rds)){
-    cutoff_rds<-paste0(fname, ".scDemultiplex.cutoff.startval_", cutoff_startval, ".rds")
-    if(!file.exists(cutoff_rds)){
-      tic(paste0("starting ", fname, "...\n"))
-      obj<-demulti_cutoff(obj, output_prefix, cutoff_startval)
-      toc1=toc()
-      saveRDS(obj, cutoff_rds)
-    }else{
-      obj<-readRDS(cutoff_rds)
-      toc1<-NA
-    }
 
-    tic(paste0("refining", fname, "...\n"))
-    obj<-demulti_refine(obj, p.cut)
+    if(init_by_HTO_demux){
+      print(paste0("starting ", fname, " by HTODemux ..."))
+      tic()
+      obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
+      toc1=toc()
+      obj$HTO_classification[obj$HTO_classification.global == "Doublet"] = "Doublet"
+      obj$HTODemux = obj$HTO_classification
+      obj$HTODemux.global = obj$HTO_classification.global
+      obj$HTO_classification = NULL
+      obj$HTO_classification.global = NULL
+      init_column = "HTODemux";
+    }else{
+      cutoff_rds<-paste0(fname, ".scDemultiplex.cutoff.startval_", cutoff_startval, ".rds")
+      if(!file.exists(cutoff_rds)){
+        print(paste0("starting ", fname, " by cutoff ..."))
+        tic()
+        obj<-demulti_cutoff(obj, output_prefix, cutoff_startval)
+        toc1=toc()
+        saveRDS(obj, cutoff_rds)
+      }else{
+        obj<-readRDS(cutoff_rds)
+        toc1<-NA
+      }
+      init_column = "scDemultiplex_cutoff";
+    }
+    tic(paste0("refining ", fname, " ...\n"))
+    obj<-demulti_refine(obj, p.cut, init_column=init_column)
     toc2=toc()
     saveRDS(obj@meta.data, refine_rds)
 
