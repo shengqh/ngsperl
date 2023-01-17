@@ -1680,6 +1680,7 @@ sub add_hto {
   my $r_script = undef;
   my $scDemultiplex_cutoff_startval = undef;
   my $scDemultiplex_init_by_HTO_demux = undef;
+  my $thread = 1;
   if ( getValue($def, "split_hto_samples_by_scDemultiplex", 0)){
     $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_scDemultiplex.r";
     $hto_task = "hto_samples_scDemultiplex";
@@ -1689,6 +1690,7 @@ sub add_hto {
     if(!$scDemultiplex_init_by_HTO_demux){
       $scDemultiplex_cutoff_startval = getValue($def, "scDemultiplex_cutoff_startval", 0);
     }
+    $thread = 5;
   } elsif ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
     $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
     $hto_task = "hto_samples_cutoff_all";
@@ -1729,7 +1731,7 @@ sub add_hto {
     output_perSample_file_ext => ".HTO.umap.class.png;.HTO.csv;.HTO.data.csv;.HTO.umap.rds",
     sh_direct   => 1,
     pbs => {
-      "nodes"     => "1:ppn=1",
+      "nodes"     => "1:ppn=$thread",
       "walltime"  => "20",
       "mem"       => "20gb"
     },
