@@ -3,13 +3,14 @@ library(ggplot2)
 library(Seurat)
 library(gridExtra)
 library(ggExtra)
+library(patchwork)
 
-is_one<-function(value){
-  if(is.na(value)){
-    return(FALSE)
-  }
+is_one<-function(value, defaultValue=FALSE){
   if(is.null(value)){
-    return(FALSE)
+    return(defaultValue)
+  }
+  if(is.na(value)){
+    return(defaultValue)
   }
   return(value == '1')
 }
@@ -241,7 +242,20 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
     g<-FeaturePlot(obj, features=tagnames, reduction = "umap", ncol=ncol)
     print(g)
     dev.off()
-    
+
+    glist=list()
+    for(tagname in tagnames){
+      cols=rep("gray", length(hto_names))
+      names(cols)=hto_names
+      cols[tagname]="red"
+      glist[tagname] = DimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c(tagname))+
+        scale_color_manual(values=cols) + ggtitle(tagname)
+    }
+    g<-wrap_plots(glist, nrow = nrow, ncol = ncol)
+    png(paste0(output_prefix, ".umap.assigned.png"), width=ncol*1500, height=1500*nrow, res=300)
+    print(g)
+    dev.off()
+
     cols=rep("gray", length(hto_names))
     names(cols)=hto_names
     cols[['Negative']]="blue"
@@ -252,6 +266,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
       scale_color_manual(values=cols)
     print(g)
     dev.off()
+
   }
 }
 
