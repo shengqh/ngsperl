@@ -1678,11 +1678,17 @@ sub add_hto {
   my $rmd_ext;
   my $method = "";
   my $r_script = undef;
+  my $scDemultiplex_cutoff_startval = undef;
+  my $scDemultiplex_init_by_HTO_demux = undef;
   if ( getValue($def, "split_hto_samples_by_scDemultiplex", 0)){
     $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_scDemultiplex.r";
     $hto_task = "hto_samples_scDemultiplex";
     $rmd_ext = ".scDemultiplex.html";
     $method = "scDemultiplex";
+    $scDemultiplex_init_by_HTO_demux = getValue($def, "scDemultiplex_init_by_HTO_demux", 0);
+    if(!$scDemultiplex_init_by_HTO_demux){
+      $scDemultiplex_cutoff_startval = getValue($def, "scDemultiplex_cutoff_startval", 0);
+    }
   } elsif ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
     $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
     $hto_task = "hto_samples_cutoff_all";
@@ -1710,7 +1716,8 @@ sub add_hto {
       task_name => getValue($def, "task_name"),
       email => getValue($def, "email"),
       method => $method,
-      cutoff_startval => getValue($def, "scDemultiplex_cutoff_startval", "0"),
+      init_by_HTO_demux => $scDemultiplex_init_by_HTO_demux,
+      cutoff_startval => $scDemultiplex_cutoff_startval,
       hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
       cutoff_file => getValue($def, "cutoff_file", ""),
       umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),

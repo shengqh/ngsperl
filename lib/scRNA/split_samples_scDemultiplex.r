@@ -61,7 +61,6 @@ for(idx in c(1:length(files))){
 
   refine_rds<-paste0(fname, ".scDemultiplex.refine.rds")
   if(!file.exists(refine_rds)){
-
     if(init_by_HTO_demux){
       print(paste0("starting ", fname, " by HTODemux ..."))
       tic()
@@ -74,27 +73,20 @@ for(idx in c(1:length(files))){
       obj$HTO_classification.global = NULL
       init_column = "HTODemux";
     }else{
-      cutoff_rds<-paste0(fname, ".scDemultiplex.cutoff.startval_", cutoff_startval, ".rds")
-      if(!file.exists(cutoff_rds)){
-        print(paste0("starting ", fname, " by cutoff ..."))
-        tic()
-        obj<-demulti_cutoff(obj, output_prefix, cutoff_startval)
-        toc1=toc()
-        saveRDS(obj, cutoff_rds)
-      }else{
-        obj<-readRDS(cutoff_rds)
-        toc1<-NA
-      }
+      print(paste0("starting ", fname, " by cutoff ..."))
+      tic()
+      obj<-demulti_cutoff(obj, output_prefix, cutoff_startval, mc.cores=nrow(obj))
+      toc1=toc()
       init_column = "scDemultiplex_cutoff";
     }
     tic(paste0("refining ", fname, " ...\n"))
-    obj<-demulti_refine(obj, p.cut, init_column=init_column)
+    obj<-demulti_refine(obj, p.cut, init_column=init_column, mc.cores=nrow(obj))
     toc2=toc()
-    saveRDS(obj@meta.data, refine_rds)
+    saveRDS(obj, refine_rds)
 
     saveRDS(list("cutoff"=toc1, "refine"=toc2), paste0(output_prefix, ".scDemultiplex.tictoc.rds"))
   }else{
-    obj@meta.data<-readRDS(refine_rds)
+    obj<-readRDS(refine_rds)
   }
 
   obj$HTO_classification<-obj$scDemultiplex
