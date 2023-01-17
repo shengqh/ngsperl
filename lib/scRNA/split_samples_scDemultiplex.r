@@ -25,7 +25,7 @@ params_lines=read.table(parSampleFile3, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
 
-init_by_HTO_demux=is_one(params$init_by_HTO_demux)
+init_by_HTODemux=is_one(params$init_by_HTODemux)
 cutoff_startval=ifelse(is.null(params$cutoff_startval), 0, ifelse(params$cutoff_startval == "", 0, as.numeric(params$cutoff_startval)))
 
 has_valid_tag = exists("parSampleFile4")
@@ -61,7 +61,7 @@ for(idx in c(1:length(files))){
 
   refine_rds<-paste0(fname, ".scDemultiplex.refine.rds")
   if(!file.exists(refine_rds)){
-    if(init_by_HTO_demux){
+    if(init_by_HTODemux){
       print(paste0("starting ", fname, " by HTODemux ..."))
       tic()
       obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
