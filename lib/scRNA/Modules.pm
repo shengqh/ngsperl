@@ -1679,26 +1679,29 @@ sub add_hto {
   my $method = "";
   my $r_script = undef;
   my $scDemultiplex_cutoff_startval = undef;
-  my $scDemultiplex_init_by_HTO_demux = undef;
+  my $scDemultiplex_init_by_HTODemux = undef;
   my $thread = 1;
   if ( getValue($def, "split_hto_samples_by_scDemultiplex", 0)){
     $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_scDemultiplex.r";
     $hto_task = "hto_samples_scDemultiplex";
     $rmd_ext = ".scDemultiplex.html";
     $method = "scDemultiplex";
-    $scDemultiplex_init_by_HTO_demux = getValue($def, "scDemultiplex_init_by_HTO_demux", 0);
-    if(!$scDemultiplex_init_by_HTO_demux){
+    $scDemultiplex_init_by_HTODemux = getValue($def, "scDemultiplex_init_by_HTODemux", 0);
+    if($scDemultiplex_init_by_HTODemux){
+      $hto_task = $hto_task . "_HTODemux";
+    }else{
       $scDemultiplex_cutoff_startval = getValue($def, "scDemultiplex_cutoff_startval", 0);
+      $hto_task = $hto_task . "_cutoff";
     }
     $thread = 5;
   } elsif ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
     $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_cutoff_all.r";
-    $hto_task = "hto_samples_cutoff_all";
+    $hto_task = "hto_samples_cutoff";
     $rmd_ext = ".cutoff.html";
     $method = "cutoff";
   } else {
     $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_seurat_all.r";
-    $hto_task = "hto_samples_HTODemux_all";
+    $hto_task = "hto_samples_HTODemux";
     $rmd_ext = ".HTODemux.html";
     $method = "HTODemux";
   }
@@ -1718,7 +1721,7 @@ sub add_hto {
       task_name => getValue($def, "task_name"),
       email => getValue($def, "email"),
       method => $method,
-      init_by_HTO_demux => $scDemultiplex_init_by_HTO_demux,
+      init_by_HTODemux => $scDemultiplex_init_by_HTODemux,
       cutoff_startval => $scDemultiplex_cutoff_startval,
       hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
       cutoff_file => getValue($def, "cutoff_file", ""),
@@ -1852,7 +1855,7 @@ sub add_souporcell_integration {
     class                     => "CQS::UniqueR",
     target_dir                => "${target_dir}/${hto_integration_task}",
     rtemplate                 => "../scRNA/hto_souporcell_integration.r",
-    rReportTemplate           => "../scRNA/hto_souporcell_integration.rmd;reportFunctions.Rmd",
+    rReportTemplate           => "../scRNA/hto_souporcell_integration.rmd;reportFunctions.R",
     run_rmd_independent => 1,
     rmd_ext => ".souporcell.html",
     option                    => "",
