@@ -1,15 +1,14 @@
 rm(list=ls()) 
-outFile='P9112'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20221129_9112_scRNA_human/hto_samples_cutoff_all_souporcell_integration/result')
+setwd('/data/wanjalla_lab/shengq2/20230115_combined_scRNA_hg38/hto_samples_scDemultiplex_HTODemux_souporcell_integration/result')
 
 ### Parameter setting end ###
 
@@ -47,8 +46,8 @@ get_max_row<-function(x){
 
 sample_name=rownames(souporcell_tb)[1]
 for (sample_name in rownames(souporcell_tb)){
-  s1<-read.csv(cutoff_tb[sample_name, "V1"], row.names=1)
-  s2<-read.table(souporcell_tb[sample_name, "V1"], row.names=1, header=T)
+  s1<-read.csv(cutoff_tb[sample_name, "V1"], row.names=1, check.names=F)
+  s2<-read.table(souporcell_tb[sample_name, "V1"], row.names=1, header=T, check.names=F)
   obj<-readRDS(umap_rds_tb[sample_name, "V1"])
   
   if(sample_name %in% names(ignore_map)){
@@ -160,7 +159,7 @@ for (sample_name in rownames(souporcell_tb)){
   
   tags<-unlist(cmap)
   tags<-tags[order(tags)]
-  tags<-gsub("-",".",tags)
+  #tags<-gsub("-",".",tags)
   hto_final<-s[,c(tags, "Final")]
   hto_final$HTO.global=unlist(lapply(hto_final$Final, function(x){
     if(x == "Doublet"){
@@ -298,6 +297,3 @@ for (sample_name in rownames(souporcell_tb)){
     dev.off()
   }
 }
-
-library('rmarkdown')
-rmarkdown::render("hto_souporcell_integration.rmd",output_file=paste0(outFile,".html"))
