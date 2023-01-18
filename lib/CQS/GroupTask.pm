@@ -44,9 +44,12 @@ sub get_pbs_source {
   	  my $groups = get_raw_files($config, $section, $group_key);
 	    for my $resKey ( keys %$pbsFiles ) {
 	    	my $samples = $groups->{$resKey};
+        if(!is_array($samples)){
+          $samples = [$samples];
+        }
 	    	if(defined $result->{ $pbsFiles->{$resKey}}){
 	    		my $oldSamples = $result->{ $pbsFiles->{$resKey}};
-	    		push @$oldSamples, @$samples;
+     		  push(@$oldSamples, @$samples);
 	    	}else{
 	    	  $result->{ $pbsFiles->{$resKey}} = $samples;
 	    	}
