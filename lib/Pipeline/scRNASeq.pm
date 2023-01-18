@@ -428,8 +428,8 @@ sub getScRNASeqConfig {
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
         if(defined $def->{bubble_plots}){
-          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters" );
-          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_final", $seurat_task, $meta_ref, "layer4", "layer4_clusters" );
+          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters", ".dynamic_iter1_dot.html" );
+          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_final", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_dot.html" );
         }
 
         if(getValue($def, "perform_individual_dynamic_cluster", 0)){
@@ -464,7 +464,7 @@ sub getScRNASeqConfig {
 
             if(defined $def->{bubble_plots}){
               my $bubble_task = $choose_task . "_bubblemap";
-              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task);
+              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task, undef, undef, ".dynamic_choose_dot.html");
             }
 
             if(defined $clonotype_convert) {
@@ -666,7 +666,7 @@ sub getScRNASeqConfig {
 
             if(defined $def->{bubble_plots}){
               my $bubble_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_bubblemap";
-              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task);
+              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task, undef, undef, ".multi_choose_dot.html");
             }
 
             if ( $perform_comparison ) {
