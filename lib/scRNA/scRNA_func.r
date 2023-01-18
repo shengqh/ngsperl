@@ -6,6 +6,16 @@ library(scales)
 library(ggplot2)
 library(patchwork)
 library(Matrix.utils)
+library(parallel)
+
+check_mc_cores<-function(mc.cores) {  
+  if(.Platform$OS.type == "windows") {
+    mc.cores=1
+  }else{
+    mc.cores=min(parallel::detectCores() - 1, max(1, mc.cores))
+  }
+  return(mc.cores)
+}
 
 is_one<-function(value, defaultValue=FALSE){
   if(is.null(value)){
@@ -532,19 +542,21 @@ do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, sc
   return(obj)
 }
 
-do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE) {
-  cat("performing SCTransform ...\n")
+do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE, mc.cores=1) {
+  mc.cores = check_mc_cores(mc.cores)
+
+  print("performing SCTransform ...")
   nsamples=length(unique(rawobj$orig.ident))
   if(nsamples > 1){
-    cat("  split objects ...\n")
+    print("  split objects ...")
     objs<-SplitObject(object = rawobj, split.by = "orig.ident")
     #perform sctransform
     objs<-lapply(objs, function(x){
-      cat("  sctransform", unique(x$orig.ident), "...\n")
+      print("  sctransform", unique(x$orig.ident), "...")
       x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
       return(x)
     })  
-    cat("merge samples ... \n")
+    print("merge samples ...")
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
     #https://github.com/satijalab/seurat/issues/2814
     VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
@@ -556,10 +568,10 @@ do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE) {
   }
 }
 
-do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch_file, pca_dims, essential_genes=NULL){
+do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch_file, pca_dims, essential_genes=NULL, mc.cores=1){
   if(by_sctransform){
     #now perform sctranform
-    obj<-do_sctransform(obj, vars.to.regress=vars.to.regress)
+    obj<-do_sctransform(obj, vars.to.regress=vars.to.regress,mc.cores=mc.cores)
     assay="SCT"
   }else{
     assay="RNA"
@@ -1468,8 +1480,7 @@ sub_cluster<-function(subobj,
                      essential_genes, 
                      key = "",
                      do_umap = TRUE,
-                     reduction.name = "umap",
-                     previous_layer = NA
+                     reduction.name = "umap"
 ){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
