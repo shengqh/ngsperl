@@ -7,24 +7,21 @@ output:
     number_sections: true
 ---
 
-```{r setup, include=FALSE}
-library(knitr)
-library(dplyr)
-library(kableExtra)
-library(ggplot2)
-library(dplyr)
-
-source("scRNA_func.r")
-knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
-```
-
 ```{css, echo=FALSE}
 #content{
     max-width:1920px;
 }
 ```
 
-```{r, child="reportFunctions.Rmd", include=FALSE} 
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+source("reportFunctions.R")
+source("scRNA_func.r")
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
 
 ```{r data, echo = FALSE}
