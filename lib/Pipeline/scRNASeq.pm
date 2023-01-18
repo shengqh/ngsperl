@@ -253,6 +253,7 @@ sub getScRNASeqConfig {
     my $hto_ref = undef;
     my $hto_sample_file = undef;
     my $hto_summary_task = undef;
+    my $files_def = "files";
 
     my $files = $def->{files};
     my $hto_file_ref = "files";
@@ -280,6 +281,10 @@ sub getScRNASeqConfig {
       }
     }
 
+    if(getValue($def, "perform_scDblFinder", 0)){
+      add_scDblFinder($config, $def, $individual, $target_dir, "scDblFinder", "files" );
+      $files_def = "scDblFinder";
+    }
 
     if( $perform_split_hto_samples ) {
       my $preparation_task = add_hto_samples_preparation($config, $def, $summary, $target_dir, $hto_file_ref, $hto_raw_file_ref);
@@ -376,9 +381,9 @@ sub getScRNASeqConfig {
     my $seurat_rawdata = "seurat_rawdata";
     if ( getValue( $def, "perform_seurat" ) ) {
       if (getValue($def, "merge_seurat_object", 0)){
-        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, "files");
+        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, $files_def);
       }else{
-        add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file);
+        add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def);
       }
 
       push (@report_files, ($seurat_rawdata, "rawobj.rds"));
