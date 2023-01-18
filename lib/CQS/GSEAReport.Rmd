@@ -1,9 +1,6 @@
 ---
 title: "GSEA Report"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
-output: 
-  rmdformats::html_clean:
-    toc_depth: 3
 ---
 
 ```{css, echo=FALSE}
@@ -37,16 +34,21 @@ library(htmltools)
 library(knitr)
 library(kableExtra)
 
+rmdformats='html_clean'
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 if(nrow(files) == 1 & files$V2[1] == 'gsea'){
   #single cell GSEA result
   files<-read.csv(files$V1[1])
   files$Comparisons<-basename(dirname(files$Folder))
 }else if ("task_name" %in% files$V2) {
-  task_name<-files$V1[files$V2 == "task_name"]
+  params_map<-split(files$V1, files$V2)
+  task_name<-params_map$task_name
   gsea_file<-paste0(task_name, ".gsea.files.csv")
   files<-read.csv(gsea_file)
   files$Comparisons<-gsub(".gsea$", "", basename(dirname(files$Folder)))
+  if(!is.null(params_map$rmdformats)){
+    rmdformats=params_map$rmdformats
+  }
 }else{
   rownames(files)<-files$V2
 }
@@ -56,3 +58,9 @@ if(nrow(files) == 1 & files$V2[1] == 'gsea'){
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
 display_gsea(files, "")
 ``` 
+
+---
+output: 
+  rmdformats::`r rmdformats`:
+    toc_depth: 2
+---
