@@ -37,7 +37,7 @@ colnames(group_def)<-c("Sample", "Group")
 comp_def<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
 colnames(comp_def)<-c("Group", "Category", "Comparison")
 
-edgeR_files<-read.csv(paste0(outFile, ".edgeR.files.csv"), row.names=1)
+edgeR_files<-read.csv(paste0(outFile, ".edgeR.files.csv"))
 comparisons<-unique(edgeR_files$comparison)
 
 num_cell<-read.csv(paste0(outFile, ".num_cell.csv"))
