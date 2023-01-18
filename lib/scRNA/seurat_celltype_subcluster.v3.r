@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='GPA_NML'
+outFile='crs'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_merge/result/GPA_NML.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_merge_dr0.5_01_call/result/GPA_NML.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/essential_genes/result/GPA_NML.txt'
-parFile4='/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_merge_SignacX/result/GPA_NML.meta.rds'
+parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
+parFile3='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
+parFile4='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_SignacX/result/crs.meta.rds'
 
 
-setwd('/data/h_gelbard_lab/projects/20230108_9112_3885_JH_scRNA/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
+setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -215,6 +215,12 @@ writeLines(previous_celltypes, paste0(outFile, ".cell_types.txt"))
 
 DefaultAssay(obj)<-assay
 
+obj$dot<-obj[[previous_layer]]
+ctnames<-unique(obj$dot)
+ctmap=c(1:length(ctnames))
+names(ctmap)<-ctnames
+obj$dot_cluster<-unlist(ctmap[obj$dot]) + 1000
+
 cur_folder = getwd()
 tmp_folder = paste0(cur_folder, "/details")
 if(!dir.exists(tmp_folder)){
@@ -226,7 +232,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[4]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -262,14 +268,13 @@ for(pct in previous_celltypes){
                         essential_genes, 
                         key,
                         do_umap = TRUE,
-                        reduction.name = subumap,
-                        previous_layer = NA)
+                        reduction.name = subumap)
   
   reductions_rds = paste0(curprefix, ".reductions.rds")
   saveRDS(subobj@reductions, reductions_rds)
   
   cat(key, "Find marker genes\n")
-  cluster = clusters[5]
+  cluster = clusters[10]
   markers_map = list()
   for(cluster in clusters){
     cat("  ", cluster, "\n")
@@ -396,16 +401,27 @@ for(pct in previous_celltypes){
     cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
+      obj$cur_dot<-as.character(obj$dot)
+      obj@meta.data[colnames(subobj),"cur_dot"]<-as.character(subobj$seurat_celltype)
+      
+      g1<-get_bubble_plot(obj, NULL, NULL, bubblemap_file, assay="RNA", group.by="cur_dot")
+      g1data<-g1$data
+      
       #using global normalized data for bubblemap
       subobj2@meta.data <- subobj@meta.data
+      g2<-get_bubble_plot(subobj2, NULL, NULL, bubblemap_file, assay="RNA", group.by="seurat_celltype") + theme(text = element_text(size=20))
+      g2data<-g2$data
+
+      g1data<-subset(g1data, id %in% unique(g2data$id) )  
+      #replace avg.exp.scaled with between all cell types instead of between subcluters.
+      g2$data<-g1data    
 
       ncluster<-length(unique(subobj2$seurat_clusters))
       height=max(2000, ncluster*250 + 1000)
 
-      g<-get_bubble_plot(subobj2, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA") + theme(text = element_text(size=20))
       dot_file = paste0(cluster_prefix, ".dot.png")
       png(dot_file, width=6000, height=height, res=300)
-      print(g)
+      print(g2)
       dev.off()
 
       cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot", cur_resolution, pct))
@@ -420,4 +436,3 @@ for(pct in previous_celltypes){
 setwd(cur_folder)
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
-

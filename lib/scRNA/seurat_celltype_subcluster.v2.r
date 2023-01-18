@@ -183,8 +183,7 @@ for(pct in previous_celltypes){
                         essential_genes, 
                         key,
                         do_umap = FALSE,
-                        reduction.name = NA,
-                        previous_layer = NA)
+                        reduction.name = NA)
   
   g11<-DimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F)
   
