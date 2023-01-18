@@ -40,7 +40,7 @@ if(regress_by_percent_mt){
   vars.to.regress=NULL
 }
 
-obj<-do_harmony(obj, by_sctransform, vars.to.regress, has_batch_file, parSampleFile2, pca_dims, essential_genes=essential_genes)
+obj<-do_harmony(obj, by_sctransform, vars.to.regress, has_batch_file, parSampleFile2, pca_dims, essential_genes=essential_genes, mc.cores=8)
 
 reduction="harmony"
 

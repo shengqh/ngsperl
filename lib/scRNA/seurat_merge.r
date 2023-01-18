@@ -47,7 +47,7 @@ finalList<-finalList[names(finalList) != "rawobj"]
 DefaultAssay(obj)<-"RNA"
 
 if(by_sctransform){
-  obj<-do_sctransform(obj, vars.to.regress=vars.to.regress, return.only.var.genes=FALSE)
+  obj<-do_sctransform(obj, vars.to.regress=vars.to.regress, return.only.var.genes=FALSE, mc.cores=8)
   assay="SCT"
 }else{
   assay="RNA"
