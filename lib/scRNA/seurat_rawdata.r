@@ -1,15 +1,14 @@
 rm(list=ls()) 
-outFile='P9112'
+outFile='P9061'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20221129_9112_scRNA_human/seurat_rawdata/result')
+setwd('/scratch/vickers_lab/projects/20230118_scRNA_9061_mouse_scDblFinder/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -159,6 +158,13 @@ for(fileTitle in names(fileMap)) {
     counts = Read10X_h5(fileName)
   } else if (grepl('.gz$', fileName)) {
     counts = data.frame(read_gzip_count_file(fileName, fileTitle, species))
+  } else if (grepl('.rds$', fileName)) {
+    counts = readRDS(fileName)
+    if("Seurat" %in% class(counts)){
+      counts = GetAssayData(counts, slot = "counts")
+    }
+  } else {
+    stop(paste0("I don't know format of ", fileName))
   }
   
   adt.counts<-NULL
