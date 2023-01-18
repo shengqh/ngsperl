@@ -40,6 +40,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_pseudo_count
 
   add_doublet_check
+  add_scDblFinder
 
   addEnclone 
   addClonotypeMerge 
@@ -103,7 +104,7 @@ sub get_marker_gene_dict {
 }
 
 sub add_seurat_rawdata {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file) = @_;
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def) = @_;
   $config->{$seurat_rawdata} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -112,7 +113,7 @@ sub add_seurat_rawdata {
     rReportTemplate => "../scRNA/seurat_rawdata.rmd;reportFunctions.Rmd",
     rmd_ext => ".rawdata.html",
     run_rmd_independent => 1,
-    parameterSampleFile1_ref => "files",
+    parameterSampleFile1_ref => $files_def,
     parameterSampleFile2     => {
       task_name => getValue($def, "task_name"),
       Mtpattern             => getValue( $def, "Mtpattern" ),
@@ -176,6 +177,7 @@ sub add_seurat {
   my $sct_str = getValue( $def, "by_sctransform" ) ? "_sct":"";
   #my $thread = getValue( $def, "by_sctransform" ) ? 8 : 1;
   my $thread = 1;
+  my $rmd_ext = getValue( $def, "by_sctransform" ) ? ".sct":"";
 
   my $preprocessing_rscript;
   if($by_integration){
@@ -184,16 +186,20 @@ sub add_seurat {
       $seurat_task = "seurat${sct_str}_harmony";
       $preprocessing_rscript = "../scRNA/seurat_harmony.r";
       $reduction = "harmony";
+      $rmd_ext = $rmd_ext . ".harmony";
     }else{
       $seurat_task = "seurat${sct_str}_integration";
       $preprocessing_rscript = "../scRNA/seurat_integration.r";
       $reduction = "pca";
+      $rmd_ext = $rmd_ext . ".integration";
     }
   }else{
     $seurat_task = "seurat${sct_str}_merge";
     $preprocessing_rscript = "../scRNA/seurat_merge.r";
     $reduction = "pca";
+    $rmd_ext = $rmd_ext . ".merge";
   }
+  $rmd_ext = $rmd_ext . ".html";
 
   $config->{$seurat_task} = {
     class                    => "CQS::UniqueR",
@@ -202,6 +208,7 @@ sub add_seurat {
     rtemplate                => "../scRNA/scRNA_func.r;$preprocessing_rscript",
     rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.Rmd",
     run_rmd_independent => 1,
+    rmd_ext => $rmd_ext,
     parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
     parameterFile2_ref => $essential_gene_task,
     parameterSampleFile1     => {
@@ -1171,9 +1178,9 @@ sub addEdgeRTask {
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
       docker_prefix              => "gsea_",
       rtemplate                  => "GSEAPerform.R",
-      rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.Rmd;Functions.Rmd",
-      run_rmd_independent => 1,
-      rmd_ext => ".gsea.html",
+      # rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.Rmd;Functions.Rmd",
+      # run_rmd_independent => 1,
+      # rmd_ext => ".gsea.html",
       output_to_result_directory => 1,
       output_file_ext            => ".gsea.files.csv",
       parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
@@ -1250,12 +1257,16 @@ sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
 
   my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".scDynamic.meta.rds";
+  my $rmd_ext = $by_individual_sample ? ".dynamic_individual.html":".dynamic_individual.html";
+
   $config->{$scDynamic_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_one_layer_one_resolution.r",
-    rReportTemplate          => "../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.Rmd",
+    rReportTemplate => "../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.R",
+    run_rmd_independent => 1,
+    rmd_ext => $rmd_ext,
     parameterFile1_ref => [$seurat_task, ".rds"],
     parameterFile3_ref => $essential_gene_task,
     parameterSampleFile1     => {
@@ -2164,7 +2175,6 @@ sub add_doublet_check {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $doublet_check_task,
     rtemplate                => "countTableVisFunctions.R,../scRNA/scRNA_func.r,../scRNA/seurat_doublet_check.r",
     parameterFile1_ref       => $obj_ref,
-    parameterFile2_ref       => ,
     parameterFile3_ref       => [ $doublet_finder_task, ".meta.rds" ],
     parameterFile4_ref       => [ $doublet_finder_task, ".options.csv" ],
     parameterSampleFile1     => {
@@ -2184,6 +2194,39 @@ sub add_doublet_check {
     },
   };
   push( @$summary, $doublet_check_task );
+}
+
+sub add_scDblFinder {
+  my ($config, $def, $summary, $target_dir, $scDblFinder_task, $h5_ref ) = @_;
+
+  my $script = dirname(__FILE__) . "/scDblFinderStandalone.r";
+
+  $config->{$scDblFinder_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$scDblFinder_task",
+    program => "",
+    check_program => 0,
+    option => "
+R --vanilla -f $script --args __FILE__ __OUTPUT__
+
+",
+    source_arg => "",
+    source_ref => $h5_ref,
+    output_arg => "",
+    output_file_prefix => "",
+    output_file_ext => ".scDblFinder.rds",
+    output_to_same_folder => 1,
+    samplename_in_result => 0,
+    output_file_key => 0,
+    can_result_be_empty_file => 0,
+    sh_direct   => 0,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "40gb"
+    },
+  };
+  push( @$summary, $scDblFinder_task );
 }
 
 #https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1863-4#availability-of-data-and-materials
