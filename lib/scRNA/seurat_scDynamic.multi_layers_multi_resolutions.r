@@ -224,8 +224,7 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
                             essential_genes, 
                             key,
                             do_umap = TRUE,
-                            umap_min_dist_map,
-                            previous_layer)
+                            umap_min_dist_map)
     }else{
       cat(key, "FindNeighbors\n")
       subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
