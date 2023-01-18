@@ -1,3 +1,18 @@
+rm(list=ls()) 
+outFile='P9061'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/scratch/vickers_lab/projects/20230118_scRNA_9061_mouse_scDblFinder/seurat_rawdata/result/P9061.rawobj.rds'
+parFile2='/scratch/vickers_lab/projects/20230118_scRNA_9061_mouse_scDblFinder/essential_genes/result/P9061.txt'
+parFile3=''
+
+
+setwd('/scratch/vickers_lab/projects/20230118_scRNA_9061_mouse_scDblFinder/seurat_sct_harmony/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -57,4 +72,3 @@ finalListFile<-paste0(outFile, ".final.rds")
 saveRDS(finalList, file=finalListFile)
 
 output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
-
