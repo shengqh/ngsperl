@@ -3170,9 +3170,9 @@ sub add_gsea {
     perform                    => 1,
     target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
     rtemplate                  => "GSEAPerform.R",
-    rReportTemplate => "GSEAReport.Rmd;../Pipeline/Pipeline.Rmd;Functions.Rmd",
-    run_rmd_independent => 1,
-    rmd_ext => ".gsea.html",
+    # rReportTemplate => "GSEAReport.Rmd;../Pipeline/Pipeline.Rmd;Functions.Rmd",
+    # run_rmd_independent => 1,
+    # rmd_ext => ".gsea.html",
     parameterSampleFile1_ref   => $rnk_file_ref,
     parameterSampleFile2   => {
       task_name => getValue($def, "task_name")
