@@ -550,20 +550,25 @@ do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE, m
   if(nsamples > 1){
     print("  split objects ...")
     objs<-SplitObject(object = rawobj, split.by = "orig.ident")
-    #perform sctransform
-    objs<-lapply(objs, function(x){
-      print("  sctransform", unique(x$orig.ident), "...")
+
+    print("  perform sctransform ...")
+    objs<-mclapply(objs, function(x){
+      print(paste0("    sctransform ", unique(x$orig.ident), " ..."))
       x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
       return(x)
-    })  
-    print("merge samples ...")
+    },mc.cores=mc.cores)  
+    print("  sctransform done")
+
+    print("  merge samples ...")
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
     #https://github.com/satijalab/seurat/issues/2814
     VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
     rm(objs)
     return(obj)
   }else{
+    print("  perform sctransform ...")
     rawobj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
+    print("  sctransform done")
     return(rawobj)
   }
 }
@@ -584,18 +589,18 @@ do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch
 
   DefaultAssay(obj)<-assay
 
-  cat("RunPCA ... \n")
+  print("RunPCA ...")
   obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
 
   if(has_batch_file){
-    cat("Setting batch ...\n")
+    print("Setting batch ...")
     poolmap = get_batch_samples(batch_file, unique(obj$sample))
     obj$batch <- unlist(poolmap[obj$sample])
   }else if(!("batch" %in% colnames(obj@meta.data))){
     obj$batch <- obj$sample
   }
 
-  cat("RunHarmony ... \n")
+  print("RunHarmony ...")
   obj <- RunHarmony(object = obj,
                     assay.use = assay,
                     reduction = "pca",
@@ -1164,7 +1169,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   nwidth=ceiling(sqrt(nsample))
   nheight=ceiling(nsample/nwidth)
   
-  png(file=paste0(prefix, ".qc.read.png"), width=min(20000, max(2000, 1000 * nwidth) + 300), height=min(10000, max(2000, 1000*nheight)), res=300)
+  png(file=paste0(prefix, ".qc.read.png"), width=min(20000, 1000 * nwidth + 300), height=min(10000, 1000*nheight), res=300)
   p1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
@@ -1174,7 +1179,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   print(p1)
   dev.off()
 
-  png(file=paste0(prefix, ".qc.feature.png"), width=min(20000, max(2000, 1000 * nwidth) + 300), height=min(10000, max(2000, 1000*nheight)), res=300)
+  png(file=paste0(prefix, ".qc.feature.png"), width=min(20000, 1000 * nwidth + 300), height=min(10000, 1000*nheight), res=300)
   p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
