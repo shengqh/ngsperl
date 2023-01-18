@@ -258,7 +258,12 @@ sub perform {
 
   if($run_rmd_independent){
     if(defined $rmd_file){
-      print $pbs "\n\n$rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='${task_name}${rmd_ext}')\"\n";
+      print $pbs "
+
+if [[ -s $final_file ]]; then
+  $rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='${task_name}${rmd_ext}')\"
+fi
+";
     }
   }
   $self->close_pbs( $pbs, $pbs_file );
