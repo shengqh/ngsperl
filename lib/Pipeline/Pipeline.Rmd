@@ -182,20 +182,20 @@ display_gsea=function(files, target_folder="", gsea_prefix="#") {
 
         sig_file=paste0(target_folder, gname, ".", gseaCategory, ".csv" )
         write.csv(final, sig_file, row.names=F)
-
-        final<-final[order(final$NES, decreasing=T),]
-        final$NAME<-factor(final$NAME, levels=final$NAME)
-        g<-ggplot(final, aes(NES, NAME)) + geom_point(aes(size=Core.Enrichment, color=FDR.q.val)) + geom_vline(xintercept=0) + theme_bw() + ylab("") + xlab("Normalized enrichment score")
-
-        height=max(1000, 3000/40*nrow(final))
-        warning(final$NAME)
-        ncharmax=max(nchar(as.character(final$NAME)))
-        width=max(3000, ncharmax * 40 + 1000)
         pngfile=paste0(sig_file, ".png")
-        png(pngfile, width=width, height=height, res=300)
-        print(g)
-        dev.off()
+        if(!file.exists(pngfile)){
+          final<-final[order(final$NES, decreasing=T),]
+          final$NAME<-factor(final$NAME, levels=final$NAME)
+          g<-ggplot(final, aes(NES, NAME)) + geom_point(aes(size=Core.Enrichment, color=FDR.q.val)) + geom_vline(xintercept=0) + theme_bw() + ylab("") + xlab("Normalized enrichment score")
 
+          height=max(1000, 3000/40*nrow(final))
+          warning(final$NAME)
+          ncharmax=max(nchar(as.character(final$NAME)))
+          width=max(3000, ncharmax * 40 + 1000)
+          png(pngfile, width=width, height=height, res=300)
+          print(g)
+          dev.off()
+        }
         cat(paste0("\n\n<img src='", pngfile, "'>\n\n"))
         #include_graphics(file_path_as_absolute(pngfile))
         #cat("\n\n")
