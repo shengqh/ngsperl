@@ -110,6 +110,7 @@ sub add_seurat_rawdata {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
     rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_rawdata.r",
     rReportTemplate => "../scRNA/seurat_rawdata.rmd;reportFunctions.Rmd",
+    rmd_ext => ".rawdata.html",
     run_rmd_independent => 1,
     parameterSampleFile1_ref => "files",
     parameterSampleFile2     => {
@@ -173,6 +174,8 @@ sub add_seurat {
   my $nsamples = scalar(@sample_names);
   my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
   my $sct_str = getValue( $def, "by_sctransform" ) ? "_sct":"";
+  #my $thread = getValue( $def, "by_sctransform" ) ? 8 : 1;
+  my $thread = 1;
 
   my $preprocessing_rscript;
   if($by_integration){
@@ -223,7 +226,7 @@ sub add_seurat {
     output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
     sh_direct            => 1,
     pbs                  => {
-      "nodes"     => "1:ppn=1",
+      "nodes"     => "1:ppn=$thread",
       "walltime"  => getValue($def, "seurat_walltime", "12"),
       "mem"       => getValue($def, "seurat_mem"),
     },
@@ -1033,7 +1036,7 @@ sub addEdgeRTask {
     perform              => 1,
     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $edgeRtaskname,
     rtemplate            => "../scRNA/scRNA_func.r,${edgeRscript}",
-    rReportTemplate      => "$edgeRmd;reportFunctions.Rmd",
+    rReportTemplate      => "$edgeRmd;reportFunctions.R",
     rmd_ext => $rmd_ext,     
     run_rmd_independent => 1,
     parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
@@ -1175,7 +1178,8 @@ sub addEdgeRTask {
       output_file_ext            => ".gsea.files.csv",
       parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
       parameterSampleFile1         => {
-        task_name => getValue($def, "task_name")
+        task_name => getValue($def, "task_name"),
+        rmdformats => "readthedown",
       },
       sh_direct                  => 1,
       rCode                      => "$gsea_chip_str gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
@@ -1330,6 +1334,7 @@ sub addSubCluster {
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v3.r",
     rReportTemplate          => "../scRNA/seurat_celltype_subcluster.v3.rmd;reportFunctions.Rmd",
     run_rmd_independent => 1,
+    rmd_ext => ".subcluster.html",
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
@@ -2313,7 +2318,7 @@ sub add_clustree_rmd {
 }
 
 sub add_bubble_plots {
-  my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name) = @_;
+  my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name, $rmd_ext) = @_;
   my $p2key = (-e $meta_ref) ? "parameterFile2" : "parameterFile2_ref";
   $config->{$bubble_task} = {
     class                => "CQS::UniqueR",
@@ -2321,6 +2326,7 @@ sub add_bubble_plots {
     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubble_task,
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multi.r",
     rReportTemplate           => "../scRNA/seurat_bubblemap_multi.rmd;reportFunctions.Rmd",
+    rmd_ext => $rmd_ext,
     run_rmd_independent => 1,
     parameterFile1_ref   => [ $choose_task, ".final.rds" ],
     $p2key  => $meta_ref,
