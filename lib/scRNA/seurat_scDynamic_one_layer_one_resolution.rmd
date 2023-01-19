@@ -177,4 +177,3 @@ cat(pctRmd(outFile, "layer4", pcts, files), file=pct_file)
 ```{r, child=pct_file} 
 ```
 
-```
