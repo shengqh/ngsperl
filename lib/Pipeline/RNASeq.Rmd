@@ -406,18 +406,19 @@ versions<-display_versions()
 # Description
 ```{r echo=FALSE}
 vmap<-split(versions$Version, versions$Software)
+has_cutadapt<-"Cutadapt" %in% names(vmap)
 ```
 
-Reads were trimmed to remove adapter sequences using Cutadapt (`r vmap['Cutadapt']`)[1] and aligned to the `r vmap['genome']` genome using STAR (`r vmap['STAR']`)[2]. 
+Reads were `r if(has_cutadapt){paste0("trimmed to remove adapter sequences using Cutadapt ", vmap['Cutadapt'], ")[1] and")}` aligned to the `r vmap['genome']` genome using STAR (`r vmap['STAR']`)[2]. 
 `r vmap['gtf']` gene annotations were provided to STAR to improve the accuracy of mapping. 
-Quality control on both raw reads and adaptor-trimmed reads was performed using FastQC (`r vmap['FastQC']`)(www.bioinformatics.babraham.ac.uk/projects/fastqc). 
+Quality control on `r if(has_cutadapt){"both raw reads and adaptor-trimmed"}` reads was performed using FastQC (`r vmap['FastQC']`)(www.bioinformatics.babraham.ac.uk/projects/fastqc). 
 featureCounts (`r vmap['featureCounts']`)[3] was used to count the number of mapped reads to each gene. 
 Heatmap3 [4] was used for cluster analysis and visualization. 
 `r if(hasDEseq2){paste0("Significantly differential expressed genes with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[5].")}`
 `r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[6].")}`
 `r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[7] on database (", vmap['GSEA_DB'], ").")}`
 
-[1]	Martin M: Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnetjournal 2011, 17:10-12. \
+`r if(has_cutadapt){"[1]	Martin M: Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnetjournal 2011, 17:10-12."}` \
 [2]	Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, Batut P, Chaisson M, Gingeras TR: STAR: ultrafast universal RNA-seq aligner. Bioinformatics 2013, 29(1):15-21. \
 [3]	Liao Y, Smyth GK, Shi W: featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics 2014, 30(7):923-930. \
 [4]	Zhao S, Guo Y, Sheng Q, Shyr Y: Advanced heat map and clustering analysis using heatmap3. BioMed research international 2014, 2014:986048. \
