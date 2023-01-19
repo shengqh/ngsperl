@@ -1150,24 +1150,28 @@ sub get_group_samplefile_map_key {
   my $groups    = get_raw_files( $config, $section, $group_key );
   my %group_sample_map = ();
   for my $group_name ( sort keys %{$groups} ) {
-    my @gfiles        = ();
+    my $gfiles        = [];
+    $group_sample_map{$group_name} = $gfiles;
     my $group_samples = $groups->{$group_name};
     if ( ref $group_samples eq ref "" ) {
-      push( @gfiles, $group_samples );
-    }
-    else {
-      my @samples = @{$group_samples};
-      foreach my $sample_name (@samples) {
-        if ( not defined $raw_files->{$sample_name} ) {
-          die "Cannot find $sample_name of group $group_name in raw_files of section $section, check your sample names";
-        }
-        my @bam_files = @{ $raw_files->{$sample_name} };
-        foreach my $bam_file (@bam_files) {
-          push( @gfiles, $bam_file );
-        }
+      if(! defined $raw_files->{$group_samples}){
+        push( @$gfiles, $group_samples );
+        continue
+      }else{
+        $group_samples = [$group_samples];
       }
     }
-    $group_sample_map{$group_name} = \@gfiles;
+
+    my @samples = @{$group_samples};
+    foreach my $sample_name (@samples) {
+      if ( not defined $raw_files->{$sample_name} ) {
+        die "Cannot find $sample_name of group $group_name in raw_files of section $section, check your sample names";
+      }
+      my @bam_files = @{ $raw_files->{$sample_name} };
+      foreach my $bam_file (@bam_files) {
+        push( @$gfiles, $bam_file );
+      }
+    }
   }
   return \%group_sample_map;
 }

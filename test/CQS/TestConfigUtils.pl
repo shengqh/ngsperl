@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 47;
+use Test::More tests => 48;
 
 { #test is_string
   ok(is_string("string"));
@@ -632,6 +632,31 @@ is_deeply( $cov_map, $cov_expect );
                     'LDLR_PEL_01' => [ '1' ],
                     'LDLR_PEL_02' => [ '2' ],
                     'LDLR_PEL_03' => [ '3' ],
+                   }
+  );
+}
+
+{
+  #get_group_samplefile_map_key
+  my $config = {
+    files => {                                       
+      'LDLR_PEL_01' => [ '1' ],
+      'LDLR_PEL_02' => [ '2' ],
+      'LDLR_PEL_03' => [ '3' ],
+    },
+    "test_section" => {
+      source_ref =>"files",
+      groups => {
+        S1 => 'LDLR_PEL_01',
+        S2 => ['LDLR_PEL_02','LDLR_PEL_03'],
+      },
+    },
+  };
+  
+  my $res = get_group_samplefile_map_key($config, "test_section", "", "groups");
+  is_deeply( $res, {                                       
+                    'S1' => [ '1' ],
+                    'S2' => [ '2', '3' ],
                    }
   );
 }
