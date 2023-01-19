@@ -110,12 +110,15 @@ sub add_seurat_rawdata {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
     rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_rawdata.r",
-    rReportTemplate => "../scRNA/seurat_rawdata.rmd;reportFunctions.Rmd",
+    rReportTemplate => "../scRNA/seurat_rawdata.rmd;reportFunctions.R",
     rmd_ext => ".rawdata.html",
     run_rmd_independent => 1,
     parameterSampleFile1_ref => $files_def,
     parameterSampleFile2     => {
+      #for report
       task_name => getValue($def, "task_name"),
+      email => getValue($def, "email"),
+      #for analysis
       Mtpattern             => getValue( $def, "Mtpattern" ),
       rRNApattern           => getValue( $def, "rRNApattern" ),
       hemoglobinPattern     => getValue( $def, "hemoglobinPattern" ),
@@ -1257,7 +1260,6 @@ sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
 
   my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".scDynamic.meta.rds";
-  my $rmd_ext = $by_individual_sample ? ".dynamic_individual.html":".dynamic_individual.html";
 
   $config->{$scDynamic_task} = {
     class                    => "CQS::UniqueR",
@@ -1265,8 +1267,7 @@ sub addDynamicCluster {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_one_layer_one_resolution.r",
     rReportTemplate => "../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.R",
-    run_rmd_independent => 1,
-    rmd_ext => $rmd_ext,
+    run_rmd_independent => 0,
     parameterFile1_ref => [$seurat_task, ".rds"],
     parameterFile3_ref => $essential_gene_task,
     parameterSampleFile1     => {
