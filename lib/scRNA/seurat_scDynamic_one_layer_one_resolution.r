@@ -594,7 +594,7 @@ if(by_individual_sample){
 
     file.copy(paste0(root_folder, "/scRNA_func.r"), paste0(cur_folder, "/scRNA_func.r"), overwrite = TRUE)
     file.copy(paste0(root_folder, "/seurat_scDynamic_one_layer_one_resolution.rmd"), paste0(cur_folder, "/seurat_scDynamic_one_layer_one_resolution.rmd"), overwrite = TRUE)
-    file.copy(paste0(root_folder, "/reportFunctions.Rmd"), paste0(cur_folder, "/reportFunctions.Rmd"), overwrite = TRUE)
+    file.copy(paste0(root_folder, "/reportFunctions.R"), paste0(cur_folder, "/reportFunctions.R"), overwrite = TRUE)
 
     subobj<-subset(obj, cells=colnames(obj)[obj@meta.data$orig.ident==sample])
 
@@ -640,7 +640,7 @@ if(by_individual_sample){
   writeLines(result_list, paste0(prefix, ".samples.list"))
   write.table(all_ct_counts, paste0(prefix, ".ct_count.tsv"), sep="\t", row.names=T)
 
-  output_file=paste0(prefix,".dynamic.html")
+  output_file=paste0(prefix,".dynamic_individual.html")
   rmdfile = "seurat_scDynamic_one_layer_one_resolution_summary.rmd"
   rmarkdown::render(rmdfile, output_file=output_file)
 }else{
