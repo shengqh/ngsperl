@@ -1,10 +1,20 @@
 ---
-title: "Seurat raw data"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
-    toc_depth: 2
+    toc_depth: 3
     number_sections: true
+---
+
+```{r, echo=FALSE}
+options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+author_line<-ifelse(is.null(myoptions$email), "", paste0('author: "', myoptions$email, '"'))
+```
+
+---
+title: "Seurat raw data"
+`r author_line`
 ---
 
 ```{r setup, include=FALSE}
@@ -20,12 +30,8 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r, child="reportFunctions.Rmd", include=FALSE} 
-```
-
 ```{r data, echo = FALSE}
-options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
+source('reportFunctions.R')
 
 outFile=myoptions$task_name
 ```
@@ -70,5 +76,3 @@ include_graphics(paste0(outFile,".qc.feature.png"))
 ```{r, results="asis", echo=FALSE}
 include_graphics(paste0(outFile,".top20.png"))
 ```
-
-

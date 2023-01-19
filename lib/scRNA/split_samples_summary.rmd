@@ -2,8 +2,20 @@
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
-    toc_depth: 2
+    toc_depth: 3
     number_sections: true
+---
+
+```{r, echo=FALSE}
+options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+author_line<-ifelse(is.null(myoptions$email), "", paste0('author: "', myoptions$email, '"'))
+method=myoptions$method
+```
+
+---
+title: "Demultiplex by `r method`"
+`r author_line`
 ---
 
 ```{r setup, include=FALSE}
@@ -22,15 +34,10 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 ```{r data, echo = FALSE}
 source('reportFunctions.R')
 
-options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
 outFile=myoptions$task_name
-method=myoptions$method
-email=myoptions$email
 
 files_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 samples<-files_table$V2
-
 ```
 
 ```{r echo=FALSE}
@@ -70,7 +77,3 @@ cat(figureRmd(samples, hto_samples), file=resFile)
 ```{r, child=resFile} 
 ```
 
----
-title: "Demultiplex by `r method`"
-author: "`r email`"
----
