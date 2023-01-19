@@ -47,6 +47,10 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "sequencetask_run_time",     '12' );
   initDefaultValue( $def, "emailType",                 "FAIL" );
   initDefaultValue( $def, "extractSingleEndFastqFromPairend", 0 );
+  initDefaultValue( $def, "sra_to_fastq_sh_direct", 0 );
+  
+  # initDefaultValue( $def, "rmdformats_theme", "rmdformats::readthedown");
+  # initDefaultValue( $def, "toc_depth", "3");
 
   return $def;
 }
@@ -441,7 +445,7 @@ sub getPreprocessionConfig {
       option     => "",
       source_ref => $source_ref,
       sra_table  => $def->{sra_table},
-      sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 1),
+      sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 0),
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
       is_restricted_data => getValue($def, "is_restricted_data"),
