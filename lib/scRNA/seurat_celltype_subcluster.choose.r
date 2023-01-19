@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='mouse_8870'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
-parFile2='c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
-parFile3='c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
-parFile4='c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result/crs.files.csv'
+parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony/result/mouse_8870.final.rds'
+parFile2='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_01_call/result/mouse_8870.scDynamic.meta.rds'
+parFile3='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/essential_genes/result/mouse_8870.txt'
+parFile4='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_02_subcluster/result/mouse_8870.files.csv'
 
 
-setwd('c:/projects/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result')
+setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose/result')
 
 ### Parameter setting end ###
 
@@ -65,15 +65,21 @@ if(!exists("obj")){
 }
 # obj<-readRDS("crs.final.rds")
 
-obj<-build_dummy_cluster(obj, label.by=previous_layer, new_cluster_name = "old_clusters")
-g<-get_dim_plot(obj, group.by ="old_clusters", label.by="old_clusters_label", label.size = 8, legend.title="") + 
-  theme(legend.text = element_text(size = 20)) + ggtitle("")
-png(paste0(prefix, ".pre.umap.png"), width=3200, height=2000, res=300)
-print(g)
-dev.off()
+pre_choose_file=paste0(prefix, ".pre.umap.png")
 
-obj$old_clusters<-NULL
-obj$old_clusters_label<-NULL
+post_rename_umap = file.path(dirname(parFile4), outFile, ".post_rename.umap.png")
+if(file.exists(post_rename_umap)){
+  file.copy(post_rename_umap, pre_choose_file)
+}else{
+  obj<-build_dummy_cluster(obj, label.by=previous_layer, new_cluster_name = "old_clusters")
+  g<-get_dim_plot(obj, group.by ="old_clusters", label.by="old_clusters_label", label.size = 8, legend.title="") + 
+    theme(legend.text = element_text(size = 20)) + ggtitle("")
+  png(pre_choose_file, width=3200, height=2000, res=300)
+  print(g)
+  dev.off()
+  obj$old_clusters<-NULL
+  obj$old_clusters_label<-NULL
+}
 
 obj<-AddMetaData(obj, obj[[previous_layer]], col.name = cur_layer)
 obj<-unfactorize_layer(obj, cur_layer)
@@ -123,7 +129,7 @@ if(!("type" %in% colnames(res_files))){
     if(grepl('meta', x['file'])){
       return('meta')
     }
-    die(x)
+    stop(x)
   }))
 }
 
@@ -186,7 +192,6 @@ cluster_index=0
 pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   cat(pct, "\n")
-  cells<-rownames(meta)[meta[,previous_layer] == pct]
   best_res_row = subset(best_res_tbl, V3==pct)
   if(nrow(best_res_row) > 0){
     best_res=as.numeric(subset(best_res_row, V2 == "resolution")$V1)
