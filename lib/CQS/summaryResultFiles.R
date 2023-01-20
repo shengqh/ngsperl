@@ -107,7 +107,7 @@ for (step in unique(ResultOut$StepName)) {
   g<-ggplot(tableForPlot, aes(SampleName, TaskName))+
       geom_tile(data=tableForPlot, aes(fill=Result), color="white") +
       scale_fill_manual(values=colors) +
-      theme(axis.text.x = element_text(angle=90, vjust=1, size=11, hjust=1, face="bold"),
+      theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
           axis.text.y = element_text(size=11, face="bold")) +
       labs(title = paste0(step,": Status"))+
       coord_equal()
