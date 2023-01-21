@@ -1,0 +1,84 @@
+library(knitr)
+library(reshape2)
+library(ggplot2)
+library(data.table)
+library(DT)
+library(RCurl)
+library(htmltools)
+
+addHtmlLinkTag<-function(text,link) {
+  result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
+  return(result)
+}
+
+addLinkTag<-function(text,link) {
+  result<-paste0("[", text, "](", link, ")")
+  return(result)
+}
+
+figRef <- local({
+  tag <- numeric()
+  created <- logical()
+  used <- logical()
+  function(label, caption, prefix = options("figcap.prefix"), 
+           sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight"), trunk.eval=TRUE) {
+    if(trunk.eval){ 
+      i <- which(names(tag) == label)
+      if (length(i) == 0) {
+        i <- length(tag) + 1
+        tag <<- c(tag, i)
+        names(tag)[length(tag)] <<- label
+        used <<- c(used, FALSE)
+        names(used)[length(used)] <<- label
+        created <<- c(created, FALSE)
+        names(created)[length(created)] <<- label
+      }
+      if (!missing(caption)) {
+        created[label] <<- TRUE
+        paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+               " ", caption)
+      } else {
+        used[label] <<- TRUE
+        paste(prefix, tag[label])
+      }
+    }
+  }
+})
+options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
+
+
+tabRef <- local({
+  tag <- numeric()
+  created <- logical()
+  used <- logical()
+  function(label, caption, prefix = options("tabcap.prefix"), 
+           sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight"), trunk.eval=TRUE) {
+    if(trunk.eval){
+      i <- which(names(tag) == label)
+      if (length(i) == 0) {
+        i <- length(tag) + 1
+        tag <<- c(tag, i)
+        names(tag)[length(tag)] <<- label
+        used <<- c(used, FALSE)
+        names(used)[length(used)] <<- label
+        created <<- c(created, FALSE)
+        names(created)[length(created)] <<- label
+      }
+      if (!missing(caption)) {
+        created[label] <<- TRUE
+        paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
+              " ", caption)
+      } else {
+        used[label] <<- TRUE
+        paste(prefix, tag[label])
+      }
+    }
+  }
+})
+options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
+
+check_and_include_graphics<-function(graphicFile) {
+  if (all(file.exists(graphicFile))) {
+    include_graphics(graphicFile)
+  }
+}
