@@ -15,11 +15,6 @@ output:
   margin-right: auto;
 }
 </style>
-
-```{r, child="Functions.Rmd"} 
-```
-```{r, child="Pipeline.Rmd"} 
-```
   
 ```{r setup, include=FALSE}
 library(XML)
@@ -28,6 +23,9 @@ library(stringr)
 library(kableExtra)
 library(tidyverse)
 options(bitmapType='cairo')
+
+source('Functions.R')
+source('Pipeline.R')
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 files<-split(files$V1, files$V2)
@@ -41,6 +39,8 @@ has_bowtie2 <- any(grepl("bowtie2_", names(files)))
 has_bowtie2_cleanbam <- any(grepl("bowtie2_cleanbam_", names(files)))
 has_chipqc <- "chipqc_html" %in% names(files)
 has_homer<-any(grepl("homer_", names(files)))
+
+has_peak_count<-"peak_count" %in% names(files)
 
 homer<-chipseqOptions$homer_result
 macs2<-chipseqOptions$macs2_result
@@ -219,6 +219,12 @@ print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling and enric
     htmltools::HTML())
 ```
 
+```{r peak_count, echo=FALSE, results='asis', warning=F, eval=has_peak_count}
+df<-read.table(files$peak_count, sep="\t", header=T)
+print(kable(df, caption=tabRef("peakSummary", "Summary of peak calling")) %>%
+    kable_styling() %>%
+    htmltools::HTML())
+```
 <br>
 
 ```{r homer_motif, echo=FALSE, results='asis', warning=F, eval=has_homer}
