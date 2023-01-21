@@ -1,6 +1,10 @@
 ---
 title: "GSEA Report"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+    number_sections: false
 ---
 
 ```{css, echo=FALSE}
@@ -19,11 +23,6 @@ library(dplyr)
 library(kableExtra)
 knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
-```{r, child="Functions.Rmd"} 
-```
-```{r, child="Pipeline.Rmd"} 
-```
-
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
 library(ggplot2)
 library(RColorBrewer)
@@ -34,33 +33,50 @@ library(htmltools)
 library(knitr)
 library(kableExtra)
 
-rmdformats='html_clean'
-files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
-if(nrow(files) == 1 & files$V2[1] == 'gsea'){
-  #single cell GSEA result
-  files<-read.csv(files$V1[1])
-  files$Comparisons<-basename(dirname(files$Folder))
-}else if ("task_name" %in% files$V2) {
-  params_map<-split(files$V1, files$V2)
-  task_name<-params_map$task_name
-  gsea_file<-paste0(task_name, ".gsea.files.csv")
-  files<-read.csv(gsea_file)
-  files$Comparisons<-gsub(".gsea$", "", basename(dirname(files$Folder)))
-  if(!is.null(params_map$rmdformats)){
-    rmdformats=params_map$rmdformats
+source('reportFunctions.R')
+source('Pipeline.R')
+
+files<-read.csv("gsea_files.csv", as.is=TRUE)
+
+resFile<-"sub.Rmd"
+figureRmd<-function(files){
+  result<-""
+  comparisons = unique(files$comparison)
+  comparison<-comparisons[1]
+  for(comparison in comparisons){
+    result<-paste0(result, paste0("\n\n# ", comparison, "\n\n"))
+
+    comp_files<-files[files$comparison==comparison,,drop=FALSE]
+
+    categories = unique(comp_files$category)
+    category=categories[1]
+    for(category in categories){
+      result<-paste0(result, paste0("\n\n## ", category, "\n\n"))
+
+      cat_files<-comp_files[comp_files$category == category,,drop=F]
+      file_map<-split(cat_files$file_path, cat_files$file_key)
+
+      if(!is.null(file_map$pos_file)){
+        result<-paste0(result, paste0("\n\n### Positive-regulated\n\n"))
+        result<-paste0(result, getTable(file_map$pos_file))
+      }
+
+      if(!is.null(file_map$neg_file)){
+        result<-paste0(result, paste0("\n\n### negative-regulated\n\n"))
+        result<-paste0(result, getTable(file_map$neg_file))
+      }
+
+      if(!is.null(file_map$enriched_file)){
+        result<-paste0(result, paste0("\n\n### Enrichment\n\n"))
+        result<-paste0(result, getTable(file_map$enriched_file))
+        result<-paste0(result, getFigure(file_map$enriched_png))
+      }
+    }
   }
-}else{
-  rownames(files)<-files$V2
+  return(result)
 }
-
+cat(figureRmd(files), file=resFile)
 ```
- 
-```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
-display_gsea(files, "")
-``` 
 
----
-output: 
-  rmdformats::`r rmdformats`:
-    toc_depth: 2
----
+```{r, child=resFile} 
+```

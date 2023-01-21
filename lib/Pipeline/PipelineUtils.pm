@@ -951,15 +951,26 @@ sub writeDesignTable {
         my $factor   = getValue( $entryMap,   "Factor", $defaultNameFactor );
         my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
         my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
-        my $peakFile  = $peaksfiles->{$sampleName}->[0];
+        my $peakFile  = $peaksfiles->{$sampleName};
+        if(is_array($peakFile)){
+          $peakFile = $peakFile->[0];
+        }
 
-        my $sampleId   = $treatments->{$sampleName}->[0];
+        my $sampleId   = $treatments->{$sampleName};
+        if(is_array($sampleId)){
+          $sampleId = $sampleId->[0];
+        }
+
         my $bamReads   = $bamfiles->{$sampleId}[0];
         my $controlId  = "";
         my $bamControl = "";
 
         if ( defined $controls && defined $controls->{$sampleName} ) {
-          $controlId  = $controls->{$sampleName}->[0];
+          $controlId  = $controls->{$sampleName};
+          if(is_array($controlId)){
+            $controlId = $controlId->[0];
+          }
+
           $bamControl = $bamfiles->{$controlId}[0];
         }
 
@@ -3170,9 +3181,6 @@ sub add_gsea {
     perform                    => 1,
     target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
     rtemplate                  => "GSEAPerform.R",
-    # rReportTemplate => "GSEAReport.Rmd;../Pipeline/Pipeline.Rmd;Functions.Rmd",
-    # run_rmd_independent => 1,
-    # rmd_ext => ".gsea.html",
     parameterSampleFile1_ref   => $rnk_file_ref,
     parameterSampleFile2   => {
       task_name => getValue($def, "task_name")
@@ -3204,14 +3212,16 @@ sub add_gsea {
 
   my $gsea_report = $gseaTaskName . "_report";
   $config->{$gsea_report} = {
-    class                      => "CQS::BuildReport",
+    class                      => "CQS::UniqueR",
     perform                    => 1,
     target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
-    report_rmd_file            => "GSEAReport.Rmd",
-    additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+    rtemplate                  => "GSEAReport.R",
+    rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;Functions.R,reportFunctions.R",
+    run_rmd_independent => 1,
+    rmd_ext => ".gsea.html",
     parameterSampleFile1_ref   => \@gsea_report_files,
     parameterSampleFile1_names => \@gsea_report_names,
-    parameterSampleFile3       => [],
+    remove_empty_parameter => 1,
     sh_direct                  => 1,
     pbs                        => {
       "nodes"     => "1:ppn=1",

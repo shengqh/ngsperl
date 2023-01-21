@@ -1181,9 +1181,6 @@ sub addEdgeRTask {
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
       docker_prefix              => "gsea_",
       rtemplate                  => "GSEAPerform.R",
-      # rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.Rmd;Functions.Rmd",
-      # run_rmd_independent => 1,
-      # rmd_ext => ".gsea.html",
       output_to_result_directory => 1,
       output_file_ext            => ".gsea.files.csv",
       parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
@@ -1203,14 +1200,17 @@ sub addEdgeRTask {
 
     my $gsea_report = $gseaTaskName . "_report";
     $config->{$gsea_report} = {
-      class                      => "CQS::BuildReport",
+      class                      => "CQS::UniqueR",
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
-      report_rmd_file            => "GSEAReport.Rmd",
-      additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+      rtemplate                  => "GSEAReport.R",
+      rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;Functions.R",
+      run_rmd_independent => 1,
+      rmd_ext => ".gsea.html",
       parameterSampleFile1_ref   => [$gseaTaskName],
       parameterSampleFile1_names => ["gsea"],
-      parameterSampleFile3       => [],
+      output_no_name => 1,
+      output_file_ext            => "gsea_files.csv",
       sh_direct                  => 1,
       pbs                        => {
         "nodes"     => "1:ppn=1",
