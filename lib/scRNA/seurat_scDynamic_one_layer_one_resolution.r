@@ -533,6 +533,14 @@ do_analysis<-function(tmp_folder,
     }
   }
 
+
+  obj$seurat_layer4=paste0(obj$layer4_clusters, ": ", obj$layer4_raw)
+  g<-get_dim_plot(subobj, group.by="layer4_clusters", label.by="seurat_layer4", reduction="umap", legend.title="")
+
+  png(paste0(prefix, ".", cur_celltype, ".", celltype_to_filename(pct), ".umap.png"), width=2400, height=2000, res=300)
+  print(g)
+  dev.off()
+
   cur_celltype="layer4"
   for(pct in unique(unlist(obj[[cur_celltype]]))){
     cells=colnames(obj)[obj[[cur_celltype]] == pct]
@@ -545,13 +553,13 @@ do_analysis<-function(tmp_folder,
     dev.off()
   }
 
-  obj$ct_cluster<-paste0(obj$layer4, ":", obj$layer4_clusters)
-  dot_width=4400
-  g<-get_bubble_plot(obj, cur_res="layer4_clusters", "layer4", bubblemap_file, assay="RNA", orderby_cluster = FALSE)
-  dot_file = paste0(prefix, ".layer4.dot.sub.png")
-  png(dot_file, width=dot_width, height=get_dot_height(obj, "ct_cluster"), res=300)
-  print(g)
-  dev.off()
+  # obj$ct_cluster<-paste0(obj$layer4, ":", obj$layer4_clusters)
+  # dot_width=4400
+  # g<-get_bubble_plot(obj, cur_res="layer4_clusters", "layer4", bubblemap_file, assay="RNA", orderby_cluster = FALSE)
+  # dot_file = paste0(prefix, ".layer4.dot.sub.png")
+  # png(dot_file, width=dot_width, height=get_dot_height(obj, "ct_cluster"), res=300)
+  # print(g)
+  # dev.off()
 
   tb=data.frame("cell"=colnames(obj), "cell_type"=obj$layer4, category=prefix)
 
