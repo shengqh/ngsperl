@@ -26,33 +26,25 @@ cat("chromosomes=", chromosomes, "\n")
 
 register(SerialParam())
 
-rdatafile = paste0(configFile, ".rdata")
-#if (file.exists(rdatafile)){
-#  load(rdatafile)
-#}else{
-  if(!is.na(chromosomes)){
-    chromosomes = unlist(strsplit(chromosomes, split=','))
-  }else{
-    chromosomes = NULL
-  } 
+rdatafile = paste0(configFile, ".rata")
+if(!is.na(chromosomes)){
+  chromosomes = unlist(strsplit(chromosomes, split=','))
+}else{
+  chromosomes = NULL
+} 
 
-  experiment <- read.table(configFile, sep="\t", header=T)
+experiment <- read.table(configFile, sep="\t", header=T)
 
-  if(annotationName == "unknown"){
-    qcresult = ChIPQC(experiment, consensus=TRUE, chromosomes=chromosomes)
-  }else{
-    qcresult = ChIPQC(experiment, consensus=TRUE, annotation = annotationName, chromosomes=chromosomes)
-  }
-  save(qcresult, file=rdatafile)
-#}
+if(annotationName == "unknown"){
+  qcresult = ChIPQC(experiment, consensus=TRUE, chromosomes=chromosomes)
+}else{
+  qcresult = ChIPQC(experiment, consensus=TRUE, chromosomes=chromosomes, annotation=annotationName)
+}
+save(qcresult, file=rdatafile)
+
+#load(rdatafile)
+
+chipqc_version<-paste0("ChIPQC,v", packageVersion("ChIPQC"))
+writeLines(chipqc_version, paste0(configFile,".ChIPQC.version"))
 
 ChIPQCreport(qcresult)
-
-if(file.exists("ChIPQCreport/GenomicFeatureEnrichment.png")){
-  samples=qcresult@Samples
-  height=min(2000, length(names(samples)) * 500 + 1000)
-  png("ChIPQCreport/GenomicFeatureEnrichment.png", width=3000, height=height, res=300)
-  g<-plotRegi(qcresult)
-  print(g)
-  dev.off()
-}
