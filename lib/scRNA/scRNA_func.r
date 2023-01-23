@@ -66,6 +66,10 @@ get_hue_colors<-function(n, random_colors=TRUE, random.seed=20220606){
   return(ccolors)
 }
 
+theme_rotate_x_axis_label <- function() {
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+}
+
 theme_bw3 <- function (axis.x.rotate=F) { 
 	result = theme_bw() +
     theme(
@@ -1701,21 +1705,23 @@ save_umap<-function(file_prefix, obj, umap_names=c("UMAP_1", "UMAP_2") ){
   write.csv(umap, paste0(file_prefix, ".csv"))
 }
 
-get_sig_gene_figure<-function(cell_obj, sigout, design_data, siggene, DE_by_cell=TRUE, is_between_cluster=FALSE){
-  udesign<-design_data[!duplicated(design_data$Group),]
+get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cell=TRUE, is_between_cluster=FALSE, log_cpm=NULL){
+  group_levels<-unique(design_data$Group)
+  display_group_levels<-unique(design_data$DisplayGroup)
+
   groupColors<-c("blue", "red")
-  names(groupColors)<-udesign$DisplayGroup
+  names(groupColors)<-display_group_levels
 
   gmap<-unlist(split(design_data$Group, design_data$Sample))
   gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
 
-  cell_obj$Group=gmap[cell_obj$orig.ident]
-  cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=names(groupColors))
+  cell_obj$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
+  cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
 
-  logFC<-sigout[siggene, "logFC"]
-  FDR<-sigout[siggene,"FDR"]
+  logFC<-sigout[sig_gene, "logFC"]
+  FDR<-sigout[sig_gene,"FDR"]
 
-  geneexp=FetchData(cell_obj,vars=c(siggene))
+  geneexp=FetchData(cell_obj,vars=c(sig_gene))
   colnames(geneexp)<-"Gene"
   colorRange<-c(min(geneexp), max(geneexp))
   fix.sc <- scale_color_gradientn(colors=c("lightgrey", "blue"), limits = colorRange)
@@ -1723,33 +1729,39 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, siggene, DE_by_cell
   geneexp$Group<-cell_obj$DisplayGroup
   geneexp$Sample<-cell_obj$orig.ident
   
-  title<-paste0(siggene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
+  title<-paste0(sig_gene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
   
   if(is_between_cluster){
-    p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2) + facet_grid(~Sample) + theme_bw() + 
+    p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2) + 
+      facet_grid(~Sample) + theme_bw3() + 
       scale_color_manual(values = groupColors) +
-      NoLegend() + xlab("") + ylab("Gene Expression") + theme(strip.background=element_blank())
+      NoLegend() + xlab("") + ylab("Gene Expression")
     
     p1<-DimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
     
-    p2<-MyFeaturePlot(object = cell_obj, features=as.character(siggene), order=T)
+    p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T)
     p<-p0+p1+p2+plot_layout(design="AA
 BC")
     
   }else{
-    p0<-ggplot(geneexp, aes(x="1", y=Gene, color=Group)) + geom_violin() + geom_jitter(width = 0.2) + facet_grid(~Sample) + theme_bw3() + 
+    p0<-ggplot(geneexp, aes(x=Sample, y=Gene, color=Group)) + 
+      geom_violin() + geom_jitter(width = 0.2) + 
+      theme_bw3() + theme_rotate_x_axis_label() +
       scale_color_manual(values = groupColors) +
-      xlab("") + ylab("Gene Expression") + theme(strip.background=element_blank(), axis.text.x = element_blank())
+      xlab("") + ylab("Gene Expression")
     
     if("subumap" %in% names(cell_obj@reductions)){
-      p1<-MyFeaturePlot(object = cell_obj, features=siggene, order=T, reduction="subumap")
+      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="subumap") + xlab("UMAP_1") + ylab("UMAP_2")
     }else{
-      p1<-MyFeaturePlot(object = cell_obj, features=siggene, order=T, reduction="umap")
+      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="umap")
     }
     p1$data$Group=cell_obj@meta.data[rownames(p1$data), "DisplayGroup"]
     p1<-p1+facet_grid(~Group) + theme_bw3() + ggtitle("")
     
     if(!DE_by_cell){
+      melt_cpm = as.data.frame(t(log_cpm[sig_gene,,drop=F]))
+      colnames(melt_cpm)<-"CPM"
+      melt_cpm$Group = factor(unlist(gdismap[rownames(melt_cpm)]), levels=display_group_levels)
       g0<-ggplot(melt_cpm, aes(x=Group, y=CPM, color=Group)) + geom_violin() + geom_boxplot(width=0.2) + geom_jitter(width = 0.1) +  
         theme_bw3() +
         scale_color_manual(values = groupColors) +
