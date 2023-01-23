@@ -98,14 +98,14 @@ printTable<-function(filepath){
 }
 
 getTable<-function(filepath){
-  return(paste0("```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "')\n```\n\n"))
+  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "')\n```\n\n"))
 }
 
 getFigure<-function(filepath, in_details=FALSE){
   if(in_details){
-    return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('details/", filepath, "')\n```\n\n"))
+    return(paste0("\n```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('details/", filepath, "')\n```\n\n"))
   }else{
-    return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
+    return(paste0("\n```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
   }
 }
 
