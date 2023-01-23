@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AG_integrated'
+outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose/result/AG_integrated.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result/AG_integrated.edgeR.files.csv'
-parFile3='/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose/result/AG_integrated.meta.rds'
+parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.final.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample/result/crs.edgeR.files.csv'
+parFile3='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.meta.rds'
 
 
-setwd('/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_vis/result')
+setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample_vis/result')
 
 ### Parameter setting end ###
 
@@ -85,13 +85,13 @@ for (prefix in rownames(edgeRres)){
         cell_obj$DisplayGroup=design$DisplayGroup
       }else{
         #pseudo_bulk
-        gmap<-unlist(split(design$Group, design$Sample))
-        gdismap<-unlist(split(design$DisplayGroup, design$Sample))
-        
         cells<-clusterDf[clusterDf[,cluster_name] == cellType,]
         cells<-cells[cells$orig.ident %in% names(gmap),]
         cell_obj<-subset(obj, cells=rownames(cells))
-        
+
+        gmap<-unlist(split(design$Group, design$Sample))
+        gdismap<-unlist(split(design$DisplayGroup, design$Sample))
+
         cell_obj$Group=gmap[cell_obj$orig.ident]
         cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=names(groupColors))
       
@@ -119,7 +119,7 @@ for (prefix in rownames(edgeRres)){
         width=width+5
       }
       
-      topN = ifelse(nrow(siggenes) >= 100, 100, nrow(siggenes))
+      topN = min(100, nrow(siggenes))
       topNgenes<-siggenes$gene[1:topN]
 
       pdf(file=visFile, onefile = T, width=width, height=10)
@@ -159,15 +159,13 @@ BC")
             scale_color_manual(values = groupColors) +
             xlab("") + ylab("Gene Expression") + theme(strip.background=element_blank(), axis.text.x = element_blank())
           
-          subcells<-colnames(cell_obj)[cell_obj$DisplayGroup == controlGroup]
-          subobj<-subset(cell_obj, cells=subcells)
-          p1<-MyFeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Control: ", controlGroup))
-          p1<-suppressMessages(expr = p1 + xlim(xlim) + ylim(ylim) + fix.sc)
-          
-          subcells<-colnames(cell_obj)[cell_obj$DisplayGroup == sampleGroup]
-          subobj<-subset(cell_obj, cells=subcells)
-          p2<-MyFeaturePlot(object = subobj, features=siggene, order=T) + ggtitle(paste0("Sample: ", sampleGroup))
-          p2<-suppressMessages(expr = p2  + xlim(xlim) + ylim(ylim) + fix.sc)
+          if("subumap" %in% names(cell_obj@reductions)){
+            p1<-MyFeaturePlot(object = cell_obj, features=siggene, order=T, reduction="subumap")
+          }else{
+            p1<-MyFeaturePlot(object = cell_obj, features=siggene, order=T, reduction="umap")
+          }
+          p1$data$Group=cell_obj@meta.data[rownames(p1$data), "DisplayGroup"]
+          p1<-p1+facet_grid(~Group) + theme_bw3()
           
           if(!DE_by_cell){
             gd<-melt_cpm[melt_cpm$Gene==siggene,]
@@ -175,11 +173,11 @@ BC")
               theme_bw3() +
               scale_color_manual(values = groupColors) +
               xlab("") + ylab("CPM") + NoLegend()
-            p<-p0+g0+p1+p2+plot_layout(design="AAAAA
-BCCDD")
+            p<-p0+g0+p1+plot_layout(design="AAAAA
+BCCCC")
           }else{
-            p<-p0+p1+p2+plot_layout(design="AA
-BC")
+            p<-p0+p1+plot_layout(design="A
+B")
           }
         }
         p<-p+ plot_annotation(title=title)
