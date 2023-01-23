@@ -469,7 +469,7 @@ sub getScRNASeqConfig {
 
             if(defined $def->{bubble_plots}){
               my $bubble_task = $choose_task . "_bubblemap";
-              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task, undef, undef, ".dynamic_choose_dot.html");
+              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".dynamic_choose_dot.html");
             }
 
             if(defined $clonotype_convert) {
@@ -671,7 +671,7 @@ sub getScRNASeqConfig {
 
             if(defined $def->{bubble_plots}){
               my $bubble_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_bubblemap";
-              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task, undef, undef, ".multi_choose_dot.html");
+              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".multi_choose_dot.html");
             }
 
             if ( $perform_comparison ) {
