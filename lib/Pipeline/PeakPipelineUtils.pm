@@ -115,12 +115,9 @@ sub addPeakPipelineReport {
 
   if ( $def->{perform_chipqc} ) {
     my $chipqc_taskname = $task_dic->{chipqc};
+    push( @report_files, $chipqc_taskname, ".rdata" );
     push( @report_files, $chipqc_taskname, ".html" );
-    push( @report_files, $chipqc_taskname, "GenomicFeatureEnrichment.png" );
-    push( @report_files, $chipqc_taskname, "CCPlot.png" );
-    push( @report_files, $chipqc_taskname, "PeakCorHeatmap.png" );
-    push( @report_files, $chipqc_taskname, "PeakPCA.png" );
-    push( @report_names, "chipqc_html", "chipqc_GenomicFeatureEnrichment", "chipqc_CCPlot", "chipqc_PeakCorHeatmap", "chipqc_PeakPCA" );
+    push( @report_names, "chipqc_data", "chipqc_html" );
   }
 
   if( $def->{"perform_homer"}){
