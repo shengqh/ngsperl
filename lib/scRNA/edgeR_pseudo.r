@@ -34,99 +34,106 @@ if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
 }
 
-meta<-obj@meta.data
-mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
-colnames(mt)<-c("cell_type", "sample", "num_cell")
-write.csv(mt, paste0(outFile, ".num_cell.csv"), row.names=F)
+if(1){
+  meta<-obj@meta.data
+  mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
+  colnames(mt)<-c("cell_type", "sample", "num_cell")
+  write.csv(mt, paste0(outFile, ".num_cell.csv"), row.names=F)
 
-sample_count_df<-get_seurat_sum_count(obj = obj, 
-                                      cluster_name = cluster_name, 
-                                      min_cell_per_sample = min_cell_per_sample)
+  sample_count_df<-get_seurat_sum_count(obj = obj, 
+                                        cluster_name = cluster_name, 
+                                        min_cell_per_sample = min_cell_per_sample)
 
-cts<-sample_count_df$cluster
-cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
-cts_file_map<-unlist(split(sample_count_df$pusedo_file, sample_count_df$cluster))
+  cts<-sample_count_df$cluster
+  cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
+  cts_file_map<-unlist(split(sample_count_df$pusedo_file, sample_count_df$cluster))
 
-comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
-if(ncol(comparisons) == 3){
-  colnames(comparisons)<-c("Value", "Key", "Comparison")
-}else{
-  colnames(comparisons)<-c("Value", "Comparison")
-  comparisons$Key = "groups"
-}
-
-comparisonNames<-unique(comparisons$Comparison)
-
-comp <-comparisonNames[1]
-designMatrix<-NULL
-for (comp in comparisonNames){
-  comp_groups<-comparisons[comparisons$Comparison==comp,]
-  comp_options = split(comp_groups$Value, comp_groups$Key)
-  
-  if("groups" %in% names(comp_options)){
-    sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
-    colnames(sampleGroups)<-c("Sample","Group")
-    groups<-comp_options$groups
-    controlGroup<-groups[1]
-    sampleGroup<-groups[2]
-    
-    control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
-    sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
+  comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
+  if(ncol(comparisons) == 3){
+    colnames(comparisons)<-c("Value", "Key", "Comparison")
   }else{
-    control_names<-as.numeric(comp_options$control_clusters)
-    controlGroup<-ifelse("control_name" %in% names(comp_options), comp_options$control_name, paste("Cluster", paste(control_names, collapse = "_"), sep="_"))
-    sample_names<-as.numeric(comp_options$sample_clusters)
-    sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
-  }
-  
-  if("covariances" %in% names(comp_options)){
-    covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T, row.names=1)
-    assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
-    covariances=comp_options$covariances
-  }else{
-    covariances=NULL
+    colnames(comparisons)<-c("Value", "Comparison")
+    comparisons$Key = "groups"
   }
 
+  comparisonNames<-unique(comparisons$Comparison)
 
-  idx<-1
-  for (idx in c(1:length(cts))){
-    ct<-cts[idx]
-    prefix<-paste0(cts_name_map[ct], ".", comp)
-    cts_file<-cts_file_map[ct]
+  designMatrix<-NULL
+
+  comp <-comparisonNames[1]
+  for (comp in comparisonNames){
+    comp_groups<-comparisons[comparisons$Comparison==comp,]
+    comp_options = split(comp_groups$Value, comp_groups$Key)
     
-    counts<-read.csv(cts_file, row.names = 1)
-    cts_control_names<-intersect(control_names, colnames(counts))
-    cts_sample_names<-intersect(sample_names, colnames(counts))
-    
-    if (length(cts_control_names) < 2){
-      writeLines(paste0("There were no enough controls: ", paste0(cts_control_names, collapse=",")), paste0(prefix, ".error"))
-      next
+    if("groups" %in% names(comp_options)){
+      sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
+      colnames(sampleGroups)<-c("Sample","Group")
+      groups<-comp_options$groups
+      controlGroup<-groups[1]
+      sampleGroup<-groups[2]
+      
+      control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
+      sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
+    }else{
+      control_names<-as.numeric(comp_options$control_clusters)
+      controlGroup<-ifelse("control_name" %in% names(comp_options), comp_options$control_name, paste("Cluster", paste(control_names, collapse = "_"), sep="_"))
+      sample_names<-as.numeric(comp_options$sample_clusters)
+      sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
     }
     
-    if (length(cts_sample_names) < 2){
-      writeLines(paste0("There were no enough samples: ", paste0(cts_sample_names, collapse=",")), paste0(prefix, ".error"))
-      next
+    if("covariances" %in% names(comp_options)){
+      covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T, row.names=1)
+      assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
+      covariances=comp_options$covariances
+    }else{
+      covariances=NULL
     }
-    
-    design_data<-data.frame("Group"=c(rep("control", length(cts_control_names)), rep("sample", length(cts_sample_names))),
-                            "Sample"=c(cts_control_names,cts_sample_names),
-                            "DisplayGroup"=c(rep(controlGroup, length(cts_control_names)), rep(sampleGroup, length(cts_sample_names))))
-    if(!is.null(covariances)){
-      for(cov_name in covariances){
-        design_data[,cov_name] = unlist(covariances_tbl[design_data$Sample, cov_name])
+
+
+    idx<-1
+    for (idx in c(1:length(cts))){
+      ct<-cts[idx]
+      prefix<-paste0(cts_name_map[ct], ".", comp)
+      cts_file<-cts_file_map[ct]
+      
+      counts<-read.csv(cts_file, row.names = 1)
+      cts_control_names<-intersect(control_names, colnames(counts))
+      cts_sample_names<-intersect(sample_names, colnames(counts))
+      
+      if (length(cts_control_names) < 2){
+        writeLines(paste0("There were no enough controls: ", paste0(cts_control_names, collapse=",")), paste0(prefix, ".error"))
+        next
+      }
+      
+      if (length(cts_sample_names) < 2){
+        writeLines(paste0("There were no enough samples: ", paste0(cts_sample_names, collapse=",")), paste0(prefix, ".error"))
+        next
+      }
+      
+      design_data<-data.frame("Group"=c(rep("control", length(cts_control_names)), rep("sample", length(cts_sample_names))),
+                              "Sample"=c(cts_control_names,cts_sample_names),
+                              "DisplayGroup"=c(rep(controlGroup, length(cts_control_names)), rep(sampleGroup, length(cts_sample_names))))
+      if(!is.null(covariances)){
+        for(cov_name in covariances){
+          design_data[,cov_name] = unlist(covariances_tbl[design_data$Sample, cov_name])
+        }
+      }
+
+      design_file<-paste0(prefix, ".design")
+      write.csv(design_data, file=design_file, row.names=F, quote=F)
+      
+      curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, count_file=cts_file, design=design_file, stringsAsFactors = F)
+      if (is.null(designMatrix)){
+        designMatrix = curdf
+      }else{
+        designMatrix = rbind(designMatrix, curdf)
       }
     }
-
-    design_file<-paste0(prefix, ".design")
-    write.csv(design_data, file=design_file, row.names=F, quote=F)
-    
-    curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, count_file=cts_file, design=design_file, stringsAsFactors = F)
-    if (is.null(designMatrix)){
-      designMatrix = curdf
-    }else{
-      designMatrix = rbind(designMatrix, curdf)
-    }
   }
+
+  saveRDS(designMatrix, paste0(outFile, ".designMatrix.rds"))
+}else{
+  designMatrix=readRDS(paste0(outFile, ".designMatrix.rds"))
 }
 
 meta<-obj@meta.data
@@ -182,9 +189,9 @@ for(idx in c(1:nrow(designMatrix))){
   dge_filename <-paste0(prefix, ".csv")
   write.csv(out$table, file=dge_filename, quote=F)
 
-  logcpm <- cpm(dge, log=TRUE)
+  log_cpm <- cpm(dge, log=TRUE)
   cpm_file = paste0(prefix, ".cpm.csv")
-  write.csv(logcpm, file=cpm_file, quote=F)
+  write.csv(log_cpm, file=cpm_file, quote=F)
 
   if(useRawPvalue){
     sigout<-out$table[(out$table$PValue<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
@@ -209,8 +216,8 @@ for(idx in c(1:nrow(designMatrix))){
     ct_cells<-rownames(ct_meta)[ct_meta$orig.ident %in% design_data$Sample]
     cell_obj<-subset(obj, cells=ct_cells)
 
-    g<-get_sig_gene_figure(cell_obj, sigout, design_data, sig_gene, DE_by_cell=FALSE, is_between_cluster=FALSE)
-    png(paste0(prefix, ".top_1_gene.png"), width=3000, height=2000, res=300)
+    g<-get_sig_gene_figure(cell_obj, sigout, design_data, sig_gene, DE_by_cell=FALSE, is_between_cluster=FALSE, log_cpm=log_cpm)
+    png(paste0(prefix, ".top_1_gene.png"), width=3000, height=2500, res=300)
     print(g)
     dev.off()
   }
