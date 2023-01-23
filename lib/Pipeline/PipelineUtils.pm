@@ -3221,7 +3221,12 @@ sub add_gsea {
     rmd_ext => ".gsea.html",
     parameterSampleFile1_ref   => \@gsea_report_files,
     parameterSampleFile1_names => \@gsea_report_names,
+    parameterSampleFile2 => {
+      task_name => getValue($def, "task_name")
+    },
     remove_empty_parameter => 1,
+    output_ext => "gsea_files.csv",
+    output_no_name => 1,
     sh_direct                  => 1,
     pbs                        => {
       "nodes"     => "1:ppn=1",
