@@ -2,19 +2,16 @@
 title: "ChIP-Seq Analysis Report"
 date: "`r format(Sys.time())`"
 output: 
-  html_document:
-    toc: true
-    toc_depth: 4
+  rmdformats::readthedown:
+    toc_depth: 3
     number_sections: true
 ---
 
-<style type="text/css">
-.main-container {
-  max-width: 90%;
-  margin-left: auto;
-  margin-right: auto;
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
 }
-</style>
+```
   
 ```{r setup, include=FALSE}
 library(XML)
@@ -48,6 +45,22 @@ macs2<-chipseqOptions$macs2_result
 if(has_chipqc) {
   chipqc_html = files$chipqc_html
   has_chipqc=file.exists(chipqc_html)
+  chipqc_dir=dirname(chipqc_html)
+  chp_file=file.path(chipqc_dir, "CoverageHistogramPlot.png")
+  gfe_file=file.path(chipqc_dir, "GenomicFeatureEnrichment.png")
+  pch_file=file.path(chipqc_dir, "PeakCorHeatmap.png")
+  pca_file=file.path(chipqc_dir, "PeakPCA.png")
+  pp_file=file.path(chipqc_dir, "PeakProfile.png")
+  rap_file=file.path(chipqc_dir, "Rap.png")
+  rip_file=file.path(chipqc_dir, "Rip.png")
+}else{
+  chp_file=""
+  gfe_file=""
+  pch_file=""
+  pca_file=""
+  pp_file=""
+  rap_file=""
+  rip_file=""
 }
 
 project_dir <- dir("../..", full.names=T)
@@ -161,22 +174,24 @@ print(kable(QCtable, caption=tabRef("mapSummary", "Summary of ChIP-seq filtering
 
 <br>
 
-```{r genomic_features,echo=FALSE,warning=FALSE, results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("feature_enrichment", "Heatmap of log2 enrichment of reads in genomic features"), out.width="40%", out.height="20%"}
+```{r genomic_features,echo=FALSE,warning=FALSE, results='asis', eval=file.exists(gfe_file), fig.align="center", fig.cap=figRef("feature_enrichment", "Heatmap of log2 enrichment of reads in genomic features")}
 cat("## Enrichment of reads in genomic features\n")
-check_and_include_graphics(files$chipqc_GenomicFeatureEnrichment)
+include_graphics(gfe_file)
 ```
 
 <br>
 
-```{r CrossCoverage,echo=FALSE,warning=FALSE, results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("cross_coverage", "Plot of CrossCoverage score after successive strand shifts"), out.width="40%", out.height="20%"}
+```{r CrossCoverage,echo=FALSE,warning=FALSE, results='asis', eval=file.exists(chp_file), fig.align="center", fig.cap=figRef("cross_coverage", "Plot of CrossCoverage score after successive strand shifts")}
 cat("## ChIP signal distribution and structure\n")
-check_and_include_graphics(files$chipqc_CCPlot)
+include_graphics(chp_file)
 ```
 
 <br>
 
 # Peak calling and correlation between samples
+
 ## Summary of peak calling
+
 ```{r peak_calling_summary, echo=FALSE, warning=FALSE, results='asis', eval=has_macs2}
 
 peaks_xls <- list.files(paste0(macs2, "/result"), recursive=T, pattern="peaks.xls", full.names=T)
@@ -267,18 +282,28 @@ print(kable(tab, caption= tabRef("homer_table", "Homer annotation for peaks"), e
 ```
 <br>
 
+```{r,echo=FALSE,results='asis', eval=file.exists(pp_file), fig.align="center", fig.cap=figRef("peak_profile", "Plot of the average signal profile across peaks")}
+cat("## Peak profile and ChIP enrichment\n")
+include_graphics(pp_file)
+```
 
+```{r,echo=FALSE,results='asis', eval=file.exists(rap_file), fig.align="center", fig.cap=figRef("rap", "Barplot of the percentage number of reads in peaks")}
+include_graphics(rap_file)
+```
 
-```{r Correlation,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("peak_correlation", "Plot of correlation between peaksets"), out.width="60%", out.height="60%"}
+```{r,echo=FALSE,results='asis', eval=file.exists(rip_file), fig.align="center", fig.cap=figRef("rip", "Density plot of the number of reads in peaks")}
+include_graphics(rip_file)
+```
+
+```{r Correlation,echo=FALSE,results='asis', eval=file.exists(pch_file), fig.align="center", fig.cap=figRef("peak_correlation", "Plot of correlation between peaksets")}
 cat("## Correlation between samples\n")
-check_and_include_graphics(files$chipqc_PeakCorHeatmap)
-cat("* Replicate samples of high quality can be expected to cluster together in the heatmap and be spatially grouped within the PCA plot.\n\n")
+include_graphics(pch_file)
+cat("\n* Replicate samples of high quality can be expected to cluster together in the heatmap and be spatially grouped within the PCA plot.\n\n")
 ```
 
-```{r PCA,echo=FALSE,results='asis', eval=has_chipqc, fig.align="center", fig.cap=figRef("pca", "PCA of peaksets"), out.width="60%", out.height="60%"}
-check_and_include_graphics(files$chipqc_PeakPCA)
+```{r PCA,echo=FALSE,results='asis', eval=file.exists(pca_file), fig.align="center", fig.cap=figRef("pca", "PCA of peaksets")}
+include_graphics(pca_file)
 ```
-
 
 ```{r diffbind_1, results="asis", echo=FALSE, eval=has_diffbind} 
 #if(has_diffbind){
