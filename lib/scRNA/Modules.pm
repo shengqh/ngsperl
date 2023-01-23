@@ -2014,10 +2014,12 @@ sub add_invidual_qc {
     $qc_files_ref = "files";
   }
   $config->{$individual_qc_task} = {
-    class => "CQS::UniqueRmd",
+    class => "CQS::UniqueR",
     target_dir => "${target_dir}/$individual_qc_task",
-    report_rmd_file => "../scRNA/individual_qc.Rmd",
-    additional_rmd_files => "../scRNA/markerCode_filter.R;../scRNA/scRNA_func.r",
+    rtemplate => "../scRNA/individual_qc.r",
+    rReportTemplate => "../scRNA/individual_qc.Rmd;reportFunctions.R;../scRNA/markerCode_filter.R;../scRNA/scRNA_func.r",
+    run_rmd_independent => 1,
+    rmd_ext => ".individual_qc.html",
     option => "",
     parameterSampleFile1_ref => $qc_files_ref,
     parameterSampleFile2 => {
