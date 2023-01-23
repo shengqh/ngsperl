@@ -47,54 +47,71 @@ print(kable_styling(kable(group_def, caption = "Group definition")))
 print(kable_styling(kable(comp_def, caption = "Comparison definition")))
 ```
 
+
 ```{r, echo=FALSE}
-comp=comparisons[1]
-for(comp in comparisons){
-  cat("# ", comp, "\n\n")
-  comp_files<-subset(edgeR_files, comparison == comp)
-  cts = rev(comp_files$cellType)
-  ct<-cts[1]
+resFile<-"comp.Rmd"
+figureRmd<-function(edgeR_files, comparisons){
+  result<-""
 
-  sig_list=list()
-  for(ct in cts){
-    ct_files<-subset(comp_files, cellType == ct)
-    sig_file=ct_files$sigFile[1]
-    sig_data<-read.csv(sig_file, row.names=1)
-    sig_list[[ct]] = sig_data
-  }
+  comp=comparisons[1]
+  for(comp in comparisons){
+    result<-paste0(result, "\n# ", comp, "\n\n")
+    comp_files<-subset(edgeR_files, comparison == comp)
+    cts = rev(comp_files$cellType)
+    ct<-cts[1]
 
-  nums=lapply(sig_list, function(x){
-    n=nrow(x)
-    np=sum(x$logFC > 0)
-    nn=sum(x$logFC < 0)
-    return(c(n, np, nn))})
-  
-  nums_df<-do.call(rbind, nums)
-  colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
+    sig_list=list()
+    for(ct in cts){
+      ct_files<-subset(comp_files, cellType == ct)
+      sig_file=ct_files$sigFile[1]
+      sig_data<-read.csv(sig_file, row.names=1)
+      sig_list[[ct]] = sig_data
+    }
 
-  cat("## Number of DE genes\n\n")
-  print(kable_styling(kable(nums_df)))
-
-  for(ct in cts){
-    cat("## ", ct, "\n\n")
-    ct_files<-subset(comp_files, cellType == ct)
+    nums=lapply(sig_list, function(x){
+      n=nrow(x)
+      np=sum(x$logFC > 0)
+      nn=sum(x$logFC < 0)
+      return(c(n, np, nn))})
     
-    design_file=ct_files$designFile[1]
-    design_data=read.csv(design_file)
+    nums_df<-do.call(rbind, nums)
+    colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
 
-    ct_num_cell<-subset(num_cell, cell_type == ct)
-    ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
+    result<-paste0(result, "\n## Number of DE genes\n\n")
+    num_sig_file = paste0(comp, ".num_sig.csv")
+    write.csv(nums_df, num_sig_file)
 
-    design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+    result<-paste0(result, getTable(num_sig_file))
 
-    cat("### design table\n\n")
-    print(kable_styling(kable(design_data, row.names = F)))
+    for(ct in cts){
+      result<-paste0(result, "\n## ", ct, "\n\n")
+      ct_files<-subset(comp_files, cellType == ct)
+      
+      design_file=ct_files$designFile[1]
+      design_data=read.csv(design_file)
 
-    sig_data<-sig_list[[ct]]
-    n_genes = min(10, nrow(sig_data))
-    cat("### top", n_genes, "significantly differential expressed genes (total", nrow(sig_data),"DE genes)\n\n")
-    print(kable_styling(kable(head(sig_data, 10))))
+      ct_num_cell<-subset(num_cell, cell_type == ct)
+      ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
+
+      design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+
+      result<-paste0(result,"\n### design table\n\n")
+      result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
+
+      sig_data<-sig_list[[ct]]
+      n_genes = min(10, nrow(sig_data))
+      result<-paste0(result,"\n### top ", n_genes, " significantly differential expressed genes (total", nrow(sig_data)," DE genes)\n\n")
+      result<-paste0(result, kable_styling(kable(head(sig_data, 10))))
+
+      top_gene_png<-paste0(celltype_to_filename(ct), ".", comp, ".top_1_gene.png")
+      result<-paste0(result, getFigure(top_gene_png))
+    }
   }
+
+  return(result)
 }
+cat(figureRmd(edgeR_files, comparisons), file=resFile)
 ```
 
+```{r, child=resFile} 
+```
