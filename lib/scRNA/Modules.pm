@@ -999,7 +999,7 @@ sub addEdgeRTask {
 
   my $edgeRscript = "../scRNA/edgeR.r";
   my $edgeRmd =  "../scRNA/edgeR.rmd";
-  my $rmd_ext = "_edgeR_by_cell.html";
+  my $rmd_ext = ".edgeR_by_cell.html";
   if ($bBetweenCluster) {
     $edgeRtaskname  = $edgeRtaskname . "_betweenCluster_byCell";
     $curClusterName = getValue( $def, "DE_cluster_name" );
@@ -1031,7 +1031,7 @@ sub addEdgeRTask {
       $edgeRtaskname = $edgeRtaskname . "_bySample";
       $edgeRscript = "../scRNA/edgeR_pseudo.r";
       $edgeRmd =  "../scRNA/edgeR_pseudo.rmd";
-      $rmd_ext = "_edgeR_by_sample.html";
+      $rmd_ext = ".edgeR_by_sample.html";
     }
 
     $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
@@ -1209,8 +1209,12 @@ sub addEdgeRTask {
       rmd_ext => ".gsea.html",
       parameterSampleFile1_ref   => [$gseaTaskName],
       parameterSampleFile1_names => ["gsea"],
+      parameterSampleFile2 => {
+        task_name => getValue($def, "task_name")
+      },
+      remove_empty_parameter => 1,
+      output_ext => "gsea_files.csv",
       output_no_name => 1,
-      output_file_ext            => "gsea_files.csv",
       sh_direct                  => 1,
       pbs                        => {
         "nodes"     => "1:ppn=1",
