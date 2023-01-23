@@ -108,19 +108,19 @@ for (comp in comparisonNames){
       next
     }
     
-    designdata<-data.frame("Group"=c(rep("control", length(cts_control_names)), rep("sample", length(cts_sample_names))),
-                           "Sample"=c(cts_control_names,cts_sample_names),
-                           "DisplayGroup"=c(rep(controlGroup, length(cts_control_names)), rep(sampleGroup, length(cts_sample_names))))
+    design_data<-data.frame("Group"=c(rep("control", length(cts_control_names)), rep("sample", length(cts_sample_names))),
+                            "Sample"=c(cts_control_names,cts_sample_names),
+                            "DisplayGroup"=c(rep(controlGroup, length(cts_control_names)), rep(sampleGroup, length(cts_sample_names))))
     if(!is.null(covariances)){
       for(cov_name in covariances){
-        designdata[,cov_name] = unlist(covariances_tbl[designdata$Sample, cov_name])
+        design_data[,cov_name] = unlist(covariances_tbl[design_data$Sample, cov_name])
       }
     }
 
-    designfile<-paste0(prefix, ".design")
-    write.csv(designdata, file=designfile, row.names=F, quote=F)
+    design_file<-paste0(prefix, ".design")
+    write.csv(design_data, file=design_file, row.names=F, quote=F)
     
-    curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, count_file=cts_file, design=designfile, stringsAsFactors = F)
+    curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, count_file=cts_file, design=design_file, stringsAsFactors = F)
     if (is.null(designMatrix)){
       designMatrix = curdf
     }else{
@@ -129,16 +129,18 @@ for (comp in comparisonNames){
   }
 }
 
+meta<-obj@meta.data
+
 result<-NULL
 idx<-1
 for(idx in c(1:nrow(designMatrix))){
   prefix=designMatrix[idx, "prefix"]
-  designfile=designMatrix[idx, "design"]
+  design_file=designMatrix[idx, "design"]
   cellType=designMatrix[idx, "cellType"]
   comp=designMatrix[idx, "comparison"]
   count_file=designMatrix[idx,"count_file"]
 
-  designdata<-read.csv(designfile, stringsAsFactors = F)
+  design_data<-read.csv(design_file, stringsAsFactors = F)
 
   if(!is.null(covariances)){
     variables = c(covariances, "Group")
@@ -146,19 +148,19 @@ for(idx in c(1:nrow(designMatrix))){
     variables = c("Group")
   }
   formula_str = paste0("~ ", paste0(variables, collapse = " + "))
-  design <- model.matrix(as.formula(formula_str), designdata)
+  design <- model.matrix(as.formula(formula_str), design_data)
 
-  rownames(design)<-designdata$Sample
+  rownames(design)<-design_data$Sample
   write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
   
   cat(prefix, "\n")
 
   counts<-read.csv(count_file, row.names = 1)
-  counts<-counts[,designdata$Sample]
+  counts<-counts[,design_data$Sample]
   counts_file = paste0(prefix, ".counts.csv")
   write.csv(counts, file=counts_file, quote=F)
 
-  groups<-designdata$Group
+  groups<-design_data$Group
   
   dge <- DGEList(counts=counts, group=groups)
   keep <- filterByExpr(dge, group=groups)
@@ -192,15 +194,28 @@ for(idx in c(1:nrow(designMatrix))){
   sigFile<-paste0(prefix, ".sig.csv")
   write.csv(sigout, file=sigFile, quote=F)
   
-  siggenes<-data.frame(gene=rownames(sigout), stringsAsFactors = F)
+  sig_genes<-data.frame(gene=rownames(sigout), stringsAsFactors = F)
   sigGenenameFile<-paste0(prefix, ".sig_genename.txt")
-  write.table(siggenes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
+  write.table(sig_genes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
   
   gseaFile<-paste0(prefix, "_GSEA.rnk")
   rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * out$table$F)
   write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
+
+  if(nrow(sig_genes) > 0){
+    sig_gene = sig_genes$gene[1]
+
+    ct_meta<-meta[meta[,cluster_name] == cellType,]
+    ct_cells<-rownames(ct_meta)[ct_meta$orig.ident %in% design_data$Sample]
+    cell_obj<-subset(obj, cells=ct_cells)
+
+    g<-get_sig_gene_figure(cell_obj, sigout, design_data, sig_gene, DE_by_cell=FALSE, is_between_cluster=FALSE)
+    png(paste0(prefix, ".top_1_gene.png"), width=3000, height=2000, res=300)
+    print(g)
+    dev.off()
+  }
   
-  curDF<-data.frame("prefix"=prefix, "cellType"=cellType, "comparison"=comp, "betweenCluster"=0, "sampleInGroup"=0, "deFile"=dge_filename, "sigFile"=sigFile, "sigGenenameFile"=sigGenenameFile, "gseaFile"=gseaFile, "designFile"=designfile, "cpmFile"=cpm_file)
+  curDF<-data.frame("prefix"=prefix, "cellType"=cellType, "comparison"=comp, "betweenCluster"=0, "sampleInGroup"=0, "deFile"=dge_filename, "sigFile"=sigFile, "sigGenenameFile"=sigGenenameFile, "gseaFile"=gseaFile, "designFile"=design_file, "cpmFile"=cpm_file)
   if(is.null(result)){
     result<-curDF
   }else{
