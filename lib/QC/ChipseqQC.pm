@@ -157,6 +157,8 @@ sub result {
 
   if ($combined) {
     my @result_files = ();
+    push( @result_files, $result_dir . "/${task_name}.config.txt.rdata" );
+    push( @result_files, $result_dir . "/${task_name}.config.txt.version" );
     my $targetDir    = $result_dir . "/ChIPQCreport";
     push( @result_files, $targetDir . "/ChIPQC.html" );
     push( @result_files, $targetDir . "/GenomicFeatureEnrichment.png" );
