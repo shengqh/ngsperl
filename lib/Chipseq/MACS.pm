@@ -88,6 +88,7 @@ if [[ \$status -ne 0 ]]; then
 else
   touch $sample_name.macs.succeed
   sed 's/\\tMACS_peak_/\\t${sname}_/' ${sample_name}_peaks.bed > ${sample_name}_peaks.name.bed
+  macs --version | cut -d ' ' -f2 | awk '{print \"macs,v\"\$1}' > ${sample_name}.version
 fi
 ";
 
@@ -116,6 +117,7 @@ sub result {
     my $cur_dir      = $result_dir . "/$group_name";
     my @result_files = ();
     push( @result_files, $cur_dir . "/${group_name}_peaks.name.bed" );
+    push( @result_files, $cur_dir . "/${group_name}.version" );
     push( @result_files, $cur_dir . "/${group_name}_MACS_wiggle/treat" );
 
     $result->{$group_name} = filter_array( \@result_files, $pattern );
