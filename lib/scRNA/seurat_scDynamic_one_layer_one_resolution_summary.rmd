@@ -48,8 +48,23 @@ figureRmd<-function(samples, outFile){
   for(sample in samples){
     result<-paste0(result, "# ", sample, "\n\n")
 
+    result<-paste0(result, "## UMAP\n\n")
     umap_file=paste0(sample, "/", sample, ".layer4.umap.png")
     result<-paste0(result, getFigure(umap_file))
+
+    result<-paste0(result, "## Marker genes\n\n")
+    dot_file=paste0(sample, "/", sample, ".layer4.dot.sub.png")
+    result<-paste0(result, getFigure(dot_file))
+
+    result<-paste0(result, "## Cell types\n\n")
+    ct_res_file = paste0(sample, "/", sample, ".scDynamic.celltype_res.txt")
+    cts<-read.table(ct_res_file, sep="\t", header=T)$celltype
+
+    for(ct in cts){
+      result<-paste0(result, "### ", ct, "\n\n")
+      umap_file=paste0(sample, "/", sample, ".layer4.", celltype_to_filename(ct), ".umap.png")
+      result<-paste0(result, getFigure(umap_file))
+    }
   }
   return(result)
 }
