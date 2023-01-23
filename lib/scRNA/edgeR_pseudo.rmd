@@ -20,11 +20,9 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r, child="reportFunctions.Rmd", include=FALSE} 
-```
-
 ```{r data, echo = FALSE}
 library(knitr)
+source('reportFunctions.R')
 
 options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
@@ -64,8 +62,18 @@ for(comp in comparisons){
     sig_data<-read.csv(sig_file, row.names=1)
     sig_list[[ct]] = sig_data
   }
-  gene_count_df<-data.frame("cell_type" = cts, "num_sig_gene"=unlist(lapply(sig_list, nrow)))
-  print(kable_styling(kable(gene_count_df, row.names = F)))
+
+  nums=lapply(sig_list, function(x){
+    n=nrow(x)
+    np=sum(x$logFC > 0)
+    nn=sum(x$logFC < 0)
+    return(c(n, np, nn))})
+  
+  nums_df<-do.call(rbind, nums)
+  colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
+
+  cat("## Number of DE genes\n\n")
+  print(kable_styling(kable(nums_df)))
 
   for(ct in cts){
     cat("## ", ct, "\n\n")
