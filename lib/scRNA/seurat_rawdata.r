@@ -197,8 +197,10 @@ for(fileTitle in names(fileMap)) {
   if (!is.null(adt.counts)){
     mat<-as.matrix(adt.counts)
     rowsum<-apply(mat>0, 1, sum)
-    mat<-mat[rowsum > (ncol(mat) / 2),]
-    sobj[["ADT"]] <- CreateAssayObject(counts = mat)
+    mat<-mat[rowsum > (ncol(mat) / 2),,drop=FALSE]
+    if(nrow(mat) > 0){
+      sobj[["ADT"]] <- CreateAssayObject(counts = mat)
+    }
   }
 
   sobj$sample=fileTitle
