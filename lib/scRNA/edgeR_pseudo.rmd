@@ -4,7 +4,7 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 3
-    number_sections: true
+    number_sections: false
 ---
 
 ```{r setup, include=FALSE}
@@ -22,6 +22,8 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 
 ```{r data, echo = FALSE}
 library(knitr)
+
+source('scRNA_func.r')
 source('reportFunctions.R')
 
 options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
