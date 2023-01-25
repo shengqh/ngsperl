@@ -524,32 +524,6 @@ sub getConfig {
       }
     }
 
-    if (getValue($def, "perform_activeGene", 0)) {
-      $config->{"activeGene"} = {
-        class => "CQS::ProgramWrapperOneToOne",
-        target_dir => "${target_dir}/" . getNextFolderIndex($def) . "activeGene",
-        interpretor => "python3",
-        program => "../Chipseq/activeGene.py",
-        option => "-g " . getValue($def, "active_gene_genome"),
-        source_arg => "-i",
-        source_ref => [$peakCallerTask, ".bed"],
-        output_arg => "-o",
-        output_file_prefix => "",
-        output_file_ext => ".TSS_ACTIVE_-1000_1000.txt",
-        output_to_same_folder => 1,
-        can_result_be_empty_file => 0,
-        docker_prefix => "crc_",
-        sh_direct   => 1,
-        pbs => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
-        },
-      };
-      push (@$step2, "activeGene");
-      my $activeGeneRef = ["activeGene", ".txt"];
-    }
-
     if ( getValue( $def, "perform_merge_peaks" )) {
       my $mergePeakTask = $peakCallerTask . "_mergePeaks";
       $config->{$mergePeakTask} = {
@@ -574,28 +548,123 @@ sub getConfig {
       $homer_name = addHomerAnnotation( $config, $def, $summary, $target_dir, $peakCallerTask, $callFilePattern );
     }
 
-    if ( $def->{perform_rose} ) {
-      my $roseTask = $peakCallerTask . "_bradner_rose2";
-      $config->{$roseTask} = {
-        class                => "Chipseq::Rose2",
-        perform              => 1,
-        target_dir           => "${target_dir}/" . getNextFolderIndex($def) . "$roseTask",
-        option               => "",
-        source_ref           => $bam_ref,
-        groups               => $def->{"treatments"},
-        controls             => $def->{"controls"},
-        pipeline_dir         => getValue( $def, "rose_folder" ),                             #"/scratch/cqs/shengq1/local/bin/bradnerlab"
-        binding_site_bed_ref => [ $peakCallerTask, ".bed\$" ],
-        genome               => getValue( $def, "rose_genome" ),                             #hg19,
-        sh_direct            => 1,
-        pbs                  => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
+    if(getValue($def, "perform_crc", 0)){
+      $def->{perform_activeGene} = 1;
+      $def->{perform_rose} = 1;
+    }
+
+    my $active_gene_task;
+    if (getValue($def, "perform_activeGene", 0)) {
+      $active_gene_task = $peakCallerTask . "_active_gene";
+      $config->{$active_gene_task} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => "${target_dir}/" . getNextFolderIndex($def) . $active_gene_task,
+        interpretor => "python3",
+        program => "../Chipseq/activeGene.py",
+        option => "-g " . getValue($def, "active_gene_genome"),
+        source_arg => "-i",
+        source_ref => [$peakCallerTask, ".bed"],
+        output_arg => "-o",
+        output_file_prefix => "",
+        output_file_ext => ".TSS_ACTIVE_-1000_1000.txt",
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 0,
+        docker_prefix => "crc_",
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
         },
       };
-      push @$step2, ($roseTask);
+      push (@$step2, $active_gene_task);
+    }
+
+    my $roseTask;
+    if ( $def->{perform_rose} ) {
+      $config->{bam_treatments} = {
+        class => "CQS::GroupPickTask",
+        source_ref => $bam_ref,
+        groups => getValue($def, "treatments"),
+      };
+
+      my $output_file_ext;
+      if ($def->{peak_caller} eq "macs"){
+        $output_file_ext = "__NAME__/__NAME___peaks_SuperEnhancers_ENHANCER_TO_GENE.txt",
+      }else{
+        die "contact quanhu.sheng.1\@vumc.org to fix the problem.";
+        #"__NAME__/overlap_SuperEnhancers_ENHANCER_TO_GENE.txt"
+      }
+
+      $roseTask = $peakCallerTask . "_rose2";
+      $config->{$roseTask} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => "${target_dir}/$roseTask",
+        interpretor => "",
+        program => "ROSE2",
+        check_program => 0,
+        docker_prefix => "crc_",
+        option => "-o __NAME__/ -g " . getValue($def, "rose_genome"),
+        source_arg => "-i",
+        source_ref => [ $peakCallerTask, ".bed\$" ],
+        parameterSampleFile2_arg => "-r",
+        parameterSampleFile2_ref => "bam_treatments",
+        output_arg => "-o",
+        output_file_prefix => "",
+        output_file_ext => $output_file_ext,
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 0,
+        sh_direct => 0,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      },
+
+      my $has_control = defined $def->{controls};
+      if($has_control){
+        $config->{bam_controls} = {
+          class => "CQS::GroupPickTask",
+          source_ref => $bam_ref,
+          groups => getValue($def, "controls"),
+        };
+        $config->{$roseTask}{parameterSampleFile3_arg} = "-c";
+        $config->{$roseTask}{parameterSampleFile3_ref} = "bam_controls";
+      }
+
+      push @$summary, ($roseTask);
+    }
+
+    if(getValue($def, "perform_crc", 0)){
+      my $crc_task = $peakCallerTask . "_crc";
+      $config->{$crc_task} = { 
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => "${target_dir}/$crc_task",
+        interpretor => "",
+        program => "crc",
+        check_program => 0,
+        docker_prefix => "crc_",
+        option => "-n __NAME__ -c " . getValue($def, "enhancer_genome_path") . " -g " . getValue($def, "rose_genome"),
+        source_arg => "-s",
+        source_ref => [ $peakCallerTask, ".bed\$" ],
+        parameterSampleFile2_arg => "-e",
+        parameterSampleFile2_ref => [$roseTask, "SuperEnhancers_ENHANCER_TO_GENE.txt"],
+        parameterSampleFile3_arg => "-a",
+        parameterSampleFile3_ref => [$active_gene_task, ".txt"],
+        output_arg => "-o",
+        output_file_prefix => "",
+        output_file_ext => "__NAME__/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz.bed,__NAME__/qc/qc.html,__NAME__/align/rep1/__NAME__.nodup.bam,__NAME__/align/ctl1/input.nodup.bam",
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 0,
+        sh_direct => 0,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push @$summary, ($crc_task);
     }
 
     my $chipqc_taskname = $peakCallerTask . "_chipqc";
