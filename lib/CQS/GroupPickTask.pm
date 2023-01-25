@@ -32,7 +32,7 @@ sub result {
 
   for my $group_name (keys %$groups) {
     my $samples = $groups->{$group_name};
-    my $sample_name = $samples->[$pick_index];
+    my $sample_name = is_array($samples) ? $samples->[$pick_index] : $samples;
     if(not defined $sample_name) {
       if($can_be_empty){
         $result->{$group_name} = [];
