@@ -26,7 +26,7 @@ libraryKey<-"TotalReads"
 
 ##predefined_condition_end
 
-options(bitmapType='cairo')
+ooptions(bitmapType='cairo')
 
 suffix<-"";
 if(top25only){
@@ -673,6 +673,9 @@ for(countfile_index in c(1:length(countfiles))){
       comparisonData=comparisonData[baseMeans > filterBaseMeanValue,]
     }
 
+    rld_normed<-log2(counts(dds,normalized=TRUE) + 1)
+    write.csv(format(rld_normed, digits=3), paste0(prefix, "_DESeq2-log2-normalized-counts.csv"))
+
     #draw density graph
     rldmatrix<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
 
@@ -731,7 +734,7 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(nrow(comparisonData) > 1){
       assayvsd<-assay(vsd)
-      write.csv(assayvsd, file=paste0(prefix, "_DESeq2-vsd.csv"))
+      write.csv(format(assayvsd, digits=3), file=paste0(prefix, "_DESeq2-vsd.csv"))
       
       rldmatrix=as.matrix(assayvsd)
       
