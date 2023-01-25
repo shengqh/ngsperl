@@ -190,6 +190,10 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
           next
         }
 
+        final$NES = as.numeric(final$NES)
+        final$Core.Enrichment = as.numeric(final$Core.Enrichment)
+        final$FDR.q.val = as.numeric(final$FDR.q.val)
+
         has_enriched = TRUE
 
         enriched_file=paste0(target_folder, prefix, ".enriched.csv")
