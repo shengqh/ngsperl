@@ -125,62 +125,8 @@ for (prefix in rownames(edgeRres)){
       pdf(file=visFile, onefile = T, width=width, height=10)
       siggene<-topNgenes[1]
       for (siggene in topNgenes){
-        logFC<-sigout[siggene, "logFC"]
-        FDR<-sigout[siggene,"FDR"]
-        
-        geneexp=FetchData(cell_obj,vars=c(siggene))
-        colnames(geneexp)<-"Gene"
-        colorRange<-c(min(geneexp), max(geneexp))
-        fix.sc <- scale_color_gradientn(colors=c("lightgrey", "blue"), limits = colorRange)
-        
-        geneexp$Group<-cell_obj$DisplayGroup
-        geneexp$Sample<-cell_obj$orig.ident
-        
-        title<-paste0(siggene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
-        
-        if(bBetweenCluster){
-          p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2) + facet_grid(~Sample) + theme_bw() + 
-            scale_color_manual(values = groupColors) +
-            NoLegend() + xlab("") + ylab("Gene Expression") + theme(strip.background=element_blank())
-          
-          p1<-DimPlot(cell_obj, reduction = reduction, label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
-          
-          p2<-MyFeaturePlot(object = cell_obj, features=as.character(siggene), order=T)
-          p<-p0+p1+p2+plot_layout(design="AA
-BC")
-          
-          # p<-ggarrange(p0,                                                 # First row with scatter plot
-          #              ggarrange(p1, p2, ncol = 2, labels = c("B", "C")), # Second row with box and dot plots
-          #              nrow = 2, 
-          #              labels = "A"                                        # Labels of the scatter plot
-          # ) 
-        }else{
-          p0<-ggplot(geneexp, aes(x="1", y=Gene, color=Group)) + geom_violin() + geom_jitter(width = 0.2) + facet_grid(~Sample) + theme_bw() + 
-            scale_color_manual(values = groupColors) +
-            xlab("") + ylab("Gene Expression") + theme(strip.background=element_blank(), axis.text.x = element_blank())
-          
-          if("subumap" %in% names(cell_obj@reductions)){
-            p1<-MyFeaturePlot(object = cell_obj, features=siggene, order=T, reduction="subumap")
-          }else{
-            p1<-MyFeaturePlot(object = cell_obj, features=siggene, order=T, reduction="umap")
-          }
-          p1$data$Group=cell_obj@meta.data[rownames(p1$data), "DisplayGroup"]
-          p1<-p1+facet_grid(~Group) + theme_bw3()
-          
-          if(!DE_by_cell){
-            gd<-melt_cpm[melt_cpm$Gene==siggene,]
-            g0<-ggplot(gd, aes(x=Group, y=CPM, color=Group)) + geom_violin() + geom_boxplot(width=0.2) + geom_jitter(width = 0.1) +  
-              theme_bw3() +
-              scale_color_manual(values = groupColors) +
-              xlab("") + ylab("CPM") + NoLegend()
-            p<-p0+g0+p1+plot_layout(design="AAAAA
-BCCCC")
-          }else{
-            p<-p0+p1+plot_layout(design="A
-B")
-          }
-        }
-        p<-p+ plot_annotation(title=title)
+        p<-get_sig_gene_figure(cell_obj, sigout, design_data, sig_gene, DE_by_cell=DE_by_cell, is_between_cluster=bBetweenCluster, log_cpm=log_cpm)
+
         print(p)
         #break
       }
