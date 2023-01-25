@@ -1516,6 +1516,10 @@ sub_cluster<-function(subobj,
       #due to very limited cell numbers in small cluster, it may cause problem to redo harmony, 
       cat(key, "use old harmony result\n")
     }
+    if(!("harmony" %in% names(subobj@reductions))){
+      curreduction = "pca";
+      cat(key, "no harmony, use PCA.\n")
+    }
   }else{
     #https://github.com/satijalab/seurat/issues/5244
     if (by_sctransform) {
