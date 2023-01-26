@@ -1264,6 +1264,7 @@ sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
 
   my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".scDynamic.meta.rds";
+  my $output_other_ext = $by_individual_sample ? ".dynamic_individual.html":".dynamic.html";
 
   $config->{$scDynamic_task} = {
     class                    => "CQS::UniqueR",
@@ -1300,7 +1301,7 @@ sub addDynamicCluster {
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
     parameterSampleFile4 => getValue($def, "dynamic_combine_cell_types", {}),
     output_file_ext      => $output_file_ext,
-    output_other_ext     => ".dynamic.html",
+    output_other_ext     => $output_other_ext,
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
@@ -2386,7 +2387,7 @@ sub add_bubble_plots {
       cluster_name => $cluster_name,
       celltype_name => $celltype_name 
     },
-    output_file_ext      => ".html",
+    output_file_ext      => $rmd_ext,
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
