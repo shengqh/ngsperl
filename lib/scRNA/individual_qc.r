@@ -1,3 +1,17 @@
+rm(list=ls()) 
+outFile='combined'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parFile1=''
+parFile2=''
+parFile3=''
+
+
+setwd('/data/wanjalla_lab/projects/20230115_combined_scRNA_hg38/individual_qc/result')
+
+### Parameter setting end ###
+
 library(Seurat)
 library(data.table)
 library(dplyr)
@@ -55,50 +69,17 @@ if (dim(Cutoffs)[1]==1){
 
 transpose=FALSE
 
+ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
+                             species = species,
+                             curated_markers_file = myoptions$curated_markers_file,
+                             HLA_panglao5_file = myoptions$HLA_panglao5_file,
+                             layer="Layer4",
+                             remove_subtype_str = "",
+                             combined_celltype_file = NULL)
+tiers = ctdef$tiers
+cell_activity_database<-ctdef$cell_activity_database
+
 celltype_predictmethod="cta" # cta: cell activity; ora: over-represent
-
-##specific marker database############
-
-markerfile<-myoptions$markers_file
-
-#these R will use markerfile, add_Subtype, species, so have to put at the end
-add_Subtype<-FALSE
-
-##compare to markerCode, add filter criteria for each sample
-
-marker<-data.frame(fread(markerfile))
-species_ind<-regexpr(species,marker[,1])
-marker_species<-marker[species_ind>0 & marker$ubiquitousness.index<0.05,]
-##change the gene symbol only keep the first letter capitalize
-if (species=="Mm") {
-  marker_species$official.gene.symbol<-paste0(substr(marker_species$official.gene.symbol,1,1),substr(tolower(marker_species$official.gene.symbol),2,nchar(marker_species$official.gene.symbol)))
-}
-cellType<-tapply(marker_species$official.gene.symbol,marker_species$cell.type,list)
-##combine with other marker genes
-if(file.exists(myoptions$curated_markers_file)){
-  curated_markers_df<-read.table(myoptions$curated_markers_file, sep="\t", header=F, stringsAsFactors=F)
-  curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
-  for(cmct in names(curated_markers_celltype)){
-    cellType[[cmct]]=curated_markers_celltype[[cmct]]
-  }
-}
-
-###if add crc-specific signatures # if add_subtype==NULL, only use subtype but not markerfile
-if(is.null(add_Subtype)) {
-  subtype<-read.csv(subtypefile,as.is=T,header=F)
-  celltype_add<-tapply(subtype[,1],subtype[,2],list)
-  cellType<-celltype_add
-}else if (add_Subtype==TRUE) {
-  subtype<-read.csv(subtypefile,as.is=T,header=F)
-  celltype_add<-tapply(subtype[,1],subtype[,2],list)
-  cellType<-c(cellType,celltype_add)
-}
-
-knownmarkers<- c("COL1A1","COL1A2","DCN","TAGLN","MYH11","ATCA2","PECAM1","CDH5","CLDN5","CD68","C1QB","LYZ2","NKAIN4","LGFBP5","CD248","WIF1","CHAD","SULT1D1","CD3D","CD3G","NKG7","CD209A","H2-AB1","H2-EB1","KCNA1","PLP1","MYL1","CD79A")
-
-if(species=="Mm") {
-  knownmarkers<-paste0(substr(knownmarkers,1,1),substr(tolower(knownmarkers),2,nchar(knownmarkers)))
-}
 
 object.list<-list()
 
@@ -108,17 +89,19 @@ for (i in 1:nrow(SampleInfos)) {
   Cutoff<-Cutoffs[i,]
   bubble_file=myoptions$bubblemap_file
   Ensemblfile=NULL
-  info<-preprocess(SampleInfo,
-                     Cutoff,
-                     Mtpattern,
-                     resolution, 
-                     Remove_Mt_rRNA,
-                     celltype_predictmethod,
-                     transpose=transpose,
-                     hto_map=hto_map,
-                     tag_tb=tag_tb,
-                     Ensemblfile=Ensemblfile,
-                     bubble_file=bubble_file)
+  info<-preprocess( SampleInfo = SampleInfo,
+                    Cutoff = Cutoff,
+                    cellType = cell_activity_database$cellType,
+                    Mtpattern = Mtpattern,
+                    rRNApattern = rRNApattern,
+                    resolution = resolution, 
+                    Remove_Mt_rRNA = Remove_Mt_rRNA,
+                    celltype_predictmethod = celltype_predictmethod,
+                    transpose = transpose,
+                    hto_map = hto_map,
+                    tag_tb = tag_tb,
+                    Ensemblfile = Ensemblfile,
+                    bubble_file = bubble_file)
   
   object.list<-c(object.list, info)
 }
@@ -130,3 +113,5 @@ stats<-lapply(object.list, function(x){unlist(x$preprocess)})
 stats_df<-data.frame(do.call(rbind, stats))
 colnames(stats_df)<-gsub("preprocess.","",colnames(stats_df))
 write.table(stats_df, file="qc_filter_config.txt", sep="\t", row.names=F)
+
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
