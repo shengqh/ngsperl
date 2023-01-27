@@ -330,7 +330,7 @@ preprocess<-function( SampleInfo,
     filters$raw_num_cell=ncol(obj)
   
     #cat("\n\n### Violin plot of nGene,nUMI and mtRNA distribution\n\n")
-    g1<-VlnPlot(subobj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+    g1<-VlnPlot(subobj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3) & xlab("")
     png(paste0(cur_sample, ".qc1.png"), width=3000, height=1500, res=300)
     print(g1)
     dev.off()

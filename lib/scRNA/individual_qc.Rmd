@@ -4,7 +4,7 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 2
-    number_sections: true
+    number_sections: false
 ---
 
 ```{r setup, include=FALSE}
@@ -31,18 +31,39 @@ source("scRNA_func.r")
 source("reportFunctions.R")
 ```
 
-```{r, echo=FALSE}
+# Files Parameters
 
-cat("\n\n## Files Parameters\n\n")
-
-#raw scRNAseq data files and clinical information
-#work directory to save or load objectlist, objectintegrated and integratedmarkers; the raw files are in workdir/raw
-
+```{r, echo=FALSE, results="asis"}
 option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F)
 myoptions<-split(option_table$V1, option_table$V2)
 print(kable(option_table))
 ```
 
+# Sample summary
+
+```{r echo=FALSE, results="asis"}
+object.list<-readRDS("objectlist.rds")
+stats<-lapply(object.list, function(x){unlist(x$preprocess)})
+stats_df<-data.frame(do.call(rbind, stats))
+colnames(stats_df)<-gsub("preprocess.","",colnames(stats_df))
+print(kable(stats_df))
+```
+
+# Sample/Celltype
+
+```{r echo=FALSE, results="asis"}
+celltypes<-lapply(names(object.list), function(x){
+  df<-data.frame(table(object.list[[x]]$meta$cell_type))
+  df$Sample = x
+  return(df)
+  })
+ct_df<-data.frame(do.call(rbind, celltypes))
+library(reshape2)
+ct_tb<-acast(ct_df, "Sample~Var1",  value.var="Freq", fill=0)
+print(kable(ct_tb))
+```
+
+<br/>
 
 ```{r echo=FALSE}
 #raw data file locations
@@ -59,6 +80,7 @@ if(file.exists('fileList3.txt')){
 
   samples<-samples[!(samples %in% tag_tb$File)]
   samples<-c(samples, tag_tb$Sample)
+  samples<-samples[order(samples)]
 }
 ```
 
@@ -72,24 +94,25 @@ figureRmd<-function(samples){
     }
     result<-paste0(result, paste0("\n\n# ", cur_sample, "\n\n"))
 
-    result<-paste0(result, "\n## QC1\n\n")
+    result<-paste0(result, "\n## Violin plot of nGene,nUMI and mtRNA distribution\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc1.png"), TRUE))
-    result<-paste0(result, "\n## QC2\n\n")
+    result<-paste0(result, "\n## The scatterplot between mtRNA/nGene and nUMI\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc2.png"), TRUE))
-    result<-paste0(result, "\n## QC3\n\n")
+    result<-paste0(result, "\n## The density plot between nUMI/nGene and mtRNA \n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc3.png"), TRUE))
-    result<-paste0(result, "\n## QC4\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".qc4.png"), TRUE))
-    result<-paste0(result, "\n## QC5\n\n")
+    result<-paste0(result, "\n## nUMI, nGene, mtRNA, nGene and cell distribution in each cluster\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc5.png"), TRUE))
-    result<-paste0(result, "\n## QC6\n\n")
+    result<-paste0(result, "\n## mtRNA, nGene, nUMI and PC1 in UMAP\n\n")
+    result<-paste0(result, getFigure(paste0(cur_sample, ".qc4.png"), TRUE))
+    result<-paste0(result, "\n## Cluster in PCA/UMAP\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc6.png"), TRUE))
-    result<-paste0(result, "\n## QC7\n\n")
+    result<-paste0(result, "\n## Cell type annotation\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc7.png"), TRUE))
-    result<-paste0(result, "\n## heatmap\n\n")
+    result<-paste0(result, "\n## Heatmap of highly expressed gene of each cluster\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".heatmap.png"), TRUE))
-    result<-paste0(result, "\n## Marker genes\n\n")
+    result<-paste0(result, "\n## Expression of user defined marker genes\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".bubble.png"), TRUE))
+    result<-paste0(result, "\n---\n")
   }
   return(result)
 }
@@ -98,13 +121,4 @@ cat(figureRmd(samples), file=resFile)
 ```
 
 ```{r, child=resFile} 
-```
-
-```{r echo=FALSE}
-cat("\n\n# Sample summary\n")
-object.list<-readRDS("objectlist.rds")
-stats<-lapply(object.list, function(x){unlist(x$preprocess)})
-stats_df<-data.frame(do.call(rbind, stats))
-colnames(stats_df)<-gsub("preprocess.","",colnames(stats_df))
-print(kable(stats_df))
 ```
