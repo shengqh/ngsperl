@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='P9061'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
+parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/scratch/vickers_lab/projects/20230118_scRNA_9061_mouse_scDblFinder/seurat_rawdata/result')
+setwd('/data/wanjalla_lab/projects/20230115_combined_scRNA_hg38/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -137,6 +138,10 @@ read_gzip_count_file<-function(files, sample, species){
 
 #read raw count dat
 filelist1<-read.table(parSampleFile1, header=F, stringsAsFactors = F)
+if(nrow(filelist1) == 0){
+  die("No data defined, check your configuration file.")
+}
+
 rawobjs = list()
 fidx=3
 fileMap<-split(filelist1$V1, filelist1$V2)
@@ -145,33 +150,10 @@ fileTitle = names(fileMap)[1]
 for(fileTitle in names(fileMap)) {
   fileName  = fileMap[[fileTitle]]
   cat(fileTitle, "\n")
-  if(dir.exists(fileName)){
-    feature.names <- read.delim(paste0(fileName, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
-    gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
-    counts = Read10X(fileName, gene.column=gene.column)
-    if(is.list(counts)){
-      if("protein_coding" %in% names(counts)){
-        counts<-do.call(rbind, counts)
-      }
-    }
-  } else if (grepl('.h5$', fileName)) {
-    counts = Read10X_h5(fileName)
-  } else if (grepl('.gz$', fileName)) {
-    counts = data.frame(read_gzip_count_file(fileName, fileTitle, species))
-  } else if (grepl('.rds$', fileName)) {
-    counts = readRDS(fileName)
-    if("Seurat" %in% class(counts)){
-      counts = GetAssayData(counts, slot = "counts")
-    }
-  } else {
-    stop(paste0("I don't know format of ", fileName))
-  }
-  
-  adt.counts<-NULL
-  if (is.list(counts) & ("Gene Expression" %in% names(counts))){
-    adt.counts<-counts$`Antibody Capture`
-    counts<-counts$`Gene Expression` 
-  }
+  lst = read_scrna_data(fileName)
+
+  counts = lst$counts  
+  adt.counts = lst$adt.counts
   
   if(fileTitle %in% names(remove_cells)){
     rcs<-remove_cells[[fileTitle]]
@@ -192,7 +174,7 @@ for(fileTitle in names(fileMap)) {
   sobj = CreateSeuratObject(counts = counts, project = fileTitle)
   sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt")
   sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo")
-  sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+  sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")
 
   if (!is.null(adt.counts)){
     mat<-as.matrix(adt.counts)
@@ -203,6 +185,26 @@ for(fileTitle in names(fileMap)) {
     }
   }
 
+  #################################################
+  #three columns for source of the data
+  #project indicates the h5 file name (experimental name)
+  #sample indicates the sample name (after demultiplex)
+  #orig.ident indicates final name (after pooling)
+  #################################################
+  #  with demultiplex: 
+  #    sample != project
+  #    with pooling:
+  #      orig.ident != sample
+  #    without pooling:
+  #      orig.ident == sample
+  #  without demultiplex:
+  #    sample == project
+  #    with pooling:
+  #      orig.ident != sample
+  #    without pooling:
+  #      orig.ident == sample
+  #################################################
+  sobj$project=fileTitle    
   sobj$sample=fileTitle
 
   if(has_hto && fileTitle %in% names(hto_data)) {
@@ -214,6 +216,7 @@ for(fileTitle in names(fileMap)) {
       sample = tagcells$Sample[1]
       sample_obj = subset(validobj, cells=tagcells$cell)
       sample_obj$orig.ident = sample
+      sample_obj$sample = sample
       sample_obj<-RenameCells(object=sample_obj, new.names=paste0(sample, "_", colnames(sample_obj)))
       rawobjs[[sample]] = sample_obj
     }
@@ -235,19 +238,26 @@ if(pool_sample){
   poolNames = unique(pools$V2)
   pooledObjs = lapply(poolNames, function(pn){
     curPools<-pools[pools$V2==pn,]
-    curListIndecies<-which(unlist(lapply(rawobjs, function(x) x@project.name %in% curPools$V1)))
+     #Checking for agreement in names
+    if(!all(curPools$V1 %in% names(rawobjs))){
+      missed = curPools$V1[!(curPools$V1 %in% names(rawobjs))]
+      stop(paste0(paste0(missed, collapse=","), " of ", pn, " not in object list: ", paste0(names(rawobjs), collapse=",")))
+    }
+    
+    curListIndecies<-which(names(rawobjs)%in%curPools$V1)
+
     curObjs<-rawobjs[curListIndecies]
     if(length(curObjs) == 1){
       curobj = curObjs[[1]]
     }else{
       curobj <- merge(curObjs[[1]], y = unlist(curObjs[2:length(curObjs)]), project = "integrated")
     }
-    curobj@project.name=pn
-    curobj$orig.ident=rep(pn, length(curobj$orig.ident))
+    curobj$orig.ident=pn
     Idents(curobj)<-"orig.ident"
     return(curobj)
-  });
-  notPoolIndecies<-which(unlist(lapply(rawobjs, function(x) !(x@project.name %in% pools$V1))))
+  })
+
+  notPoolIndecies<-which(!(names(rawobjs)%in%pools$V1))
   if(length(notPoolIndecies) > 0){
     notPoolObjs<-rawobjs[notPoolIndecies]
     rawobjs<-c(pooledObjs, notPoolObjs)
@@ -265,3 +275,4 @@ if(length(rawobjs) == 1){
 rm(rawobjs)
 
 output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')

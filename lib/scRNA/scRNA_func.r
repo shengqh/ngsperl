@@ -1131,6 +1131,8 @@ output_ElbowPlot<-function(obj, outFile, reduction){
 
 draw_feature_qc<-function(prefix, rawobj, ident_name) {
   Idents(rawobj)<-ident_name
+
+  nsample<-length(unique(unlist(rawobj[[ident_name]])))
   
   feats<-c("nFeature_RNA","nCount_RNA","percent.mt","percent.ribo")
   if("percent.hb" %in% colnames(rawobj@meta.data)){
@@ -1143,7 +1145,6 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   dev.off()
 
   if('umap' %in% names(rawobj@reductions)){
-    nsample<-length(unique(unlist(rawobj[[ident_name]])))
     nfeature<-length(feats)
 
     by.col=nfeature>=nsample
@@ -1161,19 +1162,18 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     dev.off()  
   }
 
-  png(file=paste0(prefix, ".qc.png"), width=3000, height=1200, res=300)
-  p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt")
-  p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+  png(file=paste0(prefix, ".qc.png"), width=2600, height=1200, res=300)
+  p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + NoLegend()
+  p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") + NoLegend()
   p<-p1+p2+plot_layout(ncol=2)
   print(p)
   dev.off()
   
   mt<-data.frame(mt=rawobj$percent.mt, Sample=unlist(rawobj[[ident_name]]), nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
-  nsample=length(unique(mt$Sample))
   nwidth=ceiling(sqrt(nsample))
   nheight=ceiling(nsample/nwidth)
   
-  png(file=paste0(prefix, ".qc.read.png"), width=min(20000, 1000 * nwidth + 300), height=min(10000, 1000*nheight), res=300)
+  png(file=paste0(prefix, ".qc.read.png"), width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), res=300)
   p1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
@@ -1183,7 +1183,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   print(p1)
   dev.off()
 
-  png(file=paste0(prefix, ".qc.feature.png"), width=min(20000, 1000 * nwidth + 300), height=min(10000, 1000*nheight), res=300)
+  png(file=paste0(prefix, ".qc.feature.png"), width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), res=300)
   p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
@@ -1196,23 +1196,25 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   ct<-as.data.frame(table(rawobj[[ident_name]]))
   colnames(ct)<-c("Sample","Cell")
 
-  if("sample" %in% colnames(rawobj@meta.data)){
-    ident_sample_map<-lapply(split(rawobj$sample, rawobj$orig.ident), unique)
-    is_merged<-any(lapply(ident_sample_map, length) > 1)
+  if("project" %in% colnames(rawobj@meta.data)){
+    is_hto=any(rawobj$project != rawobj$orig.ident)
+  }else{
+    is_hto=FALSE
+  }
 
-    sample_ident_map<-lapply(split(rawobj$orig.ident, rawobj$sample), unique)
-    is_hto<-any(lapply(sample_ident_map, length) > 1)
+  if("sample" %in% colnames(rawobj@meta.data)){
+    is_merged=any(rawobj$sample != rawobj$orig.ident)
   }else{
     is_merged=FALSE
-    is_hto=FALSE
   }
 
   if(ident_name == "orig.ident" & is_hto){
     meta<-rawobj@meta.data
     meta<-meta[!duplicated(meta$orig.ident),,drop=F]
-    smap=split(as.character(meta$sample), as.character(meta$orig.ident))
+    smap=split(as.character(meta$project), as.character(meta$orig.ident))
     ct$Set=unlist(smap[ct$Sample])
   }
+
   if(ident_name == "sample" & is_merged){
     meta<-rawobj@meta.data
     meta<-meta[!duplicated(meta$sample),,drop=F]
@@ -1227,7 +1229,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     g<-ggplot(ct, aes(x=Sample, y=Cell))
   }
   g<-g + geom_bar(stat="identity") + theme_bw3(axis.x.rotate = T)
-  png(paste0(prefix, ".cell.bar.png"), width=3000, height=2000, res=300)
+  png(paste0(prefix, ".cell.bar.png"), width=max(3000, nrow(ct) * 100), height=2000, res=300)
   print(g)
   dev.off()
 }
@@ -1445,10 +1447,17 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
           col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
   dev.off()
 
+  has_project = ifelse("project" %in% colnames(rawobj@meta.data), any(rawobj$orig.ident != rawobj$project),FALSE)
+  has_sample = ifelse("sample" %in% colnames(rawobj@meta.data), any(rawobj$orig.ident != rawobj$sample), FALSE)
+
   draw_feature_qc(outFile, rawobj, "orig.ident")
 
-  if(any(rawobj$orig.ident != rawobj$sample)){
+  if(has_sample){
     draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
+  }
+
+  if(has_project){
+    draw_feature_qc(paste0(outFile, ".project"), rawobj, "project")
   }
 
   rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
@@ -1460,8 +1469,12 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
 
   draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
 
-  if(any(rawobj$orig.ident != rawobj$sample)){
-    draw_feature_qc(paste0(outFile, ".no_ribo", ".sample"), rawobj, "sample")
+  if(has_sample){
+    draw_feature_qc(paste0(outFile, ".no_ribo.sample"), rawobj, "sample")
+  }
+
+  if(has_project){
+    draw_feature_qc(paste0(outFile, ".no_ribo.project"), rawobj, "project")
   }
 }
 
@@ -1781,3 +1794,33 @@ B")
   return(p)
 }
 
+read_scrna_data<-function(fileName){
+  if(dir.exists(fileName)){
+    feature.names <- read.delim(paste0(fileName, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
+    gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
+    counts = Read10X(fileName, gene.column=gene.column)
+    if(is.list(counts)){
+      if("protein_coding" %in% names(counts)){
+        counts<-do.call(rbind, counts)
+      }
+    }
+  } else if (grepl('.h5$', fileName)) {
+    counts = Read10X_h5(fileName)
+  } else if (grepl('.gz$', fileName)) {
+    counts = data.frame(read_gzip_count_file(fileName, fileTitle, species))
+  } else if (grepl('.rds$', fileName)) {
+    counts = readRDS(fileName)
+    if("Seurat" %in% class(counts)){
+      counts = GetAssayData(counts, slot = "counts")
+    }
+  } else {
+    stop(paste0("I don't know format of ", fileName))
+  }
+  
+  adt.counts<-NULL
+  if (is.list(counts) & ("Gene Expression" %in% names(counts))){
+    adt.counts<-counts$`Antibody Capture`
+    counts<-counts$`Gene Expression` 
+  }
+  return(list(counts=counts, adt.counts=adt.counts))
+}
