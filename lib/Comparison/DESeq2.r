@@ -26,7 +26,7 @@ libraryKey<-"TotalReads"
 
 ##predefined_condition_end
 
-ooptions(bitmapType='cairo')
+options(bitmapType='cairo')
 
 suffix<-"";
 if(top25only){
