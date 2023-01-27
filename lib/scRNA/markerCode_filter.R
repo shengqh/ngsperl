@@ -1,9 +1,12 @@
 
 library(dplyr)
+library(patchwork)
+
+source("scRNA_func.r")
 
 ################
 
-ORA_celltype<-function(medianexp,cellType,method="cta"){
+ORA_celltype_qc<-function(medianexp,cellType,method="cta"){
   freq<-sort((table(unlist(cellType)))/length(cellType))
   weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))	
   
@@ -15,7 +18,6 @@ ORA_celltype<-function(medianexp,cellType,method="cta"){
     clusterexp<-medianexp[,j] 
     clusterexp_z<-exp_z[,j]
     for (i in 1:length(cellType)){
-      
       ct_exp_names<-(intersect(genenames[clusterexp>0],cellType[[i]]))
       ct_exp<-length(ct_exp_names)
       ct_not_exp<-length(cellType[[i]])-ct_exp
@@ -43,22 +45,14 @@ ORA_celltype<-function(medianexp,cellType,method="cta"){
   if (method=="cta") {
     cta_val<-max_cta
     p_val<-ORA_result[cbind(match(names(max_cta),rownames(ORA_result)),seq(1:length(max_cta)))]
-    
     predict_result<-cbind(cta_val,p_val)
-    
-    
   }
   if (method=="ora") {
     p_val<-minp_ora
     cta_val<-CTA_result[cbind(match(names(minp_ora),rownames(CTA_result)),seq(1:length(minp_ora)))]
     
     predict_result<-cbind(cta_val,p_val)  
-    
-    
   }
-  
-  
-  
   return(list(predict_result=predict_result, method=method,ora=ORA_result,cta=CTA_result,minp_ora=minp_ora,max_cta=max_cta,ct_exp_names=ct_exp_names))
 }
 
@@ -176,16 +170,6 @@ get_mean_expression<-function(SCLC){
   return(result)
 }
 
-get_seurat_average_expression<-function(SCLC){
-  dd=GetAssayData(SCLC,slot="data")
-  dobj=CreateSeuratObject(counts=dd)
-  dobj$seurat_clusters=SCLC$seurat_clusters
-  result<-AverageExpression(dobj, slot="counts", group.by="seurat_clusters" )[[1]]
-  rm(dd)
-  rm(dobj)
-  return(result)
-}
-
 #https://github.com/yihui/knitr/issues/1494
 # Based on code from http://michaeljw.com/blog/post/subchunkify/
 #' Generate a sub-chunk to be interpreted by knitr.  The enclosing chunk
@@ -254,7 +238,20 @@ myScaleData<-function(object, features, assay, ...){
   return(object)
 }
 
-preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remove_Mt_rRNA=FALSE,celltype_predictmethod="cta",transpose=FALSE, Ensemblfile=NULL, hto_map=list(),tag_tb=NULL,bubble_file="") {
+preprocess<-function( SampleInfo, 
+                      Cutoff,  
+                      cellType,
+                      Mtpattern="^MT-|^Mt-|^mt-", 
+                      rRNApattern="^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]",
+                      resolution=0.5, 
+                      Remove_Mt_rRNA=FALSE,
+                      celltype_predictmethod="cta",
+                      transpose=FALSE, 
+                      Ensemblfile=NULL, 
+                      hto_map=list(),
+                      tag_tb=NULL,
+                      bubble_file="") {
+
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
   
@@ -263,24 +260,10 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
     has_bubble_file=file.exists(bubble_file)
   }
   
-  library(patchwork)
+  lst = read_scrna_data(countfile)
+  counts<-lst$counts
+  rm(lst)
   
-  if(url.exists(countfile) | (file.exists(countfile) & !dir.exists(countfile))){
-    if (length(grep (".rds$",countfile))>0) { 
-      counts<-readRDS(countfile)$cm
-    } else if (length(grep (".h5$",countfile))>0) {
-      counts<-Read10X_h5(countfile)
-      if (is.list(counts)){
-        counts<-counts$`Gene Expression` 
-      }
-    } else  {
-      counts = data.frame(fread(countfile),row.names = 1,check.names=F) 
-    }
-  } else {
-    feature.names <- read.delim(paste0(countfile, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
-    gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
-    counts=Read10X(countfile, gene.column=gene.column)
-  }
   if (transpose){
     counts<-t(counts)
   }
@@ -292,282 +275,256 @@ preprocess<-function(SampleInfo, Cutoff,  Mtpattern="^MT-", resolution=0.5, Remo
   hto_file=hto_map[[sampleid]]
   has_hto=!is.null(hto_file)
   if(has_hto){
-    hto<-read.csv(hto_file, stringsAsFactors = F, row.names=1)   
-    hto<-subset(hto, !(hto$HTO %in% c("Negative", "Doublet")))
+    if(grepl(".rds$", hto_file)){
+      hto<-readRDS(hto_file)
+    }else{
+      hto<-read.csv(hto_file, stringsAsFactors = F, row.names=1)   
+    }
+
+    if("final" %in% colnames(hto)){
+      colname="final"
+    }else if ("HTO_classification" %in% colnames(hto)) {
+      colname="HTO_classification"
+    }else{
+      stop("no final or HTO_classification in hto data, don't know which column should be used.")
+    }
+
+    hto<-subset(hto, !(hto[[colname]] %in% c("Negative", "Doublet")))
     hto_tag=subset(tag_tb, tag_tb$File==sampleid)
     tag_map=split(hto_tag$Sample, hto_tag$Tagname)
-    hto$sample<-unlist(tag_map[hto$HTO])
+    hto$sample<-unlist(tag_map[unlist(hto[[colname]])])
     counts<-counts[, colnames(counts) %in% rownames(hto)]
   }
 
   cat("\n\n#", sampleid, "\n\n")
-  cat("\n\n## Quality Check\n\n")
+  #cat("\n\n## Quality Check\n\n")
   
   #counts<-counts[,sample(ncol(counts), 2000)]
 
-  SCLC <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, project=sampleid)
+  obj <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, project=sampleid)
+  obj$sample=sampleid
   if(has_hto){
-    samples<-hto[colnames(SCLC), "sample"]
-  }else{
-    samples=sampleid
+    obj$orig.ident=hto[colnames(obj), "sample"]
   }
-  SCLC$sample=samples
   rm(counts)
+  Idents(obj)<-"orig.ident"
 
-  SCLC[["percent.mt"]] <- PercentageFeatureSet(SCLC, pattern = Mtpattern)
-  
-  filters<-c(list(sample=sampleid), as.list(Cutoff))
-  filters$raw_num_cell=ncol(SCLC)
-  
-  cat("\n\n### ", "Fig.1 Violin plot of nGene,nUMI and mtRNA distribution\n\n")
-  if(has_hto){
-    g1<-VlnPlot(SCLC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, group.by = "sample")
-  }else{
-    g1<-VlnPlot(SCLC, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+  obj<-PercentageFeatureSet(object=obj, pattern=Mtpattern, col.name="percent.mt")
+  obj<-PercentageFeatureSet(object=obj, pattern=rRNApattern, col.name = "percent.ribo")
+
+  samples<-unique(obj$orig.ident)
+
+  cur_folder = getwd()
+  if(!dir.exists("details")){
+    dir.create("details")
   }
-
-  subchunkify(g1, fig.height=7, fig.width=15)
-  #print(g1)
-
-  plot1 <- FeatureScatter(SCLC, feature1 = "nCount_RNA", feature2 = "percent.mt")+NoLegend()
-  plot2 <- FeatureScatter(SCLC, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")+NoLegend()
-  cat("\n\n### ", "Fig.2 The scatterplot between mtRNA/nGene and nUMI \n\n")
-  p<-plot1+plot2
-  subchunkify(p, fig.height=7, fig.width=14)
-  #print(plot1+plot2)
-  
-  mt<-data.frame(mt=SCLC$percent.mt, Sample=SCLC$sample, nFeature=log10(SCLC$nFeature_RNA), nCount=log10(SCLC$nCount_RNA))
-  plot3<-ggplot(mt, aes(x=nCount,y=mt) ) +
-    geom_bin2d(bins = 70) + 
-    scale_fill_continuous(type = "viridis") + 
-    geom_vline(xintercept = log10(Cutoff$nCount_cutoff), color="red")  + 
-    geom_hline(yintercept = Cutoff$mt_cutoff, color="red") +
-    ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
-    theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  if(has_hto){
-    plot3<-plot3+facet_grid(~Sample)
-  }
-  
-  plot4<-ggplot(mt, aes(x=nFeature,y=mt) ) +
-    geom_bin2d(bins = 70) + 
-    scale_fill_continuous(type = "viridis") + 
-    geom_vline(xintercept = log10(Cutoff$nFeature_cutoff_min), color="red")  + 
-    geom_vline(xintercept = log10(Cutoff$nFeature_cutoff_max), color="red")  + 
-    geom_hline(yintercept = Cutoff$mt_cutoff, color="red") +
-    ylab("Percentage of mitochondrial") + xlab("log10(number of gene)") +
-    theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  if(has_hto){
-    plot4<-plot4+facet_grid(~Sample)
-  }
-  
-  cat("\n\n### ", "Fig.3  nUMI distribution\n\n")
-  if(has_hto){
-    subchunkify(plot3, fig.height=7, fig.width=15)
-    subchunkify(plot4, fig.height=7, fig.width=15)
-    #print(plot3)
-    #print(plot4)
-  }else{
-    p<-plot3+plot4
-    subchunkify(p, fig.height=7, fig.width=14)
-  }
-
-
-  # plot(sort(SCLC@meta.data$nCount_RNA,decreasing = T),ylab="UMI counts",lty=2,pch=16,log="xy")
-  # abline(h=1000)
-  # abline(h=500)
+  setwd(file.path(cur_folder, "details"))
   
   info=list()
-  if (min(SCLC[["percent.mt"]]) < Cutoff$mt_cutoff) {  
-    SCLC <- subset(SCLC, subset = nFeature_RNA > Cutoff$nFeature_cutoff_min & nFeature_RNA<Cutoff$nFeature_cutoff_max & nCount_RNA>Cutoff$nCount_cutoff & percent.mt < Cutoff$mt_cutoff)
-    filters$valid_num_cell=ncol(SCLC)
 
-    SCLC <- NormalizeData(SCLC)
-    SCLC <- FindVariableFeatures(SCLC, selection.method = "vst", nfeatures = 2000)
+  cur_sample=samples[1]
+  for(cur_sample in samples){
+    subobj=subset(obj, orig.ident==cur_sample)
+
+    filters<-c(list(sample=cur_sample), as.list(Cutoff))
+    filters$raw_num_cell=ncol(obj)
+  
+    #cat("\n\n### Violin plot of nGene,nUMI and mtRNA distribution\n\n")
+    g1<-VlnPlot(subobj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+    png(paste0(cur_sample, ".qc1.png"), width=3000, height=1500, res=300)
+    print(g1)
+    dev.off()
+  
+    plot1 <- FeatureScatter(subobj, feature1 = "nCount_RNA", feature2 = "percent.mt")+NoLegend()
+    plot2 <- FeatureScatter(subobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")+NoLegend()
+    #cat("\n\n### ", "Fig.2 The scatterplot between mtRNA/nGene and nUMI \n\n")
+    p<-plot1+plot2
+    png(paste0(cur_sample, ".qc2.png"), width=3000, height=1500, res=300)
+    print(p)
+    dev.off()
+  
+    mt<-data.frame(mt=subobj$percent.mt, nFeature=log10(subobj$nFeature_RNA), nCount=log10(subobj$nCount_RNA))
+    plot3<-ggplot(mt, aes(x=nCount,y=mt) ) +
+      geom_bin2d(bins = 70) + 
+      scale_fill_continuous(type = "viridis") + 
+      geom_vline(xintercept = log10(Cutoff$nCount_cutoff), color="red")  + 
+      geom_hline(yintercept = Cutoff$mt_cutoff, color="red") +
+      ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
+      theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  
+    plot4<-ggplot(mt, aes(x=nFeature,y=mt) ) +
+      geom_bin2d(bins = 70) + 
+      scale_fill_continuous(type = "viridis") + 
+      geom_vline(xintercept = log10(Cutoff$nFeature_cutoff_min), color="red")  + 
+      geom_vline(xintercept = log10(Cutoff$nFeature_cutoff_max), color="red")  + 
+      geom_hline(yintercept = Cutoff$mt_cutoff, color="red") +
+      ylab("Percentage of mitochondrial") + xlab("log10(number of gene)") +
+      theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  
+    #cat("\n\n### ", "Fig.3  nUMI distribution\n\n")
+    p<-plot3+plot4
+    png(paste0(cur_sample, ".qc3.png"), width=3000, height=1500, res=300)
+    print(p)
+    dev.off()
+
+    subobj <- subset(subobj, subset = nFeature_RNA > Cutoff$nFeature_cutoff_min & nFeature_RNA<Cutoff$nFeature_cutoff_max & nCount_RNA>Cutoff$nCount_cutoff & percent.mt < Cutoff$mt_cutoff)
+    filters$valid_num_cell=ncol(subobj)
+
+    if(ncol(subobj) == 0){
+      writeLines(paste0(cur_sample, " has no cells after filter."), paste0(cur_sample, ".nocell.txt"))
+      next
+    }
+
+    subobj <- NormalizeData(subobj)
+    subobj <- FindVariableFeatures(subobj, selection.method = "vst", nfeatures = 2000)
     
-    rRNA.genes <- grep(pattern = rRNApattern,  rownames(SCLC), value = TRUE)
-    Mt.genes<- grep (pattern= Mtpattern,rownames(SCLC), value=TRUE ) 
+    rRNA.genes <- grep(pattern = rRNApattern,  rownames(subobj), value = TRUE)
+    Mt.genes<- grep (pattern= Mtpattern,rownames(subobj), value=TRUE ) 
     
     if (Remove_Mt_rRNA) {
-      var.genes <- dplyr::setdiff(VariableFeatures(SCLC), c(rRNA.genes,Mt.genes))
+      var.genes <- dplyr::setdiff(VariableFeatures(subobj), c(rRNA.genes,Mt.genes))
     } else {
-      var.genes <- VariableFeatures(SCLC)
+      var.genes <- VariableFeatures(subobj)
     }
 
-    if (dim(SCLC)[2]>50){
-      SCLC <- ScaleData(SCLC, vars.to.regress = c("percent.mt"))
+    subobj <- ScaleData(subobj, vars.to.regress = c("percent.mt"))
+    
+    #find variable genes and store them in the var.genes
+    subobj <- RunPCA(subobj, features = var.genes)
+    subobj <- FindNeighbors(subobj, dims = 1:20)
+    subobj <- FindClusters(subobj, resolution = resolution)
+    subobj <- RunUMAP(subobj, dims = 1:20)
+    
+    #cat("\n\n## Cell clusters\n\n")
+    #cat("\n\n### ", "Fig.4 nGene,nUMI and mtRNA distribution in each cluster and PCA, UMAP results\n\n")
+    g1<-FeaturePlot(subobj, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T)
+    png(paste0(cur_sample, ".qc4.png"), width=3000, height=3000, res=300)
+    print(g1)
+    dev.off()
+
+    plot1<-ggplot(data=data.frame(cluster=subobj@active.ident,nUMI=subobj@meta.data$nCount_RNA),aes(x=cluster,y=nUMI))+geom_boxplot()+scale_y_log10()    + theme_bw()
+    plot2<-ggplot(data=data.frame(cluster=subobj@active.ident,ngene=subobj@meta.data$nFeature_RNA),aes(x=cluster,y=ngene))+geom_boxplot()+scale_y_log10() + theme_bw()
+    plot3<-ggplot(data=data.frame(cluster=subobj@active.ident,MtRNA=subobj@meta.data$percent.mt),aes(x=cluster,y=MtRNA))+geom_boxplot()   + theme_bw()
+    plot4<-ggplot(data=data.frame(cluster=subobj@active.ident),aes(x=cluster))+geom_bar(stat="count")+theme(axis.text.x = element_text(angle = 45))+ylab("nCells")+ggtitle(paste0("total cells:",dim(subobj)[2])) + theme_bw()
+
+    p<-plot1+plot2+plot3+plot4+plot_layout(ncol=4)
+    png(paste0(cur_sample, ".qc5.png"), width=4000, height=1000, res=300)
+    print(p)
+    dev.off()
+
+    plot5<-DimPlot(subobj, reduction = "pca",label=T,label.size=4) 
+    plot6<-DimPlot(subobj, reduction = "umap",label=T,label.size=4)
+    
+    #cat("\n\n### ", "Fig.5 Boxplot of nUMI,nGene, mtRNA and nCells distribution and PCA, UMAP results\n\n") 
+    p<-plot5+plot6+plot_layout(ncol = 2)
+    png(paste0(cur_sample, ".qc6.png"), width=2200, height=1000, res=300)
+    print(p)
+    dev.off()
+
+    if (Cutoff$cluster_remove!=""){
+      removeIdent<-(unlist((strsplit(Cutoff$cluster_remove,",")))) 
+      subobj<-subset(subobj,idents=removeIdent, invert=T)
+    }
+    
+    #cat("\n\n## Markers and cell type annotation\n\n")
+
+    ##predict method
+    if (!is.null(celltype_predictmethod) & length(levels(subobj@active.ident))>1 ) {
+      meanexp<-get_seurat_average_expression(subobj, "seurat_clusters")
+      if (nrow(meanexp)==1) meanexp<-t(meanexp)
+      predict_celltype<-ORA_celltype_qc(meanexp,cellType,method=celltype_predictmethod)
       
-      #find variable genes and store them in the var.genes
-      SCLC <- RunPCA(SCLC, features = var.genes)
-      SCLC <- FindNeighbors(SCLC, dims = 1:30)
-      SCLC <- FindClusters(SCLC, resolution = resolution)
-      ##
-      SCLC <- RunUMAP(SCLC, dims = 1:30)
+      #use the max_cta_score for each cluster
+      new.cluster.ids<-rownames(predict_celltype$predict_result)
+      names(new.cluster.ids) <- levels(subobj)
+      subobj$cell_type=new.cluster.ids[subobj$seurat_clusters]
       
-      cat("\n\n## Cell clusters\n\n")
-      cat("\n\n### ", "Fig.4 nGene,nUMI and mtRNA distribution in each cluster and PCA, UMAP results\n\n")
+      new.cluster.ids<-paste0(levels(subobj$seurat_clusters), ": ", rownames(predict_celltype$predict_result))
+      names(new.cluster.ids) <- levels(subobj)
+      subobj$seurat_cell_type=factor(new.cluster.ids[subobj$seurat_clusters], levels=new.cluster.ids)
+
+      Idents(subobj)<-"seurat_cell_type"
+      
+      #cat("\n\n### ", "Fig.6 UMAP result\n\n")
+      g<-DimPlot(subobj, reduction = "umap",label=T,label.size=6) + NoLegend()
+      png(paste0(cur_sample, ".qc7.png"), width=2000, height=2000, res=300)
+      print(g)
+      dev.off()
+
       if(has_hto){
-        g1<-FeaturePlot(SCLC, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T, split.by = "sample")
-      }else{
-        g1<-FeaturePlot(SCLC, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T)
-      }
-      subchunkify(g1, fig.height=15, fig.width=15)
-      
-      plot1<-ggplot(data=data.frame(cluster=SCLC@active.ident,nUMI=SCLC@meta.data$nCount_RNA),aes(x=cluster,y=nUMI))+geom_boxplot()+scale_y_log10()    + theme_bw()
-      plot2<-ggplot(data=data.frame(cluster=SCLC@active.ident,ngene=SCLC@meta.data$nFeature_RNA),aes(x=cluster,y=ngene))+geom_boxplot()+scale_y_log10() + theme_bw()
-      plot3<-ggplot(data=data.frame(cluster=SCLC@active.ident,MtRNA=SCLC@meta.data$percent.mt),aes(x=cluster,y=MtRNA))+geom_boxplot()   + theme_bw()
-      if(has_hto){
-        plot4<-ggplot(data=data.frame(cluster=SCLC@active.ident, sample=SCLC$sample),aes(x=cluster, fill=sample))+geom_bar(stat="count")+theme(axis.text.x = element_text(angle = 45))+ylab("nCells")+ggtitle(paste0("total cells:",dim(SCLC)[2])) + theme_bw() + theme(legend.position="top")
-      }else{
-        plot4<-ggplot(data=data.frame(cluster=SCLC@active.ident),aes(x=cluster))+geom_bar(stat="count")+theme(axis.text.x = element_text(angle = 45))+ylab("nCells")+ggtitle(paste0("total cells:",dim(SCLC)[2])) + theme_bw()
-      }
-      plot5<-DimPlot(SCLC, reduction = "pca",label=T,label.size=4) 
-      plot6<-DimPlot(SCLC, reduction = "umap",label=T,label.size=4)
-      
-      cat("\n\n### ", "Fig.5 Boxplot of nUMI,nGene, mtRNA and nCells distribution and PCA, UMAP results\n\n") 
-      p<-plot1+plot2+plot3+plot4+plot5+plot6+plot_layout(ncol = 3)
-      subchunkify(p, fig.height=10, fig.width=15)
-      
-      if (Cutoff$cluster_remove!=""){
-        removeIdent<-(unlist((strsplit(Cutoff$cluster_remove,",")))) 
-        SCLC<-subset(SCLC,idents=removeIdent, invert=T)
-      }
-      
-      cat("\n\n## Markers and cell type annotation\n\n")
-
-      ##predict method
-      if (!is.null(celltype_predictmethod) & length(levels(SCLC@active.ident))>1 ) {
-        meanexp<-get_seurat_average_expression(SCLC)
-        if (nrow(meanexp)==1) meanexp<-t(meanexp)
-        predict_celltype<-ORA_celltype(meanexp,cellType,method=celltype_predictmethod)
-        
-        #use the max_cta_score for each cluster
-        new.cluster.ids<-rownames(predict_celltype$predict_result)
-        names(new.cluster.ids) <- levels(SCLC)
-        SCLC$cell_type=new.cluster.ids[SCLC$seurat_clusters]
-        
-        new.cluster.ids<-paste0(levels(SCLC$seurat_clusters), ": ", rownames(predict_celltype$predict_result))
-        names(new.cluster.ids) <- levels(SCLC)
-        SCLC$seurat_cell_type=factor(new.cluster.ids[SCLC$seurat_clusters], levels=new.cluster.ids)
-
-        Idents(SCLC)<-"seurat_cell_type"
-        
-        cat("\n\n### ", "Fig.6 UMAP result\n\n")
-        g<-DimPlot(SCLC, reduction = "umap",label=T,label.size=6)
+        g<-DimPlot(subobj, reduction = "umap",label=T,label.size=3, split.by = "sample")
         subchunkify(g, fig.height=15, fig.width=15)
+      }
+      
+      subobj.markers <- FindAllMarkers(subobj, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+      subobj@misc$markers<-subobj.markers
+      
+      if('avg_log2FC' %in% colnames(subobj.markers)){
+        top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+      }else{
+        top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+      }
+      #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
+      top10gene<-unique(top10$gene)
+      if (length(top10gene)>200) {
+        genesize=5
+      } else {
+        if (length(top10gene)>100) {
+          genesize=6
+        }  else {
+          genesize=7
+        } 
+      }
+      
+      subobj<-myScaleData(subobj, top10gene, "RNA")
+      
+      #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
+      #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
+      g<-DoHeatmap(subobj, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
+      png(paste0(cur_sample, ".heatmap.png"), width=4000, height=4000, res=300)
+      print(g)
+      dev.off()
 
-        if(has_hto){
-          g<-DimPlot(SCLC, reduction = "umap",label=T,label.size=3, split.by = "sample")
-          subchunkify(g, fig.height=15, fig.width=15)
-        }
+      # subobj@misc$Qcluster <- EvalCluster(subobj)
+      # ViewQcluster(SCLC)
+      # cat("\n\n")
+      # print(kable(subobj@misc$Qcluster))
+      # cat("\n\n")
+      
+      # Doheatmap_cellmarker_cellType(SCLC,top10,cellType,predict_celltype)
+      # def.par <- par(no.readonly = TRUE) 
+      #   layout(matrix(c(1,2), 1, 2, byrow = TRUE))
+      #   Plot_predictcelltype(predict_celltype,method="cta")
+      #   Plot_predictcelltype(predict_celltype,method="ora")
+      # par(def.par)
+      
+      if(has_bubble_file){
+        genes<-read_bubble_genes(bubble_file, rownames(subobj))
+        ugenes<-unique(genes$gene)
         
-        SCLC.markers <- FindAllMarkers(SCLC, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
-        SCLC@misc$markers<-SCLC.markers
+        #cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
         
-        if('avg_log2FC' %in% colnames(SCLC.markers)){
-          top10 <- SCLC.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
-        }else{
-          top10 <- SCLC.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-        }
-        #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
-        top10gene<-unique(top10$gene)
-        if (length(top10gene)>200) {
-          genesize=5
-        } else {
-          if (length(top10gene)>100) {
-            genesize=6
-          }  else {
-            genesize=7
-          } 
-        }
-        
-        SCLC<-myScaleData(SCLC, top10gene, "RNA")
-        
-        #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
-        cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-        g<-DoHeatmap(SCLC, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
-        subchunkify(g, fig.height=15, fig.width=15)
-        
-        ##
-        # SCLC@misc$Qcluster <- EvalCluster(SCLC)
-        # ViewQcluster(SCLC)
-        # cat("\n\n")
-        # print(kable(SCLC@misc$Qcluster))
-        # cat("\n\n")
-        
-        # Doheatmap_cellmarker_cellType(SCLC,top10,cellType,predict_celltype)
-        # def.par <- par(no.readonly = TRUE) 
-        #   layout(matrix(c(1,2), 1, 2, byrow = TRUE))
-        #   Plot_predictcelltype(predict_celltype,method="cta")
-        #   Plot_predictcelltype(predict_celltype,method="ora")
-        # par(def.par)
-        
-        if(has_bubble_file){
-          genes<-read_bubble_genes(bubble_file, rownames(SCLC))
-          ugenes<-unique(genes$gene)
-          
-          cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
-          
-          SCLC<-myScaleData(SCLC, ugenes, "RNA")
+        subobj<-myScaleData(subobj, ugenes, "RNA")
 
-          g<-DoHeatmap(SCLC, assay="RNA",features=ugenes)
-          subchunkify(g, fig.height=15, fig.width=15)
-          
-          gene_groups=split(genes$gene, genes$cell_type)
-          
-          genes=unique(unlist(gene_groups))
-          g<-DotPlot(SCLC, assay="RNA", features=genes)
-          gdata<-g$data
-          
-          data.plot<-NULL
-          gn=names(gene_groups)[1]
-          for(gn in names(gene_groups)){
-            gs=gene_groups[[gn]]
-            gdd<-gdata[gdata$features.plot %in% gs,]
-            if(nrow(gdd)== 0){
-              stop(gn)
-            }
-            gdd$feature.groups=gn
-            data.plot<-rbind(data.plot, gdd)
-          }
-          
-          data.plot$feature.groups=factor(data.plot$feature.groups, levels=names(gene_groups))
-          
-          color.by <- "avg.exp.scaled"
-          scale.func <- scale_radius
-          scale.min = NA
-          scale.max = NA
-          dot.scale = 6
-          cols = c("lightgrey", "blue")
-          
-          library(cowplot)
-          plot <- ggplot(data = data.plot, mapping = aes_string(x = "features.plot", y = "id")) + 
-            geom_point(mapping = aes_string(size = "pct.exp", color = color.by)) + 
-            scale.func(range = c(0, dot.scale), limits = c(scale.min, scale.max)) + 
-            theme(axis.title.x = element_blank(), axis.title.y = element_blank()) + guides(size = guide_legend(title = "Percent Expressed")) +
-            labs(x = "Features", y = "Identity") +
-            theme_cowplot() + 
-            facet_grid(facets = ~feature.groups, scales = "free_x", space = "free_x", switch = "y") + 
-            theme(panel.spacing = unit(x = 1,units = "lines"), strip.background = element_blank()) + 
-            scale_color_gradient(low = cols[1], high = cols[2])
-          
-          g=plot + 
-            xlab("") + ylab("") + theme_bw() + theme(plot.title = element_text(hjust = 0.5), 
-                                                     axis.text.x = element_text(angle = 90, hjust=1, vjust=0.5),
-                                                     strip.background = element_blank(),
-                                                     strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
-          cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
-          subchunkify(g, fig.height=10, fig.width=15)
-          cat("<br><br>\n\n\n")
-        }
+        g<-DoHeatmap(subobj, assay="RNA",features=ugenes)
+        png(paste0(cur_sample, ".bubble_heatmap.png"), width=4000, height=4000, res=300)
+        print(g)
+        dev.off()
+
+        g<-get_bubble_plot(subobj, NULL, NULL, bubble_file, assay="RNA", group.by="seurat_cell_type") + theme(text = element_text(size=20))
+        #cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
+        png(paste0(cur_sample, ".bubble.png"), width=6000, height=3000, res=300)
+        print(g)
+        dev.off()
       }
     }
 
-    info=list("preprocess"=filters, "meta"=SCLC@meta.data)
+    info[[cur_sample]]=list("preprocess"=filters, "meta"=subobj@meta.data)
   }
   
-  result=list(info)
-  names(result)<-sampleid
-  return(result)
+  setwd(cur_folder)
+
+  return(info)
 }
 
 savelevel3and4<-function(SCLC,SampleInfo,Cutoff,resolution,outputdir) {
