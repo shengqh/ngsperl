@@ -106,12 +106,9 @@ for (i in 1:nrow(SampleInfos)) {
   object.list<-c(object.list, info)
 }
 
-save(object.list,file=paste0("objectlist.Rdata"))
-#load("objectlist.Rdata")
+saveRDS(object.list,file=paste0("objectlist.rds"))
 
 stats<-lapply(object.list, function(x){unlist(x$preprocess)})
 stats_df<-data.frame(do.call(rbind, stats))
 colnames(stats_df)<-gsub("preprocess.","",colnames(stats_df))
 write.table(stats_df, file="qc_filter_config.txt", sep="\t", row.names=F)
-
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
