@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use File::Basename;
+use File::Copy;
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -45,6 +46,25 @@ sub getSuffix {
     $suffix = $suffix . "_fdr" . $pvalue;
   }
   return $suffix;
+}
+
+sub output_report {
+  my ( $task_name, $pbs_dir, $result_dir ) = @_;
+
+  copy(dirname(__FILE__) . "/DESeq2.rmd",  "$result_dir/DESeq2.rmd");
+  copy(dirname(__FILE__) . "/../CQS/reportFunctions.R",  "$result_dir/reportFunctions.R");
+
+  my $rmd_command = "Rscript --vanilla -e \"library('rmarkdown');rmarkdown::render('DESeq2.rmd',output_file='${task_name}.deseq2.html')\"";
+  my $report_sh = "$pbs_dir/report.sh";
+  open( my $rs, ">$report_sh" ) or die $!;
+  print $rs "
+cd $result_dir
+
+$rmd_command
+";
+  close($rs);
+
+  return($rmd_command);
 }
 
 sub perform {
@@ -289,6 +309,9 @@ libraryKey<-\"$libraryKey\"
   my $pbs                = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
   print $pbs "R --vanilla -f $rfile \n";
+
+  my $rmd_cmd = output_report($task_name, $pbs_dir, $result_dir);
+  print $pbs "\n$rmd_cmd \n";
 
   $self->close_pbs( $pbs, $pbs_file );
 }

@@ -92,8 +92,8 @@ check_and_include_graphics<-function(graphicFile) {
   }
 }
 
-printTable<-function(filepath){
-  tbl<-read.csv(filepath, check.names=F, row.names=1)
+printTable<-function(filepath, row.names=1){
+  tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
   print(kable_styling(kable(tbl)))
 }
 

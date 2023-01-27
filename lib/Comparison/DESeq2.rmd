@@ -1,0 +1,108 @@
+---
+title: "DESeq2 differential expression analysis"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+library(knitr)
+source("reportFunctions.R")
+
+find_file<-function(pattern, stop_if_not_found=FALSE, filter_pattern=NULL){
+  result_files = list.files(".", pattern)
+  if(length(result_files) == 0){
+    if(stop_if_not_found){
+      stop(paste0("No file with pattern ", pattern, " found."))
+    }
+    return(NULL)
+  }
+
+  if(!is.null(filter_pattern)){
+    result_files = result_files[grepl(filter_pattern, result_files)]
+  }
+
+  if(length(result_files) > 1){
+    return(result_files[1])
+  }
+  return(result_files)
+}
+
+define_file = find_file("*.define$", stop_if_not_found=TRUE)
+task_name = gsub(".define", "", define_file)
+
+define_data<-read.table(define_file, sep="\t", header=T)
+```
+
+# DESeq2 result summary
+
+```{r, echo=FALSE}
+sig_summary_file = find_file("*_DESeq2_sigGeneSummary.csv", stop_if_not_found=TRUE)
+sig_summary = read.csv(sig_summary_file)
+print(kable_styling(kable(sig_summary)))
+```
+
+```{r, echo=FALSE}
+resFile<-"comp.Rmd"
+figureRmd<-function(define_data){
+  result<-""
+
+  design_file_map <- unlist(split(define_data$ConditionFile, define_data$ComparisonName))
+  comparisons<-names(design_file_map)
+
+  comp=comparisons[1]
+  for(comp in comparisons){
+    result<-paste0(result, "\n# ", comp, "\n\n")
+    design_file = design_file_map[comp]
+    design_data = read.table(design_file, sep="\t", header=T)
+
+    result<-paste0(result, "\n## Comparison design\n\n")
+    result<-paste0(result, kable(design_data))
+
+    sig_csv = find_file("*_sig.csv", FALSE, paste0(comp, "_min"))
+    sig_res = read.csv(sig_csv, row.names=1)
+    sig_res = head(sig_res, min(10, nrow(sig_res)))
+    result<-paste0(result, paste0("\n## Top ", nrow(sig_res), " significantly differential expressed genes\n\n"))
+    result<-paste0(result, kable(sig_res))
+
+    volcanoEnhanced_png = find_file("_DESeq2_volcanoEnhanced.png", FALSE, paste0(comp, "_min"))
+    if(!is.null(volcanoEnhanced_png)){
+      result<-paste0(result, "\n## Volcano plot\n\n")
+      result<-paste0(result, getFigure(volcanoEnhanced_png))
+    }
+
+    heatmap_png = find_file("*_geneAll_DESeq2-vsd-heatmap.png", FALSE, paste0(comp, "_min"))
+    if(!is.null(heatmap_png)){
+      result<-paste0(result, "\n## Heatmap plot\n\n")
+      result<-paste0(result, getFigure(heatmap_png))
+    }
+
+    pca_png = find_file("*_geneAll_DESeq2-vsd-pca.png", FALSE, paste0(comp, "_min"))
+    if(!is.null(pca_png)){
+      result<-paste0(result, "\n## PCA plot\n\n")
+      result<-paste0(result, getFigure(pca_png))
+    }
+  }
+
+  return(result)
+}
+cat(figureRmd(define_data), file=resFile)
+```
+
+```{r, child=resFile} 
+```
