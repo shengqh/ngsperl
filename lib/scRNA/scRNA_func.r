@@ -1625,45 +1625,51 @@ output_celltype_figures<-function(obj,
                                   cell_identity_order=NULL,
                                   all_umap="umap",
                                   cell_identity_umap="umap"){
-  if(group.by != "batch"){
-    if(is.null(cell_identity_order)){
-      g<-get_bubble_plot( obj = obj, 
-                          cur_res = NULL, 
-                          cur_celltype = cell_identity, 
-                          bubblemap_file = bubblemap_file, 
-                          assay = "RNA", 
-                          orderby_cluster = T)
-    }else{
-      g<-get_bubble_plot( obj = obj, 
-                          cur_res = NULL, 
-                          cur_celltype = cell_identity, 
-                          bubblemap_file = bubblemap_file, 
-                          assay = "RNA", 
-                          orderby_cluster = FALSE,
-                          group.by = cell_identity)
-    }
 
-    png(paste0(prefix, ".", cell_identity, ".dot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
-    print(g)
-    dev.off()
+  nct<-length(unique(unlist(obj[[cell_identity]])))
 
-    if(is.null(cell_identity_order)){
-      g<-get_dim_plot_labelby(obj = obj, 
-                              label.by = cell_identity, 
-                              title = "",
-                              reduction = all_umap, 
-                              legend.title = "")
-    }else{
-      g<-get_dim_plot(obj = obj,
-                      group.by = cell_identity_order,
-                      label.by = cell_identity, 
-                      title = "",
-                      reduction = all_umap, 
-                      legend.title = "")
+  if(is.null(cell_identity_order)){
+    g<-get_dim_plot_labelby(obj = obj, 
+                            label.by = cell_identity, 
+                            title = "",
+                            reduction = all_umap, 
+                            legend.title = "")
+  }else{
+    g<-get_dim_plot(obj = obj,
+                    group.by = cell_identity_order,
+                    label.by = cell_identity, 
+                    title = "",
+                    reduction = all_umap, 
+                    legend.title = "")
+  }
+  png(paste0(prefix, ".", cell_identity, ".umap.png"), width=umap_width, height=2000, res=300)
+  print(g)
+  dev.off()
+
+
+  if(nct > 1){
+    if(group.by != "batch"){
+      if(is.null(cell_identity_order)){
+        g<-get_bubble_plot( obj = obj, 
+                            cur_res = NULL, 
+                            cur_celltype = cell_identity, 
+                            bubblemap_file = bubblemap_file, 
+                            assay = "RNA", 
+                            orderby_cluster = T)
+      }else{
+        g<-get_bubble_plot( obj = obj, 
+                            cur_res = NULL, 
+                            cur_celltype = cell_identity, 
+                            bubblemap_file = bubblemap_file, 
+                            assay = "RNA", 
+                            orderby_cluster = FALSE,
+                            group.by = cell_identity)
+      }
+
+      png(paste0(prefix, ".", cell_identity, ".dot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
+      print(g)
+      dev.off()
     }
-    png(paste0(prefix, ".", cell_identity, ".umap.png"), width=umap_width, height=2000, res=300)
-    print(g)
-    dev.off()
 
     if(!all(is.na(cell_activity_database))){
       g<-get_celltype_marker_bubble_plot( obj = obj, 

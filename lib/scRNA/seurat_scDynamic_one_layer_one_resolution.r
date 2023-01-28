@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='P9270'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_harmony/result/crs.final.rds'
+parFile1='/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/seurat_sct_merge/result/P9270.final.rds'
 parFile2=''
-parFile3='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
+parFile3='/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/essential_genes/result/P9270.txt'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_harmony_dynamic_01_res0.2_call/result')
+setwd('/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/seurat_sct_merge_dr0.5_individual/result')
 
 ### Parameter setting end ###
 
@@ -475,26 +475,28 @@ do_analysis<-function(tmp_folder,
 
   save_umap(paste0(prefix, ".scDynamic.umap"), obj)
 
-  #find markers for all cell types
-  all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
-  all_top10<-get_top10_markers(all_markers)
-  all_top10<-unique(all_top10$gene)
+  if(length(unique(obj$layer4)) > 1){
+    #find markers for all cell types
+    all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+    all_top10<-get_top10_markers(all_markers)
+    all_top10<-unique(all_top10$gene)
 
-  obj<-myScaleData(obj, all_top10, "RNA")
-  if(ncol(obj) > 5000){
-    subsampled <- obj[, sample(colnames(obj), size=5000, replace=F)]
-    g<-DoHeatmap(subsampled, assay="RNA", group.by="layer4", features=all_top10)
-    rm(subsampled)
-  }else{
-    g<-DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10)
+    obj<-myScaleData(obj, all_top10, "RNA")
+    if(ncol(obj) > 5000){
+      subsampled <- obj[, sample(colnames(obj), size=5000, replace=F)]
+      g<-DoHeatmap(subsampled, assay="RNA", group.by="layer4", features=all_top10)
+      rm(subsampled)
+    }else{
+      g<-DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10)
+    }
+
+    width<-max(5000, min(10000, length(unique(Idents(obj))) * 400 + 1000))
+    height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
+    png(paste0(prefix, ".layer4.heatmap.png"), width=width, height=height, res=300)
+    print(g)
+    dev.off()
   }
-
-  width<-max(5000, min(10000, length(unique(Idents(obj))) * 400 + 1000))
-  height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
-  png(paste0(prefix, ".layer4.heatmap.png"), width=width, height=height, res=300)
-  print(g)
-  dev.off()
-
+  
   output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="orig.ident", name="sample")
 
   if(!by_individual_sample){
@@ -533,15 +535,14 @@ do_analysis<-function(tmp_folder,
     }
   }
 
-
   obj$seurat_layer4=paste0(obj$layer4_clusters, ": ", obj$layer4_raw)
-  g<-get_dim_plot(subobj, group.by="layer4_clusters", label.by="seurat_layer4", reduction="umap", legend.title="")
 
-  png(paste0(prefix, ".", cur_celltype, ".", celltype_to_filename(pct), ".umap.png"), width=2400, height=2000, res=300)
+  cur_celltype="layer4"
+  g<-get_dim_plot(obj, group.by="layer4_clusters", label.by="seurat_layer4", reduction="umap", legend.title="")
+  png(paste0(prefix, ".", cur_celltype, ".umap.png"), width=2400, height=2000, res=300)
   print(g)
   dev.off()
 
-  cur_celltype="layer4"
   for(pct in unique(unlist(obj[[cur_celltype]]))){
     cells=colnames(obj)[obj[[cur_celltype]] == pct]
     subobj=subset(obj, cells=cells)
@@ -584,7 +585,7 @@ if(by_individual_sample){
   result_list = c()
   all_ct_counts = NULL
 
-  sample=samples[1]
+  sample=samples[2]
   for (sample in samples){
     cat("processing ", sample, "...\n")
     cur_folder = paste0(root_folder, "/", sample)
@@ -605,6 +606,13 @@ if(by_individual_sample){
     file.copy(paste0(root_folder, "/reportFunctions.R"), paste0(cur_folder, "/reportFunctions.R"), overwrite = TRUE)
 
     subobj<-subset(obj, cells=colnames(obj)[obj@meta.data$orig.ident==sample])
+
+    #remove genes without count
+    sub_counts<-subobj@assays$RNA@counts
+    rc<-rowSums(sub_counts)
+    rc<-rc[rc>0]
+    rm(sub_counts)
+    subobj <- subset(subobj, features = names(rc))
 
     if(0){#for test
       subobj=subset(subobj, cells=colnames(subobj)[1:2000])
@@ -672,4 +680,3 @@ if(by_individual_sample){
                           essential_genes = essential_genes,
                           by_individual_sample = 0);
 }
-
