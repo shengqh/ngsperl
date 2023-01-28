@@ -402,7 +402,7 @@ layer_cluster_celltype<-function(obj,
   dev.off()
 
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay)
+    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay="RNA")
     g<-g+g2+plot_layout(ncol = 2, widths = c(3, 5))
     width=6400
   }else{
