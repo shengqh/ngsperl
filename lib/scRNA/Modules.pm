@@ -125,6 +125,7 @@ sub add_seurat_rawdata {
       species               => getValue( $def, "species" ),
       pool_sample           => getValue( $def, "pool_sample" ),
       hto_sample_file       => $hto_sample_file,
+      ensembl_gene_map_file => $def->{ensembl_gene_map_file},
     },
     parameterSampleFile3 => $def->{"pool_sample_groups"},
     parameterSampleFile4_ref => $hto_ref,
