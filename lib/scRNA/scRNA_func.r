@@ -17,6 +17,16 @@ check_mc_cores<-function(mc.cores) {
   return(mc.cores)
 }
 
+to_numeric<-function(value, defaultValue){
+  if(is.null(value)){
+    return(defaultValue)
+  }
+  if(is.na(value)){
+    return(defaultValue)
+  }
+  return(as.numeric(value))
+}
+
 is_one<-function(value, defaultValue=FALSE){
   if(is.null(value)){
     return(defaultValue)

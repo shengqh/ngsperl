@@ -250,14 +250,16 @@ preprocess<-function( SampleInfo,
                       Ensemblfile=NULL, 
                       hto_map=list(),
                       tag_tb=NULL,
-                      bubble_file="") {
+                      bubblemap_file="",
+                      bubblemap_width=6000,
+                      bubblemap_height=3000) {
 
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
   
-  has_bubble_file<-!is.null(bubble_file)
-  if(has_bubble_file){
-    has_bubble_file=file.exists(bubble_file)
+  has_bubblemap_file<-!is.null(bubblemap_file)
+  if(has_bubblemap_file){
+    has_bubblemap_file=file.exists(bubblemap_file)
   }
   
   lst = read_scrna_data(countfile)
@@ -451,11 +453,6 @@ preprocess<-function( SampleInfo,
       print(g)
       dev.off()
 
-      if(has_hto){
-        g<-DimPlot(subobj, reduction = "umap",label=T,label.size=3, split.by = "sample")
-        subchunkify(g, fig.height=15, fig.width=15)
-      }
-      
       subobj.markers <- FindAllMarkers(subobj, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
       subobj@misc$markers<-subobj.markers
       
@@ -498,8 +495,8 @@ preprocess<-function( SampleInfo,
       #   Plot_predictcelltype(predict_celltype,method="ora")
       # par(def.par)
       
-      if(has_bubble_file){
-        genes<-read_bubble_genes(bubble_file, rownames(subobj))
+      if(has_bubblemap_file){
+        genes<-read_bubble_genes(bubblemap_file, rownames(subobj))
         ugenes<-unique(genes$gene)
         
         #cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
@@ -511,9 +508,9 @@ preprocess<-function( SampleInfo,
         print(g)
         dev.off()
 
-        g<-get_bubble_plot(subobj, NULL, NULL, bubble_file, assay="RNA", group.by="seurat_cell_type") + theme(text = element_text(size=20))
+        g<-get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay="RNA", group.by="seurat_cell_type") + theme(text = element_text(size=20))
         #cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
-        png(paste0(cur_sample, ".bubble.png"), width=6000, height=3000, res=300)
+        png(paste0(cur_sample, ".bubble.png"), width=bubblemap_width, height=bubblemap_height, res=300)
         print(g)
         dev.off()
       }

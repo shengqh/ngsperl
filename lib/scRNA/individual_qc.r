@@ -34,6 +34,10 @@ myoptions$pca_dims=as.numeric(myoptions$pca_dims)
 myoptions$resolution=as.numeric(myoptions$resolution)
 myoptions$Remove_MtRNA=is_one(myoptions$Remove_MtRNA)
 myoptions$Remove_rRNA=is_one(myoptions$Remove_rRNA)
+
+myoptions$bubblemap_width=to_numeric(myoptions$bubblemap_width, 6000)
+myoptions$bubblemap_height=to_numeric(myoptions$bubblemap_height, 3000)
+
 Mtpattern=myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
 Remove_Mt_rRNA=myoptions$Remove_MtRNA
@@ -87,7 +91,6 @@ i=1
 for (i in 1:nrow(SampleInfos)) {
   SampleInfo<-SampleInfos[i,]
   Cutoff<-Cutoffs[i,]
-  bubble_file=myoptions$bubblemap_file
   Ensemblfile=NULL
   info<-preprocess( SampleInfo = SampleInfo,
                     Cutoff = Cutoff,
@@ -101,7 +104,9 @@ for (i in 1:nrow(SampleInfos)) {
                     hto_map = hto_map,
                     tag_tb = tag_tb,
                     Ensemblfile = Ensemblfile,
-                    bubble_file = bubble_file)
+                    bubblemap_file = myoptions$bubblemap_file,
+                    bubblemap_width = myoptions$bubblemap_width,
+                    bubblemap_height = myoptions$bubblemap_height)
   
   object.list<-c(object.list, info)
 }
