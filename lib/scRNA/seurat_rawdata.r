@@ -1,15 +1,14 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='P9270'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
+parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230115_combined_scRNA_hg38/seurat_rawdata/result')
+setwd('/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -32,6 +31,16 @@ hemoglobinPattern=myoptions$hemoglobinPattern
 
 species=myoptions$species
 pool_sample<-ifelse(myoptions$pool_sample == "0", FALSE, TRUE)
+
+if("ensembl_gene_map_file" %in% names(myoptions)){
+  ensembl_gene_map_file = myoptions$ensembl_gene_map_file
+  gene_tb=read.table(ensembl_gene_map_file, sep="\t", header=T)
+  gene_tb=gene_tb[!duplicated(gene_tb$ENSEMBL_GENE_ID),]
+  gene_tb=gene_tb[gene_tb$ENSEMBL_GENE_ID != "",]
+  ensembl_map = split(gene_tb$GENE_SYMBOL, gene_tb$ENSEMBL_GENE_ID)
+}else{
+  ensembl_map=NULL
+}
 
 hto_str = ""
 hto_data = list()
@@ -165,6 +174,17 @@ for(fileTitle in names(fileMap)) {
     }
   }
 
+  rs<-rowSums(counts)
+  counts<-counts[rs>0,]
+
+  if(!is.null(ensembl_map)){
+    gtf_counts<-counts[!(rownames(counts) %in% names(ensembl_map)),]
+    ensembl_counts<-counts[(rownames(counts) %in% names(ensembl_map)),]
+    gene_names<-unlist(ensembl_map[rownames(ensembl_counts)])
+    gene_counts<-DelayedArray::rowsum(ensembl_counts, gene_names)
+    counts<-rbind(gtf_counts, gene_counts)
+  }
+
   if (species=="Mm") {
     rownames(counts)<-toMouseGeneSymbol(rownames(counts))
   }
@@ -275,4 +295,3 @@ if(length(rawobjs) == 1){
 rm(rawobjs)
 
 output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
