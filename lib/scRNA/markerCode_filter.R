@@ -365,7 +365,7 @@ preprocess<-function( SampleInfo,
   
     #cat("\n\n### ", "Fig.3  nUMI distribution\n\n")
     p<-plot3+plot4
-    png(paste0(cur_sample, ".qc3.png"), width=3000, height=1500, res=300)
+    png(paste0(cur_sample, ".qc3.png"), width=3000, height=1200, res=300)
     print(p)
     dev.off()
 
@@ -400,7 +400,7 @@ preprocess<-function( SampleInfo,
     #cat("\n\n## Cell clusters\n\n")
     #cat("\n\n### ", "Fig.4 nGene,nUMI and mtRNA distribution in each cluster and PCA, UMAP results\n\n")
     g1<-FeaturePlot(subobj, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T)
-    png(paste0(cur_sample, ".qc4.png"), width=3000, height=3000, res=300)
+    png(paste0(cur_sample, ".qc4.png"), width=3000, height=2600, res=300)
     print(g1)
     dev.off()
 
@@ -448,8 +448,8 @@ preprocess<-function( SampleInfo,
       Idents(subobj)<-"seurat_cell_type"
       
       #cat("\n\n### ", "Fig.6 UMAP result\n\n")
-      g<-DimPlot(subobj, reduction = "umap",label=T,label.size=6) + NoLegend()
-      png(paste0(cur_sample, ".qc7.png"), width=2000, height=2000, res=300)
+      g<-DimPlot(subobj, reduction = "umap",label=T,label.size=4) + NoLegend()
+      png(paste0(cur_sample, ".qc7.png"), width=1500, height=1500, res=300)
       print(g)
       dev.off()
 
