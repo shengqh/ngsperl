@@ -24,6 +24,9 @@ to_numeric<-function(value, defaultValue){
   if(is.na(value)){
     return(defaultValue)
   }
+  if(value == ""){
+    return(defaultValue)
+  }
   return(as.numeric(value))
 }
 
@@ -88,7 +91,7 @@ theme_bw3 <- function (axis.x.rotate=F) {
       axis.line = element_line(colour = "black", size = 0.5)
     )
   if (axis.x.rotate){
-    result = result + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+    result = result + theme_rotate_x_axis_label()
   }
 
   return(result)
