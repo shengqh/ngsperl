@@ -435,6 +435,7 @@ preprocess<-function( SampleInfo,
       meanexp<-get_seurat_average_expression(subobj, "seurat_clusters")
       if (nrow(meanexp)==1) meanexp<-t(meanexp)
       predict_celltype<-ORA_celltype_qc(meanexp,cellType,method=celltype_predictmethod)
+      saveRDS(predict_celltype, paste0(cur_sample, ".ct.rds"))
       
       #use the max_cta_score for each cluster
       new.cluster.ids<-rownames(predict_celltype$predict_result)
