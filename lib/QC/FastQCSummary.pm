@@ -51,7 +51,10 @@ sub perform {
 
   my $rmdfile = $task_name . ".FastQC.Rmd";
   copy($rmd_script, $result_dir . "/" . $rmdfile) or die "Copy failed: $!";
-  
+
+  my $reportFunctions = dirname(dirname(__FILE__)) . "/CQS/reportFunctions.R";
+  copy($reportFunctions, $result_dir . "/reportFunctions.R") or die "Copy failed: $! : $reportFunctions";
+
   my $fastqc_file_list = "fileList1.txt";
   save_parameter_sample_file( $config, $section, "source", "${result_dir}/$fastqc_file_list" );
 

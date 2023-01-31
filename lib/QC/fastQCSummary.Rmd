@@ -1,27 +1,19 @@
 ---
 title: "FastQC Summary Report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
-  html_document:
-    toc: true
+  rmdformats::readthedown:
     toc_depth: 2
     number_sections: true
 ---
 
-<style type="text/css">
-.main-container {
-  max-width: 90%;
-  margin-left: auto;
-  margin-right: auto;
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
 }
-</style>
+```
 
- 
-<style type="text/css">
-  div.datatables { height: auto !important;}
-</style>
-  
-  
-```{r functions, include=FALSE}
+```{r setup, include=FALSE}
 library(knitr)
 library(reshape2)
 library(ggplot2)
@@ -30,89 +22,50 @@ library(DT)
 library(RCurl)
 library(htmltools)
 
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo=FALSE, results="asis", warning=FALSE)
+options(knitr.graphics.rel_path = FALSE)
 
-addLinkTag<-function(text,link) {
-  result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
-  return(result)
-}
-
-figRef <- local({
-  tag <- numeric()
-  created <- logical()
-  used <- logical()
-  function(label, caption, prefix = options("figcap.prefix"), 
-           sep = options("figcap.sep"), prefix.highlight = options("figcap.prefix.highlight"), trunk.eval=TRUE) {
-    if(trunk.eval){ 
-      i <- which(names(tag) == label)
-      if (length(i) == 0) {
-        i <- length(tag) + 1
-        tag <<- c(tag, i)
-        names(tag)[length(tag)] <<- label
-        used <<- c(used, FALSE)
-        names(used)[length(used)] <<- label
-        created <<- c(created, FALSE)
-        names(created)[length(created)] <<- label
-      }
-      if (!missing(caption)) {
-        created[label] <<- TRUE
-        paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
-               " ", caption)
-      } else {
-        used[label] <<- TRUE
-        paste(prefix, tag[label])
-      }
-    }
-  }
-})
-options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
-
-
-tabRef <- local({
-  tag <- numeric()
-  created <- logical()
-  used <- logical()
-  function(label, caption, prefix = options("tabcap.prefix"), 
-           sep = options("tabcap.sep"), prefix.highlight = options("tabcap.prefix.highlight"), trunk.eval=TRUE) {
-    if(trunk.eval){
-      i <- which(names(tag) == label)
-      if (length(i) == 0) {
-        i <- length(tag) + 1
-        tag <<- c(tag, i)
-        names(tag)[length(tag)] <<- label
-        used <<- c(used, FALSE)
-        names(used)[length(used)] <<- label
-        created <<- c(created, FALSE)
-        names(created)[length(created)] <<- label
-      }
-      if (!missing(caption)) {
-        created[label] <<- TRUE
-        paste0(prefix.highlight, prefix, " ", i, sep, prefix.highlight, 
-              " ", caption)
-      } else {
-        used[label] <<- TRUE
-        paste(prefix, tag[label])
-      }
-    }
-  }
-})
-options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
-
-check_and_include_graphics<-function(graphicFile) {
-  if (file.exists(graphicFile)) {
-    include_graphics(graphicFile)
-  }
-}
-
+source("reportFunctions.R")
 ```
 
-```{r setup, include=FALSE}
-files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
-
-getFigure<-function(filename, fileKey, fileDescription){
-  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", fileKey, "', '", fileDescription, "')}\n",
-"  check_and_include_graphics(\"", filename, "\")\n```\n"))
+```{r, include=FALSE}
+has_fileList2 = file.exists("fileList2.txt")
+if(has_fileList2){
+  option_tb=read.table("fileList2.txt", sep="\t", header=FALSE)
+  myoptions=split(option_tb$V1, option_tb$V2)
+  prefix = paste0(myoptions$task_name, ".FastQC")
 }
+```
+
+
+```{r, echo=FALSE, eval=has_fileList2}
+cat("\n# Overall\n\n")
+cat("\n## Summary\n\n")
+include_graphics(paste0(prefix, ".summary.tsv.png"))
+```
+
+```{r, echo=FALSE, results="asis", eval=has_fileList2}
+cat("\n## Adapter\n\n")
+include_graphics(paste0(prefix, ".adapter.tsv.png"))
+```
+
+```{r, echo=FALSE, results="asis", eval=has_fileList2}
+cat("\n## Base quality\n\n")
+include_graphics(paste0(prefix, ".baseQuality.tsv.png"))
+```
+
+```{r, echo=FALSE, results="asis", eval=has_fileList2}
+cat("\n## Sequence GC\n\n")
+include_graphics(paste0(prefix, ".sequenceGC.tsv.png"))
+```
+
+```{r, echo=FALSE, eval=has_fileList2}
+cat("\n## Reads\n\n")
+include_graphics(paste0(prefix, ".reads.tsv.png"))
+```
+
+```{r, echo=FALSE}
+files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 
 figureFile<-"figures.Rmd"
 cnames=c("per_base_quality", "per_base_sequence_content", "per_sequence_quality", "per_sequence_gc_content", "per_tile_quality", "adapter_content")
@@ -122,7 +75,7 @@ figureRmd<-function(files, section){
   i<-1
   for(i in c(1:length(dnames))){
     dname = dnames[i]
-    result<-paste0(result, "\n# ", dname, "\n\n")
+    result<-paste0(result, "\n## ", dname, "\n\n")
 
     dfiles<-files[files$V2 == dname,,drop=F]
     j<-1
@@ -131,7 +84,7 @@ figureRmd<-function(files, section){
       folder = dirname(dfile)
       fname = basename(folder)
       fname = gsub("_fastqc", "", fname)
-      result<-paste0(result, "\n## ", fname, "\n\n")
+      result<-paste0(result, "\n### ", fname, "\n\n")
 
       imagefolder = paste0(folder, "/Images/")
       images<-paste0(imagefolder, cnames, ".png")
@@ -144,8 +97,9 @@ figureRmd<-function(files, section){
   return(result)
 }
 cat(figureRmd(files, "#"), file=figureFile)
-
 ```
+
+# Individual samples
 
 ```{r, child=figureFile} 
 ```
