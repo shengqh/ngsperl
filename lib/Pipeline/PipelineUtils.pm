@@ -219,26 +219,57 @@ sub addFastQC {
       "mem"      => "10gb"
     },
   };
+  push @$individual, $fastqcTask;
 
   my $summaryTask = $fastqcTask . "_summary";
-
-  $config->{$summaryTask} = {
-    class      => "QC::FastQCSummary",
-    perform    => 1,
-    target_dir => $parentDir . "/" . getNextFolderIndex($def) . $summaryTask,
-    option     => "",
-    cluster    => $def->{cluster},
-    source_ref => [$fastqcTask, "data.txt"],
-    sh_direct  => 1,
-    can_result_be_empty_file => 1,
-    pbs        => {
-#      "email"    => $def->{email},
-      "nodes"    => "1:ppn=1",
-      "walltime" => "2",
-      "mem"      => "10gb"
-    },
-  };
-  push @$individual, $fastqcTask;
+  if(getValue($def, "use_old_fastq_summary", 0)){
+    $config->{$summaryTask} = {
+      class      => "QC::FastQCSummary",
+      perform    => 1,
+      target_dir => $parentDir . "/" . getNextFolderIndex($def) . $summaryTask,
+      option     => "",
+      cluster    => $def->{cluster},
+      source_ref => [$fastqcTask, "data.txt"],
+      sh_direct  => 1,
+      can_result_be_empty_file => 1,
+      pbs        => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      },
+    };
+  }else{
+    my $python_script = dirname(dirname(__FILE__)) . "/QC/fastQCSummary.py";
+    my $task_name = getValue($def, "task_name");
+    $config->{$summaryTask} = {
+      class => "CQS::UniqueR",
+      suffix => "_fqs",
+      target_dir => $parentDir . "/" . getNextFolderIndex($def) . $summaryTask,
+      init_command => "
+python3 $python_script -i fileList1.txt -o ${task_name}.FastQC      
+",
+      rtemplate => "../QC/fastQCSummary.r",
+      rReportTemplate => "../QC/fastQCSummary.Rmd;reportFunctions.R",
+      run_rmd_independent => 1,
+      rmd_ext => ".FastQC.html",
+      option => "",
+      output_file_ext => ".FastQC.summary.tsv,.FastQC.summary.tsv.png,.FastQC.reads.tsv,.FastQC.reads.tsv.png,.FastQC.baseQuality.tsv,.FastQC.baseQuality.tsv.png,.FastQC.sequenceGC.tsv,.FastQC.sequenceGC.tsv.png,.FastQC.adapter.tsv,.FastQC.adapter.tsv.png,.FastQC.overrepresented.tsv",
+      output_no_name => 0,
+      docker_prefix => "report_",
+      can_result_be_empty_file => 0,
+      parameterSampleFile1_ref => [$fastqcTask, "data.txt"],
+      parameterSampleFile2 => {
+        task_name => $task_name,
+        email => getValue($def, "email"),
+      },
+      sh_direct  => 1,
+      pbs        => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      },
+    };
+  }  
   push @$summary,    $summaryTask;
 
   return($summaryTask);
