@@ -162,8 +162,8 @@ sub perform {
     my $g2 = $group_names->[1];
     die "cannot find group $g1 " if !defined( $groups->{$g1} );
     die "cannot find group $g2 " if !defined( $groups->{$g2} );
-    my @s1 = @{ $groups->{$g1} };
-    my @s2 = @{ $groups->{$g2} };
+    my @s1 = sort @{ $groups->{$g1} };
+    my @s2 = sort @{ $groups->{$g2} };
     
     for my $s11 (@s1){
       if (not defined $cov_table->{$s11}){
