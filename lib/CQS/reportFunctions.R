@@ -12,6 +12,7 @@ library(DT)
 library(RCurl)
 library(htmltools)
 library(kableExtra)
+library(DT)
 
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -93,12 +94,33 @@ check_and_include_graphics<-function(graphicFile) {
 }
 
 printTable<-function(filepath, row.names=1){
-  tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
+  if(row.names > 0){
+    tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
+  }else{
+    tbl<-data.frame(fread(filepath, check.names=F))
+  }
   print(kable_styling(kable(tbl)))
 }
 
-getTable<-function(filepath){
-  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "')\n```\n\n"))
+printPagedTable<-function(filepath, row.names=1){
+  if(row.names > 0){
+    tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
+  }else{
+    tbl<-data.frame(fread(filepath, check.names=F))
+  }
+  DT::datatable(tbl, 
+         extensions = c('FixedColumns','FixedHeader'),
+          options = list(scrollX = TRUE, 
+                         paging=TRUE,
+                         fixedHeader=TRUE))
+}
+
+getPagedTable<-function(filepath, row.names=1){
+  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintPagedTable('", filepath, "', ", row.names, ")\n```\n\n"))
+}
+
+getTable<-function(filepath, row.names=1){
+  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "', ", row.names, ")\n```\n\n"))
 }
 
 getFigure<-function(filepath, in_details=FALSE){

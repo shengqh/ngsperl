@@ -16,14 +16,12 @@ output:
 }
 </style>
 
-```{r, child="Functions.Rmd"} 
-```
-```{r, child="Pipeline.Rmd"} 
-```
-  
 ```{r setup, include=FALSE}
 library(kableExtra)
 library(tidyverse)
+
+source("reportFunctions.R")
+source("Pipeline.R")
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2
@@ -39,11 +37,9 @@ knitr::opts_chunk$set(
   tidy.opts = list(width.cutoff = 120),
   message = FALSE,
   warning = FALSE,
-  fig.width=8, 
-  fig.height=6, 
   out.width=out.width
 )
-
+options(knitr.graphics.rel_path = FALSE)
 
 hasFastqc<-any(grepl("fastqc_", rownames(files)))
 hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
@@ -346,19 +342,24 @@ if(hasEnrichmentAnalysis ){
 
 <br>
   
-```{r webgestalt, results="asis", echo=FALSE, warning=FALSE} 
-if(hasWebGestaltAnalysis){
-  display_webgestalt(files)
-}
+```{r webgestalt, results="asis", echo=FALSE, warning=FALSE, eval=hasWebGestaltAnalysis} 
+display_webgestalt(files)
 ```
 
 <br>
   
-```{r gsea, results="asis", echo=FALSE, warning=FALSE} 
-if(hasGseaAnalysis){
-  display_gsea(files, paste0(taskName, "/gsea/"))
-}
+```{r gsea, results="asis", echo=FALSE, warning=FALSE, eval=hasGseaAnalysis} 
+gsea_file_list = files$V1[files$V2 == "report_gsea"]
+gsea_files = read.csv(gsea_file_list, row.names=1)
+gsea_rmd_file="gsea.rmd"
+gsea_files$file_path=paste0(dirname(gsea_file_list), "/", gsea_files$file_path)
+save_gsea_rmd(gsea_files, gsea_rmd_file)
+#gsea_files=files[grepl("gsea_", files$V2),]
+#display_gsea(gsea_files, paste0(taskName, "/gsea/"))
 ``` 
+
+```{r, child=gsea_rmd_file, eval=hasGseaAnalysis} 
+```
 
 <br>
   

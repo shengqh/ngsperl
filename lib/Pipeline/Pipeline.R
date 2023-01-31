@@ -1,5 +1,6 @@
 library(stringr)
 library(ggplot2)
+
 #library(tools)
 
 display_webgestalt=function(files) {
@@ -43,10 +44,16 @@ display_webgestalt=function(files) {
   }
 }
 
-processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLinkPath=FALSE) {
+processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=0,absLinkPath=FALSE) {
   rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
+  rawTable<-rawTable[rawTable$FDR.q.val<=maxCategoryFdr,,drop=F]
+  
   rawTableOut<-NULL
-  for (i in head(which(rawTable$FDR.q.val<=maxCategoryFdr),maxCategory)) {
+  if(maxCategory > 0){
+    rawTable<-head(rawTable, maxCategory)
+  }
+  
+  for (i in nrow(rawTable)) {
     categoryName=rawTable[i,1]
     gseaUrl=paste0("http://www.gsea-msigdb.org/gsea/msigdb/geneset_page.jsp?geneSetName=",categoryName)
     categoryNameInTable<-addLinkTag(text=categoryName,link=gseaUrl)
@@ -79,7 +86,7 @@ processGseaTable=function(gseaTableFile,maxCategoryFdr=0.05,maxCategory=5,absLin
   return(rawTableOut)
 }
 
-print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive, maxCategory=5, print_rmd=TRUE){
+parse_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive, maxCategory=0){
   pstr = ifelse(is_positive, "pos", "neg")
   title = ifelse(is_positive, "Positive-regulated", "Negative-regulated")
   pattern = paste0("gsea_report_for_na_", pstr, '_\\d+\\.(tsv|xls)$')
@@ -98,21 +105,13 @@ print_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive, ma
   }
 
   rawTable<-read.delim(gseaTableFile,header=T,as.is=T)
-  rawTable<-rawTable[rawTable$FDR.q.val <= 0.05, c("NAME", "NES", "FDR.q.val")]
-
+  rawTable<-rawTable[rawTable$FDR.q.val <= 0.05,,drop=F]
   if (nrow(rawTable) == 0){
     return(NULL)
   }
 
-  rawTable$Core.Enrichment=0
-  for(idx in c(1:nrow(rawTable))){
-    gsfile = paste0(resultDirSub, "/", rawTable$NAME[idx], ".tsv")
-    if(!file.exists(gsfile)){
-      break
-    }
-    gsdetail = read.table(gsfile, sep="\t", header=T)
-    rawTable$Core.Enrichment[idx]=sum(gsdetail$CORE.ENRICHMENT == "Yes")
-  }
+  rawTable$Core.Enrichment=round(rawTable$SIZE * as.numeric(str_extract(rawTable$LEADING.EDGE, "\\d+")) / 100)
+  rawTable<-rawTable[rawTable$FDR.q.val <= 0.05, c("NAME", "NES", "FDR.q.val", "Core.Enrichment")]
   return(list(rawTable=rawTable, rawTableOut=rawTableOut))
 }
 
@@ -130,6 +129,7 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
   is_singlecell<-"compName" %in% colnames(files)
 
   maxCategory=ifelse(is_singlecell, 10, 5)
+  #maxCategory=0
   
   if(is_singlecell){
     gsea_files<-files
@@ -140,13 +140,15 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
     gsea_files$Comparisons<-gsea_files$V2
     comparisons<-unique(gsea_files$Comparisons)
   }
-  j=2
+  j=1
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
     comp_files<-gsea_files[gsea_files$Comparisons == comparison,]
 
     if(print_rmd){
       cat(paste0("\n\n", gsea_prefix, "## ", comparison, "\n\n"))
+    }else{
+      cat(comparison, "\n")
     }
   
     i=1
@@ -162,8 +164,13 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
       for (k in 1:nrow(gfolders)){
         resultDirSub<-gfolders$Folder[k]
         gseaCategory<-gfolders$GseaCategory[k]
-        pos = print_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE, maxCategory=maxCategory)
-        neg = print_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE, maxCategory=maxCategory)
+
+        if(!print_rmd){
+          cat("  ", gseaCategory, "\n")
+        }
+
+        pos = parse_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE, maxCategory=maxCategory)
+        neg = parse_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE, maxCategory=maxCategory)
         if (is.null(pos) & is.null(neg)){
           next
         }
@@ -171,34 +178,38 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
         prefix = paste0(gname, ".", gseaCategory)
 
         final = NULL
+        all = NULL
         if(!is.null(pos)){
           pos_file=paste0(target_folder, prefix, ".pos.csv")
           write.csv(pos$rawTableOut, pos_file)
           result[nrow(result) + 1,] = c(comparison, gname, gseaCategory, "pos_file", pos_file)
 
-          final = pos$rawTable[pos$rawTable$Core.Enrichment > 0,]
+          all = pos$rawTable[pos$rawTable$Core.Enrichment > 0,]
+          final = head(all, 10)
         }
         if(!is.null(neg)){
           neg_file=paste0(target_folder, prefix, ".neg.csv")
           write.csv(neg$rawTableOut, neg_file)
           result[nrow(result) + 1,] = c(comparison, gname, gseaCategory, "neg_file", neg_file)
 
-          final = rbind(final, neg$rawTable[neg$rawTable$Core.Enrichment > 0,])
+          neg_all = head(neg$rawTable[neg$rawTable$Core.Enrichment > 0,], 10)
+          all <- rbind(all, neg_all)
+          final = rbind(final, head(neg_all, 10))
         }
 
-        if(is.null(final)){
+        if(is.null(all)){
           next
         }
-
-        final$NES = as.numeric(final$NES)
-        final$Core.Enrichment = as.numeric(final$Core.Enrichment)
-        final$FDR.q.val = as.numeric(final$FDR.q.val)
 
         has_enriched = TRUE
 
         enriched_file=paste0(target_folder, prefix, ".enriched.csv")
-        write.csv(final, enriched_file, row.names=F)
+        write.csv(all, enriched_file, row.names=F)
         result[nrow(result) + 1,] = c(comparison, gname, gseaCategory, "enriched_file", enriched_file)
+
+        final$NES = as.numeric(final$NES)
+        final$Core.Enrichment = as.numeric(final$Core.Enrichment)
+        final$FDR.q.val = as.numeric(final$FDR.q.val)
 
         enriched_png=paste0(enriched_file, ".png")
         result[nrow(result) + 1,] = c(comparison, gname, gseaCategory, "enriched_png", enriched_png)
@@ -208,7 +219,6 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
         g<-ggplot(final, aes(NES, NAME)) + geom_point(aes(size=Core.Enrichment, color=FDR.q.val)) + geom_vline(xintercept=0) + theme_bw() + ylab("") + xlab("Normalized enrichment score")
 
         height=max(1000, 3000/40*nrow(final))
-        warning(final$NAME)
         ncharmax=max(nchar(as.character(final$NAME)))
         width=max(3000, ncharmax * 40 + 1000)
         png(enriched_png, width=width, height=height, res=300)
@@ -216,10 +226,8 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
         dev.off()
 
         if(print_rmd){
-          cat(paste0("\n\n<img src='", pngfile, "'>\n\n"))
+          cat(paste0("\n\n<img src='", enriched_png, "'>\n\n"))
         }
-        #include_graphics(file_path_as_absolute(pngfile))
-        #cat("\n\n")
       }
     }  
 
@@ -254,6 +262,49 @@ get_versions=function(){
   df<-df[order(df$V1),]
   colnames(df)<-c("Software", "Version")
   return(df)
+}
+
+save_gsea_rmd<-function(files, resFile){
+  source("reportFunctions.R")
+  figureRmd<-function(files){
+    result<-""
+    comparisons = unique(files$comparison)
+    comparison<-comparisons[1]
+    for(comparison in comparisons){
+      result<-paste0(result, paste0("\n\n# ", comparison, "\n\n"))
+
+      comp_files<-files[files$comparison==comparison,,drop=FALSE]
+
+      categories = unique(comp_files$category)
+      category=categories[1]
+      for(category in categories){
+        result<-paste0(result, paste0("\n\n## ", category, "\n\n"))
+
+        cat_files<-comp_files[comp_files$category == category,,drop=F]
+        file_map<-split(cat_files$file_path, cat_files$file_key)
+
+        if(!is.null(file_map$pos_file)){
+          result<-paste0(result, paste0("\n\n### Top positive-regulated\n\n"))
+          result<-paste0(result, getTable(file_map$pos_file))
+        }
+
+        if(!is.null(file_map$neg_file)){
+          result<-paste0(result, paste0("\n\n### Top negative-regulated\n\n"))
+          result<-paste0(result, getTable(file_map$neg_file))
+        }
+
+        if(!is.null(file_map$enriched_file)){
+          result<-paste0(result, paste0("\n\n### All enriched gene sets\n\n"))
+          result<-paste0(result, getPagedTable(file_map$enriched_file, 0))
+          
+          result<-paste0(result, paste0("\n\n### Top enriched gene sets\n\n"))
+          result<-paste0(result, getFigure(file_map$enriched_png))
+        }
+      }
+    }
+    return(result)
+  }
+  cat(figureRmd(files), file=resFile)
 }
 
 display_versions=function(){

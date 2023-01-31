@@ -1324,6 +1324,11 @@ fi
         push( @report_files, $gseaTaskName, "/" . $key . ".gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
+
+      my $gsea_report_task = $gseaTaskName . "_report";
+      push( @report_files, $gsea_report_task, "gsea_files.csv" );
+      push( @report_names, "report_gsea" );
+
       $hasFunctionalEnrichment = 1;
     }
 
@@ -1344,7 +1349,7 @@ fi
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
       report_rmd_file            => "../Pipeline/RNASeq.Rmd",
-      additional_rmd_files       => "../Pipeline/Pipeline.Rmd;Functions.Rmd",
+      additional_rmd_files       => "../Pipeline/Pipeline.R;reportFunctions.R",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
       parameterSampleFile2       => $options,
