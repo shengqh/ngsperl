@@ -38,7 +38,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
   my $task_suffix = $self->{_task_suffix};
-
+  
+  my $init_command = get_option($config, $section, "init_command", "");
   my $rCode = $self->getRcode( $config, $section );
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
@@ -245,6 +246,8 @@ sub perform {
   if($rlibs ne ""){
     print $pbs "export R_LIBS=$rlibs \n\n";
   }
+
+  print $pbs "$init_command\n";
 
   my $rscript = get_option_include_general($config, $section, "Rscript", "Rscript");
 
