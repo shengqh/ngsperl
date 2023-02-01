@@ -336,6 +336,9 @@ for (i in 1:nrow(countTableFileAll)) {
   if (groupFileList!="") {
     sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), useLeastGroups,onlySamplesInGroup=onlySamplesInGroup)
     if (onlySamplesInGroup) {
+      if(!any(colnames(countNum) %in% as.character(sampleToGroup$V1))){
+        stop(paste0("No file in count table was found in sample/group file:", groupFileList))
+      }
       countNum<-countNum[,which(colnames(countNum) %in% as.character(sampleToGroup$V1))]
       #remove genes with total reads 0
       countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
