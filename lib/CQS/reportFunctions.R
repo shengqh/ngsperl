@@ -102,21 +102,22 @@ printTable<-function(filepath, row.names=1){
   print(kable_styling(kable(tbl)))
 }
 
-printPagedTable<-function(filepath, row.names=1){
+printPagedTable<-function(filepath, row.names=1, escape=TRUE){
   if(row.names > 0){
     tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
   }else{
     tbl<-data.frame(fread(filepath, check.names=F))
   }
   DT::datatable(tbl, 
-         extensions = c('FixedColumns','FixedHeader'),
-          options = list(scrollX = TRUE, 
-                         paging=TRUE,
-                         fixedHeader=TRUE))
+                extensions = c('FixedColumns','FixedHeader'),
+                rownames = row.names > 0,
+                escape = escape,
+                options = list( scrollX=TRUE, 
+                                paging=TRUE))
 }
 
-getPagedTable<-function(filepath, row.names=1){
-  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintPagedTable('", filepath, "', ", row.names, ")\n```\n\n"))
+getPagedTable<-function(filepath, row.names=1, escape=TRUE){
+  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintPagedTable('", filepath, "', ", row.names, ",", escape, ")\n```\n\n"))
 }
 
 getTable<-function(filepath, row.names=1){
