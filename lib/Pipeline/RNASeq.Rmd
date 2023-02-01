@@ -353,7 +353,7 @@ gsea_file_list = files$V1[files$V2 == "report_gsea"]
 gsea_files = read.csv(gsea_file_list, row.names=1)
 gsea_rmd_file="gsea.rmd"
 gsea_files$file_path=paste0(dirname(gsea_file_list), "/", gsea_files$file_path)
-save_gsea_rmd(gsea_files, gsea_rmd_file)
+save_gsea_rmd(gsea_files, gsea_rmd_file, "#")
 #gsea_files=files[grepl("gsea_", files$V2),]
 #display_gsea(gsea_files, paste0(taskName, "/gsea/"))
 ``` 

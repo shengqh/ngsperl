@@ -1205,7 +1205,7 @@ sub addEdgeRTask {
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
       rtemplate                  => "GSEAReport.R",
-      rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;Functions.R",
+      rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;reportFunctions.R",
       run_rmd_independent => 1,
       rmd_ext => ".gsea.html",
       parameterSampleFile1_ref   => [$gseaTaskName],
