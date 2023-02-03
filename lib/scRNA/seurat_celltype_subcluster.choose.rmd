@@ -21,10 +21,9 @@ source("scRNA_func.r")
 }
 ```
 
-```{r, child="reportFunctions.Rmd", include=FALSE} 
-```
+```{r data, include=FALSE}
+source("reportFunctions.R")
 
-```{r data, echo = FALSE}
 options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 

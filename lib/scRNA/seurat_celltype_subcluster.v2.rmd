@@ -19,10 +19,8 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r, child="reportFunctions.Rmd", include=FALSE} 
-```
-
-```{r data, echo = FALSE}
+```{r setup, include=FALSE}
+source("reportFunctions.R")
 
 options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
