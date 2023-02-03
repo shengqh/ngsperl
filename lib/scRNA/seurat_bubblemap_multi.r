@@ -35,7 +35,11 @@ if(!dir.exists(tmp_folder)){
 }
 
 draw_figure<-function(subobj, group1, group2, bubblemap_file, png_prefix, width, rotate.title, tmp_folder, by_group1=TRUE){
-  subobj$dump_cluster = paste0(unlist(subobj[[group1]]), ":", unlist(subobj[[group2]]))
+  if(group2 == ""){
+    subobj$dump_cluster = unlist(subobj[[group1]])
+  }else{
+    subobj$dump_cluster = paste0(unlist(subobj[[group1]]), ":", unlist(subobj[[group2]]))
+  }
 
   dc_tbl<-table(subobj$dump_cluster)
   dc_tbl_c<-paste0(names(dc_tbl), "(", dc_tbl, ")")
@@ -43,7 +47,12 @@ draw_figure<-function(subobj, group1, group2, bubblemap_file, png_prefix, width,
   subobj$dump_cluster_c<-dc_tbl_c[subobj$dump_cluster]
 
   meta<-subobj@meta.data
-  meta<-meta[order(meta[[group1]], meta[[group2]]), ]
+  if(group2 == ""){
+    meta<-meta[order(meta[[group1]]), ]
+  }else{
+    meta<-meta[order(meta[[group1]], meta[[group2]]), ]
+  }
+
   subobj$dump_cluster_c<-factor(subobj$dump_cluster_c, unique(meta$dump_cluster_c))
 
   g=get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=rotate.title, group.by="dump_cluster_c") + scale_color_gradient2(low="blue", mid="yellow", high="red")
@@ -97,6 +106,8 @@ for(bn in bnames){
   }else{
     subobj=obj
   }
+
+  draw_figure(subobj, celltype_name, "", bubblemap_file, paste0(outFile, ".", bn, ".bubblemap.ct"), width, rotate.title, tmp_folder, by_group1 = FALSE)
 
   draw_figure(subobj, celltype_name, cluster_name, bubblemap_file, paste0(outFile, ".", bn, ".bubblemap.ct_cluster"), width, rotate.title, tmp_folder)
 
