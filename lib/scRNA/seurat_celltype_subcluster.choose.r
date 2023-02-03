@@ -204,7 +204,8 @@ for(pct in previous_celltypes){
 
   reductions_rds = file.path(sub_dir, "details", paste0(outFile, ".", celltype_to_filename(pct), ".reductions.rds"))
   reductions<-readRDS(reductions_rds)
-  subobj<-subset(obj, cells=rownames(reductions$umap))
+  cells<-rownames(reductions$umap)
+  subobj<-subset(obj, cells=cells)
   subobj@reductions<-reductions
   
   subumap<-as.data.frame(reductions$subumap@cell.embeddings)
