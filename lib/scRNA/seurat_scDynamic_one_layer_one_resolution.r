@@ -246,6 +246,17 @@ iterate_celltype<-function(obj,
     
     predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
     
+    cta_rds_file=paste0(curprefix, ".", pct_str, ".cta.rds")
+    saveRDS(predict_celltype, cta_rds_file)
+    files<-rbind(files, c(previous_layer, cur_layer, pct, "cta_rds", cta_rds_file))
+
+    if(length(predict_celltype$max_cta) > 1){
+      cta_png_file=paste0(curprefix, ".", pct_str, ".cta.png")
+      Plot_predictcelltype( predict_celltype, 
+                            filename=cta_png_file)
+      files<-rbind(files, c(previous_layer, cur_layer, pct, "cta_png", cta_png_file))
+    }
+
     new_cluster_ids<-names(predict_celltype$max_cta)
     
     cur_cts<-cbind_celltype(subobj, data_norm, cluster, new_cluster_ids, cur_layermap, cur_cts)
@@ -397,20 +408,16 @@ layer_cluster_celltype<-function(obj,
 
   g<-DimPlot(obj, group.by = cur_layer, label=T)
 
-  png(paste0(prefix, ".", cur_layer, ".final.png"), width=3300, height=3000, res=300)
+  png(paste0(prefix, ".", cur_layer, ".umap.png"), width=3300, height=3000, res=300)
   print(g)
   dev.off()
 
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
     g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay="RNA")
-    g<-g+g2+plot_layout(ncol = 2, widths = c(3, 5))
-    width=6400
-  }else{
-    width=2400
+    png(paste0(prefix, ".", cur_layer, ".dot.png"), width=4400, height=2000, res=300)
+    print(g2)
+    dev.off()
   }
-  png(paste0(prefix, ".", cur_layer, ".png"), width=width, height=2000, res=300)
-  print(g)
-  dev.off()
 
   write.csv(obj@meta.data, file=paste0(prefix, ".", cur_layer, ".meta.csv"))
   saveRDS(obj@meta.data, file=paste0(prefix, ".", cur_layer, ".meta.rds"))
@@ -538,11 +545,6 @@ do_analysis<-function(tmp_folder,
   obj$seurat_layer4=paste0(obj$layer4_clusters, ": ", obj$layer4_raw)
 
   cur_celltype="layer4"
-  g<-get_dim_plot(obj, group.by="layer4_clusters", label.by="seurat_layer4", reduction="umap", legend.title="")
-  png(paste0(prefix, ".", cur_celltype, ".umap.png"), width=2400, height=2000, res=300)
-  print(g)
-  dev.off()
-
   for(pct in unique(unlist(obj[[cur_celltype]]))){
     cells=colnames(obj)[obj[[cur_celltype]] == pct]
     subobj=subset(obj, cells=cells)

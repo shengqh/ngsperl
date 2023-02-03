@@ -148,7 +148,7 @@ sub add_seurat_merge_object {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
     rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_merge_object.r",
-    rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.Rmd",
+    rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.R",
     run_rmd_independent => 1,
     parameterSampleFile1_ref => $source_ref,
     parameterSampleFile2     => {
@@ -210,7 +210,7 @@ sub add_seurat {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_task,
     rtemplate                => "../scRNA/scRNA_func.r;$preprocessing_rscript",
-    rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.Rmd",
+    rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.R",
     run_rmd_independent => 1,
     rmd_ext => $rmd_ext,
     parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
@@ -1265,15 +1265,17 @@ sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
 
   my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".scDynamic.meta.rds";
-  my $output_other_ext = $by_individual_sample ? ".dynamic_individual.html":".dynamic.html";
+  my $rmd_ext = $by_individual_sample ? ".dynamic_individual.html":".dynamic.html";
+  my $rReportTemplate = $by_individual_sample ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R":"../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.R";
 
   $config->{$scDynamic_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_one_layer_one_resolution.r",
-    rReportTemplate => "../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.R",
-    run_rmd_independent => 0,
+    rReportTemplate => $rReportTemplate,
+    rmd_ext => $rmd_ext,
+    run_rmd_independent => 1,
     parameterFile1_ref => [$seurat_task, ".rds"],
     parameterFile3_ref => $essential_gene_task,
     parameterSampleFile1     => {
@@ -1304,7 +1306,6 @@ sub addDynamicCluster {
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
     parameterSampleFile4 => getValue($def, "dynamic_combine_cell_types", {}),
     output_file_ext      => $output_file_ext,
-    output_other_ext     => $output_other_ext,
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
@@ -1352,7 +1353,7 @@ sub addSubCluster {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $subcluster_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v3.r",
-    rReportTemplate          => "../scRNA/seurat_celltype_subcluster.v3.rmd;reportFunctions.Rmd",
+    rReportTemplate          => "../scRNA/seurat_celltype_subcluster.v3.rmd;reportFunctions.R",
     run_rmd_independent => 1,
     rmd_ext => ".subcluster.html",
     parameterFile1_ref => $obj_ref,
@@ -1413,7 +1414,7 @@ sub addSubClusterChoose {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $choose_task,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.choose.r",
     
-    rReportTemplate          => "../scRNA/seurat_celltype_subcluster.choose.rmd;reportFunctions.Rmd",
+    rReportTemplate          => "../scRNA/seurat_celltype_subcluster.choose.rmd;reportFunctions.R",
     run_rmd_independent => 1,
     rmd_ext => ".choose.html",
 
@@ -1583,7 +1584,7 @@ sub add_hto_samples_preparation {
     class => "CQS::UniqueR",
     target_dir => "${target_dir}/$preparation_task",
     rtemplate => "../scRNA/split_samples_utils.r,../scRNA/split_samples_preparation.r",
-    rReportTemplate => "../scRNA/split_samples_preparation.rmd;reportFunctions.Rmd",
+    rReportTemplate => "../scRNA/split_samples_preparation.rmd;reportFunctions.R",
     run_rmd_independent => 1,
     rmd_ext => ".hto_preparation.html",
     option => "",
@@ -2365,7 +2366,7 @@ sub add_clustree_rmd {
     class => "CQS::UniqueRmd",
     target_dir => "${target_dir}/$clustree_task",
     report_rmd_file => "../scRNA/clustree.rmd",
-    additional_rmd_files => "../scRNA/scRNA_func.r;reportFunctions.Rmd",
+    additional_rmd_files => "../scRNA/scRNA_func.r;reportFunctions.R",
     option => "",
     parameterSampleFile1 => {
       outFile => getValue($def, "task_name")
@@ -2393,7 +2394,7 @@ sub add_bubble_plots {
     perform              => 1,
     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubble_task,
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multi.r",
-    rReportTemplate           => "../scRNA/seurat_bubblemap_multi.rmd;reportFunctions.Rmd",
+    rReportTemplate           => "../scRNA/seurat_bubblemap_multi.rmd;reportFunctions.R",
     rmd_ext => $rmd_ext,
     run_rmd_independent => 1,
     parameterFile1_ref   => [ $choose_task, ".final.rds" ],
@@ -2404,7 +2405,7 @@ sub add_bubble_plots {
       cluster_name => $cluster_name,
       celltype_name => $celltype_name 
     },
-    output_file_ext      => $rmd_ext,
+    output_file_ext      => ".cell_type.txt",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",

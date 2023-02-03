@@ -79,6 +79,12 @@ figureRmd<-function(files, outFile){
         umap=pct_tbl$fname[pct_tbl$type=="new_umap"]
         result<-paste0(result, getFigure(umap))
       }
+
+      if("cta_png" %in% pct_tbl$type){
+        result<-paste0(result, "### Cell type annotation score\n\n")
+        cta_png=pct_tbl$fname[pct_tbl$type=="cta_png"]
+        result<-paste0(result, getFigure(cta_png))
+      }
     }
 
     result<-paste0(result, getFigure(paste0(outFile, ".", to_layer, ".final.png")))
