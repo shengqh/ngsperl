@@ -11,6 +11,8 @@ RNA_class <- rownames(fileList1)[!(rownames(fileList1) %in% c("category"))]
 category <- read.csv(fileList1["category",1], header=T, row.names=1)
 totalReads<-unlist(category["TotalReads",])
 
+min_read_length = 16
+
 final<-NULL
 for(rna in RNA_class){
   print(rna)
@@ -55,7 +57,7 @@ textTitle<-element_text(face= "bold", color = "black", size=22, hjust=0.5)
 text20Bold<-element_text(face= "bold", color = "black", size=20)
 text20<-element_text(color = "black", size=20)
 
-fastq_length<-fastq_length[fastq_length$Length >= 10,]
+fastq_length<-fastq_length[fastq_length$Length >= min_read_length,]
 
 pdf(file=paste0(outFile,".pdf"), onefile=T, width=8, height=7)
 
