@@ -585,7 +585,7 @@ sub getScRNASeqConfig {
           perform                  => 1,
           target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $multires_task,
           rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_multires.r",
-          rReportTemplate          => "../scRNA/seurat_multires.rmd;reportFunctions.Rmd",
+          rReportTemplate          => "../scRNA/seurat_multires.rmd;reportFunctions.R",
           parameterFile1_ref => $obj_ref,
           parameterSampleFile1    => {
             task_name             => getValue( $def, "task_name" ),
