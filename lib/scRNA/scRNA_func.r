@@ -1843,3 +1843,20 @@ read_scrna_data<-function(fileName){
   }
   return(list(counts=counts, adt.counts=adt.counts))
 }
+
+Plot_predictcelltype<-function(predict_celltype, topn=2, filename=NA, width=2000, height=2000) {
+  library(heatmap3)
+
+  cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:topn])})
+  cta_index<-unique(sort(cta_index))
+  cta_mat<- predict_celltype$cta[cta_index,]
+  colnames(cta_mat)=paste0(colnames(cta_mat), ":", names(predict_celltype$max_cta))
+  
+  if(!is.na(filename)){
+    png(filename, width=width, height=height, res=300)
+  }
+  heatmap3(cta_mat, scale="none", margin=c(10, 10), cexRow=1, cexCol=1, col=colorRampPalette(c("blue", "white", "red"))(n=1024))
+  if(!is.na(filename)){
+    dev.off()
+  }
+}
