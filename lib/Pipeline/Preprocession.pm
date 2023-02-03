@@ -716,6 +716,7 @@ sub getPreprocessionConfig {
         {
           class              => "CQS::UniqueR",
           perform            => 1,
+          suffix => "_fqcv",
           rtemplate          => "countTableVisFunctions.R,countInFastQcVis.R",
           output_file        => ".countInFastQcVis.Result",
           output_file_ext    => ".Reads.csv",
