@@ -309,6 +309,12 @@ for(pct in previous_celltypes){
     data.norm=get_seurat_average_expression(subobj2, cluster)
 
     predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
+    saveRDS(predict_celltype, paste0(cluster_prefix, ".cta.rds"))
+    if(length(predict_celltype$max_cta) > 1){
+      Plot_predictcelltype( predict_celltype, 
+                            filename=paste0(cluster_prefix, ".cta.png"))
+    }
+
     layer_ids<-names(predict_celltype$max_cta)
     names(layer_ids) <- colnames(data.norm)
     
