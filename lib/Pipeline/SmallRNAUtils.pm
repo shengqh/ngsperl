@@ -456,6 +456,30 @@ sub add_identical {
   push @$individual, ("identical");
   my $identical_ref = [ 'identical', '.fastq.gz$' ];
   my $identical_count_ref = [ 'identical', '.dupcount$' ];
+
+  if($def->{perform_identical_summary}){
+    $config->{identical_summary} = {
+      class => "CQS::UniqueR",
+      target_dir => $preprocessing_dir . "/identical_summary",
+      rtemplate => "FastqIdentical_summary.r",
+      option => "",
+      parameterSampleFile1_ref => $identical_count_ref,
+      output_file_ext => ".txt",
+      sh_direct   => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "4",
+        "mem"       => "20gb"
+      },
+    };
+
+    if(defined $config->{"fastqc_post_trim_summary"}){
+      $config->{identical_summary}{parameterFile1_ref} = ["fastqc_post_trim_summary", '.reads.tsv$'];
+    }elsif(defined $config->{"fastqc_raw_summary"}){
+      $config->{identical_summary}{parameterFile1_ref} = ["fastqc_raw_summary", '.reads.tsv$'];
+    }
+  }
+
   return($identical_ref, $identical_count_ref);
 }
 
@@ -487,34 +511,14 @@ sub getPrepareConfig {
     $config->{pairs} = $def->{pairs};
   }
 
-  my $preparation = {
-    identical => {
-      class      => "CQS::FastqIdentical",
-      perform    => 1,
-      target_dir => $preprocessing_dir . "/identical",
-      option     => "-l " . $def->{min_read_length},
-      source_ref => $source_ref,
-      extension  => "_clipped_identical.fastq.gz",
-      sh_direct  => 1,
-      use_first_read_after_trim => $def->{use_first_read_after_trim},
-      cluster    => $cluster,
-      pbs        => {
-        "email"    => $def->{email},
-        "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "20gb"
-      },
-    },
-  };
-  push @$individual, ("identical");
-  my $identical_ref = [ 'identical', '.fastq.gz$' ];
-  my $host_identical_ref = [ 'identical', '.fastq.gz$' ];
+  my ($identical_ref, $identical_count_ref) = add_identical($config, $def, $individual, $preprocessing_dir, $source_ref);
+  my $host_identical_ref = $identical_ref;
 
   my $run_cutadapt     = getValue( $def, "perform_cutadapt");
   if($run_cutadapt){
     my $perform_identical_short = getValue( $def, "perform_identical_short", 0);
     if($perform_identical_short){
-      $preparation->{identical_short} = {
+      $config->{identical_short} = {
         class      => "CQS::FastqIdentical",
         perform    => 1,
         target_dir => $preprocessing_dir . "/identical_short",
@@ -536,7 +540,7 @@ sub getPrepareConfig {
 
   my $search_host_genome = getValue($def, "search_host_genome", 1);
   if ( $search_host_genome && $consider_tRNA_NTA ) {
-    $preparation->{identical_check_cca} = {
+    $config->{identical_check_cca} = {
       class              => "SmallRNA::tRNACheckCCA",
       perform            => 1,
       target_dir         => $intermediate_dir . "/identical_check_cca",
@@ -558,7 +562,7 @@ sub getPrepareConfig {
   my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
   if ($perform_class_independent_analysis) {
     $class_independent_dir = create_directory_or_die( $target_dir . "/class_independent" );
-    $preparation->{identical_sequence_count_table} = {
+    $config->{identical_sequence_count_table} = {
       class         => "CQS::SmallRNASequenceCountTable",
       perform       => 1,
       target_dir    => $class_independent_dir . "/identical_sequence_count_table",
@@ -604,7 +608,7 @@ sub getPrepareConfig {
 
   if ( $search_host_genome && ($consider_miRNA_NTA || $consider_tRNA_NTA )) {
     my $ccaaOption = $consider_tRNA_NTA ? "--ccaa" : "--no-ccaa";
-    $preparation->{identical_NTA} = {
+    $config->{identical_NTA} = {
       class      => "SmallRNA::FastqSmallRnaNTA",
       perform    => 1,
       target_dir => $intermediate_dir . "/identical_NTA",
@@ -623,8 +627,6 @@ sub getPrepareConfig {
     push @$individual, ("identical_NTA");
     $host_identical_ref = [ "identical_NTA", ".fastq.gz\$" ];
   }
-
-  $config = merge_hash_right_precedent( $config, $preparation );
 
   return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref );
 }
