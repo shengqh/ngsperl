@@ -24,7 +24,6 @@ library(htmltools)
 library(knitr)
 library(kableExtra)
 
-source('Functions.R')
 source('Pipeline.R')
 
 files<-read.table(parSampleFile1, header=FALSE, as.is=TRUE)
