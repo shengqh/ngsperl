@@ -1,7 +1,7 @@
 #outputdir<-"/gpfs23/scratch/cqs/shengq2/rolanda_lister/20190403_rnaseq_2499_lister_mouse_placenta_cutadapt/fastqc_raw/result"
 args = commandArgs(trailingOnly=TRUE)
 if(length(args) == 0){
-  option_tb=read.table("fileList2.txt", sep="\t", header=FALSE)
+  option_tb=read.table(parSampleFile2, sep="\t", header=FALSE)
   myoptions=split(option_tb$V1, option_tb$V2)
   prefix = paste0(myoptions$task_name, ".FastQC")
 }else{
@@ -42,8 +42,8 @@ g<-ggplot(fp, aes(File, Category))+
   xlab("") + ylab("") +
   coord_equal()
 
-width=min(max(2500, 60 * length(unique(fp$File))), 10000)
-png(file=paste0(summaryfile, ".png"), height=1000, width=width, res=300)
+width=min(max(2500, 60 * length(unique(fp$File))) + 600, 10000)
+png(file=paste0(summaryfile, ".png"), height=1500, width=width, res=300)
 print(g)
 dev.off()
 
@@ -55,7 +55,7 @@ g<-ggplot(fp, aes(x=File, y=Reads))+ geom_bar(stat="identity", width=.5)+
         axis.text.y = element_text(size=11, face="bold")) + xlab("")
 
 width=min(max(2500, 60 * nrow(fp)), 10000)
-png(file=paste0(readfile, ".png"), height=1000, width=width, res=300)
+png(file=paste0(readfile, ".png"), height=1500, width=width, res=300)
 print(g)
 dev.off()
 
