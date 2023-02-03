@@ -12,6 +12,8 @@ library(knitr)
 library(dplyr)
 library(kableExtra)
 knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+source("reportFunctions.R")
+source("scRNA_func.r")
 ```
 
 ```{css, echo=FALSE}
@@ -20,14 +22,11 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r, child="reportFunctions.Rmd", include=FALSE} 
-```
-
 ```{r data, echo = FALSE}
-library(knitr)
-
 options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
+
+DE_by_cell<-is_one(myoptions$DE_by_cell)
 
 outFile<-myoptions$task_name
 
@@ -74,6 +73,10 @@ for(comp in comparisons){
     design_file=ct_files$designFile[1]
     design_data=read.csv(design_file)
 
+    if(DE_by_cell){
+      design_data=design_data[!duplicated(design_data$Sample), c(1,3,4)]
+    }
+
     ct_num_cell<-subset(num_cell, cell_type == ct)
     ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
 
@@ -89,4 +92,3 @@ for(comp in comparisons){
   }
 }
 ```
-
