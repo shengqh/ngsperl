@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='AK6383'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.meta.rds'
+parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
+parFile2='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample/result')
+setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -139,7 +139,7 @@ if(1){
 meta<-obj@meta.data
 
 result<-NULL
-idx<-1
+idx<-18
 for(idx in c(1:nrow(designMatrix))){
   prefix=designMatrix[idx, "prefix"]
   design_file=designMatrix[idx, "design"]
@@ -149,35 +149,54 @@ for(idx in c(1:nrow(designMatrix))){
 
   design_data<-read.csv(design_file, stringsAsFactors = F)
 
-  if(!is.null(covariances)){
-    variables = c(covariances, "Group")
-  }else{
-    variables = c("Group")
+  covariances=colnames(design_data)[!(colnames(design_data) %in% c("Group", "Sample", "DisplayGroup"))]
+
+  while(TRUE){
+    if(length(covariances) > 0){
+      variables = c(covariances, "Group")
+    }else{
+      variables = c("Group")
+    }
+    formula_str = paste0("~ ", paste0(variables, collapse = " + "))
+    design <- model.matrix(as.formula(formula_str), design_data)
+
+    rownames(design)<-design_data$Sample
+    write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
+    
+    cat(prefix, "\n")
+
+    counts<-read.csv(count_file, row.names = 1)
+    counts<-counts[,design_data$Sample]
+    counts_file = paste0(prefix, ".counts.csv")
+    write.csv(counts, file=counts_file, quote=F)
+
+    groups<-design_data$Group
+    
+    dge <- DGEList(counts=counts, group=groups)
+    keep <- filterByExpr(dge, group=groups)
+    dge <- dge[keep, , keep.lib.sizes=FALSE]
+    
+    cat("  calcNormFactors", "\n")
+    dge<-calcNormFactors(dge,method = "TMM")
+
+    cat("  estimateDisp", "\n")
+    dge<-estimateDisp(dge,design=design)
+
+    if("common.dispersion" %in% names(dge)){
+      if(!is.na(dge$common.dispersion)){
+        break
+      }
+    }
+
+    if(length(covariances) == 0){
+      stop("estimateDisp failed")
+    }
+
+    covariances = c()
+    cat("  redo estimateDisp without covariates\n")
+    design_data = design_data[,colnames(design_data) %in% c("Group", "Sample", "DisplayGroup")]
+    write.table(design_data, design_file, sep="\t", row.names=FALSE)
   }
-  formula_str = paste0("~ ", paste0(variables, collapse = " + "))
-  design <- model.matrix(as.formula(formula_str), design_data)
-
-  rownames(design)<-design_data$Sample
-  write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
-  
-  cat(prefix, "\n")
-
-  counts<-read.csv(count_file, row.names = 1)
-  counts<-counts[,design_data$Sample]
-  counts_file = paste0(prefix, ".counts.csv")
-  write.csv(counts, file=counts_file, quote=F)
-
-  groups<-design_data$Group
-  
-  dge <- DGEList(counts=counts, group=groups)
-  keep <- filterByExpr(dge, group=groups)
-  dge <- dge[keep, , keep.lib.sizes=FALSE]
-  
-  cat("  calcNormFactors", "\n")
-  dge<-calcNormFactors(dge,method = "TMM")
-
-  cat("  estimateDisp", "\n")
-  dge<-estimateDisp(dge,design=design)
   
   saveRDS(dge, paste0(prefix, ".dge.rds"))
 
