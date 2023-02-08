@@ -539,9 +539,11 @@ do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, sc
 
   cat("NormalizeData ... \n")
   obj <- NormalizeData(obj, verbose = FALSE)
+  cat("NormalizeData done ... \n")
   
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
+  cat("FindVariableFeatures done ... \n")
   
   if(scale.all){
     features = rownames(obj@assays$RNA@data)
@@ -551,8 +553,9 @@ do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, sc
       features = unique(c(features, essential_genes))
     }
   }
-  cat("Scale", length(features), "genes ...\n")
+  cat("ScaleData: ", length(features), "genes ...\n")
   obj <- ScaleData(obj, vars.to.regress=vars.to.regress, features=features, verbose = FALSE)
+  cat("ScaleData done ... \n")
 
   stopifnot(dim(obj@assays$RNA@scale.data)[1] > 0)
 
@@ -892,6 +895,11 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   dobj=CreateSeuratObject(counts=dd)
   dobj$seurat_clusters=SCLC[[cluster_name]]
   result<-AverageExpression(dobj, slot="counts", group.by="seurat_clusters" )[[1]]
+
+  cnames = unique(dobj$seurat_clusters)
+  cnames = cnames[order(cnames)]
+  colnames(result) <- cnames
+
   rm(dd)
   rm(dobj)
   return(result)
@@ -1844,7 +1852,7 @@ read_scrna_data<-function(fileName){
   return(list(counts=counts, adt.counts=adt.counts))
 }
 
-Plot_predictcelltype<-function(predict_celltype, topn=2, filename=NA, width=2000, height=2000) {
+Plot_predictcelltype<-function(predict_celltype, topn=3, filename=NA, width=2000, height=2000) {
   library(heatmap3)
 
   cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:topn])})
@@ -1856,6 +1864,53 @@ Plot_predictcelltype<-function(predict_celltype, topn=2, filename=NA, width=2000
     png(filename, width=width, height=height, res=300)
   }
   heatmap3(cta_mat, scale="none", margin=c(10, 10), cexRow=1, cexCol=1, col=colorRampPalette(c("blue", "white", "red"))(n=1024))
+  if(!is.na(filename)){
+    dev.off()
+  }
+}
+
+Plot_predictcelltype_ggplot2<-function(predict_celltype, topn=3, filename=NA, width=NA, height=NA, is_validation=FALSE) {
+  library(ggplot2)
+  library(scales)
+  
+  cta_index<-apply(predict_celltype$cta,2,function(x){return(order(x,decreasing=T)[1:topn])})
+  cta_index<-unique(sort(cta_index))
+  cta_mat<- predict_celltype$cta[cta_index,,drop=F]
+  if(!is_validation){
+    colnames(cta_mat)=paste0(colnames(cta_mat), ":", names(predict_celltype$max_cta))
+  }
+
+  n_ct=nrow(cta_mat)
+  n_cluster=ncol(cta_mat)
+  
+  if(is.na(width)){
+    width = max(1000, n_cluster * 50) + 500 
+  }
+  
+  if(is.na(height)){
+    height = max(1000, n_ct * 50) + 250 
+  }
+  
+  ord <- hclust( dist(cta_mat, method = "euclidean"), method = "ward.D" )$order
+  sorted_ct=rownames(cta_mat)[ord]
+
+  ord <- hclust( dist(t(cta_mat), method = "euclidean"), method = "ward.D" )$order
+  sorted_cluster=colnames(cta_mat)[ord]
+
+  md = reshape2::melt(cta_mat)
+  colnames(md)<-c("db_cell_type", "cluster", "cta_score")
+  md$db_cell_type<-factor(md$db_cell_type, levels=sorted_ct)
+  md$cluster<-factor(md$cluster, levels=sorted_cluster)
+
+  colors = colorRampPalette(c("blue", "white", "red"))(n=1024)
+
+  if(!is.na(filename)){
+    png(filename, width=width, height=height, res=300)
+  }
+  g<-ggplot(md, aes(cluster, db_cell_type) ) +
+    geom_tile(aes(fill = cta_score)) +
+    scale_fill_gradientn(colours=colors) + theme_bw3(axis.x.rotate=TRUE) + xlab("") + ylab("")
+  print(g)
   if(!is.na(filename)){
     dev.off()
   }
