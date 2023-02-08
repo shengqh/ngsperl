@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='P9270'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
+parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/seurat_rawdata/result')
+setwd('/data/wanjalla_lab/projects/20230115_combined_scRNA_hg38/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -32,14 +33,15 @@ hemoglobinPattern=myoptions$hemoglobinPattern
 species=myoptions$species
 pool_sample<-ifelse(myoptions$pool_sample == "0", FALSE, TRUE)
 
+ensembl_map=NULL
 if("ensembl_gene_map_file" %in% names(myoptions)){
   ensembl_gene_map_file = myoptions$ensembl_gene_map_file
-  gene_tb=read.table(ensembl_gene_map_file, sep="\t", header=T)
-  gene_tb=gene_tb[!duplicated(gene_tb$ENSEMBL_GENE_ID),]
-  gene_tb=gene_tb[gene_tb$ENSEMBL_GENE_ID != "",]
-  ensembl_map = split(gene_tb$GENE_SYMBOL, gene_tb$ENSEMBL_GENE_ID)
-}else{
-  ensembl_map=NULL
+  if(ensembl_gene_map_file != ""){
+    gene_tb=read.table(ensembl_gene_map_file, sep="\t", header=T)
+    gene_tb=gene_tb[!duplicated(gene_tb$ENSEMBL_GENE_ID),]
+    gene_tb=gene_tb[gene_tb$ENSEMBL_GENE_ID != "",]
+    ensembl_map = split(gene_tb$GENE_SYMBOL, gene_tb$ENSEMBL_GENE_ID)
+  }
 }
 
 hto_str = ""
@@ -253,7 +255,7 @@ if(pool_sample){
   if (!file.exists(parSampleFile3)) {
     stop(paste0('pool_sample_groups ', parSampleFile3, ' is not defined or not exists.'))
   }
-  #cat("pooling samples ... \n")
+  cat("pooling samples ... \n")
   pools = read.table(parSampleFile3, header=F, stringsAsFactors = F)
   poolNames = unique(pools$V2)
   pooledObjs = lapply(poolNames, function(pn){
@@ -284,14 +286,15 @@ if(pool_sample){
   }else{
     rawobjs<-pooledObjs
   }
-  #cat("pooling samples done. \n")
 }
 
 if(length(rawobjs) == 1){
   rawobj <- rawobjs[[1]]
 }else{
+  cat("merging all samples ... \n")
   rawobj <- merge(rawobjs[[1]], y = unlist(rawobjs[2:length(rawobjs)]), project = "integrated")
 }
 rm(rawobjs)
 
+cat("outputing result ... \n")
 output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)
