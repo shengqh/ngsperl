@@ -50,6 +50,7 @@ figureRmd<-function(samples){
     tagnames = rownames(soupor)[!(rownames(soupor) %in% c("Negative", "Doublet"))]
     result<-paste0(result, paste0("\n\n# ", sample, "\n\n"))
 
+    result<-paste0(result, paste0("\n\n## Overlap table\n\n"))
     result<-paste0(result, getTable(soupor_file))
 
     soupor_clusters = colnames(soupor)[!(colnames(soupor) %in% c("unassigned", "doublet"))]
