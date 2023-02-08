@@ -1031,7 +1031,6 @@ sub addEdgeRTask {
       $rCodeDic->{"filter_min_cell_per_sample"}=getValue( $def, "DE_by_sample_min_cell_per_sample" );
       $edgeRtaskname = $edgeRtaskname . "_bySample";
       $edgeRscript = "../scRNA/edgeR_pseudo.r";
-      $edgeRmd =  "../scRNA/edgeR_pseudo.rmd";
       $rmd_ext = ".edgeR_by_sample.html";
     }
 
@@ -1173,7 +1172,9 @@ sub addEdgeRTask {
 
     my $gsea_makeReport = getValue($def, "gsea_makeReport", 0);
 
-    my $gseaTaskName = $edgeRtaskname . "_GSEA";
+    my $use_mouse_gsea_db = getValue($def, "use_mouse_gsea_db", 0);
+
+    my $gseaTaskName = $edgeRtaskname . "_GSEA_" . ($use_mouse_gsea_db ? "Mm" : "Hs");
 
     #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
     $config->{$gseaTaskName} = {
@@ -1386,7 +1387,7 @@ sub addSubCluster {
     }),
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $rename_map,
-    output_file_ext      => ".files.csv",
+    output_file_ext      => ".files.csv,.meta.rds",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
