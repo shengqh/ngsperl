@@ -106,10 +106,10 @@ if(!is_file_empty(parSampleFile2)){
   obj<-obj[!(rownames(obj) %in% ignore_genes),]
 }
 
+meta<-obj@meta.data
 if(!is_file_empty(parSampleFile3)){
   rename_map = read.table(parSampleFile3, sep="\t", header=F)
 
-  meta<-obj@meta.data
   meta[,previous_layer]<-as.character(meta[,previous_layer])
 
   keys = unique(rename_map$V3)
@@ -158,7 +158,6 @@ if(!is_file_empty(parSampleFile3)){
   dev.off()
   png()
 
-  saveRDS(meta, paste0(outFile, ".post_rename.meta.rds"))
   obj@meta.data<-meta
 
   g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", legend.title="")
@@ -166,6 +165,7 @@ if(!is_file_empty(parSampleFile3)){
   print(g)
   dev.off()
 }
+saveRDS(meta, paste0(outFile, ".meta.rds"))
 
 bHasSignacX<-FALSE
 if(exists("parFile4")){
@@ -311,7 +311,7 @@ for(pct in previous_celltypes){
     predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
     saveRDS(predict_celltype, paste0(cluster_prefix, ".cta.rds"))
     if(length(predict_celltype$max_cta) > 1){
-      Plot_predictcelltype( predict_celltype, 
+      Plot_predictcelltype_ggplot2( predict_celltype, 
                             filename=paste0(cluster_prefix, ".cta.png"))
     }
 
