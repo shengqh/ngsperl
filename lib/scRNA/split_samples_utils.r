@@ -212,10 +212,10 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
   write.csv(tmat, file=paste0(output_prefix, ".csv"))
   
   if(length(tagnames) >= 2) {
-    VariableFeatures(obj)<-tagnames
+    obj <- FindVariableFeatures(obj, selection.method = "mean.var.plot")
 
     cat("ScaleData...\n")
-    obj<-ScaleData(obj)
+    obj<-ScaleData(obj,  features = VariableFeatures(obj))
 
     cat("RunUMAP...\n")
     #https://jlmelville.github.io/uwot/abparams.html
@@ -248,7 +248,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
       cols=rep("gray", length(hto_names))
       names(cols)=hto_names
       cols[tagname]="red"
-      glist[tagname] = DimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c(tagname))+
+      glist[[tagname]] = DimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c(tagname))+
         scale_color_manual(values=cols) + ggtitle(tagname)
     }
     g<-wrap_plots(glist, nrow = nrow, ncol = ncol)
@@ -266,7 +266,6 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
       scale_color_manual(values=cols)
     print(g)
     dev.off()
-
   }
 }
 
@@ -318,3 +317,51 @@ draw_cutoff<-function(prefix, values, cut_off){
   dev.off()
 }
 
+do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by_HTODemux=FALSE, cutoff_startval=0.5, cur_tags=NULL){
+  library(scDemultiplex)
+  library(tictoc)
+
+  cat(fname, ":", rdsfile, " ...\n")
+
+  obj=read_hto(rdsfile, output_prefix, cur_tags)
+
+  p.cut=0.001
+
+  refine_rds<-paste0(fname, ".scDemultiplex.refine.rds")
+  if(!file.exists(refine_rds)){
+    if(init_by_HTODemux){
+      print(paste0("starting ", fname, " by HTODemux ..."))
+      tic()
+      obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
+      toc1=toc()
+      obj$HTO_classification[obj$HTO_classification.global == "Doublet"] = "Doublet"
+      obj$HTODemux = obj$HTO_classification
+      obj$HTODemux.global = obj$HTO_classification.global
+      obj$HTO_classification = NULL
+      obj$HTO_classification.global = NULL
+      init_column = "HTODemux";
+    }else{
+      print(paste0("starting ", fname, " by cutoff ..."))
+      tic()
+      obj<-demulti_cutoff(obj, output_prefix, cutoff_startval, mc.cores=nrow(obj))
+      toc1=toc()
+      init_column = "scDemultiplex_cutoff";
+    }
+    tic(paste0("refining ", fname, " ...\n"))
+    obj<-demulti_refine(obj, p.cut, init_column=init_column, mc.cores=nrow(obj))
+    toc2=toc()
+    saveRDS(obj, refine_rds)
+
+    saveRDS(list("cutoff"=toc1, "refine"=toc2), paste0(output_prefix, ".scDemultiplex.tictoc.rds"))
+  }else{
+    obj<-readRDS(refine_rds)
+  }
+
+  obj$HTO_classification<-obj$scDemultiplex
+  obj$HTO_classification.global<-obj$scDemultiplex.global
+
+  cat(paste0("output result...\n"))
+  output_post_classification(obj, output_prefix)
+
+  return(obj)
+}
