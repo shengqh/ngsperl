@@ -12,11 +12,12 @@ setwd('/data/wanjalla_lab/shengq2/20230115_combined_scRNA_hg38/hto_samples_scDem
 
 ### Parameter setting end ###
 
-source("split_samples_utils.r")
 library(Seurat)
 library(ggplot2)
 library(scDemultiplex)
 library(tictoc)
+
+source("split_samples_utils.r")
 
 files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
@@ -26,7 +27,7 @@ params=split(params_lines$V1, params_lines$V2)
 params$hto_ignore_exists=ifelse(params$hto_ignore_exists=="0", FALSE, TRUE)
 
 init_by_HTODemux=is_one(params$init_by_HTODemux)
-cutoff_startval=ifelse(is.null(params$cutoff_startval), 0, ifelse(params$cutoff_startval == "", 0, as.numeric(params$cutoff_startval)))
+cutoff_startval=ifelse(is.null(params$cutoff_startval), 0.5, ifelse(params$cutoff_startval == "", 0.5, as.numeric(params$cutoff_startval)))
 
 has_valid_tag = exists("parSampleFile4")
 if(has_valid_tag){
@@ -45,7 +46,6 @@ for(idx in c(1:length(files))){
   }
 
   rdsfile=files[[idx]]
-  cat(fname, ":", rdsfile, " ...\n")
 
   cur_tags = NULL
   if(has_valid_tag){
@@ -55,43 +55,13 @@ for(idx in c(1:length(files))){
       warning(paste0(fname, " is not in valid tag map, check HTO_tags in configuration file, will continue to use all tags in this sample!"))
     }
   }
-  obj=read_hto(rdsfile, output_prefix, cur_tags)
 
-  p.cut=0.001
-
-  refine_rds<-paste0(fname, ".scDemultiplex.refine.rds")
-  if(!file.exists(refine_rds)){
-    if(init_by_HTODemux){
-      print(paste0("starting ", fname, " by HTODemux ..."))
-      tic()
-      obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
-      toc1=toc()
-      obj$HTO_classification[obj$HTO_classification.global == "Doublet"] = "Doublet"
-      obj$HTODemux = obj$HTO_classification
-      obj$HTODemux.global = obj$HTO_classification.global
-      obj$HTO_classification = NULL
-      obj$HTO_classification.global = NULL
-      init_column = "HTODemux";
-    }else{
-      print(paste0("starting ", fname, " by cutoff ..."))
-      tic()
-      obj<-demulti_cutoff(obj, output_prefix, cutoff_startval, mc.cores=nrow(obj))
-      toc1=toc()
-      init_column = "scDemultiplex_cutoff";
-    }
-    tic(paste0("refining ", fname, " ...\n"))
-    obj<-demulti_refine(obj, p.cut, init_column=init_column, mc.cores=nrow(obj))
-    toc2=toc()
-    saveRDS(obj, refine_rds)
-
-    saveRDS(list("cutoff"=toc1, "refine"=toc2), paste0(output_prefix, ".scDemultiplex.tictoc.rds"))
-  }else{
-    obj<-readRDS(refine_rds)
-  }
-
-  obj$HTO_classification<-obj$scDemultiplex
-  obj$HTO_classification.global<-obj$scDemultiplex.global
-
-  cat(paste0("output result...\n"))
-  output_post_classification(obj, output_prefix)
+  obj = do_scDemultiplex( fname=fname, 
+                          rdsfile=rdsfile, 
+                          output_prefix=output_prefix, 
+                          init_by_HTODemux=init_by_HTODemux, 
+                          cutoff_startval=cutoff_startval,
+                          cur_tags=cur_tags)
+                          
+  saveRDS(obj, paste0(output_prefix, ".scDemultiplex.final.rds"))
 }
