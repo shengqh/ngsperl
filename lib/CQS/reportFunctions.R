@@ -102,12 +102,17 @@ printTable<-function(filepath, row.names=1){
   print(kable_styling(kable(tbl)))
 }
 
-printPagedTable<-function(filepath, row.names=1, escape=TRUE){
+printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
   if(row.names > 0){
     tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
   }else{
     tbl<-data.frame(fread(filepath, check.names=F))
   }
+
+  if(digits > 0){
+    tbl <- tbl %>% dplyr::mutate_if(is.numeric, format, digits=digits, nsmall=nsmall)
+  }
+
   DT::datatable(tbl, 
                 extensions = c('FixedColumns','FixedHeader'),
                 rownames = row.names > 0,
@@ -116,8 +121,8 @@ printPagedTable<-function(filepath, row.names=1, escape=TRUE){
                                 paging=TRUE))
 }
 
-getPagedTable<-function(filepath, row.names=1, escape=TRUE){
-  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintPagedTable('", filepath, "', ", row.names, ",", escape, ")\n```\n\n"))
+getPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
+  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintPagedTable('", filepath, "', ", row.names, ",", escape, ",", digits, ",", nsmall, ")\n```\n\n"))
 }
 
 getTable<-function(filepath, row.names=1){
