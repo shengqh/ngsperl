@@ -1,15 +1,17 @@
 rm(list=ls()) 
-outFile='P9061'
-parSampleFile1=''
+outFile='mouse_8870'
+parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_byCell/result/P9061.edgeR.files.csv'
+parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_bySample/result/mouse_8870.edgeR.files.csv'
 parFile2=''
 parFile3=''
 outputDirectory='.'
-gseaDb='/data/cqs/references/gsea/v2022.1.Mm'; gseaJar='gsea-cli.sh'; gseaCategories=c('mh.all.v2022.1.Mm.symbols.gmt', 'm2.all.v2022.1.Mm.symbols.gmt', 'm5.all.v2022.1.Mm.symbols.gmt', 'm8.all.v2022.1.Mm.symbols.gmt'); makeReport=0;
+gseaChip='/data/cqs/references/gsea/v2022.1.Hs/Mouse_Gene_Symbol_Remapping_Human_Orthologs_MSigDB.v2022.1.Hs.chip'; gseaDb='/data/cqs/references/gsea/v2022.1.Hs'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v2022.1.Hs.symbols.gmt', 'c2.all.v2022.1.Hs.symbols.gmt', 'c5.all.v2022.1.Hs.symbols.gmt', 'c6.all.v2022.1.Hs.symbols.gmt', 'c7.all.v2022.1.Hs.symbols.gmt'); makeReport=0;
 
-setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_byCell_GSEA/result')
+overwrite=FALSE
+
+setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_bySample_GSEA_Hs/result')
 
 ### Parameter setting end ###
 
@@ -18,6 +20,10 @@ library(stringr)
 ###############################################################################
 # Author: Shilin Zhao, Quanhu Sheng
 ###############################################################################
+
+if(!exists('overwrite')){
+  overwrite=TRUE
+}
 
 #if you run the script at windows using gsea-cli.bat, remember to remove "start" from gsea-cli.bat
 
@@ -54,34 +60,41 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
   }
   gesaResultDir<-str_replace_all(gesaResultDir, '[()]', '_')
 
+  b_perform=TRUE
   if (file.exists(gesaResultDir)) {
-    warning(paste0(gesaResultDir," folder exists! Will delete all files in it and regenerate GSEA results."))
-    unlink(gesaResultDir, recursive = TRUE)
+    if(overwrite){
+      warning(paste0(gesaResultDir," folder exists! Will delete all files in it and regenerate GSEA results."))
+      unlink(gesaResultDir, recursive = TRUE)
+    }else{
+      b_perform=FALSE
+    }
   }
   
-  gseaCategory=gseaCategories[1]
-  for (gseaCategory in gseaCategories) {
-    gseaCategoryName=strsplit(gseaCategory,"\\.")[[1]][1]
-    if (gseaCategoryName %in% names(fileToName)) {
-      gseaCategoryName<-fileToName[gseaCategoryName]
+  if(b_perform){
+    gseaCategory=gseaCategories[1]
+    for (gseaCategory in gseaCategories) {
+      gseaCategoryName=strsplit(gseaCategory,"\\.")[[1]][1]
+      if (gseaCategoryName %in% names(fileToName)) {
+        gseaCategoryName<-fileToName[gseaCategoryName]
+      }
+      
+      if (grepl("cli.sh", gseaJar) || (grepl("cli.bat", gseaJar))){
+        runCommand=paste0(gseaJar," GseaPreranked")
+      }else{
+        runCommand=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked") 
+      }
+      runCommand = paste0(runCommand, " -gmx ",gseaDb,"/",gseaCategory, " -rnk \"",preRankedGeneFile,"\" -rpt_label ",gseaCategoryName," -scoring_scheme weighted -make_sets true -nperm 1000 -plot_top_x 20 -set_max 500 -set_min 15 -mode Abs_max_of_probes -zip_report false -norm meandiv -create_svgs false -include_only_symbols true -rnd_seed timestamp -out \"", gesaResultDir, "\"")
+      
+      if(!is.na(gseaChip)){
+        runCommand=paste0(runCommand, " -collapse Collapse -chip ", gseaChip)
+      }else{
+        runCommand=paste0(runCommand, " -collapse false")
+      }
+      print(runCommand)
+      system(runCommand)
     }
-    
-    if (grepl("cli.sh", gseaJar) || (grepl("cli.bat", gseaJar))){
-      runCommand=paste0(gseaJar," GseaPreranked")
-    }else{
-      runCommand=paste0("java -Xmx8198m -cp ",gseaJar," xtools.gsea.GseaPreranked") 
-    }
-    runCommand = paste0(runCommand, " -gmx ",gseaDb,"/",gseaCategory, " -rnk \"",preRankedGeneFile,"\" -rpt_label ",gseaCategoryName," -scoring_scheme weighted -make_sets true -nperm 1000 -plot_top_x 20 -set_max 500 -set_min 15 -mode Abs_max_of_probes -zip_report false -norm meandiv -create_svgs false -include_only_symbols true -rnd_seed timestamp -out \"", gesaResultDir, "\"")
-    
-    if(!is.na(gseaChip)){
-      runCommand=paste0(runCommand, " -collapse Collapse -chip ", gseaChip)
-    }else{
-      runCommand=paste0(runCommand, " -collapse false")
-    }
-    print(runCommand)
-    system(runCommand)
   }
-  
+
   resultDirSubs<-list.dirs(gesaResultDir,recursive=FALSE,full.names=TRUE)
   newResultDirSubs<-unlist(lapply(resultDirSubs, function(x) {
     newDir = gsub("\\.GseaPreranked.*", "", x)
@@ -140,3 +153,4 @@ for (i in 1:nrow(preRankedGeneFileTable)) {
 }
 
 write.csv(alldt, file=paste0(outFile, ".gsea.files.csv"), row.names=F)
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
