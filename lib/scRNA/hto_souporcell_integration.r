@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='AK6383'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/shengq2/20230115_combined_scRNA_hg38/hto_samples_scDemultiplex_HTODemux_souporcell_integration/result')
+setwd('/nobackup/kirabo_lab/shengq2/20230206_6383_scRNA_human/hto_samples_scDemultiplex_HTODemux_souporcell_integration/result')
 
 ### Parameter setting end ###
 
@@ -44,7 +45,7 @@ get_max_row<-function(x){
   }
 }
 
-sample_name=rownames(souporcell_tb)[1]
+sample_name=rownames(souporcell_tb)[4]
 for (sample_name in rownames(souporcell_tb)){
   s1<-read.csv(cutoff_tb[sample_name, "V1"], row.names=1, check.names=F)
   s2<-read.table(souporcell_tb[sample_name, "V1"], row.names=1, header=T, check.names=F)
@@ -258,8 +259,13 @@ for (sample_name in rownames(souporcell_tb)){
     col1[hto]<-"red"
     gg1<-g1+scale_color_manual(values=col1)
     
-    htodata<-gg1$data[gg1$data[,3] == hto,]
-    nohtodata<-gg1$data[gg1$data[,3] != hto,]
+    if(length(hto) > 1){
+      htodata<-gg1$data[gg1$data[,3] %in% hto,]
+      nohtodata<-gg1$data[!(gg1$data[,3] %in% hto),]
+    }else{
+      htodata<-gg1$data[gg1$data[,3] == hto,]
+      nohtodata<-gg1$data[gg1$data[,3] != hto,]
+    }
     
     gg1$data<-rbind(nohtodata, htodata)
     gg1$data[,3]=factor(gg1$data[,3], levels=groups)
@@ -276,16 +282,20 @@ for (sample_name in rownames(souporcell_tb)){
     return(gg1)
   }
 
+  if(!is.null(ignore_souporcells)){
+    cmap=cmap[!(names(cmap) %in% as.character(ignore_souporcells))]
+  }
+
   hmap<-split(names(cmap), as.character(cmap))  
   hmap$Doublet<-"Doublet"
 
   htos<-unique(as.character(obj$HTO_classification))
-  hto<-htos[1]
+  hto<-htos[7]
   for (hto in htos){
     gg1<-get_gg(g1, hto, "HTO")
     
     if(hto %in% names(hmap)){
-      gg2<-get_gg(g2, as.character(hmap[hto]), "souporcell")
+      gg2<-get_gg(g2, as.character(unlist(hmap[hto])), "souporcell")
     }else{
       gg2<-get_gg(g2, "Unmapped", "souporcell")
     }
