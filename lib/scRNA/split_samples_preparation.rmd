@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r setup, include=FALSE}
+```{r data, include=FALSE}
 source("reportFunctions.R")
 
 options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)

@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r setup, include=FALSE}
+```{r data, include=FALSE}
 source("reportFunctions.R")
 
 options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
@@ -64,24 +64,34 @@ figureRmd<-function(cts, files){
       result<-paste0(result, paste0("\n\n## Resolution ", res, "\n\n"))
       res_tbl=ct_tbl[ct_tbl$resolution == res,]
 
-      heatmap=res_tbl$file[res_tbl$type=="heatmap"]
-      if(file.info(paste0("details/", basename(heatmap)))$size > 20000){
+      res_map=split(res_tbl$file, res_tbl$type)
+
+      heatmap=res_map$heatmap
+      if(file.info(heatmap)$size > 20000){
         result<-paste0(result, "### Marker genes\n\n")
         result<-paste0(result, getFigure(heatmap))
       }
 
       result<-paste0(result, "### UMAP\n\n")
-      umap=res_tbl$file[res_tbl$type=="umap"]
+      umap=res_map$umap
       result<-paste0(result, getFigure(umap))
 
-      if("dot" %in% res_tbl$type){
+      cur_prefix = gsub(".umap.png$", "", umap)
+
+      cta_png = paste0(cur_prefix, ".cta.png")
+      if(file.exists(cta_png)){
+        result<-paste0(result, "### Cell type annotation score\n\n")
+        result<-paste0(result, getFigure(cta_png))
+      }
+
+      if("dot" %in% names(res_map)){
         result<-paste0(result, "### Bubble plot\n\n")
-        dot=res_tbl$file[res_tbl$type=="dot"]
+        dot=res_map$dot
         result<-paste0(result, getFigure(dot))
       }
 
       result<-paste0(result, "### Sample/Cluster\n\n")
-      bar=res_tbl$file[res_tbl$type=="bar"]
+      bar=res_map$bar
       result<-paste0(result, getFigure(bar))
     }
   }
