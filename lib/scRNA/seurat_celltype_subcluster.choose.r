@@ -4,10 +4,9 @@ parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony/result/mouse_8870.final.rds'
-parFile2='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_01_call/result/mouse_8870.scDynamic.meta.rds'
+parFile2='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_02_subcluster/result/mouse_8870.meta.rds'
 parFile3='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/essential_genes/result/mouse_8870.txt'
 parFile4='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_02_subcluster/result/mouse_8870.files.csv'
-
 
 setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose/result')
 
@@ -52,6 +51,17 @@ resolution_col = "resolution"
 essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
 essential_genes<-""
 
+ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
+                             species = myoptions$species,
+                             curated_markers_file = myoptions$curated_markers_file,
+                             HLA_panglao5_file = myoptions$HLA_panglao5_file,
+                             layer="Layer4",
+                             remove_subtype_str = "",
+                             combined_celltype_file = NULL)
+
+cell_activity_database<-ctdef$cell_activity_database
+
+
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 bubble_width <-ifelse(is.null(myoptions$bubble_width), 6000, as.numeric(myoptions$bubble_width))
@@ -67,9 +77,9 @@ if(!exists("obj")){
 
 pre_choose_file=paste0(prefix, ".pre.umap.png")
 
-post_rename_umap = file.path(dirname(parFile4), outFile, ".post_rename.umap.png")
+post_rename_umap = file.path(dirname(parFile4), paste0(outFile, ".post_rename.umap.png"))
 if(file.exists(post_rename_umap)){
-  file.copy(post_rename_umap, pre_choose_file)
+  file.copy(post_rename_umap, pre_choose_file, overwrite=TRUE)
 }else{
   obj<-build_dummy_cluster(obj, label.by=previous_layer, new_cluster_name = "old_clusters")
   g<-get_dim_plot(obj, group.by ="old_clusters", label.by="old_clusters_label", label.size = 8, legend.title="") + 
@@ -438,9 +448,16 @@ if(output_heatmap){
 
 g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_cur_layer, label.size = 8, legend.title="") + 
   theme(legend.text = element_text(size = 20)) + ggtitle("") 
-png(paste0(prefix, ".umap.png"), width=4400, height=2000, res=300)
+png(paste0(prefix, ".umap.png"), width=4000, height=2000, res=300)
 print(g)
 dev.off()
+
+data_norm=get_seurat_average_expression(obj, seurat_cur_layer)
+predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
+saveRDS(predict_celltype, paste0(outFile, ".cta.rds"))
+Plot_predictcelltype_ggplot2( predict_celltype, 
+                              filename=paste0(outFile, ".cta.png"),
+                              is_validation=TRUE)
 
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
   g<-get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA", orderby_cluster=TRUE)
