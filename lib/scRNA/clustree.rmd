@@ -7,9 +7,16 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-library(knitr)
-library(dplyr)
-library(kableExtra)
+library("knitr")
+library("dplyr")
+library("kableExtra")
+library("Seurat")
+library("clustree")
+library("mclust")
+
+source("scRNA_func.r")
+source("reportFunctions.R")
+
 knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=12, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
 
@@ -19,15 +26,7 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r setup, include=FALSE}
-library("Seurat")
-library("clustree")
-library("dplyr")
-library("mclust")
-
-source("scRNA_func.r")
-source("reportFunctions.R")
-
+```{r data, include=FALSE}
 options_table = read.table("fileList1.txt", sep="\t")
 myoptions = split(options_table$V1, options_table$V2)
 outFile=myoptions$outFile
