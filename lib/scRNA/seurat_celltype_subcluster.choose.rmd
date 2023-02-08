@@ -29,6 +29,8 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
 detailFile=paste0("details/", outFile)
+
+cta_file=paste0(outFile, ".cta.png")
 ```
 
 # Pre selection
@@ -120,6 +122,11 @@ include_graphics(paste0(detailFile, ".seurat_cell_type.umap.png"))
 
 ```{r, echo=FALSE}
 include_graphics(paste0(detailFile, ".seurat_cell_type.dot.png"))
+```
+
+```{r, echo=FALSE, eval=file.exists(cta_file)}
+cat("\n### Cell type annotation score\n\n")
+include_graphics(cta_file)
 ```
 
 ### Sample / cell subtype
