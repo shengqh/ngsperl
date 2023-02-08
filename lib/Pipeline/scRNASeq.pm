@@ -457,6 +457,7 @@ sub getScRNASeqConfig {
           my $rename_map = $def->{"dynamic_rename_map"};
 
           $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
+          $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_dynamic_choose")) {
             my $choose_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_choose";
@@ -650,6 +651,7 @@ sub getScRNASeqConfig {
           my $rename_map = $def->{"multires_rename_map"};
 
           addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
+          $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_multires_choose", 0)) {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
