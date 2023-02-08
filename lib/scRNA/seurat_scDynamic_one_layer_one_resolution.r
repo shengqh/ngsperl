@@ -252,7 +252,7 @@ iterate_celltype<-function(obj,
 
     if(length(predict_celltype$max_cta) > 1){
       cta_png_file=paste0(curprefix, ".", pct_str, ".cta.png")
-      Plot_predictcelltype( predict_celltype, 
+      Plot_predictcelltype_ggplot2( predict_celltype, 
                             filename=cta_png_file)
       files<-rbind(files, c(previous_layer, cur_layer, pct, "cta_png", cta_png_file))
     }
