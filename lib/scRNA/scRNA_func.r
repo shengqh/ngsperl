@@ -843,11 +843,11 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   }
 }
 
-read_bubble_genes<-function(bubble_file, allgenes=c()){
+read_bubble_genes<-function(bubblemap_file, allgenes=c()){
   library("readxl")
   library("tidyr")
   
-  genes <- read_xlsx(bubble_file, sheet = 1)
+  genes <- read_xlsx(bubblemap_file, sheet = 1)
   colnames(genes)[colnames(genes) == "Marker Gene"] = "gene"
   colnames(genes)[colnames(genes) == "Cell Type"] = "cell_type"
 
