@@ -107,12 +107,17 @@ figureRmd<-function(edgeR_files, comparisons){
       result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
 
       sig_file=sig_file_map[[ct]]
-      result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
-      result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
+      sig_data=read.csv(sig_file, header=T)
+      if(nrow(sig_data) == 0){
+        result<-paste0(result,"\n### No significantly differential expressed genes\n\n")
+      }else{
+        result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
+        result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
 
-      top_gene_png<-paste0(celltype_to_filename(ct), ".", comp, ".top_1_gene.png")
-      if(file.exists(top_gene_png)){
-        result<-paste0(result, getFigure(top_gene_png))
+        top_gene_png<-paste0(celltype_to_filename(ct), ".", comp, ".top_1_gene.png")
+        if(file.exists(top_gene_png)){
+          result<-paste0(result, getFigure(top_gene_png))
+        }
       }
     }
   }
