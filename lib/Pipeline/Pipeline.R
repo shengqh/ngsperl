@@ -69,32 +69,37 @@ processGseaTable=function(gseaTableFile, maxCategoryFdr=0.05) {
     paste0("<a href='", x['URL'], "' target='_blank'>", gsub("_", " ", x['NAME']), "</a>")
   }))
   
-  rawTable$Description=unlist(apply(rawTable, 1, function(x){
+  descriptions=unlist(apply(rawTable, 1, function(x){
+    categoryDescription=""
     cname = x['NAME']
     if(cname %in% names(gsd_map)){
       categoryDescription=gsd_map[cname]
     }else{
       gseaUrl=x['URL']
       gseaWeb<-getURL(gseaUrl)
-      temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
-      j=grep("Brief",temp)
-      categoryDescription<-gsub("^>","",temp[j+2])
-      categoryDescription<-gsub("<\\/$","",categoryDescription)
-      reg_pattern = "<a href=.+?]</a>"
-      if(length(categoryDescription) > 0){
-        while(grepl(reg_pattern, categoryDescription)){
-          url = str_extract(categoryDescription, reg_pattern) 
-          
-          name=str_match(url, '\\[(.+?)]')[[2]]
-          name_url=str_match(url, "<a href='(.+)'")[[2]]
-          namelink=addLinkTag(name, name_url)
-          
-          categoryDescription<-gsub(url, namelink, fixed=TRUE, categoryDescription)
+      if(gseaWeb != ""){
+        temp<-strsplit(gseaWeb,"description|\\<td\\>")[[1]]
+        j=grep("Brief",temp)
+        categoryDescription<-gsub("^>","",temp[j+2])
+        categoryDescription<-gsub("<\\/$","",categoryDescription)
+        reg_pattern = "<a href=.+?]</a>"
+        if(length(categoryDescription) > 0){
+          while(grepl(reg_pattern, categoryDescription)){
+            url = str_extract(categoryDescription, reg_pattern) 
+            
+            name=str_match(url, '\\[(.+?)]')[[2]]
+            name_url=str_match(url, "<a href='(.+)'")[[2]]
+            namelink=addLinkTag(name, name_url)
+            
+            categoryDescription<-gsub(url, namelink, fixed=TRUE, categoryDescription)
+          }
         }
       }
     }
     return(categoryDescription)    
   }))
+
+  rawTable$Description=descriptions
 
   rawTable$Core=round(rawTable$SIZE * as.numeric(str_extract(rawTable$LEADING.EDGE, "\\d+")) / 100)
 
@@ -148,6 +153,7 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
     gsea_files$Comparisons<-gsea_files$V2
     comparisons<-unique(gsea_files$Comparisons)
   }
+
   j=1
   for (j in 1:length(comparisons)){
     comparison<-comparisons[j]
@@ -159,6 +165,8 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
       cat(comparison, "\n")
     }
   
+    has_enriched=FALSE
+
     i=1
     for (i in 1:nrow(comp_files)){
       gname=comparison
