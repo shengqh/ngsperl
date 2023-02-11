@@ -195,7 +195,7 @@ for(idx in c(1:nrow(designMatrix))){
     covariances = c()
     cat("  redo estimateDisp without covariates\n")
     design_data = design_data[,colnames(design_data) %in% c("Group", "Sample", "DisplayGroup")]
-    write.table(design_data, design_file, sep="\t", row.names=FALSE)
+    write.csv(design_data, design_file, row.names=FALSE)
   }
   
   saveRDS(dge, paste0(prefix, ".dge.rds"))
