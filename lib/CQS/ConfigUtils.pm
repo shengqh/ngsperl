@@ -614,6 +614,7 @@ sub get_refmap {
     }
     else {
       if ( !has_config_section( $config, $targetSection ) ) {
+        print Dumper(longmess());
         die "undefined section $targetSection";
       }
       $result->{1} = { config => $config, section => $targetSection, pattern => $pattern };
