@@ -470,8 +470,9 @@ sub getPreprocessionConfig {
   }
 
   if ( $def->{merge_fastq} ) {
+    my $class = getValue($def, "is_fastq_gzipped", 0) ? "Format::MergeFastqGzipped" : "Format::MergeFastq";
     $config->{merge_fastq} = {
-      class       => "Format::MergeFastq",
+      class       => $class,
       perform     => 1,
       target_dir  => $intermediate_dir . "/" . getNextFolderIndex($def) . "merge_fastq",
       option      => "",

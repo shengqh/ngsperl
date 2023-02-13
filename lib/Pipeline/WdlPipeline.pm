@@ -807,6 +807,7 @@ sub addEncodeHic {
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "source_ref" => $input_task,
+    "parameterSampleFile2_ref" => $files_ref, #add ref for job dependency
     "is_source_input_json" => 1,
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file" => $pipeline->{"wdl_file"},

@@ -47,9 +47,11 @@ def get_input_json(fastqs_str, config_file):
         "hic.assembly_name": options["hic.assembly_name"],
         "hic.chrsz": options["hic.chrsz"],
         "hic.reference_index": options["hic.reference_index"],
-        "hic.restriction_enzymes": options["hic.restriction_enzymes"],
         "hic.align_num_cpus": options["hic.align_num_cpus"]
     }
+
+    restriction_enzymes = options["hic.restriction_enzymes"].split(',')
+    input_json["hic.restriction_enzymes"] = restriction_enzymes
 
     if options["hic.restriction_enzymes"] != "none":
       input_json["hic.restriction_sites"] = options["hic.restriction_sites"]
