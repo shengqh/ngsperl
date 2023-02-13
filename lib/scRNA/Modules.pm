@@ -1387,7 +1387,7 @@ sub addSubCluster {
     }),
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $rename_map,
-    output_file_ext      => ".files.csv,.meta.rds",
+    output_file_ext      => ".meta.rds,.files.csv",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
