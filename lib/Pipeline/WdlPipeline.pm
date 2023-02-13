@@ -804,7 +804,9 @@ sub addEncodeHic {
     "option" => $encode_option,
     "target_dir" => "${target_dir}/${task_folder}",
     "singularity_image_files" => getValue($def, "singularity_image_files"),
-    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "init_command" => "rm -rf metadata.json cromwell.out hic",
+    "cromwell_jar" => $server->{"cromwell_jar"},
+    "womtool_jar" => $server->{"womtool_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "source_ref" => $input_task,
     "parameterSampleFile2_ref" => $files_ref, #add ref for job dependency
@@ -813,7 +815,6 @@ sub addEncodeHic {
     "wdl_file" => $pipeline->{"wdl_file"},
     output_to_same_folder => 0,
     cromwell_finalOutputs => 0,
-    check_output_file_pattern => "metadata.json",
     output_file_ext => "hic/",
     use_caper => 1,
     sh_direct   => $sh_direct,
