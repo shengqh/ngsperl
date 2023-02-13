@@ -437,6 +437,12 @@ preprocess<-function( SampleInfo,
       predict_celltype<-ORA_celltype_qc(meanexp,cellType,method=celltype_predictmethod)
       saveRDS(predict_celltype, paste0(cur_sample, ".ct.rds"))
       
+      if(length(predict_celltype$max_cta) > 1){
+        cta_png_file=paste0(cur_sample, ".cta.png")
+        Plot_predictcelltype_ggplot2( predict_celltype, 
+                                      filename=cta_png_file)
+      }
+
       #use the max_cta_score for each cluster
       new.cluster.ids<-rownames(predict_celltype$predict_result)
       names(new.cluster.ids) <- levels(subobj)
@@ -478,7 +484,7 @@ preprocess<-function( SampleInfo,
       
       #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
       #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-      g<-DoHeatmap(subobj, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
+      g<-MyDoHeatMap(subobj, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
       png(paste0(cur_sample, ".heatmap.png"), width=4000, height=4000, res=300)
       print(g)
       dev.off()
@@ -504,7 +510,7 @@ preprocess<-function( SampleInfo,
         
         subobj<-myScaleData(subobj, ugenes, "RNA")
 
-        g<-DoHeatmap(subobj, assay="RNA",features=ugenes)
+        g<-MyDoHeatMap(subobj, assay="RNA",features=ugenes)
         png(paste0(cur_sample, ".bubble_heatmap.png"), width=4000, height=4000, res=300)
         print(g)
         dev.off()
