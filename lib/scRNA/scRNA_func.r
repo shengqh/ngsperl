@@ -97,9 +97,18 @@ theme_bw3 <- function (axis.x.rotate=F) {
   return(result)
 }
 
+get_heatmap_height<-function(ngenes){
+  result<-max(3000, min(20000, ngenes * 60 + 1000))
+  return(result)
+}
+
+get_heatmap_width<-function(nclusters){
+  result<-max(3000, min(10000, nclusters * 300 + 1000))
+  return(result)
+}
+
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
-
 MyDoHeatMap<-function(object, max_cell=5000, ...){
   if(ncol(obj) > max_cell){
     subsampled <- obj[, sample(colnames(obj), size=max_cell, replace=F)]
@@ -953,6 +962,23 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   return(g)
 }
 
+get_dot_width<-function(g, min_width=4400){
+  ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot","feature.groups")]),])
+  ngroups = length(unique(g$data$feature.groups))
+  width=ngenes * 40 + ngroups * 30 + 400
+  return(max(width, min_width))
+}
+
+get_dot_height_vec<-function(vec){
+  ngroups = length(unique(vec))
+  result = max(1500, ngroups * 90 + 200)
+  return(result)
+}
+
+get_dot_height<-function(obj, group.by){
+  return(get_dot_height_vec(unlist(obj[[group.by]])))
+}
+
 get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL, use_blue_yellow_red=TRUE){
   allgenes=rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes)
@@ -1582,16 +1608,6 @@ sub_cluster<-function(subobj,
   }
 
   return(subobj)    
-}
-
-get_dot_height_vec<-function(vec){
-  ngroups = length(unique(vec))
-  result = max(1500, ngroups * 90 + 200)
-  return(result)
-}
-
-get_dot_height<-function(obj, group.by){
-  return(get_dot_height_vec(unlist(obj[[group.by]])))
 }
 
 output_barplot<-function(obj, sample_key, cell_key, filename){
