@@ -963,16 +963,23 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
 }
 
 get_dot_width<-function(g, min_width=4400){
+  if(!all(c("features.plot","feature.groups") %in% colnames(g$data))){
+    stop(paste0("features.plot or feature.groups is not in ", paste0(colnames(g$data), collapse = ",")))
+  }
   ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot","feature.groups")]),])
   ngroups = length(unique(g$data$feature.groups))
   width=ngenes * 40 + ngroups * 30 + 400
   return(max(width, min_width))
 }
 
-get_dot_height_vec<-function(vec){
-  ngroups = length(unique(vec))
+get_dot_height_num<-function(ngroups){
   result = max(1500, ngroups * 90 + 200)
   return(result)
+}
+
+get_dot_height_vec<-function(vec){
+  ngroups = length(unique(vec))
+  return(get_dot_height_num(ngroups))
 }
 
 get_dot_height<-function(obj, group.by){
