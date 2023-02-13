@@ -32,11 +32,8 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
-  my $cromwell_config_file = get_option_file($config, $section, "cromwell_config_file");
-  my $cromwell_jar = get_option_file($config, $section, "cromwell_jar");
- 
   my $wdl_file = get_option_file( $config, $section, "wdl_file");
 
   my $sample_name_regex = get_option( $config, $section, "sample_name_regex", "" );
@@ -107,6 +104,8 @@ fi
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $expect_file );
 
     print $pbs "
+$init_command
+
 cp $sample_input_file $input_file
 ";
 
@@ -126,11 +125,23 @@ if [[ -e $final_dir/${sample_name}.failed ]]; then
 fi
 ";
     if($use_caper){
+      my $cromwell_jar = get_option_file($config, $section, "cromwell_jar", "");
+      my $womtool_jar = get_option_file($config, $section, "womtool_jar", "");
+
+      my $jar_option = "";
+      if ($cromwell_jar ne ""){
+        $jar_option = $jar_option . " --cromwell $cromwell_jar";
+      }
+      if ($womtool_jar ne ""){
+        $jar_option = $jar_option . " --womtool $womtool_jar";
+      }
       print $pbs "
-caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metadata.json
+caper run $wdl_file $option $jar_option -i $input_file $singularity_option -m $cur_dir/metadata.json
     
 ";
     }else{
+      my $cromwell_jar = get_option_file($config, $section, "cromwell_jar", "");
+      my $cromwell_config_file = get_option_file($config, $section, "cromwell_config_file");
       my $input_option_file = get_option_file( $config, $section, "input_option_file" );
 
       print $pbs "
