@@ -413,7 +413,7 @@ layer_cluster_celltype<-function(obj,
 
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
     g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay="RNA")
-    png(paste0(prefix, ".", cur_layer, ".dot.png"), width=get_dot_width(g), height=get_dot_height(obj, cur_layer), res=300)
+    png(paste0(prefix, ".", cur_layer, ".dot.png"), width=get_dot_width(g2), height=get_dot_height(obj, cur_layer), res=300)
     print(g2)
     dev.off()
   }
@@ -490,8 +490,8 @@ do_analysis<-function(tmp_folder,
     obj<-myScaleData(obj, all_top10, "RNA")
     g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = all_top10, group.by = "layer4", angle = 90) + NoLegend()
 
-    width<-max(5000, min(10000, length(unique(Idents(obj))) * 400 + 1000))
-    height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
+    width<-get_heatmap_width(length(unique(Idents(obj))))
+    height<-get_heatmap_height(length(all_top10))
     png(paste0(prefix, ".layer4.heatmap.png"), width=width, height=height, res=300)
     print(g)
     dev.off()
