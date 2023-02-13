@@ -25,3 +25,5 @@ curl -L http://cpanmin.us | perl - WWW::Mechanize
 curl -L http://cpanmin.us | perl - Algorithm::Loops
 curl -L http://cpanmin.us | perl - JSON::Streaming::Reader
 curl -L http://cpanmin.us | perl - Tie::IxHash
+curl -L http://cpanmin.us | perl - Text::CSV
+
