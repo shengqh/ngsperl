@@ -422,11 +422,8 @@ for(pct in previous_celltypes){
       #replace avg.exp.scaled with between all cell types instead of between subcluters.
       g2$data<-g1data    
 
-      ncluster<-length(unique(subobj2$seurat_clusters))
-      height=max(2000, ncluster*250 + 1000)
-
       dot_file = paste0(cluster_prefix, ".dot.png")
-      png(dot_file, width=6000, height=height, res=300)
+      png(dot_file, width=get_dot_width(g2), height=get_dot_height(subobj2, "seurat_clusters"), res=300)
       print(g2)
       dev.off()
 

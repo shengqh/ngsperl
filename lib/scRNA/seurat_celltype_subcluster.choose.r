@@ -394,7 +394,7 @@ for(pct in pcts){
   
   g_data<-galldata[galldata$id %in% unlist(subobj[[seurat_cur_layer]]),]
   gdot$data<-g_data
-  png(paste0(outFile, ".", celltype_to_filename(pct), ".dot.png"), width=bubble_width, height=get_dot_height_vec(g_data$id),res=300)
+  png(paste0(outFile, ".", celltype_to_filename(pct), ".dot.png"), width=get_dot_width(gdot, min_width=bubble_width), height=get_dot_height_vec(g_data$id),res=300)
   print(gdot)
   dev.off()
 }
@@ -437,11 +437,11 @@ write.csv(obj[["subumap"]]@cell.embeddings, paste0(outFile, ".subumap.csv"))
 nclusters<-length(unique(obj$seurat_clusters))
 
 if(output_heatmap){
-  width<-max(3000, min(10000, nclusters * 150 + 1000))
-  height<-max(3000, min(20000, length(allmarkers) * 60 + 1000))
-  
   g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
-  png(paste0(prefix, ".top10.heatmap.png"), width=width, height=height, res=300)
+  png(paste0(prefix, ".top10.heatmap.png"), 
+      width=get_heatmap_width(nclusters), 
+      height=get_heatmap_height(length(allmarkers)), 
+      res=300)
   print(g)
   dev.off()
 }
@@ -461,7 +461,7 @@ Plot_predictcelltype_ggplot2( predict_celltype,
 
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
   g<-get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA", orderby_cluster=TRUE)
-  png(paste0(prefix, ".dot.png"), width=bubble_width, height=get_dot_height(obj, "seurat_clusters"), res=300)
+  png(paste0(prefix, ".dot.png"), width=get_dot_width(g, min_width=bubble_width), height=get_dot_height(obj, "seurat_clusters"), res=300)
   print(g)
   dev.off()
 }
@@ -483,19 +483,20 @@ top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC
 
 top10genes=unique(top10$gene)
 obj<-myScaleData(obj, top10genes, assay="RNA")
-height<-max(3000, min(20000, length(top10genes) * 60 + 1000))
 
-nclusters<-length(unique(obj$cell_type))
-width<-max(3000, min(10000, nclusters * 300 + 1000))
 g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, group.by = "cell_type", angle = 90) + NoLegend()
-png(paste0(prefix, ".cell_type.top10.heatmap.png"), width=width, height=height, res=300)
+png(paste0( prefix, ".cell_type.top10.heatmap.png"), 
+    width=get_heatmap_width(length(unique(obj$cell_type))), 
+    height=get_heatmap_height(length(top10genes)), 
+    res=300)
 print(g)
 dev.off()
 
-nclusters<-length(unique(obj$seurat_cell_type))
-width<-max(3000, min(10000, nclusters * 300 + 1000))
 g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, group.by = "seurat_cell_type", angle = 90) + NoLegend()
-png(paste0(prefix, ".seurat_cell_type.top10.heatmap.png"), width=width, height=height, res=300)
+png(paste0( prefix, ".seurat_cell_type.top10.heatmap.png"), 
+    width=get_heatmap_width(length(unique(obj$seurat_cell_type))), 
+    height=get_heatmap_height(length(top10genes)), 
+    res=300)
 print(g)
 dev.off()
 
