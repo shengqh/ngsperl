@@ -255,6 +255,11 @@ sub getScRNASeqConfig {
     my $hto_summary_task = undef;
     my $files_def = "files";
 
+    if ( getValue($def, "perform_individual_qc", 1) ){
+      my $raw_individual_qc_task = "raw_individual_qc";
+      add_invidual_qc($config, $def, $summary, $target_dir, $raw_individual_qc_task, "$target_dir/raw_qc_filter_config.txt", undef, undef, undef);
+    }
+
     my $files = $def->{files};
     my $hto_file_ref = "files";
     if(defined $hto_file_names){
