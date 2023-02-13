@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='P9270'
+outFile='P9270_colon'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/seurat_sct_merge/result/P9270.final.rds'
+parFile1='/workspace/shengq2/charles_flynn/20230209_9270_scRNA_dog_colon/seurat_sct_merge/result/P9270_colon.final.rds'
 parFile2=''
-parFile3='/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/essential_genes/result/P9270.txt'
+parFile3='/workspace/shengq2/charles_flynn/20230209_9270_scRNA_dog_colon/essential_genes/result/P9270_colon.txt'
 
 
-setwd('/workspace/shengq2/charles_flynn/20230105_9270_scRNA_dog/seurat_sct_merge_dr0.5_individual/result')
+setwd('/workspace/shengq2/charles_flynn/20230209_9270_scRNA_dog_colon/seurat_sct_merge_dr0.5_01_call/result')
 
 ### Parameter setting end ###
 
@@ -294,10 +294,9 @@ iterate_celltype<-function(obj,
       files<-rbind(files, c(previous_layer, cur_layer, pct, "new_umap", umap_cluster_file))
     }
 
-    dot_width=4400
     g<-get_bubble_plot(subobj, cur_res=cluster, "raw_cell_type", bubblemap_file, assay="RNA", orderby_cluster = FALSE)
     dot_file = paste0(curprefix, ".", pct_str, ".dot.png")
-    png(dot_file, width=dot_width, height=get_dot_height(subobj, cluster), res=300)
+    png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, cluster), res=300)
     print(g)
     dev.off()
     files<-rbind(files, c(previous_layer, cur_layer, pct, "dot", dot_file))
@@ -414,7 +413,7 @@ layer_cluster_celltype<-function(obj,
 
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
     g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay="RNA")
-    png(paste0(prefix, ".", cur_layer, ".dot.png"), width=4400, height=2000, res=300)
+    png(paste0(prefix, ".", cur_layer, ".dot.png"), width=get_dot_width(g), height=get_dot_height(obj, cur_layer), res=300)
     print(g2)
     dev.off()
   }
@@ -489,13 +488,7 @@ do_analysis<-function(tmp_folder,
     all_top10<-unique(all_top10$gene)
 
     obj<-myScaleData(obj, all_top10, "RNA")
-    if(ncol(obj) > 5000){
-      subsampled <- obj[, sample(colnames(obj), size=5000, replace=F)]
-      g<-DoHeatmap(subsampled, assay="RNA", group.by="layer4", features=all_top10)
-      rm(subsampled)
-    }else{
-      g<-DoHeatmap(obj, assay="RNA", group.by="layer4", features=all_top10)
-    }
+    g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = all_top10, group.by = "layer4", angle = 90) + NoLegend()
 
     width<-max(5000, min(10000, length(unique(Idents(obj))) * 400 + 1000))
     height<-max(3000, min(10000, length(all_top10) * 60 + 1000))
@@ -524,7 +517,7 @@ do_analysis<-function(tmp_folder,
       sdata<-gdata[gdata$sample == sample,]
       g$data=sdata
       dot_file = paste0(prefix, ".layer4.", sample, ".dot.png")
-      png(dot_file, width=4000, height=get_dot_height(obj, "layer4"), res=300)
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(obj, "layer4"), res=300)
       print(g)
       dev.off()
     }
