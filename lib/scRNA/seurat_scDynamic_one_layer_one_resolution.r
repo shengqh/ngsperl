@@ -4,12 +4,12 @@ parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/workspace/shengq2/charles_flynn/20230209_9270_scRNA_dog_colon/seurat_sct_merge/result/P9270_colon.final.rds'
+parFile1='C:/temp/seurat_sct_merge/result/P9270_colon.final.rds'
 parFile2=''
-parFile3='/workspace/shengq2/charles_flynn/20230209_9270_scRNA_dog_colon/essential_genes/result/P9270_colon.txt'
+parFile3='C:/temp/essential_genes/result/P9270_colon.txt'
 
 
-setwd('/workspace/shengq2/charles_flynn/20230209_9270_scRNA_dog_colon/seurat_sct_merge_dr0.5_01_call/result')
+setwd("C:/temp/seurat_sct_merge_dr0.5_01_call/result")
 
 ### Parameter setting end ###
 
@@ -294,7 +294,11 @@ iterate_celltype<-function(obj,
       files<-rbind(files, c(previous_layer, cur_layer, pct, "new_umap", umap_cluster_file))
     }
 
-    g<-get_bubble_plot(subobj, cur_res=cluster, "raw_cell_type", bubblemap_file, assay="RNA", orderby_cluster = FALSE)
+    if(pct == "Unassigned"){
+      g<-get_bubble_plot(subobj, bubblemap_file = bubblemap_file, group.by = "raw_seurat_cell_type")
+    }else{
+      g<-get_sub_bubble_plot(obj, previous_layer, subobj, "raw_seurat_cell_type", bubblemap_file)
+    }
     dot_file = paste0(curprefix, ".", pct_str, ".dot.png")
     png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, cluster), res=300)
     print(g)
