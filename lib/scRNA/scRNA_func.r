@@ -857,8 +857,9 @@ read_bubble_genes<-function(bubblemap_file, allgenes=c()){
   library("tidyr")
   
   genes <- read_xlsx(bubblemap_file, sheet = 1)
-  colnames(genes)[colnames(genes) == "Marker Gene"] = "gene"
-  colnames(genes)[colnames(genes) == "Cell Type"] = "cell_type"
+  colnames(genes)[1:2] = c("gene", "cell_type")  
+  #colnames(genes)[colnames(genes) == "Marker Gene"] = "gene"
+  #colnames(genes)[colnames(genes) == "Cell Type"] = "cell_type"
 
   for(idx in c(2:nrow(genes))){
     if(is.na(genes[idx,"cell_type"])){
@@ -914,7 +915,34 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE ){
+add_cluster_cell_type<-function(obj, cur_cluster, cur_celltype, target_column){
+  if(is.null(cur_cluster)){
+    cur_cluster = NA
+  } 
+  
+  b_remove_cur_cluster = FALSE
+  if(is.na(cur_cluster)){
+    cur_cluster = paste0(cur_celltype, "_cluster")
+    obj<-build_dummy_cluster(obj, label.by=cur_celltype, new_cluster_name=cur_cluster)
+    b_remove_cur_cluster = TRUE
+  }
+  
+  cell_type=obj@meta.data
+
+  cell_type<-cell_type[order(cell_type[,cur_cluster]),]
+  cell_type[,target_column]=paste0(cell_type[,cur_cluster], ": ", cell_type[,cur_celltype])
+  cell_type[,target_column]=factor(cell_type[,target_column], levels=unique(cell_type[,target_column]))
+  
+  if(b_remove_cur_cluster){
+    cell_type=cell_type[,colnames(cell_type) != cur_cluster]
+  }
+
+  cell_type<-cell_type[colnames(obj),]
+  obj@meta.data<-cell_type
+  return(obj)
+}
+
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE ){
   genes=unique(unlist(gene_groups))
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
   
@@ -959,6 +987,11 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   if(rotate.title){
     g=g+theme(strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
   }
+
+  if(use_blue_yellow_red){
+    g <- g + scale_color_gradient2(low="blue", mid="yellow", high="red")
+  }
+
   return(g)
 }
 
@@ -973,7 +1006,7 @@ get_dot_width<-function(g, min_width=4400){
 }
 
 get_dot_height_num<-function(ngroups){
-  result = max(1500, ngroups * 90 + 200)
+  result = max(1500, ngroups * 80 + 400)
   return(result)
 }
 
@@ -1040,6 +1073,25 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
     g <- g + scale_color_gradient2(low="blue", mid="yellow", high="red")
   }
   
+  return(g)
+}
+
+get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file){
+  old_meta<-obj@meta.data
+  
+  obj$fake_layer=paste0("fake_", unlist(obj@meta.data[,obj_res]))
+  obj@meta.data[colnames(subobj), "fake_layer"] = as.character(subobj@meta.data[,subobj_res])
+  
+  g<-get_bubble_plot(obj, group.by="fake_layer", bubblemap_file = bubblemap_file)
+
+  obj@meta.data=old_meta
+  
+  g$data<-g$data[!grepl("^fake_", g$data$id),]
+  sub_levels = levels(subobj@meta.data[, subobj_res])
+  if(all(!is.null(sub_levels))){
+    g$data$id<-factor(g$data$id, levels=sub_levels)
+  }
+
   return(g)
 }
 
