@@ -739,8 +739,11 @@ sub get_raw_file_list {
       my $bFound    = 0;
       my @curResult = ();
       for my $myvalues ( values %myres ) {
-        print Dumper(longmess());
-        die "Return value should be array." if ( is_not_array($myvalues) );
+        if(is_not_array($myvalues)){
+          print Dumper(longmess());
+          die "Return value should be array.";
+        }
+        
         if ( scalar(@$myvalues) > 0 ) {
           push( @curResult, @$myvalues );
           $bFound = 1;
