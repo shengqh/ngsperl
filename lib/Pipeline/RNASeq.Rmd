@@ -155,9 +155,9 @@ check_and_include_graphics(file_map$fastqc_post_trim_adapter_content)
 
 <br>
   
-# Mapping quality
-## Summary of mapping quality
 ```{r STAR_summary,echo=FALSE,results='asis', include = hasSTAR, eval = hasSTAR, fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
+cat("\n# Mapping quality\n\n")
+cat("\n## Summary of mapping quality\n\n")
 include_graphics(file_map$STAR_summary)
 ```
 
@@ -175,6 +175,10 @@ print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq m
           row_spec(which(output_table1$`Uniquely mapped ratio` < box_stats[1]), color = "black", background = "honeydew") %>%
           htmltools::HTML())
 cat("**Uniquely mapped ratio** = Uniquely mapped / Input reads\n\n**Mapped ratio** = (Uniquely mapped + Mapped to multiple loci)/ Input reads\n\n")
+```
+
+```{r, echo=FALSE,results='asis', eval = hasSTAR, fig.align="center"}
+include_graphics(file_map$STAR_chromosome_png)
 ```
 
 <br>

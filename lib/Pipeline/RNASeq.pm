@@ -1185,6 +1185,10 @@ fi
       push( @report_files, "star_featurecount_summary", ".STARSummary.csv\$" );
       push( @report_names, "STAR_summary",              "STAR_summary_table" );
 
+      push( @report_files, "star_featurecount_summary", ".chromosome.png\$" );
+      push( @report_files, "star_featurecount_summary", ".chromosome.csv\$" );
+      push( @report_names, "STAR_chromosome_png",   "STAR_chromosome_table" );
+
       push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv.png\$" );
       push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv\$" );
       push( @report_names, "featureCounts_table_png",   "featureCounts_table" );
