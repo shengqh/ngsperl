@@ -72,6 +72,12 @@ sub perform {
     close($comp);
 
     my $overlapFileName = "${name}.minoverlap.txt";
+    open( my $overlap, ">$overlapFileName" ) or die "Cannot create $overlapFileName";
+    print $overlap "Condition\tminoverlap\n";
+    for my $ov (sort keys %$minOverlap) {
+      print $overlap $ov . "\t" . $minOverlap->{$ov} . "\n";
+    }
+    close($overlap);
 
     my $finalPrefix = $name;
     my $finalFile   = $name . "." . $comparisons->[ scalar(@$comparisons) - 1 ]->[0] . ".sig.tsv";
