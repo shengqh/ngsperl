@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='PH_combine'
+outFile='doublets'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose/result/PH_combine.final.rds'
-parFile2='C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose/result/PH_combine.meta.rds'
+parFile1='/data/wanjalla_lab/projects/20230220_scRNA_P8008/P8008_CW2_compressed.rds'
+parFile2=''
 parFile3=''
 
 
-setwd('C:/projects/scratch/cqs/shengq2/paula_hurley_projects/20220824_scRNA_7467_benign_hg38/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell/result')
+setwd('/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell/result')
 
 ### Parameter setting end ###
 
@@ -44,7 +44,11 @@ if(!exists('obj')){
 }
 
 meta<-obj@meta.data
-mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
+if("seurat_cell_type" %in% colnames(meta)){
+  mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
+}else{
+  mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
+}
 colnames(mt)<-c("cell_type", "sample", "num_cell")
 write.csv(mt, paste0(outFile, ".num_cell.csv"), row.names=F)
 
@@ -70,7 +74,7 @@ for (comp in comparisonNames){
   comp_options = split(comp_groups$Value, comp_groups$Key)
   
   if("groups" %in% names(comp_options)){
-    sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
+    sampleGroups<-read.table(parSampleFile1, sep="\t", stringsAsFactors = F)
     colnames(sampleGroups)<-c("Sample","Group")
     groups<-comp_options$groups
     controlGroup<-groups[1]
@@ -101,6 +105,9 @@ for (comp in comparisonNames){
     prefix<-get_valid_path(comp)
     
     control_cells<-rownames(meta)[meta[,cluster_name] %in% control_names]  
+    if (length(control_cells) == 0){
+      stop(paste0("no control cells found, check your control names:", paste0(control_names, collapse = ",")))
+    }
     if("control_file_regex" %in% names(comp_options)){
       all_files = unique(meta$orig.ident)
       control_files=all_files[grepl(comp_options$control_file_regex, all_files)]
@@ -112,6 +119,9 @@ for (comp in comparisonNames){
     }
 
     sample_cells<-rownames(meta)[meta[,cluster_name] %in% sample_names]  
+    if (length(sample_cells) == 0){
+      stop(paste0("no sample cells found, check your sample names:", paste0(sample_cells, collapse = ",")))
+    }
     if("sample_file_regex" %in% names(comp_options)){
       all_files = unique(meta$orig.ident)
       sample_files=all_files[grepl(comp_options$sample_file_regex, all_files)]
@@ -229,9 +239,12 @@ if(nrow(designFailed) > 0){
 }
 
 result<-NULL
-idx<-1
+idx<-2
 for(idx in c(1:nrow(designMatrix))){
   prefix=designMatrix[idx, "prefix"]
+
+  cat(prefix, "\n")
+
   designfile=designMatrix[idx, "design"]
   cellType=designMatrix[idx, "cellType"]
   comp=designMatrix[idx, "comparison"]
@@ -268,19 +281,21 @@ for(idx in c(1:nrow(designMatrix))){
   
   variables = c("cdr")
   if(sampleInGroup){
-    variables = c(variables, "Sample")
+    if(length(unique(designdata$Sample)) > 1){
+      variables = c(variables, "Sample")
+    }
   }
   if(!is.null(covariances)){
     variables = c(variables, covariances)
   }
   variables = c(variables, "Group")
   formula_str = paste0("~ ", paste0(variables, collapse = " + "))
+  cat(formula_str, "\n")
+
   design <- model.matrix(as.formula(formula_str), designdata)
 
   rownames(design)<-colnames(cells)
   write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
-  
-  cat(prefix, "\n")
   
   dge<-DGEList(cells, group=groups)
   cat("  calcNormFactors", "\n")
@@ -295,7 +310,11 @@ for(idx in c(1:nrow(designMatrix))){
   
   cat("  glmQLFit", "\n")
   fitqlf<-glmQLFit(dge,design=design,robust=TRUE)
+
+  cat("  glmQLFTest", "\n")
   qlf<-glmQLFTest(fitqlf)
+
+  cat("  topTags", "\n")
   out<-topTags(qlf, n=Inf)
   dge_filename <-paste0(prefix, ".csv")
   write.csv(out$table, file=dge_filename, quote=F)
@@ -322,6 +341,7 @@ for(idx in c(1:nrow(designMatrix))){
   }else{
     result<-rbind(result, curDF)
   }
+  cat("  done", "\n")
 }
 
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)

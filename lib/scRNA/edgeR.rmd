@@ -29,13 +29,35 @@ source('reportFunctions.R')
 options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
+is_between_cluster = is_one(myoptions$bBetweenCluster)
+
 outFile<-myoptions$task_name
 
 group_def<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
-colnames(group_def)<-c("Sample", "Group")
+group_def <- group_def %>% 
+     group_by(V2) %>% 
+     mutate(Samples = paste0(V1, collapse = "")) 
+group_def<-group_def[,c("V2", "Samples")]
+if(is_between_cluster){
+  colnames(group_def)<-c("Group", "Cluster")
+}else{
+  colnames(group_def)<-c("Group", "Samples")
+}
 
 comp_def<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
-colnames(comp_def)<-c("Group", "Category", "Comparison")
+has_category = ncol(comp_def) == 3
+if(has_category){
+  colnames(comp_def)<-c("Group", "Category", "Comparison")
+}else{
+  colnames(comp_def)<-c("Group", "Comparison")
+  comp_def = comp_def %>% 
+     group_by(Comparison) %>% 
+     mutate(Samples = paste0(Group, collapse = ", ")) 
+  comp_def$ControlGroup = gsub(",.+","",comp_def$Samples)
+  comp_def$SampleGroup = gsub('.+,\\s*',"",comp_def$Samples)
+  comp_def = comp_def[,c("Comparison", "ControlGroup", "SampleGroup")]
+  comp_def = comp_def[!duplicated(comp_def$Comparison),]
+}
 
 edgeR_files<-read.csv(paste0(outFile, ".edgeR.files.csv"))
 comparisons<-unique(edgeR_files$comparison)
@@ -52,13 +74,15 @@ print(kable_styling(kable(comp_def, caption = "Comparison definition")))
 
 ```{r, echo=FALSE}
 resFile<-"comp.Rmd"
-figureRmd<-function(edgeR_files, comparisons){
+
+in_cluster_rmd<-function(edgeR_files, comparisons){
   result<-""
 
   comp=comparisons[1]
   for(comp in comparisons){
     result<-paste0(result, "\n# ", comp, "\n\n")
     comp_files<-subset(edgeR_files, comparison == comp)
+
     cts = rev(comp_files$cellType)
     ct<-cts[1]
 
@@ -124,7 +148,82 @@ figureRmd<-function(edgeR_files, comparisons){
 
   return(result)
 }
-cat(figureRmd(edgeR_files, comparisons), file=resFile)
+
+between_cluster_rmd<-function(edgeR_files, comparisons, outFile){
+  result<-""
+
+  cts = comparisons
+
+  sig_file_map=unlist(split(edgeR_files$sigFile, edgeR_files$comparison))
+
+  sig_list=list()
+
+  ct = cts[1]
+  for(ct in cts){
+    sig_file=sig_file_map[ct]
+    sig_data<-read.csv(sig_file, row.names=1)
+    sig_list[[ct]] = sig_data
+  }
+
+  nums=lapply(sig_list, function(x){
+    n=nrow(x)
+    np=sum(x$logFC > 0)
+    nn=sum(x$logFC < 0)
+    return(c(n, np, nn))})
+  
+  nums_df<-do.call(rbind, nums)
+  colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
+
+  result<-paste0(result, "\n# Number of DE genes\n\n")
+  num_sig_file = paste0(outFile, ".num_sig.csv")
+  write.csv(nums_df, num_sig_file)
+
+  result<-paste0(result, getTable(num_sig_file))
+
+  ct = cts[1]
+  for(ct in cts){
+    result<-paste0(result, "\n# ", ct, "\n\n")
+    ct_files<-subset(edgeR_files, comparison == ct)
+    
+    design_file=ct_files$designFile[1]
+    design_data=read.csv(design_file)
+    de_by_cell = "Cell" %in% colnames(design_data)
+    if(de_by_cell){
+      cell_num = table(design_data$Group)
+      if(length(unique(design_data$Sample)) == 1){
+        design_data=design_data[!duplicated(design_data$Group), c(1,4)]
+      }else{
+        design_data=design_data[!duplicated(design_data$Group), c(1,3,4)]
+      }
+      design_data$Num_of_cell<-cell_num[design_data$Group]
+    }else{
+      ct_num_cell<-subset(num_cell, cell_type == ct)
+      ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
+      design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+    }
+
+    result<-paste0(result,"\n## design table\n\n")
+    result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
+
+    sig_file=sig_file_map[[ct]]
+    sig_data=read.csv(sig_file, header=T)
+    if(nrow(sig_data) == 0){
+      result<-paste0(result,"\n### No significantly differential expressed genes\n\n")
+    }else{
+      result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
+      result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
+    }
+  }
+
+  return(result)
+}
+
+if(is_between_cluster){
+  cat(between_cluster_rmd(edgeR_files, comparisons, outFile), file=resFile)
+}else{
+  cat(in_cluster_rmd(edgeR_files, comparisons), file=resFile)
+}
+
 ```
 
 ```{r, child=resFile} 
