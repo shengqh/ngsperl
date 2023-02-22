@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P9061'
+outFile='doublets'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose/result/P9061.final.rds'
-parFile2='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCelltype_byCell/result/P9061.edgeR.files.csv'
-parFile3='/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose/result/P9061.meta.rds'
+parFile1='/data/wanjalla_lab/projects/20230220_scRNA_P8008/P8008_CW2_compressed.rds'
+parFile2='/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell/result/doublets.edgeR.files.csv'
+parFile3=''
 
 
-setwd('/scratch/vickers_lab/projects/20221201_scRNA_9061_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCelltype_byCell_vis/result')
+setwd('/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell_vis/result')
 
 ### Parameter setting end ###
 
@@ -37,10 +37,12 @@ edgeRres<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
 edgeRfolder<-dirname(parFile2)
 rownames(edgeRres)<-edgeRres$prefix
 
-df<-data.frame(c1=obj$seurat_clusters, c2=obj[[cluster_name]])
-df<-unique(df)
-df<-df[order(df$c1),]
-obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,cluster_name]))
+if(!bBetweenCluster){
+  df<-data.frame(c1=obj$seurat_clusters, c2=obj[[cluster_name]])
+  df<-unique(df)
+  df<-df[order(df$c1),]
+  obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,cluster_name]))
+}
 
 all_sigout<-NULL
 
@@ -51,7 +53,7 @@ for (prefix in rownames(edgeRres)){
   comparison<-edgeRres[prefix, "comparison"]
   sigGenenameFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "sigGenenameFile"])
   cellType<-edgeRres[prefix, "cellType"]
-  deFile=gsub(".sig_genename.txt", ".csv", sigGenenameFile)
+  deFile=paste0(edgeRfolder, "/", edgeRres[prefix, "deFile"])
   totalGene=length(readLines(deFile))-1
   sigGene=length(readLines(sigGenenameFile))
   visFile=""
@@ -111,14 +113,18 @@ for (prefix in rownames(edgeRres)){
       
       visFile=paste0(prefix, ".sig_genename.pdf")
       
-      nsamples<-length(unique(cell_obj$orig.ident))
-      width<-10
-      if(nsamples>10){
-        width=width+5
-      }else if(!DE_by_cell){
-        width=width+5
+      if(bBetweenCluster){
+        width<-10
+      }else{
+        nsamples<-length(unique(cell_obj$orig.ident))
+        width<-10
+        if(nsamples>10){
+          width=width+5
+        }else if(!DE_by_cell){
+          width=width+5
+        }
       }
-      
+
       topN = min(100, nrow(siggenes))
       topNgenes<-siggenes$gene[1:topN]
 

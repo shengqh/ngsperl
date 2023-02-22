@@ -1831,11 +1831,13 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
   groupColors<-c("blue", "red")
   names(groupColors)<-display_group_levels
 
-  gmap<-unlist(split(design_data$Group, design_data$Sample))
-  gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
+  if(!is_between_cluster){
+    gmap<-unlist(split(design_data$Group, design_data$Sample))
+    gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
 
-  cell_obj$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
-  cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
+    cell_obj$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
+    cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
+  }
 
   logFC<-sigout[sig_gene, "logFC"]
   FDR<-sigout[sig_gene,"FDR"]
@@ -1851,8 +1853,12 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
   title<-paste0(sig_gene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
   
   if(is_between_cluster){
-    p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2) + 
-      facet_grid(~Sample) + theme_bw3() + 
+    p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2)
+
+    if(length(unique(geneexp$Sample)) > 1){
+      p0 = p0 + facet_grid(~Sample)
+    }
+    p0 = p0 + theme_bw3() + 
       scale_color_manual(values = groupColors) +
       NoLegend() + xlab("") + ylab("Gene Expression")
     
