@@ -1,15 +1,32 @@
+rm(list=ls()) 
+outFile='doublets'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/data/wanjalla_lab/projects/20230220_scRNA_P8008/P8008_CW2_compressed.rds'
+parFile2='/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell/result/doublets.edgeR.files.csv'
+parFile3=''
+
+
+setwd('/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell_dotplot/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
 library(ggpubr)
 
-cell_df<-read_cell_cluster_file(parFile3)
-
-finalList<-readRDS(parFile1)
+obj<-read_object(parFile1)
 sigGeneList<-read.csv(parFile2)
 sigGeneList$designFile<-paste0(dirname(parFile2), "/", sigGeneList$designFile)
 sigGeneList$sigFile<-paste0(dirname(parFile2), "/", sigGeneList$sigFile)
 
-obj<-finalList$obj
+if(parFile3 == ""){
+  cell_df<-obj@meta.data
+}else{
+  cell_df<-read_cell_cluster_file(parFile3)
+}
 
 params_def=read.table(parSampleFile1)
 params <- setNames(as.character(params_def$V1), params_def$V2)
