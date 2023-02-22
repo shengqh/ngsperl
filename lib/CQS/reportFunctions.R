@@ -87,8 +87,20 @@ tabRef <- local({
 })
 options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
 
+is_file_exists<-function(filename){
+  if(is.null(filename)){
+    return(FALSE)
+  }
+
+  if(is.na(filename)){
+    return(FALSE)
+  }
+
+  return(file.exists(filename))
+}
+
 check_and_include_graphics<-function(graphicFile) {
-  if (!is.null(graphicFile[1]) & file.exists(graphicFile[1])) {
+  if (is_file_exists(graphicFile[1])) {
     include_graphics(graphicFile)
   }
 }
