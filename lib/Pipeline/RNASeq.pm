@@ -497,7 +497,7 @@ sub getRNASeqConfig {
       pbs             => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
-        "mem"       => "40gb"
+        "mem"       => "100gb"
       },
     };
     if ( is_array($count_file_ref) ) {
