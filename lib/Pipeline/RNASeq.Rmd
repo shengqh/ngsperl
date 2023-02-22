@@ -74,13 +74,13 @@ if(rnaseqOptions["top25cv_in_hca", 1] == "FALSE"){
   
 ## Summary of sequencing quality
   
-```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=file.exists(file_map$fastqc_raw_per_base_sequence_quality))}
+```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=file.exists(file_map$fastqc_raw_per_base_sequence_quality))}
 check_and_include_graphics(file_map$fastqc_raw_per_base_sequence_quality)
 ```
 
 <br>
 
-```{r fastqc_raw_per_base_sequence_quality_table,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc,warning=FALSE}
+```{r fastqc_raw_per_base_sequence_quality_table,echo=FALSE,results='asis', eval = hasFastqc,warning=FALSE}
 
 tableFile=gsub(".png$","",file_map$fastqc_raw_per_base_sequence_quality)
 table<-read.delim(tableFile)
@@ -105,14 +105,14 @@ if (any(table$Mean<=QualityMin)) { #use this as cutoff to show the quality table
 
 <br>
 
-```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(file_map$fastqc_raw_per_sequence_gc_content))}
+```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(file_map$fastqc_raw_per_sequence_gc_content))}
 check_and_include_graphics(file_map$fastqc_raw_per_sequence_gc_content)
 ```
 
 
 <br>
 
-```{r fastqc_raw_per_sequence_gc_content_table,echo=FALSE,results='hide', include = hasFastqc, eval = FALSE,warning=FALSE}
+```{r fastqc_raw_per_sequence_gc_content_table,echo=FALSE,results='hide', eval = FALSE,warning=FALSE}
 
 tableFile=gsub(".png$","",file_map$fastqc_raw_per_sequence_gc_content)
 tableContent<-read.delim(tableFile)
@@ -143,19 +143,19 @@ if (any(gcSampleInd)) { #use this as cutoff to show GC distribution
 
 <br>
   
-```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(file_map$fastqc_raw_adapter_content))}
+```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(file_map$fastqc_raw_adapter_content))}
 check_and_include_graphics(file_map$fastqc_raw_adapter_content)
 ```
 
 <br>
   
-```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(file_map$fastqc_post_trim_adapter_content))}
+```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', eval = hasFastqcPosttrim, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(file_map$fastqc_post_trim_adapter_content))}
 check_and_include_graphics(file_map$fastqc_post_trim_adapter_content)
 ```
 
 <br>
   
-```{r STAR_summary,echo=FALSE,results='asis', include = hasSTAR, eval = hasSTAR, fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
+```{r STAR_summary,echo=FALSE,results='asis', eval = hasSTAR, fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
 cat("\n# Mapping quality\n\n")
 cat("\n## Summary of mapping quality\n\n")
 include_graphics(file_map$STAR_summary)
@@ -163,7 +163,7 @@ include_graphics(file_map$STAR_summary)
 
 <br>
 
-```{r STAR_summary_table, echo=FALSE, results='asis', include = hasSTAR, eval = hasSTAR}
+```{r STAR_summary_table, echo=FALSE, results='asis', eval = hasSTAR}
 table<-read.csv(file_map$STAR_summary_table, check.names=F)
 output_table1<-data.frame(table[,c(1,2,3,4,5)], table[,3]/table[,2], (table[,3]+table[,4])/table[,2])
 colnames(output_table1)<-c("Sample", "Input reads", "Uniquely mapped reads", "Mapped to multiple loci", "Mapped to too many loci", "Uniquely mapped ratio", "Mapped ratio")
@@ -177,7 +177,7 @@ print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq m
 cat("**Uniquely mapped ratio** = Uniquely mapped / Input reads\n\n**Mapped ratio** = (Uniquely mapped + Mapped to multiple loci)/ Input reads\n\n")
 ```
 
-```{r, echo=FALSE,results='asis', eval = hasSTAR, fig.align="center"}
+```{r, echo=FALSE,results='asis', eval = hasSTAR, fig.align="center", fig.align="center", fig.cap=figRef("STAR_chromosome_png", "The reads mapped to each chromosome in each sample")}
 include_graphics(file_map$STAR_chromosome_png)
 ```
 
@@ -186,8 +186,8 @@ include_graphics(file_map$STAR_chromosome_png)
 # Expression Quantification
 ## Summary of reads assignment
 
-```{r, results="asis", echo=FALSE, include = hasFeatureCount, eval = hasFeatureCount} 
-cat("featureCounts was used to count reads mapped genes, and **MULTI** mapped reads were ")
+```{r, results="asis", echo=FALSE, eval = hasFeatureCount} 
+cat("\nfeatureCounts was used to count reads mapped genes, and **MULTI** mapped reads were ")
 if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
   cat(" **NOT USED**. \n\n")
 }else{
@@ -195,7 +195,7 @@ if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
 }
 ```
 
-```{r,echo=FALSE,results='asis', include = hasFeatureCount, eval = hasFeatureCount, fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes in uniquely mapped reads")}
+```{r,echo=FALSE,results='asis', eval = hasFeatureCount, fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes in uniquely mapped reads")}
 # For featureCounts, unassigned_unmapped -> 
 #                    unassigned_mappingquality -> 
 #                    unassigned_fragmentlength -> 
@@ -211,7 +211,7 @@ include_graphics(file_map$featureCounts_table_png)
 
 <br>
 
-```{r echo=FALSE,results='asis', include = hasFeatureCount, eval = hasFeatureCount}
+```{r echo=FALSE,results='asis', eval = hasFeatureCount}
 table<-read.csv(file_map$featureCounts_table, check.names=F)
 readsUsed = "reads"
 if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
@@ -229,7 +229,7 @@ print(kable(table, caption=tabRef("geneSummary", paste0("The summary of ", reads
 <br>
 
 ## Expression density of samples
-```{r correlation_density,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample", trunk.eval=file.exists(file_map$all_correlation_density))}
+```{r correlation_density,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample", trunk.eval=is_file_exists(file_map$all_correlation_density))}
 check_and_include_graphics(file_map$all_correlation_density)
 ```
 
@@ -338,7 +338,7 @@ for (i in 1:nrow(DESeq2_files)){
 cat(result, file=deseq2_rmd)
 ```
 
-```{r, child=deseq2_rmd} 
+```{r, child=deseq2_rmd, eval=hasDEseq2} 
 ```
 
 <br>
