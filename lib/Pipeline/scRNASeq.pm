@@ -1166,6 +1166,14 @@ sub getScRNASeqConfig {
     }
   }
 
+  if(defined $def->{seurat_object_file}){
+    if ( $def->{perform_comparison} ) {
+      if ( defined $def->{"DE_cluster_pairs"} ) {
+        addEdgeRTask( $config, $def, $summary, $target_dir, $def->{seurat_object_file}, undef, undef, getValue($def, "DE_cluster_name"), undef, 1, 0, 1 );
+      }
+    }
+  }
+
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,
