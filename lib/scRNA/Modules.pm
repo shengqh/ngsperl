@@ -992,7 +992,7 @@ sub addEdgeRTask {
     "reduction" => $reduction,
   };
 
-  my $edgeRtaskname  = $celltype_task . "_edgeR";
+  my $edgeRtaskname  = defined $celltype_task ? $celltype_task . "_edgeR" : "seurat_edgeR";
   my $groups         = undef;
   my $pairs          = undef;
   my $curClusterName = undef;
@@ -1049,8 +1049,6 @@ sub addEdgeRTask {
     rReportTemplate      => "$edgeRmd;reportFunctions.R",
     rmd_ext => $rmd_ext,     
     run_rmd_independent => 1,
-    parameterFile1_ref   => [ $cluster_task, ".final.rds" ],
-    parameterFile2_ref   => [ $celltype_task, $celltype_cluster_file ],
     parameterSampleFile1 => $groups,
     parameterSampleFile2 => $pairs,
     parameterSampleFile3 => $rCodeDic,
@@ -1062,6 +1060,13 @@ sub addEdgeRTask {
       "mem"       => getValue($def, "seurat_mem") 
     },
   };
+
+  if (-e $cluster_task) {
+    $config->{$edgeRtaskname}{parameterFile1} = $cluster_task;
+  }else{
+    $config->{$edgeRtaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
+    $config->{$edgeRtaskname}{parameterFile2_ref} = [ $celltype_task, $celltype_cluster_file ];
+  }
   push( @$summary, $edgeRtaskname );
 
   my $vistaskname = $edgeRtaskname . "_vis";
@@ -1070,9 +1075,7 @@ sub addEdgeRTask {
     perform            => 1,
     target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname,
     rtemplate          => "../scRNA/scRNA_func.r,../scRNA/edgeRvis.r",
-    parameterFile1_ref => [ $cluster_task, ".final.rds" ],
     parameterFile2_ref => [$edgeRtaskname],
-    parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
     output_file_ext    => ".vis.files.csv",
     parameterSampleFile1 => {
       "cluster_name" => $curClusterName,
@@ -1087,6 +1090,13 @@ sub addEdgeRTask {
       "mem"       => getValue($def, "seurat_mem") 
     },
   };
+  if (-e $cluster_task) {
+    $config->{$vistaskname}{parameterFile1} = $cluster_task;
+  }else{
+    $config->{$vistaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
+    $config->{$vistaskname}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
+  }
+
   push( @$summary, $vistaskname );
 
   if($bBetweenCluster) {
@@ -1096,9 +1106,7 @@ sub addEdgeRTask {
       perform            => 1,
       target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname2,
       rtemplate          => "../scRNA/scRNA_func.r;../scRNA/edgeRdotplot.r",
-      parameterFile1_ref => [ $cluster_task, ".final.rds" ],
       parameterFile2_ref => [$edgeRtaskname],
-      parameterFile3_ref => [ $celltype_task, $celltype_cluster_file ],
       parameterSampleFile1 => {
         cluster_name => getValue( $def, "DE_clusters_name", $curClusterName ),
         display_cluster_name => getValue( $def, "DE_clusters_display_name", $curClusterDisplayName ),
@@ -1113,6 +1121,13 @@ sub addEdgeRTask {
         "mem"       => getValue($def, "seurat_mem") 
       },
     };
+    if (-e $cluster_task) {
+      $config->{$vistaskname2}{parameterFile1} = $cluster_task;
+    }else{
+      $config->{$vistaskname2}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
+      $config->{$vistaskname2}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
+    }
+
     push( @$summary, $vistaskname2 );
   }
 
