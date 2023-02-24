@@ -51,7 +51,7 @@ overlapsheet <- read.table(overlapDef, sep="\t", header=T)
 if(nrow(overlapsheet) > 0){
   cat("checking overlap ... \n")
   #get consensus peaks and plot Venn for each condition, and generate count table for combined peaks across conditions 
-  mb1_consensus <- dba(sampleSheet=sampleSheet)
+  mb1_consensus <- dba(sampleSheet=sampleSheet, minOverlap = 1)
 
   cindex <- 1
   for(cindex in c(1:nrow(overlapsheet))){
