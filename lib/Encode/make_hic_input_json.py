@@ -35,9 +35,14 @@ def get_input_json(fastqs_str, config_file):
 
     if not "hic.no_call_loops" in options:
       options["hic.no_call_loops"] = False
+    else:
+      options["hic.no_call_loops"] = options["hic.no_call_loops"] == "1"
+
 
     if not "hic.no_call_tads" in options:
       options["hic.no_call_tads"] = False
+    else:
+      options["hic.no_call_tads"] = options["hic.no_call_tads"] == "1"
 
     fastqs_list = fastqs_str.split(',')
     fastqs = []
