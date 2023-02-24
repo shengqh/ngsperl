@@ -783,6 +783,8 @@ sub addEncodeHic {
       "hic.reference_index" => getValue($def, "hic.reference_index"),
       "hic.restriction_enzymes" => getValue($def, "hic.restriction_enzymes"),
       "hic.restriction_sites" => getValue($def, "hic.restriction_sites"),
+      "hic.no_call_loops" => getValue($def, "hic.no_call_loops", 0),
+      "hic.no_call_tads" => getValue($def, "hic.no_call_tads", 0),
       "hic.align_num_cpus" => $encode_cpu,
     }),
     output_ext => ".json",
