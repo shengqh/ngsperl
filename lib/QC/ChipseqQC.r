@@ -1,20 +1,17 @@
 options(bitmapType='cairo')
 options(expressions=102400)
 
-args = commandArgs(trailingOnly = TRUE)
-
 library(ChIPQC)
 library(BiocParallel)
 
-if(length(args) > 0){
-  configFile=args[1]
-  annotationName=args[2]
-  chromosomes=args[3]
-}else{
-  configFile=r"(C:\projects\jonathan_brown\20210321_cutrun_6048_human\macs2callpeak_narrow_chipqc\result\cutrun_6048.config.txt)"
-  annotationName="hg38"
-  chromosomes="chr1,chr2,chr3,chr4,chr5,chr6,chr7,chr8,chr9,chr10,chr11,chr12,chr13,chr14,chr15,chr16,chr17,chr18,chr19,chr20,chr21,chr22"
-}
+options_table = read.table("fileList1.txt", sep="\t")
+myoptions = split(options_table$V1, options_table$V2)
+annotationName=myoptions$genome
+consensus=myoptions$consensus == "1"
+chromosomes=myoptions$chromosomes
+
+config_table = read.table("fileList2.txt", sep="\t")
+configFile = config_table$V1[1]
 
 if (annotationName == "hg38") {
   library(TxDb.Hsapiens.UCSC.hg38.knownGene)
@@ -23,6 +20,7 @@ if (annotationName == "hg38") {
 cat("configFile=", configFile, "\n")
 cat("annotationName=", annotationName, "\n")
 cat("chromosomes=", chromosomes, "\n")
+cat("consensus=", consensus, "\n")
 
 register(SerialParam())
 
@@ -36,9 +34,9 @@ if(!is.na(chromosomes)){
 experiment <- read.table(configFile, sep="\t", header=T)
 
 if(annotationName == "unknown"){
-  qcresult = ChIPQC(experiment, consensus=TRUE, chromosomes=chromosomes)
+  qcresult = ChIPQC(experiment, consensus=consensus, chromosomes=chromosomes)
 }else{
-  qcresult = ChIPQC(experiment, consensus=TRUE, chromosomes=chromosomes, annotation=annotationName)
+  qcresult = ChIPQC(experiment, consensus=consensus, chromosomes=chromosomes, annotation=annotationName)
 }
 save(qcresult, file=rdatafile)
 
