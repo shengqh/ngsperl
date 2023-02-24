@@ -33,6 +33,12 @@ def get_input_json(fastqs_str, config_file):
         parts = line.rstrip().split('\t')
         options[parts[1]] = parts[0]
 
+    if not "hic.no_call_loops" in options:
+      options["hic.no_call_loops"] = False
+
+    if not "hic.no_call_tads" in options:
+      options["hic.no_call_tads"] = False
+
     fastqs_list = fastqs_str.split(',')
     fastqs = []
     i = 0
@@ -47,7 +53,9 @@ def get_input_json(fastqs_str, config_file):
         "hic.assembly_name": options["hic.assembly_name"],
         "hic.chrsz": options["hic.chrsz"],
         "hic.reference_index": options["hic.reference_index"],
-        "hic.align_num_cpus": options["hic.align_num_cpus"]
+        "hic.align_num_cpus": options["hic.align_num_cpus"],
+        "hic.no_call_loops": options["hic.no_call_loops"],
+        "hic.no_call_tads": options["hic.no_call_tads"],
     }
 
     restriction_enzymes = options["hic.restriction_enzymes"].split(',')
