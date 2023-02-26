@@ -99,6 +99,9 @@ sub perform {
   writeParameterSampleFile( $config, $section, $result_dir, 4, 1 );
   writeParameterSampleFile( $config, $section, $result_dir, 5, 1 );
   writeParameterSampleFile( $config, $section, $result_dir, 6, 1 );
+  writeParameterSampleFile( $config, $section, $result_dir, 7, 1 );
+  writeParameterSampleFile( $config, $section, $result_dir, 8, 1 );
+  writeParameterSampleFile( $config, $section, $result_dir, 9, 1 );
 
   my $final_file = "${task_name}.html";
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir );
