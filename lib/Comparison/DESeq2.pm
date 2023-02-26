@@ -110,6 +110,8 @@ sub perform {
   my $transformTable            = get_option( $config, $section, "transform_table",              0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
   my $cooksCutoff               = get_option( $config, $section, "cooksCutoff",                  'DEFAULT' );
+
+  writeParameterSampleFile( $config, $section, $result_dir, 1 );
   
   my $rCode = get_option( $config, $section, "rCode", "" );
 

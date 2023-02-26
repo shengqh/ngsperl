@@ -141,6 +141,7 @@ library("RColorBrewer")
 #library("preprocessCore")
 library("BiocParallel")
 library("ggrepel")
+library("stringr")
 
 setwd(rootdir)  
 comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
@@ -387,6 +388,10 @@ sigTableAll<-NULL
 sigTableAllGene<-NULL
 sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","FoldChange")
 
+options_table = read.table("fileList1.txt", sep="\t")
+myoptions = split(options_table$V1, options_table$V2)
+feature_name_regex = myoptions$feature_name_regex
+
 countfile_index = 1
 titles<-NULL
 validComparisons<-c()
@@ -403,7 +408,15 @@ for(countfile_index in c(1:length(countfiles))){
   if(transformTable){
     data<-t(data)
   }
-  
+
+  if(!is.na(feature_name_regex)){
+    if(!is.null(feature_name_regex)){
+      if(feature_name_regex != ""){
+        rownames(data) = str_match(rownames(data), feature_name_regex)[,2]
+      }
+    }
+  }
+
   data<-data[,colnames(data) != "Feature_length"]
   colClass<-sapply(data, class)
   countNotNumIndex<-which((colClass!="numeric" & colClass!="integer") | grepl("Gene_Id", colnames(data)))
