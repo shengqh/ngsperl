@@ -28,6 +28,7 @@ our %EXPORT_TAGS = (
       addHaplotypecaller
       addCollectAllelicCounts
       addEncodeATACseq
+      addEncodeHic
     )
   ]
 );
@@ -600,8 +601,11 @@ sub addEncodeATACseq {
   #my $adapter = getValue($def, "perform_cutadapt", 0) ? getValue($def, "adapter", "") : "";
   #print("adapter = " . $adapter . "\n");
   my $is_paired_end = is_paired_end($def);
-  my $encode_option = getValue($def, "encode_option", "");
-  my $folder_suffix = $encode_option =~ /slurm/ ? "_slurm" : "";
+  my $encode_option = getValue($def, "encode_option", "-b local");
+  if ($encode_option eq ""){
+    $encode_option = "-b local";
+  }
+  my $folder_suffix = $encode_option =~ /slurm/ ? "_slurm" : "_local";
   my $sh_direct = $encode_option =~ /slurm/ ? 1 : 0;
 
   my $task_folder = "${task}${folder_suffix}";
@@ -709,6 +713,119 @@ sub addEncodeATACseq {
     $config->{$task}{input_parameters}{"atac.fastqs_rep1_R1_ref"} = [$fastq_1];
     $config->{$task}{input_parameters}{"atac.fastqs_rep1_R2_ref"} = [$fastq_2];
   }
+
+  push @$individual, $task;
+
+  my $croo_task = $task . "_croo";
+  $config->{$croo_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/${task_folder}_croo",
+    interpretor => "python3",
+    program => "../Chipseq/croo.py",
+    option => "-n __NAME__ --croo " . getValue($def, "croo", "croo") . " --out_def_json " . getValue($def, "croo_out_def_json"),
+    source_arg => "-i",
+    source_ref => [$task],
+    output_arg => "-o",
+    output_file_prefix => "",
+    output_file_ext => "__NAME__/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$individual, $croo_task;
+
+  return ($task);
+}
+
+sub addEncodeHic {
+  my ($config, $def, $individual, $target_dir, $files_ref, $task) = @_;
+
+  my $server_key = getValue($def, "wdl_key", "local");
+  my $pipeline_key = "encode_hic";
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+  my $pipeline = $server->{$pipeline_key};
+
+  if(not defined $task){
+    $task = $pipeline_key;
+  }
+
+  my $encode_option = getValue($def, "encode_option", "-b local");
+  if ($encode_option eq ""){
+    $encode_option = "-b local";
+  }
+  my $folder_suffix = $encode_option =~ /slurm/ ? "_slurm" : "_local";
+  my $sh_direct = $encode_option =~ /slurm/ ? 1 : 0;
+
+  my $task_folder = "${task}${folder_suffix}";
+
+  my $encode_hic_inputs = getValue($def, "encode_hic_inputs", {});
+  my $encode_cpu = getValue($def, "hic.align_num_cpus", "16");
+
+  my $input_task = $task . "_input";
+  $config->{$input_task} = {     
+    "class" => "CQS::ProgramWrapperOneToOne",
+    "interpretor" => "python3",
+    "program" => "../Encode/make_hic_input_json.py",
+    "target_dir" => "${target_dir}/${input_task}",
+    "option" => "-o __NAME__.json",
+    "source_arg" => "-i",
+    "source_ref" => $files_ref,
+    "parameterSampleFile2_arg" => "-c",
+    "parameterSampleFile2" => merge_hash_left_precedent($encode_hic_inputs, {
+      "hic.assembly_name" => getValue($def, "hic.assembly_name"),
+      "hic.chrsz" => getValue($def, "hic.chrsz"),
+      "hic.reference_index" => getValue($def, "hic.reference_index"),
+      "hic.restriction_enzymes" => getValue($def, "hic.restriction_enzymes"),
+      "hic.restriction_sites" => getValue($def, "hic.restriction_sites"),
+      "hic.no_call_loops" => getValue($def, "hic.no_call_loops", 0),
+      "hic.no_call_tads" => getValue($def, "hic.no_call_tads", 0),
+      "hic.align_num_cpus" => $encode_cpu,
+    }),
+    output_ext => ".json",
+    output_to_same_folder => 1,
+    no_docker => 1,
+    no_output => 1,
+    sh_direct   => 1,
+    pbs=> {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "5gb",
+    },
+  };
+
+  push @$individual, $input_task;
+
+  $config->{$task} = {     
+    "class" => "CQS::WdlSimple",
+    "option" => $encode_option,
+    "target_dir" => "${target_dir}/${task_folder}",
+    "singularity_image_files" => getValue($def, "singularity_image_files"),
+    "init_command" => "rm -rf metadata.json cromwell.out hic",
+    "cromwell_jar" => $server->{"cromwell_jar"},
+    "womtool_jar" => $server->{"womtool_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "source_ref" => $input_task,
+    "parameterSampleFile2_ref" => $files_ref, #add ref for job dependency
+    "is_source_input_json" => 1,
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $pipeline->{"wdl_file"},
+    output_to_same_folder => 0,
+    cromwell_finalOutputs => 0,
+    output_file_ext => "hic/",
+    use_caper => 1,
+    sh_direct   => $sh_direct,
+    pbs=> {
+      "nodes"     => "1:ppn=$encode_cpu",
+      "walltime"  => getValue($def, "encode_hic_walltime", "24"),
+      "mem"       => getValue($def, "encode_hic_men", "40gb"),
+    },
+  };
 
   push @$individual, $task;
 

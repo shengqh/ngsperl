@@ -255,6 +255,11 @@ sub getScRNASeqConfig {
     my $hto_summary_task = undef;
     my $files_def = "files";
 
+    if ( getValue($def, "perform_individual_qc", 1) ){
+      my $raw_individual_qc_task = "raw_individual_qc";
+      add_invidual_qc($config, $def, $summary, $target_dir, $raw_individual_qc_task, "$target_dir/raw_qc_filter_config.txt", undef, undef, undef);
+    }
+
     my $files = $def->{files};
     my $hto_file_ref = "files";
     if(defined $hto_file_names){
@@ -1157,6 +1162,14 @@ sub getScRNASeqConfig {
           $config->{$report_task}{parameterSampleFile4_ref} = [$hto_task, ".HTO.class.dist.png"];
         }
         push( @$summary, $report_task );
+      }
+    }
+  }
+
+  if(defined $def->{seurat_object_file}){
+    if ( $def->{perform_comparison} ) {
+      if ( defined $def->{"DE_cluster_pairs"} ) {
+        addEdgeRTask( $config, $def, $summary, $target_dir, $def->{seurat_object_file}, undef, undef, getValue($def, "DE_cluster_name"), undef, 1, 0, 1 );
       }
     }
   }

@@ -33,11 +33,23 @@ sub getRcode {
   return get_option( $config, $section, "rCode", "" );
 }
 
+sub prepare_data {
+  my ( $self, $config, $section ) = @_;
+  return;
+}
+
+sub get_init_pbs {
+  my ( $self, $config, $section ) = @_;
+  return "";
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
   my $task_suffix = $self->{_task_suffix};
+
+  $self->prepare_data($config, $section);
   
   my $init_command = get_option($config, $section, "init_command", "");
   my $rCode = $self->getRcode( $config, $section );
@@ -248,7 +260,8 @@ sub perform {
   }
 
   print $pbs "$init_command\n";
-
+  print $pbs $self->get_init_pbs($config, $section) . "\n";
+  
   my $rscript = get_option_include_general($config, $section, "Rscript", "Rscript");
 
   my $vanilla_option = $use_vanilla ? "--vanilla ":"";

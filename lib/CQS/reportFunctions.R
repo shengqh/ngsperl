@@ -87,20 +87,65 @@ tabRef <- local({
 })
 options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
 
+is_file_exists<-function(filename){
+  if(is.null(filename)){
+    return(FALSE)
+  }
+
+  if(is.na(filename)){
+    return(FALSE)
+  }
+
+  return(file.exists(filename))
+}
+
 check_and_include_graphics<-function(graphicFile) {
-  if (!is.null(graphicFile[1]) & file.exists(graphicFile[1])) {
+  if (is_file_exists(graphicFile[1])) {
     include_graphics(graphicFile)
   }
 }
 
-printTable<-function(filepath, row.names=1){
+output_table<-function(tbl, caption=NULL, description=NULL){
+  if(!is.null(caption)){
+    new_caption = tabRef(caption, description)
+  }else{
+    new_caption = NULL
+  }
+
+  kable(tbl, caption= new_caption) %>%
+    kable_styling() %>%
+    htmltools::HTML()
+}
+
+printTable<-function(filepath, row.names=1, caption=NULL, description=NULL){
   if(row.names > 0){
     tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
   }else{
     tbl<-data.frame(fread(filepath, check.names=F))
   }
-  print(kable_styling(kable(tbl)))
+
+  output_table(tbl, caption, description)
 }
+
+get_table_description<-function(category, filepath, description){
+  result = "\n```{r,echo=FALSE,results='asis'}\n"
+  result = paste0(result, "printTable('", filepath, "', ", row.names, ",'", category, "','", description, "')\n```\n\n")
+  return(result)
+}
+
+output_paged_table<-function(tbl, rownames=TRUE, escape=TRUE, digits=0, nsmall=0){
+  if(digits > 0){
+    tbl <- tbl %>% dplyr::mutate_if(is.numeric, format, digits=digits, nsmall=nsmall)
+  }
+
+  DT::datatable(tbl, 
+                extensions = c('FixedColumns','FixedHeader'),
+                rownames = rownames,
+                escape = escape,
+                options = list( scrollX=TRUE, 
+                                paging=TRUE))
+}
+
 
 printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
   if(row.names > 0){
@@ -113,12 +158,11 @@ printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0
     tbl <- tbl %>% dplyr::mutate_if(is.numeric, format, digits=digits, nsmall=nsmall)
   }
 
-  DT::datatable(tbl, 
-                extensions = c('FixedColumns','FixedHeader'),
-                rownames = row.names > 0,
-                escape = escape,
-                options = list( scrollX=TRUE, 
-                                paging=TRUE))
+  output_paged_table( tbl=tbl,
+                      rownames=row.names > 0,
+                      escape=escape,
+                      digits=digits, 
+                      nsmall=nsmall)
 }
 
 getPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
@@ -135,6 +179,11 @@ getFigure<-function(filepath, in_details=FALSE){
   }else{
     return(paste0("\n```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
   }
+}
+
+get_figure_description<-function(category, filepath, description){
+  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists(files['", category, "',1]))}\n",
+"  check_and_include_graphics('", filepath, "')\n```\n"))
 }
 
 find_module_folder=function(files,pattern) {

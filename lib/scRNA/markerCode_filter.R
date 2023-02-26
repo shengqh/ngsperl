@@ -437,6 +437,12 @@ preprocess<-function( SampleInfo,
       predict_celltype<-ORA_celltype_qc(meanexp,cellType,method=celltype_predictmethod)
       saveRDS(predict_celltype, paste0(cur_sample, ".ct.rds"))
       
+      if(length(predict_celltype$max_cta) > 1){
+        cta_png_file=paste0(cur_sample, ".cta.png")
+        Plot_predictcelltype_ggplot2( predict_celltype, 
+                                      filename=cta_png_file)
+      }
+
       #use the max_cta_score for each cluster
       new.cluster.ids<-rownames(predict_celltype$predict_result)
       names(new.cluster.ids) <- levels(subobj)
@@ -478,8 +484,11 @@ preprocess<-function( SampleInfo,
       
       #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
       #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-      g<-DoHeatmap(subobj, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
-      png(paste0(cur_sample, ".heatmap.png"), width=4000, height=4000, res=300)
+      g<-MyDoHeatMap(subobj, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
+      png(paste0(cur_sample, ".heatmap.png"), 
+          width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
+          height=get_heatmap_height(length(top10gene)), 
+          res=300)
       print(g)
       dev.off()
 
@@ -504,14 +513,20 @@ preprocess<-function( SampleInfo,
         
         subobj<-myScaleData(subobj, ugenes, "RNA")
 
-        g<-DoHeatmap(subobj, assay="RNA",features=ugenes)
-        png(paste0(cur_sample, ".bubble_heatmap.png"), width=4000, height=4000, res=300)
+        g<-MyDoHeatMap(subobj, assay="RNA",features=ugenes)
+        png(paste0(cur_sample, ".bubble_heatmap.png"), 
+          width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
+          height=get_heatmap_height(length(ugenes)), 
+          res=300)
         print(g)
         dev.off()
 
         g<-get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay="RNA", group.by="seurat_cell_type") + theme(text = element_text(size=20))
         #cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
-        png(paste0(cur_sample, ".bubble.png"), width=bubblemap_width, height=bubblemap_height, res=300)
+        png(paste0(cur_sample, ".bubble.png"), 
+            width=get_dot_width(g), 
+            height=get_dot_height_num(length(unique(subobj$seurat_cell_type))), 
+            res=300)
         print(g)
         dev.off()
       }

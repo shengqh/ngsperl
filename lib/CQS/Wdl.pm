@@ -41,7 +41,6 @@ sub perform {
   my $cromwell_jar = get_option_file($config, $section, "cromwell_jar");
  
   my $wdl_file = get_option_file( $config, $section, "wdl_file");
-  my $input_option_file = get_option_file( $config, $section, "input_option_file" );
 
   my $input_json_file = get_option_file( $config, $section, "input_json_file" );
 
@@ -304,6 +303,8 @@ caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metad
     
 ";
     }else{
+      my $input_option_file = get_option_file( $config, $section, "input_option_file" );
+      
       print $pbs "
 java -Dconfig.file=$cromwell_config_file \\
   -jar $cromwell_jar \\

@@ -407,27 +407,11 @@ for(pct in previous_celltypes){
     cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-      obj$cur_dot<-as.character(obj$dot)
-      obj@meta.data[colnames(subobj),"cur_dot"]<-as.character(subobj$seurat_celltype)
-      
-      g1<-get_bubble_plot(obj, NULL, NULL, bubblemap_file, assay="RNA", group.by="cur_dot")
-      g1data<-g1$data
-      
-      #using global normalized data for bubblemap
-      subobj2@meta.data <- subobj@meta.data
-      g2<-get_bubble_plot(subobj2, NULL, NULL, bubblemap_file, assay="RNA", group.by="seurat_celltype") + theme(text = element_text(size=20))
-      g2data<-g2$data
-
-      g1data<-subset(g1data, id %in% unique(g2data$id) )  
-      #replace avg.exp.scaled with between all cell types instead of between subcluters.
-      g2$data<-g1data    
-
-      ncluster<-length(unique(subobj2$seurat_clusters))
-      height=max(2000, ncluster*250 + 1000)
+      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file)
 
       dot_file = paste0(cluster_prefix, ".dot.png")
-      png(dot_file, width=6000, height=height, res=300)
-      print(g2)
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
+      print(g)
       dev.off()
 
       cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot", cur_resolution, pct))

@@ -497,7 +497,7 @@ sub getRNASeqConfig {
       pbs             => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "23",
-        "mem"       => "40gb"
+        "mem"       => "100gb"
       },
     };
     if ( is_array($count_file_ref) ) {
@@ -1184,6 +1184,10 @@ fi
       push( @report_files, "star_featurecount_summary", ".STARSummary.csv.png" );
       push( @report_files, "star_featurecount_summary", ".STARSummary.csv\$" );
       push( @report_names, "STAR_summary",              "STAR_summary_table" );
+
+      push( @report_files, "star_featurecount_summary", ".chromosome.png\$" );
+      push( @report_files, "star_featurecount_summary", ".chromosome.csv\$" );
+      push( @report_names, "STAR_chromosome_png",   "STAR_chromosome_table" );
 
       push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv.png\$" );
       push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv\$" );

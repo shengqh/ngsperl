@@ -151,6 +151,7 @@ sub getValue {
     return $defaultValue;
   }
   else {
+    print Dumper(longmess());
     die "Define $name in user definition first.";
   }
 }
@@ -162,6 +163,7 @@ sub get_config_section {
   my ( $config, $section ) = @_;
 
   if(!defined $section){
+    print Dumper(longmess());
     die "section not defined";
   }
   my @sections = split( '::', $section );
@@ -173,7 +175,10 @@ sub get_config_section {
   my $result   = $config;
   for my $curSection (@sections) {
     $result = $result->{$curSection};
-    die "Cannot find section $section!" if ( !defined $result );
+    if ( !defined $result ) {
+      print Dumper(longmess());
+      die "Cannot find section $section!";
+    }
   }
   return ($result);
 }
@@ -190,7 +195,7 @@ sub has_config_section {
   my ( $config, $section ) = @_;
 
   if(!defined $section){
-    print_trace();
+    print Dumper(longmess());
     die "section not defined";
   }
 
@@ -206,6 +211,7 @@ sub has_config_section {
 sub has_option {
   my ( $config, $section, $key ) = @_;
   if (!defined $section){
+    print Dumper(longmess());
     die "section not defined";
   }
 
@@ -222,6 +228,7 @@ sub get_option {
   my $result = $curSection->{$key};
   if ( !defined $result ) {
     if ( !defined $default ) {
+      print Dumper(longmess());
       die "Define ${section}::${key} first!";
     }
     else {
@@ -243,6 +250,7 @@ sub get_option_include_general {
     $result = $config->{general}{$key};
     if (!defined $result) {
       if ( !defined $default ) {
+        print Dumper(longmess());
         die "Define ${section}::${key} first!";
       }
       else {
@@ -267,10 +275,12 @@ sub get_option_file {
   }
 
   if ( !defined $result ) {
+    print Dumper(longmess());
     die "Define ${section}::${key} first!";
   }
 
   if ( !is_debug() && !-e $result ) {
+    print Dumper(longmess());
     die "$key $result defined but not exists!";
   }
   return ($result);
@@ -403,10 +413,12 @@ sub get_param_file {
 
   if ($required) {
     if ( !defined $file ) {
+      print Dumper(longmess());
       die "$name was not defined!";
     }
 
     if ( !is_debug() and ( $checkExists and !-e $file ) ) {
+      print Dumper(longmess());
       die "$name $file defined but not exists!";
     }
   }
@@ -416,6 +428,7 @@ sub get_param_file {
         undef($result);
       }
       elsif ( !is_debug() and ( $checkExists and !-e $file ) ) {
+        print Dumper(longmess());
         die "$name $file defined but not exists!";
       }
     }
@@ -430,16 +443,21 @@ sub get_directory {
 
   my $curSection = get_config_section( $config, $section );
 
-  die "parameter name must be defined!" if !defined $name;
+  if (!defined $name){
+    print Dumper(longmess());
+    die "parameter name must be defined!";
+  }
 
   my $result = $curSection->{$name};
 
   if ($required) {
     if ( !defined $result ) {
+      print Dumper(longmess());
       die "$name was not defined!";
     }
 
     if ( !is_debug() && !-e $result ) {
+      print Dumper(longmess());
       die "$name $result defined but not exists!";
     }
   }
@@ -449,6 +467,7 @@ sub get_directory {
         undef($result);
       }
       elsif ( !is_debug() && !-e $result ) {
+        print Dumper(longmess());
         die "$name $result defined but not exists!";
       }
     }
@@ -477,6 +496,7 @@ sub get_first_result_file {
       if ($refSection =~ /$pattern/){
         return($refSection);
       }else{
+        print Dumper(longmess());
         die "$refSection doesn't match pattern $pattern";
       }
     }else{
@@ -492,11 +512,13 @@ sub get_first_result_file {
             return($file);
           } 
         }
+        print Dumper(longmess());
         die "no file in $refSectionName matches pattern $pattern";
       }else{
         return($refSection->[0]);
       }
     }else{
+      print Dumper(longmess());
       die "no file in $refSectionName";
     }
   }
@@ -515,9 +537,11 @@ sub get_first_result_file {
         return $files[0];
       }
     }
+    print Dumper(longmess());
     die "section $refSectionName return nothing for pattern $pattern !";
   }
 
+  print Dumper(longmess());
   die "section $refSectionName return nothing for pattern $pattern !";
 }
 
@@ -526,7 +550,10 @@ sub parse_param_file {
 
   my $curSection = get_config_section( $config, $section );
 
-  die "parameter key must be defined!" if !defined $key;
+  if(!defined $key){
+    print Dumper(longmess());
+    die "parameter key must be defined!";
+  }
 
   if ( defined $curSection->{$key} ) {
     return $curSection->{$key};
@@ -555,6 +582,7 @@ sub parse_param_file {
   }
 
   if ($required) {
+    print Dumper(longmess());
     die "define ${section}::${key} first.";
   }
 
@@ -598,6 +626,7 @@ sub get_refmap {
       my $partlength = scalar(@parts);
       for ( my $index = 0 ; $index < $partlength ; ) {
         if ( !has_config_section( $config, $parts[$index] ) ) {
+          print Dumper(longmess());
           die "undefined section " . Dumper($parts[$index]) . " in $section for $mapname ";
         }
         get_config_section( $config, $parts[$index] );
@@ -614,6 +643,7 @@ sub get_refmap {
     }
     else {
       if ( !has_config_section( $config, $targetSection ) ) {
+        print Dumper(longmess());
         die "undefined section $targetSection";
       }
       $result->{1} = { config => $config, section => $targetSection, pattern => $pattern };
@@ -624,6 +654,7 @@ sub get_refmap {
     #in another config, has to be array
     my $refSectionName = $curSection->{$mapname_config_ref};
     if ( is_not_array($refSectionName) ) {
+      print Dumper(longmess());
       die "$mapname_config_ref has to be defined as ARRAY with [config, section, pattern]";
     }
     my @parts      = @{$refSectionName};
@@ -633,11 +664,13 @@ sub get_refmap {
       my $targetSection = $parts[ $index + 1 ];
 
       if ( is_not_hash($targetConfig) ) {
+        print Dumper(longmess());
         die
 "$mapname_config_ref has to be defined as ARRAY with [config1, section1, pattern1,config2, section2, pattern2] or [config1, section1,config2, section2] format. config should be hash and section should be string";
       }
 
       if ( !has_config_section( $targetConfig, $targetSection ) ) {
+        print Dumper(longmess());
         die "undefined section $targetSection in $mapname_config_ref of $section";
       }
 
@@ -686,7 +719,8 @@ sub get_raw_file_list {
       my $targetConfig = $values->{config};
       my $section      = $values->{section};
       if(not defined $section){
-        stop("ERROR: no section defined for index " . $index);
+        print Dumper(longmess());
+        die("ERROR: no section defined for index " . $index);
       }
       my $pattern      = $values->{pattern};
 
@@ -705,17 +739,23 @@ sub get_raw_file_list {
       my $bFound    = 0;
       my @curResult = ();
       for my $myvalues ( values %myres ) {
-        die "Return value should be array." if ( is_not_array($myvalues) );
+        if(is_not_array($myvalues)){
+          print Dumper(longmess());
+          die "Return value should be array.";
+        }
+        
         if ( scalar(@$myvalues) > 0 ) {
           push( @curResult, @$myvalues );
           $bFound = 1;
         }
       }
       if ( not $bFound ) {
+        print Dumper(longmess());
         die "Cannot find file for " . $values->{section} . " and pattern " . $values->{pattern};
       }
 
       if ( $mustBeOne && scalar(@curResult) > 1 ) {
+        print Dumper(longmess());
         die "Only one result allowed but multiple found " . $values->{section} . " and pattern " . $values->{pattern} . "\n" . join( "\n  ", @curResult );
       }
 
@@ -725,6 +765,7 @@ sub get_raw_file_list {
     return $result;
   }
 
+  print Dumper(longmess());
   die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
 }
 
@@ -812,6 +853,7 @@ sub do_get_unsorted_raw_files_no_ignored {
               $result{$mykey} = \@merged;
             }
             else {
+              print Dumper(longmess());
               die "The source of $section->$mapname should be all HASH or all ARRAY";
             }
           }
@@ -827,6 +869,7 @@ sub do_get_unsorted_raw_files_no_ignored {
               $result{$mykey} = merge_hash_right_precedent( $oldvalues, $myvalues );
             }
             else {
+              print Dumper(longmess());
               die "The source of $section->$mapname should be all HASH or all ARRAY";
             }
           }
@@ -858,6 +901,7 @@ sub do_get_unsorted_raw_files_no_ignored {
     }
   }
   else {
+    print Dumper(longmess());
     die "define $mapname or $mapname_ref or $mapname_config_ref for $section";
   }
 }
@@ -940,6 +984,7 @@ sub do_get_raw_files_keys {
   if ( exists $resultUnsorted->{".order"} ) {
     my $orders = $resultUnsorted->{".order"};
     @result = @$orders;
+    print Dumper(longmess());
     die "number of key defined in .order not equals to actual keys for @_" if ( scalar(@result) != scalar(@keys) );
   }
   else {
@@ -966,6 +1011,7 @@ sub get_sorted_raw_files {
   if ( exists $resultUnsorted->{".order"} ) {
     my $orders = $resultUnsorted->{".order"};
     @orderedKeys = @$orders;
+    print Dumper(longmess());
     die "number of key defined in .order not equals to actual keys for @_" if ( scalar(@orderedKeys) != scalar(@keys) );
   }
   else {
@@ -1121,6 +1167,7 @@ sub get_group_sample_map {
     foreach my $sample_name (@samples) {
       my $sample_files = $raw_files->{$sample_name};
       if(!defined $sample_files){
+        print Dumper(longmess());
         die "Cannot find file of $sample_name for group $group_name";
       }
       my @bam_files = @$sample_files;
@@ -1165,6 +1212,7 @@ sub get_group_samplefile_map_key {
     my @samples = @{$group_samples};
     foreach my $sample_name (@samples) {
       if ( not defined $raw_files->{$sample_name} ) {
+        print Dumper(longmess());
         die "Cannot find $sample_name of group $group_name in raw_files of section $section, check your sample names";
       }
       my @bam_files = @{ $raw_files->{$sample_name} };
@@ -1342,6 +1390,7 @@ sub initDefaultValue {
   my ( $def, $name, $defaultValue ) = @_;
   if ( !defined $def->{$name} ) {
     if ( !defined $defaultValue ) {
+      print Dumper(longmess());
       die "defaultValue cannot be undefined for $name.";
     }
     $def->{$name} = $defaultValue;
@@ -1644,6 +1693,7 @@ sub get_program {
       $result = dirname(__FILE__) . "/$result";
     }
     if ( !( -e $result ) ) {
+      print Dumper(longmess());
       die("program $result defined but not exists!");
     }
   }
@@ -1693,6 +1743,7 @@ sub get_groups {
         $groups->{$group} = [$name];
       }
     }else{
+      print Dumper(longmess());
       die "Cannot find pattern $pattern in $name.";
     }
   }
@@ -2016,6 +2067,7 @@ sub get_correlation_groups_by_pattern {
 
   my $gpattern_dic = $def->{correlation_groups_pattern_dic};
   if(defined $gpattern_dic){
+    print Dumper(longmess());
     die "correlation_groups_pattern has to be hash " if not is_hash($gpattern_dic);
 
     my $result = {};
@@ -2177,6 +2229,7 @@ sub get_expanded_genes {
     return($result);
   }
 
+  print Dumper(longmess());
   die "curated_gene_def should be either array or hash";
 }
 

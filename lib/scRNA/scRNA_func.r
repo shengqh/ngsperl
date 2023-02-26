@@ -97,9 +97,18 @@ theme_bw3 <- function (axis.x.rotate=F) {
   return(result)
 }
 
+get_heatmap_height<-function(ngenes){
+  result<-max(3000, min(20000, ngenes * 60 + 1000))
+  return(result)
+}
+
+get_heatmap_width<-function(nclusters){
+  result<-max(3000, min(10000, nclusters * 300 + 1000))
+  return(result)
+}
+
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
-
 MyDoHeatMap<-function(object, max_cell=5000, ...){
   if(ncol(obj) > max_cell){
     subsampled <- obj[, sample(colnames(obj), size=max_cell, replace=F)]
@@ -843,13 +852,14 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   }
 }
 
-read_bubble_genes<-function(bubble_file, allgenes=c()){
+read_bubble_genes<-function(bubblemap_file, allgenes=c()){
   library("readxl")
   library("tidyr")
   
-  genes <- read_xlsx(bubble_file, sheet = 1)
-  colnames(genes)[1:2] = c("gene", "cell_type")
-  
+  genes <- read_xlsx(bubblemap_file, sheet = 1)
+  colnames(genes)[1:2] = c("gene", "cell_type")  
+
+
   for(idx in c(2:nrow(genes))){
     if(is.na(genes[idx,"cell_type"])){
       genes[idx,"cell_type"]=genes[idx-1,"cell_type"]
@@ -904,34 +914,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-add_cluster_cell_type<-function(obj, cur_cluster, cur_celltype, target_column){
-  if(is.null(cur_cluster)){
-    cur_cluster = NA
-  } 
-  
-  b_remove_cur_cluster = FALSE
-  if(is.na(cur_cluster)){
-    cur_cluster = paste0(cur_celltype, "_cluster")
-    obj<-build_dummy_cluster(obj, label.by=cur_celltype, new_cluster_name=cur_cluster)
-    b_remove_cur_cluster = TRUE
-  }
-  
-  cell_type=obj@meta.data
-
-  cell_type<-cell_type[order(cell_type[,cur_cluster]),]
-  cell_type[,target_column]=paste0(cell_type[,cur_cluster], ": ", cell_type[,cur_celltype])
-  cell_type[,target_column]=factor(cell_type[,target_column], levels=unique(cell_type[,target_column]))
-  
-  if(b_remove_cur_cluster){
-    cell_type=cell_type[,colnames(cell_type) != cur_cluster]
-  }
-
-  cell_type<-cell_type[colnames(obj),]
-  obj@meta.data<-cell_type
-  return(obj)
-}
-
-get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE){
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE ){
   genes=unique(unlist(gene_groups))
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
   
@@ -976,11 +959,31 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   if(rotate.title){
     g=g+theme(strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
   }
-  
-  if(use_blue_yellow_red){
-    g <- g + scale_color_gradient2(low="blue", mid="yellow", high="red")
-  }
   return(g)
+}
+
+get_dot_width<-function(g, min_width=4400){
+  if(!all(c("features.plot","feature.groups") %in% colnames(g$data))){
+    stop(paste0("features.plot or feature.groups is not in ", paste0(colnames(g$data), collapse = ",")))
+  }
+  ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot","feature.groups")]),])
+  ngroups = length(unique(g$data$feature.groups))
+  width=ngenes * 40 + ngroups * 30 + 400
+  return(max(width, min_width))
+}
+
+get_dot_height_num<-function(ngroups){
+  result = max(1500, ngroups * 80 + 400)
+  return(result)
+}
+
+get_dot_height_vec<-function(vec){
+  ngroups = length(unique(vec))
+  return(get_dot_height_num(ngroups))
+}
+
+get_dot_height<-function(obj, group.by){
+  return(get_dot_height_vec(unlist(obj[[group.by]])))
 }
 
 get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL, use_blue_yellow_red=TRUE){
@@ -1033,6 +1036,25 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
 
   g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title, use_blue_yellow_red=use_blue_yellow_red)
   
+  return(g)
+}
+
+get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file){
+  old_meta<-obj@meta.data
+  
+  obj$fake_layer=paste0("fake_", unlist(obj@meta.data[,obj_res]))
+  obj@meta.data[colnames(subobj), "fake_layer"] = as.character(subobj@meta.data[,subobj_res])
+  
+  g<-get_bubble_plot(obj, group.by="fake_layer", bubblemap_file = bubblemap_file)
+
+  obj@meta.data=old_meta
+  
+  g$data<-g$data[!grepl("^fake_", g$data$id),]
+  sub_levels = levels(subobj@meta.data[, subobj_res])
+  if(all(!is.null(sub_levels))){
+    g$data$id<-factor(g$data$id, levels=sub_levels)
+  }
+
   return(g)
 }
 
@@ -1610,16 +1632,6 @@ sub_cluster<-function(subobj,
   return(subobj)    
 }
 
-get_dot_height_vec<-function(vec){
-  ngroups = length(unique(vec))
-  result = max(1500, ngroups * 90 + 200)
-  return(result)
-}
-
-get_dot_height<-function(obj, group.by){
-  return(get_dot_height_vec(unlist(obj[[group.by]])))
-}
-
 output_barplot<-function(obj, sample_key, cell_key, filename){
   cts<-unlist(obj[[cell_key]])
   ct<-table(cts)
@@ -1782,11 +1794,13 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
   groupColors<-c("blue", "red")
   names(groupColors)<-display_group_levels
 
-  gmap<-unlist(split(design_data$Group, design_data$Sample))
-  gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
+  if(!is_between_cluster){
+    gmap<-unlist(split(design_data$Group, design_data$Sample))
+    gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
 
-  cell_obj$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
-  cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
+    cell_obj$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
+    cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
+  }
 
   logFC<-sigout[sig_gene, "logFC"]
   FDR<-sigout[sig_gene,"FDR"]
@@ -1802,8 +1816,12 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
   title<-paste0(sig_gene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
   
   if(is_between_cluster){
-    p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2) + 
-      facet_grid(~Sample) + theme_bw3() + 
+    p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2)
+
+    if(length(unique(geneexp$Sample)) > 1){
+      p0 = p0 + facet_grid(~Sample)
+    }
+    p0 = p0 + theme_bw3() + 
       scale_color_manual(values = groupColors) +
       NoLegend() + xlab("") + ylab("Gene Expression")
     

@@ -49,26 +49,36 @@ sub getConfig {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   my $target_dir      = $def->{target_dir};
+  my $is_paired_end = getValue($def, "is_paired_end", 1);
+  my $single_end_option = $is_paired_end ? "" : "--single";
+  my $output_file_ext = $is_paired_end ? ".extracted.1.fq.gz" : ".extracted.fq.gz";
+  my $output_other_ext = $is_paired_end ? ".extracted.2.fq.gz" : "";
+  my $min_count = getValue($def, "min_count", 75);
 
   $config->{"extract"} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/extract",
-    init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => "extract -t 8 -v --log __NAME__.log --paired __NAME__.bam",
+    init_command          => "",
+    option                => "
+if [[ ! -s __NAME__.bam ]]; then
+  ln -s __FILE__ __NAME__.bam
+fi
+
+arcasHLA extract -t 8 -v $single_end_option --log __NAME__.log __NAME__.bam",
     docker_prefix         => "arcashla_",
     interpretor           => "",
     check_program         => 0,
-    program               => "arcasHLA",
+    program               => "",
     source_ref            => "files",
-    source_arg            => "--paired",
+    source_arg            => "",
     source_join_delimiter => "",
     output_to_same_folder => 0,
     output_arg            => "-o",
     output_to_folder      => 1,
     output_file_prefix    => "",
-    output_file_ext       => ".extracted.1.fq.gz",
-    output_other_ext      => ".extracted.2.fq.gz",
+    output_file_ext       => $output_file_ext,
+    output_other_ext      => $output_other_ext,
     sh_direct             => 0,
     pbs                   => {
       "nodes"     => "1:ppn=8",
@@ -81,11 +91,12 @@ sub getConfig {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/genotype",
-    option                => "genotype -t 8 -v --log __NAME__.log",
+    option                => "
+arcasHLA genotype -t 8 -v $single_end_option --min_count $min_count --log __NAME__.log",
     docker_prefix         => "arcashla_",
     interpretor           => "",
     check_program         => 0,
-    program               => "arcasHLA",
+    program               => "",
     source_ref            => "extract",
     source_arg            => "",
     source_join_delimiter => " ",

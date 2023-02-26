@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='doublets'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample/result/crs.edgeR.files.csv'
-parFile3='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.meta.rds'
+parFile1='/data/wanjalla_lab/projects/20230220_scRNA_P8008/P8008_CW2_compressed.rds'
+parFile2='/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell/result/doublets.edgeR.files.csv'
+parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample_vis/result')
+setwd('/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell_vis/result')
 
 ### Parameter setting end ###
 
@@ -37,10 +37,12 @@ edgeRres<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
 edgeRfolder<-dirname(parFile2)
 rownames(edgeRres)<-edgeRres$prefix
 
-df<-data.frame(c1=obj$seurat_clusters, c2=obj[[cluster_name]])
-df<-unique(df)
-df<-df[order(df$c1),]
-obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,cluster_name]))
+if(!bBetweenCluster){
+  df<-data.frame(c1=obj$seurat_clusters, c2=obj[[cluster_name]])
+  df<-unique(df)
+  df<-df[order(df$c1),]
+  obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,cluster_name]))
+}
 
 all_sigout<-NULL
 
@@ -51,7 +53,7 @@ for (prefix in rownames(edgeRres)){
   comparison<-edgeRres[prefix, "comparison"]
   sigGenenameFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "sigGenenameFile"])
   cellType<-edgeRres[prefix, "cellType"]
-  deFile=gsub(".sig_genename.txt", ".csv", sigGenenameFile)
+  deFile=paste0(edgeRfolder, "/", edgeRres[prefix, "deFile"])
   totalGene=length(readLines(deFile))-1
   sigGene=length(readLines(sigGenenameFile))
   visFile=""
@@ -68,9 +70,9 @@ for (prefix in rownames(edgeRres)){
       all_sigout<-rbind(all_sigout, sigout)
 
       designFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "designFile"])
-      design<-read.csv(designFile, stringsAsFactors = F, header=T)
+      design_data<-read.csv(designFile, stringsAsFactors = F, header=T)
       
-      designUniq<-unique(design[,c("Group", "DisplayGroup")])
+      designUniq<-unique(design_data[,c("Group", "DisplayGroup")])
       rownames(designUniq)<-designUniq$Group
       
       controlGroup<-designUniq["control","DisplayGroup"]
@@ -80,17 +82,17 @@ for (prefix in rownames(edgeRres)){
       names(groupColors)<-c(controlGroup, sampleGroup)
 
       if(DE_by_cell){
-        cell_obj<-subset(obj, cells=design$Cell)
-        cell_obj$Group=design$Group
-        cell_obj$DisplayGroup=design$DisplayGroup
+        cell_obj<-subset(obj, cells=design_data$Cell)
+        cell_obj$Group=design_data$Group
+        cell_obj$DisplayGroup=design_data$DisplayGroup
       }else{
         #pseudo_bulk
         cells<-clusterDf[clusterDf[,cluster_name] == cellType,]
         cells<-cells[cells$orig.ident %in% names(gmap),]
         cell_obj<-subset(obj, cells=rownames(cells))
 
-        gmap<-unlist(split(design$Group, design$Sample))
-        gdismap<-unlist(split(design$DisplayGroup, design$Sample))
+        gmap<-unlist(split(design_data$Group, design_data$Sample))
+        gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
 
         cell_obj$Group=gmap[cell_obj$orig.ident]
         cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=names(groupColors))
@@ -111,20 +113,24 @@ for (prefix in rownames(edgeRres)){
       
       visFile=paste0(prefix, ".sig_genename.pdf")
       
-      nsamples<-length(unique(cell_obj$orig.ident))
-      width<-10
-      if(nsamples>10){
-        width=width+5
-      }else if(!DE_by_cell){
-        width=width+5
+      if(bBetweenCluster){
+        width<-10
+      }else{
+        nsamples<-length(unique(cell_obj$orig.ident))
+        width<-10
+        if(nsamples>10){
+          width=width+5
+        }else if(!DE_by_cell){
+          width=width+5
+        }
       }
-      
+
       topN = min(100, nrow(siggenes))
       topNgenes<-siggenes$gene[1:topN]
 
       pdf(file=visFile, onefile = T, width=width, height=10)
       siggene<-topNgenes[1]
-      for (siggene in topNgenes){
+      for (sig_gene in topNgenes){
         p<-get_sig_gene_figure(cell_obj, sigout, design_data, sig_gene, DE_by_cell=DE_by_cell, is_between_cluster=bBetweenCluster, log_cpm=log_cpm)
 
         print(p)

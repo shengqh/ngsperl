@@ -47,12 +47,13 @@ define_file = find_file("*.define$", stop_if_not_found=TRUE)
 task_name = gsub(".define", "", define_file)
 
 define_data<-read.table(define_file, sep="\t", header=T)
+
+sig_summary_file = find_file("*_DESeq2_sigGeneSummary.csv", stop_if_not_found=TRUE)
 ```
 
 # DESeq2 result summary
 
-```{r, echo=FALSE}
-sig_summary_file = find_file("*_DESeq2_sigGeneSummary.csv", stop_if_not_found=TRUE)
+```{r, echo=FALSE, eval=file.exists(sig_summary_file)}
 sig_summary = read.csv(sig_summary_file)
 print(kable_styling(kable(sig_summary)))
 ```

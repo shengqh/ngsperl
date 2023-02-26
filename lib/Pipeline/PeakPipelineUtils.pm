@@ -54,6 +54,7 @@ sub add_chipqc {
     blacklist_file => $def->{"blacklist_file"},
     chromosomes    => $def->{"chipqc_chromosomes"},
     is_paired_end => getValue($def, "is_paired_end"),
+    consensus => getValue($def, "chipqc_consensus", 1),
     sh_direct      => 0,
     pbs            => {
       "nodes"    => "1:ppn=1",

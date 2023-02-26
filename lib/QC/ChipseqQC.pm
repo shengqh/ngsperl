@@ -72,6 +72,11 @@ sub perform {
     die "File not found : " . $script;
   }
 
+  my $target_script_name = $task_name . ".r";
+  my $target_script = $result_dir . "/" . $target_script_name;
+  `echo "setwd('$result_dir')\n\n" > $target_script`;
+  `cat $script >> $target_script`;
+
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $task_name );
@@ -92,6 +97,17 @@ sub perform {
   }
 
   my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $sourceBamFiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
+
+  $config->{$section}{parameterSampleFile1} = {
+    task_name => $task_name,
+    genome => $genome,
+    chromosomes => $chromosomes,
+    consensus => get_option($config, $section, "consensus", 1)
+  };
+  writeParameterSampleFile( $config, $section, $result_dir, 1, 0 );  
+
+  $config->{$section}{parameterSampleFile2} = $mapFiles;
+  writeParameterSampleFile( $config, $section, $result_dir, 2, 0 );  
 
   if ($combined) {
     my $mapFile=$mapFiles->{$task_name};
@@ -120,7 +136,7 @@ fi
 ";
     }
     
-    print $pbs "R --vanilla -f $script --args $mapFile $genome $chromosomes\n\n";
+    print $pbs "R --vanilla -f $target_script_name\n\n";
     
     if ($paired_end){
       print $pbs "if [[ -s $final_file ]]; then 
@@ -140,7 +156,7 @@ fi
       my $mapFileName = $mapFiles->{$qcname};
       my $curdir      = $result_dir . "/" . $qcname;
       print $pbs "cd $curdir
-R --vanilla -f $script --args $mapFileName $genome \n";
+R --vanilla -f $target_script_name \n";
     }
   }
 
