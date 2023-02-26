@@ -74,7 +74,7 @@ sub initializeDefaultOptions {
   if(defined $def->{treatments}){
     $def->{treatments_auto} = 0;
   }else{
-    initDefaultValue( $def, "treatments_auto",     0 );
+    initDefaultValue( $def, "treatments_auto",     1 );
   }
 
   if(defined $def->{design_table}){
@@ -675,28 +675,7 @@ sub getConfig {
     my $bindName = $peakCallerTask . "_diffbind";
     my $bind_homer_name;
     if ($perform_diffbind) {
-      $config->{$bindName} = {
-        class                   => "Comparison::DiffBind",
-        perform                 => 1,
-        target_dir              => "${target_dir}/" . getNextFolderIndex($def) . "${bindName}",
-        option                  => "",
-        source_ref              => $bam_ref,
-        groups                  => $def->{"treatments"},
-        controls                => $def->{"controls"},
-        design_table            => getValue( $def, "design_table" ),
-        peaks_ref               => [ $peakCallerTask, ".bed\$" ],
-        peak_software           => "bed",
-        homer_annotation_genome => $def->{homer_annotation_genome},
-        can_result_be_empty_file => 1,
-        sh_direct               => 0,
-        pbs                     => {
-          "email"    => $email,
-          "nodes"    => "1:ppn=1",
-          "walltime" => "72",
-          "mem"      => "40gb"
-        },
-      };
-      push @$summary, ($bindName);
+      addDiffbind($config, $def, $summary, $target_dir, $bindName, $bam_ref, [ $peakCallerTask, ".bed\$" ]);
 
       if ( getValue( $def, "perform_homer" ) ) {
         $bind_homer_name = addHomerAnnotation( $config, $def, $summary, $target_dir, $bindName, ".sig.bed" );
