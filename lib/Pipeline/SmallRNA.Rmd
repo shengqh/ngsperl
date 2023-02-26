@@ -15,14 +15,12 @@ output:
   margin-right: auto;
 }
 </style>
-
-```{r, child="Functions.Rmd"} 
-```
-```{r, child="Pipeline.Rmd"} 
-```
 ```{r setup, include=FALSE}
 library(kableExtra)
 library(tidyverse)
+
+source("Functions.R")
+source("Pipeline.R")
 
 knitr::opts_chunk$set(fig.width=8, fig.height=6, out.width="80%")
 
@@ -88,13 +86,21 @@ categoryRmd<-function(dfCategory, fileName, header){
     pca<-paste0("correlation_", category, "_pca")
     group_heatmap<-paste0("correlation_", category, "_group_heatmap")
     corr_heatmap<-paste0("correlation_", category, "_corr_cluster")
-    
+
     if(has_file(files, heatmap)){
       hasFile<-TRUE
     }
     
     lines<-paste0(section, " ", name, "\n", getCategory2(heatmap, pca, paste0("Heatmap (left) and PCA (right) of ", name) ), getCategory2(group_heatmap, corr_heatmap, paste0("Group heatmap (left) and group correlation (right) of ", name)) )
     result<-paste0(result, lines)
+
+    if(file.exists('fileList7.txt')){
+      comparisons = unique(read.table('fileList7.txt', sep="\t")$V2)
+      for(comparison in comparisons){
+        volcano<-paste0("deseq2_", category, "_volcano_", comparison)
+        result<-paste0(result, getCategory(volcano, paste0("Volcano plot of comparison ", comparison, "of ", name)))
+      }
+    }
   }
 
   if(hasFile){
@@ -361,7 +367,3 @@ as 'unknown'."}`
 [2] Martin, M., Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnet.journal 2011, 17, 10-12. \
 [3] Langmead, B., Trapnell, C., Pop, M., Salzberg, S. L., Ultrafast and memory-efficient alignment of short DNA sequences to the human genome. Genome Biol 2009, 10, R25. \
 `r if(hasHostDEseq2){"[4] Love, M. I., Huber, W., Anders, S., Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol 2014, 15, 550."}`
-
-
-
-

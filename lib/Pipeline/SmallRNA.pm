@@ -1063,9 +1063,10 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
 
         for my $biotype (@biotypes){
           my $biotype_name = $biotype eq "other" ? "otherSmallRNA" : $biotype;
+          my $biotype_feature_regex = $biotype eq "tRNA" ? "(^.*?tRNA-[^-]+-[^-]+)-" : undef;
 
           $deseq2Task = addDEseq2( $config, $def, $summary_ref, $biotype_name, [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.count\$" ],
-            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, $biotype_feature_regex );
           push( @visual_source, $biotype_name );
 
           addDEseq2( $config, $def, $summary_ref, "${biotype_name}_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.read.count\$" ],
@@ -1420,6 +1421,11 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
   my $nonhost_genome_read_count = [];
   my $bacteria_read_count = [];
 
+  my $refseq_bacteria_count = getValue($def, "refseq_bacteria_count", "both");
+  if ($refseq_bacteria_count ne "both" && $refseq_bacteria_count ne "estimated" && $refseq_bacteria_count ne "aggregated" ) {
+    die "refseq_bacteria_count has to be one of those values: estimated, aggregated, both. Current is " . $refseq_bacteria_count;
+  }
+
   if (getValue($def, "search_nonhost_genome", 1) && getValue($def, "search_refseq_bacteria", 0)) {
     my $refseq_bacteria_bowtie = "refseq_bacteria_bowtie";
     $config->{"refseq_bacteria_bowtie_index"} = getValue($def, "refseq_bacteria_bowtie_index");
@@ -1532,8 +1538,13 @@ fi
     };
 
     push( @$summary_ref, $refseq_bacteria_table );  
-    push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
-    push @table_for_correlation, ( $refseq_bacteria_table, ".aggregated.count\$" );
+
+    if ($refseq_bacteria_count eq "both"){
+      push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
+      push @table_for_correlation, ( $refseq_bacteria_table, ".aggregated.count\$" );
+    }else{
+      push @table_for_correlation, ( $refseq_bacteria_table, ".${refseq_bacteria_count}.count\$" );
+    }
 
     push @table_for_countSum,    ( $refseq_bacteria_table, ".phylum.estimated.count\$" );
 
@@ -1595,12 +1606,15 @@ fi
 
     if ($do_comparison) {
       for my $cat (@$categories){
-        # addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_query", [ $refseq_bacteria_table, ".${cat}.query.count\$" ],
-        #   $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
-          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_aggregated", [ $refseq_bacteria_table, ".${cat}.aggregated.count\$" ],
-          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        if ($refseq_bacteria_count eq "both"){
+          addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
+            $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_aggregated", [ $refseq_bacteria_table, ".${cat}.aggregated.count\$" ],
+            $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        }else{
+          addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_${refseq_bacteria_count}", [ $refseq_bacteria_table, ".${cat}.${refseq_bacteria_count}.count\$" ],
+            $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        }
       }
       addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_read", [ $refseq_bacteria_table, ".read.count\$" ],
         $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
@@ -2596,8 +2610,6 @@ fi
       'sh_direct'                => 1,
       'perform'                  => 1,
       'pbs'                      => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "2",
         "mem"       => "10gb"
@@ -2618,8 +2630,6 @@ fi
         'sh_direct'                => 1,
         'perform'                  => 1,
         'pbs'                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "2",
           "mem"       => "10gb"
@@ -2685,6 +2695,9 @@ fi
     $def->{"use_intermediate_dir"} = $old_use_intermediate_dir;
   }
 
+  my $DE_library_key = getValue($def, "DE_library_key");
+  my $pairs = $config->{pairs};
+
   if ( getValue( $def, "perform_report" ) ) {
     my @report_files = ();
     my @report_names = ();
@@ -2745,28 +2758,65 @@ fi
           push( @report_names, "correlation_mirna_group_heatmap", "correlation_mirna_corr_cluster" );
         }
 
+        if(defined $pairs){
+          for my $comparison (sort keys %$pairs){
+            push( @report_files, "deseq2_miRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_names, "deseq2_mirna_volcano_${comparison}" );
+          }
+        }
+
         if(not $hasMicroRNAOnly){
           push( @report_files, "count_table_correlation",  'smallRNA_1mm_.+.tRNA.count.heatmap.png' );
           push( @report_files, "count_table_correlation",  'smallRNA_1mm_.+.tRNA.count.PCA.png' );
           push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca" );
+          if(defined $pairs){
+            for my $comparison (sort keys %$pairs){
+              push( @report_files, "deseq2_tRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+              push( @report_names, "deseq2_trna_volcano_${comparison}" );
+            }
+          }
 
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.rRNA.count.heatmap.png" );
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.rRNA.count.PCA.png" );
           push( @report_names, "correlation_rrna_heatmap", "correlation_rrna_pca" );
+          if(defined $pairs){
+            for my $comparison (sort keys %$pairs){
+              push( @report_files, "deseq2_rRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+              push( @report_names, "deseq2_rrna_volcano_${comparison}" );
+            }
+          }
 
           if($def->{hasYRNA}){
             push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.heatmap.png" );
             push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.yRNA.count.PCA.png" );
             push( @report_names, "correlation_yrna_heatmap", "correlation_yrna_pca" );
+            if(defined $pairs){
+              for my $comparison (sort keys %$pairs){
+                push( @report_files, "deseq2_yRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+                push( @report_names, "deseq2_yrna_volcano_${comparison}" );
+              }
+            }
           }
 
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snRNA.count.heatmap.png" );
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snRNA.count.PCA.png" );
           push( @report_names, "correlation_snrna_heatmap", "correlation_snrna_pca" );
+          if(defined $pairs){
+            for my $comparison (sort keys %$pairs){
+              push( @report_files, "deseq2_snRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+              push( @report_names, "deseq2_snrna_volcano_${comparison}" );
+            }
+          }
 
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snoRNA.count.heatmap.png" );
           push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.snoRNA.count.PCA.png" );
           push( @report_names, "correlation_snorna_heatmap", "correlation_snorna_pca" );
+          if(defined $pairs){
+            for my $comparison (sort keys %$pairs){
+              push( @report_files, "deseq2_snoRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+              push( @report_names, "deseq2_snorna_volcano_${comparison}" );
+            }
+          }
 
           if ($hasGroupHeatmap) {
             push( @report_files, "count_table_correlation",        "smallRNA_1mm_.+.tRNA.count.Group.heatmap.png" );
@@ -2786,6 +2836,13 @@ fi
           push( @report_files, "count_table_correlation",          "bacteria_group1_.*.Species.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_group1_group_heatmap", "correlation_group1_corr_cluster" );
         }
+
+        if(defined $pairs){
+          for my $comparison (sort keys %$pairs){
+            push( @report_files, "deseq2_bacteria_group1_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_names, "deseq2_group1_volcano_${comparison}" );
+          }
+        }
       }
 
       if ( defined $config->{bowtie1_bacteria_group2_pm_table} ) {
@@ -2797,6 +2854,13 @@ fi
           push( @report_files, "count_table_correlation",          "bacteria_group2_.*.Species.count.Group.heatmap.png" );
           push( @report_files, "count_table_correlation",          "bacteria_group2_.*.Species.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_group2_group_heatmap", "correlation_group2_corr_cluster" );
+        }
+
+        if(defined $pairs){
+          for my $comparison (sort keys %$pairs){
+            push( @report_files, "deseq2_bacteria_group2_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_names, "deseq2_group2_volcano_${comparison}" );
+          }
         }
       }
 
@@ -2810,6 +2874,13 @@ fi
           push( @report_files, "count_table_correlation",          "virus_group6_.*.Species.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_group6_group_heatmap", "correlation_group6_corr_cluster" );
         }
+
+        if(defined $pairs){
+          for my $comparison (sort keys %$pairs){
+            push( @report_files, "deseq2_virus_group6_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_names, "deseq2_group6_volcano_${comparison}" );
+          }
+        }
       }
 
       if ( defined $config->{bowtie1_tRNA_pm_table} ) {
@@ -2821,6 +2892,13 @@ fi
           push( @report_files, "count_table_correlation",           "^.*tRNA_pm_${task_name}.count.Group.heatmap.png" );
           push( @report_files, "count_table_correlation",           "^.*tRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_trnalib_group_heatmap", "correlation_trnalib_corr_cluster" );
+        }
+
+        if(defined $pairs){
+          for my $comparison (sort keys %$pairs){
+            push( @report_files, "deseq2_nonhost_tRNA_anticodon_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_names, "deseq2_trnalib_volcano_${comparison}" );
+          }
         }
       }
 
@@ -2834,30 +2912,55 @@ fi
           push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
           push( @report_names, "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
         }
+
+        if(defined $pairs){
+          for my $comparison (sort keys %$pairs){
+            push( @report_files, "deseq2_nonhost_rRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_names, "deseq2_rrnalib_volcano_${comparison}" );
+          }
+        }
       }
 
       if ( defined $config->{refseq_bacteria_table} ) {
         my $levels = [ 'species', 'genus', 'family', 'order', 'class', 'phylum'];
 
         for my $level (@$levels){
-          push( @report_files, "count_table_correlation",     "${task_name}.${level}.aggregated.count.heatmap.png" );
-          push( @report_files, "count_table_correlation",     "${task_name}.${level}.aggregated.count.PCA.png" );
-          push( @report_names, "correlation_refseq_bacteria_${level}_agg_heatmap", "correlation_refseq_bacteria_${level}_agg_pca" );
+          if ($refseq_bacteria_count eq "both" || $refseq_bacteria_count eq "aggregated" ){
+            push( @report_files, "count_table_correlation",     "${task_name}.${level}.aggregated.count.heatmap.png" );
+            push( @report_files, "count_table_correlation",     "${task_name}.${level}.aggregated.count.PCA.png" );
+            push( @report_names, "correlation_refseq_bacteria_${level}_agg_heatmap", "correlation_refseq_bacteria_${level}_agg_pca" );
 
-          if ($hasGroupHeatmap) {
-            push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.heatmap.png" );
-            push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.Correlation.Cluster.png" );
-            push( @report_names, "correlation_refseq_bacteria_${level}_agg_group_heatmap", "correlation_refseq_bacteria_${level}_agg_corr_cluster" );
+            if ($hasGroupHeatmap) {
+              push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.heatmap.png" );
+              push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.Correlation.Cluster.png" );
+              push( @report_names, "correlation_refseq_bacteria_${level}_agg_group_heatmap", "correlation_refseq_bacteria_${level}_agg_corr_cluster" );
+            }
+
+            if(defined $pairs){
+              for my $comparison (sort keys %$pairs){
+                push( @report_files, "deseq2_refseq_bacteria_${level}_aggregated_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+                push( @report_names, "deseq2_refseq_bacteria_${level}_agg_volcano_${comparison}" );
+              }
+            }
           }
 
-          push( @report_files, "count_table_correlation",     "${task_name}.${level}.estimated.count.heatmap.png" );
-          push( @report_files, "count_table_correlation",     "${task_name}.${level}.estimated.count.PCA.png" );
-          push( @report_names, "correlation_refseq_bacteria_${level}_est_heatmap", "correlation_refseq_bacteria_${level}_est_pca" );
+          if ($refseq_bacteria_count eq "both" || $refseq_bacteria_count eq "estimated" ){
+            push( @report_files, "count_table_correlation",     "${task_name}.${level}.estimated.count.heatmap.png" );
+            push( @report_files, "count_table_correlation",     "${task_name}.${level}.estimated.count.PCA.png" );
+            push( @report_names, "correlation_refseq_bacteria_${level}_est_heatmap", "correlation_refseq_bacteria_${level}_est_pca" );
 
-          if ($hasGroupHeatmap) {
-            push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.heatmap.png" );
-            push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.Correlation.Cluster.png" );
-            push( @report_names, "correlation_refseq_bacteria_${level}_est_group_heatmap", "correlation_refseq_bacteria_${level}_est_corr_cluster" );
+            if ($hasGroupHeatmap) {
+              push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.heatmap.png" );
+              push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.Correlation.Cluster.png" );
+              push( @report_names, "correlation_refseq_bacteria_${level}_est_group_heatmap", "correlation_refseq_bacteria_${level}_est_corr_cluster" );
+            }
+
+            if(defined $pairs){
+              for my $comparison (sort keys %$pairs){
+                push( @report_files, "deseq2_refseq_bacteria_${level}_estimated_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+                push( @report_names, "deseq2_refseq_bacteria_${level}_est_volcano_${comparison}" );
+              }
+            }
           }
         }
       }
@@ -2895,18 +2998,20 @@ fi
     my $version_files = get_version_files($config);
 
     my $options = {
-      "DE_fold_change" => [ getValue( $def, "DE_fold_change" ) ],
-      "DE_pvalue"      => [ getValue( $def, "DE_pvalue" ) ],
-      "DE_use_raw_pvalue"=> [ getValue( $def, "DE_use_raw_pvalue" ) ],
-      "search_nonhost_genome" => [ getValue($def, "search_nonhost_genome") ],
-      "normalize_by" => [ getValue($def, "normalize_by") ],
+      "task_name" => $task_name,
+      "DE_fold_change" => getValue( $def, "DE_fold_change" ),
+      "DE_pvalue"      => getValue( $def, "DE_pvalue" ),
+      "DE_use_raw_pvalue"=> getValue( $def, "DE_use_raw_pvalue" ),
+      "search_nonhost_genome" => getValue($def, "search_nonhost_genome"),
+      "normalize_by" => getValue($def, "normalize_by"),
+      "refseq_bacteria_count" => $refseq_bacteria_count, 
     };
     $config->{report} = {
       class                      => "CQS::BuildReport",
       perform                    => 1,
       target_dir                 => $def->{target_dir} . "/report",
       report_rmd_file            => "../Pipeline/SmallRNA.Rmd",
-      additional_rmd_files       => "Functions.Rmd;../Pipeline/Pipeline.Rmd",
+      additional_rmd_files       => "Functions.R;../Pipeline/Pipeline.R",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
       parameterSampleFile2       => $options,
@@ -2914,6 +3019,7 @@ fi
       parameterSampleFile4       => $version_files,
       parameterSampleFile5       => $def->{software_version},
       parameterSampleFile6       => $def->{groups},
+      parameterSampleFile7       => $def->{pairs},
       sh_direct                  => 1,
       pbs                        => {
         "nodes"    => "1:ppn=1",
