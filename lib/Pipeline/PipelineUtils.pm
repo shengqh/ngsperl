@@ -465,7 +465,7 @@ sub getOutputFormat {
 }
 
 sub addDEseq2 {
-  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey ) = @_;
+  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey, $feature_name_regex ) = @_;
 
   my $taskName = getDEseq2TaskName( $taskKey, $libraryKey, $def );
 
@@ -508,6 +508,9 @@ sub addDEseq2 {
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
     rCode                        => $rCode,
+    parameterSampleFile1 => {
+      feature_name_regex => $feature_name_regex,
+    },
     pbs                          => {
       "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => getValue($def, "DESeq2_walltime", "23"),
@@ -933,6 +936,8 @@ sub addCleanBAM {
 
 sub writeDesignTable {
   my ( $target_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, $merged, $task_name, $treatments, $controls ) = @_;
+
+  #print(Dumper($treatments));
 
   my $defaultTissue = getValue( $designtable, "Tissue", "" );
   my $defaultFactor = getValue( $designtable, "Factor", "" );
