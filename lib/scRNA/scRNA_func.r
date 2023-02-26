@@ -848,9 +848,8 @@ read_bubble_genes<-function(bubble_file, allgenes=c()){
   library("tidyr")
   
   genes <- read_xlsx(bubble_file, sheet = 1)
-  colnames(genes)[colnames(genes) == "Marker Gene"] = "gene"
-  colnames(genes)[colnames(genes) == "Cell Type"] = "cell_type"
-
+  colnames(genes)[1:2] = c("gene", "cell_type")
+  
   for(idx in c(2:nrow(genes))){
     if(is.na(genes[idx,"cell_type"])){
       genes[idx,"cell_type"]=genes[idx-1,"cell_type"]
@@ -905,7 +904,34 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE ){
+add_cluster_cell_type<-function(obj, cur_cluster, cur_celltype, target_column){
+  if(is.null(cur_cluster)){
+    cur_cluster = NA
+  } 
+  
+  b_remove_cur_cluster = FALSE
+  if(is.na(cur_cluster)){
+    cur_cluster = paste0(cur_celltype, "_cluster")
+    obj<-build_dummy_cluster(obj, label.by=cur_celltype, new_cluster_name=cur_cluster)
+    b_remove_cur_cluster = TRUE
+  }
+  
+  cell_type=obj@meta.data
+
+  cell_type<-cell_type[order(cell_type[,cur_cluster]),]
+  cell_type[,target_column]=paste0(cell_type[,cur_cluster], ": ", cell_type[,cur_celltype])
+  cell_type[,target_column]=factor(cell_type[,target_column], levels=unique(cell_type[,target_column]))
+  
+  if(b_remove_cur_cluster){
+    cell_type=cell_type[,colnames(cell_type) != cur_cluster]
+  }
+
+  cell_type<-cell_type[colnames(obj),]
+  obj@meta.data<-cell_type
+  return(obj)
+}
+
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE){
   genes=unique(unlist(gene_groups))
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
   
@@ -949,6 +975,10 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   
   if(rotate.title){
     g=g+theme(strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
+  }
+  
+  if(use_blue_yellow_red){
+    g <- g + scale_color_gradient2(low="blue", mid="yellow", high="red")
   }
   return(g)
 }
@@ -1001,11 +1031,7 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
     obj@meta.data<-cell_type
   }
 
-  g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title)
-  
-  if(use_blue_yellow_red){
-    g <- g + scale_color_gradient2(low="blue", mid="yellow", high="red")
-  }
+  g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title, use_blue_yellow_red=use_blue_yellow_red)
   
   return(g)
 }
