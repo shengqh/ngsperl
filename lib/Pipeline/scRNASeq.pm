@@ -450,6 +450,18 @@ sub getScRNASeqConfig {
           add_clustree_rmd($config, $def, $summary, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task);
         }
 
+        my $singleR_task = undef;
+        if (getValue( $def, "perform_SingleR", 0 ) ) {
+          $singleR_task = $scDynamic_task . "_singleR";
+          my $cur_options = {
+            task_name => $def->{task_name},
+            reduction => $reduction, 
+            celltype_layer => "layer4",
+            celltype_cluster => "layer4_clusters"
+          };
+          add_singleR( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $meta_ref, $cur_options );
+        }
+
         if(getValue($def, "perform_dynamic_subcluster")){
           my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_subcluster";
 

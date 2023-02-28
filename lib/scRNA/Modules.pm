@@ -50,6 +50,9 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addArcasHLA 
   addScMRMA 
   addCHETAH
+
+  add_singleR
+
   add_signacx_only
   addSignac
   
@@ -656,6 +659,34 @@ sub add_signacx_only {
   };
 
   push( @$tasks, $task_name );
+}
+
+sub add_singleR {
+  my ( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $meta_ref, $cur_options ) = @_;
+
+  $config->{$singleR_task} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $singleR_task,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SingleR.r",
+    parameterFile1_ref   => $obj_ref,
+    parameterFile2_ref   => $meta_ref,
+    parameterSampleFile1 => merge_hash_left_precedent($cur_options,  {
+      species             => getValue( $def, "species" ),
+      pca_dims            => getValue( $def, "pca_dims" ),
+      bubblemap_file        => $def->{bubblemap_file},
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+    }),
+    output_file_ext => ".SingleR.png;.SingleR.rds;.meta.rds",
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "SingleR_walltime", "10"),
+      "mem"       => getValue($def, "SingleR_mem", getValue($def, "seurat_mem")),
+    },
+  };
+
+  push( @$tasks, $singleR_task );
 }
 
 sub addSignac {
