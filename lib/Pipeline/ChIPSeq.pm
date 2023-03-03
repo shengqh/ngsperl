@@ -117,69 +117,7 @@ sub getConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster, $run_cutadapt_test ) = getPreprocessionConfig($def);
 
-  if (getValue($def, "treatments_auto")){
-    my $files = getValue($def, "files");
-    my $treatments = {};
-    for my $sample (sort keys %$files){
-      $treatments->{$sample} = [$sample];
-    }
-    $def->{treatments} = $treatments;
-  }
-
-  my $treatments_pattern = $def->{"treatments_pattern"};
-  if ($treatments_pattern){
-    my $files = getValue($def, "files");
-    my $treatments = {};
-    for my $sample (sort keys %$files){
-      if ($sample =~ /$treatments_pattern/){
-        $treatments->{$sample} = [$sample];
-      }
-    }
-    $def->{treatments} = $treatments;
-  }
-
-  my $inputs_pattern = $def->{"inputs_pattern"};
-  if ($inputs_pattern){
-    my $treatments_inputs_match_pattern = getValue($def, "treatments_inputs_match_pattern");
-    my $files = getValue($def, "files");
-    my $input_files = {};
-    for my $sample (sort keys %$files){
-      if ($sample =~ /$inputs_pattern/){
-        my $match_sample = capture_regex_groups($sample, $treatments_inputs_match_pattern);
-        $input_files->{$match_sample} = [$sample];
-      }
-    }
-  
-    my $inputs = {};
-    my $treatments = getValue($def, "treatments");
-    for my $sample (sort keys %$treatments){
-      my $match_sample = capture_regex_groups($sample, $treatments_inputs_match_pattern);
-      my $match_input = $input_files->{$match_sample};
-      die "cannot find input file of $sample, check treatments_inputs_match_pattern" if (!defined $match_input);
-      $inputs->{$sample} = $match_input;
-    }
-
-    $def->{controls} = $inputs;
-  }
-
-  checkFileGroupPairNames($def, ["treatments", "controls"]);
-
-  if(getValue($def, "design_table_auto")){
-    my $task_name = getValue($def, "task_name");
-    my $treatments = getValue($def, "treatments");
-    my $design_table = {};
-
-    for my $sample (sort keys %$treatments){
-      $design_table->{$sample} = {
-        Condition => $sample,
-        Replicate => "1"
-      };
-    }
-
-    $def->{design_table} = {
-      $task_name => $design_table
-    };
-  }
+  init_treatments_design_table($def);
 
   my $perform_chipqc = getValue( $def, "perform_chipqc" );
 

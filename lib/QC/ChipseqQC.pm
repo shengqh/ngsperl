@@ -96,7 +96,7 @@ sub perform {
     } 
   }
 
-  my $mapFiles = writeDesignTable( $result_dir, $section, $qctable, $sourceBamFiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
+  my ($mapFiles, $condition_map) = writeDesignTable( $result_dir, $section, $qctable, $sourceBamFiles, $peaksfiles, $peakSoftware, $combined, $task_name, $treatments, $controls );
 
   $config->{$section}{parameterSampleFile1} = {
     task_name => $task_name,

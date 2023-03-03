@@ -14,20 +14,58 @@ if(!DEBUG){
 # the new parameter defining minoverlap for each condition 
   overlapDef=args[3]
   outputPrefix=args[4]
+  optionFile=args[5]
 }else{
-  configFile="/scratch/jbrown_lab/brackr1/RB9742_human_ATAC/diffbind/pbs/ATCM.config.txt"
-  comparisonFile="/scratch/jbrown_lab/brackr1/RB9742_human_ATAC/diffbind/pbs/ATCM.comparison.txt"
-  overlapDef="/scratch/jbrown_lab/brackr1/RB9742_human_ATAC/diffbind/pbs/ATCM.minoverlap.txt"
-  outputPrefix="/scratch/jbrown_lab/brackr1/RB9742_human_ATAC/diffbind/result/ATCM"
+  setwd('/scratch/jbrown_lab/projects/20230208_RB9742_ATAC_encode/diffbind/result/RB9742_hg38')
+  configFile="RB9742_hg38.config.txt"
+  comparisonFile="RB9742_hg38.comparison.txt"
+  overlapDef="RB9742_hg38.minoverlap.txt"
+  outputPrefix="RB9742_hg38"
+  optionFile="fileList1.txt"
 }
 
 cat("configFile=", configFile, "\n")
 cat("comparisonFile=", comparisonFile, "\n")
 cat("overlapDef=", overlapDef, "\n")
 cat("outputPrefix=", outputPrefix, "\n")
+cat("optionFile=", optionFile, "\n")
+
+get_summit<-function(value){
+  if(is.null(value)){
+    return(FALSE)
+  }
+  if(is.na(value)){
+    return(FALSE)
+  }
+  if(value == '0'){
+    return(FALSE)
+  }
+  return(as.numeric(value))
+}
+
+option_table<-read.table(optionFile, sep="\t")
+myoptions = split(option_table$V1, option_table$V2)
+
+summits=get_summit(myoptions$summits)
+cat("summits=", summits, "\n")
 
 sampleSheet<-read.table(configFile, sep="\t", header=T, stringsAsFactors=F)
 sampleSheet
+
+comparisons<-read.table(comparisonFile, sep="\t", header=T, stringsAsFactors = F)
+all_groups<-unique(c(comparisons$Group1, comparisons$Group2))
+missed_groups<-all_groups[!all_groups %in% sampleSheet$Condition]
+if(length(missed_groups) > 0){
+  stop("Group defined in comparison not found in config file:", paste0(missed_groups, collapse = ","))
+}
+
+overlapsheet <- read.table(overlapDef, sep="\t", header=T) 
+if(nrow(overlapsheet) > 0){
+  missed_groups<-overlapsheet$Condition[!overlapsheet$Condition %in% sampleSheet$Condition]
+  if(length(missed_groups) > 0){
+    stop("Group defined in MinOverlap not found in config file:", paste0(missed_groups, collapse = ","))
+  }
+}
 
 is_file_exists<-file.exists(sampleSheet$Peaks)
 if(any(!is_file_exists)){
@@ -47,7 +85,6 @@ png(paste0(outputPrefix, ".heatmap.png"), width=2000, height=2000, res=300)
 plot(mb1)
 dev.off()
 
-overlapsheet <- read.table(overlapDef, sep="\t", header=T) 
 if(nrow(overlapsheet) > 0){
   cat("checking overlap ... \n")
   #get consensus peaks and plot Venn for each condition, and generate count table for combined peaks across conditions 
@@ -87,10 +124,10 @@ if(nrow(overlapsheet) > 0){
   rm(mb1_consensus)
 
   #now get count for all samples based on consensus_peaks.
-  mb1 <- dba.count(mb1,score=DBA_SCORE_READS, peaks=consensus_peaks, bRemoveDuplicates=TRUE)
+  mb1 <- dba.count(mb1, summits=summits, score=DBA_SCORE_READS, peaks=consensus_peaks, bRemoveDuplicates=TRUE)
 }else{
   #now get count for all samples
-  mb1 <- dba.count(mb1,score=DBA_SCORE_READS, bRemoveDuplicates=TRUE)
+  mb1 <- dba.count(mb1, summits=summits, score=DBA_SCORE_READS, bRemoveDuplicates=TRUE)
 }
 
 mbt = dba(mb1,bSummarizedExperiment=TRUE)
@@ -98,7 +135,6 @@ mbt = dba(mb1,bSummarizedExperiment=TRUE)
 write.table(data.frame(as.data.frame(rowRanges(mbt)),assay(mbt)),
             file=paste0(outputPrefix,".counttable_raw.txt"),quote=F,sep="\t",row.names=F)
 
-comparisons<-read.table(comparisonFile, sep="\t", header=T, stringsAsFactors = F)
 allres<-NULL
 allres_sig<-NULL
 idx<-1

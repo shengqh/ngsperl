@@ -52,29 +52,49 @@ sub perform {
   my $log_desc = $cluster->get_log_description($log);
   my $pbs      = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
 
-  my $mapFiles = writeDesignTable( $result_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, 0, $task_name, $treatments, $controls );
+  my ($mapFiles, $condition_map) = writeDesignTable( $result_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, 0, $task_name, $treatments, $controls );
 
   for my $name ( sort keys %$mapFiles ) {
     my $mapFileName = basename($mapFiles->{$name});
+    my $conditions = $condition_map->{$name};
 
     my $sampleList = $designtable->{$name};
     my $comparisons = getValue( $sampleList, "Comparison" );
     my $minOverlap = getValue( $sampleList, "MinOverlap");
 
     my $curdir       = $result_dir . "/" . $name;
+
+    my $option_file = writeParameterSampleFile( $config, $section, $curdir, 1 );
+
     my $compFileName = "${name}.comparison.txt";
     my $compfile     = $curdir . "/" . $compFileName;
     open( my $comp, ">$compfile" ) or die "Cannot create $compfile";
-    print $comp "Comparison\tGroup1\tGroup2\n";
+    print $comp "Comparison\tSampleGroup\tControlGroup\n";
     for my $comparison (@$comparisons) {
+      my $sample_group = $comparison->[2];
+      my $control_group =  $comparison->[1];
+
+      if(!exists $conditions->{$sample_group}){
+        die("Group $sample_group in comparison $comparison was not found in design table conditions");
+      }
+
+      if(!exists $conditions->{$control_group}){
+        die("Group $control_group in comparison $comparison was not found in design table conditions");
+      }
+
       print $comp $comparison->[0] . "\t" . $comparison->[2] . "\t" . $comparison->[1] . "\n";
     }
     close($comp);
 
     my $overlapFileName = "${name}.minoverlap.txt";
-    open( my $overlap, ">$overlapFileName" ) or die "Cannot create $overlapFileName";
+    my $overlapfile     = $curdir . "/" . $overlapFileName;
+    open( my $overlap, ">$overlapfile" ) or die "Cannot create $overlapfile";
     print $overlap "Condition\tminoverlap\n";
     for my $ov (sort keys %$minOverlap) {
+      if(!exists $conditions->{$ov}){
+        die("MinOverlap group " . $ov . " was not found in design table condition");
+      }
+
       print $overlap $ov . "\t" . $minOverlap->{$ov} . "\n";
     }
     close($overlap);
@@ -85,7 +105,7 @@ sub perform {
 cd $curdir
 
 if [ ! -s $finalFile ]; then
-  R --vanilla -f $script --args $mapFileName $compFileName $overlapFileName $finalPrefix
+  R --vanilla -f $script --args $mapFileName $compFileName $overlapFileName $finalPrefix $option_file
 fi
 
 ";

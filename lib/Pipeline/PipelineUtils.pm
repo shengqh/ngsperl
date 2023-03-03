@@ -759,8 +759,11 @@ sub addDiffbind {
     controls                => $def->{"controls"},
     design_table            => getValue($def, "design_table"),
     peaks_ref               => $peaks_ref,
-    peak_software           => "bed",
+    peak_software => getValue($def, "peak_software","bed"),
     homer_annotation_genome => $def->{homer_annotation_genome},
+    parameterSampleFile1 => {
+      summits => getValue($def, "diffbind_summits", 0),
+    },
     can_result_be_empty_file => 1,
     sh_direct               => 0,
     pbs                     => {
@@ -943,8 +946,10 @@ sub writeDesignTable {
   my $defaultFactor = getValue( $designtable, "Factor", "" );
 
   my $result = {};
+  my $condition_map = {};
 
   if ($merged) {
+    my $conditions = {};
     my $mapFileName = "${task_name}.config.txt";
     my $mapfile     = $target_dir . "/" . $mapFileName;
     open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
@@ -1001,17 +1006,22 @@ sub writeDesignTable {
           . $bamControl . "\t"
           . $peakFile . "\t"
           . $peakSoftware . "\n";
+
+        $conditions->{$condition} = 1;
       }
     }
     close($map);
 
     $result->{$task_name} = $mapfile;
+    $condition_map->{$task_name} = $conditions;
   }
   else {
     for my $name ( sort keys %$designtable ) {
       if ( $name eq "Tissue" || $name eq "Factor" ) {
         next;
       }
+
+      my $conditions = {};
 
       my $sampleList        = $designtable->{$name};
       my $defaultNameTissue = getValue( $sampleList, "Tissue", $defaultTissue );
@@ -1060,6 +1070,8 @@ sub writeDesignTable {
           . $bamControl . "\t"
           . $peakFile . "\t"
           . $peakSoftware . "\n";
+
+        $conditions->{$condition} = 1;
       }
       close($map);
 
@@ -1074,10 +1086,11 @@ sub writeDesignTable {
       }
 
       $result->{$name} = $mapfile;
+      $condition_map->{$name} = $conditions;
     }
   }
 
-  return $result;
+  return $result, $condition_map;
 }
 
 sub init_design_table_by_pattern {
