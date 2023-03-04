@@ -388,9 +388,13 @@ sigTableAll<-NULL
 sigTableAllGene<-NULL
 sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","FoldChange")
 
-options_table = read.table("fileList1.txt", sep="\t")
-myoptions = split(options_table$V1, options_table$V2)
-feature_name_regex = myoptions$feature_name_regex
+if(file.exists("fileList1.txt")){
+  options_table = read.table("fileList1.txt", sep="\t")
+  myoptions = split(options_table$V1, options_table$V2)
+  feature_name_regex = myoptions$feature_name_regex
+}else{
+  feature_name_regex=NA
+}
 
 countfile_index = 1
 titles<-NULL
