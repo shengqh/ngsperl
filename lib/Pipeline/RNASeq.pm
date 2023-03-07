@@ -184,6 +184,7 @@ sub getRNASeqConfig {
 
   my $multiqc_depedents = $source_ref;
 
+  my $count_table_column = 6;
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
     my $sf_task = addStarFeaturecount($config, $def, $individual, $summary, $target_dir, $source_ref, "" );
@@ -192,128 +193,134 @@ sub getRNASeqConfig {
     $count_table_ref = [ $sf_task, "(?!chromosome).count\$" ];
 
     $multiqc_depedents = $sf_task;
-  }
-  else {
-
+  }else {
     if ( $def->{perform_mapping} ) {
-      my $aligner_index;
-      if ( $aligner eq "star" ) {
-        $aligner_index = $def->{star_index} or die "Define star_index at definition first";
-      }
-      else {
-        $aligner_index = $def->{hisat2_index} or die "Define hisat2_index at definition first";
+      if ($aligner eq "salmon"){
+        my ($salmon, $salmon_table) = add_salmon($config, $def, $individual, $summary, $target_dir, $source_ref, "");
+        $count_table_ref = [ $salmon, "quant.genes.sf" ];
+        $source_ref      = [ $salmon, ".bam\$" ];
+        $count_table_column = 4;
+        $def->{perform_counting} = 0;
+      }else{
+        my $aligner_index;
+        if ( $aligner eq "star" ) {
+          $aligner_index = $def->{star_index} or die "Define star_index at definition first";
+        }
+        else {
+          $aligner_index = $def->{hisat2_index} or die "Define hisat2_index at definition first";
+        }
+
+        my $configAlignment;
+        if ( $aligner eq "star" ) {
+          my $starFolder = $target_dir . "/" . getNextFolderIndex($def) . "star";
+          $configAlignment = {
+            "star" => {
+              class                     => "Alignment::STAR",
+              perform                   => 1,
+              target_dir                => $starFolder,
+              option                    => $star_option,
+              source_ref                => $source_ref,
+              genome_dir                => $aligner_index,
+              output_sort_by_coordinate => 1,
+              output_to_same_folder     => $def->{output_bam_to_same_folder},
+              sh_direct                 => 0,
+              star_location             => $def->{star_location},
+              pbs                       => {
+                "nodes"     => "1:ppn=" . $def->{max_thread},
+                "walltime"  => "23",
+                "mem"       => "40gb"
+              },
+            },
+            "star_summary" => {
+              class                    => "CQS::UniqueR",
+              perform                  => 1,
+              target_dir               => $starFolder,
+              option                   => "",
+              rtemplate                => "../Alignment/STARFeatureCount.r",
+              output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
+              parameterSampleFile1_ref => [ "star", "_Log.final.out" ],
+              sh_direct                => 1,
+              pbs                      => {
+                "nodes"     => "1:ppn=1",
+                "walltime"  => "2",
+                "mem"       => "10gb"
+              },
+            },
+          };
+
+          $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
+          push @$summary, ("star_summary");
+          $multiqc_depedents = "star";
+        }
+        else {
+          $configAlignment = {
+            hisat2 => {
+              perform               => 1,
+              target_dir            => $target_dir . "/" . getNextFolderIndex($def) . "hisat2",
+              class                 => "Alignment::Hisat2",
+              option                => "",
+              source_ref            => $source_ref,
+              genome_dir            => $aligner_index,
+              output_to_same_folder => $def->{output_bam_to_same_folder},
+              sh_direct             => 1,
+              pbs                   => {
+                "nodes"     => "1:ppn=" . $def->{max_thread},
+                "walltime"  => "23",
+                "mem"       => "40gb"
+              },
+            },
+          };
+          $source_ref = [ "hisat2", ".bam\$" ];
+        }
+
+        $config = merge_hash_right_precedent( $config, $configAlignment );
+        push @$individual, $aligner;
+        $multiqc_depedents = "hisat2";
       }
 
-      my $configAlignment;
-      if ( $aligner eq "star" ) {
-        my $starFolder = $target_dir . "/" . getNextFolderIndex($def) . "star";
-        $configAlignment = {
-          "star" => {
-            class                     => "Alignment::STAR",
-            perform                   => 1,
-            target_dir                => $starFolder,
-            option                    => $star_option,
-            source_ref                => $source_ref,
-            genome_dir                => $aligner_index,
-            output_sort_by_coordinate => 1,
-            output_to_same_folder     => $def->{output_bam_to_same_folder},
-            sh_direct                 => 0,
-            star_location             => $def->{star_location},
-            pbs                       => {
-              "nodes"     => "1:ppn=" . $def->{max_thread},
-              "walltime"  => "23",
-              "mem"       => "40gb"
-            },
+      if ( $def->{perform_counting} ) {
+        my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+        if ( $def->{additional_bam_files} ) {
+          push @$source_ref, "additional_bam_files";
+        }
+
+        my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "featurecount";
+        $config->{"featurecount"} = {
+          class         => "Count::FeatureCounts",
+          perform       => 1,
+          target_dir    => $featureCountFolder,
+          option        => "-g gene_id -t exon",
+          source_ref    => $source_ref,
+          gff_file      => $transcript_gtf,
+          is_paired_end => is_paired_end($def),
+          sh_direct     => 0,
+          pbs           => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "23",
+            "mem"       => "40gb"
           },
-          "star_summary" => {
-            class                    => "CQS::UniqueR",
-            perform                  => 1,
-            target_dir               => $starFolder,
-            option                   => "",
-            rtemplate                => "../Alignment/STARFeatureCount.r",
-            output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
-            parameterSampleFile1_ref => [ "star", "_Log.final.out" ],
-            sh_direct                => 1,
-            pbs                      => {
-              "nodes"     => "1:ppn=1",
-              "walltime"  => "2",
-              "mem"       => "10gb"
-            },
+        };
+        $config->{"featurecount_summary"} = {
+          class                    => "CQS::UniqueR",
+          perform                  => 1,
+          target_dir               => "${featureCountFolder}_summary",
+          option                   => "",
+          rtemplate                => "../Alignment/STARFeatureCount.r",
+          output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+          parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
+          sh_direct                => 1,
+          pbs                      => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "2",
+            "mem"       => "10gb"
           },
         };
 
-        $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
-        push @$summary, ("star_summary");
-        $multiqc_depedents = "star";
+        push @$individual, "featurecount";
+        push @$summary,    "featurecount_summary";
+        $count_table_ref = [ "featurecount", ".count\$" ];
+        $multiqc_depedents = "featurecount";
       }
-      else {
-        $configAlignment = {
-          hisat2 => {
-            perform               => 1,
-            target_dir            => $target_dir . "/" . getNextFolderIndex($def) . "hisat2",
-            class                 => "Alignment::Hisat2",
-            option                => "",
-            source_ref            => $source_ref,
-            genome_dir            => $aligner_index,
-            output_to_same_folder => $def->{output_bam_to_same_folder},
-            sh_direct             => 1,
-            pbs                   => {
-              "nodes"     => "1:ppn=" . $def->{max_thread},
-              "walltime"  => "23",
-              "mem"       => "40gb"
-            },
-          },
-        };
-        $source_ref = [ "hisat2", ".bam\$" ];
-      }
-
-      $config = merge_hash_right_precedent( $config, $configAlignment );
-      push @$individual, $aligner;
-      $multiqc_depedents = "hisat2";
-    }
-
-    if ( $def->{perform_counting} ) {
-      my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-      if ( $def->{additional_bam_files} ) {
-        push @$source_ref, "additional_bam_files";
-      }
-
-      my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "featurecount";
-      $config->{"featurecount"} = {
-        class         => "Count::FeatureCounts",
-        perform       => 1,
-        target_dir    => $featureCountFolder,
-        option        => "-g gene_id -t exon",
-        source_ref    => $source_ref,
-        gff_file      => $transcript_gtf,
-        is_paired_end => is_paired_end($def),
-        sh_direct     => 0,
-        pbs           => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "23",
-          "mem"       => "40gb"
-        },
-      };
-      $config->{"featurecount_summary"} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => "${featureCountFolder}_summary",
-        option                   => "",
-        rtemplate                => "../Alignment/STARFeatureCount.r",
-        output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
-        parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
-        sh_direct                => 1,
-        pbs                      => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "2",
-          "mem"       => "10gb"
-        },
-      };
-
-      push @$individual, "featurecount";
-      push @$summary,    "featurecount_summary";
-      $count_table_ref = [ "featurecount", ".count\$" ];
-      $multiqc_depedents = "featurecount";
     }
   }
 
@@ -394,7 +401,7 @@ sub getRNASeqConfig {
       class                     => "CQS::CQSDatatable",
       perform                   => 1,
       target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
-      option                    => "-k 0 -v 6 -e --fillMissingWithZero",
+      option                    => "-k 0 -v $count_table_column -e --fillMissingWithZero",
       source_ref                => $count_table_ref,
       output_proteincoding_gene => $def->{perform_proteincoding_gene},
       name_map_file             => $name_map_file,
