@@ -43,11 +43,24 @@ get_summit<-function(value){
   return(as.numeric(value))
 }
 
+get_consensus_minOverlap<-function(value, default_value=2){
+  if(is.null(value)){
+    return(default_value)
+  }
+  if(is.na(value)){
+    return(default_value)
+  }
+  return(as.numeric(value))
+}
+
 option_table<-read.table(optionFile, sep="\t")
 myoptions = split(option_table$V1, option_table$V2)
 
 summits=get_summit(myoptions$summits)
 cat("summits=", summits, "\n")
+
+consensus_minOverlap = get_consensus_minOverlap(myoptions$consensus_minOverlap, 2)
+cat("consensus_minOverlap=", consensus_minOverlap, "\n")
 
 sampleSheet<-read.table(configFile, sep="\t", header=T, stringsAsFactors=F)
 sampleSheet
@@ -88,7 +101,7 @@ dev.off()
 if(nrow(overlapsheet) > 0){
   cat("checking overlap ... \n")
   #get consensus peaks and plot Venn for each condition, and generate count table for combined peaks across conditions 
-  mb1_consensus <- dba(sampleSheet=sampleSheet, minOverlap = 1)
+  mb1_consensus <- dba(sampleSheet=sampleSheet, minOverlap = consensus_minOverlap)
 
   cindex <- 1
   for(cindex in c(1:nrow(overlapsheet))){
@@ -119,7 +132,7 @@ if(nrow(overlapsheet) > 0){
   dba.plotVenn(mb1_consensus, mb1_consensus$masks$Consensus)  
   dev.off()
 
-  mb1_consensus <- dba(mb1_consensus,mask=mb1_consensus$masks$Consensus,minOverlap=1)
+  mb1_consensus <- dba(mb1_consensus,mask=mb1_consensus$masks$Consensus,minOverlap=consensus_minOverlap)
   consensus_peaks <- dba.peakset(mb1_consensus, bRetrieve=TRUE)
   rm(mb1_consensus)
 

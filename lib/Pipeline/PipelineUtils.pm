@@ -70,6 +70,7 @@ our %EXPORT_TAGS = (
     annotateNearestGene
     checkFileGroupPairNames
     addStarFeaturecount
+    add_salmon
     add_pairedend_fastq_gather
     add_pairedend_fastq_to_ubam
     add_BWA
@@ -762,7 +763,8 @@ sub addDiffbind {
     peak_software => getValue($def, "peak_software","bed"),
     homer_annotation_genome => $def->{homer_annotation_genome},
     parameterSampleFile1 => {
-      summits => getValue($def, "diffbind_summits", 0),
+      summits => getValue($def, "diffbind_summits", 1),
+      consensus_minOverlap => getValue($def, "diffbind_consensus_minOverlap", 2),
     },
     can_result_be_empty_file => 1,
     sh_direct               => 0,
@@ -2200,29 +2202,74 @@ sub addStarFeaturecount {
   
   add_alignment_summary($config, $def, $summary, $target_dir, "${star_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png;.chromosome.csv;.chromosome.png", [ $star_task, "_Log.final.out" ], [ $star_task, ".count.summary" ], [$star_task, ".chromosome.count"], $bam_validation_ref );
 
-  # my $summary_task = "star_featurecount${suffix}_summary";
-  # $config->{$summary_task} = {
-  #   class                    => "CQS::UniqueR",
-  #   perform                  => 1,
-  #   target_dir               => $starFolder . "_summary",
-  #   option                   => "",
-  #   rtemplate                => "../Alignment/STARFeatureCount.r",
-  #   output_file_ext          => ".FeatureCountSummary.csv",
-  #   output_other_ext          => ".FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png",
-  #   parameterSampleFile1_ref => [ $star_task, "_Log.final.out" ],
-  #   parameterSampleFile2_ref => [ $star_task, ".count.summary" ],
-  #   sh_direct                => 1,
-  #   pbs                      => {
-  #     "email"     => $def->{email},
-  #     "emailType" => $def->{emailType},
-  #     "nodes"     => "1:ppn=1",
-  #     "walltime"  => "2",
-  #     "mem"       => "10gb"
-  #   },
-  # };
-  # push @$summary, ($summary_task);
-
   return($star_task);
+};
+
+sub add_salmon {
+  my ($config, $def, $individual, $summary, $target_dir, $source_ref, $suffix) = @_;
+  my $aligner_index = $def->{salmon_index} or die "Define salmon_index at definition first";
+  my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+  my $salmon_walltime = getValue( $def, "salmon_walltime", 23 );
+  my $salmon_memory = getValue( $def, "salmon_memory", 40 );
+  my $salmon_option = getValue( $def, "salmon_option", "");
+  my $thread = getValue( $def, "max_thread", 8);
+
+  if(not defined $suffix) {
+    $suffix = "";
+  }
+  my $salmon_folder = $target_dir . "/" . getNextFolderIndex($def) . "salmon" . $suffix;
+
+  my $salmon_task = "salmon" . $suffix;
+  
+  $config->{$salmon_task} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => $salmon_folder,
+    option                => "
+salmon quant -i $aligner_index \\
+  --libType A \\
+  -1 __FILE__ \\
+  -g $transcript_gtf \\
+  -p $thread \\
+  -z __NAME__.sam \\
+  -o .
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  rm __NAME__.sam
+  touch __NAME__.failed
+else
+  echo sort __NAME__.sam
+  samtools sort -O BAM -o __NAME__.bam -@ $thread __NAME__.sam
+  echo index __NAME__.bam
+  samtools index __NAME__.bam
+  rm __NAME__.sam
+  touch __NAME__.succeed
+fi
+
+#__OUTPUT__
+",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "",
+    source_arg            => "-1",
+    source_ref            => $source_ref,
+    source_join_delimiter => " -2 ",
+    output_to_same_folder => 0,
+    output_arg            => "",
+    output_file_ext       => "quant.genes.sf",
+    output_other_ext => "__NAME__.bam",
+    output_no_name => 1,
+    sh_direct => 0,
+    pbs                       => {
+      "nodes"     => "1:ppn=" . $thread,
+      "walltime"  => "$salmon_walltime",
+      "mem"       => "${salmon_memory}gb"
+    },
+  };
+  push @$individual, ($salmon_task);
+
+  return($salmon_task);
 };
 
 sub add_BWA {
