@@ -24,7 +24,7 @@ cat("consensus=", consensus, "\n")
 
 register(SerialParam())
 
-rdatafile = paste0(configFile, ".rata")
+rdatafile = paste0(configFile, ".rdata")
 if(!is.na(chromosomes)){
   chromosomes = unlist(strsplit(chromosomes, split=','))
 }else{
