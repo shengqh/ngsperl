@@ -109,12 +109,12 @@ get_heatmap_width<-function(nclusters){
 
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
-MyDoHeatMap<-function(object, max_cell=5000, ...){
+MyDoHeatMap<-function(obj, max_cell=5000, ...){
   if(ncol(obj) > max_cell){
-    subsampled <- obj[, sample(colnames(obj), size=max_cell, replace=F)]
+    subsampled <- subset(obj, cells = sample(colnames(obj), size=max_cell, replace=F))
     g<-DoHeatmap(subsampled, ...)
   }else{
-    g<-DoHeatmap(object, ...)
+    g<-DoHeatmap(obj, ...)
   }
   return(g)
 }
