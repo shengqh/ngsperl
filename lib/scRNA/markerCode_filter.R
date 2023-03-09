@@ -11,7 +11,10 @@ ORA_celltype_qc<-function(medianexp,cellType,method="cta"){
   weight<-1+sqrt((max(freq)-freq)/(max(freq)-min(freq)))	
   
   ORA_result<-matrix(NA, nrow=length(cellType),ncol=dim(medianexp)[2])
+  colnames(ORA_result)<-colnames(medianexp)
   CTA_result<-matrix(0,nrow=length(cellType),ncol=dim(medianexp)[2])
+  colnames(CTA_result)<-colnames(medianexp)
+
   exp_z<-scale(medianexp)
   genenames<-rownames(medianexp)   
   for (j in 1: dim(medianexp)[2]){
