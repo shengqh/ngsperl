@@ -293,9 +293,7 @@ fi
     }
 
     print $pbs "
-if [[ -e $final_dir/${sample_name}.failed ]]; then
-  rm $final_dir/${sample_name}.failed
-fi
+rm -f $final_dir/${sample_name}.failed
 ";
     if($use_caper){
       print $pbs "
