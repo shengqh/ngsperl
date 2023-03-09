@@ -334,6 +334,10 @@ sub getScRNASeqConfig {
         my $split_task = add_clonotype_split($config, $def, $individual, $target_dir, $hto_ref, $clono_key);
         $clonotype_ref = [$split_task, "all_contig_annotations.json"];
       }
+
+      if ( getValue($def, "perform_individual_qc", 1) ){
+        add_invidual_qc($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file);
+      }
     }else{
       if($perform_arcasHLA || $perform_strelka2){
         getValue($def, "bam_files");
@@ -371,10 +375,6 @@ sub getScRNASeqConfig {
       $clonotype_db = addClonotypeDB($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_db", $clonotype_convert);
       my $clonotype_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_consensus", [$enclone_task, ".pchain4.pcell.csv"], [$merge_task, ".cdr3\$"]);
       my $immunarch_task = addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch", $clonotype_consensus);
-    }
-
-    if ( getValue($def, "perform_individual_qc", 1) ){
-      add_invidual_qc($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file);
     }
 
     if ( getValue( $def, "perform_scRNABatchQC" ) ) {
