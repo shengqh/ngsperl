@@ -761,6 +761,7 @@ sub addDiffbind {
     design_table            => getValue($def, "design_table"),
     peaks_ref               => $peaks_ref,
     peak_software => getValue($def, "peak_software","bed"),
+    use_version2 => getValue($def, "use_version2", 0),
     homer_annotation_genome => $def->{homer_annotation_genome},
     parameterSampleFile1 => {
       summits => getValue($def, "diffbind_summits", 1),
@@ -771,7 +772,7 @@ sub addDiffbind {
     pbs                     => {
       "nodes"    => "1:ppn=1",
       "walltime" => "72",
-      "mem"      => "40gb"
+      "mem"      => getValue($def, "diffbind_mem", "80gb")
     },
   };
   push @$tasks, $task_name;
