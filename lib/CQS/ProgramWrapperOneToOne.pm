@@ -50,6 +50,8 @@ sub perform {
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $no_output            = get_option( $config, $section, "no_output", 0 );
   my $no_input            = get_option( $config, $section, "no_input", 0 );
+
+  my $list_files = get_option( $config, $section, "copy_files", "" );
   
   my $other_localization_ext_array = get_option( $config, $section, "other_localization_ext_array", [] );
 
@@ -95,6 +97,7 @@ sub perform {
     my $curOption = $option;
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
+    copy_files($list_files, $cur_dir);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);

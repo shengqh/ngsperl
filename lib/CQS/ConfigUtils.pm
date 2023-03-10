@@ -31,6 +31,7 @@ our %EXPORT_TAGS = (
       is_not_array
       is_hash
       is_not_hash
+      copy_files
       getValue
       get_config_section
       has_config_section
@@ -1309,6 +1310,30 @@ sub save_parameter_sample_file {
   }
   else {
     return ("");
+  }
+}
+
+sub copy_files {
+  my ($files_str, $result_dir) = @_;
+
+  my @files = split( ",|;", $files_str );
+
+  my $rnum = scalar(@files);
+
+  for my $index (0 .. $#files){
+    my $cur_file = $files[$index];
+    my $is_absolute = File::Spec->file_name_is_absolute($cur_file);
+    if ( !$is_absolute ) {
+      $cur_file = dirname(__FILE__) . "/$cur_file";
+    }
+    if ( !( -e $cur_file ) ) {
+      die("file $cur_file defined but not exists!");
+    }
+
+    if ($index < $rnum){
+      my $remote_file = $result_dir . "/" . basename($cur_file);
+      copy($cur_file, $remote_file);
+    }
   }
 }
 
