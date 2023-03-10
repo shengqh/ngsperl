@@ -20,6 +20,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_essential_gene
   add_scRNABatchQC
 
+  add_sctk
+
   add_hto_samples_preparation  
   add_hto_gmm_demux
   add_hto
@@ -2134,6 +2136,37 @@ sub add_invidual_qc {
   }
   
   push( @$summary, $individual_qc_task );
+}
+
+sub add_sctk {
+  my ($config, $def, $summary, $target_dir, $sctk_task, $files_ref) = @_;
+
+  $config->{$sctk_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$sctk_task",
+    option => "
+echo -e \"__FILE__\\t__NAME__\"> fileList1.txt
+
+R --vanilla -f sctk.r
+
+#__OUTPUT__
+",
+    check_program => 0,
+    program => "",
+    source_ref => $files_ref,
+    copy_files => "../scRNA/scRNA_func.r;../scRNA/sctk.r",
+    output_to_same_folder => 0,
+    output_file_ext => "_reportCellQC.html",
+    sh_direct   => 0,
+    no_docker => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "80gb"
+    },
+  };
+
+  push( @$summary, $sctk_task );
 }
 
 sub add_gliph2 {
