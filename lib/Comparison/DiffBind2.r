@@ -117,7 +117,11 @@ if(nrow(overlapsheet) > 0){
     
     masks = mb1$masks[names(mb1$masks)==condition][[1]]
 
-    png(paste0(outputPrefix, ".", condition, ".overlap.venn.png"), width=1500, height=1200, res=300)
+    png(paste0(outputPrefix, ".", condition, ".overlap.venn.png"), width=2000, height=2000, res=300)
+    dba.plotVenn(mb1, masks)
+    dev.off()
+    
+    pdf(paste0(outputPrefix, ".", condition, ".overlap.venn.pdf"))
     dba.plotVenn(mb1, masks)
     dev.off()
     
@@ -129,6 +133,10 @@ if(nrow(overlapsheet) > 0){
   }
 
   png(paste0(outputPrefix, ".overlap-condition.png"), width =2000, height=2000, res=300)
+  dba.plotVenn(mb1_consensus, mb1_consensus$masks$Consensus)  
+  dev.off()
+
+  pdf(paste0(outputPrefix, ".overlap-condition.pdf"))
   dba.plotVenn(mb1_consensus, mb1_consensus$masks$Consensus)  
   dev.off()
 
