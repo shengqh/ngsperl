@@ -761,10 +761,10 @@ sub addDiffbind {
     design_table            => getValue($def, "design_table"),
     peaks_ref               => $peaks_ref,
     peak_software => getValue($def, "peak_software","bed"),
-    use_version2 => getValue($def, "use_version2", 0),
+    use_version2 => getValue($def, "use_version2", 1),
     homer_annotation_genome => $def->{homer_annotation_genome},
     parameterSampleFile1 => {
-      summits => getValue($def, "diffbind_summits", 1),
+      summits => getValue($def, "diffbind_summits", 200),
       consensus_minOverlap => getValue($def, "diffbind_consensus_minOverlap", 2),
     },
     can_result_be_empty_file => 1,

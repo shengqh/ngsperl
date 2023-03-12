@@ -35,7 +35,7 @@ sub perform {
   my $peakSoftware = get_option( $config, $section, "peak_software" );
   my $homer_annotation_genome = get_option( $config, $section, "homer_annotation_genome", "" );
 
-  my $use_version2 = get_option( $config, $section, "use_version2", 0 );
+  my $use_version1 = get_option( $config, $section, "use_version1", 0 );
 
   my $treatments = $config->{$section}{"groups"};
   my $controls = $config->{$section}{"inputs"};
@@ -43,7 +43,7 @@ sub perform {
     $controls = $config->{$section}{"controls"};
   }
 
-  my $script = $use_version2 ? dirname(__FILE__) . "/DiffBind2.r" : dirname(__FILE__) . "/DiffBind.r";
+  my $script = $use_version1 ? dirname(__FILE__) . "/DiffBind.v1.r" : dirname(__FILE__) . "/DiffBind.r";
   if ( !-e $script ) {
     die "File not found : " . $script;
   }
