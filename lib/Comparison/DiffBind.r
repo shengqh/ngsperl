@@ -15,9 +15,11 @@ if(!DEBUG){
   overlapDef=args[3]
   outputPrefix=args[4]
 }else{
-  configFile="/scratch/shavertm/20170512_atac-seq/bwa_macs2callpeak_narrow_CallAsSingleEnd_diffbind/result/Genotypes/Genotypes.config.txt"
-  comparisonFile="/scratch/shavertm/20170512_atac-seq/bwa_macs2callpeak_narrow_CallAsSingleEnd_diffbind/result/Genotypes/Genotypes.comparison.txt"
-  outputPrefix="/scratch/shavertm/20170512_atac-seq/bwa_macs2callpeak_narrow_CallAsSingleEnd_diffbind/result/Genotypes/Genotypes"
+  setwd('/scratch/cqs/shengq2/bugfix/diffbind_oldversion/result/ACBI1/')
+  configFile="ACBI1.config.txt"
+  comparisonFile="ACBI1.comparison.txt"
+  overlapDef="ACBI1.minoverlap.txt"
+  outputPrefix="ACBI1"
 }
 
 cat("configFile=", configFile, "\n")
@@ -37,14 +39,22 @@ overlapsheet <- read.table(overlapDef, sep="\t", header=T)
 cindex <- 1
 for(cindex in c(1:nrow(overlapsheet))){
   condition <- overlapsheet[cindex,1]
+  minOverlap = overlapsheet[cindex,2]
+  cat("condition = ", condition, ", overlap = ", minOverlap, "\n")
+
   pdf(paste0(condition,".pdf",sep=""))
   dba.plotVenn(mb1,mb1$masks[names(mb1$masks)==condition][[1]])
   dev.off()
   
-  c_peak <- dba.peakset(mb1, mb1$masks[names(mb1$masks)==condition][[1]], minOverlap=overlapsheet[cindex,2], bRetrieve=TRUE)
+  masks = mb1$masks[names(mb1$masks)==condition][[1]]
+  cat("  masks = ", masks, "\n")
+
+  c_peak <- dba.peakset(mb1, masks, minOverlap=minOverlap, bRetrieve=TRUE)
+  cat("  number of peaks = ", nrow(c_peak), "\n")
   dc_peak <- data.frame(seqnames=seqnames(c_peak),starts=start(c_peak),ends=end(c_peak),strands=strand(c_peak))
   write.table(dc_peak,file=paste0(condition,".peaks"),quote=F,row.names=F,col.names=F,sep="\t")
-  mb1_consensus <- dba.peakset(mb1_consensus, mb1_consensus$masks[names(mb1_consensus$masks)==condition][[1]], sampID=as.character(condition), minOverlap=overlapsheet[cindex,2])
+
+  mb1_consensus <- dba.peakset(mb1_consensus, masks, sampID=as.character(condition), minOverlap=minOverlap)
 }
 
 #mb1
@@ -57,6 +67,9 @@ dev.off()
 mb1_consensus <- dba(mb1_consensus,mask=mb1_consensus$masks$Consensus,minOverlap=1)
 #mb1_consensus
 consensus_peaks <- dba.peakset(mb1_consensus, bRetrieve=TRUE)
+write.csv(consensus_peaks, "consensus_peaks.csv")
+cat("Number of consensus peaks = ", nrow(consensus_peaks), "\n")
+
 mb1 <- dba.count(mb1,score=DBA_SCORE_READS, peaks=consensus_peaks, bRemoveDuplicates=TRUE)
 mbt = dba(mb1,bSummarizedExperiment=TRUE)
 #write.table(cbind(data.frame(seqnames=seqnames(consensus_peaks),starts=start(consensus_peaks),ends=end(consensus_peaks),strands=strand(consensus_peaks)),assay(mbt)),file=paste0("counttable_raw-",outputPrefix,".txt"),quote=F,sep="\t",row.names=F)
