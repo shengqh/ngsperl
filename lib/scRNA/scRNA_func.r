@@ -914,7 +914,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE ){
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE ){
   genes=unique(unlist(gene_groups))
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
   
@@ -944,13 +944,18 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   plot <- ggplot(data = data.plot, mapping = aes_string(x = "features.plot", y = "id")) + 
     geom_point(mapping = aes_string(size = "pct.exp", color = color.by)) + 
     scale.func(range = c(0, dot.scale), limits = c(scale.min, scale.max)) + 
-    theme(axis.title.x = element_blank(), axis.title.y = element_blank()) + guides(size = guide_legend(title = "Percent Expressed")) +
+    theme(axis.title.x = element_blank(), axis.title.y = element_blank()) + 
+    guides(size = guide_legend(title = "Percent Expressed")) +
     labs(x = "Features", y = "Identity") +
     theme_cowplot() + 
     facet_grid(facets = ~feature.groups, scales = "free_x", space = "free_x", switch = "y") + 
-    theme(panel.spacing = unit(x = 1,units = "lines"), strip.background = element_blank()) + 
-    scale_color_gradient(low = cols[1], high = cols[2])
-  
+    theme(panel.spacing = unit(x = 1,units = "lines"), strip.background = element_blank())
+    
+  if(use_blue_yellow_red){
+    plot <- plot + scale_colour_gradient2(low="blue", mid="yellow", high="red", midpoint=0 )
+  }else{
+    plot <- plot + scale_color_gradient(low="lightgray", high="blue")
+  }
   
   g=plot + xlab("") + ylab("") + theme_bw() + theme(plot.title = element_text(hjust = 0.5),
                                              axis.text.x = element_text(angle = 90, hjust=1, vjust=0.5),
