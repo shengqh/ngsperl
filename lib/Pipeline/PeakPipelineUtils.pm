@@ -3,6 +3,7 @@ package Pipeline::PeakPipelineUtils;
 
 use strict;
 use warnings;
+use CQS::StringUtils;
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
@@ -124,6 +125,8 @@ sub add_chipqc {
     chromosomes    => $def->{"chipqc_chromosomes"},
     is_paired_end => getValue($def, "is_paired_end"),
     consensus => getValue($def, "chipqc_consensus", 1),
+    pcaAttributes => getValue($def, "chipqc_pcaAttributes", "Tissue,Factor"),
+    pcaLabels => getValue($def, "chipqc_pcaLabels", "Replicate"),
     sh_direct      => 0,
     pbs            => {
       "nodes"    => "1:ppn=1",

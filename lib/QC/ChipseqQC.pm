@@ -102,7 +102,9 @@ sub perform {
     task_name => $task_name,
     genome => $genome,
     chromosomes => $chromosomes,
-    consensus => get_option($config, $section, "consensus", 1)
+    consensus => get_option($config, $section, "consensus", 1),
+    pcaAttributes => get_option($config, $section, "pcaAttributes", "Tissue,Factor"),
+    pcaLabels => get_option($config, $section, "pcaLabels", "Replicate")
   };
   writeParameterSampleFile( $config, $section, $result_dir, 1, 0 );  
 
