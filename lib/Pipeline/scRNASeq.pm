@@ -255,7 +255,7 @@ sub getScRNASeqConfig {
     my $hto_summary_task = undef;
     my $files_def = "files";
 
-    if ( getValue($def, "perform_sctk", 1) ){
+    if ( getValue($def, "perform_sctk", 0) ){
       my $sctk_task = "sctk";
       add_sctk($config, $def, $summary, $target_dir, $sctk_task, "files");
     }
