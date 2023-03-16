@@ -320,17 +320,17 @@ else
   file_count=\$(find $cur_dir -name $check_output_file_pattern | wc -l) 
 fi
 if [[ \$file_count -eq 0 ]]; then
-  jid${final_index} =\$(sbatch ${depjid} ${samplepbs} | awk '{print \$NF}') 
+  jid${final_index}=\$(sbatch ${depjid} ${samplepbs} | awk '{print \$NF}') 
 else
-  jid${final_index} =1000000000
+  jid${final_index}=1000000000
 fi
 ";
         }else{
           print $final_submit "
 if [[ (1 -eq \$1) || ((! -s $expect_file) && (! -d $expect_file)) ]]; then 
-  jid${final_index} =\$(sbatch ${depjid} ${samplepbs} | awk '{print \$NF}') \
+  jid${final_index}=\$(sbatch ${depjid} ${samplepbs} | awk '{print \$NF}') \
 else 
-  jid${final_index} =1000000000 
+  jid${final_index}=1000000000 
 fi
 ";
         }
