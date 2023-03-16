@@ -148,6 +148,24 @@ check_and_include_graphics(paste0(outFile, ".layer4.heatmap.png"))
 
 ```{r, include=FALSE, echo = FALSE}
 pctRmd<-function(outFile, cell_identity, pcts, files){
+  cta_map=list()
+  previous_layers<-unique(files$previous_layer)
+  for(pre_layer in previous_layers){
+    #cat(pre_layer, "\n")
+
+    res_tbl<-files[files$previous_layer==pre_layer,]
+    pcts=unique(res_tbl$pct)
+
+    pct=pcts[1]
+    for(pct in pcts) {
+      pct_tbl = res_tbl[res_tbl$pct==pct,]
+      if("cta_png" %in% pct_tbl$type){
+        cta_png=pct_tbl$fname[pct_tbl$type=="cta_png"]
+        cta_map[[pct]] = paste0("details/", cta_png)
+      }
+    }
+  }
+
   result=""
   in_details=FALSE
   result<-paste0(result, paste0("\n\n## Cell type clusters\n\n"))
@@ -162,6 +180,12 @@ pctRmd<-function(outFile, cell_identity, pcts, files){
     last_files<-files[files$pct==pct & files$type=="dot",]
     dot_file<-last_files$fname[nrow(last_files)]
     result<-paste0(result, getFigure(dot_file, TRUE))
+
+    if(pct %in% names(cta_map)){
+      cta_file = cta_map[[pct]]
+      result<-paste0(result, paste0("\n\n#### Cell type annotation score\n\n"))
+      result<-paste0(result, getFigure(cta_file, TRUE))
+    }
 
     if(!by_individual_sample){
       for(group.by in c("sample", "batch")) {
