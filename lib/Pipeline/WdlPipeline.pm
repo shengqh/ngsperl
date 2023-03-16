@@ -640,7 +640,7 @@ sub addEncodeATACseq {
     output_to_same_folder => 0,
     cromwell_finalOutputs => 0,
     check_output_file_pattern => "qc.html",
-    #output_file_ext => "atac/",
+    output_file_ext => "atac/",
     use_caper => 1,
     sh_direct   => $sh_direct,
     pbs=> {
@@ -727,7 +727,7 @@ sub addEncodeATACseq {
     source_ref => [$task],
     output_arg => "-o",
     output_file_prefix => "",
-    output_file_ext => "__NAME__/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz",
+    output_file_ext => getValue($def, "croo_output_file_ext", "__NAME__/peak/overlap_reproducibility/overlap.optimal_peak.narrowPeak.gz"),
     output_to_same_folder => 1,
     can_result_be_empty_file => 0,
     sh_direct   => 1,
