@@ -18,6 +18,7 @@ library(Seurat)
 library(ggplot2)
 library(patchwork)
 library(celldex)
+
 hpca.se <- HumanPrimaryCellAtlasData()
 
 options(future.globals.maxSize= 10779361280)
@@ -26,19 +27,12 @@ random.seed=20200107
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-
-
-
-pca_dims=1:as.numeric(myoptions$pca_dims)
-reduction=myoptions$reduction
-by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
-assay=ifelse(by_sctransform, "SCT", "RNA")
-
 if(!exists("obj")){
   obj=read_object(parFile1)
 }
 
-labels<-SingleR(obj@assays$RNA@counts, ref=hpca.se, assay.type.test=1, labels=hpca.se$label.main)
+sce=as.SingleCellExperiment(DietSeurat(obj))
+labels<-SingleR(sce, ref=hpca.se, assay.type.test=1, labels=hpca.se$label.main)
 
 saveRDS(labels, file=paste0(outFile, ".SingleR.rds"))
 
@@ -63,7 +57,6 @@ ct_tbl<-table(ct$SingleR,ct$Sample)
 write.csv(ct_tbl, paste0(outFile, ".SingleR_Sample.csv"))
 
 major_obj<-subset(obj, cells=colnames(obj)[obj$SingleR_major_labels != "other"])
-
 
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
