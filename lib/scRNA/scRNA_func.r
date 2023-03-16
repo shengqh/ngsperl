@@ -973,12 +973,12 @@ get_dot_width<-function(g, min_width=4400){
   }
   ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot","feature.groups")]),])
   ngroups = length(unique(g$data$feature.groups))
-  width=ngenes * 40 + ngroups * 30 + 400
+  width=ngenes * 80 + ngroups * 40 + 400
   return(max(width, min_width))
 }
 
 get_dot_height_num<-function(ngroups){
-  result = max(1500, ngroups * 80 + 400)
+  result = max(1500, ngroups * 100 + 800)
   return(result)
 }
 
