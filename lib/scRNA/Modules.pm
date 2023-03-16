@@ -53,11 +53,14 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addScMRMA 
   addCHETAH
 
+  add_singleR_cell
   add_singleR
 
   add_signacx_only
   addSignac
   
+  add_call_validation
+
   addCellRangerCount 
   addCellRangerVdj
   addCellRangerMulti
@@ -691,6 +694,33 @@ sub add_singleR {
   push( @$tasks, $singleR_task );
 }
 
+sub add_singleR_cell {
+  my ( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $cur_options ) = @_;
+
+  $config->{$singleR_task} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $singleR_task,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SingleR.r",
+    parameterFile1_ref   => $obj_ref,
+    parameterSampleFile1 => merge_hash_left_precedent($cur_options,  {
+      species             => getValue( $def, "species" ),
+      pca_dims            => getValue( $def, "pca_dims" ),
+      bubblemap_file        => $def->{bubblemap_file},
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+    }),
+    output_file_ext => ".SingleR.png;.SingleR.rds;.meta.rds",
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "SingleR_walltime", "10"),
+      "mem"       => getValue($def, "SingleR_mem", getValue($def, "seurat_mem")),
+    },
+  };
+
+  push( @$tasks, $singleR_task );
+}
+
 sub addSignac {
   my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $tcell_only, $celltype, $reduction, $celltype_layer, $is_dynamic ) = @_;
 
@@ -725,6 +755,41 @@ sub addSignac {
     $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".cluster.csv" ];
     $config->{$task_name}{parameterFile3_ref} = [ $celltype, ".celltype.csv" ];
   }
+  push( @$tasks, $task_name );
+}
+
+sub add_call_validation {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $signac_task, $singleR_task, $sctk_task ) = @_;
+  my $signac_ref = defined $signac_task ? [$signac_task, ".meta.rds"] : undef;
+  my $singleR_ref = defined $singleR_task ? [$singleR_task, ".meta.rds"] : undef;
+  my $sctk_ref = defined $sctk_task ? [$sctk_task, ".meta.rds"] : undef;
+
+  $config->{$task_name} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_validation.r",
+    parameterFile1_ref       => $object_ref,
+    parameterFile2_ref       => $meta_ref,
+    parameterFile3_ref       => $signac_ref,
+    parameterFile4_ref       => $singleR_ref,
+    parameterSampleFile1     => {
+      task_name => getValue($def, "task_name"),
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      doublet_column => "doubletFinder_doublet_label_resolution_1.5",
+    },
+    parameterSampleFile2_ref => $sctk_ref,
+    parameterSampleFile3 => $def->{pool_sample_groups},
+    output_file_ext      => ".meta.rds",
+    output_other_ext  => "",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => getValue($def, "seurat_mem") 
+    },
+  };
   push( @$tasks, $task_name );
 }
 
@@ -2156,7 +2221,7 @@ R --vanilla -f sctk.r
     source_ref => $files_ref,
     copy_files => "../scRNA/scRNA_func.r;../scRNA/sctk.r",
     output_to_same_folder => 0,
-    output_file_ext => "_reportCellQC.html",
+    output_file_ext => ".meta.rds",
     sh_direct   => 0,
     no_docker => 1,
     pbs => {

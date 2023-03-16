@@ -255,8 +255,9 @@ sub getScRNASeqConfig {
     my $hto_summary_task = undef;
     my $files_def = "files";
 
+    my $sctk_task = undef;
     if ( getValue($def, "perform_sctk", 0) ){
-      my $sctk_task = "sctk";
+      $sctk_task = "sctk";
       add_sctk($config, $def, $summary, $target_dir, $sctk_task, "files");
     }
 
@@ -293,7 +294,7 @@ sub getScRNASeqConfig {
 
     if(getValue($def, "perform_scDblFinder", 0)){
       add_scDblFinder($config, $def, $individual, $target_dir, "scDblFinder", "files" );
-      $files_def = "scDblFinder";
+      #$files_def = "scDblFinder";
     }
 
     if( $perform_split_hto_samples ) {
@@ -425,6 +426,16 @@ sub getScRNASeqConfig {
         add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $obj_ref, $reduction );
       }
 
+      my $singleR_task = undef;
+      if (getValue( $def, "perform_SingleR", 0 ) ) {
+        $singleR_task = $seurat_task . "_singleR";
+        my $cur_options = {
+          task_name => $def->{task_name},
+          reduction => $reduction, 
+        };
+        add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $cur_options );
+      }
+
       my $celltype_task = undef;
       my $celltype_name = undef;
 
@@ -442,6 +453,11 @@ sub getScRNASeqConfig {
         addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, 0);
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
 
+        if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
+          my $validation_task = $scDynamic_task . "_validation";
+          add_call_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $signacX_task, $singleR_task, $sctk_task );
+        }
+
         if(defined $def->{bubble_plots}){
           add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters", ".dynamic_iter1_dot.html" );
           add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_final", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_dot.html" );
@@ -455,17 +471,16 @@ sub getScRNASeqConfig {
           add_clustree_rmd($config, $def, $summary, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task);
         }
 
-        my $singleR_task = undef;
-        if (getValue( $def, "perform_SingleR", 0 ) ) {
-          $singleR_task = $scDynamic_task . "_singleR";
-          my $cur_options = {
-            task_name => $def->{task_name},
-            reduction => $reduction, 
-            celltype_layer => "layer4",
-            celltype_cluster => "layer4_clusters"
-          };
-          add_singleR( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $meta_ref, $cur_options );
-        }
+        # if (getValue( $def, "perform_SingleR", 0 ) ) {
+        #   my $singleR_task = $scDynamic_task . "_singleR";
+        #   my $cur_options = {
+        #     task_name => $def->{task_name},
+        #     reduction => $reduction, 
+        #     celltype_layer => "layer4",
+        #     celltype_cluster => "layer4_clusters"
+        #   };
+        #   add_singleR( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $meta_ref, $cur_options );
+        # }
 
         if(getValue($def, "perform_dynamic_subcluster")){
           my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_subcluster";
