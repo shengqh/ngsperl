@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230115_combined_scRNA_hg38/individual_qc/result')
+setwd('/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38_v2/raw_individual_qc/result')
 
 ### Parameter setting end ###
 
@@ -35,8 +35,9 @@ myoptions$resolution=as.numeric(myoptions$resolution)
 myoptions$Remove_MtRNA=is_one(myoptions$Remove_MtRNA)
 myoptions$Remove_rRNA=is_one(myoptions$Remove_rRNA)
 
-myoptions$bubblemap_width=to_numeric(myoptions$bubblemap_width, 6000)
-myoptions$bubblemap_height=to_numeric(myoptions$bubblemap_height, 3000)
+bubblemap_file = myoptions$bubblemap_file
+bubblemap_width=to_numeric(myoptions$bubblemap_width, 6000)
+bubblemap_height=to_numeric(myoptions$bubblemap_height, 3000)
 
 Mtpattern=myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
@@ -82,6 +83,7 @@ ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
                              combined_celltype_file = NULL)
 tiers = ctdef$tiers
 cell_activity_database<-ctdef$cell_activity_database
+cellType = cell_activity_database$cellType
 
 celltype_predictmethod="cta" # cta: cell activity; ora: over-represent
 
@@ -94,7 +96,7 @@ for (i in 1:nrow(SampleInfos)) {
   Ensemblfile=NULL
   info<-preprocess( SampleInfo = SampleInfo,
                     Cutoff = Cutoff,
-                    cellType = cell_activity_database$cellType,
+                    cellType = cellType,
                     Mtpattern = Mtpattern,
                     rRNApattern = rRNApattern,
                     resolution = resolution, 
