@@ -261,6 +261,8 @@ sub perform {
 
       my $depend_all = $myclass->{_depend_all};
 
+      my $check_output_file_pattern = get_option( $config, $task_section, "check_output_file_pattern", "" );
+
       #print($classname . " = " . $depend_all . "\n");
 
       my $expect_file_map;
@@ -308,12 +310,30 @@ sub perform {
           print(Dumper($expect_file_map));          
           die "Found error, $sample not in result list of $task_section\n";
         }
-        
-        print $final_submit "if [[ (1 -eq \$1) || ((! -s $expect_file) && (! -d $expect_file)) ]]; then \n";
-        print $final_submit "  jid" . $final_index . "=\$(sbatch $depjid " . $samplepbs . " | awk '{print \$NF}') \n";
-        print $final_submit "else \n";
-        print $final_submit "  jid" . $final_index . "=1000000000 \n";
-        print $final_submit "fi \n";
+
+        if($check_output_file_pattern ne ""){
+          my $cur_dir = dirname($expect_file);
+          print $final_submit "
+if [[ 1 -eq \$1 ]]; then
+  file_count=0
+else
+  file_count=\$(find $cur_dir -name $check_output_file_pattern | wc -l) 
+fi
+if [[ \$file_count -eq 0 ]]; then
+  jid${final_index} =\$(sbatch ${depjid} ${samplepbs} | awk '{print \$NF}') 
+else
+  jid${final_index} =1000000000
+fi
+";
+        }else{
+          print $final_submit "
+if [[ (1 -eq \$1) || ((! -s $expect_file) && (! -d $expect_file)) ]]; then 
+  jid${final_index} =\$(sbatch ${depjid} ${samplepbs} | awk '{print \$NF}') \
+else 
+  jid${final_index} =1000000000 
+fi
+";
+        }
         $final_pbs_id_map->{$samplepbs} = [ "jid" . $final_index, 0 ];
 #      }
         print $final "bash $samplepbs \n";

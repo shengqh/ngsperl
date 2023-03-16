@@ -211,10 +211,26 @@ sub perform {
 
     my $expect_file = $expected->{$sample_name}[0];
 
-    print $sh "if [[ ! -s $expect_file ]]; then
+    if($check_output_file_pattern ne ""){
+      print $sh "
+if [[ 1 -eq \$1 ]]; then
+  file_count=0
+else
+  file_count=\$(find $cur_dir -name $check_output_file_pattern | wc -l) 
+fi
+if [[ \$file_count -eq 0 ]]; then
   \$MYCMD ./$pbs_name
 fi
+
 ";
+    $expect_file = undef;
+    }else{
+      print $sh "if [[ ! -s $expect_file ]]; then
+  \$MYCMD ./$pbs_name
+fi
+
+";
+    }
 
     my $log_desc = $cluster->get_log_description($log);
     
@@ -284,7 +300,11 @@ cp $sample_input_file $input_file
 
     if($check_output_file_pattern ne ""){
       print $pbs "
-file_count=\$(find . -name $check_output_file_pattern | wc -l) 
+if [[ 1 -eq \$1 ]]; then
+  file_count=0
+else
+  file_count=\$(find . -name $check_output_file_pattern | wc -l) 
+fi
 if [[ \$file_count -gt 0 ]]; then
   echo \"Warning: $check_output_file_pattern found \$file_count times in $cur_dir !\"
   exit 0
