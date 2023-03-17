@@ -710,6 +710,7 @@ sub add_singleR_cell {
       by_sctransform        => getValue( $def, "by_sctransform" ),
     }),
     output_file_ext => ".SingleR.png;.SingleR.rds;.meta.rds",
+    no_docker => 1,
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
