@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='P9270_colon'
+outFile='P9551'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='C:/temp/seurat_sct_merge/result/P9270_colon.final.rds'
+parFile1='/scratch/jbrown_lab/projects/20230313_pipseq_9551_flynn_hg38_liver_seurat/seurat_sct_merge/result/P9551.final.rds'
 parFile2=''
-parFile3='C:/temp/essential_genes/result/P9270_colon.txt'
+parFile3='/scratch/jbrown_lab/projects/20230313_pipseq_9551_flynn_hg38_liver_seurat/essential_genes/result/P9551.txt'
 
 
-setwd("C:/temp/seurat_sct_merge_dr0.5_01_call/result")
+setwd('/scratch/jbrown_lab/projects/20230313_pipseq_9551_flynn_hg38_liver_seurat/seurat_sct_merge_dr0.2_01_call/result')
 
 ### Parameter setting end ###
 
@@ -102,6 +102,7 @@ replace_cts=layer2map %in% names(combined_ct)
 layer2map[replace_cts] = combined_ct[layer2map[replace_cts]]
 
 prefix<-outFile
+root_folder=getwd()
 
 if(!exists('obj')){
   obj<-readRDS(parFile1)
@@ -146,14 +147,6 @@ cbind_celltype<-function(subobj, data_norm, cluster, new_cluster_ids, cur_layerm
   return(cur_cts)
 }
 
-if(0){
-  previous_layer<-"layer0"
-  cur_layer="layer4"
-  cur_layermap=layer2map
-  previous_celltypes<-unique(obj@meta.data[[previous_layer]])
-  iter=1
-}
-
 get_empty_files<-function(){
   files = data.frame("previous_layer"=character(),
                      "cur_layer"=character(),
@@ -163,10 +156,26 @@ get_empty_files<-function(){
   return(files)
 }
 
+if(0){
+  previous_celltypes<-unique(obj@meta.data[[previous_layer]])
+  previous_layer<-"layer0"
+  cur_layer="layer4"
+  cur_layermap=layer2map
+  iter=1
+  iter_name=paste0("iter", iter)
+  previous_celltypes<-previous_celltypes[order(previous_celltypes)]
+  curprefix = paste0(prefix, ".iter", iter)
+  tmp_folder = paste0(root_folder, "/details")
+  if(!dir.exists(tmp_folder)){
+    dir.create(tmp_folder)
+  }
+  setwd(tmp_folder)
+}
+
 iterate_celltype<-function(obj, 
                            previous_celltypes, 
                            previous_layer, 
-                           cur_layer, 
+                           iter_name, 
                            cur_layermap, 
                            npcs, 
                            resolution, 
@@ -248,13 +257,13 @@ iterate_celltype<-function(obj,
     
     cta_rds_file=paste0(curprefix, ".", pct_str, ".cta.rds")
     saveRDS(predict_celltype, cta_rds_file)
-    files<-rbind(files, c(previous_layer, cur_layer, pct, "cta_rds", cta_rds_file))
+    files<-rbind(files, c(previous_layer, iter_name, pct, "cta_rds", cta_rds_file))
 
     if(length(predict_celltype$max_cta) > 1){
       cta_png_file=paste0(curprefix, ".", pct_str, ".cta.png")
       Plot_predictcelltype_ggplot2( predict_celltype, 
                             filename=cta_png_file)
-      files<-rbind(files, c(previous_layer, cur_layer, pct, "cta_png", cta_png_file))
+      files<-rbind(files, c(previous_layer, iter_name, pct, "cta_png", cta_png_file))
     }
 
     new_cluster_ids<-names(predict_celltype$max_cta)
@@ -270,7 +279,11 @@ iterate_celltype<-function(obj,
     #using RNA assay for visualization
     DefaultAssay(subobj)<-assay
 
-    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    if(pct == "Unassigned"){
+      g0<-DimPlot(obj, label=F, group.by=previous_layer) + ggtitle(pct)
+    }else{
+      g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    }
     g1<-DimPlot(subobj, reduction="oumap", group.by = "cell_type", label=T) + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle("New cell type in old UMAP")
     g2<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="raw_seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat raw cell type in old UMAP")
     g3<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat cell type in old UMAP")
@@ -280,7 +293,7 @@ iterate_celltype<-function(obj,
     print(g)
     dev.off()
 
-    files<-rbind(files, c(previous_layer, cur_layer, pct, "old_umap", umap_celltype_file))
+    files<-rbind(files, c(previous_layer, iter_name, pct, "old_umap", umap_celltype_file))
 
     if(pct != "Unassigned"){
       g1<-get_dim_plot(subobj, group.by="seurat_clusters", label.by="raw_seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Raw cell type in new UMAP")
@@ -291,11 +304,13 @@ iterate_celltype<-function(obj,
       png(umap_cluster_file, width=4600, height=2000, res=300)
       print(g)
       dev.off()
-      files<-rbind(files, c(previous_layer, cur_layer, pct, "new_umap", umap_cluster_file))
+      files<-rbind(files, c(previous_layer, iter_name, pct, "new_umap", umap_cluster_file))
     }
 
     if(pct == "Unassigned"){
-      g<-get_bubble_plot(subobj, bubblemap_file = bubblemap_file, group.by = "raw_seurat_cell_type")
+      g<-get_bubble_plot(obj = subobj, 
+        bubblemap_file = bubblemap_file, 
+        group.by = "raw_seurat_cell_type")
     }else{
       g<-get_sub_bubble_plot(obj, previous_layer, subobj, "raw_seurat_cell_type", bubblemap_file)
     }
@@ -303,7 +318,7 @@ iterate_celltype<-function(obj,
     png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, cluster), res=300)
     print(g)
     dev.off()
-    files<-rbind(files, c(previous_layer, cur_layer, pct, "dot", dot_file))
+    files<-rbind(files, c(previous_layer, iter_name, pct, "dot", dot_file))
 
     all_cur_cts<-rbind(all_cur_cts, cur_cts)
     
@@ -350,6 +365,7 @@ layer_cluster_celltype<-function(obj,
       iter_meta_file = paste0(curprefix, ".csv")
       iter_meta_rds = paste0(curprefix, ".rds")
 
+      cat("  Call iterate_celltype ...\n")
       lst<-iterate_celltype(obj, 
                             previous_celltypes, 
                             previous_layer, 
@@ -579,7 +595,6 @@ if(by_individual_sample){
   if("pca" %in% names(obj@reductions)){
     obj@reductions["pca"]<-NULL
   }
-  root_folder = getwd()
   samples <- unique(obj$orig.ident)
   result_list = c()
   all_ct_counts = NULL
@@ -679,3 +694,4 @@ if(by_individual_sample){
                           essential_genes = essential_genes,
                           by_individual_sample = 0);
 }
+
