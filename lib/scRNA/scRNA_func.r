@@ -856,17 +856,17 @@ read_bubble_genes<-function(bubblemap_file, allgenes=c()){
   library("readxl")
   library("tidyr")
   
-  genes <- read_xlsx(bubblemap_file, sheet = 1)
+  genes <- data.frame(read_xlsx(bubblemap_file, sheet = 1))
+  if(colnames(genes)[1] == 'Count'){
+    genes <- genes[,c(2:ncol(genes))]
+  }
   colnames(genes)[1:2] = c("gene", "cell_type")  
-
 
   for(idx in c(2:nrow(genes))){
     if(is.na(genes[idx,"cell_type"])){
       genes[idx,"cell_type"]=genes[idx-1,"cell_type"]
     }
   }
-  
-  genes<-separate_rows(genes, gene)
   
   gene_names=genes$gene
   gene_names[gene_names=="PECAM"] = "PECAM1"
