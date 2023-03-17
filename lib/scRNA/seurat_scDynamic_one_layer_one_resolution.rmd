@@ -154,10 +154,10 @@ pctRmd<-function(outFile, cell_identity, pcts, files){
     #cat(pre_layer, "\n")
 
     res_tbl<-files[files$previous_layer==pre_layer,]
-    pcts=unique(res_tbl$pct)
+    layer_pcts=unique(res_tbl$pct)
 
-    pct=pcts[1]
-    for(pct in pcts) {
+    pct=layer_pcts[1]
+    for(pct in layer_pcts) {
       pct_tbl = res_tbl[res_tbl$pct==pct,]
       if("cta_png" %in% pct_tbl$type){
         cta_png=pct_tbl$fname[pct_tbl$type=="cta_png"]
