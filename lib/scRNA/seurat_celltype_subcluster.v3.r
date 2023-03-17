@@ -2,14 +2,14 @@ rm(list=ls())
 outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
-parFile1='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
-parFile3='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
-parFile4='/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_SignacX/result/crs.meta.rds'
+parSampleFile3='fileList3.txt'
+parFile1='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
+parFile3='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
+parFile4='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_SignacX/result/crs.meta.rds'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
+setwd('/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -106,6 +106,27 @@ if(!is_file_empty(parSampleFile2)){
   obj<-obj[!(rownames(obj) %in% ignore_genes),]
 }
 
+bHasSignacX<-FALSE
+if(exists("parFile4")){
+  if(parFile4 != ""){
+    signacX<-readRDS(parFile4)
+    assert(rownames(signacX) == rownames(obj@meta.data))
+  
+    ct_map=c('T.CD4.memory'='T.CD4', 
+      'T.CD4.naive'='T.CD4', 
+      'T.CD8.cm'='T.CD8',
+      'T.CD8.em'='T.CD8',
+      'T.CD8.naive'='T.CD8')
+    signacX$signacx_CellStates_slim<-as.character(signacX$signacx_CellStates)
+    for(ct_name in names(ct_map)){
+      signacX$signacx_CellStates_slim[signacX$signacx_CellStates_slim==ct_name]=ct_map[ct_name]
+    }
+  
+    obj<-AddMetaData(obj, signacX$signacx_CellStates_slim, col.name = "signacx_CellStates")
+    bHasSignacX<-TRUE
+  }
+}
+
 meta<-obj@meta.data
 if(!is_file_empty(parSampleFile3)){
   rename_map = read.table(parSampleFile3, sep="\t", header=F)
@@ -148,9 +169,6 @@ if(!is_file_empty(parSampleFile3)){
       meta[cells,previous_layer]<-to
     }
   }
-  tb<-table(meta[,previous_layer])
-  tb<-tb[order(tb, decreasing=T)]
-  meta[,previous_layer]<-factor(meta[,previous_layer], levels=names(tb))
 
   g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", legend.title="")
   png(paste0(outFile, ".pre_rename.umap.png"), width=2400, height=2000, res=300)
@@ -159,6 +177,15 @@ if(!is_file_empty(parSampleFile3)){
   png()
 
   obj@meta.data<-meta
+  if("DELETE" %in% meta[,previous_layer]){
+    cells = rownames(meta)[meta[,previous_layer] != "DELETE"]
+    obj = subset(obj, cells=cells)
+  }
+  meta=obj@meta.data
+  tb<-table(meta[,previous_layer])
+  tb<-tb[order(tb, decreasing=T)]
+  meta[,previous_layer]<-factor(meta[,previous_layer], levels=names(tb))
+  obj@meta.data = meta
 
   g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", legend.title="")
   png(paste0(outFile, ".post_rename.umap.png"), width=2400, height=2000, res=300)
@@ -166,27 +193,6 @@ if(!is_file_empty(parSampleFile3)){
   dev.off()
 }
 saveRDS(meta, paste0(outFile, ".meta.rds"))
-
-bHasSignacX<-FALSE
-if(exists("parFile4")){
-  if(parFile4 != ""){
-    signacX<-readRDS(parFile4)
-    assert(rownames(signacX) == rownames(obj@meta.data))
-  
-    ct_map=c('T.CD4.memory'='T.CD4', 
-      'T.CD4.naive'='T.CD4', 
-      'T.CD8.cm'='T.CD8',
-      'T.CD8.em'='T.CD8',
-      'T.CD8.naive'='T.CD8')
-    signacX$signacx_CellStates_slim<-as.character(signacX$signacx_CellStates)
-    for(ct_name in names(ct_map)){
-      signacX$signacx_CellStates_slim[signacX$signacx_CellStates_slim==ct_name]=ct_map[ct_name]
-    }
-  
-    obj<-AddMetaData(obj, signacX$signacx_CellStates_slim, col.name = "signacx_CellStates")
-    bHasSignacX<-TRUE
-  }
-}
 
 if(has_bubblemap){
   allgenes<-rownames(obj)
@@ -232,7 +238,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[4]
+pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -426,3 +432,4 @@ for(pct in previous_celltypes){
 setwd(cur_folder)
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+
