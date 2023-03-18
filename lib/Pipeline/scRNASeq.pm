@@ -428,7 +428,7 @@ sub getScRNASeqConfig {
 
       my $singleR_task = undef;
       if (getValue( $def, "perform_SingleR", 0 ) ) {
-        $singleR_task = $seurat_task . "_singleR";
+        $singleR_task = $seurat_task . "_SingleR";
         my $cur_options = {
           task_name => $def->{task_name},
           reduction => $reduction, 
@@ -472,7 +472,7 @@ sub getScRNASeqConfig {
         }
 
         # if (getValue( $def, "perform_SingleR", 0 ) ) {
-        #   my $singleR_task = $scDynamic_task . "_singleR";
+        #   my $singleR_task = $scDynamic_task . "_SingleR";
         #   my $cur_options = {
         #     task_name => $def->{task_name},
         #     reduction => $reduction, 
