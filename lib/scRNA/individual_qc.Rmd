@@ -46,6 +46,7 @@ object.list<-readRDS("objectlist.rds")
 stats<-lapply(object.list, function(x){unlist(x$preprocess)})
 stats_df<-data.frame(do.call(rbind, stats))
 colnames(stats_df)<-gsub("preprocess.","",colnames(stats_df))
+write.csv(stats_df, "sample_summary.csv")
 print(kable(stats_df))
 ```
 
@@ -60,6 +61,7 @@ celltypes<-lapply(names(object.list), function(x){
 ct_df<-data.frame(do.call(rbind, celltypes))
 library(reshape2)
 ct_tb<-acast(ct_df, "Sample~Var1",  value.var="Freq", fill=0)
+write.csv(ct_tb, "sample_celltype.csv")
 print(kable(ct_tb))
 ```
 
