@@ -161,6 +161,7 @@ if(!bBetweenCluster){
     rateMap=unlist(split(compRes$sigRate, compRes$cluster))
     
     obj$sigRate=rateMap[as.character(unlist(obj[[cluster_name]]))]
+    obj$sigRate[is.na(obj$sigRate)]<-0
     
     pdf(paste0(outFile, ".", comp, ".sigGenePerc.pdf"), width=14, height=7)
     p1<-DimPlot(obj, group.by = cluster_name, label=T) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
