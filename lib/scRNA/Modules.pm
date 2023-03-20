@@ -34,7 +34,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
 
   add_clonotype_split
 
-  add_invidual_qc
+  add_individual_qc
 
   add_gliph2
 
@@ -2127,15 +2127,16 @@ sub add_clonotype_split {
   return($split_task);
 }
 
-sub add_invidual_qc {
-  my ($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file) = @_;
+sub add_individual_qc {
+  my ($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file, $qc_files_ref) = @_;
 
-  my $qc_files_ref;
-  if(defined $def->{qc_files}){
-    $qc_files_ref = "qc_files";
-    $config->{qc_files} = $def->{qc_files};
-  }else{
-    $qc_files_ref = "files";
+  if(!defined $qc_files_ref){
+    if(defined $def->{qc_files}){
+      $qc_files_ref = "qc_files";
+      $config->{qc_files} = $def->{qc_files};
+    }else{
+      $qc_files_ref = "files";
+    }
   }
   $config->{$individual_qc_task} = {
     class => "CQS::UniqueR",

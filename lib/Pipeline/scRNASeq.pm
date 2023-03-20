@@ -263,7 +263,7 @@ sub getScRNASeqConfig {
 
     if ( getValue($def, "perform_individual_qc", 1) ){
       my $raw_individual_qc_task = "raw_individual_qc";
-      add_invidual_qc($config, $def, $summary, $target_dir, $raw_individual_qc_task, "$target_dir/raw_qc_filter_config.txt", undef, undef, undef);
+      add_individual_qc($config, $def, $summary, $target_dir, $raw_individual_qc_task, "$target_dir/raw_qc_filter_config.txt", undef, undef, undef);
     }
 
     my $files = $def->{files};
@@ -342,7 +342,7 @@ sub getScRNASeqConfig {
       }
 
       if ( getValue($def, "perform_individual_qc", 1) ){
-        add_invidual_qc($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file);
+        add_individual_qc($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file);
       }
     }else{
       if($perform_arcasHLA || $perform_strelka2){
