@@ -5,7 +5,7 @@ source("scRNA_func.r")
 sample_dirs <- read.table("fileList1.txt", header=F)
 sample_map = unlist(split(sample_dirs$V1, sample_dirs$V2))
 
-overwrite=TRUE
+overwrite=FALSE
 
 sce_list <- list()
 sample_name=names(sample_map)[1]
@@ -34,8 +34,8 @@ for (sample_name in names(sample_map)){
   saveRDS(colData(sce), paste0(sample_name, ".meta.rds"))
 
   cat("  reportCellQC\n")
-  #reportCellQC(inSCE = sce, output_file = paste0(sample_name, "_reportCellQC"))
+  reportCellQC(inSCE = sce, output_file = paste0(sample_name, "_reportCellQC"))
 
-  cat("  exportSCE\n")
+  #cat("  exportSCE\n")
   #exportSCE(inSCE = sce, samplename = sample_name, type = "Cells", format = c("Seurat"))
 }
