@@ -431,10 +431,9 @@ preprocess<-function( SampleInfo,
       subobj<-subset(subobj,idents=removeIdent, invert=T)
     }
     
-    #cat("\n\n## Markers and cell type annotation\n\n")
-
     ##predict method
-    if (!is.null(celltype_predictmethod) & length(levels(subobj@active.ident))>1 ) {
+    if (!is.null(celltype_predictmethod)) {
+      #cat("\n\n## Markers and cell type annotation\n\n")
       meanexp<-get_seurat_average_expression(subobj, "seurat_clusters")
       if (nrow(meanexp)==1) meanexp<-t(meanexp)
       predict_celltype<-ORA_celltype_qc(meanexp,cellType,method=celltype_predictmethod)
@@ -463,75 +462,78 @@ preprocess<-function( SampleInfo,
       print(g)
       dev.off()
 
-      subobj.markers <- FindAllMarkers(subobj, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
-      subobj@misc$markers<-subobj.markers
-      
-      if('avg_log2FC' %in% colnames(subobj.markers)){
-        top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
-      }else{
-        top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-      }
-      #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
-      top10gene<-unique(top10$gene)
-      if (length(top10gene)>200) {
-        genesize=5
-      } else {
-        if (length(top10gene)>100) {
-          genesize=6
-        }  else {
-          genesize=7
-        } 
-      }
-      
-      subobj<-myScaleData(subobj, top10gene, "RNA")
-      
-      #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
-      #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-      g<-MyDoHeatMap(subobj, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
-      png(paste0(cur_sample, ".heatmap.png"), 
-          width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
-          height=get_heatmap_height(length(top10gene)), 
-          res=300)
-      print(g)
-      dev.off()
-
-      # subobj@misc$Qcluster <- EvalCluster(subobj)
-      # ViewQcluster(SCLC)
-      # cat("\n\n")
-      # print(kable(subobj@misc$Qcluster))
-      # cat("\n\n")
-      
-      # Doheatmap_cellmarker_cellType(SCLC,top10,cellType,predict_celltype)
-      # def.par <- par(no.readonly = TRUE) 
-      #   layout(matrix(c(1,2), 1, 2, byrow = TRUE))
-      #   Plot_predictcelltype(predict_celltype,method="cta")
-      #   Plot_predictcelltype(predict_celltype,method="ora")
-      # par(def.par)
-      
-      if(has_bubblemap_file){
-        genes<-read_bubble_genes(bubblemap_file, rownames(subobj))
-        ugenes<-unique(genes$gene)
+      has_multi_clusters<-length(levels(subobj$seurat_clusters))>1
+      if(has_multi_clusters) {
+        subobj.markers <- FindAllMarkers(subobj, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+        subobj@misc$markers<-subobj.markers
         
-        #cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
+        if('avg_log2FC' %in% colnames(subobj.markers)){
+          top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+        }else{
+          top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+        }
+        #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
+        top10gene<-unique(top10$gene)
+        if (length(top10gene)>200) {
+          genesize=5
+        } else {
+          if (length(top10gene)>100) {
+            genesize=6
+          }  else {
+            genesize=7
+          } 
+        }
         
-        subobj<-myScaleData(subobj, ugenes, "RNA")
-
-        g<-MyDoHeatMap(subobj, assay="RNA",features=ugenes)
-        png(paste0(cur_sample, ".bubble_heatmap.png"), 
-          width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
-          height=get_heatmap_height(length(ugenes)), 
-          res=300)
-        print(g)
-        dev.off()
-
-        g<-get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay="RNA", group.by="seurat_cell_type") + theme(text = element_text(size=20))
-        #cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
-        png(paste0(cur_sample, ".bubble.png"), 
-            width=get_dot_width(g), 
-            height=get_dot_height_num(length(unique(subobj$seurat_cell_type))), 
+        subobj<-myScaleData(subobj, top10gene, "RNA")
+        
+        #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
+        #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
+        g<-MyDoHeatMap(subobj, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
+        png(paste0(cur_sample, ".heatmap.png"), 
+            width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
+            height=get_heatmap_height(length(top10gene)), 
             res=300)
         print(g)
         dev.off()
+
+        # subobj@misc$Qcluster <- EvalCluster(subobj)
+        # ViewQcluster(SCLC)
+        # cat("\n\n")
+        # print(kable(subobj@misc$Qcluster))
+        # cat("\n\n")
+        
+        # Doheatmap_cellmarker_cellType(SCLC,top10,cellType,predict_celltype)
+        # def.par <- par(no.readonly = TRUE) 
+        #   layout(matrix(c(1,2), 1, 2, byrow = TRUE))
+        #   Plot_predictcelltype(predict_celltype,method="cta")
+        #   Plot_predictcelltype(predict_celltype,method="ora")
+        # par(def.par)
+        
+        if(has_bubblemap_file){
+          genes<-read_bubble_genes(bubblemap_file, rownames(subobj))
+          ugenes<-unique(genes$gene)
+          
+          #cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
+          
+          subobj<-myScaleData(subobj, ugenes, "RNA")
+
+          g<-MyDoHeatMap(subobj, assay="RNA",features=ugenes)
+          png(paste0(cur_sample, ".bubble_heatmap.png"), 
+            width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
+            height=get_heatmap_height(length(ugenes)), 
+            res=300)
+          print(g)
+          dev.off()
+
+          g<-get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay="RNA", group.by="seurat_cell_type") + theme(text = element_text(size=20))
+          #cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
+          png(paste0(cur_sample, ".bubble.png"), 
+              width=get_dot_width(g), 
+              height=get_dot_height_num(length(unique(subobj$seurat_cell_type))), 
+              res=300)
+          print(g)
+          dev.off()
+        }
       }
     }
 
