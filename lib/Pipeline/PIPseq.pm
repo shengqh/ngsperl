@@ -12,6 +12,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
+use scRNA::Modules;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -73,7 +74,7 @@ singularity run $singularity_option $pipseeker_sif count --input-path __FILE__ -
     output_to_same_folder => 0,
     output_arg            => "--output-root",
     output_no_name => 1,
-    output_file_ext    => "filtered_matrix/sensitivity_1",
+    output_file_ext    => "filtered_matrix/sensitivity_1,filtered_matrix/sensitivity_2,filtered_matrix/sensitivity_3,filtered_matrix/sensitivity_4,filtered_matrix/sensitivity_5",
     use_tmp_folder        => 0,
     sh_direct             => 0,
     pbs                   => {
@@ -82,7 +83,13 @@ singularity run $singularity_option $pipseeker_sif count --input-path __FILE__ -
       "mem"       => "100gb"
     },
   };
-  #push @$individual, ($cutruntools2);
+
+  push @$individual, ($pipseeker);
+
+  my $pipseeker_qc = $pipseeker . "_qc";
+  if(defined $def->{qc_files}){
+    add_individual_qc($config, $def, $summary, $target_dir, $pipseeker_qc, "$target_dir/raw_qc_filter_config.txt", undef, undef, undef);
+  }
 
   return ($config);
 }
