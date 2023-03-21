@@ -78,7 +78,7 @@ obj<-subset(obj, cells=colnames(obj)[1:1000])
 
 if(has_bubblemap){
   allgenes<-rownames(obj)
-  genes_df <- read_bubble_genes(bubblemap_file, allgenes)
+  genes_df <- read_bubble_genes(bubblemap_file, allgenes, species = myoptions$species)
   bubble_genes<-unique(genes_df$gene)
 }
 

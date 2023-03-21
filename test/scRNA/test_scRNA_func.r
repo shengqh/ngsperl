@@ -23,4 +23,14 @@ test_that("read_bubble_genes_2", {
   expect_equal(as.character(genes_df$cell_type[3]), "Pan B Cells")
 })
 
+test_that("read_bubble_genes_3", {
+  bubblemap_file="/home/shengq2/program/collaborations/scRNA/20220707_BubbleMap_mouse_biolegend_aorta.xlsx"
+  genes_df = read_bubble_genes(bubblemap_file, species="Mm")
+  expect_equal(nrow(genes_df), 40)
+  expect_equal(genes_df$gene[1], "Cd68")
+  expect_equal(genes_df$gene[2], "Adgre1")
+  expect_equal(genes_df$gene[3], "Btg1")
+  expect_equal(as.character(genes_df$cell_type[3]), "Macrophages")
+})
+
 

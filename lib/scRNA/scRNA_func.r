@@ -852,22 +852,52 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   }
 }
 
-read_bubble_genes<-function(bubblemap_file, allgenes=c()){
+read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
   library("readxl")
   library("tidyr")
   
   genes <- data.frame(read_xlsx(bubblemap_file, sheet = 1))
-  if(colnames(genes)[1] == 'Count'){
+  if(colnames(genes)[1] %in% c('Count', 'Index')){
     genes <- genes[,c(2:ncol(genes))]
   }
+
+  while(all(is.na(genes[,1]))){
+    genes <- genes[,c(2:ncol(genes))]
+  }
+
+  if(colnames(genes)[2] == 'Marker.Gene'){
+    genes <- genes[,c(2:ncol(genes))]
+  }
+
   colnames(genes)[1:2] = c("gene", "cell_type")  
+
+  if(ncol(genes) > 2){
+    #for some excel files, the third column is addtional genes
+    if(any(grepl(',', genes[,1])) & any(grepl(',', genes[,3]))){
+      genes[,3][is.na(genes[,3])]<-""
+      genes[,1] = paste0(genes[,1], ",", genes[,3])
+    }
+
+    genes<-genes[,c(1,2)]
+  }
 
   for(idx in c(2:nrow(genes))){
     if(is.na(genes[idx,"cell_type"])){
       genes[idx,"cell_type"]=genes[idx-1,"cell_type"]
     }
   }
-  
+
+  #for some excel file, multiple genes are in same row but seperated by ',', 
+  #use sepearte_rows to put them in different rows.
+  genes<-data.frame(separate_rows(genes, gene))
+  genes<-genes[genes$gene != "",]
+
+  if(!is.null(species)){
+    if(tolower(species) == "mm" | tolower(species) == "mouse"){
+      genes$gene = toMouseGeneSymbol(genes$gene)
+    }
+  }
+
   gene_names=genes$gene
   gene_names[gene_names=="PECAM"] = "PECAM1"
   gene_names[gene_names=="HGD1B"] = "HGD"
@@ -878,12 +908,15 @@ read_bubble_genes<-function(bubblemap_file, allgenes=c()){
   gene_names[gene_names=="FOXJ!"] = "FOXJ1"
   
   genes$gene<-gene_names
-  
+
+  genes<-genes[!duplicated(genes),]
+
   if(length(allgenes) > 0){
     miss_genes=setdiff(genes$gene, allgenes)
     writeLines(miss_genes, con="miss_gene.csv")
 
     genes<-genes[genes$gene %in% allgenes,]
+  }else{
   }
   genes$cell_type=factor(genes$cell_type, levels=unique(genes$cell_type))
   
@@ -991,9 +1024,9 @@ get_dot_height<-function(obj, group.by){
   return(get_dot_height_vec(unlist(obj[[group.by]])))
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL, use_blue_yellow_red=TRUE){
+get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL, use_blue_yellow_red=TRUE, species=NULL){
   allgenes=rownames(obj)
-  genes_df <- read_bubble_genes(bubblemap_file, allgenes)
+  genes_df <- read_bubble_genes(bubblemap_file, allgenes, species=species)
   gene_groups=split(genes_df$gene, genes_df$cell_type)
 
   if(is.null(group.by)){

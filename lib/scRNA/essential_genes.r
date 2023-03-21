@@ -33,7 +33,7 @@ genes<-unlist(cell_activity_database$cellType)
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 if(has_bubblemap){
-  genes_df <- read_bubble_genes(bubblemap_file, NA)
+  genes_df <- read_bubble_genes(bubblemap_file, species=species)
   bubble_genes<-unique(genes_df$gene)
   genes<-c(genes, bubble_genes)
 }

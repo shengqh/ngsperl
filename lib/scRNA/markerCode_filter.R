@@ -255,7 +255,8 @@ preprocess<-function( SampleInfo,
                       tag_tb=NULL,
                       bubblemap_file="",
                       bubblemap_width=6000,
-                      bubblemap_height=3000) {
+                      bubblemap_height=3000,
+                      species=NULL) {
 
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
@@ -510,7 +511,7 @@ preprocess<-function( SampleInfo,
         # par(def.par)
         
         if(has_bubblemap_file){
-          genes<-read_bubble_genes(bubblemap_file, rownames(subobj))
+          genes<-read_bubble_genes(bubblemap_file, rownames(subobj), species=species)
           ugenes<-unique(genes$gene)
           
           #cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
