@@ -30,9 +30,7 @@ myoptions<-split(options_table$V1, options_table$V2)
 outFile=myoptions$task_name
 by_individual_sample=is_one(myoptions$by_individual_sample)
 
-prefix=paste0("details/", outFile)
-
-files<-read.csv(paste0(prefix, ".iter_png.csv"), row.names=1)
+files<-read.csv(paste0(outFile, ".iter_png.csv"), row.names=1)
 
 last_iter=files$cur_layer[nrow(files)]
 
