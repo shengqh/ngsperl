@@ -484,9 +484,9 @@ do_analysis<-function(tmp_folder,
   files=reslist1$files
   rm(reslist1)
 
-  write.csv(files, paste0(prefix, ".iter_png.csv"))
-
   setwd(cur_folder)
+
+  write.csv(files, paste0(prefix, ".iter_png.csv"))
 
   celltypes<-unique(obj$layer4)
   celltypes<-celltypes[order(celltypes)]
