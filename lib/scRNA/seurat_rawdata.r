@@ -1,15 +1,14 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='P8256'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
+parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230115_combined_scRNA_hg38/seurat_rawdata/result')
+setwd('/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -31,7 +30,10 @@ rRNApattern=myoptions$rRNApattern
 hemoglobinPattern=myoptions$hemoglobinPattern
 
 species=myoptions$species
-pool_sample<-ifelse(myoptions$pool_sample == "0", FALSE, TRUE)
+pool_sample<-is_one(myoptions$pool_sample)
+
+keep_seurat_object<-is_one(myoptions$keep_seurat_object)
+seurat_sample_column<-myoptions$seurat_sample_column
 
 ensembl_map=NULL
 if("ensembl_gene_map_file" %in% names(myoptions)){
@@ -161,39 +163,53 @@ fileTitle = names(fileMap)[1]
 for(fileTitle in names(fileMap)) {
   fileName  = fileMap[[fileTitle]]
   cat(fileTitle, "\n")
-  lst = read_scrna_data(fileName)
+  lst = read_scrna_data(fileName, keep_seurat_object)
 
   counts = lst$counts  
   adt.counts = lst$adt.counts
-  
-  if(fileTitle %in% names(remove_cells)){
-    rcs<-remove_cells[[fileTitle]]
-    if(length(rcs) > 0){
-      counts<-counts[,!(colnames(counts) %in% rcs)]
-      if(!is.null(adt.counts)){
-        adt.counts<-adt.counts[,!(colnames(adt.counts) %in% rcs)]
+
+  if("Seurat" %in% class(counts)){
+    sobj<-counts
+    rm(counts)
+
+    if("" != seurat_sample_column){
+      sobj$orig.ident = unlist(sobj@meta.data[,seurat_sample_column])
+    }else{
+      sobj$orig.ident = fileTitle
+    }
+  }else{
+    if(fileTitle %in% names(remove_cells)){
+      rcs<-remove_cells[[fileTitle]]
+      if(length(rcs) > 0){
+        counts<-counts[,!(colnames(counts) %in% rcs)]
+        if(!is.null(adt.counts)){
+          adt.counts<-adt.counts[,!(colnames(adt.counts) %in% rcs)]
+        }
       }
     }
+
+    rs<-rowSums(counts)
+    counts<-counts[rs>0,]
+
+    if(!is.null(ensembl_map)){
+      gtf_counts<-counts[!(rownames(counts) %in% names(ensembl_map)),]
+      ensembl_counts<-counts[(rownames(counts) %in% names(ensembl_map)),]
+      gene_names<-unlist(ensembl_map[rownames(ensembl_counts)])
+      gene_counts<-DelayedArray::rowsum(ensembl_counts, gene_names)
+      counts<-rbind(gtf_counts, gene_counts)
+    }
+
+    if (species=="Mm") {
+      rownames(counts)<-toMouseGeneSymbol(rownames(counts))
+    }
+    if (species=="Hs") {
+      rownames(counts)<-toupper(rownames(counts))
+    }
+    sobj = CreateSeuratObject(counts = counts, project = fileTitle)
+    sobj$orig.ident <- fileTitle
+    rm(counts)
   }
 
-  rs<-rowSums(counts)
-  counts<-counts[rs>0,]
-
-  if(!is.null(ensembl_map)){
-    gtf_counts<-counts[!(rownames(counts) %in% names(ensembl_map)),]
-    ensembl_counts<-counts[(rownames(counts) %in% names(ensembl_map)),]
-    gene_names<-unlist(ensembl_map[rownames(ensembl_counts)])
-    gene_counts<-DelayedArray::rowsum(ensembl_counts, gene_names)
-    counts<-rbind(gtf_counts, gene_counts)
-  }
-
-  if (species=="Mm") {
-    rownames(counts)<-toMouseGeneSymbol(rownames(counts))
-  }
-  if (species=="Hs") {
-    rownames(counts)<-toupper(rownames(counts))
-  }
-  sobj = CreateSeuratObject(counts = counts, project = fileTitle)
   sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt")
   sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo")
   sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")
@@ -243,7 +259,7 @@ for(fileTitle in names(fileMap)) {
       rawobjs[[sample]] = sample_obj
     }
   }else{
-    sobj<-RenameCells(object=sobj, new.names=paste0(fileTitle, "_", colnames(sobj)))
+    sobj<-RenameCells(object=sobj, new.names=paste0(sobj$orig.ident, "_", colnames(sobj)))
     rawobjs[[fileTitle]] = sobj
   }
 }

@@ -79,11 +79,11 @@ get_hue_colors<-function(n, random_colors=TRUE, random.seed=20220606){
   return(ccolors)
 }
 
-theme_rotate_x_axis_label <- function() {
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+theme_rotate_x_axis_label <- function(angle=90, vjust=0.5, hjust=1) {
+  theme(axis.text.x = element_text(angle=angle, vjust=vjust, hjust=hjust))
 }
 
-theme_bw3 <- function (axis.x.rotate=F) { 
+theme_bw3 <- function (axis.x.rotate=F, angle=90, vjust=0.5, hjust=1) { 
 	result = theme_bw() +
     theme(
       strip.background = element_rect(fill = NA, colour = 'black'),
@@ -91,7 +91,7 @@ theme_bw3 <- function (axis.x.rotate=F) {
       axis.line = element_line(colour = "black", size = 0.5)
     )
   if (axis.x.rotate){
-    result = result + theme_rotate_x_axis_label()
+    result = result + theme_rotate_x_axis_label(angle=angle,vjust=vjust,hjust=hjust)
   }
 
   return(result)
@@ -1903,7 +1903,7 @@ B")
   return(p)
 }
 
-read_scrna_data<-function(fileName){
+read_scrna_data<-function(fileName, keep_seurat=FALSE){
   if(dir.exists(fileName)){
     feature.names <- read.delim(paste0(fileName, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
     gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
@@ -1920,7 +1920,9 @@ read_scrna_data<-function(fileName){
   } else if (grepl('.rds$', fileName)) {
     counts = readRDS(fileName)
     if("Seurat" %in% class(counts)){
-      counts = GetAssayData(counts, slot = "counts")
+      if(!keep_seurat){
+        counts = GetAssayData(counts, slot = "counts")
+      }
     }
   } else {
     stop(paste0("I don't know format of ", fileName))
