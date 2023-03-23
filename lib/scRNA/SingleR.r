@@ -19,13 +19,20 @@ library(ggplot2)
 library(patchwork)
 library(celldex)
 
-hpca.se <- HumanPrimaryCellAtlasData()
-
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
+
+if(myoptions$species == "Mm"){
+  ct_ref = MouseRNAseqData()
+}else if (myoptions$species == "Hs") {
+  ct_ref <- HumanPrimaryCellAtlasData()
+}else{
+  warning(paste0("Cannot find singleR ref db for species ", myoptions$species, ", use HumanPrimaryCellAtlasData"))
+  ct_ref <- HumanPrimaryCellAtlasData()
+}
 
 if(!exists("obj")){
   obj=read_object(parFile1)
@@ -37,7 +44,7 @@ if(file.exists(rds_file) & !force){
   labels<-readRDS(rds_file)
 }else{
   sce=as.SingleCellExperiment(DietSeurat(obj))
-  labels<-SingleR(sce, ref=hpca.se, assay.type.test=1, labels=hpca.se$label.main)
+  labels<-SingleR(sce, ref=ct_ref, assay.type.test=1, labels=ct_ref$label.main)
   rm(sce)
 
   labels$pruned.labels[is.na(labels$pruned.labels)] <- "unclassified"
