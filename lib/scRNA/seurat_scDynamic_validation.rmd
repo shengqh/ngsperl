@@ -1,0 +1,90 @@
+---
+title: "Dynamic cell type validation"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+source("scRNA_func.r")
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+
+options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outFile=myoptions$task_name
+
+iter_png_file=unlist(readLines("iter_png.txt"))
+iter_png<-read.csv(iter_png_file)
+iter_png$fname<-paste0(dirname(iter_png_file), "/details/", iter_png$fname)
+
+meta_file=paste0(outFile, ".meta.rds")
+meta<-readRDS(meta_file)
+cts<-levels(meta$layer4)
+if(all(is.null(cts))){
+  tb<-table(meta$layer4)
+  tb<-tb[order(tb, decreasing = TRUE)]
+  cts<-names(tb)
+}
+
+get_last_figure<-function(ct_png, png_type){
+  type_png_list<-ct_png[ct_png$type == png_type, "fname"]
+  return(type_png_list[length(type_png_list)])
+}
+
+resFile<-"cluster.Rmd"
+figureRmd<-function(outFile, cts, iter_png){
+  result<-""
+
+  ct=cts[1]
+  for(ct in cts){
+    result<-paste0(result, paste0("\n\n# ", ct, "\n\n"))
+    ct_name = celltype_to_filename(ct)
+    
+    ct_png<-iter_png[iter_png$pct == ct,]
+
+    old_umap = get_last_figure(ct_png, "old_umap")
+    new_umap = get_last_figure(ct_png, "new_umap")
+    dot = get_last_figure(ct_png, "dot")
+    cta_png = get_last_figure(ct_png, "cta_png")
+
+    result<-paste0(result, paste0("\n\n## UMAP\n\n"))
+    result<-paste0(result, getFigure(old_umap))
+
+    result<-paste0(result, paste0("\n\n## SUB_UMAP\n\n"))
+    result<-paste0(result, getFigure(new_umap))
+
+    result<-paste0(result, paste0("\n\n## Marker genes\n\n"))
+    result<-paste0(result, getFigure(dot))
+
+    result<-paste0(result, paste0("\n\n## Cell type enrichment score\n\n"))
+    result<-paste0(result, getFigure(cta_png))
+
+    result<-paste0(result, paste0("\n\n## Validation\n\n"))
+    vc_file = paste0(getwd(), "/", outFile, ".", ct_name, ".png")
+    result<-paste0(result, getFigure(vc_file))
+  }
+  return(result)
+}
+cat(figureRmd(outFile, cts, iter_png), file=resFile)
+
+```
+
+```{r, child=resFile} 
+```
+

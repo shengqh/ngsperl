@@ -452,10 +452,11 @@ sub getScRNASeqConfig {
         my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call";
         addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, 0);
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
+        my $call_files_ref = [$scDynamic_task, ".iter_png.csv"];
 
         if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
           my $validation_task = $scDynamic_task . "_validation";
-          add_call_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $signacX_task, $singleR_task, $sctk_task );
+          add_call_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, $signacX_task, $singleR_task, $sctk_task );
         }
 
         if(defined $def->{bubble_plots}){
@@ -493,7 +494,7 @@ sub getScRNASeqConfig {
 
           my $rename_map = $def->{"dynamic_rename_map"};
 
-          $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
+          $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_task, $singleR_task);
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_dynamic_choose")) {
@@ -687,7 +688,7 @@ sub getScRNASeqConfig {
           };
           my $rename_map = $def->{"multires_rename_map"};
 
-          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map);
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_task, $singleR_task);
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_multires_choose", 0)) {

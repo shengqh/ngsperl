@@ -1,15 +1,16 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='P8256'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
-parFile3='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_SignacX/result/crs.meta.rds'
-parFile4='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_singleR/result/crs.meta.rds'
+parSampleFile3=''
+parFile1='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge/result/P8256.final.rds'
+parFile2='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_01_call/result/P8256.scDynamic.meta.rds'
+parFile3='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_SignacX/result/P8256.meta.rds'
+parFile4='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_SingleR/result/P8256.meta.rds'
+parFile5='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_01_call/result/P8256.iter_png.csv'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call_validation/result')
+setwd('/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_01_call_validation/result')
 
 ### Parameter setting end ###
 
@@ -45,40 +46,64 @@ if(file.exists(parSampleFile2)){
   sctk_files<-read.table(parSampleFile2, sep="\t")
   sctk_map<-unlist(split(sctk_files$V1, sctk_files$V2))
 
-  cur_name='T6_KS_030822_RC_E'
+  cur_name='SB_1'
   for(cur_name in names(sctk_map)){
-    cur_meta_file=sctk_map[cur_name]
-    cur_meta=readRDS(cur_meta_file)
+    sctk_meta_file=sctk_map[cur_name]
+    sctk_meta=readRDS(sctk_meta_file)
 
-    rownames(cur_meta)<-paste0(cur_name, "_", rownames(cur_meta))
-    cur_cells = intersect(rownames(cur_meta), rownames(meta))
-    meta[cur_cells, "DoubletStatus"] = tolower(as.character(cur_meta[cur_cells,doublet_column]))
+    cur_names<-paste0(cur_name, "_", rownames(sctk_meta))
+    cur_cells = intersect(cur_names, rownames(meta))
+
+    if(length(cur_cells) == 0){
+      obj_meta = meta[meta$project == cur_name,]
+      obj_meta$original_cells<-gsub(".+_", "", rownames(obj_meta))
+      cur_cells = intersect(rownames(sctk_meta), obj_meta$original_cells)
+      if(length(cur_cells) == 0){
+        stop(paste0("I don't know how to map sctk meta cell ", rownames(sctk_meta)[1], " with object meta ", rownames(meta)[1]))
+      }else{
+        cell_map = unlist(split(obj_meta$original_cells, rownames(obj_meta)))
+        meta[names(cell_map), "Doublet"] = tolower(as.character(sctk_meta[cell_map,doublet_column]))
+      }
+    }else{
+      rownames(sctk_meta) = cur_names
+      meta[cur_cells, "Doublet"] = tolower(as.character(sctk_meta[cur_cells,doublet_column]))
+    }
   }
-  validation_columns<-c(validation_columns, "DoubletStatus")
+  validation_columns<-c(validation_columns, "Doublet")
 }
 
 saveRDS(meta, paste0(outFile, ".meta.rds"))
 
-col_name="SignacX"
-draw_figure<-function(outFile, meta, col_name){
+draw_figure<-function(outFile, meta, validation_columns){
   cts = unique(meta$layer4)
   ct = cts[1]
   for(ct in cts){
     pct = celltype_to_filename(ct)
     ct_meta = subset(meta, layer4 == ct)
-    tbl = data.frame(table(ct_meta$layer4_clusters, ct_meta[,col_name]))
-    tbl$Var1 = as.numeric(as.character(tbl$Var1))
 
-    g<-ggplot(tbl, aes(Var2, Freq, fill=Var2)) + geom_bar(width=0.5, stat = "identity") + facet_grid(Var1~., scales = "free_y") + theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend()
+    alltbl=NULL
 
-    height = max(1000, length(unique(tbl$Var1)) * 200) + 500
-    width = max(1000, length(unique(tbl$Var2)) * 100) + 400
-    png(paste0(outFile, ".", pct, ".", col_name, ".png"), width=width, height=height, res=300)
+    col_name="SignacX"
+    for(col_name in validation_columns){
+      tbl = data.frame(table(ct_meta$layer4_clusters, ct_meta[,col_name]))
+      tbl$Var1 = as.numeric(as.character(tbl$Var1))
+      tbl$Category=col_name
+
+      alltbl<-rbind(alltbl, tbl)
+    }
+
+    g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + geom_bar(width=0.5, stat = "identity") + facet_grid(Var1~Category, scales = "free", space='free_x') + theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend()
+
+    height = max(1000, length(unique(alltbl$Var1)) * 200) + 500
+    width = max(1000, length(unique(alltbl$Var2)) * 50) + 400
+    png(paste0(outFile, ".", pct, ".png"), width=width, height=height, res=300)
     print(g)
     dev.off()
   }
 }
 
-for(col_name in validation_columns){
-  draw_figure(outFile, meta, col_name)
-}
+validation_columns<-c("orig.ident", validation_columns)
+draw_figure(outFile, meta, validation_columns)
+
+writeLines(validation_columns, "validation_columns.txt")
+writeLines(parFile5, "iter_png.txt")
