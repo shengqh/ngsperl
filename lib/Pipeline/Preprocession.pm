@@ -3,13 +3,16 @@ package Pipeline::Preprocession;
 
 use strict;
 use warnings;
+
+use Text::CSV qw( csv );
+use Data::Dumper;
+use Hash::Merge qw( merge );
+
 use CQS::FileUtils;
 use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
-use Data::Dumper;
-use Hash::Merge qw( merge );
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -251,6 +254,12 @@ sub getPreprocessionConfig {
 
   if (defined $def->{groups_pattern}) {
     $def->{groups} = get_groups_by_pattern($def);
+  }
+
+  if(defined $def->{covariance_file}){
+    if(!defined $def->{groups} && defined $def->{sample_column} && defined $def->{group_column}){
+      $def->{groups} = get_groups_from_covariance_file($def->{covariance_file}, $def->{sample_column}, $def->{group_column});
+    }
   }
 
   if(defined $def->{ignore_samples}){
