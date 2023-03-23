@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 48;
+use Test::More tests => 49;
 
 { #test is_string
   ok(is_string("string"));
@@ -657,6 +657,15 @@ is_deeply( $cov_map, $cov_expect );
   is_deeply( $res, {                                       
                     'S1' => [ '1' ],
                     'S2' => [ '2', '3' ],
+                   }
+  );
+}
+
+{
+  my $res = get_groups_from_covariance_file(dirname(__FILE__) . "/../../data/pbmc_metadata.csv", "Sample_ID", "group");
+  is_deeply( $res, {                                       
+                    'cav' => [ 'CVD_002', 'CVD_003' ],
+                    'control' => [ 'CVD_001', 'CVD_006' ],
                    }
   );
 }

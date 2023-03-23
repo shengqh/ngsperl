@@ -17,6 +17,7 @@ use Hash::Merge qw( merge );
 use Tie::IxHash;
 use String::Util qw(trim);
 use List::MoreUtils qw(uniq);
+use Text::CSV qw( csv );
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -112,6 +113,7 @@ our %EXPORT_TAGS = (
       get_task_dep_pbs_map
       add_bind
       get_final_file_by_task_name
+      get_groups_from_covariance_file
       )
   ]
 );
@@ -1012,8 +1014,10 @@ sub get_sorted_raw_files {
   if ( exists $resultUnsorted->{".order"} ) {
     my $orders = $resultUnsorted->{".order"};
     @orderedKeys = @$orders;
-    print Dumper(longmess());
-    die "number of key defined in .order not equals to actual keys for @_" if ( scalar(@orderedKeys) != scalar(@keys) );
+    if ( scalar(@orderedKeys) != scalar(@keys) ){
+      print Dumper(longmess());
+      die "number of key defined in .order not equals to actual keys for @_" ;
+    }
   }
   else {
     @orderedKeys = sort @keys;
@@ -2447,6 +2451,26 @@ sub get_final_file_by_task_name {
     $final_file = $no_filelists[-1];
   }
   return($final_file);
+}
+
+sub get_groups_from_covariance_file {
+  my ($covariance_file, $sample_column, $group_column) = @_;
+  my $result = {};
+  if($covariance_file =~ /.csv$/){
+    my $aoh = csv(in => $covariance_file, headers => "auto"); 
+    for my $dic (@$aoh){
+      my $cur_sample = $dic->{$sample_column};
+      my $cur_group = $dic->{$group_column};
+      #print($cur_sample . " => " . $cur_group . "\n");
+      if (!defined $result->{$cur_group}){
+        $result->{$cur_group} = [$cur_sample];
+      }else{
+        my $old_samples = $result->{$cur_group};
+        push(@$old_samples, $cur_sample);
+      }
+    }
+  }
+  return($result);
 }
 
 1;
