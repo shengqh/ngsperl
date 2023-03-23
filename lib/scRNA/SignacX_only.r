@@ -1,3 +1,18 @@
+rm(list=ls()) 
+outFile='P8256'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge/result/P8256.final.rds'
+parFile2=''
+parFile3=''
+
+
+setwd('/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_SignacX/result')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library(SignacX)
 library(Seurat)
 library(ggplot2)
@@ -12,6 +27,17 @@ pca_dims=1:as.numeric(myoptions$pca_dims)
 reduction=myoptions$reduction
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 assay=ifelse(by_sctransform, "SCT", "RNA")
+
+SignacX_reference_file=myoptions$SignacX_reference_file
+if(is.null(SignacX_reference_file)){
+  R="default"
+}else if(SignacX_reference_file == ""){
+  R="default"
+}else if(!file.exists(SignacX_reference_file)){
+  stop(paste0('reference file not exists: ', SignacX_reference_file))
+}else{
+  R = readRDS(SignacX_reference_file)
+}
 
 if(!exists("obj")){
   obj=read_object(parFile1)
@@ -29,7 +55,7 @@ if(DefaultAssay(obj) == "integrated"){
 
 obj<-FindNeighbors(object = obj, reduction=reduction, dims=pca_dims, verbose=FALSE)
 
-labels <- Signac(obj)
+labels <- Signac(E=obj, R=R)
 
 celltypes = GenerateLabels(labels, E = obj)
 saveRDS(celltypes, file=paste0(outFile, ".SignacX.rds"))
