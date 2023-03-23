@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='P8256'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
-parFile2='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
+parFile1='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_03_choose/result/P8256.final.rds'
+parFile2='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_03_choose/result/P8256.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_edgeR_inCluster_bySample/result')
+setwd('/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_03_choose_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -18,6 +18,7 @@ library(ggplot2)
 library(ggpubr)
 library(Seurat)
 library(testit)
+library(data.table)
 
 options_table<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
@@ -82,13 +83,12 @@ if(1){
     }
     
     if("covariances" %in% names(comp_options)){
-      covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T, row.names=1)
+      covariances_tbl<-data.frame(fread(myoptions$covariance_file, stringsAsFactors = F, header=T), row.names=1)
       assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
       covariances=comp_options$covariances
     }else{
       covariances=NULL
     }
-
 
     idx<-1
     for (idx in c(1:length(cts))){
