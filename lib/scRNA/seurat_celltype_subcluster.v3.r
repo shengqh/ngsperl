@@ -3,13 +3,14 @@ outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
-parFile3='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
-parFile4='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_SignacX/result/crs.meta.rds'
+parFile1='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
+parFile3='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
+parFile4='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_SignacX/result/crs.meta.rds'
+parFile5='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_SingleR/result/crs.meta.rds'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
+setwd('/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -127,6 +128,17 @@ if(exists("parFile4")){
   }
 }
 
+bHasSingleR<-FALSE
+if(exists("parFile5")){
+  if(parFile5 != ""){
+    singleR<-readRDS(parFile5)
+    assert(rownames(singleR) == rownames(obj@meta.data))
+  
+    obj<-AddMetaData(obj, singleR$SingleR_labels, col.name = "SingleR")
+    bHasSingleR<-TRUE
+  }
+}
+
 meta<-obj@meta.data
 if(!is_file_empty(parSampleFile3)){
   rename_map = read.table(parSampleFile3, sep="\t", header=F)
@@ -135,7 +147,7 @@ if(!is_file_empty(parSampleFile3)){
 
   keys = unique(rename_map$V3)
   if("from" %in% rename_map$V2){
-    rname = keys[1]
+    rname = keys[2]
     for(rname in keys){
       rmap = rename_map[rename_map$V3 == rname,]
       from = rmap$V1[rmap$V2=="from"]
@@ -147,11 +159,11 @@ if(!is_file_empty(parSampleFile3)){
       }
       submeta<-meta[meta[,previous_layer] == from,]
 
-      if(!(cluster %in% unlist(submeta[,previous_cluster]))){
-        stop(paste0("Cannot find cluster ", cluster, " in cell type ", from, " of cluster ", previous_cluster))
+      if(!(all(cluster %in% unlist(submeta[,previous_cluster])))){
+        stop(paste0("Cannot find cluster ", paste0(cluster, collapse = "/"), " in cell type ", from, " of cluster ", previous_cluster))
       }
 
-      cells<-rownames(submeta)[submeta[,previous_cluster]==cluster]
+      cells<-rownames(submeta)[submeta[,previous_cluster] %in% cluster]
       meta[cells,previous_layer]<-to
     }
   }else{
@@ -238,7 +250,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[4]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -278,6 +290,58 @@ for(pct in previous_celltypes){
   
   reductions_rds = paste0(curprefix, ".reductions.rds")
   saveRDS(subobj@reductions, reductions_rds)
+
+  bHasCurrentSignacX<-FALSE
+  if(bHasSignacX){
+    sx<-table(subobj$signacx_CellStates)
+    sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
+    sxnames<-names(sx)
+
+    sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
+    sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
+
+    g4<-get_dim_plot_labelby(sxobj, reduction="umap", label.by = "signacx_CellStates", label=T) + ggtitle("SignacX")
+    g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = "signacx_CellStates", label=T) + ggtitle(paste0(subumap, ": SignacX"))
+    g<-g4+g5+plot_layout(ncol=2)
+
+    signacx_file=paste0(curprefix, ".SignacX.umap.png")
+    png(signacx_file, width=3600, height=1500, res=300)
+    print(g)
+    dev.off()
+
+    rm(g4, g5, g)
+
+    bHasCurrentSignacX = any(sxnames != "Unclassified")
+
+    cur_df = data.frame("file"=signacx_file, "type"="SignacX", "resolution"="", "celltype"=pct)
+    filelist<-rbind(filelist, cur_df)
+  }
+
+  bHasCurrentSingleR<-FALSE
+  if(bHasSingleR){
+    sx<-table(subobj$SingleR)
+    sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
+    sxnames<-names(sx)
+
+    srobj<-subset(subobj, SingleR %in% sxnames)
+    srobj$SingleR<-as.character(srobj$SingleR)
+    bHasCurrentSingleR<-TRUE
+
+    g4<-get_dim_plot_labelby(srobj, reduction="umap", label.by = "SingleR", label=T) + ggtitle("SingleR")
+    g5<-get_dim_plot_labelby(srobj, reduction=subumap, label.by = "SingleR", label=T) + ggtitle(paste0(subumap, ": SingleR"))
+    g<-g4+g5+plot_layout(ncol=2)
+    signacr_file=paste0(curprefix, ".SingleR.umap.png")
+    png(signacr_file, width=3600, height=1500, res=300)
+    print(g)
+    dev.off()
+
+    rm(g4, g5, g)
+
+    cur_df = data.frame("file"=signacr_file, "type"="SingleR", "resolution"="", "celltype"=pct)
+    filelist<-rbind(filelist, cur_df)
+
+    bHasCurrentSingleR = any(sxnames != "unclassified")
+  }
   
   cat(key, "Find marker genes\n")
   cluster = clusters[10]
@@ -347,48 +411,48 @@ for(pct in previous_celltypes){
     meta_rds = paste0(cluster_prefix, ".meta.rds")
     saveRDS(subobj@meta.data, meta_rds)
     
-    bHasCurrentSignacX<-FALSE
-    if(bHasSignacX){
+    if(bHasCurrentSignacX){
       sx<-table(subobj$signacx_CellStates)
-      sx<-sx[sx>5]
+      sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
       sxnames<-names(sx)
       sxnames<-sxnames[sxnames != "Unclassified"]
-      if(length(sxnames)>0){
-        sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
-        sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
-        bHasCurrentSignacX<-TRUE
-      }
+      sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
+      sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
+    }
+
+    if(bHasCurrentSingleR){
+      sx<-table(subobj$SingleR)
+      sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
+      sxnames<-names(sx)
+      sxnames<-sxnames[sxnames != "unclassified"]
+      srobj<-subset(subobj, SingleR %in% sxnames)
+      srobj$SingleR<-as.character(srobj$SingleR)
     }
 
     # bar file
     bar_file=paste0(cluster_prefix, ".bar.png")
     gb<-get_groups_dot(subobj, "display_layer", "orig.ident")
+    height = 1100
     if(bHasCurrentSignacX){
-      gb<-gb+get_groups_dot(subobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
+      gb<-gb+get_groups_dot(sxobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
+      height = height + 1100
     }
-    height=ifelse(bHasCurrentSignacX, 2200, 1100)
+    if(bHasCurrentSingleR){
+      gb<-gb+get_groups_dot(srobj, "display_layer", "SingleR") + plot_layout(ncol=1)
+      height = height + 1100
+    }
     png(bar_file, width=3000, height=height, res=300)
     print(gb)
     dev.off()
 
     # umap file
     g0<-DimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
-    g1<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
-    g3<-DimPlot(subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
-    g4<-DimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
-    if(bHasCurrentSignacX){
-      g2<-DimPlot(sxobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle("signacx")
-      g5<-DimPlot(sxobj, reduction=subumap, group.by = "signacx_CellStates", label=F) + ggtitle(paste0(subumap, ": signacX"))
-      g<-g0+g1+g2+g3+g4+g5
-    }else{
-      g<-g0+g1+g3+g4
-    }
-    ncol=ifelse(bHasCurrentSignacX, 3, 2)
-    g<-g+plot_layout(ncol=ncol)
-    width=ncol * 1800
-    height=3000
+    g1<-DimPlot(subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
+    g2<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
+    g3<-DimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
+    g<-g0+g1+g2+g3+plot_layout(ncol=2)
     umap_file = paste0(cluster_prefix, ".umap.png")
-    png(umap_file, width=width, height=height, res=300)
+    png(umap_file, width=3600, height=3000, res=300)
     print(g)
     dev.off()
 

@@ -10,6 +10,7 @@ output:
 ```{r setup, include=FALSE}
 library(knitr)
 library(dplyr)
+library(reshape2)
 library(kableExtra)
 knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
@@ -27,6 +28,8 @@ options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors 
 myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
+
+pre_file=paste0(outFile, ".pre_rename.umap.png")
 
 post_file=paste0(outFile, ".post_rename.umap.png")
 
@@ -55,6 +58,15 @@ figureRmd<-function(cts, files){
       next
     }
 
+    ct_files<-ct_tbl[is.na(ct_tbl$resolution),]
+    for(idx in 1:nrow(ct_files)){
+      fname = ct_files$type[idx]
+      fpath = ct_files$file[idx]
+      result<-paste0(result, "### ", fname, "\n\n")
+      result<-paste0(result, getFigure(fpath))
+    }
+
+    ct_tbl<-ct_tbl[!is.na(ct_tbl$resolution),]
     resolutions<-unique(ct_tbl$resolution)
     
     idy = 1
@@ -99,6 +111,18 @@ figureRmd<-function(cts, files){
 }
 cat(figureRmd(cts, files), file=resFile)
 
+
+```{r, echo=FALSE, eval=file.exists(pre_file)}
+cat("\n\n# Pre renaming cell type, before sub-clustering\n\n")
+include_graphics(pre_file)
+```
+
+```{r, echo=FALSE, eval=file.exists(post_file)}
+rename_tbl<-read.table("fileList3.txt", sep="\t", header=F)
+colnames(rename_tbl)<-c("Value", "Key", "Name")
+d_tbl=dcast(rename_tbl, Name~Key, value.var="Value", fun.aggregate=function(x){paste0(x, collapse=",")})
+d_tbl<-d_tbl[,c("from","cluster","to")]
+output_table(d_tbl, "Rename/delete sub clusters")
 ```
 
 ```{r, echo=FALSE, eval=file.exists(post_file)}
