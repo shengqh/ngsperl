@@ -134,6 +134,8 @@ sub add_seurat_rawdata {
       pool_sample           => getValue( $def, "pool_sample" ),
       hto_sample_file       => $hto_sample_file,
       ensembl_gene_map_file => $def->{ensembl_gene_map_file},
+      keep_seurat_object => getValue( $def, "keep_seurat_object", 0 ),
+      seurat_sample_column => $def->{"seurat_sample_column"},
     },
     parameterSampleFile3 => $def->{"pool_sample_groups"},
     parameterSampleFile4_ref => $hto_ref,
@@ -653,6 +655,7 @@ sub add_signacx_only {
       pca_dims            => getValue( $def, "pca_dims" ),
       bubblemap_file        => $def->{bubblemap_file},
       by_sctransform        => getValue( $def, "by_sctransform" ),
+      SignacX_reference_file => $def->{SignacX_reference_file}
     },
     output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
     sh_direct       => 1,
@@ -760,7 +763,7 @@ sub addSignac {
 }
 
 sub add_call_validation {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $signac_task, $singleR_task, $sctk_task ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $signac_task, $singleR_task, $sctk_task ) = @_;
   my $signac_ref = defined $signac_task ? [$signac_task, ".meta.rds"] : undef;
   my $singleR_ref = defined $singleR_task ? [$singleR_task, ".meta.rds"] : undef;
   my $sctk_ref = defined $sctk_task ? [$sctk_task, ".meta.rds"] : undef;
@@ -770,10 +773,14 @@ sub add_call_validation {
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_validation.r",
+    rReportTemplate => "../scRNA/seurat_scDynamic_validation.rmd,reportFunctions.R",
+    rmd_ext => ".call_validation.html",
+    run_rmd_independent => 1,
     parameterFile1_ref       => $object_ref,
     parameterFile2_ref       => $meta_ref,
     parameterFile3_ref       => $signac_ref,
     parameterFile4_ref       => $singleR_ref,
+    parameterFile5_ref => $call_files_ref,
     parameterSampleFile1     => {
       task_name => getValue($def, "task_name"),
       pca_dims              => getValue( $def, "pca_dims" ),
@@ -1088,6 +1095,8 @@ sub addEdgeRTask {
     "bBetweenCluster" => $bBetweenCluster,
     "DE_by_cell" => $DE_by_cell,
     "covariance_file" => $def->{covariance_file},
+    "sample_column" => $def->{sample_column},
+    "group_column" => $def->{group_column},
     "reduction" => $reduction,
   };
 
@@ -1379,7 +1388,7 @@ sub addComparison {
 sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
 
-  my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".scDynamic.meta.rds";
+  my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".iter_png.csv,.scDynamic.meta.rds";
   my $rmd_ext = $by_individual_sample ? ".dynamic_individual.html":".dynamic.html";
   my $rReportTemplate = $by_individual_sample ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R":"../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.R";
 
@@ -1433,7 +1442,7 @@ sub addDynamicCluster {
 }
 
 sub addSubCluster {
-  my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $signacX_task, $cur_options, $rename_map) = @_;
+  my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_task, $singleR_task) = @_;
 
   my $by_integration;
   my $integration_by_harmony;
@@ -1512,6 +1521,12 @@ sub addSubCluster {
   if(defined $signacX_task){
     if(defined $config->{$signacX_task}){
       $config->{$subcluster_task}{parameterFile4_ref} = [ $signacX_task, ".meta.rds" ];
+    }
+  }
+
+  if(defined $singleR_task){
+    if(defined $config->{$singleR_task}){
+      $config->{$subcluster_task}{parameterFile5_ref} = [ $singleR_task, ".meta.rds" ];
     }
   }
 
