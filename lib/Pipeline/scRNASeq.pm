@@ -681,6 +681,11 @@ sub getScRNASeqConfig {
           }
           my $multires_celltype = $celltype_cluster . "_celltype_summary";
 
+          if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
+            my $validation_task = $multires_task . "_validation";
+            add_call_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $signacX_task, $singleR_task, $sctk_task, $celltype_cluster . "_celltype" );
+          }
+
           my $cur_options = {
             reduction => $reduction, 
             celltype_layer => $multires_celltype,
