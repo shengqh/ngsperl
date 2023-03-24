@@ -36,8 +36,9 @@ outFile<-myoptions$task_name
 group_def<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 group_def <- group_def %>% 
      group_by(V2) %>% 
-     mutate(Samples = paste0(V1, collapse = "")) 
+     mutate(Samples = paste0(V1, collapse = ",")) 
 group_def<-group_def[,c("V2", "Samples")]
+group_def<-group_def[!duplicated(group_def),]
 if(is_between_cluster){
   colnames(group_def)<-c("Group", "Cluster")
 }else{
@@ -62,7 +63,12 @@ if(has_category){
 edgeR_files<-read.csv(paste0(outFile, ".edgeR.files.csv"))
 comparisons<-unique(edgeR_files$comparison)
 
-num_cell<-read.csv(paste0(outFile, ".num_cell.csv"))
+num_cell_file = paste0(outFile, ".num_cell.csv")
+if(file.exists(num_cell_file)){
+  num_cell<-read.csv(num_cell_file)
+}else{
+  num_cell<-NA
+}
 
 ```
 
@@ -122,10 +128,12 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
         design_data=design_data[!duplicated(design_data$Sample), c(1,3,4)]
       }
 
-      ct_num_cell<-subset(num_cell, cell_type == ct)
-      ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
+      if(!all(is.na(num_cell))){
+        ct_num_cell<-subset(num_cell, cell_type == ct)
+        ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
 
-      design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+        design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+      }
 
       result<-paste0(result,"\n### design table\n\n")
       result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
@@ -197,9 +205,11 @@ between_cluster_rmd<-function(edgeR_files, comparisons, outFile){
       }
       design_data$Num_of_cell<-cell_num[design_data$Group]
     }else{
-      ct_num_cell<-subset(num_cell, cell_type == ct)
-      ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
-      design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+      if(!all(is.na(num_cell))){
+        ct_num_cell<-subset(num_cell, cell_type == ct)
+        ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
+        design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+      }
     }
 
     result<-paste0(result,"\n## design table\n\n")
