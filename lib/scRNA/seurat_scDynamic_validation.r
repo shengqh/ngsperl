@@ -1,16 +1,15 @@
 rm(list=ls()) 
-outFile='P8256'
+outFile='AK6383'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge/result/P8256.final.rds'
-parFile2='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_01_call/result/P8256.scDynamic.meta.rds'
-parFile3='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_SignacX/result/P8256.meta.rds'
-parFile4='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_SingleR/result/P8256.meta.rds'
-parFile5='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_01_call/result/P8256.iter_png.csv'
+parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge/result/AK6383.final.rds'
+parFile2='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_01_call/result/AK6383.meta.rds'
+parFile3='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_SignacX/result/AK6383.meta.rds'
+parFile4='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_SingleR/result/AK6383.meta.rds'
 
 
-setwd('/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_01_call_validation/result')
+setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_01_call_validation/result')
 
 ### Parameter setting end ###
 
@@ -22,8 +21,15 @@ options(future.globals.maxSize= 10779361280)
 option_tbl=read.table(parSampleFile1, sep="\t")
 myoptions = split(option_tbl$V1, option_tbl$V2)
 doublet_column = myoptions$doublet_column
+celltype_column = myoptions$celltype_column
 
 meta<-readRDS(parFile2)
+
+if(paste0("seurat_", celltype_column) %in% colnames(meta)){
+  celltype_cluster_column = paste0("seurat_", celltype_column)
+}else{
+  celltype_cluster_column = paste0(celltype_column, "_clusters")
+}
 
 validation_columns=c()
 
@@ -74,18 +80,18 @@ if(file.exists(parSampleFile2)){
 
 saveRDS(meta, paste0(outFile, ".meta.rds"))
 
-draw_figure<-function(outFile, meta, validation_columns){
-  cts = unique(meta$layer4)
+draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, validation_columns){
+  cts = unique(meta[,celltype_column])
   ct = cts[1]
   for(ct in cts){
     pct = celltype_to_filename(ct)
-    ct_meta = subset(meta, layer4 == ct)
+    ct_meta = meta[meta[,celltype_column] == ct,]
 
     alltbl=NULL
 
     col_name="SignacX"
     for(col_name in validation_columns){
-      tbl = data.frame(table(ct_meta$layer4_clusters, ct_meta[,col_name]))
+      tbl = data.frame(table(ct_meta[,celltype_cluster_column], ct_meta[,col_name]))
       tbl$Var1 = as.numeric(as.character(tbl$Var1))
       tbl$Category=col_name
 
@@ -103,7 +109,8 @@ draw_figure<-function(outFile, meta, validation_columns){
 }
 
 validation_columns<-c("orig.ident", validation_columns)
-draw_figure(outFile, meta, validation_columns)
+draw_figure(outFile, meta, celltype_column, celltype_cluster_column, validation_columns)
 
 writeLines(validation_columns, "validation_columns.txt")
 writeLines(parFile5, "iter_png.txt")
+
