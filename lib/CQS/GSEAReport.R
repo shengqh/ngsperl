@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='AG_integrated'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample_GSEA_report/result')
+setwd('/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_GSEA_Hs_report/result')
 
 ### Parameter setting end ###
 
@@ -30,6 +30,9 @@ files<-read.table(parSampleFile1, header=FALSE, as.is=TRUE)
 if(nrow(files) == 1 & files$V2[1] == outFile){
   #single cell GSEA result
   files<-read.csv(files$V1[1])
+  if(all(grepl("^_", files$compName))){
+    files$compName<-gsub("_GSEA.rnk.*", "", basename(dirname(files$Folder)))
+  }
 }else if ("task_name" %in% files$V2) {
   params_map<-split(files$V1, files$V2)
   task_name<-params_map$task_name
