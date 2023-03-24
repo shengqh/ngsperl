@@ -713,7 +713,7 @@ sub add_singleR_cell {
       by_sctransform        => getValue( $def, "by_sctransform" ),
     }),
     output_file_ext => ".SingleR.png;.SingleR.rds;.meta.rds",
-    no_docker => 1,
+    #no_docker => 1,
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
@@ -763,7 +763,7 @@ sub addSignac {
 }
 
 sub add_call_validation {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $signac_task, $singleR_task, $sctk_task ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $signac_task, $singleR_task, $sctk_task, $celltype_column ) = @_;
   my $signac_ref = defined $signac_task ? [$signac_task, ".meta.rds"] : undef;
   my $singleR_ref = defined $singleR_task ? [$singleR_task, ".meta.rds"] : undef;
   my $sctk_ref = defined $sctk_task ? [$sctk_task, ".meta.rds"] : undef;
@@ -786,6 +786,7 @@ sub add_call_validation {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
       doublet_column => "doubletFinder_doublet_label_resolution_1.5",
+      celltype_column => $celltype_column,
     },
     parameterSampleFile2_ref => $sctk_ref,
     parameterSampleFile3 => $def->{pool_sample_groups},
