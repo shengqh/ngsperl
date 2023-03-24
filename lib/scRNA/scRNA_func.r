@@ -871,15 +871,17 @@ read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
 
   colnames(genes)[1:2] = c("gene", "cell_type")  
 
-  if(ncol(genes) > 2){
-    #for some excel files, the third column is addtional genes
-    if(any(grepl(',', genes[,1])) & any(grepl(',', genes[,3]))){
-      genes[,3][is.na(genes[,3])]<-""
-      genes[,1] = paste0(genes[,1], ",", genes[,3])
-    }
+  #don't use the marker genes other than thhe first column, it might just annotation
+  #if you want to use those genes, put into the first column
+  # if(ncol(genes) > 2){
+  #   #for some excel files, the third column is addtional genes
+  #   if(any(grepl(',', genes[,1])) & any(grepl(',', genes[,3]))){
+  #     genes[,3][is.na(genes[,3])]<-""
+  #     genes[,1] = paste0(genes[,1], ",", genes[,3])
+  #   }
 
-    genes<-genes[,c(1,2)]
-  }
+  #   genes<-genes[,c(1,2)]
+  # }
 
   for(idx in c(2:nrow(genes))){
     if(is.na(genes[idx,"cell_type"])){
