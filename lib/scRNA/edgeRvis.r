@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='doublets'
+outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/data/wanjalla_lab/projects/20230220_scRNA_P8008/P8008_CW2_compressed.rds'
-parFile2='/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell/result/doublets.edgeR.files.csv'
-parFile3=''
+parFile1='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.final.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample/result/crs.edgeR.files.csv'
+parFile3='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.meta.rds'
 
 
-setwd('/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell_vis/result')
+setwd('/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample_vis/result')
 
 ### Parameter setting end ###
 
@@ -88,7 +88,7 @@ for (prefix in rownames(edgeRres)){
       }else{
         #pseudo_bulk
         cells<-clusterDf[clusterDf[,cluster_name] == cellType,]
-        cells<-cells[cells$orig.ident %in% names(gmap),]
+        cells<-cells[cells$orig.ident %in% design_data$Sample,]
         cell_obj<-subset(obj, cells=rownames(cells))
 
         gmap<-unlist(split(design_data$Group, design_data$Sample))
