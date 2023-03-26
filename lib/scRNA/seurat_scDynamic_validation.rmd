@@ -3,8 +3,7 @@ title: "Dynamic cell type validation"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
-    toc_depth: 3
-    number_sections: true
+    toc_depth: 2
 ---
 
 ```{r setup, include=FALSE}
@@ -28,16 +27,22 @@ options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors 
 myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
+celltype_column=myoptions$celltype_column
 
-iter_png_file=unlist(readLines("iter_png.txt"))
-iter_png<-read.csv(iter_png_file)
-iter_png$fname<-paste0(dirname(iter_png_file), "/details/", iter_png$fname)
+if(file.exists("iter_png.txt")){
+  iter_png_file=unlist(readLines("iter_png.txt"))
+  iter_png<-read.csv(iter_png_file)
+  iter_png$fname<-paste0(dirname(iter_png_file), "/details/", iter_png$fname)
+}else{
+  iter_png = NULL
+}
 
 meta_file=paste0(outFile, ".meta.rds")
 meta<-readRDS(meta_file)
-cts<-levels(meta$layer4)
+
+cts<-levels(meta[,celltype_column])
 if(all(is.null(cts))){
-  tb<-table(meta$layer4)
+  tb<-table(meta[,celltype_column])
   tb<-tb[order(tb, decreasing = TRUE)]
   cts<-names(tb)
 }
@@ -55,26 +60,28 @@ figureRmd<-function(outFile, cts, iter_png){
   for(ct in cts){
     result<-paste0(result, paste0("\n\n# ", ct, "\n\n"))
     ct_name = celltype_to_filename(ct)
+
+    if(!is.null(iter_png)){
+      ct_png<-iter_png[iter_png$pct == ct,]
+
+      old_umap = get_last_figure(ct_png, "old_umap")
+      new_umap = get_last_figure(ct_png, "new_umap")
+      dot = get_last_figure(ct_png, "dot")
+      cta_png = get_last_figure(ct_png, "cta_png")
+
+      result<-paste0(result, paste0("\n\n## UMAP\n\n"))
+      result<-paste0(result, getFigure(old_umap))
+
+      result<-paste0(result, paste0("\n\n## SUB_UMAP\n\n"))
+      result<-paste0(result, getFigure(new_umap))
+
+      result<-paste0(result, paste0("\n\n## Marker genes\n\n"))
+      result<-paste0(result, getFigure(dot))
+
+      result<-paste0(result, paste0("\n\n## Cell type enrichment score\n\n"))
+      result<-paste0(result, getFigure(cta_png))
+    }
     
-    ct_png<-iter_png[iter_png$pct == ct,]
-
-    old_umap = get_last_figure(ct_png, "old_umap")
-    new_umap = get_last_figure(ct_png, "new_umap")
-    dot = get_last_figure(ct_png, "dot")
-    cta_png = get_last_figure(ct_png, "cta_png")
-
-    result<-paste0(result, paste0("\n\n## UMAP\n\n"))
-    result<-paste0(result, getFigure(old_umap))
-
-    result<-paste0(result, paste0("\n\n## SUB_UMAP\n\n"))
-    result<-paste0(result, getFigure(new_umap))
-
-    result<-paste0(result, paste0("\n\n## Marker genes\n\n"))
-    result<-paste0(result, getFigure(dot))
-
-    result<-paste0(result, paste0("\n\n## Cell type enrichment score\n\n"))
-    result<-paste0(result, getFigure(cta_png))
-
     result<-paste0(result, paste0("\n\n## Validation\n\n"))
     vc_file = paste0(getwd(), "/", outFile, ".", ct_name, ".png")
     result<-paste0(result, getFigure(vc_file))

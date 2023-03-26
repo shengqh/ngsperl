@@ -59,7 +59,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_signacx_only
   addSignac
   
-  add_call_validation
+  add_celltype_validation
 
   addCellRangerCount 
   addCellRangerVdj
@@ -762,8 +762,8 @@ sub addSignac {
   push( @$tasks, $task_name );
 }
 
-sub add_call_validation {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $signac_task, $singleR_task, $sctk_task, $celltype_column ) = @_;
+sub add_celltype_validation {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $signac_task, $singleR_task, $sctk_task, $celltype_column, $rmd_ext ) = @_;
   my $signac_ref = defined $signac_task ? [$signac_task, ".meta.rds"] : undef;
   my $singleR_ref = defined $singleR_task ? [$singleR_task, ".meta.rds"] : undef;
   my $sctk_ref = defined $sctk_task ? [$sctk_task, ".meta.rds"] : undef;
@@ -774,7 +774,7 @@ sub add_call_validation {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_validation.r",
     rReportTemplate => "../scRNA/seurat_scDynamic_validation.rmd,reportFunctions.R",
-    rmd_ext => ".call_validation.html",
+    rmd_ext => $rmd_ext,
     run_rmd_independent => 1,
     parameterFile1_ref       => $object_ref,
     parameterFile2_ref       => $meta_ref,

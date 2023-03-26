@@ -456,7 +456,7 @@ sub getScRNASeqConfig {
 
         if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
           my $validation_task = $scDynamic_task . "_validation";
-          add_call_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, $signacX_task, $singleR_task, $sctk_task );
+          add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, $signacX_task, $singleR_task, $sctk_task, ".dynamic_call_validation.html");
         }
 
         if(defined $def->{bubble_plots}){
@@ -503,6 +503,11 @@ sub getScRNASeqConfig {
             addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
             $obj_ref = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
+
+            if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
+              my $validation_task = $choose_task . "_validation";
+              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, $signacX_task, $singleR_task, $sctk_task, "seurat_cell_type", ".dynamic_choose_validation.html" );
+            }
 
             $celltype_task = $choose_task;
 
@@ -683,7 +688,7 @@ sub getScRNASeqConfig {
 
           if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
             my $validation_task = $multires_task . "_validation";
-            add_call_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $signacX_task, $singleR_task, $sctk_task, $celltype_cluster . "_celltype" );
+            add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $signacX_task, $singleR_task, $sctk_task, $celltype_cluster . "_celltype", ".multires_call_validation.html" );
           }
 
           my $cur_options = {
@@ -700,6 +705,11 @@ sub getScRNASeqConfig {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
             my $table = getValue($def, "multires_subclusters_table");
             addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
+
+            if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
+              my $validation_task = $choose_task . "_validation";
+              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, $signacX_task, $singleR_task, $sctk_task, "seurat_cell_type", ".multires_choose_validation.html" );
+            }
 
             $celltype_task = $choose_task;
 
