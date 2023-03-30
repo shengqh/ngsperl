@@ -225,7 +225,7 @@ sub result {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
-  my $output_no_name = get_option( $config, $section, "output_no_name", 0 );
+  my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
 
   my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
@@ -239,7 +239,7 @@ sub result {
     for my $output_ext (@$output_exts) {
       my $result_file;
       if ( $output_ext ne "" ) {
-        if ($output_no_name) {
+        if (not $samplename_in_result) {
           $result_file = $output_ext;
         }elsif($output_ext =~ /__NAME__/) {
           $result_file = $output_ext;

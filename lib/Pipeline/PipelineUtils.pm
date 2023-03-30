@@ -237,7 +237,6 @@ python3 $python_script -i fileList1.txt -o ${task_name}.FastQC
     rmd_ext => ".FastQC.html",
     option => "",
     output_file_ext => ".FastQC.summary.tsv,.FastQC.summary.tsv.png,.FastQC.reads.tsv,.FastQC.reads.tsv.png,.FastQC.baseQuality.tsv,.FastQC.baseQuality.tsv.png,.FastQC.sequenceGC.tsv,.FastQC.sequenceGC.tsv.png,.FastQC.adapter.tsv,.FastQC.adapter.tsv.png,.FastQC.overrepresented.tsv",
-    output_no_name => 0,
     docker_prefix => "report_",
     can_result_be_empty_file => 0,
     parameterSampleFile1_ref => [$fastqcTask, "data.txt"],
@@ -2260,7 +2259,7 @@ fi
     output_arg            => "",
     output_file_ext       => "quant.genes.sf",
     output_other_ext => "__NAME__.bam",
-    output_no_name => 1,
+    samplename_in_result => 0,
     sh_direct => 0,
     pbs                       => {
       "nodes"     => "1:ppn=" . $thread,
@@ -3304,7 +3303,7 @@ sub add_gsea {
     },
     remove_empty_parameter => 1,
     output_ext => "gsea_files.csv",
-    output_no_name => 1,
+    samplename_in_result => 0,
     sh_direct                  => 1,
     pbs                        => {
       "nodes"     => "1:ppn=1",

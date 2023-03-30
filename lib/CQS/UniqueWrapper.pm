@@ -46,8 +46,8 @@ sub result {
     return($result);
   }
 
-  my $output_no_name             = get_option( $config, $section, "output_no_name",                0 );
-  my $output_taskname = $output_no_name ? "" : $task_name;
+  my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
+  my $output_taskname = $samplename_in_result ? $task_name : "";
 
   my $output_file                = get_option( $config, $section, "output_file",                "" );
   my $output_file_exts = get_output_ext_list( $config, $section );
