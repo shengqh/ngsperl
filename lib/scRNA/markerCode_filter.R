@@ -1,6 +1,7 @@
 
 library(dplyr)
 library(patchwork)
+library(data.table)
 
 source("scRNA_func.r")
 
@@ -153,14 +154,36 @@ plotfunction_celltype<-function(cta_mat) {
 
 ## if provide ensembl ID, using the convertfile (csv format) to convert to gene symbol, the first line is gene symbol and then second is ensembl
 convertEnsembltoGeneSymbol<-function(counts,convertfile) {
-  
-  converttable<-read.csv(convertfile,stringsAsFactors = F)
+  if(is.null(convertfile)){
+    return(counts)
+  }
+  if(is.na(convertfile)){
+    return(counts)
+  }
+  if(convertfile == ""){
+    return(counts)
+  }
+  converttable<-data.frame(fread(convertfile), stringsAsFactors = F)
   ind<-match(rownames(counts),converttable[,2])
-  if (sum(is.na(ind)>0)) {
-    counts<-counts[!is.na(ind),]
-    genename<-converttable[ind[!is.na(ind)],1]
-    warning('convertfile is incorrect')} else {genename<-converttable[ind,1]}
-  
+  num_is_na = sum(is.na(ind))
+  if (num_is_na>0) {
+    if(any(rownames(counts) %in% converttable[,1])){ #complementary file
+      genename<-rownames(counts)
+      gmap=unlist(split(converttable[,1], converttable[,2]))
+      in_gmap = (genename %in% names(gmap)) & !(gmap[genename] %in% genename)
+      old_names=genename[in_gmap]
+      new_names=gmap[old_names]
+      is_dup=duplicated(new_names)
+      new_names[is_dup]=old_names[is_dup]
+      genename[in_gmap] = new_names
+    }else{#keep converted only
+      counts<-counts[!is.na(ind),]
+      genename<-converttable[ind[!is.na(ind)],1]
+      warning(paste0('convertfile is incorrect, there are ', num_is_na, ' missing names'))
+    }
+  }else{
+    genename<-converttable[ind,1]
+  }
   
   ind_dup<-duplicated(genename)
   counts<-counts[!ind_dup,]
