@@ -389,18 +389,28 @@ sub getScRNASeqConfig {
 
     my $essential_gene_task = add_essential_gene($config, $def, $summary, $target_dir);
 
-    my $seurat_rawdata = "seurat_rawdata";
+    my $seurat_rawdata = undef;
     if ( getValue( $def, "perform_seurat" ) ) {
+      my $doublets_ref = undef;
+      my $doublet_column = undef;
+      my $no_doublets = "";
+      if(getValue($def, "remove_doublets", 0) && (defined $sctk_task)){
+        $doublets_ref = [$sctk_task, ".meta.rds"];
+        $doublet_column = getValue($def, "remove_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
+        $no_doublets = "_nodoublets";
+      }
+      $seurat_rawdata = "seurat${no_doublets}_rawdata";
+
       if (getValue($def, "merge_seurat_object", 0)){
-        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, $files_def);
+        add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, $files_def, $doublets_ref, $doublet_column);
       }else{
-        add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def);
+        add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, $doublets_ref, $doublet_column );
       }
 
       push (@report_files, ($seurat_rawdata, "rawobj.rds"));
       push (@report_names, "raw_obj");
 
-      my ($seurat_task, $reduction) = add_seurat($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task);
+      my ($seurat_task, $reduction) = add_seurat($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets);
       my $obj_ref = [$seurat_task, ".final.rds"];
 
       push (@report_files, ($seurat_task, ".final.png", 
@@ -456,7 +466,7 @@ sub getScRNASeqConfig {
 
         if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
           my $validation_task = $scDynamic_task . "_validation";
-          add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, $signacX_task, $singleR_task, $sctk_task, ".dynamic_call_validation.html");
+          add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, $signacX_task, $singleR_task, $sctk_task, "layer4", ".dynamic_call_validation.html");
         }
 
         if(defined $def->{bubble_plots}){
