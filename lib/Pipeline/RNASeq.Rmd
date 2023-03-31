@@ -13,6 +13,10 @@ output:
 }
 ```
 
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
+
 ```{r setup, include=FALSE}
 library(kableExtra)
 library(tidyverse)
@@ -23,17 +27,19 @@ source("Pipeline.R")
 
 rnaseqOptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
 rownames(rnaseqOptions)<-rnaseqOptions$V2
-
-taskName<-rnaseqOptions["task_name", 1]
 out.width<-rnaseqOptions["out.width", 1]
+taskName<-rnaseqOptions["task_name", 1]
 
 knitr::opts_chunk$set(
-  tidy = TRUE,
-  tidy.opts = list(width.cutoff = 120),
-  message = FALSE,
-  warning = FALSE,
-  out.width=out.width
-)
+  echo=FALSE,  
+  message=FALSE, 
+  warning=FALSE, 
+  results = 'asis', 
+  fig.width=7, 
+  fig.height = 7,
+  tidy = TRUE, 
+  tidy.opts = list(comment = FALSE, width.cutoff = 120),
+  out.width=out.width)
 options(knitr.graphics.rel_path = FALSE)
 ```
 
@@ -356,11 +362,12 @@ display_webgestalt(files)
 <br>
   
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE, eval=hasGseaAnalysis} 
+cat("## GSEA\n\n")
 gsea_file_list = files$V1[files$V2 == "report_gsea"]
 gsea_files = read.csv(gsea_file_list, row.names=1)
 gsea_rmd_file="gsea.rmd"
 gsea_files$file_path=paste0(dirname(gsea_file_list), "/", gsea_files$file_path)
-save_gsea_rmd(gsea_files, gsea_rmd_file, "#")
+save_gsea_rmd(gsea_files, gsea_rmd_file, "##")
 #gsea_files=files[grepl("gsea_", files$V2),]
 #display_gsea(gsea_files, paste0(taskName, "/gsea/"))
 ``` 
