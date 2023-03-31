@@ -13,11 +13,13 @@ display_webgestalt=function(files) {
     comparison<-comparisons[j]
     comp_files<-enrich_files[enrich_files$Comparisons == comparison,]
     cat(paste0("  \n### ", comparison, "  \n"))
-  
+
+    have_result = FALSE
     for (i in 1:nrow(comp_files)){
       if (!file.exists(comp_files[i,1])) {
         next;
       }
+      have_result = TRUE
       ename<-rownames(comp_files)[i]
       if(grepl(".html.rds", comp_files[i,1])){
         plotData <-readRDS(comp_files[i,1])
@@ -40,7 +42,11 @@ display_webgestalt=function(files) {
         kable_styling() %>%
         htmltools::HTML())
       }
-    }  
+    }
+
+    if(!have_result){
+      cat("\n\nNo WebGestalt result. It might caused by very limited number of differential expressed genes.\n<hr>")
+    }
   }
 }
 
@@ -283,7 +289,7 @@ save_gsea_rmd<-function(files, resFile, rmd_prefix=""){
 
         if(!is.null(file_map$enriched_png)){
           result<-paste0(result, paste0("\n\n", rmd_prefix, "### Top enriched gene sets\n\n"))
-          result<-paste0(result, getFigure(file_map$enriched_png))
+          result<-paste0(result, getFigure(file_map$enriched_png, out_width="100%"))
         }
       }
     }
