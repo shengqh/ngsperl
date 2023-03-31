@@ -51,44 +51,50 @@ sub getConfig {
 
   my $target_dir = $def->{target_dir};
 
-  my $pipseeker_sif = getValue($def, "pipseeker_sif");
+  my $pipseeker_docker_command = getValue($def, "pipseeker_docker_command");
   my $pipseeker_star_index = getValue($def, "pipseeker_star_index");
   my $singularity_option = getValue($def, "singularity_option", "");
 
   my $pipseeker = "pipseeker";
   $config->{$pipseeker} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "${target_dir}/${pipseeker}",
-    option                => "
+    class => "CQS::ProgramWrapperOneToMany",
+    target_dir => "${target_dir}/${pipseeker}",
+    option => "
 
-singularity run $singularity_option $pipseeker_sif count --input-path __FILE__ --id __NAME__ --output-root ${target_dir}/${pipseeker}/result/__NAME__ --star-index-path $pipseeker_star_index --star-threads 8
+$pipseeker_docker_command count --input-path __FILE__ --id __NAME__ --output-root ${target_dir}/${pipseeker}/result/__NAME__ --star-index-path $pipseeker_star_index --star-threads 8
 
 #__OUTPUT__
 ",
-    interpretor           => "",
-    program               => "",
-    check_program         => 0,
-    source_arg            => "-i",
-    source_ref            => $untrimed_ref,
+    interpretor => "",
+    program => "",
+    check_program => 0,
+    source_arg => "--input-path",
+    source_ref => $untrimed_ref,
     output_to_same_folder => 0,
-    output_arg            => "--output-root",
-    output_no_name => 1,
-    output_file_ext    => "filtered_matrix/sensitivity_1,filtered_matrix/sensitivity_2,filtered_matrix/sensitivity_3,filtered_matrix/sensitivity_4,filtered_matrix/sensitivity_5",
-    use_tmp_folder        => 0,
-    sh_direct             => 0,
-    pbs                   => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => "96",
-      "mem"       => "100gb"
+    output_arg => "--output-root",
+    samplename_in_result => 0,
+    samplename_in_result => 0,
+    output_file_prefix => "",
+    output_file_ext => "filtered_matrix/sensitivity__ITER_",
+    iteration => 5,
+    iteration_fill_length => 1,
+    use_tmp_folder => 0,
+    sh_direct => 0,
+    no_docker => 1,
+    pbs => {
+      "nodes" => "1:ppn=8",
+      "walltime" => "96",
+      "mem" => "100gb"
     },
   };
 
   push @$individual, ($pipseeker);
 
-  my $pipseeker_qc = $pipseeker . "_qc";
-  if(defined $def->{qc_files}){
-    add_individual_qc($config, $def, $summary, $target_dir, $pipseeker_qc, "$target_dir/raw_qc_filter_config.txt", undef, undef, undef);
+  my $pipseeker_qc = "qc";
+
+  if(getValue($def, "perform_individual_qc", 1)){
+    my $qc_pattern = getValue($def, "qc_pattern", "sensitivity_[345]");
+    add_individual_qc($config, $def, $summary, $target_dir, $pipseeker_qc, "$target_dir/raw_qc_filter_config.txt", 0, undef, undef, [$pipseeker, $qc_pattern]);
   }
 
   return ($config);
