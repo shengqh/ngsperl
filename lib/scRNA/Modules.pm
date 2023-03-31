@@ -112,7 +112,7 @@ sub get_marker_gene_dict {
 }
 
 sub add_seurat_rawdata {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def) = @_;
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, $doublets_ref, $doublet_column) = @_;
   $config->{$seurat_rawdata} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -136,9 +136,11 @@ sub add_seurat_rawdata {
       ensembl_gene_map_file => $def->{ensembl_gene_map_file},
       keep_seurat_object => getValue( $def, "keep_seurat_object", 0 ),
       seurat_sample_column => $def->{"seurat_sample_column"},
+      doublet_column => $doublet_column,
     },
     parameterSampleFile3 => $def->{"pool_sample_groups"},
     parameterSampleFile4_ref => $hto_ref,
+    parameterSampleFile5_ref => $doublets_ref,
     output_file_ext      => ".rawobj.rds",
     sh_direct            => 1,
     pbs                  => {
@@ -180,7 +182,7 @@ sub add_seurat_merge_object {
 }
 
 sub add_seurat {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task) = @_;
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets) = @_;
 
   my $seurat_task;
   my $reduction;
@@ -188,27 +190,28 @@ sub add_seurat {
   my @sample_names = keys %{$def->{files}};
   my $nsamples = scalar(@sample_names);
   my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
-  my $sct_str = getValue( $def, "by_sctransform" ) ? "_sct":"";
-  #my $thread = getValue( $def, "by_sctransform" ) ? 8 : 1;
-  my $thread = 1;
-  my $rmd_ext = getValue( $def, "by_sctransform" ) ? ".sct":"";
+  my $by_sctransform = getValue( $def, "by_sctransform" );
+  my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 1);
+  my $sct_str = $by_sctransform ? ($use_sctransform_v2 ? "_sct2": "_sct"):"";
+  my $thread = getValue( $def, "sctransform_thread", 1 );
+  my $rmd_ext = $by_sctransform ? ($use_sctransform_v2 ? ".sct2": ".sct"):"";
 
   my $preprocessing_rscript;
   if($by_integration){
     my $integration_by_harmony = getValue( $def, "integration_by_harmony", 1);
     if($integration_by_harmony){
-      $seurat_task = "seurat${sct_str}_harmony";
+      $seurat_task = "seurat${no_doublets}${sct_str}_harmony";
       $preprocessing_rscript = "../scRNA/seurat_harmony.r";
       $reduction = "harmony";
       $rmd_ext = $rmd_ext . ".harmony";
     }else{
-      $seurat_task = "seurat${sct_str}_integration";
+      $seurat_task = "seurat${no_doublets}${sct_str}_integration";
       $preprocessing_rscript = "../scRNA/seurat_integration.r";
       $reduction = "pca";
       $rmd_ext = $rmd_ext . ".integration";
     }
   }else{
-    $seurat_task = "seurat${sct_str}_merge";
+    $seurat_task = "seurat${no_doublets}${sct_str}_merge";
     $preprocessing_rscript = "../scRNA/seurat_merge.r";
     $reduction = "pca";
     $rmd_ext = $rmd_ext . ".merge";
@@ -241,8 +244,10 @@ sub add_seurat {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_integration        => $by_integration,
       by_sctransform        => getValue( $def, "by_sctransform" ),
+      use_sctransform_v2 => $use_sctransform_v2,
       batch_for_integration => getValue( $def, "batch_for_integration" ),
       qc_genes              => getValue( $def, "qc_genes", "" ),
+      thread => $thread,
     },
     output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
     sh_direct            => 1,
@@ -329,7 +334,7 @@ tar -xzvf $def->{enclone_vdj_reference_tar_gz} -C vdj_reference
     output_file              => "all_contig_annotations",
     output_file_ext          => ".json",
     output_other_ext         => ".json.cdr3",
-    output_no_name           => 1,
+    samplename_in_result => 0,
     post_command             => $post_command,
     sh_direct                => 1,
     pbs                      => {
@@ -391,7 +396,6 @@ sub addEncloneToConsensus {
     output_arg               => "-o",
     output_file              => ".meta.list",
     output_file_ext          => ".meta.list",
-    output_no_name           => 0,
     output_to_same_folder    => 1,
     sh_direct                => 1,
     pbs                      => {
@@ -763,10 +767,25 @@ sub addSignac {
 }
 
 sub add_celltype_validation {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $signac_task, $singleR_task, $sctk_task, $celltype_column, $rmd_ext ) = @_;
+  my ( 
+    $config, 
+    $def, 
+    $tasks, 
+    $target_dir, 
+    $task_name, 
+    $object_ref, 
+    $meta_ref, 
+    $call_files_ref, 
+    $signac_task, 
+    $singleR_task, 
+    $sctk_task, 
+    $celltype_column, 
+    $rmd_ext ) = @_;
+    
   my $signac_ref = defined $signac_task ? [$signac_task, ".meta.rds"] : undef;
   my $singleR_ref = defined $singleR_task ? [$singleR_task, ".meta.rds"] : undef;
   my $sctk_ref = defined $sctk_task ? [$sctk_task, ".meta.rds"] : undef;
+  my $doublet_column = getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
 
   $config->{$task_name} = {
     class                    => "CQS::UniqueR",
@@ -785,7 +804,7 @@ sub add_celltype_validation {
       task_name => getValue($def, "task_name"),
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
-      doublet_column => "doubletFinder_doublet_label_resolution_1.5",
+      doublet_column => $doublet_column,
       celltype_column => $celltype_column,
     },
     parameterSampleFile2_ref => $sctk_ref,
@@ -1340,7 +1359,7 @@ sub addEdgeRTask {
       },
       remove_empty_parameter => 1,
       output_ext => "gsea_files.csv",
-      output_no_name => 1,
+      samplename_in_result => 0,
       sh_direct                  => 1,
       pbs                        => {
         "nodes"     => "1:ppn=1",
@@ -1781,7 +1800,6 @@ GMM-demux \$res_dir/__NAME__ __FILE2__ -f __NAME__ -o __NAME__
     parameterSampleFile2 => $gmm_demux_option_map,
     output_arg => "-o",
     output_file_prefix => "",
-    output_no_name => 0,
     output_file_ext => "__NAME__/GMM_full.csv,__NAME__/GMM_full.config",
     output_to_same_folder => 1,
     can_result_be_empty_file => 0,
@@ -1992,7 +2010,7 @@ sub add_souporcell {
     parameterSampleFile5 => $common_variants_map,
     output_arg => "-o",
     output_file_prefix => "",
-    output_no_name => 1,
+    samplename_in_result => 0,
     output_file_ext => "clusters.tsv",
     output_to_same_folder => 0,
     can_result_be_empty_file => 0,
@@ -2172,7 +2190,7 @@ sub add_individual_qc {
       db_markers_file       => getValue( $def, "markers_file" ),
       curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
       annotate_tcell        => getValue( $def, "annotate_tcell", 0),
-      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
+      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file" ),
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
       bubblemap_file => $def->{bubblemap_file},
       bubblemap_width => $def->{bubblemap_width},
@@ -2187,10 +2205,12 @@ sub add_individual_qc {
       mt_cutoff             => getValue( $def, "mt_cutoff" ),
       resolution            => getValue( $def, "resolution" ),
       pca_dims              => getValue( $def, "pca_dims" ),
+      ensembl_gene_map_file => $def->{"ensembl_gene_map_file"},
     },
     output_file_ext => "objectlist.rds",
-    output_no_name => 1,
+    samplename_in_result => 0,
     can_result_be_empty_file => 0,
+    remove_empty_parameter => 1,
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=1",
@@ -2443,7 +2463,7 @@ fi
     program             => "",
     check_program        => 0,
     output_arg           => "",
-    output_no_name       => 1,
+    samplename_in_result => 0,
     output_file_ext      => "results/variants/variants.vcf.gz",
     output_other_ext  => "",
     sh_direct            => 1,
@@ -2537,7 +2557,6 @@ sub add_clustree_rmd {
     parameterSampleFile2_ref => [$scDynamic_task, ".scDynamic.meta.rds"],
     parameterSampleFile3_ref => [$individual_scDynamic_task, ".celltype_cell_num.csv"],
     output_file_ext => "_ur.html",
-    output_no_name => 0,
     can_result_be_empty_file => 0,
     sh_direct   => 1,
     pbs => {
