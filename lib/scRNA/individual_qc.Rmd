@@ -110,6 +110,8 @@ figureRmd<-function(samples){
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc6.png"), TRUE))
     result<-paste0(result, "\n## Cell type annotation\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc7.png"), TRUE))
+    result<-paste0(result, "\n## Cell type annotation score\n\n")
+    result<-paste0(result, getFigure(paste0(cur_sample, ".cta.png"), TRUE))
     result<-paste0(result, "\n## Heatmap of highly expressed gene of each cluster\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".heatmap.png"), TRUE))
     result<-paste0(result, "\n## Expression of user defined marker genes\n\n")

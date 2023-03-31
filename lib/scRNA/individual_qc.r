@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='P9674'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38_v2/raw_individual_qc/result')
+setwd('/scratch/cqs/charles_flynn_projects/20230327_9674_dog_2_scRNA_qc/raw_individual_qc/result')
 
 ### Parameter setting end ###
 
@@ -35,6 +35,7 @@ myoptions$resolution=as.numeric(myoptions$resolution)
 myoptions$Remove_MtRNA=is_one(myoptions$Remove_MtRNA)
 myoptions$Remove_rRNA=is_one(myoptions$Remove_rRNA)
 
+Ensemblfile=myoptions$ensembl_gene_map_file
 bubblemap_file = myoptions$bubblemap_file
 bubblemap_width=to_numeric(myoptions$bubblemap_width, 6000)
 bubblemap_height=to_numeric(myoptions$bubblemap_height, 3000)
@@ -65,7 +66,8 @@ Cutoffs<-data.frame(nFeature_cutoff_min=myoptions$nFeature_cutoff_min ,
                     nFeature_cutoff_max=myoptions$nFeature_cutoff_max,
                     nCount_cutoff=myoptions$nCount_cutoff, 
                     mt_cutoff=myoptions$mt_cutoff, 
-                    cluster_remove=c(""),stringsAsFactors = F)
+                    cluster_remove=c(""),
+                    tringsAsFactors = F)
 
 #every sample share the same cutoff, otherwise put every parameter in the Cutoff dataframe
 if (dim(Cutoffs)[1]==1){
@@ -79,7 +81,7 @@ ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
                              curated_markers_file = myoptions$curated_markers_file,
                              HLA_panglao5_file = myoptions$HLA_panglao5_file,
                              layer="Layer4",
-                             remove_subtype_str = "",
+                             remove_subtype_str = NULL,
                              combined_celltype_file = NULL)
 tiers = ctdef$tiers
 cell_activity_database<-ctdef$cell_activity_database
@@ -93,7 +95,6 @@ i=1
 for (i in 1:nrow(SampleInfos)) {
   SampleInfo<-SampleInfos[i,]
   Cutoff<-Cutoffs[i,]
-  Ensemblfile=NULL
   info<-preprocess( SampleInfo = SampleInfo,
                     Cutoff = Cutoff,
                     cellType = cellType,
@@ -106,9 +107,9 @@ for (i in 1:nrow(SampleInfos)) {
                     hto_map = hto_map,
                     tag_tb = tag_tb,
                     Ensemblfile = Ensemblfile,
-                    bubblemap_file = myoptions$bubblemap_file,
-                    bubblemap_width = myoptions$bubblemap_width,
-                    bubblemap_height = myoptions$bubblemap_height)
+                    bubblemap_file = bubblemap_file,
+                    bubblemap_width = bubblemap_width,
+                    bubblemap_height = bubblemap_height)
   
   object.list<-c(object.list, info)
 }
@@ -119,3 +120,4 @@ stats<-lapply(object.list, function(x){unlist(x$preprocess)})
 stats_df<-data.frame(do.call(rbind, stats))
 colnames(stats_df)<-gsub("preprocess.","",colnames(stats_df))
 write.table(stats_df, file="qc_filter_config.txt", sep="\t", row.names=F)
+
