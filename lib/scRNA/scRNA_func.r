@@ -571,21 +571,23 @@ do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, sc
   return(obj)
 }
 
-do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE, mc.cores=1) {
-  mc.cores = check_mc_cores(mc.cores)
+do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE, mc.cores=1, use_sctransform_v2=TRUE) {
+  vst.flavor = ifelse(use_sctransform_v2, "v2", "v1")
 
-  print("performing SCTransform ...")
+  print(paste0("performing SCTransform by ", vst.flavor, " ..."))
   nsamples=length(unique(rawobj$orig.ident))
-  if(nsamples > 1){
+  if((nsamples > 1) & (mc.cores > 1)){
+    mc.cores = check_mc_cores(mc.cores)
+
     print("  split objects ...")
     objs<-SplitObject(object = rawobj, split.by = "orig.ident")
 
     print("  perform sctransform ...")
     objs<-mclapply(objs, function(x){
       print(paste0("    sctransform ", unique(x$orig.ident), " ..."))
-      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
+      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
       return(x)
-    },mc.cores=mc.cores)  
+    }, mc.cores=mc.cores)  
     print("  sctransform done")
 
     print("  merge samples ...")
@@ -596,7 +598,7 @@ do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE, m
     return(obj)
   }else{
     print("  perform sctransform ...")
-    rawobj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE)
+    rawobj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
     print("  sctransform done")
     return(rawobj)
   }
@@ -1012,8 +1014,8 @@ get_dot_width<-function(g, min_width=4400){
   return(max(width, min_width))
 }
 
-get_dot_height_num<-function(ngroups){
-  result = max(1500, ngroups * 100 + 800)
+get_dot_height_num<-function(ngroups, min_height=2000, height_per_entry=100, height_additional_space=1000){
+  result = max(min_height, ngroups * height_per_entry + height_additional_space)
   return(result)
 }
 
