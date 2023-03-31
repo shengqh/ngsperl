@@ -173,11 +173,16 @@ getTable<-function(filepath, row.names=1){
   return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "', ", row.names, ")\n```\n\n"))
 }
 
-getFigure<-function(filepath, in_details=FALSE){
-  if(in_details){
-    return(paste0("\n```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('details/", filepath, "')\n```\n\n"))
+getFigure<-function(filepath, in_details=FALSE, out_width=NULL){
+  if(!is.null(out_width)){
+    result = paste0("\n```{r,echo=FALSE,results='asis',out.width='", out_width,  "'}\n")
   }else{
-    return(paste0("\n```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
+    result = "\n```{r,echo=FALSE,results='asis'}\n"
+  }
+  if(in_details){
+    return(paste0(result, "check_and_include_graphics('details/", filepath, "')\n```\n\n"))
+  }else{
+    return(paste0(result, "check_and_include_graphics('", filepath, "')\n```\n\n"))
   }
 }
 
