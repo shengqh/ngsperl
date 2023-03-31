@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='P8256'
+outFile='mouse_9622'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
+parSampleFile5='fileList5.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_rawdata/result')
+setwd('/nobackup/jbrown_lab/shengq2/test/20230330_9622_scRNA_mouse_test/seurat_nodoublets_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -121,6 +122,25 @@ if(file.exists(parFile1)){
   }
 }
 
+if(exists("parSampleFile5")){
+  doublet_tbl=read.table(parSampleFile5, sep="\t", header=F)
+  doublet_map=unlist(split(doublet_tbl$V1, doublet_tbl$V2))
+  doublet_column=myoptions$doublet_column
+  doublet_cells = list()
+  sname = names(doublet_map)[1]
+  for(sname in names(doublet_map)){
+    sfile = doublet_map[sname]
+    smeta = readRDS(sfile)
+    dcells = rownames(smeta)[smeta[,doublet_column] %in% c("Doublet", "doublet")]
+    if(sname %in% names(remove_cells)){
+      remove_cells[[sname]] = c(remove_cells[[sname]], dcells)
+    }else{
+      remove_cells[[sname]] = dcells
+    }
+  }
+  remove_doublets=TRUE
+}
+
 read_gzip_count_file<-function(files, sample, species){
   all_counts<-NA
   index = 1
@@ -176,6 +196,14 @@ for(fileTitle in names(fileMap)) {
       sobj$orig.ident = unlist(sobj@meta.data[,seurat_sample_column])
     }else{
       sobj$orig.ident = fileTitle
+    }
+
+    if(fileTitle %in% names(remove_cells)){
+      rcs<-remove_cells[[fileTitle]]
+      if(length(rcs) > 0){
+        valid_cells=colnames(sobj)[!(colnames(sobj) %in% rcs)]
+        sobj=subset(sobj, cells=valid_cells)
+      }
     }
   }else{
     if(fileTitle %in% names(remove_cells)){
