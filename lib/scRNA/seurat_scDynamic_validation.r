@@ -1,15 +1,16 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='P9551'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.final.rds'
-parFile2='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose/result/AK6383.meta.rds'
-parFile3='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_SignacX/result/AK6383.meta.rds'
-parFile4='/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_SingleR/result/AK6383.meta.rds'
+parFile1='/nobackup/jbrown_lab/projects/20230329_9551_flynn_hg38_liver_seurat/seurat_merge/result/P9551.final.rds'
+parFile2='/nobackup/jbrown_lab/projects/20230329_9551_flynn_hg38_liver_seurat/seurat_merge_dr0.5_01_call/result/P9551.scDynamic.meta.rds'
+parFile3='/nobackup/jbrown_lab/projects/20230329_9551_flynn_hg38_liver_seurat/seurat_merge_SignacX/result/P9551.meta.rds'
+parFile4='/nobackup/jbrown_lab/projects/20230329_9551_flynn_hg38_liver_seurat/seurat_merge_SingleR/result/P9551.meta.rds'
+parFile5='/nobackup/jbrown_lab/projects/20230329_9551_flynn_hg38_liver_seurat/seurat_merge_dr0.5_01_call/result/P9551.iter_png.csv'
 
 
-setwd('/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/seurat_merge_multires_03_choose_validation/result')
+setwd('/nobackup/jbrown_lab/projects/20230329_9551_flynn_hg38_liver_seurat/seurat_merge_dr0.5_01_call_validation/result')
 
 ### Parameter setting end ###
 
@@ -58,30 +59,36 @@ if(file.exists(parSampleFile2)){
   sctk_files<-read.table(parSampleFile2, sep="\t")
   sctk_map<-unlist(split(sctk_files$V1, sctk_files$V2))
 
-  cur_name='AP_1'
+  cur_name=names(sctk_map)[1]
   for(cur_name in names(sctk_map)){
     sctk_meta_file=sctk_map[cur_name]
     sctk_meta=readRDS(sctk_meta_file)
 
-    cur_names<-paste0(cur_name, "_", rownames(sctk_meta))
-    cur_cells = intersect(cur_names, rownames(meta))
+    cur_cells = intersect(rownames(sctk_meta), rownames(meta))
 
     if(length(cur_cells) == 0){
-      if("project" %in% colnames(meta)){
-        obj_meta = meta[meta$project == cur_name,]
-      }else{
-        obj_meta = meta[meta$sample == cur_name,]
-      }
-      obj_meta$original_cells<-gsub(".+_", "", rownames(obj_meta))
-      cur_cells = intersect(rownames(sctk_meta), obj_meta$original_cells)
+      cur_names<-paste0(cur_name, "_", rownames(sctk_meta))
+      cur_cells = intersect(cur_names, rownames(meta))
+
       if(length(cur_cells) == 0){
-        stop(paste0("I don't know how to map sctk meta cell ", rownames(sctk_meta)[1], " with object meta ", rownames(meta)[1]))
+        if("project" %in% colnames(meta)){
+          obj_meta = meta[meta$project == cur_name,]
+        }else{
+          obj_meta = meta[meta$sample == cur_name,]
+        }
+        obj_meta$original_cells<-gsub(".+_", "", rownames(obj_meta))
+        cur_cells = intersect(rownames(sctk_meta), obj_meta$original_cells)
+        if(length(cur_cells) == 0){
+          stop(paste0("I don't know how to map sctk meta cell ", rownames(sctk_meta)[1], " with object meta ", rownames(meta)[1]))
+        }else{
+          cell_map = unlist(split(obj_meta$original_cells, rownames(obj_meta)))
+          meta[names(cell_map), "DBT"] = tolower(as.character(sctk_meta[cell_map,doublet_column]))
+        }
       }else{
-        cell_map = unlist(split(obj_meta$original_cells, rownames(obj_meta)))
-        meta[names(cell_map), "DBT"] = tolower(as.character(sctk_meta[cell_map,doublet_column]))
+        rownames(sctk_meta) = cur_names
+        meta[cur_cells, "DBT"] = tolower(as.character(sctk_meta[cur_cells,doublet_column]))
       }
     }else{
-      rownames(sctk_meta) = cur_names
       meta[cur_cells, "DBT"] = tolower(as.character(sctk_meta[cur_cells,doublet_column]))
     }
   }
@@ -123,7 +130,10 @@ draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, v
   }
 }
 
-validation_columns<-c("orig.ident", validation_columns)
+if(length(unique(meta$orig.ident)) > 1){
+  validation_columns<-c("orig.ident", validation_columns)
+}
+
 draw_figure(outFile, meta, celltype_column, celltype_cluster_column, validation_columns)
 
 writeLines(validation_columns, "validation_columns.txt")
