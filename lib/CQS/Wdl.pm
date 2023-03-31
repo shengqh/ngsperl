@@ -53,28 +53,30 @@ sub perform {
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
 
   #softlink singularity_image_files to result folder
-  my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
   my $singularity_option = "";
-  for my $image_name ( sort keys %$singularity_image_files ) {
-    my $source_image=$singularity_image_files->{$image_name};
-    if( is_array($source_image) ) {
-      $source_image=${$source_image}[0];
-    }
-
-    $singularity_option="--singularity $source_image";
-
-    # print $image_name."\n";
-    # print $source_image."\n";
-    my $target_image = $result_dir."/".$image_name;
-    if (! -e $target_image) {
-      my $simgSoftlinkCommand;
-      if (-l $singularity_image_files->{$image_name}) { #softlink, copy
-          $simgSoftlinkCommand="cp -P ".$source_image." ".$target_image;
-      } else { #file, make softlink
-          $simgSoftlinkCommand="ln -s ".$source_image." ".$target_image;
+  if(has_raw_files( $config, $section, "singularity_image_files" )){
+    my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
+    for my $image_name ( sort keys %$singularity_image_files ) {
+      my $source_image=$singularity_image_files->{$image_name};
+      if( is_array($source_image) ) {
+        $source_image=${$source_image}[0];
       }
-      print($simgSoftlinkCommand."\n");
-      system($simgSoftlinkCommand);
+
+      $singularity_option="--singularity $source_image";
+
+      # print $image_name."\n";
+      # print $source_image."\n";
+      my $target_image = $result_dir."/".$image_name;
+      if (! -e $target_image) {
+        my $simgSoftlinkCommand;
+        if (-l $singularity_image_files->{$image_name}) { #softlink, copy
+            $simgSoftlinkCommand="cp -P ".$source_image." ".$target_image;
+        } else { #file, make softlink
+            $simgSoftlinkCommand="ln -s ".$source_image." ".$target_image;
+        }
+        print($simgSoftlinkCommand."\n");
+        system($simgSoftlinkCommand);
+      }
     }
   }
 
