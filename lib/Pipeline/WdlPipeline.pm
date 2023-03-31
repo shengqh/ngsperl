@@ -619,7 +619,6 @@ sub addEncodeATACseq {
     #"option" => "--no-build-singularity",
     "option" => $encode_option,
     "target_dir" => "${target_dir}/${task_folder}",
-    "singularity_image_files_ref" => ["singularity_image_files"],
     "cromwell_jar" => $wdl->{"cromwell_jar"},
     "input_option_file" => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
@@ -643,12 +642,21 @@ sub addEncodeATACseq {
     output_file_ext => "atac/",
     use_caper => 1,
     sh_direct   => $sh_direct,
+    fastq_ref => $files_ref,
     pbs=> {
       "nodes"     => "1:ppn=$encode_cpu",
       "walltime"  => getValue($def, "encode_atac_walltime", "24"),
-      "mem"       => getValue($def, "encode_atac_men", "40gb"),
+      "mem"       => getValue($def, "encode_atac_men", "80gb"),
     },
   };
+
+  if(defined $def->{"atac.docker"}){
+    $config->{$task}{"input_parameters"}{"atac.docker"} = $def->{"atac.docker"};
+  }
+
+  if(defined $def->{"atac.singularity"}){
+    $config->{$task}{"input_parameters"}{"atac.singularity"} = $def->{"atac.singularity"};
+  }
 
   my $input_parameters_is_vector = {};
   if(defined $def->{replicates}){
