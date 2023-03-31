@@ -1352,7 +1352,7 @@ fi
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping],
       "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ],
       "task_name" => $taskName,
-      "out.width" => getValue($def, "report.out.width", "60%")
+      "out.width" => getValue($def, "report.out.width", "80%")
     };
 
     $config->{report} = {
