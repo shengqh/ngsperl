@@ -67,9 +67,20 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "star_option",                "--twopassMode Basic --outSAMmapqUnique 60 --outSAMprimaryFlag AllBestScore" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );
   initDefaultValue( $def, "top25cv_in_hca",             0 );
-  initDefaultValue( $def, "use_green_red_color_in_hca", 1 );
+  initDefaultValue( $def, "use_green_red_color_in_hca", 0 );
   initDefaultValue( $def, "output_bam_to_same_folder",  1 );
-  initDefaultValue( $def, "show_label_PCA",             1 );
+
+  if(defined $def->{files}){
+    my $files = $def->{files};
+    my $nfiles = keys %$files;
+    if($nfiles < 20){
+      initDefaultValue( $def, "show_label_PCA", 1 );
+    }else{
+      initDefaultValue( $def, "show_label_PCA", 0 );
+    }
+  }else{
+    initDefaultValue( $def, "show_label_PCA", 1 );
+  }
 
   initDefaultValue( $def, "max_thread",            8 );
   initDefaultValue( $def, "sequencetask_run_time", '24' );
@@ -497,9 +508,11 @@ sub getRNASeqConfig {
         "draw_umap" => getValue($def, "draw_umap", 0),
         "heatmap_cexCol" => $def->{heatmap_cexCol},
       },
+      parameterFile4 => $def->{covariance_file},
       rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
       output_file     => "parameterSampleFile1",
       output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
+      can_result_be_empty_file => 1,
       sh_direct       => 1,
       pbs             => {
         "nodes"     => "1:ppn=1",
