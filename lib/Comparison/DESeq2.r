@@ -164,12 +164,19 @@ align<-function(data1,data2,by=0,suffixes=c(deparse(substitute(data1)),deparse(s
   return (data)
 }
 
-theme_bw2 <- function () { 
-  theme_bw() %+replace% 
+theme_bw3 <- function (axis.x.rotate=F) { 
+  result = theme_bw() +
     theme(
-      panel.border = element_blank(),
-      axis.line = element_line(colour = "black", size = 0.5)
+      strip.background = element_rect(fill = NA, colour = 'black'),
+      panel.border = element_rect(fill = NA, color = "black"),			
+      axis.line = element_line(colour = "black", linewidth = 0.5),
+      plot.title = element_text(hjust = 0.5)
     )
+  if (axis.x.rotate){
+    result = result + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  }
+  
+  return(result)
 }
 
 # Convert a byte-compiled function to an interpreted-code function 
@@ -313,7 +320,7 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
       geom_vline(aes(xintercept=0), size=.2) + 
       xlab(pcalabs[1]) + ylab(pcalabs[2]) +
       scale_color_manual(values=c("red", "blue")) +
-      theme_bw2() + theme(legend.position="top")
+      theme_bw3() + theme(legend.position="top")
     
     filePrefix<-paste0(prefix, "_DESeq2-vsd-pca")
     drawPlot(filePrefix, outputFormat, 6, 5, 3000, 3000, g, "PCA")
@@ -699,14 +706,14 @@ for(countfile_index in c(1:length(countfiles))){
     rsdata<-melt(rldmatrix)
     colnames(rsdata)<-c("Gene", "Sample", "log2Count")
     png(filename=paste0(prefix, "_DESeq2-log2-density.png"), width=4000, height=3000, res=300)
-    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + xlab("DESeq2 log2 transformed count")
+    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + xlab("DESeq2 log2 transformed count") + guides(color = FALSE)
     print(g)
     dev.off()
     
     width=max(4000, ncol(rldmatrix) * 40 + 1000)
     height=max(3000, ncol(rldmatrix) * 40)
     png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=width, height=height, res=300)
-    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count")
+    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count") + guides(color = FALSE)
     print(g)
     dev.off()
     
@@ -916,7 +923,7 @@ for(countfile_index in c(1:length(countfiles))){
         coord_flip()+
         #     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
         scale_y_continuous(name=bquote(log[2]~Fold~Change))+
-        theme_bw2() +
+        theme_bw3() +
         theme(axis.text = element_text(colour = "black"))
       
       filePrefix<-paste0(prefix,"_DESeq2_sig_barplot")
