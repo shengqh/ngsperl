@@ -317,7 +317,7 @@ sub getPreprocessionConfig {
       checkFileGroupPairNames($def, ["pool_sample_groups"], ["pairs"], "files");
       checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
     }else{
-      checkFileGroupPairNames($def, ["groups"], ["pairs"], "files");
+      checkFileGroupPairNames($def, ["groups"], ["pairs"], "files", getValue($def, "remove_missing_samples_in_group", 0));
 
       if(not defined $def->{groups}){
         my $files = $def->{files};
