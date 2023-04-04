@@ -72,6 +72,9 @@ if(rnaseqOptions["top25cv_in_hca", 1] == "FALSE"){
 }else{
   hca_gene_used<-" using all genes"
 }
+
+deseq2_rmd="deseq2.rmd"
+gsea_rmd_file="gsea.rmd"
 ```
 
 <br>
@@ -269,8 +272,6 @@ cat(figureRmd(file_map, corNames, "###", hca_gene_used), file=corrFile)
 <br>
 
 ```{r include=FALSE, eval=hasDEseq2}
-deseq2_rmd="deseq2.rmd"
-
 result = "# Differential expression\n<br>\n\n"
 if ("DE_use_raw_pvalue" %in% row.names(rnaseqOptions) & rnaseqOptions["DE_use_raw_pvalue", 1]==1) {
   pValueText="p value"
@@ -365,7 +366,6 @@ display_webgestalt(files)
 cat("## GSEA\n\n")
 gsea_file_list = files$V1[files$V2 == "report_gsea"]
 gsea_files = read.csv(gsea_file_list, row.names=1)
-gsea_rmd_file="gsea.rmd"
 gsea_files$file_path=paste0(dirname(gsea_file_list), "/", gsea_files$file_path)
 save_gsea_rmd(gsea_files, gsea_rmd_file, "##")
 #gsea_files=files[grepl("gsea_", files$V2),]
