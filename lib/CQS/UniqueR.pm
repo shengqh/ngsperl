@@ -252,7 +252,7 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $self->can_result_be_empty_file($config, $section) );
 
   my $rlibs = get_option_include_general($config, $section, "R_LIBS", "");
   if($rlibs ne ""){
