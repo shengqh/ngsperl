@@ -2094,7 +2094,12 @@ sub annotateNearestGene {
 }
 
 sub checkFileGroupPairNames {
-  my ($def, $groupKeys, $pairKeys, $fileKey) = @_;
+  my ($def, $groupKeys, $pairKeys, $fileKey, $remove_missing) = @_;
+
+  if(!defined $remove_missing){
+    $remove_missing = 0;
+  }
+
   if(!defined $fileKey){
     $fileKey = "files";
   }
@@ -2114,16 +2119,24 @@ sub checkFileGroupPairNames {
     if(defined $def->{$groupKey}){
       my $groups = $def->{$groupKey};
       for my $groupName (keys %$groups){
-        if ($groupName =~ /^./) {
+        if ($groupName =~ /^[.]/) {
           next;
         }
         my $sampleNames = $groups->{$groupName};
+
+        my $newSampleNames = [];
         for my $sampleName (@$sampleNames){
           if (!defined $files->{$sampleName}){
-            print STDERR "Sample $sampleName in $groupKey $groupName is not defined in files.\n";
-            $bFailed = 1;
+            if(!$remove_missing){
+              print STDERR "Sample $sampleName in $groupKey $groupName is not defined in files.\n";
+              $bFailed = 1;
+            }
+          }else{
+            push(@$newSampleNames, $sampleName);
           }
         }
+
+        $groups->{$groupName} = $newSampleNames;
 
         $allGroupNames->{$groupName} = 1;
       }
