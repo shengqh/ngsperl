@@ -3,16 +3,20 @@ outFile=''
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
+parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2='/scratch/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/9074_ES.Category.Table.csv'
-parFile3='/scratch/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/preprocessing/fastqc_post_trim_summary/result/9074_ES.countInFastQcVis.Result.Reads.csv'
-useLeastGroups<-FALSE;showLabelInPCA<-FALSE;totalCountKey='Reads for Mapping';minMedian=0;minMedianInGroup=1;textSize=9;groupTextSize=10;
+parFile2=''
+parFile3=''
+parFile4='/home/shengq2/program/projects/ravi_shah/20230327_rnaseq_veteran_hg38/20230327_meta.csv'
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
 
-setwd('/scratch/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/data_visualization/count_table_correlation_TotalReads/result')
+setwd('/nobackup/h_cqs/ravi_shah_projects/shengq2/20230327_rnaseq_veteran_hg38/genetable/result')
 
 ### Parameter setting end ###
 
 source("countTableVisFunctions.R")
+library(data.table)
+
 options(bitmapType='cairo')
 
 library(heatmap3)
@@ -63,7 +67,7 @@ totalCountFile<-parFile3
 
 covarianceFile<-ifelse(exists("parFile4"), parFile4, "")
 if(file.exists((covarianceFile))){
-  covariances<-read.table(covarianceFile, sep="\t", header=T)
+  covariances<-fread(covarianceFile, header=T, data.table=F)
   has_batch<-"batch" %in% colnames(covariances)
   batch_map<-unlist(split(covariances$batch, covariances$Sample))
 }else{
@@ -433,21 +437,56 @@ for (i in 1:nrow(countTableFileAll)) {
       }
       
       if(has_batch){
+        saveRDS(dds, paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.vsd.rds"))
+
         countNumVsd<-assay(dds)
         colnames(countNumVsd)<-colnames(validCountNum)
         write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.vsd.txt"),col.names=NA, quote=F, sep="\t")
 
         dds$batch<-batch_map[colnames(dds)]
-        png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.png"), width=2000, height=2000, res=300)
-        g<-plotPCA(dds, "batch") + theme_bw3()
+        ntop = 3000
+
+        png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.batch.png"), width=2000, height=2000, res=300)
+        g<-plotPCA(dds, "batch", ntop=ntop) + theme_bw3()
         print(g)
         dev.off()
+
+        hasMultipleGroup<-length(unique(validSampleToGroup$V2)) > 1
+        if(hasMultipleGroup){
+          stopifnot(all(rownames(colData(dds)) == validSampleToGroup$V1))
+          dds$group = validSampleToGroup$V2
+
+          png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.group.png"), width=2000, height=2000, res=300)
+          g<-plotPCA(dds, "group", ntop=ntop) + theme_bw3()
+          print(g)
+          dev.off()
+
+          png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.batch_group.png"), width=2000, height=2000, res=300)
+          g<-plotPCA(dds, c("batch", "group"), ntop=ntop) + theme_bw3()
+          print(g)
+          dev.off()
+        }
+
         assay(dds) <- limma::removeBatchEffect(assay(dds), dds$batch)
-        png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.png"), width=2000, height=2000, res=300)
-        g<-plotPCA(dds, "batch") + theme_bw3()
+        png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.batch.png"), width=2000, height=2000, res=300)
+        g<-plotPCA(dds, "batch", ntop=ntop) + theme_bw3()
         print(g)
         dev.off()
+
+        if(hasMultipleGroup){
+          png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.group.png"), width=2000, height=2000, res=300)
+          g<-plotPCA(dds, "group", ntop=ntop) + theme_bw3()
+          print(g)
+          dev.off()
+
+          png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.batch_group.png"), width=2000, height=2000, res=300)
+          g<-plotPCA(dds, c("batch", "group"), ntop=ntop) + theme_bw3()
+          print(g)
+          dev.off()
+        }
       }
+
+      saveRDS(dds, paste0(outputFilePrefix,curSuffix,".vsd.rds"))
 
       countNumVsd<-assay(dds)
       colnames(countNumVsd)<-colnames(validCountNum)
