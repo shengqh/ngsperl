@@ -1,0 +1,5 @@
+Sample_ID	age	sex	cav_grade	stanford	hx_acr	acr	hx_amr	amr	class2_dsa	prednisone	cni	metabolite	mtori	dm2	group	high_grade_cav
+CVD_001	49	m	0	3	0	0	0	0	0	0	1	0	1	1	control	0
+CVD_002	63	m	1	1	1	0	0	0	0	0	1	1	0	1	cav	0
+CVD_003	38	f	3	1	1	0	1	0	1	1	1	1	1	0	cav	1
+CVD_006	72	m	0	1	0	0	0	0	0	0	1	1	0	0	control	0

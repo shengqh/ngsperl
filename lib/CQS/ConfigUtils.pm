@@ -1982,7 +1982,7 @@ sub get_groups_by_pattern_dic {
     }
   }
 
-  my @samplenames = uniq (values %$sample_names);
+  my @samplenames = sort(uniq(values %$sample_names));
   #print(@samplenames);
 
   my $groups = {};
@@ -2456,18 +2456,21 @@ sub get_final_file_by_task_name {
 sub get_groups_from_covariance_file {
   my ($covariance_file, $sample_column, $group_column) = @_;
   my $result = {};
+  my $aoh;
   if($covariance_file =~ /.csv$/){
-    my $aoh = csv(in => $covariance_file, headers => "auto"); 
-    for my $dic (@$aoh){
-      my $cur_sample = $dic->{$sample_column};
-      my $cur_group = $dic->{$group_column};
-      #print($cur_sample . " => " . $cur_group . "\n");
-      if (!defined $result->{$cur_group}){
-        $result->{$cur_group} = [$cur_sample];
-      }else{
-        my $old_samples = $result->{$cur_group};
-        push(@$old_samples, $cur_sample);
-      }
+    $aoh = csv(in => $covariance_file, headers => "auto"); 
+  }else{
+    $aoh = csv(in => $covariance_file, sep_char => "\t", headers => "auto"); 
+  }
+  for my $dic (@$aoh){
+    my $cur_sample = $dic->{$sample_column};
+    my $cur_group = $dic->{$group_column};
+    #print($cur_sample . " => " . $cur_group . "\n");
+    if (!defined $result->{$cur_group}){
+      $result->{$cur_group} = [$cur_sample];
+    }else{
+      my $old_samples = $result->{$cur_group};
+      push(@$old_samples, $cur_sample);
     }
   }
   return($result);
