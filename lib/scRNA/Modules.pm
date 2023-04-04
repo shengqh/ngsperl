@@ -191,7 +191,7 @@ sub add_seurat {
   my $nsamples = scalar(@sample_names);
   my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
   my $by_sctransform = getValue( $def, "by_sctransform" );
-  my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 1);
+  my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 0);
   my $sct_str = $by_sctransform ? ($use_sctransform_v2 ? "_sct2": "_sct"):"";
   my $thread = getValue( $def, "sctransform_thread", 1 );
   my $rmd_ext = $by_sctransform ? ($use_sctransform_v2 ? ".sct2": ".sct"):"";
