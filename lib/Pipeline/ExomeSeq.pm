@@ -147,16 +147,18 @@ sub getFasta {
 sub addMutect2 {
   my ($config, $def, $tasks, $target_dir, $bam_input, $mutect2_call, $option, $use_germline_resource, $pon) = @_;
 
-  my $run_funcotator;
-  if(defined $def->{run_funcotator}){
-    $run_funcotator = $def->{run_funcotator};
-  }else{
-    if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-      $run_funcotator="true";
-    }else{
-      $run_funcotator="false";
-    }
-  }
+  # my $run_funcotator;
+  # if(defined $def->{run_funcotator}){
+  #   $run_funcotator = $def->{run_funcotator};
+  # }else{
+  #   if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
+  #     $run_funcotator="true";
+  #   }else{
+  #     $run_funcotator="false";
+  #   }
+  # }
+
+  my $run_funcotator = getValue($def, "run_funcotator", "false");
 
   my $output_sample_ext;
   if($def->{muTect2_suffix}) {
