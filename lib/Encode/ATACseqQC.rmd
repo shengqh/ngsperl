@@ -1,0 +1,55 @@
+---
+title: "ENCODE ATACseq QC Report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+
+options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outFile=myoptions$task_name
+
+json_files = fread(parSampleFile2, data.table=F, header=F)
+sample_names = json_files$V2
+
+resFile<-"qc.Rmd"
+figureRmd<-function(outFile, sample_names, json_files){
+  result<-""
+
+  ct=sample_names[1]
+  for(ct in sample_names){
+    result<-paste0(result, paste0("\n\n# ", ct, "\n\n"))
+
+    #find q1_file from ATACseqQC.r
+    qc1_file=""
+
+    result<-paste0(result, paste0("\n\n## QC1\n\n"))
+    result<-paste0(result, getFigure(qc1_file))
+  }
+  return(result)
+}
+cat(figureRmd(outFile, sample_names, json_files), file=resFile)
+
+```
+
+```{r, child=resFile} 
+```
+
