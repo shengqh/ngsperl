@@ -31,22 +31,39 @@ sub perform {
   my $selfname = $self->{_name};
 
   my $abismal_index = $config->{$section}{abismal_index};
+
+  my $addqual_perlFile = $config->{$section}{addqual_perlFile};
+
+  my $picard = $config->{$section}{picard};
+  my $chrDir=$config->{$section}{chr_dir};
+  my $interval_list=$config->{$section}{interval_list};
+  if ( !defined $chrDir ) {
+    die "define ${section}::chr_dir first";
+  }
   if ( !defined $abismal_index ) {
     die "define ${section}::abismal_index first";
   }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-
+  
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
   for my $sample_name ( sort keys %raw_files ) {
     my @sample_files = @{ $raw_files{$sample_name} };
-    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? " " . $sample_files[0] . "  " . $sample_files[1]: " " . $sample_files[0];
+    my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files[0] . " -2 " . $sample_files[1]: "-1 " . $sample_files[0];
 
-    my $result_file_unsorted          = $sample_name . ".unsorted.sam";
-  my $result_file          = $sample_name . ".sam";
+    my $result_file_raw          = $sample_name . ".raw.sam";
+    my $result_file_unsorted     = $sample_name . ".unsorted.sam";
+    my $result_file_unsorted_bam = $sample_name . ".unsorted.bam";
+    my $result_file              = $sample_name . ".sorted.sam";
+    my $result_file_bam          = $sample_name . ".sorted.bam";
+    my $result_file_bai          = $sample_name . ".sorted.bam.bai";
+    my $map_stat                 = $sample_name . ".mapstats";
+
+    my $hs_metrics               = $sample_name . "_hs_metrics.txt";
+    my $per_target_coverage      = $sample_name . "_hs_metrics_per_interval.txt";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -59,53 +76,87 @@ sub perform {
     my $rmlist = "";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
-#     print $pbs "
+#			print $pbs "
 #if [ ! -s $result_file ]; then
 #  echo zcat=`date`
 #";
-  if ($sample_files[0]=~/\.gz$/) { #.gz fle, need to zcat
-    my @sample_files_unzip=();
-    foreach my $sampleFile (@sample_files) {
-      my $sampleFileUnzip = basename(change_extension( $sampleFile, "" ));
-      push @sample_files_unzip,$sampleFileUnzip;
-      print $pbs "
+	if ($sample_files[0]=~/\.gz$/) { #.gz fle, need to zcat
+		my @sample_files_unzip=();
+		foreach my $sampleFile (@sample_files) {
+			my $sampleFileUnzip = basename(change_extension( $sampleFile, "" ));
+			push @sample_files_unzip,$sampleFileUnzip;
+			print $pbs "
   if [ ! -s $sampleFileUnzip ]; then
       echo zcat=`date`
       zcat $sampleFile > $sampleFileUnzip
   fi
 ";
-      $rmlist=$rmlist. " $sampleFileUnzip"
-    }
-#         print $pbs "
+			$rmlist=$rmlist. " $sampleFileUnzip"
+		}
+#					print $pbs "
 #fi
 #";
-    $sample_files_str = ( scalar(@sample_files_unzip) == 2 ) ? " " . $sample_files_unzip[0] . "  " . $sample_files_unzip[1]: " " . $sample_files_unzip[0];
-  } else { #NOT .gz fle
-    $sample_files_str = ( scalar(@sample_files) == 2 ) ? " " . $sample_files[0] . "  " . $sample_files[1]: " " . $sample_files[0];
-  }
-  
+		$sample_files_str = ( scalar(@sample_files_unzip) == 2 ) ? " " . $sample_files_unzip[0] . " " . $sample_files_unzip[1]: " " . $sample_files_unzip[0];
+	} else { #NOT .gz fle
+	  $sample_files_str = ( scalar(@sample_files) == 2 ) ? " " . $sample_files[0] . " " . $sample_files[1]: " " . $sample_files[0];
+	}
+	
     print $pbs "
-if [[ ! -s $result_file_unsorted && ! -s $result_file ]]; then
+if [[ ! -s $result_file_raw && ! -s $result_file_bam ]]; then
   echo abismal=`date`
-  abismal -i $abismal_index -o $result_file_unsorted $sample_files_str
+  dnmtools abismal -t $thread -i $abismal_index $sample_files_str -s $map_stat -o $result_file_raw
+  perl $addqual_perlFile $result_file_raw $result_file_unsorted 
 fi
 ";
+    $rmlist=$rmlist ." $result_file_raw";
+    if ($rmlist ne "") {
+      print $pbs "
+if [[ -s $result_file_unsorted ]]; then
+  rm $rmlist
+fi
+";
+    }
+
     print $pbs "
-if [ ! -s $result_file ]; then
-  echo samtools sort abismal=`date`
-  #sort -k1,1 -k2,2g -k3,3g -k6,6 $result_file_unsorted -o $result_file;
-  samtools sort -o $result_file -O SAM -@ $thread $result_file_unsorted;
+if [ ! -s $result_file_bam ]; then
+  echo samtools_sort =`date`
+  samtools view -b $result_file_unsorted > $result_file_unsorted_bam
+  samtools sort -@ $thread -O bam -o $result_file_bam $result_file_unsorted_bam
+  samtools index $result_file_bam $result_file_bai
 fi
 ";
-    $rmlist=$rmlist ." $result_file_unsorted";
+    $rmlist=" $result_file_unsorted" ." $result_file_unsorted_bam";
 
     if ($rmlist ne "") {
-          print $pbs "
+    	    print $pbs "
 if [[ -s $result_file_unsorted && -s $result_file ]]; then
   rm $rmlist 
 fi
 ";
     }
+
+    print $pbs "
+if [[ ( -s $result_file_bam ) && ( ! -s $hs_metrics ) ]; then
+  echo picard CollectHsMetrics =`date`
+  java -jar $picard CollectHsMetrics \
+    I=$result_file_bam \
+    O=$hs_metrics \
+    R=$chrDir \
+    PER_TARGET_COVERAGE=$per_target_coverage \
+    BAIT_INTERVALS=$interval_list \
+    TARGET_INTERVALS=$interval_list
+fi
+";
+
+    print $pbs "
+if [[ -s $result_file_bam ]; then
+  echo picard CollectRrbsMetrics =`date`
+  java -jar $picard CollectRrbsMetrics \
+    I=$result_file_bam \
+    M=$sample_name \
+    R=$chrDir
+fi
+";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -126,9 +177,9 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $bam_file     = "${result_dir}/${sample_name}.sam";
+    my $sam_file     = "${result_dir}/${sample_name}.sorted.sam";
     my @result_files = ();
-    push( @result_files, $bam_file );
+    push( @result_files, $sam_file );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
