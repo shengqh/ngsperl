@@ -249,7 +249,7 @@ sub addMutect2Wdl {
   my $mutect2_call = $mutect2_prefix . getNextIndex($def, $mutect2_prefix) . "_call_wdl";
   my $run_funcotator="false";
   if ($def->{ncbi_build} eq "GRCh38") { #based on genome, hg38=true, else false
-    $run_funcotator="true";
+    $run_funcotator=getValue($def, "run_funcotator", "true");
   }
 
   my $run_orientation_bias_mixture_model_filter = getValue($def, "Mutect2.run_orientation_bias_mixture_model_filter", "true");
