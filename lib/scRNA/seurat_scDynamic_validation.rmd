@@ -31,8 +31,16 @@ celltype_column=myoptions$celltype_column
 
 if(file.exists("iter_png.txt")){
   iter_png_file=unlist(readLines("iter_png.txt"))
+  detail_folder = file.path(dirname(iter_png_file), "details")
+  if(!file.exists(iter_png_file)){
+    iter_png_file = gsub("/result/", "/result/details/", iter_png_file)
+  }
+  if(!file.exists(iter_png_file)){
+    stop(paste0("Cannot find file:", iter_png_file))
+  }
+
   iter_png<-read.csv(iter_png_file)
-  iter_png$fname<-paste0(dirname(iter_png_file), "/details/", iter_png$fname)
+  iter_png$fname<-file.path(detail_folder, iter_png$fname)
 }else{
   iter_png = NULL
 }
