@@ -123,6 +123,7 @@ if [ ! -s $result_file_bam ]; then
   samtools view -b $result_file_unsorted > $result_file_unsorted_bam
   samtools sort -@ $thread -O bam -o $result_file_bam $result_file_unsorted_bam
   samtools index $result_file_bam $result_file_bai
+  samtools view -O sam -o $result_file $result_file_bam
 fi
 ";
     $rmlist=" $result_file_unsorted" ." $result_file_unsorted_bam";

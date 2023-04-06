@@ -30,11 +30,6 @@ sub perform {
 
   my $selfname = $self->{_name};
 
-  my $abismal_index = $config->{$section}{abismal_index};
-  if ( !defined $abismal_index ) {
-    die "define ${section}::abismal_index first";
-  }
-
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $chrDir=$config->{$section}{chr_dir};
   if ( !defined $chrDir ) {
@@ -234,7 +229,7 @@ fi
     chmod 0755, $shfile;
   }
 
-  print "!!!shell file $shfile created, you can run this shell file to submit all Walt tasks.\n";
+  print "!!!shell file $shfile created, you can run this shell file to submit all DNMTools tasks.\n";
 }
 
 sub result {

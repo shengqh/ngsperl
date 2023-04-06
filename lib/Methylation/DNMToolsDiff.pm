@@ -102,7 +102,7 @@ fi
 
 #make tracks
     print $pbs "
-echo Methpipe5Diff To Tracks=`date`
+echo methdiff To Tracks=`date`
 if [ ! -s ${dmrFile1Filtered}.bb ]; then
   cut -f 1-3 ${dmrFile1Filtered} > ${dmrFile1Filtered}.tmp
   bedToBigBed  ${dmrFile1Filtered}.tmp $chrSizeFile ${dmrFile1Filtered}.bb
