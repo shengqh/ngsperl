@@ -85,7 +85,7 @@ if [ ! -s ${sample_name}.formatted.sam ]; then
 fi
 
 if [[ -s ${sample_name}.formatted.sam ]]; then
-  rm ${sample_name}.sorted.sam ${sample_name}.sorted.bam ${sample_name}.sorted.bam.bai
+  rm $sampleFile
 fi
 
 if [ ! -s ${sample_name}.sam ]; then
