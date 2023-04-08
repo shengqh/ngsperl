@@ -1428,7 +1428,7 @@ sub initDefaultValue {
 }
 
 sub writeParameterSampleFile {
-  my ( $config, $section, $resultDir, $index, $removeEmpty ) = @_;
+  my ( $config, $section, $resultDir, $index, $removeEmpty, $cur_sample_name ) = @_;
   my $result      = "";
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   my $key         = "parameterSampleFile" . $index;
@@ -1455,6 +1455,12 @@ sub writeParameterSampleFile {
     open( my $list, ">$resultDir/$result" ) or die "Cannot create $result";
     my $nameIndex = -1;
     foreach my $sample_name (@orderedSampleNames) {
+      if(defined $cur_sample_name){
+        if($cur_sample_name ne $sample_name){
+          next;
+        }
+      }
+
       my $subSampleFiles = $temp->{$sample_name};
       if(not defined $subSampleFiles) {
         print $list "\t$sample_name\n";
