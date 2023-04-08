@@ -21,6 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_o2o";
+  $self->{_output_to_same_folder} = 1;
   bless $self, $class;
   return $self;
 }
@@ -45,7 +46,7 @@ sub perform {
   my $program     = get_program( $config, $section );
 
   my $output_to_folder = get_option( $config, $section, "output_to_folder", 0 );
-  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", $self->{_output_to_same_folder});
   my $output_file_prefix    = get_option( $config, $section, "output_file_prefix", (!$output_to_folder) );
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $no_output            = get_option( $config, $section, "no_output", 0 );
@@ -55,7 +56,9 @@ sub perform {
   
   my $other_localization_ext_array = get_option( $config, $section, "other_localization_ext_array", [] );
 
-  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );
+  my $source_key = has_raw_files($config, $section, "source") ? "source" : "parameterSampleFile1";
+  my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, $source_key );
+
   my @sample_names = ( sort keys %$parameterSampleFile1 );
   my $has_multi_samples = scalar(@sample_names) > 1;
 
@@ -227,8 +230,10 @@ sub result {
 
   my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
 
-  my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = get_parameter_sample_files( $config, $section, "source" );
-  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
+  my $source_key = has_raw_files($config, $section, "source") ? "source" : "parameterSampleFile1";
+  my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = get_parameter_sample_files( $config, $section, $source_key );
+
+  my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", $self->{_output_to_same_folder} );
   my $output_exts           = get_output_ext_list( $config, $section );
 
   my $result = {};
