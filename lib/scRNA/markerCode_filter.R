@@ -279,7 +279,9 @@ preprocess<-function( SampleInfo,
                       bubblemap_file="",
                       bubblemap_width=6000,
                       bubblemap_height=3000,
-                      species=NULL) {
+                      species=NULL,
+                      by_sctransform=0,
+                      use_sctransform_v2=0) {
 
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
@@ -404,25 +406,37 @@ preprocess<-function( SampleInfo,
       next
     }
 
+    vars.to.regress = c("percent.mt")
+
+    #no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
+    #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
     subobj <- NormalizeData(subobj)
     subobj <- FindVariableFeatures(subobj, selection.method = "vst", nfeatures = 2000)
-    
+    var.genes <- VariableFeatures(subobj)
+    subobj <- ScaleData(subobj, vars.to.regress = vars.to.regress)
+
+    if(by_sctransform){
+      subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress, use_sctransform_v2=use_sctransform_v2)
+      assay="SCT"
+      var.genes <- VariableFeatures(subobj[["SCT"]])
+      ndim = 30
+    }else{
+      assay="RNA"
+      ndim = 20
+    }
+
     rRNA.genes <- grep(pattern = rRNApattern,  rownames(subobj), value = TRUE)
     Mt.genes<- grep (pattern= Mtpattern,rownames(subobj), value=TRUE ) 
     
     if (Remove_Mt_rRNA) {
-      var.genes <- dplyr::setdiff(VariableFeatures(subobj), c(rRNA.genes,Mt.genes))
-    } else {
-      var.genes <- VariableFeatures(subobj)
+      var.genes <- dplyr::setdiff(var.genes, c(rRNA.genes, Mt.genes))
     }
 
-    subobj <- ScaleData(subobj, vars.to.regress = c("percent.mt"))
-    
     #find variable genes and store them in the var.genes
-    subobj <- RunPCA(subobj, features = var.genes)
-    subobj <- FindNeighbors(subobj, dims = 1:20)
+    subobj <- RunPCA(subobj, assay=assay, features = var.genes)
+    subobj <- FindNeighbors(subobj, dims = 1:ndim)
     subobj <- FindClusters(subobj, resolution = resolution)
-    subobj <- RunUMAP(subobj, dims = 1:20)
+    subobj <- RunUMAP(subobj, dims = 1:ndim)
     
     #cat("\n\n## Cell clusters\n\n")
     #cat("\n\n### ", "Fig.4 nGene,nUMI and mtRNA distribution in each cluster and PCA, UMAP results\n\n")
@@ -561,7 +575,7 @@ preprocess<-function( SampleInfo,
       }
     }
 
-    info[[cur_sample]]=list("preprocess"=filters, "meta"=subobj@meta.data)
+    info[[cur_sample]]=list("preprocess"=filters, "obj"=subobj)
   }
   
   setwd(cur_folder)
