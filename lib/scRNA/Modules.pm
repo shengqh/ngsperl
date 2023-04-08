@@ -644,31 +644,61 @@ sub addCHETAH {
 }
 
 sub add_signacx_only {
-  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $obj_ref, $reduction ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $obj_ref, $reduction, $by_individual_sample ) = @_;
 
-  $config->{$task_name} = {
-    class                => "CQS::UniqueR",
-    perform              => 1,
-    target_dir           => $target_dir . "/" . $task_name,
-    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
-    parameterFile1_ref   => $obj_ref,
-    parameterSampleFile1 => {
-      species             => getValue( $def, "species" ),
-      prefix              => $project_name,
-      reduction           => $reduction,
-      pca_dims            => getValue( $def, "pca_dims" ),
-      bubblemap_file        => $def->{bubblemap_file},
-      by_sctransform        => getValue( $def, "by_sctransform" ),
-      SignacX_reference_file => $def->{SignacX_reference_file}
-    },
-    output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
-    sh_direct       => 1,
-    pbs             => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => getValue($def, "signacx_walltime", "10"),
-      "mem"       => getValue($def, "signacx_mem", getValue($def, "seurat_mem")),
-    },
-  };
+  if(!defined $by_individual_sample){
+    $by_individual_sample = 0;
+  }
+
+  if($by_individual_sample){
+    $config->{$task_name} = {
+      class                => "CQS::IndividualR",
+      perform              => 1,
+      target_dir           => $target_dir . "/" . $task_name,
+      rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
+      parameterSampleFile1_ref => $obj_ref,
+      parameterSampleFile2 => {
+        species             => getValue( $def, "species" ),
+        prefix              => $project_name,
+        reduction           => $reduction,
+        pca_dims            => getValue( $def, "pca_dims" ),
+        bubblemap_file        => $def->{bubblemap_file},
+        by_sctransform        => getValue( $def, "by_sctransform" ),
+        SignacX_reference_file => $def->{SignacX_reference_file}
+      },
+      output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
+      sh_direct       => 1,
+      pbs             => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => getValue($def, "signacx_walltime", "10"),
+        "mem"       => getValue($def, "signacx_mem", getValue($def, "seurat_mem")),
+      },
+    };
+  }else{
+    $config->{$task_name} = {
+      class                => "CQS::UniqueR",
+      perform              => 1,
+      target_dir           => $target_dir . "/" . $task_name,
+      rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
+      parameterFile1_ref   => $obj_ref,
+      parameterSampleFile2 => {
+        species             => getValue( $def, "species" ),
+        prefix              => $project_name,
+        reduction           => $reduction,
+        pca_dims            => getValue( $def, "pca_dims" ),
+        bubblemap_file        => $def->{bubblemap_file},
+        by_sctransform        => getValue( $def, "by_sctransform" ),
+        SignacX_reference_file => $def->{SignacX_reference_file}
+      },
+      output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
+      sh_direct       => 1,
+      pbs             => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => getValue($def, "signacx_walltime", "10"),
+        "mem"       => getValue($def, "signacx_mem", getValue($def, "seurat_mem")),
+      },
+    };
+  }
 
   push( @$tasks, $task_name );
 }
@@ -2172,10 +2202,18 @@ sub add_individual_qc {
       $qc_files_ref = "files";
     }
   }
+
+  my $v2 = getValue($def, "individual_qc_v2", 0);
+  my $class = $v2 ? "CQS::IndividualR" : "CQS::UniqueR";
+  my $rtemplate = "../scRNA/individual_qc.r";
+  my $by_sctransform = getValue( $def, "by_sctransform" );
+  my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 0 );
+  my $sct_str = $by_sctransform ? ($use_sctransform_v2 ? "_sct2" : "_sct") : "";
+
   $config->{$individual_qc_task} = {
-    class => "CQS::UniqueR",
-    target_dir => "${target_dir}/$individual_qc_task",
-    rtemplate => "../scRNA/individual_qc.r",
+    class => $class,
+    target_dir => "${target_dir}/${individual_qc_task}${sct_str}",
+    rtemplate => $rtemplate,
     rReportTemplate => "../scRNA/individual_qc.Rmd;reportFunctions.R;../scRNA/markerCode_filter.R;../scRNA/scRNA_func.r",
     run_rmd_independent => 1,
     rmd_ext => ".individual_qc.html",
@@ -2184,7 +2222,8 @@ sub add_individual_qc {
     parameterSampleFile2 => {
       email => $def->{email},
       pca_dims              => getValue( $def, "pca_dims" ),
-      by_sctransform        => getValue( $def, "by_sctransform" ),
+      by_sctransform        => ,
+      use_sctransform_v2 => ,
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
       species               => getValue( $def, "species" ),
       db_markers_file       => getValue( $def, "markers_file" ),
@@ -2211,7 +2250,7 @@ sub add_individual_qc {
     samplename_in_result => 0,
     can_result_be_empty_file => 0,
     remove_empty_parameter => 1,
-    sh_direct   => 1,
+    sh_direct => 0,
     pbs => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "10",
