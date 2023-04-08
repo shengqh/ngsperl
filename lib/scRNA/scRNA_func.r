@@ -543,7 +543,7 @@ draw_dimplot<-function(mt, filename, split.by) {
   return(g1)
 }
 
-do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, scale.all=FALSE, essential_genes=NULL) {
+do_normalization<-function(obj, selection.method="vst", nfeatures=2000, vars.to.regress=NULL, scale.all=FALSE, essential_genes=NULL) {
   DefaultAssay(obj)<-"RNA"
 
   cat("NormalizeData ... \n")
@@ -571,23 +571,31 @@ do_normalization<-function(obj, selection.method, nfeatures, vars.to.regress, sc
   return(obj)
 }
 
-do_sctransform<-function(rawobj, vars.to.regress, return.only.var.genes=FALSE, mc.cores=1, use_sctransform_v2=TRUE) {
+do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FALSE, mc.cores=1, use_sctransform_v2=FALSE) {
   vst.flavor = ifelse(use_sctransform_v2, "v2", "v1")
 
   print(paste0("performing SCTransform by ", vst.flavor, " ..."))
   nsamples=length(unique(rawobj$orig.ident))
-  if((nsamples > 1) & (mc.cores > 1)){
+  if(nsamples > 1){
     mc.cores = check_mc_cores(mc.cores)
 
     print("  split objects ...")
     objs<-SplitObject(object = rawobj, split.by = "orig.ident")
 
     print("  perform sctransform ...")
-    objs<-mclapply(objs, function(x){
-      print(paste0("    sctransform ", unique(x$orig.ident), " ..."))
-      x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
-      return(x)
-    }, mc.cores=mc.cores)  
+    if(mc.cores > 1){
+      objs<-mclapply(objs, function(x){
+        print(paste0("    sctransform ", unique(x$orig.ident), " ..."))
+        x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
+        return(x)
+      }, mc.cores=mc.cores)  
+    }else{
+      objs<-lapply(objs, function(x){
+        print(paste0("    sctransform ", unique(x$orig.ident), " ..."))
+        x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
+        return(x)
+      })  
+    }
     print("  sctransform done")
 
     print("  merge samples ...")
