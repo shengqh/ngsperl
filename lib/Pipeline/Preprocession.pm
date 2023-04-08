@@ -313,16 +313,21 @@ sub getPreprocessionConfig {
   }
 
   if (defined $def->{files}) {
-    if ( $def->{pool_sample} ){
-      checkFileGroupPairNames($def, ["pool_sample_groups"], ["pairs"], "files");
-      checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups");
+    my $perform_split_hto_samples = getValue($def, "perform_split_hto_samples", 0);
+    if($perform_split_hto_samples){
+      #don't check the data, too complicated
     }else{
-      checkFileGroupPairNames($def, ["groups"], ["pairs"], "files", getValue($def, "remove_missing_samples_in_group", 0));
+      if ( $def->{pool_sample} ){
+        checkFileGroupPairNames($def, ["pool_sample_groups"], ["pairs"], "files");
+        checkFileGroupPairNames($def, ["groups"], ["pairs"], "pool_sample_groups", 1);
+      }else{
+        checkFileGroupPairNames($def, ["groups"], ["pairs"], "files", getValue($def, "remove_missing_samples_in_group", 0));
 
-      if(not defined $def->{groups}){
-        my $files = $def->{files};
-        my $sampleNames = [keys %$files];
-        $def->{groups} = {"All" => $sampleNames};
+        if(not defined $def->{groups}){
+          my $files = $def->{files};
+          my $sampleNames = [keys %$files];
+          $def->{groups} = {"All" => $sampleNames};
+        }
       }
     }
   }
