@@ -1,5 +1,6 @@
 rm(list=ls()) 
-outFile='P9674'
+sample_name='C4_AL_110822_NC'
+outFile='C4_AL_110822_NC'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -8,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/scratch/cqs/charles_flynn_projects/20230327_9674_dog_2_scRNA_qc/raw_individual_qc/result')
+setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/raw_individual_qc/result/C4_AL_110822_NC')
 
 ### Parameter setting end ###
 
@@ -31,7 +32,6 @@ myoptions$nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
 myoptions$nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
 myoptions$nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
 myoptions$pca_dims=as.numeric(myoptions$pca_dims)
-myoptions$resolution=as.numeric(myoptions$resolution)
 myoptions$Remove_MtRNA=is_one(myoptions$Remove_MtRNA)
 myoptions$Remove_rRNA=is_one(myoptions$Remove_rRNA)
 
@@ -44,6 +44,9 @@ Mtpattern=myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
 Remove_Mt_rRNA=myoptions$Remove_MtRNA
 resolution=as.numeric(myoptions$resolution)
+
+by_sctransform=is_one(myoptions$by_sctransform)
+use_sctransform_v2=is_one(myoptions$use_sctransform_v2)
 
 species=myoptions$species # Hs or Mm
 
@@ -109,7 +112,10 @@ for (i in 1:nrow(SampleInfos)) {
                     Ensemblfile = Ensemblfile,
                     bubblemap_file = bubblemap_file,
                     bubblemap_width = bubblemap_width,
-                    bubblemap_height = bubblemap_height)
+                    bubblemap_height = bubblemap_height,
+                    species = species,
+                    by_sctransform = by_sctransform,
+                    use_sctransform_v2 = use_sctransform_v2)
   
   object.list<-c(object.list, info)
 }
