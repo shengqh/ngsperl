@@ -37,7 +37,7 @@ pca_dims<-1:npcs
 by_sctransform<-is_one(myoptions$by_sctransform)
 use_sctransform_v2<-is_one(myoptions$use_sctransform_v2)
 regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
-thread<-to_number(myoptions$thread, 1)
+thread<-to_numeric(myoptions$thread, 1)
 
 if(regress_by_percent_mt){
   vars.to.regress="percent.mt"
