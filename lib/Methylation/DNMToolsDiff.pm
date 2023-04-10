@@ -119,7 +119,7 @@ fi
 # report different methylated CpGs for both directions
     print $pbs "
 echo methdiff CpGs=`date`
-if [ ! -s ${group_name}_hypoinSample1.dmcpgs &&  ! -s ${group_name}_hypoinSample1.dmcpgs ]; then
+if [ ! -s ${group_name}_hypoinSample1.dmcpgs &&  ! -s ${group_name}_hypoinSample2.dmcpgs ]; then
   R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} 0.25  0.05
 ";
 	}
