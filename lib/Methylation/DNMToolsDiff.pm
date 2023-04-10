@@ -116,6 +116,12 @@ fi
 
 ";
 
+# report different methylated CpGs for both directions
+    print $pbs "
+echo methdiff CpGs=`date`
+if [ ! -s ${group_name}_hypoinSample1.dmcpgs &&  ! -s ${group_name}_hypoinSample1.dmcpgs ]; then
+  R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} 0.25  0.05
+";
 	}
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -141,6 +147,7 @@ sub result {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
     push( @result_files, "$cur_dir/${group_name}.methdiff" );
+    push( @result_files, "$cur_dir/${group_name}.dmcpgs" );
     
     my @sampleNames = @{ $comparisons->{$group_name}; };
     my $controlHmrFile=$sampleNames[0].".hmr.DMR";
