@@ -13,6 +13,8 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [qw(
   get_gmm_demux_option_map
 
+  get_sct_str
+
   get_marker_gene_dict
   add_seurat_rawdata
   add_seurat_merge_object
@@ -112,7 +114,7 @@ sub get_marker_gene_dict {
 }
 
 sub add_seurat_rawdata {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, $doublets_ref, $doublet_column) = @_;
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, $doublets_ref, $doublet_column, $qc_task) = @_;
   $config->{$seurat_rawdata} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -141,6 +143,8 @@ sub add_seurat_rawdata {
     parameterSampleFile3 => $def->{"pool_sample_groups"},
     parameterSampleFile4_ref => $hto_ref,
     parameterSampleFile5_ref => $doublets_ref,
+    parameterSampleFile6_ref => $qc_task,
+    parameterFile1 => $def->{filter_config_file},
     output_file_ext      => ".rawobj.rds",
     sh_direct            => 1,
     pbs                  => {
@@ -154,11 +158,14 @@ sub add_seurat_rawdata {
 }
 
 sub add_seurat_merge_object {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $source_ref) = @_;
-  $config->{$seurat_rawdata} = {
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata_task, $source_ref, $doublets_ref, $doublet_column) = @_;
+
+  #print($source_ref);
+
+  $config->{$seurat_rawdata_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $seurat_rawdata_task,
     rtemplate                => "../scRNA/scRNA_func.r;../scRNA/seurat_merge_object.r",
     rReportTemplate          => "../scRNA/seurat_data.rmd;reportFunctions.R",
     run_rmd_independent => 1,
@@ -168,7 +175,9 @@ sub add_seurat_merge_object {
       rRNApattern           => getValue( $def, "rRNApattern" ),
       hemoglobinPattern     => getValue( $def, "hemoglobinPattern" ),
       sample_pattern        => getValue( $def, "sample_pattern" ),
+      keep_seurat_object => getValue( $def, "keep_seurat_object", 0 ),
     },
+    parameterSampleFile3 => $def->{merge_object_config},
     output_file_ext      => ".rawobj.rds",
     sh_direct            => 1,
     pbs                  => {
@@ -178,11 +187,11 @@ sub add_seurat_merge_object {
     },
   };
 
-  push( @$summary, $seurat_rawdata );
+  push( @$summary, $seurat_rawdata_task );
 }
 
 sub add_seurat {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets) = @_;
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets, $is_preprocessed) = @_;
 
   my $seurat_task;
   my $reduction;
@@ -247,6 +256,7 @@ sub add_seurat {
       use_sctransform_v2 => $use_sctransform_v2,
       batch_for_integration => getValue( $def, "batch_for_integration" ),
       qc_genes              => getValue( $def, "qc_genes", "" ),
+      is_preprocessed => $is_preprocessed,
       thread => $thread,
     },
     output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
@@ -650,55 +660,30 @@ sub add_signacx_only {
     $by_individual_sample = 0;
   }
 
-  if($by_individual_sample){
-    $config->{$task_name} = {
-      class                => "CQS::IndividualR",
-      perform              => 1,
-      target_dir           => $target_dir . "/" . $task_name,
-      rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
-      parameterSampleFile1_ref => $obj_ref,
-      parameterSampleFile2 => {
-        species             => getValue( $def, "species" ),
-        prefix              => $project_name,
-        reduction           => $reduction,
-        pca_dims            => getValue( $def, "pca_dims" ),
-        bubblemap_file        => $def->{bubblemap_file},
-        by_sctransform        => getValue( $def, "by_sctransform" ),
-        SignacX_reference_file => $def->{SignacX_reference_file}
-      },
-      output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
-      sh_direct       => 1,
-      pbs             => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => getValue($def, "signacx_walltime", "10"),
-        "mem"       => getValue($def, "signacx_mem", getValue($def, "seurat_mem")),
-      },
-    };
-  }else{
-    $config->{$task_name} = {
-      class                => "CQS::UniqueR",
-      perform              => 1,
-      target_dir           => $target_dir . "/" . $task_name,
-      rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
-      parameterFile1_ref   => $obj_ref,
-      parameterSampleFile2 => {
-        species             => getValue( $def, "species" ),
-        prefix              => $project_name,
-        reduction           => $reduction,
-        pca_dims            => getValue( $def, "pca_dims" ),
-        bubblemap_file        => $def->{bubblemap_file},
-        by_sctransform        => getValue( $def, "by_sctransform" ),
-        SignacX_reference_file => $def->{SignacX_reference_file}
-      },
-      output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
-      sh_direct       => 1,
-      pbs             => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => getValue($def, "signacx_walltime", "10"),
-        "mem"       => getValue($def, "signacx_mem", getValue($def, "seurat_mem")),
-      },
-    };
-  }
+  my $class =  $by_individual_sample ? "CQS::IndividualR" : "CQS::UniqueR";
+  $config->{$task_name} = {
+    class                => $class,
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $task_name,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
+    parameterSampleFile1_ref => $obj_ref,
+    parameterSampleFile2 => {
+      species             => getValue( $def, "species" ),
+      prefix              => $project_name,
+      reduction           => $reduction,
+      pca_dims            => getValue( $def, "pca_dims" ),
+      bubblemap_file        => $def->{bubblemap_file},
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      SignacX_reference_file => $def->{SignacX_reference_file}
+    },
+    output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
+    sh_direct       => 0,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "signacx_walltime", "10"),
+      "mem"       => getValue($def, "signacx_mem", $by_individual_sample ? "40g" : getValue($def, "seurat_mem")),
+    },
+  };
 
   push( @$tasks, $task_name );
 }
@@ -732,15 +717,28 @@ sub add_singleR {
 }
 
 sub add_singleR_cell {
-  my ( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $cur_options ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $cur_options, $by_individual_sample ) = @_;
 
+  if(!defined $by_individual_sample){
+    $by_individual_sample = 0;
+  }
+
+  my $target_folder = $target_dir . "/" . $singleR_task;
+  my $class =  $by_individual_sample ? "CQS::IndividualR" : "CQS::UniqueR";
+  my $init_command = $by_individual_sample ? "
+mkdir -p $target_folder/result/.cache
+if [[ ! -s .cache ]]; then
+  ln -s ../.cache .cache
+fi
+" : "";
   $config->{$singleR_task} = {
-    class                => "CQS::UniqueR",
+    class                => $class,
     perform              => 1,
     target_dir           => $target_dir . "/" . $singleR_task,
+    init_command => $init_command,
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SingleR.r",
-    parameterFile1_ref   => $obj_ref,
-    parameterSampleFile1 => merge_hash_left_precedent($cur_options,  {
+    parameterSampleFile1_ref   => $obj_ref,
+    parameterSampleFile2 => merge_hash_left_precedent($cur_options,  {
       species             => getValue( $def, "species" ),
       pca_dims            => getValue( $def, "pca_dims" ),
       bubblemap_file        => $def->{bubblemap_file},
@@ -748,11 +746,11 @@ sub add_singleR_cell {
     }),
     output_file_ext => ".SingleR.png;.SingleR.rds;.meta.rds",
     #no_docker => 1,
-    sh_direct       => 1,
+    sh_direct       => 0,
     pbs             => {
       "nodes"     => "1:ppn=1",
       "walltime"  => getValue($def, "SingleR_walltime", "10"),
-      "mem"       => getValue($def, "SingleR_mem", getValue($def, "seurat_mem")),
+      "mem"       => getValue($def, "SingleR_mem", $by_individual_sample ? "40g" : getValue($def, "seurat_mem")),
     },
   };
 
@@ -2191,6 +2189,14 @@ sub add_clonotype_split {
   return($split_task);
 }
 
+sub get_sct_str {
+  my $def = shift;
+  my $by_sctransform = getValue( $def, "by_sctransform" );
+  my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 0 );
+  my $result = $by_sctransform ? ($use_sctransform_v2 ? "_sct2" : "_sct") : "";
+  return($result);
+}
+
 sub add_individual_qc {
   my ($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file, $qc_files_ref) = @_;
 
@@ -2205,14 +2211,12 @@ sub add_individual_qc {
 
   my $v2 = getValue($def, "individual_qc_v2", 0);
   my $class = $v2 ? "CQS::IndividualR" : "CQS::UniqueR";
+  my $output_object = $v2 ? 1 : 0;
   my $rtemplate = "../scRNA/individual_qc.r";
-  my $by_sctransform = getValue( $def, "by_sctransform" );
-  my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 0 );
-  my $sct_str = $by_sctransform ? ($use_sctransform_v2 ? "_sct2" : "_sct") : "";
 
   $config->{$individual_qc_task} = {
     class => $class,
-    target_dir => "${target_dir}/${individual_qc_task}${sct_str}",
+    target_dir => "${target_dir}/${individual_qc_task}",
     rtemplate => $rtemplate,
     rReportTemplate => "../scRNA/individual_qc.Rmd;reportFunctions.R;../scRNA/markerCode_filter.R;../scRNA/scRNA_func.r",
     run_rmd_independent => 1,
@@ -2222,8 +2226,8 @@ sub add_individual_qc {
     parameterSampleFile2 => {
       email => $def->{email},
       pca_dims              => getValue( $def, "pca_dims" ),
-      by_sctransform        => ,
-      use_sctransform_v2 => ,
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      use_sctransform_v2 => getValue( $def, "use_sctransform_v2", 0 ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
       species               => getValue( $def, "species" ),
       db_markers_file       => getValue( $def, "markers_file" ),
@@ -2245,16 +2249,18 @@ sub add_individual_qc {
       resolution            => getValue( $def, "resolution" ),
       pca_dims              => getValue( $def, "pca_dims" ),
       ensembl_gene_map_file => $def->{"ensembl_gene_map_file"},
+      output_object => $output_object,
     },
+    parameterFile1 => $qc_filter_config_file,
     output_file_ext => "objectlist.rds",
     samplename_in_result => 0,
     can_result_be_empty_file => 0,
     remove_empty_parameter => 1,
     sh_direct => 0,
     pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "20gb"
+      "nodes" => "1:ppn=1",
+      "walltime" => "10",
+      "mem" => getValue($def, "qc_mem", "80gb"),
     },
   };
 
@@ -2265,14 +2271,14 @@ sub add_individual_qc {
     
   if( ! -e $qc_filter_config_file){
     open(my $qc, '>', $qc_filter_config_file) or die $!;
-    print $qc "sample\tnFeature_cutoff_min\tnFeature_cutoff_max\tnCount_cutoff\tmt_cutoff\tcluster_remove\n";
+    print $qc "sample,nFeature_cutoff_min,nFeature_cutoff_max,nCount_cutoff,mt_cutoff,cluster_remove\n";
     my $files = $def->{files};
     for my $fname (sort keys %$files){
-      print $qc "$fname\t" . 
-                getValue( $def, "nFeature_cutoff_min" ) . "\t" . 
-                getValue( $def, "nFeature_cutoff_max" ) . "\t" . 
-                getValue( $def, "nCount_cutoff" ) . "\t" .
-                getValue( $def, "mt_cutoff" ) . "\t\n";
+      print $qc "$fname," . 
+                getValue( $def, "nFeature_cutoff_min" ) . "," . 
+                getValue( $def, "nFeature_cutoff_max" ) . "," . 
+                getValue( $def, "nCount_cutoff" ) . "," .
+                getValue( $def, "mt_cutoff" ) . ",\n";
     }
     close($qc);
   }
