@@ -4,12 +4,12 @@ outFile='C4_AL_110822_NC'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1=''
+parFile1='/home/shengq2/program/projects/justin_turner/20221115_7114_8822_scRNA_hg38/20230406_filter_config.csv'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/raw_individual_qc/result/C4_AL_110822_NC')
+setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/raw_qc_sct2/result/C4_AL_110822_NC')
 
 ### Parameter setting end ###
 
@@ -21,6 +21,7 @@ library(pheatmap)
 library(RCurl)
 library(knitr)
 library(kableExtra)
+library(data.table)
 
 source("scRNA_func.r")
 source("markerCode_filter.R")
@@ -47,6 +48,7 @@ resolution=as.numeric(myoptions$resolution)
 
 by_sctransform=is_one(myoptions$by_sctransform)
 use_sctransform_v2=is_one(myoptions$use_sctransform_v2)
+output_object=is_one(myoptions$output_object)
 
 species=myoptions$species # Hs or Mm
 
@@ -65,16 +67,23 @@ if(file.exists('fileList3.txt')){
 }
 
 ##cutoff dataframe for each sample to filter empty droplets
-Cutoffs<-data.frame(nFeature_cutoff_min=myoptions$nFeature_cutoff_min ,
-                    nFeature_cutoff_max=myoptions$nFeature_cutoff_max,
-                    nCount_cutoff=myoptions$nCount_cutoff, 
-                    mt_cutoff=myoptions$mt_cutoff, 
-                    cluster_remove=c(""),
-                    tringsAsFactors = F)
+if(parFile1 != ""){
+  Cutoffs<-fread(parFile1, data.table=F, header=TRUE)
+}else{
+  Cutoffs<-data.frame(
+    sample=SampleInfos$SampleId,
+    nFeature_cutoff_min=myoptions$nFeature_cutoff_min ,
+    nFeature_cutoff_max=myoptions$nFeature_cutoff_max,
+    nCount_cutoff=myoptions$nCount_cutoff, 
+    mt_cutoff=myoptions$mt_cutoff, 
+    cluster_remove=c(""),
+    stringsAsFactors = F)
+}
+rownames(Cutoffs)<-Cutoffs$sample
 
-#every sample share the same cutoff, otherwise put every parameter in the Cutoff dataframe
-if (dim(Cutoffs)[1]==1){
-  Cutoffs<-data.frame(lapply(Cutoffs, rep, nrow(SampleInfos)),stringsAsFactors = F)
+miss_samples = SampleInfos$SampleId[!(SampleInfos$SampleId %in% Cutoffs$sample)]
+if(length(miss_samples) > 0){
+  stop(paste0("Samples ", paste0(miss_samples, collapse=","), " not in ", parFile1))
 }
 
 transpose=FALSE
@@ -97,7 +106,7 @@ object.list<-list()
 i=1
 for (i in 1:nrow(SampleInfos)) {
   SampleInfo<-SampleInfos[i,]
-  Cutoff<-Cutoffs[i,]
+  Cutoff<-Cutoffs[SampleInfo$SampleId,]
   info<-preprocess( SampleInfo = SampleInfo,
                     Cutoff = Cutoff,
                     cellType = cellType,
@@ -115,7 +124,8 @@ for (i in 1:nrow(SampleInfos)) {
                     bubblemap_height = bubblemap_height,
                     species = species,
                     by_sctransform = by_sctransform,
-                    use_sctransform_v2 = use_sctransform_v2)
+                    use_sctransform_v2 = use_sctransform_v2,
+                    output_object = output_object)
   
   object.list<-c(object.list, info)
 }
