@@ -281,7 +281,8 @@ preprocess<-function( SampleInfo,
                       bubblemap_height=3000,
                       species=NULL,
                       by_sctransform=0,
-                      use_sctransform_v2=0) {
+                      use_sctransform_v2=0,
+                      output_object=0) {
 
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
@@ -357,7 +358,7 @@ preprocess<-function( SampleInfo,
   for(cur_sample in samples){
     subobj=subset(obj, orig.ident==cur_sample)
 
-    filters<-c(list(sample=cur_sample), as.list(Cutoff))
+    filters<-as.list(Cutoff)
     filters$raw_num_cell=ncol(obj)
   
     #cat("\n\n### Violin plot of nGene,nUMI and mtRNA distribution\n\n")
@@ -455,19 +456,20 @@ preprocess<-function( SampleInfo,
     print(p)
     dev.off()
 
-    plot5<-DimPlot(subobj, reduction = "pca",label=T,label.size=4) 
-    plot6<-DimPlot(subobj, reduction = "umap",label=T,label.size=4)
+    plot5<-DimPlot(subobj, reduction = "pca",label=T,label.size=4) + NoLegend() + theme(aspect.ratio=1)
+    plot6<-DimPlot(subobj, reduction = "umap",label=T,label.size=4) + NoLegend() + theme(aspect.ratio=1)
     
     #cat("\n\n### ", "Fig.5 Boxplot of nUMI,nGene, mtRNA and nCells distribution and PCA, UMAP results\n\n") 
     p<-plot5+plot6+plot_layout(ncol = 2)
-    png(paste0(cur_sample, ".qc6.png"), width=2200, height=1000, res=300)
+    png(paste0(cur_sample, ".qc6.png"), width=2000, height=1000, res=300)
     print(p)
     dev.off()
 
-    if (Cutoff$cluster_remove!=""){
-      removeIdent<-(unlist((strsplit(Cutoff$cluster_remove,",")))) 
-      subobj<-subset(subobj,idents=removeIdent, invert=T)
-    }
+    # In preprocessing, no cluster will be removed.
+    # if (Cutoff$cluster_remove!=""){
+    #   removeIdent<-(unlist((strsplit(Cutoff$cluster_remove,",")))) 
+    #   subobj<-subset(subobj,idents=removeIdent, invert=T)
+    # }
     
     ##predict method
     if (!is.null(celltype_predictmethod)) {
@@ -492,11 +494,16 @@ preprocess<-function( SampleInfo,
       names(new.cluster.ids) <- levels(subobj)
       subobj$seurat_cell_type=factor(new.cluster.ids[subobj$seurat_clusters], levels=new.cluster.ids)
 
+      max_char = max(unlist(lapply(new.cluster.ids, nchar))) + 2
+
       Idents(subobj)<-"seurat_cell_type"
       
       #cat("\n\n### ", "Fig.6 UMAP result\n\n")
-      g<-DimPlot(subobj, reduction = "umap",label=T,label.size=4) + NoLegend()
-      png(paste0(cur_sample, ".qc7.png"), width=1500, height=1500, res=300)
+      g<-get_dim_plot(subobj, group.by = "seurat_clusters", label.by="seurat_cell_type", label.size = 4, legend.title="") + 
+        theme(legend.text = element_text(size = 10)) + ggtitle("") + theme(aspect.ratio=1)
+
+      width = 1500 + max_char * 25
+      png(paste0(cur_sample, ".qc7.png"), width=width, height=1500, res=300)
       print(g)
       dev.off()
 
@@ -575,7 +582,11 @@ preprocess<-function( SampleInfo,
       }
     }
 
-    info[[cur_sample]]=list("preprocess"=filters, "obj"=subobj)
+    if(output_object){
+      info[[cur_sample]]=list("preprocess"=filters, meta=subobj@meta.data, "obj"=subobj)
+    }else{
+      info[[cur_sample]]=list("preprocess"=filters, meta=subobj@meta.data)
+    }
   }
   
   setwd(cur_folder)
