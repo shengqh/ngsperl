@@ -302,17 +302,17 @@ fi
         my $rmd_command = "$rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='$folder${sample_name}${rmd_ext}')\"";
         print $pbs "
 
-  if [[ -s $final_file ]]; then
-    $rmd_command
-  fi
-  ";
+$rmd_command
+
+";
         my $report_sh = "$pbs_dir/${sample_name}_report.sh";
         open( my $rs, ">$report_sh" ) or die $!;
         print $rs "
-  cd $cur_dir
+cd $cur_dir
 
-  $rmd_command
-  ";
+$rmd_command
+
+";
         close($rs);
       }
     }
