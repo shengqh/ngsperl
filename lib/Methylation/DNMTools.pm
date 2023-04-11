@@ -130,7 +130,7 @@ do
     echo states_\${chr}=`date`
     p1='/\\b';p2='\\b/p'
     pat=\"\$p1\$chr\$p2\"
-    sed -n \$pat ${sample_name}.dremove.sam > ${sample_name}.\${chr}.sam
+    sed -n \$pat ${sample_name}.sam > ${sample_name}.\${chr}.sam
     dnmtools states -c $chrDir -o ${sample_name}.\${chr}.epiread ${sample_name}.\${chr}.sam
     rm ${sample_name}.\${chr}.sam
   fi
@@ -153,7 +153,7 @@ fi
 
 
 if [[ -s ${sample_name}.meth ]]; then
-  samtools view -b ${sample_name}.bam ${sample_name}.sam
+  samtools view -h -b -o ${sample_name}.bam ${sample_name}.sam
   samtools index ${sample_name}.bam ${sample_name}.bam.bai
   rm ${sample_name}.sam
 fi
