@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='mouse_9622'
+outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/jbrown_lab/shengq2/test/20230330_9622_scRNA_mouse_nodoublets/seurat_nodoublets_rawdata/result/mouse_9622.rawobj.rds'
-parFile2='/nobackup/jbrown_lab/shengq2/test/20230330_9622_scRNA_mouse_nodoublets/essential_genes/result/mouse_9622.txt'
+parFile1='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_rawdata_postqc/result/crs.rawobj.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
 parFile3=''
 
 
-setwd('/nobackup/jbrown_lab/shengq2/test/20230330_9622_scRNA_mouse_nodoublets/seurat_nodoublets_sct2_merge/result')
+setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge/result')
 
 ### Parameter setting end ###
 
@@ -38,6 +38,7 @@ by_sctransform<-is_one(myoptions$by_sctransform)
 use_sctransform_v2<-is_one(myoptions$use_sctransform_v2)
 regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 thread<-to_numeric(myoptions$thread, 1)
+is_preprocessed=is_one(myoptions$is_preprocessed)
 
 if(regress_by_percent_mt){
   vars.to.regress="percent.mt"
@@ -55,18 +56,23 @@ finalListFile<-paste0(prefix, ".final.rds")
 
 obj<-readRDS(parFile1)
 
-finalList<-preprocessing_rawobj(obj, myoptions, prefix)
-obj<-finalList$rawobj
-finalList<-finalList[names(finalList) != "rawobj"]
+if(!is_preprocessed){
+  finalList<-preprocessing_rawobj(obj, myoptions, prefix)
+  obj<-finalList$rawobj
+  finalList<-finalList[names(finalList) != "rawobj"]
 
-DefaultAssay(obj)<-"RNA"
-
-if(by_sctransform){
-  obj<-do_sctransform(obj, vars.to.regress=vars.to.regress, return.only.var.genes=FALSE, mc.cores=thread, use_sctransform_v2=use_sctransform_v2)
-  assay="SCT"
+  DefaultAssay(obj)<-"RNA"
+  if(by_sctransform){
+    obj<-do_sctransform(obj, vars.to.regress=vars.to.regress, return.only.var.genes=FALSE, mc.cores=thread, use_sctransform_v2=use_sctransform_v2)
+  }
 }else{
-  assay="RNA"
+  finalList=list()
+  if(by_sctransform){
+    #https://github.com/satijalab/seurat/issues/2814
+    VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
+  }
 }
+assay=ifelse(by_sctransform, "SCT", "RNA")
 
 #no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
 #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap

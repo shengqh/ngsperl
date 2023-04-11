@@ -22,11 +22,13 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 
 ```{r data, include=FALSE}
 source("reportFunctions.R")
+source("scRNA_func.r")
 
 options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
 outFile=myoptions$task_name
+is_preprocessed=is_one(myoptions$is_preprocessed)
 
 ```
 
@@ -38,8 +40,13 @@ include_graphics(paste0(outFile,".elbowplot.pca.png"))
 
 # Sample cells
 
-```{r, results="asis", echo=FALSE}
+```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
 tbl<-read.csv(paste0(outFile, ".filtered.cell.csv"))
+print(kable(tbl, row.names=F) %>%	kable_styling())
+```
+
+```{r, results="asis", echo=FALSE, eval=is_preprocessed}
+tbl<-fread(paste0(outFile, ".Ident.cell.txt"))
 print(kable(tbl, row.names=F) %>%	kable_styling())
 ```
 
@@ -47,27 +54,23 @@ print(kable(tbl, row.names=F) %>%	kable_styling())
 include_graphics(paste0(outFile,".Ident.cell.bar.png"))
 ```
 
-# Filtering cutoffs
-
-```{r, results="asis", echo=FALSE}
+```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
+cat("\n\n# Filtering cutoffs\n\n")
 include_graphics(paste0(outFile,".qc.1.png"))
 ```
 
-# Number of reads ~ percentage of mitochondral
-
-```{r, results="asis", echo=FALSE}
+```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
+cat("\n\n# Number of reads ~ percentage of mitochondral\n\n")
 include_graphics(paste0(outFile,".qc.2.png"))
 ```
 
-# Number of features ~ percentage of mitochondral
-
-```{r, results="asis", echo=FALSE}
+```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
+cat("\n\n# Number of features ~ percentage of mitochondral\n\n")
 include_graphics(paste0(outFile,".qc.3.png"))
 ```
 
-# Sample characters after filtering
-
-```{r, results="asis", echo=FALSE}
+```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
+cat("\n\n# Sample characters after filtering\n\n")
 include_graphics(paste0(outFile,".qc.4.png"))
 ```
 
