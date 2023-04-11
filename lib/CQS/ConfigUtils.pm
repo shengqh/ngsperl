@@ -795,6 +795,12 @@ sub get_ignore_sample_map {
 sub do_get_unsorted_raw_files_no_ignored {
   my ( $config, $section, $returnself, $mapname, $pattern, $removeEmpty ) = @_;
 
+  if(!defined $removeEmpty){
+    if(!defined $mapname || $mapname eq "source" || $mapname eq "parameterSampleFile1"){
+      $removeEmpty = get_option($config, $section, "remove_empty_source", 0);
+    }
+  }
+
   my $curSection = get_config_section( $config, $section );
 
   if ( !defined $mapname ) {
