@@ -1,0 +1,495 @@
+---
+title: "Whole Genome Bisulfite Sequencing Data Analysis Report"
+date: "`r format(Sys.time())`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+ 
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(stringr)
+
+source("Pipeline.R")
+source("reportFunctions.R")
+
+knitr::opts_chunk$set(
+  tidy = TRUE,
+  tidy.opts = list(width.cutoff = 120),
+  message = FALSE,
+  warning = FALSE,
+  fig.width=8, 
+  fig.height=6
+)
+
+option_tbl<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
+myoptions<-unlist(split(option_tbl$V1, option_tbl$V2))
+
+path <- myoptions$dnmtools_path
+project <- myoptions$task_name
+
+files<-read.table("fileList1.txt", sep="\t", header=FALSE, as.is=TRUE)
+rownames(files)<-files$V2
+
+hasFastqc<-any(grepl("fastqc_", rownames(files)))
+
+hasWebGestaltAnalysis=file.exists('fileList4.txt')
+```
+
+<br>
+
+# Sequencing Quality
+  
+## Summary of sequencing quality
+  
+```{r fastqc_raw_per_base_sequence_quality,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_base_sequence_quality", "The mean quality scores of sequencing reads in each position", trunk.eval=file.exists(files["fastqc_raw_per_base_sequence_quality",1]))}
+check_and_include_graphics(files["fastqc_raw_per_base_sequence_quality",1])
+```
+
+<br>
+
+```{r fastqc_raw_per_base_sequence_quality_table,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc,warning=FALSE}
+
+tableFile=gsub(".png$","",files["fastqc_raw_per_base_sequence_quality",1])
+table<-read.delim(tableFile)
+
+QualityMin=30
+if (any(table$Mean<=QualityMin)) { #use this as cutoff to show the quality table
+  output_table1=data.frame(table[,c("File","Mean","Base")])
+  output_table1$Base=factor(as.character(output_table1$Base),levels = unique(output_table1$Base))
+  output_table1=tidyr::pivot_wider(output_table1,names_from=Base,values_from=Mean)
+  output_table1=output_table1[which(apply(output_table1[,-1],1,min)< QualityMin),]
+  
+  print(kable(output_table1, caption=tabRef("Quality Summary", "Samples with Low WGBS Quality"), row.names=F) %>% 
+          kable_styling() %>%
+          row_spec(which(apply(output_table1[,-1],1,min)< QualityMin), color = "black", background = "honeydew") %>%
+          htmltools::HTML())
+}
+
+
+```
+
+<br>
+
+```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_per_sequence_gc_content",1]))}
+check_and_include_graphics(files["fastqc_raw_per_sequence_gc_content",1])
+```
+
+
+<br>
+
+```{r fastqc_raw_per_sequence_gc_content_table,echo=FALSE,results='hide', include = hasFastqc, eval = FALSE,warning=FALSE}
+
+tableFile=gsub(".png$","",files["fastqc_raw_per_sequence_gc_content",1])
+tableContent<-read.delim(tableFile)
+
+tableContentSummary=tableContent %>% group_by(File) %>% summarise(GC25=sum(Count[which(GC.Content<=25)])/sum(Count),
+                                              GC50=sum(Count[which(GC.Content<=50)])/sum(Count),
+                                              GC75=sum(Count[which(GC.Content>=75)])/sum(Count))
+
+
+
+GcDistributionCutoff=0.4 #GC content cutoff
+gcSampleInd=which(tableContentSummary$GC25>=GcDistributionCutoff | tableContentSummary$GC75>=GcDistributionCutoff )
+if (any(gcSampleInd)) { #use this as cutoff to show GC distribution
+  output_table1=tableContentSummary[gcSampleInd,]
+  colnames(output_table1)[-1]=c("Percent of Reads <=25% GC","Percent of Reads <=50% GC","Percent of Reads >=75% GC")
+  for (i in 2:4) {
+    output_table1[[i]]=paste0(round(output_table1[[i]]*100,1),"%")
+  }
+  
+  print(kable(output_table1, caption=tabRef("GC content Distribution Summary", "Samples with abnormal GC content Distribution"), row.names=F) %>% 
+          kable_styling() %>%
+          htmltools::HTML() %>%
+          row_spec(which(apply(output_table1[,-1],1,min)< QualityMin), color = "black", background = "honeydew"))
+}
+
+
+```
+
+<br>
+  
+```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', include = hasFastqc, eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_adapter_content",1]))}
+check_and_include_graphics(files["fastqc_raw_adapter_content",1])
+```
+
+<br>
+
+# Mapping quality
+
+## Summary of mapping quality
+
+```{r mapping_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("mapping_summary", "The statistics of WGBS mapping results")}
+pat <- ".mapstats.yaml$"
+
+files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+
+DT <- list()
+
+for (i in 1:length(files) ) {
+  infile <- paste(path, files[i], sep = "/")
+  info <- read.delim(infile, header = F, sep = "", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T)
+  info <- info %>%
+    dplyr::slice(2, 4:9, 11:17) %>%
+    mutate(V1 = str_replace(V1, ":", "")) %>%
+    column_to_rownames("V1")
+  info <- t(info)
+  sample <- gsub(".+\\/(.*).mapstats.yaml", "\\1", files[i])
+  rownames(info) <- sample
+  DT[[sample]] <- info
+}
+
+mapping_df <- Reduce(rbind, DT)
+mapping_df <- as.data.frame(mapping_df) %>% rownames_to_column("sample")
+write.csv(file=paste0(project, ".abismal.mapping.csv"), mapping_df)
+mfinal <- mapping_df[,c("sample", "num_unique", "num_ambiguous", "num_unmapped")]
+colnames(mfinal) <- c("Sample", "Unique", "Ambiguous", "Unmapped")
+mfinal<-melt(mfinal, id="Sample", variable.name="Read", value.name="Count")
+mfinal$Read<-factor(mfinal$Read, levels=c("Unmapped", "Ambiguous", "Unique"))
+  
+
+width=max(2000, 70 * ncol(mapping_df))
+png(file=paste0(project, ".abismal.mapping.csv.png"), height=1500, width=width, res=300)
+
+g<-ggplot(mfinal, aes(x=Sample, y=Count, fill=Read)) +
+  geom_bar(stat="identity", width=0.5) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g)
+
+invisible(dev.off())
+
+g
+```
+
+<br>
+
+```{r mapping_summary_table, echo=FALSE, results='asis', include = T, eval = T}
+kable(mapping_df, caption="Mapping Quality Summary Table", row.names=F) %>% 
+        kable_styling()
+```
+
+<br>
+
+
+## Summary of coverage status
+
+### Coverage proportion of Sites
+
+```{r coverage_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("coverage_summary", "The statistics of coverage proportion")}
+pat <- ".levels$"
+
+files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+samples <- gsub(".+\\/(.*).levels", "\\1", files)
+DT <- list()
+
+for (i in 1:length(files) ) {
+  infile <- paste(path, files[i], sep = "/")
+  info <- read.delim(infile, header = F, sep = " ", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T)
+  info <- info %>%
+    mutate_at(c('V1'), ~na_if(., '')) %>%
+    tidyr::fill(V1) %>%
+    dplyr::select(-V2) %>%
+    mutate(V1 = str_replace(V1, ":", ""),
+           V3 = str_replace(V3, ":", "")) %>%
+    dplyr::filter(!is.na(V4)) %>%
+    dplyr::rename(Category = V1,
+                  Stat = V3,
+                  Value = V4)
+  sample <- gsub(".+\\/(.*).levels", "\\1", files[i])
+  DT[[sample]] <- info$Value
+}
+
+levels_df <- Reduce(cbind, DT)
+colnames(levels_df) <- samples
+levels_df <- cbind(info[,c(1:2)], levels_df)
+
+write.csv(file=paste0(project, ".coverage.stat.csv"), levels_df)
+
+mlevels <- levels_df %>%
+  gather("Sample", "Value", 3:ncol(levels_df))
+
+site_cov_perc <- mlevels %>%
+  dplyr::filter(Stat == "sites_covered_fraction") %>%
+  mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg")))
+
+width=max(2000, 70 * ncol(levels_df))
+png(file=paste0(project, ".coverage.stat.csv.png"), height=1500, width=width, res=300)
+
+g1<-ggplot(site_cov_perc, aes(x=Sample, y=Value, fill=Category)) +
+  geom_bar(stat="identity", width=0.5, position=position_dodge()) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g1)
+
+invisible(dev.off())
+
+
+g1
+
+```
+
+<br>
+
+
+### Coverage of target bases at different depths
+
+```{r coverage_depth_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("coverage_depth_summary", "The Coverage proportion of target bases at different depths")}
+pat <- "_hs_metrics.txt$"
+
+files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+samples <- gsub(".+\\/(.*)_hs_metrics.txt", "\\1", files)
+DT <- list()
+
+for (i in 1:length(files) ) {
+  infile <- paste(path, files[i], sep = "/")
+  info <- read.delim(infile, header = T, sep = "\t", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, nrows = 1)
+  info$sample <- gsub(".+\\/(.*)_hs_metrics.txt", "\\1", files[i])
+  DT[[files[i]]] <- info
+}
+
+hs_met_df <- bind_rows(DT)
+hs_met_df <- hs_met_df[, c(58, 1:54)]
+
+write.csv(file=paste0(project, ".HS.matrics.csv"), hs_met_df)
+
+cov_perc_depth <- hs_met_df %>%
+  dplyr::select(c("sample", starts_with("PCT_TARGET_BASES"))) %>%
+  gather("Depth", "Percentage", -sample) %>%
+  mutate(Depth = gsub("PCT_TARGET_BASES_(.+)", "\\1", Depth)) %>%
+  mutate(Depth = factor(Depth, levels = c("1X", "2X", "10X", "20X", "30X", "40X", "50X", "100X")))
+
+width=max(2000, 70 * ncol(levels_df))
+png(file=paste0(project, ".coverage.depth.perc.csv.png"), height=1500, width=width, res=300)
+
+g2<-ggplot(cov_perc_depth, aes(x=sample, y=Percentage, group = Depth, colour=Depth)) +
+  geom_line(size = 1.5) +
+  geom_point() +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g2)
+
+invisible(dev.off())
+
+g2
+```
+
+
+<br>
+
+
+## Duplication rate statistics
+
+```{r dup_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("dup_summary", "The duplication rate")}
+pat <- ".sam.dupstats$"
+
+files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+samples <- gsub(".+\\/(.*).sam.dupstats", "\\1", files)
+DT <- list()
+
+for (i in 1:length(files) ) {
+  infile <- paste(path, files[i], sep = "/")
+  info <- read.delim(infile, header = F, sep = "", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T)
+  info <- info %>%
+    mutate(V1 = str_replace(V1, ":", "")) %>%
+    column_to_rownames("V1")
+  info <- t(info)
+  sample <- gsub(".+\\/(.*).sam.dupstats", "\\1", files[i])
+  rownames(info) <- sample
+  DT[[sample]] <- info
+}
+
+dup_df <- Reduce(rbind, DT)
+
+write.csv(file=paste0(project, ".dup.rate.csv"), dup_df)
+
+dup_rate <- as.data.frame(dup_df) %>%
+  rownames_to_column("Sample") %>%
+  dplyr::select(c("Sample", "duplication_rate"))
+
+width=max(2000, 70 * ncol(levels_df))
+png(file=paste0(project, ".dup.rate.csv.png"), height=1500, width=width, res=300)
+
+g3<-ggplot(dup_rate, aes(x=Sample, y=duplication_rate)) +
+  geom_bar(stat="identity", width = 0.5, fill = "blue") +
+  ylim(0,100) +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g3)
+
+invisible(dev.off())
+
+g3
+```
+
+
+<br>
+
+# Methylation statistics in chromosomes
+
+## BS convert rate statistics in chromosomes 
+
+### The overall BS rate in chromosomes
+
+```{r bs_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("bs_summary", "The BS convert rate in chromosomes")}
+pat <- ".bsrate$"
+
+files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+samples <- gsub(".+\\/(.*).bsrate", "\\1", files)
+bsrate <- c()
+
+for (i in 1:length(files) ) {
+  infile <- paste(path, files[i], sep = "/")
+  info <- read.table(infile, header = F, sep = "", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T, nrows = 1)
+  info <- info$V5
+  bsrate <- append(bsrate, info)
+}
+
+bs_overall_df <- data.frame(samples, bsrate)
+
+write.csv(file=paste0(project, ".bs.overall.rate.csv"), bs_overall_df)
+
+width=max(2000, 70 * ncol(levels_df))
+png(file=paste0(project, ".bs.overall.rate.csv.png"), height=1500, width=width, res=300)
+
+g4<-ggplot(bs_overall_df, aes(x=samples, y=bsrate)) +
+  geom_bar(stat="identity", width = 0.5, fill = "green") +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g4)
+
+invisible(dev.off())
+
+g4
+
+```
+
+
+<br>
+
+
+### The BS rates of Non-CpG and CpG sites in chromosomes
+
+```{r bs_cpg_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites in chromosomes")}
+pat <- ".rrbs_summary_metrics$"
+
+files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+
+DT <- list()
+
+for (i in 1:length(files) ) {
+  infile <- paste(path, files[i], sep = "/")
+  info <- read.delim(infile, header = T, sep = "\t", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, nrows = 1)
+  sample <- gsub(".+\\/(.*).rrbs_summary_metrics", "\\1", files[i])
+  rownames(info) <- sample
+  DT[[sample]] <- info
+}
+
+rrbs_met_df <- bind_rows(DT)
+
+write.csv(file=paste0(project, ".bs.CpG.rate.csv"), bs_overall_df)
+
+width=max(2000, 70 * ncol(rrbs_met_df))
+png(file=paste0(project, ".bs.CpG.rate.csv.png"), height=1500, width=width, res=300)
+
+rrbs_final <- rrbs_met_df %>%
+  rownames_to_column("Sample") %>%
+  dplyr::select(Sample, PCT_NON_CPG_BASES_CONVERTED, PCT_CPG_BASES_CONVERTED) %>%
+  gather("Site_type", "Percentage", -Sample) %>%
+  mutate(Percentage = ifelse(Percentage <= 1, Percentage, 1-(Percentage - 1)))
+g5<-ggplot(rrbs_final, aes(x=Sample, y=Percentage, fill = Site_type)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  ylim(0,1) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g5)
+
+invisible(dev.off())
+
+g5
+
+```
+
+
+<br>
+
+
+## The statistics of methylation level in chromosomes
+
+```{r methy_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("methy_summary", "The statistics of methylation level in chromosomes")}
+fractional_meth <- mlevels %>%
+  dplyr::filter(Stat == "fractional_meth") %>%
+  mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg")))
+
+width=max(2000, 70 * ncol(rrbs_met_df))
+png(file=paste0(project, ".fractional_meth.csv.png"), height=1500, width=width, res=300)
+
+g6<-ggplot(fractional_meth, aes(x=Sample, y=Value, fill=Category)) +
+  geom_bar(stat="identity", width=0.5, position=position_dodge()) +
+  ylim(0,1) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g6)
+
+invisible(dev.off())
+
+g6
+```
+
+
+```{r include=FALSE, eval=hasWebGestaltAnalysis}
+wga_rmd = "webGestaltAnalysis.rmd"
+
+wga_files=read.table('fileList4.txt', sep="\t", header=FALSE, stringsAsFactors = FALSE)
+wga_names=unique(wga_files$V2)
+
+fdr_cutoff <- 0.1
+
+result = "# Enrichment of cis-regulated genes of differentially methylated CpGs\n<br>\n\n"
+wga_name = wga_names[1]
+for(wga_name in wga_names){
+  result = paste0(result, paste0("## ", wga_name, "\n\n"))
+  cur_tbl = wga_files[wga_files$V2 == wga_name,]
+  cur_file = cur_tbl$V1[1]
+  prefix = paste0("enrichment_results_", wga_name)
+  for(cur_file in cur_tbl$V1){
+    if(file.exists(cur_file)){
+      cur_name = basename(cur_file)
+      cur_category = str_sub(cur_name, nchar(prefix) +2, -5)
+      result = paste0(result, paste0("### ", cur_category, "\n\n"))
+      result = paste0(result, '```{r include=FALSE}\nanno_df <- read.table("', cur_file, '", sep = "\t", header = T)\n')
+      result = paste0(result, 'anno_df <- anno_df %>% dplyr::select(-c(link, overlapId)) %>% dplyr::filter(FDR <= fdr_cutoff)\n')
+      result = paste0(result, 'anno_df %>% DT::datatable(extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv")))\n```\n\n')
+    }
+  }
+}
+
+cat(result, file=wga_rmd)
+```
+
+```{r, child=wga_rmd, eval=hasWebGestaltAnalysis} 
+```
+
+<br>
+

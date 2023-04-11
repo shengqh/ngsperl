@@ -12,6 +12,7 @@ use CQS::Task;
 use CQS::GroupTask;
 use CQS::NGSCommon;
 use CQS::StringUtils;
+use Data::Dumper;
 
 our @ISA = qw(CQS::GroupTask);
 
@@ -130,7 +131,7 @@ fi
 }
 
 sub result {
-  my ( $self, $config, $section, $pattern ) = @_;
+  my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
@@ -141,18 +142,35 @@ sub result {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
     push( @result_files, "$cur_dir/${group_name}.methdiff" );
+    my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+      $result->{$group_name} = $filtered;
+    }
     
     my @sampleNames = @{ $comparisons->{$group_name}; };
+
     my $controlHmrFile=$sampleNames[0].".hmr.DMR";
     my $treatmentHmrFile=$sampleNames[1].".hmr.DMR";
     my $controlHmrFileFiltered=$controlHmrFile.".filtered";
     my $treatmentHmrFileFiltered=$treatmentHmrFile.".filtered";
+
+    @result_files = ();
     push( @result_files, "$cur_dir/${controlHmrFile}" );
-    push( @result_files, "$cur_dir/${treatmentHmrFile}" );
     push( @result_files, "$cur_dir/${controlHmrFileFiltered}" );
+    $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+      $result->{$group_name . "_" . $sampleNames[0]} = $filtered;
+    }
+
+    @result_files = ();
+    push( @result_files, "$cur_dir/${treatmentHmrFile}" );
     push( @result_files, "$cur_dir/${treatmentHmrFileFiltered}" );
-    $result->{$group_name} = filter_array( \@result_files, $pattern );
+    $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
+    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
+      $result->{$group_name . "_" . $sampleNames[1]} = $filtered;
+    }
   }
+
   return $result;
 }
 
