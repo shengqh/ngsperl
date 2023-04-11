@@ -68,7 +68,7 @@ sub perform {
     }
   }
   else {
-    copy( $rtemplate, $rfile ) or die "Copy failed: $!";
+    copy( $rtemplate, $rfile ) or die "Copy failed: $! : " . $rtemplate;
   }
 
   my $additional_rmd_files = $config->{$section}{additional_rmd_files};
