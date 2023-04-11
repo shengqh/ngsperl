@@ -63,18 +63,6 @@ sub perform {
     my $rmlist = "";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
-#preseq part
-    print $pbs "
-if [ ! -s ${sample_name}.c_curve ]; then
-  echo preseq c_curve=`date`
-  preseq c_curve $sampleFile > ${sample_name}.c_curve
-fi
-if [ ! -s ${sample_name}.lc_extrap ]; then
-  echo preseq lc_extrap=`date`
-  preseq lc_extrap -D $sampleFile > ${sample_name}.lc_extrap
-fi
-";
-
 #dnmtools part
     print $pbs "
 echo DNMTools=`date`

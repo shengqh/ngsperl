@@ -55,15 +55,16 @@ sub perform {
     my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files[0] . " -2 " . $sample_files[1]: "-1 " . $sample_files[0];
 
     my $result_file_raw          = $sample_name . ".raw.sam";
-    my $result_file_unsorted     = $sample_name . ".unsorted.sam";
-    my $result_file_unsorted_bam = $sample_name . ".unsorted.bam";
     my $result_file              = $sample_name . ".sorted.sam";
     my $result_file_bam          = $sample_name . ".sorted.bam";
-    my $result_file_bai          = $sample_name . ".sorted.bam.bai";
+    my $result_file_addqual     = $sample_name . ".sorted.addqual.sam";
+    my $result_file_addqual_bam     = $sample_name . ".sorted.addqual.bam";
+    my $result_file_addqual_bai     = $sample_name . ".sorted.addqual.bam.bai";
     my $map_stat                 = $sample_name . ".mapstats";
 
     my $hs_metrics               = $sample_name . "_hs_metrics.txt";
     my $per_target_coverage      = $sample_name . "_hs_metrics_per_interval.txt";
+    my $rrbs_metrics             = $sample_name . ".rrbs_summary_metrics";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -105,59 +106,86 @@ sub perform {
 if [[ ! -s $result_file_raw && ! -s $result_file_bam ]]; then
   echo abismal=`date`
   dnmtools abismal -t $thread -i $abismal_index $sample_files_str -s $map_stat -o $result_file_raw
-  perl $addqual_perlFile $result_file_raw $result_file_unsorted 
+  samtools sort -@ $thread -O BAM -o $result_file_bam $result_file_raw
 fi
 ";
     $rmlist=$rmlist ." $result_file_raw";
     if ($rmlist ne "") {
       print $pbs "
-if [[ -s $result_file_unsorted ]]; then
+if [[ -s $result_file_bam ]]; then
   rm $rmlist
 fi
 ";
     }
 
     print $pbs "
-if [ ! -s $result_file_bam ]; then
-  echo samtools_sort =`date`
-  samtools view -b $result_file_unsorted > $result_file_unsorted_bam
-  samtools sort -@ $thread -O bam -o $result_file_bam $result_file_unsorted_bam
-  samtools index $result_file_bam $result_file_bai
-  samtools view -O sam -o $result_file $result_file_bam
+if [[ ( -s $result_file_bam ) && ( ! -s $result_file_addqual_bam) ]]; then
+  echo add_qual =`date`
+  samtools view -h -O SAM $result_file_bam | perl $addqual_perlFile - $result_file_addqual
+  samtools view -b -o $result_file_addqual_bam $result_file_addqual
+  samtools index $result_file_addqual_bam $result_file_addqual_bai
 fi
 ";
-    $rmlist=" $result_file_unsorted" ." $result_file_unsorted_bam";
+    $rmlist=" $result_file_addqual";
 
     if ($rmlist ne "") {
     	    print $pbs "
-if [[ -s $result_file_unsorted && -s $result_file ]]; then
+if [[ -s $result_file_addqual_bam ]]; then
   rm $rmlist 
 fi
 ";
     }
 
+#preseq
     print $pbs "
-if [[ ( -s $result_file_bam ) && ( ! -s $hs_metrics ) ]; then
+if [ ! -s ${sample_name}.c_curve ]; then
+  echo preseq c_curve=`date`
+  preseq c_curve -B $result_file_addqual_bam > ${sample_name}.c_curve
+fi
+
+if [ ! -s ${sample_name}.lc_extrap ]; then
+  echo preseq lc_extrap=`date`
+  preseq lc_extrap -B -D $result_file_addqual_bam > ${sample_name}.lc_extrap
+fi
+
+";
+
+    print $pbs "
+if [[ ( -s $result_file_addqual_bam ) && ( ! -s $hs_metrics ) ]]; then
   echo picard CollectHsMetrics =`date`
-  java -jar $picard CollectHsMetrics \
-    I=$result_file_bam \
-    O=$hs_metrics \
-    R=$chrDir \
-    PER_TARGET_COVERAGE=$per_target_coverage \
-    BAIT_INTERVALS=$interval_list \
+  java -jar $picard CollectHsMetrics \\
+    I=$result_file_addqual_bam \\
+    O=$hs_metrics \\
+    R=$chrDir \\
+    PER_TARGET_COVERAGE=$per_target_coverage \\
+    BAIT_INTERVALS=$interval_list \\
     TARGET_INTERVALS=$interval_list
 fi
 ";
 
     print $pbs "
-if [[ -s $result_file_bam ]; then
+if [[ ( -s $result_file_addqual_bam ) && ( ! -s $rrbs_metrics ) ]]; then
   echo picard CollectRrbsMetrics =`date`
-  java -jar $picard CollectRrbsMetrics \
-    I=$result_file_bam \
-    M=$sample_name \
+  java -jar $picard CollectRrbsMetrics \\
+    I=$result_file_addqual_bam \\
+    M=$sample_name \\
     R=$chrDir
 fi
 ";
+
+    print $pbs "
+if [[ ( -s $hs_metrics ) && ( -s $rrbs_metrics ) ]]; then
+  rm $result_file_addqual_bam $result_file_addqual_bai
+fi
+    ";
+
+    print $pbs "
+if [[ ( -s $hs_metrics ) && ( -s $rrbs_metrics ) ]]; then
+  echo samtools final result =`date`
+  samtools view -h -O SAM -o $result_file $result_file_bam
+fi
+    ";
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
