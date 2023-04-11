@@ -53,15 +53,15 @@ for(fileTitle in names(fileMap)) {
   }
 
   if(!('percent.mt' %in% colnames(sobj@meta.data))){
-    sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt")
+    sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt", assay="RNA")
   }
 
   if(!('percent.ribo' %in% colnames(sobj@meta.data))){
-    sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo")
+    sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo", assay="RNA")
   }
 
   if(!('percent.hb' %in% colnames(sobj@meta.data))){
-    sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")
+    sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb", assay="RNA")
   }   
 
   if(!('sample' %in% colnames(sobj@meta.data))){
