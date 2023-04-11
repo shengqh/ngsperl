@@ -21,7 +21,14 @@ def validate2(logger, input1str, input2str, output):
     read_count = 0
     error_msg = None
     try:
-      with gzip.open(read1, "rt") as fin1, gzip.open(read2, "rt") as fin2:
+      if read1.endswith(".gz"):
+        fin1 = gzip.open(read1, "rt")
+        fin2 = gzip.open(read2, "rt")
+      else:
+        fin1 = open(read1, "rt")
+        fin2 = open(read2, "rt")
+
+      with fin1, fin2:
         while(True):
           line1 = fin1.readline()
           line2 = fin2.readline()
