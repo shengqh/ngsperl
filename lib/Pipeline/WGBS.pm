@@ -161,7 +161,7 @@ sub getConfig {
     buildver   => $annovar_buildver,
     remove_empty_source => 1,
     isBed      => 1,
-    source_ref => [ "DNMToolsDiff", ".DMR.filtered\$|.dmcpgs\$" ],
+    source_ref => [ "DNMToolsDiff", ".DMR.filtered\$|\.dmcpgs\$" ],
     pbs        => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
@@ -176,7 +176,8 @@ sub getConfig {
     target_dir         => "$targetDir/DNMToolsDiffAnnovarGenes",
     interpretor => "perl",
     program => "../Methylation/get_gene_names.pl",
-    parameterSampleFile1_ref => [ "DNMToolsDiffAnnovar" ],
+    #parameterSampleFile1_ref => [ "DNMToolsDiffAnnovar" ],
+    source_ref => ["DNMToolsDiffAnnovar", ".dmcpgs.annovar.final.tsv\$" ],
     output_file_prefix => ".genename.txt",
     output_ext => ".genename.txt",
     output_by_file => 1,
