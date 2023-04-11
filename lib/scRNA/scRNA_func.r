@@ -7,6 +7,7 @@ library(ggplot2)
 library(patchwork)
 library(Matrix.utils)
 library(parallel)
+library(data.table)
 
 check_mc_cores<-function(mc.cores) {  
   if(.Platform$OS.type == "windows") {
@@ -64,6 +65,16 @@ is_file_empty<-function(filepath){
   return(FALSE)
 }
 
+is_seurat_object<-function(obj){
+  return("Seurat" %in% class(obj))
+}
+
+read_file_map<-function(file_list_path){
+  tbl<-fread(file_list_path, data.table=F, header=F)
+  result<-unlist(split(tbl$V1, tbl$V2))
+  return(result)
+}
+
 celltype_to_filename<-function(pct){
   return(gsub('[/:()?\ ]+', "_", pct))
 }
@@ -88,7 +99,7 @@ theme_bw3 <- function (axis.x.rotate=F, angle=90, vjust=0.5, hjust=1) {
     theme(
       strip.background = element_rect(fill = NA, colour = 'black'),
       panel.border = element_rect(fill = NA, color = "black"),			
-      axis.line = element_line(colour = "black", size = 0.5)
+      axis.line = element_line(colour = "black", linewidth = 0.5)
     )
   if (axis.x.rotate){
     result = result + theme_rotate_x_axis_label(angle=angle,vjust=vjust,hjust=hjust)
@@ -1210,12 +1221,26 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
   return(lastCluster)
 }
   
-read_object<-function(obj_file, meta_rds=NULL, columns=NULL){
+read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
   obj=readRDS(obj_file)
   if(is.list(obj)){
-    obj<-obj$obj
+    if(!is.null(sample_name)){
+      obj<-obj[[sample_name]]
+    }
+  }
+
+  if(is.list(obj)){
+    if("obj" %in% names(obj)){
+      obj=obj$obj
+    }else{
+      stop(paste0("No obj found in list with names: ", paste0(names(obj), collapse=", ")))
+    }
   }
   
+  if(!is_seurat_object(obj)){
+    stop(paste0("It is not Seurat object: ", obj_file))
+  }
+
   if(!is.null(meta_rds)){
     if (meta_rds != ""){
       if(file_ext(meta_rds) == "rds"){
@@ -1238,6 +1263,14 @@ read_object<-function(obj_file, meta_rds=NULL, columns=NULL){
       }
     }
   }
+  return(obj)
+}
+
+read_object_from_file_list<-function(file_list_path, meta_rds=NULL, columns=NULL){
+  df=fread(file_list_path, header=F)
+  sample_name=df$V2[1]
+  objlist_file=df$V1[1]
+  obj=read_object(objlist_file, meta_rds=meta_rds, columns=columns, sample_name=sample_name)
   return(obj)
 }
 
@@ -1315,37 +1348,43 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   ct<-as.data.frame(table(rawobj[[ident_name]]))
   colnames(ct)<-c("Sample","Cell")
 
-  if("project" %in% colnames(rawobj@meta.data)){
-    is_hto=any(rawobj$project != rawobj$orig.ident)
-  }else{
-    is_hto=FALSE
+  if(!("project" %in% colnames(rawobj@meta.data))){
+    rawobj$project = rawobj$orig.ident
   }
 
-  if("sample" %in% colnames(rawobj@meta.data)){
-    is_merged=any(rawobj$sample != rawobj$orig.ident)
-  }else{
-    is_merged=FALSE
+  if(!("sample" %in% colnames(rawobj@meta.data))){
+    rawobj$sample = rawobj$orig.ident
   }
 
-  if(ident_name == "orig.ident" & is_hto){
-    meta<-rawobj@meta.data
-    meta<-meta[!duplicated(meta$orig.ident),,drop=F]
-    smap=split(as.character(meta$project), as.character(meta$orig.ident))
-    ct$Set=unlist(smap[ct$Sample])
-  }
+  if(ident_name == "orig.ident"){
+    if(any(rawobj$orig.ident != rawobj$sample)){
+      meta<-rawobj@meta.data
+      meta$os = paste0(meta$orig.ident, ":", meta$sample)
+      meta<-meta[!duplicated(meta$os),,drop=F]
+      smap=split(as.character(meta$sample), as.character(meta$orig.ident))
+      smap2=lapply(smap,function(x){
+        paste0(x, collapse=",")
+      })
+      ct$Source=unlist(smap2[ct$Sample])
+    }
 
-  if(ident_name == "sample" & is_merged){
-    meta<-rawobj@meta.data
-    meta<-meta[!duplicated(meta$sample),,drop=F]
-    smap=split(as.character(meta$orig.ident), as.character(meta$sample))
-    ct$Set=unlist(smap[ct$Sample])
+    if(any(rawobj$project != rawobj$sample)){
+      meta<-rawobj@meta.data
+      meta$os = paste0(meta$orig.ident, ":", meta$project)
+      meta<-meta[!duplicated(meta$os),,drop=F]
+      smap=split(as.character(meta$project), as.character(meta$orig.ident))
+      smap2=lapply(smap,function(x){
+        paste0(x, collapse=",")
+      })
+      ct$Project=unlist(smap2[ct$Sample])
+    }
   }
   write.table(ct, paste0(prefix, ".cell.txt"), sep="\t", row.names=F)
   
-  if("Set" %in% colnames(ct)){
-    g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Set))
+  if("Project" %in% colnames(ct)){
+    g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Project))
   }else{
-    g<-ggplot(ct, aes(x=Sample, y=Cell))
+    g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Sample)) + NoLegend()
   }
   g<-g + geom_bar(stat="identity") + theme_bw3(axis.x.rotate = T)
   png(paste0(prefix, ".cell.bar.png"), width=max(3000, nrow(ct) * 100), height=2000, res=300)
@@ -1421,7 +1460,8 @@ get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.
   scolors = get_hue_colors(ngroups, random_colors)
 
   g<-DimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by, ...)+ 
-    scale_color_manual(legend.title, values=scolors, labels = cts, guide = guide_legend(ncol=ncol)) + ggtitle(title)
+    scale_color_manual(legend.title, values=scolors, labels = cts, guide = guide_legend(ncol=ncol)) + 
+    ggtitle(title) + theme(aspect.ratio=1)
   return(g)
 }
 
@@ -1553,8 +1593,6 @@ get_valid_path<-function(oldpath){
 output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern) {
   writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
 
-  saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
-
   png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
   par(mar = c(4, 8, 2, 1))
   C <- rawobj@assays$RNA@counts
@@ -1579,22 +1617,22 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
     draw_feature_qc(paste0(outFile, ".project"), rawobj, "project")
   }
 
-  rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
-  rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
+  # rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
+  # rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
 
-  rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
-  rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
-  rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
+  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
+  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
 
-  draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
+  # draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
 
-  if(has_sample){
-    draw_feature_qc(paste0(outFile, ".no_ribo.sample"), rawobj, "sample")
-  }
+  # if(has_sample){
+  #   draw_feature_qc(paste0(outFile, ".no_ribo.sample"), rawobj, "sample")
+  # }
 
-  if(has_project){
-    draw_feature_qc(paste0(outFile, ".no_ribo.project"), rawobj, "project")
-  }
+  # if(has_project){
+  #   draw_feature_qc(paste0(outFile, ".no_ribo.project"), rawobj, "project")
+  # }
 }
 
 XAxisRotation<-function(){
@@ -1931,7 +1969,7 @@ read_scrna_data<-function(fileName, keep_seurat=FALSE){
     counts = data.frame(read_gzip_count_file(fileName, fileTitle, species))
   } else if (grepl('.rds$', fileName)) {
     counts = readRDS(fileName)
-    if("Seurat" %in% class(counts)){
+    if(is_seurat_object(counts)){
       if(!keep_seurat){
         counts = GetAssayData(counts, slot = "counts")
       }
@@ -1980,11 +2018,11 @@ Plot_predictcelltype_ggplot2<-function(predict_celltype, topn=3, filename=NA, wi
   n_cluster=ncol(cta_mat)
   
   if(is.na(width)){
-    width = max(1000, n_cluster * 50) + 500 
+    width = max(1000, n_cluster * 60) + 500 
   }
   
   if(is.na(height)){
-    height = max(1000, n_ct * 50) + 250 
+    height = max(1000, n_ct * 60) + 400 
   }
   
   ord <- hclust( dist(cta_mat, method = "euclidean"), method = "ward.D" )$order
@@ -2011,3 +2049,4 @@ Plot_predictcelltype_ggplot2<-function(predict_celltype, topn=3, filename=NA, wi
     dev.off()
   }
 }
+
