@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='crs'
+sample_name='C4_AL_110822_NC'
+outFile='C4_AL_110822_NC'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
+parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230314_7114_8822_scRNA_hg38/seurat_sct_merge_singleR/result')
+setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/raw_qc_sct2_SingleR/result/C4_AL_110822_NC')
 
 ### Parameter setting end ###
 
@@ -22,7 +23,7 @@ library(celldex)
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
-options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
+options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
 if(myoptions$species == "Mm"){
@@ -35,7 +36,7 @@ if(myoptions$species == "Mm"){
 }
 
 if(!exists("obj")){
-  obj=read_object(parFile1)
+  obj=read_object_from_file_list(parSampleFile1)
 }
 
 force=TRUE
