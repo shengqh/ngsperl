@@ -1620,9 +1620,9 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
   # rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
   # rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
 
-  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt")
-  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo")
-  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb")    
+  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt", assay="RNA")
+  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo", assay="RNA")
+  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb", assay="RNA")    
 
   # draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
 

@@ -245,6 +245,7 @@ sub getScRNASeqConfig {
   my $bam_ref = undef;
   my $hla_merge = undef;
   my $filter_config_file = getValue($def, "filter_config_file", $target_dir . "/filter_config.csv");
+  my $sctk_ref = undef;
   if (defined $def->{files}){
     my @report_files = ();
     my @report_names = ();
@@ -254,10 +255,10 @@ sub getScRNASeqConfig {
     my $hto_summary_task = undef;
     my $files_def = "files";
 
-    my $sctk_task = undef;
     if ( getValue($def, "perform_sctk", 0) ){
-      $sctk_task = "sctk";
+      my $sctk_task = "sctk";
       add_sctk($config, $def, $summary, $target_dir, $sctk_task, "files");
+      $sctk_ref = [$sctk_task, ".meta.rds"];
     }
 
     my $raw_individual_qc_task = undef;
@@ -269,20 +270,22 @@ sub getScRNASeqConfig {
 
       my $reduction = "pca";
 
-      my $signacX_task = undef;
+      my $signacX_ref = undef;
       if (getValue( $def, "perform_SignacX", 0 ) ) {
-        $signacX_task = $raw_individual_qc_task . "_SignacX";
+        my $signacX_task = $raw_individual_qc_task . "_SignacX";
         add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $raw_individual_qc_task, $reduction, 1);
+        $signacX_ref = [ $signacX_task, ".meta.rds" ];
       }
 
-      my $singleR_task = undef;
+      my $singleR_ref = undef;
       if (getValue( $def, "perform_SingleR", 0 ) ) {
-        $singleR_task = $raw_individual_qc_task . "_SingleR";
+        my $singleR_task = $raw_individual_qc_task . "_SingleR";
         my $cur_options = {
           task_name => $def->{task_name},
           reduction => $reduction, 
         };
         add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $raw_individual_qc_task, $cur_options, 1 );
+        $singleR_ref = [ $singleR_task, ".meta.rds" ];
       }
 
       my $qc_report_task = $raw_individual_qc_task . "_report";
@@ -304,9 +307,9 @@ sub getScRNASeqConfig {
           doublet_column => getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5")),
         },
         parameterSampleFile2_ref => $raw_individual_qc_task,
-        parameterSampleFile3_ref => $sctk_task,
-        parameterSampleFile4_ref => [ $signacX_task, ".meta.rds" ],
-        parameterSampleFile5_ref => [ $singleR_task, ".meta.rds" ],
+        parameterSampleFile3_ref => $sctk_ref,
+        parameterSampleFile4_ref => $signacX_ref,
+        parameterSampleFile5_ref => $singleR_ref,
         output_file_ext => ".qc.html",
         sh_direct       => 1,
         pbs             => {
@@ -457,8 +460,8 @@ sub getScRNASeqConfig {
       }else{
         my $doublets_ref = undef;
         my $doublet_column = undef;
-        if(getValue($def, "remove_doublets", 0) && (defined $sctk_task)){
-          $doublets_ref = [$sctk_task, ".meta.rds"];
+        if(getValue($def, "remove_doublets", 0) && (defined $sctk_ref)){
+          $doublets_ref = $sctk_ref;
           $doublet_column = getValue($def, "remove_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
           $no_doublets = "_nodoublets";
         }
@@ -495,20 +498,22 @@ sub getScRNASeqConfig {
         addDoubletFinder($config, $def, $summary, $target_dir, $df_task, $obj_ref, undef );
       }
 
-      my $signacX_task = undef;
+      my $signacX_ref = undef;
       if (getValue( $def, "perform_SignacX", 0 ) ) {
-        $signacX_task = $seurat_task . "_SignacX";
+        my $signacX_task = $seurat_task . "_SignacX";
         add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $obj_ref, $reduction );
+        $signacX_ref = [$signacX_task, ".meta.rds"];
       }
 
-      my $singleR_task = undef;
+      my $singleR_ref = undef;
       if (getValue( $def, "perform_SingleR", 0 ) ) {
-        $singleR_task = $seurat_task . "_SingleR";
+        my $singleR_task = $seurat_task . "_SingleR";
         my $cur_options = {
           task_name => $def->{task_name},
           reduction => $reduction, 
         };
         add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $cur_options );
+        $singleR_ref = [$singleR_task, ".meta.rds"];
       }
 
       my $celltype_task = undef;
@@ -529,9 +534,9 @@ sub getScRNASeqConfig {
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
         my $call_files_ref = [$scDynamic_task, ".iter_png.csv"];
 
-        if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
+        if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
           my $validation_task = $scDynamic_task . "_validation";
-          add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, $signacX_task, $singleR_task, $sctk_task, "layer4", ".dynamic_call_validation.html");
+          add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, $signacX_ref, $singleR_ref, $sctk_ref, "layer4", ".dynamic_call_validation.html");
         }
 
         if(defined $def->{bubble_plots}){
@@ -569,7 +574,7 @@ sub getScRNASeqConfig {
 
           my $rename_map = $def->{"dynamic_rename_map"};
 
-          $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_task, $singleR_task);
+          $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref);
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_dynamic_choose")) {
@@ -579,9 +584,9 @@ sub getScRNASeqConfig {
             $obj_ref = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
-            if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
+            if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, $signacX_task, $singleR_task, $sctk_task, "seurat_cell_type", ".dynamic_choose_validation.html" );
+              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, $signacX_ref, $singleR_ref, $sctk_ref, "seurat_cell_type", ".dynamic_choose_validation.html" );
             }
 
             $celltype_task = $choose_task;
@@ -761,9 +766,9 @@ sub getScRNASeqConfig {
           }
           my $multires_celltype = $celltype_cluster . "_celltype_summary";
 
-          if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
+          if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
             my $validation_task = $multires_task . "_validation";
-            add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $signacX_task, $singleR_task, $sctk_task, $celltype_cluster . "_celltype", ".multires_call_validation.html" );
+            add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $signacX_ref, $singleR_ref, $sctk_ref, $celltype_cluster . "_celltype", ".multires_call_validation.html" );
           }
 
           my $cur_options = {
@@ -773,7 +778,7 @@ sub getScRNASeqConfig {
           };
           my $rename_map = $def->{"multires_rename_map"};
 
-          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_task, $singleR_task);
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref);
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_multires_choose", 0)) {
@@ -781,9 +786,9 @@ sub getScRNASeqConfig {
             my $table = getValue($def, "multires_subclusters_table");
             addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
 
-            if (defined $sctk_task or defined $signacX_task or defined $singleR_task){
+            if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, $signacX_task, $singleR_task, $sctk_task, "seurat_cell_type", ".multires_choose_validation.html" );
+              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, $signacX_ref, $singleR_ref, $sctk_ref, "seurat_cell_type", ".multires_choose_validation.html" );
             }
 
             $celltype_task = $choose_task;

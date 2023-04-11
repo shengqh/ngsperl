@@ -804,15 +804,12 @@ sub add_celltype_validation {
     $object_ref, 
     $meta_ref, 
     $call_files_ref, 
-    $signac_task, 
-    $singleR_task, 
-    $sctk_task, 
+    $signacX_ref, 
+    $singleR_ref, 
+    $sctk_ref, 
     $celltype_column, 
     $rmd_ext ) = @_;
     
-  my $signac_ref = defined $signac_task ? [$signac_task, ".meta.rds"] : undef;
-  my $singleR_ref = defined $singleR_task ? [$singleR_task, ".meta.rds"] : undef;
-  my $sctk_ref = defined $sctk_task ? [$sctk_task, ".meta.rds"] : undef;
   my $doublet_column = getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
 
   $config->{$task_name} = {
@@ -825,7 +822,7 @@ sub add_celltype_validation {
     run_rmd_independent => 1,
     parameterFile1_ref       => $object_ref,
     parameterFile2_ref       => $meta_ref,
-    parameterFile3_ref       => $signac_ref,
+    parameterFile3_ref       => $signacX_ref,
     parameterFile4_ref       => $singleR_ref,
     parameterFile5_ref => $call_files_ref,
     parameterSampleFile1     => {
@@ -1490,7 +1487,7 @@ sub addDynamicCluster {
 }
 
 sub addSubCluster {
-  my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_task, $singleR_task) = @_;
+  my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref) = @_;
 
   my $by_integration;
   my $integration_by_harmony;
@@ -1531,6 +1528,8 @@ sub addSubCluster {
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
+    parameterFile4_ref => $signacX_ref,
+    parameterFile5_ref => $singleR_ref,
     parameterSampleFile1    => merge_hash_left_precedent($cur_options, {
       task_name             => getValue( $def, "task_name" ),
       pca_dims              => getValue( $def, "pca_dims" ),
@@ -1566,17 +1565,6 @@ sub addSubCluster {
       "mem"       => getValue($def, "seurat_mem")
     },
   };
-  if(defined $signacX_task){
-    if(defined $config->{$signacX_task}){
-      $config->{$subcluster_task}{parameterFile4_ref} = [ $signacX_task, ".meta.rds" ];
-    }
-  }
-
-  if(defined $singleR_task){
-    if(defined $config->{$singleR_task}){
-      $config->{$subcluster_task}{parameterFile5_ref} = [ $singleR_task, ".meta.rds" ];
-    }
-  }
 
   push( @$summary, $subcluster_task );
 

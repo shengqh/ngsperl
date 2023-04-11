@@ -157,7 +157,9 @@ read_gzip_count_file<-function(files, sample, species){
 #read object from either qc seurat object file or original count file
 raw_objs = list()
 remove_cells = list()
-if(exists('parSampleFile6')){
+
+is_qc_data = exists('parSampleFile6')
+if(is_qc_data){
   #from qc data
   obj_map = read_file_map(parSampleFile6)
   if(parFile1 != ""){
@@ -284,9 +286,11 @@ for(sample_name in sample_names){
     sobj$orig.cell = colnames(sobj)
   }
 
-  sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt")
-  sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo")
-  sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb")
+  if(!is_qc_data){
+    sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt", assay="RNA")
+    sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo", assay="RNA")
+    sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb", assay="RNA")
+  }
 
   if(sample_name %in% names(remove_cells)){
     rcs<-remove_cells[[sample_name]]
@@ -318,6 +322,7 @@ for(sample_name in sample_names){
   sobj$project=sample_name    
   sobj$sample=sample_name
 
+  sobj<-RenameCells(object=sobj, new.names=paste0(sample_name, "_", colnames(sobj)))
   if(sample_name %in% names(hto_data)) {
     cat("processing HTO demultiplex of", sample_name, "\n")
     raw_objs[[sample_name]] = NULL
@@ -330,11 +335,9 @@ for(sample_name in sample_names){
       sample_obj = subset(validobj, cells=tagcells$cell)
       sample_obj$orig.ident = sample
       sample_obj$sample = sample
-      sample_obj<-RenameCells(object=sample_obj, new.names=paste0(sample, "_", colnames(sample_obj)))
       raw_objs[[sample]] = sample_obj
     }
   }else{
-    sobj<-RenameCells(object=sobj, new.names=paste0(sobj$orig.ident, "_", colnames(sobj)))
     raw_objs[[sample_name]] = sobj
   }
 }
