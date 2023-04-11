@@ -26,6 +26,11 @@ sub new {
   return $self;
 }
 
+sub get_pbs_key {
+  my ($self, $config, $section) = @_;
+  return(has_raw_files($config, $section, "source") ? "source" : "parameterSampleFile1");
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -47,7 +52,7 @@ sub perform {
 
   my $output_to_folder = get_option( $config, $section, "output_to_folder", 0 );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", $self->{_output_to_same_folder});
-  my $output_file_prefix    = get_option( $config, $section, "output_file_prefix", (!$output_to_folder) );
+  my $output_file_prefix = get_option( $config, $section, "output_file_prefix", "");
   my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $no_output            = get_option( $config, $section, "no_output", 0 );
   my $no_input            = get_option( $config, $section, "no_input", 0 );
@@ -56,7 +61,7 @@ sub perform {
   
   my $other_localization_ext_array = get_option( $config, $section, "other_localization_ext_array", [] );
 
-  my $source_key = has_raw_files($config, $section, "source") ? "source" : "parameterSampleFile1";
+  my $source_key = $self->get_pbs_key($config, $section);
   my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, $source_key );
 
   my @sample_names = ( sort keys %$parameterSampleFile1 );
@@ -170,6 +175,8 @@ fi
       $output_option = "";
     }
 
+    #print("output_option=" . $output_option. "\n");
+
     my $cur_init_command = $init_command;
     if ($cur_init_command =~ /__NAME__/){
       $cur_init_command =~ s/__NAME__/$sample_name/g;
@@ -230,20 +237,30 @@ sub result {
 
   my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
 
-  my $source_key = has_raw_files($config, $section, "source") ? "source" : "parameterSampleFile1";
+  my $source_key = $self->get_pbs_key($config, $section);
   my ( $source_files, $source_file_arg, $source_file_join_delimiter ) = get_parameter_sample_files( $config, $section, $source_key );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", $self->{_output_to_same_folder} );
   my $output_exts           = get_output_ext_list( $config, $section );
+  my $output_by_file = get_option( $config, $section, "output_by_file", 0 );
 
   my $result = {};
   for my $sample_name ( sort keys %$source_files ) {
     my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
+    my $cur_files = $source_files->{$sample_name};
 
     my @result_files = ();
     for my $output_ext (@$output_exts) {
       my $result_file;
       if ( $output_ext ne "" ) {
+        if($output_by_file){
+          for my $cur_file (@$cur_files){
+            my $cur_name = basename($cur_file);
+            push( @result_files, "${cur_dir}/${cur_name}${output_ext}" );
+          }
+          next;
+        }
+
         if (not $samplename_in_result) {
           $result_file = $output_ext;
         }elsif($output_ext =~ /__NAME__/) {
