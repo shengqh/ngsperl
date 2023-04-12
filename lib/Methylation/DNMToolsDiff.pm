@@ -21,6 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_dnmtoolsdiff";
+  $self->{_group_keys} = ["source"],
   bless $self, $class;
   return $self;
 }
