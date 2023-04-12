@@ -21,6 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_dnmtoolsdiff";
+  $self->{_group_keys} = ["source"];
   bless $self, $class;
   return $self;
 }
@@ -37,7 +38,10 @@ sub perform {
   my $hmrfiles = get_raw_files( $config, $section, "hmrfile" );
   my $minCpgInDMR   = get_option( $config, $section, "minCpgInDMR", 10 );
   my $minSigCpgInDMR   = get_option( $config, $section, "minSigCpgInDMR", 5 );
-  
+  my $perc_cut   = get_option( $config, $section, "perc_cut", 0.25 );
+  my $fdr   = get_option( $config, $section, "FDR", 0.05 );
+  my $mincov = get_option( $config, $section, "mincov", 4);
+
   my $chrSizeFile=$config->{$section}{chr_size_file}; #to make tracks
   if ( !defined $chrSizeFile ) {
     die "define ${section}::chr_size_file first";
@@ -124,7 +128,9 @@ fi
     print $pbs "
 echo methdiff CpGs=`date`
 if [[ ! -s $dmcpgsFile1 &&  ! -s $dmcpgsFile2 ]]; then
-  R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} $sampleNames[0],$sampleNames[1] 0.25 0.05 4
+  R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} $sampleNames[0],$sampleNames[1] $perc_cut $fdr $mincov
+fi
+
 ";
 	}
     $self->close_pbs( $pbs, $pbs_file );
@@ -150,23 +156,20 @@ sub result {
   for my $group_name ( keys %{$comparisons} ) {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
-    my @sampleNames = @{ $comparisons->{$group_name}; };
     push( @result_files, "$cur_dir/${group_name}.methdiff" );
-    push( @result_files, "$cur_dir/$sampleNames[0].dmcpgs" );
-    push( @result_files, "$cur_dir/$sampleNames[1].dmcpgs" );
     my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$group_name} = $filtered;
     }
     
-    #my @sampleNames = @{ $comparisons->{$group_name}; };
+    my @sampleNames = @{ $comparisons->{$group_name}; };
 
     my $controlHmrFile=$sampleNames[0].".hmr.DMR";
     my $treatmentHmrFile=$sampleNames[1].".hmr.DMR";
     my $controlHmrFileFiltered=$controlHmrFile.".filtered";
     my $treatmentHmrFileFiltered=$treatmentHmrFile.".filtered";
-    my $dmcpgsFile1=$controlHmrFile.".dmcpgs";
-    my $dmcpgsFile2=$treatmentHmrFile.".dmcpgs";
+    my $dmcpgsFile1=$sampleNames[0].".dmcpgs";
+    my $dmcpgsFile2=$sampleNames[1].".dmcpgs";
 
     @result_files = ();
     push( @result_files, "$cur_dir/${controlHmrFile}" );

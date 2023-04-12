@@ -143,6 +143,9 @@ sub getConfig {
     hmrfile_ref   => [ "DNMTools", ".hmr\$" ],
     minCpG        => 10,
     minSigCpG     => 5,
+    perc_cut      => 0.25,
+    FDR           => 0.2,
+    mincov        => 2,
     chr_size_file => $chr_size_file,
     pbs => {
       "nodes"     => "1:ppn=1",
