@@ -161,7 +161,7 @@ sub getConfig {
     buildver   => $annovar_buildver,
     remove_empty_source => 1,
     isBed      => 1,
-    source_ref => [ "DNMToolsDiff", ".DMR.filtered\$|.dmcpgs\$" ],
+    source_ref => [ "DNMToolsDiff", ".DMR.filtered\$|\.dmcpgs\$" ],
     pbs        => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
@@ -176,9 +176,10 @@ sub getConfig {
     target_dir         => "$targetDir/DNMToolsDiffAnnovarGenes",
     interpretor => "perl",
     program => "../Methylation/get_gene_names.pl",
-    parameterSampleFile1_ref => [ "DNMToolsDiffAnnovar" ],
-    output_file_prefix => ".genename.txt",
-    output_ext => ".genename.txt",
+    #parameterSampleFile1_ref => [ "DNMToolsDiffAnnovar" ],
+    source_ref => ["DNMToolsDiffAnnovar", ".dmcpgs.annovar.final.tsv\$" ],
+    output_file_prefix => ".dmcpgs.annovar.final.tsv.genename.txt",
+    output_ext => ".dmcpgs.annovar.final.tsv.genename.txt",
     output_by_file => 1,
     sh_direct          => 1,
     pbs                => {
@@ -189,7 +190,7 @@ sub getConfig {
   };
   push(@$tasks, "DNMToolsDiffAnnovarGenes");
 
-  my $webgestalt_task = addWebgestalt($config, $def, $tasks, $targetDir, "DNMToolsDiffAnnovarGenes", "DNMToolsDiffAnnovarGenes");
+  my $webgestalt_task = addWebgestalt($config, $def, $tasks, $targetDir, "DNMToolsDiffAnnovarGenes",  [ "DNMToolsDiffAnnovarGenes", ".genename.txt\$" ]);
 
   $config->{HOMER_DMR} = {
     class        => "Homer::FindMotifs",

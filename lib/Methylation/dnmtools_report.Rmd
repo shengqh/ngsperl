@@ -226,13 +226,18 @@ site_cov_perc <- mlevels %>%
   dplyr::filter(Stat == "sites_covered_fraction") %>%
   mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg")))
 
+site_cov_perc_cpg <- site_cov_perc %>%
+  dplyr::filter(Category == "cpg")
+
 width=max(2000, 70 * ncol(levels_df))
 png(file=paste0(project, ".coverage.stat.csv.png"), height=1500, width=width, res=300)
 
-g1<-ggplot(site_cov_perc, aes(x=Sample, y=Value, fill=Category)) +
+g1<-ggplot(site_cov_perc_cpg, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
+  xlab("") +
+  ylab("Coverage proportion") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g1)
 
@@ -279,8 +284,10 @@ png(file=paste0(project, ".coverage.depth.perc.csv.png"), height=1500, width=wid
 g2<-ggplot(cov_perc_depth, aes(x=sample, y=Percentage, group = Depth, colour=Depth)) +
   geom_line(size = 1.5) +
   geom_point() +
+  xlab("") +
+  ylab("Coverage percentage") +
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g2)
 
@@ -328,9 +335,11 @@ png(file=paste0(project, ".dup.rate.csv.png"), height=1500, width=width, res=300
 g3<-ggplot(dup_rate, aes(x=Sample, y=duplication_rate)) +
   geom_bar(stat="identity", width = 0.5, fill = "blue") +
   ylim(0,100) +
+  xlab("") +
+  ylab("Duplication Rate") +
   theme_classic() +
   theme(legend.position = "none",
-        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g3)
 
@@ -342,13 +351,13 @@ g3
 
 <br>
 
-# Methylation statistics in chromosomes
+# Methylation statistics
 
-## BS convert rate statistics in chromosomes 
+## BS convert rate statistics 
 
-### The overall BS rate in chromosomes
+### The overall BS rate
 
-```{r bs_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("bs_summary", "The BS convert rate in chromosomes")}
+```{r bs_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("bs_summary", "The BS convert rate")}
 pat <- ".bsrate$"
 
 files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
@@ -371,9 +380,11 @@ png(file=paste0(project, ".bs.overall.rate.csv.png"), height=1500, width=width, 
 
 g4<-ggplot(bs_overall_df, aes(x=samples, y=bsrate)) +
   geom_bar(stat="identity", width = 0.5, fill = "green") +
+  xlab("") +
+  ylab("BS Rate") +
   theme_classic() +
   theme(legend.position = "none",
-        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g4)
 
@@ -387,9 +398,9 @@ g4
 <br>
 
 
-### The BS rates of Non-CpG and CpG sites in chromosomes
+### The BS rates of Non-CpG and CpG sites
 
-```{r bs_cpg_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites in chromosomes")}
+```{r bs_cpg_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites")}
 pat <- ".rrbs_summary_metrics$"
 
 files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
@@ -416,11 +427,14 @@ rrbs_final <- rrbs_met_df %>%
   dplyr::select(Sample, PCT_NON_CPG_BASES_CONVERTED, PCT_CPG_BASES_CONVERTED) %>%
   gather("Site_type", "Percentage", -Sample) %>%
   mutate(Percentage = ifelse(Percentage <= 1, Percentage, 1-(Percentage - 1)))
+
 g5<-ggplot(rrbs_final, aes(x=Sample, y=Percentage, fill = Site_type)) +
   geom_bar(stat="identity", position=position_dodge()) +
+  xlab("") +
+  ylab("BS rate") +
   ylim(0,1) +
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g5)
 
@@ -434,27 +448,84 @@ g5
 <br>
 
 
-## The statistics of methylation level in chromosomes
+## The statistics of methylation level
 
-```{r methy_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("methy_summary", "The statistics of methylation level in chromosomes")}
+### the fraction of "called" sites "called" methylated
+
+```{r methy_summary1,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("methy_summary1", "The fraction of methylated sites")}
 fractional_meth <- mlevels %>%
   dplyr::filter(Stat == "fractional_meth") %>%
-  mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg")))
+  mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
+  dplyr::filter(Category = "cpg")
 
 width=max(2000, 70 * ncol(rrbs_met_df))
 png(file=paste0(project, ".fractional_meth.csv.png"), height=1500, width=width, res=300)
 
 g6<-ggplot(fractional_meth, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
+  xlab("") +
+  ylab("The fraction of methylated sites") +
   ylim(0,1) +
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g6)
 
 invisible(dev.off())
 
 g6
+```
+
+### the mean of the methylation levels for covered sites
+
+```{r methy_summary2,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("methy_summary2", "The mean of the methylation levels")}
+mean_meth <- mlevels %>%
+  dplyr::filter(Stat == "mean_meth") %>%
+  mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
+  dplyr::filter(Category = "cpg")
+
+width=max(2000, 70 * ncol(rrbs_met_df))
+png(file=paste0(project, ".mean_meth.csv.png"), height=1500, width=width, res=300)
+
+g7 <- ggplot(mean_meth, aes(x=Sample, y=Value, fill=Category)) +
+  geom_bar(stat="identity", width=0.5, position=position_dodge()) +
+  xlab("") +
+  ylab("The mean of the methylation levels") +
+  ylim(0,1) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g7)
+
+invisible(dev.off())
+
+g7
+```
+
+### the mean of the methylation levels weighted by coverage
+
+```{r methy_summary3,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("methy_summary3", "The mean of the methylation levels weighted by coverage")}
+mean_meth_weighted <- mlevels %>%
+  dplyr::filter(Stat == "mean_meth_weighted") %>%
+  mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
+  dplyr::filter(Category = "cpg")
+
+width=max(2000, 70 * ncol(rrbs_met_df))
+png(file=paste0(project, ".mean_meth_weighted.csv.png"), height=1500, width=width, res=300)
+
+g8 <- ggplot(mean_meth_weighted, aes(x=Sample, y=Value, fill=Category)) +
+  geom_bar(stat="identity", width=0.5, position=position_dodge()) +
+  xlab("") +
+  ylab("mean_meth_weighted") +
+  ylim(0,1) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+print(g8)
+
+invisible(dev.off())
+
+g8
 ```
 
 

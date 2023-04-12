@@ -66,7 +66,9 @@ sub perform {
     my $treatmentHmrFile = ${$hmrfiles->{ $sampleNames[1] }}[0];
     my $dmrFile1      = basename($controlHmrFile).".DMR";
     my $dmrFile2      = basename($treatmentHmrFile).".DMR";
-    
+    my $dmcpgsFile1   = basename($controlHmrFile).".dmcpgs";
+    my $dmcpgsFile2   = basename($treatmentHmrFile).".dmcpgs";
+
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
     my $log = $self->get_log_filename( $log_dir, $group_name );
@@ -82,6 +84,7 @@ if [ ! -s $methdiffFile ]; then
   echo dnmtools diff=`date`
   dnmtools diff -o $methdiffFile $controlMethFile $treatmentMethFile
 fi
+
 if [[ ! -s $dmrFile1 || ! -s $dmrFile2 ]]; then
   echo dnmtools diff dmr=`date`
   dnmtools dmr $methdiffFile $controlHmrFile $treatmentHmrFile $dmrFile1 $dmrFile2
@@ -121,8 +124,8 @@ fi
 # report different methylated CpGs for both directions
     print $pbs "
 echo methdiff CpGs=`date`
-if [ ! -s ${group_name}_hypoinSample1.dmcpgs &&  ! -s ${group_name}_hypoinSample2.dmcpgs ]; then
-  R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} 0.25  0.05
+if [[ ! -s $dmcpgsFile1 &&  ! -s $dmcpgsFile2 ]]; then
+  R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} $sampleNames[0],$sampleNames[1] 0.25 0.05 4
 ";
 	}
     $self->close_pbs( $pbs, $pbs_file );
@@ -148,23 +151,28 @@ sub result {
   for my $group_name ( keys %{$comparisons} ) {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
+    my @sampleNames = @{ $comparisons->{$group_name}; };
     push( @result_files, "$cur_dir/${group_name}.methdiff" );
-    push( @result_files, "$cur_dir/${group_name}.dmcpgs" );
+    push( @result_files, "$cur_dir/$sampleNames[0].dmcpgs" );
+    push( @result_files, "$cur_dir/$sampleNames[1].dmcpgs" );
     my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$group_name} = $filtered;
     }
     
-    my @sampleNames = @{ $comparisons->{$group_name}; };
+    #my @sampleNames = @{ $comparisons->{$group_name}; };
 
     my $controlHmrFile=$sampleNames[0].".hmr.DMR";
     my $treatmentHmrFile=$sampleNames[1].".hmr.DMR";
     my $controlHmrFileFiltered=$controlHmrFile.".filtered";
     my $treatmentHmrFileFiltered=$treatmentHmrFile.".filtered";
+    my $dmcpgsFile1=$controlHmrFile.".dmcpgs";
+    my $dmcpgsFile2=$treatmentHmrFile.".dmcpgs";
 
     @result_files = ();
     push( @result_files, "$cur_dir/${controlHmrFile}" );
     push( @result_files, "$cur_dir/${controlHmrFileFiltered}" );
+    push( @result_files, "$cur_dir/${dmcpgsFile1}" );
     $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$group_name . "_" . $sampleNames[0]} = $filtered;
@@ -173,6 +181,7 @@ sub result {
     @result_files = ();
     push( @result_files, "$cur_dir/${treatmentHmrFile}" );
     push( @result_files, "$cur_dir/${treatmentHmrFileFiltered}" );
+    push( @result_files, "$cur_dir/${dmcpgsFile2}" );
     $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$group_name . "_" . $sampleNames[1]} = $filtered;
