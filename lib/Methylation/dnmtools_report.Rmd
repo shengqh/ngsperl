@@ -20,7 +20,10 @@ output:
 library(knitr)
 library(kableExtra)
 library(tidyverse)
+library(data.table)
 library(stringr)
+library(ggpubr)
+library(tibble)
 
 source("Pipeline.R")
 source("reportFunctions.R")
@@ -39,6 +42,8 @@ myoptions<-unlist(split(option_tbl$V1, option_tbl$V2))
 
 path <- myoptions$dnmtools_path
 project <- myoptions$task_name
+diffpath <- myoptions$dnmtoolsdiff_path
+meta <- myoptions$meta_data
 
 files<-read.table("fileList1.txt", sep="\t", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2
@@ -476,6 +481,10 @@ invisible(dev.off())
 g6
 ```
 
+
+<br>
+
+
 ### the mean of the methylation levels for covered sites
 
 ```{r methy_summary2,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("methy_summary2", "The mean of the methylation levels")}
@@ -501,6 +510,10 @@ invisible(dev.off())
 
 g7
 ```
+
+
+<br>
+
 
 ### the mean of the methylation levels weighted by coverage
 
@@ -528,6 +541,110 @@ invisible(dev.off())
 g8
 ```
 
+<br>
+
+# correlation distance of β value of CpG sites
+
+
+```{r dmcpg_table, include=TRUE, fig.align="center", out.height = "680px", out.width='800px', fig.cap=c("MDS plot based on correlation distance of β value of CpG sites"), echo=FALSE}
+#knitr::include_graphics("./QZ9413_report/methyl_CpG_bvalue_cor_MDS_plot.png")
+cpg.pat <- ".meth$"
+
+cpg.all <- list.files(path = path, pattern = cpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
+cpg.all <- cpg.all[!(str_detect(cpg.all,"all.meth$"))]
+cpg.lst <- list()
+for (i in 1:length(cpg.all)) {
+	#read in *.meth files
+	cpg.infile <- paste(path, cpg.all[i], sep = "/")
+	id <- gsub(".*/(.*).meth", "\\1", cpg.all[i])
+	#format cpg data frame
+	DT.cpg <- read.table(cpg.infile, header = F, stringsAsFactors = FALSE)
+	colnames(DT.cpg) <- c("chr", "base", "strand", "Type", id, "coverage")
+	DT.cpg$chrBase <- paste(DT.cpg$chr, DT.cpg$base, sep = ".")
+	DT.cpg <- DT.cpg[,c("chrBase", id)]
+	cpg.lst[[id]] <- DT.cpg
+}
+
+cpg.all.df <- cpg.lst %>% 
+  reduce(full_join, by='chrBase') %>%
+  column_to_rownames("chrBase")
+
+cpg_bvalue_cor <- cor(cpg.all.df, method = "pearson")
+
+cpg_bvalue_mds <- (1 - cpg_bvalue_cor) %>%
+  cmdscale() %>%
+  as_tibble()
+
+colnames(cpg_bvalue_mds) <- c("Dim.1", "Dim.2")
+#rownames(cpg_bvalue_mds) <- colnames(cpg_bvalue_df)
+meta_df <- read.table(meta, sep = "\t", header = T)
+#cpg_bvalue_mds$group <- c(rep("DKs8", 4), rep("DLD1", 5), rep("Kidney", 3))
+#cpg_bvalue_mds$type <- c("cell", "EV", "EV", "EV", "cell", "EV", "EV", "EV", "EV", "EV", "cell", "EV")
+cpg_bvalue_mds$group <- meta_df$group
+cpg_bvalue_mds$type <- meta_df$type
+
+# Plot MDS
+dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2", 
+                      label = colnames(cpg.all.df),
+                      xlab = "CpG b-value Dim 1",
+                      ylab = "CpG b-value Dim 2",
+                      color = "group",
+                      palette = "jco",
+                      size = 1, 
+                      ellipse = F,
+                      ellipse.type = "norm",
+                      repel = TRUE) + 
+  theme_bw()
+
+
+pdf(file = "methyl_CpG_bvalue_cor_MDS_plot.pdf", width = 6, height = 6, pointsize = 8, onefile = T)
+dms_plot
+invisible(dev.off())
+
+png(file=paste0("methyl_CpG_bvalue_cor_MDS_plot.png"), height=1500, width=1500, res=300)
+print(dms_plot)
+invisible(dev.off())
+
+dms_plot
+```
+
+
+<br>
+
+# differentially methylated CpGs
+
+
+```{r mds, include=TRUE, fig.align="center", echo=FALSE}
+dmcpg.pat <- ".dmcpgs$"
+
+dmcpg.all <- list.files(path = diffpath, pattern = dmcpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
+
+dmcpg.lst <- list()
+for (i in 1:length(dmcpg.all)) {
+	#read in *.meth files
+	dmcpg.infile <- paste(diffpath, dmcpg.all[i], sep = "/")
+	sample <- gsub(".*/(.*).dmcpgs", "\\1", dmcpg.all[i])
+	comparison <- gsub(".*/(.*)/.*.dmcpgs", "\\1", dmcpg.all[i])
+	
+	#format cpg data frame
+	DT.dmcpg <- read.table(dmcpg.infile, header = T, sep = "\t", stringsAsFactors = FALSE)
+	hypo_CpGs_num <- nrow(DT.dmcpg)
+	link <- paste0("[",sample,"](",dmcpg.infile,")")
+	info <- c(comparison, sample, hypo_CpGs_num, link)
+	dmcpg.lst[[i]] <- info
+}
+
+dmcpg_df <- Reduce(rbind, dmcpg.lst)
+colnames(dmcpg_df) <- c("Comparison", "Sample", "Hypo_meth_num", "Links")
+
+dmcpg_sign_file <- read.table(paste0(project, "_dmcpg_sign_file.txt"), sep = "\t", header = T)
+
+kable(dmcpg_sign_file, caption="Links of differentially methylated CpGs for comparisons", row.names=F) %>% 
+        kable_styling()
+```
+
+
+<br>
 
 ```{r include=FALSE, eval=hasWebGestaltAnalysis}
 wga_rmd = "webGestaltAnalysis.rmd"

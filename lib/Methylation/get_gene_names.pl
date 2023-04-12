@@ -5,8 +5,8 @@ while(<IN>){
   chomp;
   next if(/^Chr/);
   @a = split/\t/,$_;
-  if($a[6] =~/\,/){
-    @b = split/\,/,$a[6];
+  if($a[6] =~/[,;]+/){
+    @b = split/[,;]+/,$a[6];
     foreach $key(@b){
       $genes{$key}++;
     }
