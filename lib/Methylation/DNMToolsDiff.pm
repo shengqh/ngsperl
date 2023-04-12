@@ -21,7 +21,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_dnmtoolsdiff";
-  $self->{_group_keys} = ["source"];
+  $self->{_group_keys} = ["source"],
   bless $self, $class;
   return $self;
 }
@@ -38,10 +38,7 @@ sub perform {
   my $hmrfiles = get_raw_files( $config, $section, "hmrfile" );
   my $minCpgInDMR   = get_option( $config, $section, "minCpgInDMR", 10 );
   my $minSigCpgInDMR   = get_option( $config, $section, "minSigCpgInDMR", 5 );
-  my $perc_cut   = get_option( $config, $section, "perc_cut", 0.25 );
-  my $fdr   = get_option( $config, $section, "FDR", 0.05 );
-  my $mincov = get_option( $config, $section, "mincov", 4);
-
+  
   my $chrSizeFile=$config->{$section}{chr_size_file}; #to make tracks
   if ( !defined $chrSizeFile ) {
     die "define ${section}::chr_size_file first";
@@ -87,7 +84,6 @@ if [ ! -s $methdiffFile ]; then
   echo dnmtools diff=`date`
   dnmtools diff -o $methdiffFile $controlMethFile $treatmentMethFile
 fi
-
 if [[ ! -s $dmrFile1 || ! -s $dmrFile2 ]]; then
   echo dnmtools diff dmr=`date`
   dnmtools dmr $methdiffFile $controlHmrFile $treatmentHmrFile $dmrFile1 $dmrFile2
@@ -121,16 +117,13 @@ if [ ! -s ${dmrFile2Filtered}.bb ]; then
   bedToBigBed  ${dmrFile2Filtered}.tmp $chrSizeFile ${dmrFile2Filtered}.bb
   rm  ${dmrFile2Filtered}.tmp
 fi
-
 ";
 
 # report different methylated CpGs for both directions
     print $pbs "
 echo methdiff CpGs=`date`
 if [[ ! -s $dmcpgsFile1 &&  ! -s $dmcpgsFile2 ]]; then
-  R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} $sampleNames[0],$sampleNames[1] $perc_cut $fdr $mincov
-fi
-
+  R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} $sampleNames[0],$sampleNames[1] 0.25 0.05 4
 ";
 	}
     $self->close_pbs( $pbs, $pbs_file );
@@ -156,20 +149,21 @@ sub result {
   for my $group_name ( keys %{$comparisons} ) {
     my @result_files = ();
     my $cur_dir      = $result_dir . "/$group_name";
+    my @sampleNames = @{ $comparisons->{$group_name}; };
     push( @result_files, "$cur_dir/${group_name}.methdiff" );
     my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$group_name} = $filtered;
     }
     
-    my @sampleNames = @{ $comparisons->{$group_name}; };
+    #my @sampleNames = @{ $comparisons->{$group_name}; };
 
     my $controlHmrFile=$sampleNames[0].".hmr.DMR";
     my $treatmentHmrFile=$sampleNames[1].".hmr.DMR";
     my $controlHmrFileFiltered=$controlHmrFile.".filtered";
     my $treatmentHmrFileFiltered=$treatmentHmrFile.".filtered";
-    my $dmcpgsFile1=$sampleNames[0].".dmcpgs";
-    my $dmcpgsFile2=$sampleNames[1].".dmcpgs";
+    my $dmcpgsFile1=$controlHmrFile.".dmcpgs";
+    my $dmcpgsFile2=$treatmentHmrFile.".dmcpgs";
 
     @result_files = ();
     push( @result_files, "$cur_dir/${controlHmrFile}" );
