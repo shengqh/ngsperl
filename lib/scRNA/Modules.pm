@@ -2188,6 +2188,10 @@ sub get_sct_str {
 sub add_individual_qc {
   my ($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file, $qc_files_ref) = @_;
 
+  if(!defined $qc_filter_config_file){
+    $qc_filter_config_file = "";
+  }
+  
   if(!defined $qc_files_ref){
     if(defined $def->{qc_files}){
       $qc_files_ref = "qc_files";
@@ -2257,18 +2261,20 @@ sub add_individual_qc {
     $config->{$individual_qc_task}{parameterSampleFile2}{hto_sample_file} = $hto_sample_file;
   }
     
-  if( ! -e $qc_filter_config_file){
-    open(my $qc, '>', $qc_filter_config_file) or die $!;
-    print $qc "sample,nFeature_cutoff_min,nFeature_cutoff_max,nCount_cutoff,mt_cutoff,cluster_remove\n";
-    my $files = $def->{files};
-    for my $fname (sort keys %$files){
-      print $qc "$fname," . 
-                getValue( $def, "nFeature_cutoff_min" ) . "," . 
-                getValue( $def, "nFeature_cutoff_max" ) . "," . 
-                getValue( $def, "nCount_cutoff" ) . "," .
-                getValue( $def, "mt_cutoff" ) . ",\n";
+  if($qc_filter_config_file ne ""){
+    if( ! -e $qc_filter_config_file){
+      open(my $qc, '>', $qc_filter_config_file) or die $!;
+      print $qc "sample,nFeature_cutoff_min,nFeature_cutoff_max,nCount_cutoff,mt_cutoff,cluster_remove\n";
+      my $files = $def->{files};
+      for my $fname (sort keys %$files){
+        print $qc "$fname," . 
+                  getValue( $def, "nFeature_cutoff_min" ) . "," . 
+                  getValue( $def, "nFeature_cutoff_max" ) . "," . 
+                  getValue( $def, "nCount_cutoff" ) . "," .
+                  getValue( $def, "mt_cutoff" ) . ",\n";
+      }
+      close($qc);
     }
-    close($qc);
   }
   
   push( @$summary, $individual_qc_task );
