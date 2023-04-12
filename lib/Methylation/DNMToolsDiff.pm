@@ -153,8 +153,6 @@ sub result {
     my $cur_dir      = $result_dir . "/$group_name";
     my @sampleNames = @{ $comparisons->{$group_name}; };
     push( @result_files, "$cur_dir/${group_name}.methdiff" );
-    push( @result_files, "$cur_dir/$sampleNames[0].dmcpgs" );
-    push( @result_files, "$cur_dir/$sampleNames[1].dmcpgs" );
     my $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$group_name} = $filtered;
