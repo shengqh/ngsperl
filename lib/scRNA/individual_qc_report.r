@@ -99,25 +99,19 @@ for(sample_name in sample_names){
   if(has_sctk){
     sctk_file = sctk_map[[sample_name]]
     sctk_meta = readRDS(sctk_file)
-
-    cur_cells = intersect(rownames(cur_meta), rownames(sctk_meta))
-    cur_meta[cur_cells, "DBT"] = tolower(as.character(sctk_meta[cur_cells, doublet_column]))
+    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, doublet_column, "DBT")
   }
   
   if(has_signacx){
     signacx_file = signacx_map[[sample_name]]
     signacx_meta = readRDS(signacx_file)
-
-    cur_cells = intersect(rownames(cur_meta), rownames(signacx_meta))
-    cur_meta[cur_cells, "SignacX"] = as.character(signacx_meta[cur_cells, "signacx_CellStates"])
+    cur_meta = fill_meta_info(sample_name, signacx_meta, cur_meta, "signacx_CellStates", "SignacX")
   }
   
   if(has_singler){
     singler_file = singler_map[[sample_name]]
     singler_meta = readRDS(singler_file)
-
-    cur_cells = intersect(rownames(cur_meta), rownames(singler_meta))
-    cur_meta[cur_cells, "SingleR"] = as.character(singler_meta[cur_cells, "SingleR_labels"])
+    cur_meta = fill_meta_info(sample_name, singler_meta, cur_meta, "SingleR_labels", "SingleR")
   }
 
   rownames(cur_meta)<-paste0(sample_name, "_", rownames(cur_meta))
