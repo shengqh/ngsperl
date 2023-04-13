@@ -280,11 +280,11 @@ iterate_celltype<-function(obj,
     DefaultAssay(subobj)<-assay
 
     if(pct == "Unassigned"){
-      g0<-DimPlot(obj, label=F, group.by=previous_layer) + ggtitle(pct)
+      g0<-get_dim_plot(obj, label=F, group.by=previous_layer) + ggtitle(pct)
     }else{
-      g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+      g0<-get_dim_plot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
     }
-    g1<-DimPlot(subobj, reduction="oumap", group.by = "cell_type", label=T) + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle("New cell type in old UMAP")
+    g1<-get_dim_plot(subobj, reduction="oumap", group.by = "cell_type", label=T) + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle("New cell type in old UMAP")
     g2<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="raw_seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat raw cell type in old UMAP")
     g3<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat cell type in old UMAP")
     g<-g0+g1+g2+g3+plot_layout(nrow=2)
