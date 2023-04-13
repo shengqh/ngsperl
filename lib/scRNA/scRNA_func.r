@@ -69,9 +69,12 @@ is_seurat_object<-function(obj){
   return("Seurat" %in% class(obj))
 }
 
-read_file_map<-function(file_list_path){
+read_file_map<-function(file_list_path, do_unlist=TRUE){
   tbl<-fread(file_list_path, data.table=F, header=F)
-  result<-unlist(split(tbl$V1, tbl$V2))
+  result<-split(tbl$V1, tbl$V2)
+  if(do_unlist){
+    result<-unlist(result)
+  }
   return(result)
 }
 
@@ -1029,11 +1032,11 @@ get_dot_width<-function(g, min_width=4400){
   }
   ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot","feature.groups")]),])
   ngroups = length(unique(g$data$feature.groups))
-  width=ngenes * 80 + ngroups * 40 + 400
+  width=ngenes * 60 + ngroups * 40 + 400
   return(max(width, min_width))
 }
 
-get_dot_height_num<-function(ngroups, min_height=2000, height_per_entry=100, height_additional_space=1000){
+get_dot_height_num<-function(ngroups, min_height=2000, height_per_entry=80, height_additional_space=1000){
   result = max(min_height, ngroups * height_per_entry + height_additional_space)
   return(result)
 }
@@ -1225,7 +1228,9 @@ read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
   obj=readRDS(obj_file)
   if(is.list(obj)){
     if(!is.null(sample_name)){
-      obj<-obj[[sample_name]]
+      if(sample_name %in% names(obj)){
+        obj<-obj[[sample_name]]
+      }
     }
   }
 
@@ -1269,8 +1274,8 @@ read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
 read_object_from_file_list<-function(file_list_path, meta_rds=NULL, columns=NULL){
   df=fread(file_list_path, header=F)
   sample_name=df$V2[1]
-  objlist_file=df$V1[1]
-  obj=read_object(objlist_file, meta_rds=meta_rds, columns=columns, sample_name=sample_name)
+  obj_file=df$V1[1]
+  obj=read_object(obj_file, meta_rds=meta_rds, columns=columns, sample_name=sample_name)
   return(obj)
 }
 
@@ -2018,7 +2023,7 @@ Plot_predictcelltype_ggplot2<-function(predict_celltype, topn=3, filename=NA, wi
   n_cluster=ncol(cta_mat)
   
   if(is.na(width)){
-    width = max(1000, n_cluster * 60) + 500 
+    width = max(1500, n_cluster * 60) + 1000 
   }
   
   if(is.na(height)){
@@ -2050,3 +2055,58 @@ Plot_predictcelltype_ggplot2<-function(predict_celltype, topn=3, filename=NA, wi
   }
 }
 
+match_cell_names<-function(sample_name, source_meta, target_meta){
+  cur_cells = intersect(rownames(source_meta), rownames(target_meta))
+
+  if(length(cur_cells) > 0){
+    return(source_meta)
+  }
+
+  cur_names<-paste0(sample_name, "_", rownames(source_meta))
+  cur_cells = intersect(cur_names, rownames(target_meta))
+
+  if(length(cur_cells) > 0){
+    rownames(source_meta)<-cur_names
+    return(source_meta)
+  }
+
+  if("project" %in% colnames(target_meta)){
+    obj_meta = target_meta[target_meta$project == sample_name,]
+  }else{
+    obj_meta = target_meta[target_meta$sample == sample_name,]
+  }
+
+  if(!"orig.cell" %in% colnames(target_meta)){
+    obj_meta$orig.cell<-gsub(".+_", "", rownames(obj_meta))
+  }
+
+  cur_cells = intersect(rownames(source_meta), obj_meta$orig.cell)
+  if(length(cur_cells) == 0){
+    stop(paste0("I don't know how to map source meta cell ", rownames(source_meta)[1], " with target meta ", rownames(target_meta)[1]))
+  }
+  
+  matched = rownames(source_meta) %in% obj_meta$orig.cell
+  old_names = rownames(source_meta)[matched]
+  cell_map = unlist(split(rownames(obj_meta), obj_meta$orig.cell))
+  rownames(source_meta)[matched] = unlist(cell_map[old_names])
+
+  return(source_meta)
+}
+
+fill_meta_info<-function(sample_name, source_meta, target_meta, source_column, target_column){
+  source_meta<-match_cell_names(sample_name, source_meta, target_meta)
+  cur_cells = intersect(rownames(source_meta), rownames(target_meta))
+  target_meta[cur_cells, target_column] = as.character(source_meta[cur_cells, source_column])
+  return(target_meta)
+}
+
+fill_meta_info_list<-function(source_meta_file_list, target_meta, source_column, target_column){
+  source_map<-read_file_map(source_meta_file_list)
+  cur_name=names(source_map)[1]
+  for(cur_name in names(source_map)){
+    source_meta_file=source_map[cur_name]
+    source_meta=readRDS(source_meta_file)
+    target_meta=fill_meta_info(cur_name, source_meta, target_meta, source_column, target_column)
+  }
+  return(target_meta)
+}

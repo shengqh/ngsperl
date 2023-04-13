@@ -248,6 +248,9 @@ sub getScRNASeqConfig {
   my $hla_merge = undef;
   my $filter_config_file = getValue($def, "filter_config_file", $target_dir . "/filter_config.csv");
   my $sctk_ref = undef;
+  my $signacX_ref = undef;
+  my $singleR_ref = undef;
+
   if (defined $def->{files}){
     my @report_files = ();
     my @report_names = ();
@@ -272,14 +275,12 @@ sub getScRNASeqConfig {
 
       my $reduction = "pca";
 
-      my $signacX_ref = undef;
       if (getValue( $def, "perform_SignacX", 0 ) ) {
         my $signacX_task = $raw_individual_qc_task . "_SignacX";
         add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $raw_individual_qc_task, $reduction, 1);
         $signacX_ref = [ $signacX_task, ".meta.rds" ];
       }
 
-      my $singleR_ref = undef;
       if (getValue( $def, "perform_SingleR", 0 ) ) {
         my $singleR_task = $raw_individual_qc_task . "_SingleR";
         my $cur_options = {
@@ -454,7 +455,7 @@ sub getScRNASeqConfig {
       my $no_doublets = "";
       if(getValue($def, "rawdata_from_qc", 0)){
         if(!defined $raw_individual_qc_task){
-          stop("trying to build rawdata from qc, please set perform_individual_qc => 1 in your configuration file");
+          die("trying to build rawdata from qc, please set perform_individual_qc => 1 in your configuration file");
         }
         $seurat_rawdata = "seurat_rawdata_postqc";
         add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task );
@@ -500,22 +501,24 @@ sub getScRNASeqConfig {
         addDoubletFinder($config, $def, $summary, $target_dir, $df_task, $obj_ref, undef );
       }
 
-      my $signacX_ref = undef;
-      if (getValue( $def, "perform_SignacX", 0 ) ) {
-        my $signacX_task = $seurat_task . "_SignacX";
-        add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $obj_ref, $reduction );
-        $signacX_ref = [$signacX_task, ".meta.rds"];
+      if(!defined $signacX_ref) {
+        if (getValue( $def, "perform_SignacX", 0 ) ) {
+          my $signacX_task = $seurat_task . "_SignacX";
+          add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $obj_ref, $reduction );
+          $signacX_ref = [$signacX_task, ".meta.rds"];
+        }
       }
 
-      my $singleR_ref = undef;
-      if (getValue( $def, "perform_SingleR", 0 ) ) {
-        my $singleR_task = $seurat_task . "_SingleR";
-        my $cur_options = {
-          task_name => $def->{task_name},
-          reduction => $reduction, 
-        };
-        add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $cur_options );
-        $singleR_ref = [$singleR_task, ".meta.rds"];
+      if(!defined $singleR_ref) {
+        if (getValue( $def, "perform_SingleR", 0 ) ) {
+          my $singleR_task = $seurat_task . "_SingleR";
+          my $cur_options = {
+            task_name => $def->{task_name},
+            reduction => $reduction, 
+          };
+          add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $cur_options );
+          $singleR_ref = [$singleR_task, ".meta.rds"];
+        }
       }
 
       my $celltype_task = undef;
