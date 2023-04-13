@@ -181,8 +181,8 @@ sub getConfig {
     program => "../Methylation/get_gene_names.pl",
     #parameterSampleFile1_ref => [ "DNMToolsDiffAnnovar" ],
     source_ref => ["DNMToolsDiffAnnovar", ".dmcpgs.annovar.final.tsv\$" ],
-    output_file_prefix => ".dmcpgs.annovar.final.tsv.genename.txt",
-    output_ext => ".dmcpgs.annovar.final.tsv.genename.txt",
+    output_file_prefix => ".genename.txt",
+    output_ext => ".genename.txt",
     output_by_file => 1,
     sh_direct          => 1,
     pbs                => {
@@ -232,6 +232,8 @@ sub getConfig {
     parameterSampleFile2 => {
       task_name => $task_name,
       dnmtools_path => $config->{DNMTools}{target_dir} . "/result/",
+      dnmtoolsdiff_path => $config->{DNMToolsDiff}{target_dir} . "/result/",
+      meta_data => "../../" . $task_name . "_meta.tsv",
     },
     parameterSampleFile3 => [],
     parameterSampleFile4_ref => [ $webgestalt_task, ".txt\$" ],
