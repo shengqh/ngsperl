@@ -95,6 +95,8 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_enclone_only",      0 );
 
   initDefaultValue( $def, "perform_seurat",      1 );
+  
+  initDefaultValue( $def, "seurat_walltime",          "24" );
   initDefaultValue( $def, "seurat_mem",          "120gb" );
 
   initDefaultValue( $def, "Mtpattern",           "^MT-|^Mt-" );

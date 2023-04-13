@@ -149,8 +149,8 @@ sub add_seurat_rawdata {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => "40gb"
+      "walltime"  => getValue($def, "seurat_walltime"),
+      "mem"       => getValue($def, "seurat_mem"),
     },
   };
 
@@ -182,8 +182,8 @@ sub add_seurat_merge_object {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => "40gb"
+      "walltime"  => getValue($def, "seurat_walltime"),
+      "mem"       => getValue($def, "seurat_mem"),
     },
   };
 
@@ -263,7 +263,7 @@ sub add_seurat {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=$thread",
-      "walltime"  => getValue($def, "seurat_walltime", "12"),
+      "walltime"  => getValue($def, "seurat_walltime"),
       "mem"       => getValue($def, "seurat_mem"),
     },
   };
@@ -646,10 +646,47 @@ sub addCHETAH {
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => getValue($def, "seurat_mem")
+      "walltime"  => getValue($def, "seurat_walltime"),
+      "mem"       => getValue($def, "seurat_mem"),
     },
   };
+  push( @$tasks, $task_name );
+}
+
+sub addSignac {
+  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $tcell_only, $celltype, $reduction, $celltype_layer, $is_dynamic ) = @_;
+
+  $config->{$task_name} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $task_name,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX.r",
+    parameterFile1_ref   => $seurat_ref,
+    parameterSampleFile1 => {
+      species             => getValue( $def, "species" ),
+      prefix              => $project_name,
+      tcell_only          => $tcell_only,
+      reduction           => $reduction,
+      pca_dims            => getValue( $def, "pca_dims" ),
+      celltype_layer      => $celltype_layer,
+      bubblemap_file        => $def->{bubblemap_file},
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+    },
+    output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "seurat_walltime"),
+      "mem"       => getValue($def, "seurat_mem"),
+    },
+  };
+
+  if($is_dynamic){
+    $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".meta.rds" ];
+  }else{
+    $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".cluster.csv" ];
+    $config->{$task_name}{parameterFile3_ref} = [ $celltype, ".celltype.csv" ];
+  }
   push( @$tasks, $task_name );
 }
 
@@ -709,7 +746,7 @@ sub add_singleR {
     pbs             => {
       "nodes"     => "1:ppn=1",
       "walltime"  => getValue($def, "SingleR_walltime", "10"),
-      "mem"       => getValue($def, "SingleR_mem", getValue($def, "seurat_mem")),
+      "mem"       => getValue($def, "seurat_mem"),
     },
   };
 
@@ -755,43 +792,6 @@ fi
   };
 
   push( @$tasks, $singleR_task );
-}
-
-sub addSignac {
-  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $tcell_only, $celltype, $reduction, $celltype_layer, $is_dynamic ) = @_;
-
-  $config->{$task_name} = {
-    class                => "CQS::UniqueR",
-    perform              => 1,
-    target_dir           => $target_dir . "/" . $task_name,
-    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX.r",
-    parameterFile1_ref   => $seurat_ref,
-    parameterSampleFile1 => {
-      species             => getValue( $def, "species" ),
-      prefix              => $project_name,
-      tcell_only          => $tcell_only,
-      reduction           => $reduction,
-      pca_dims            => getValue( $def, "pca_dims" ),
-      celltype_layer      => $celltype_layer,
-      bubblemap_file        => $def->{bubblemap_file},
-      by_sctransform        => getValue( $def, "by_sctransform" ),
-    },
-    output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
-    sh_direct       => 1,
-    pbs             => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => getValue($def, "seurat_mem") 
-    },
-  };
-
-  if($is_dynamic){
-    $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".meta.rds" ];
-  }else{
-    $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".cluster.csv" ];
-    $config->{$task_name}{parameterFile3_ref} = [ $celltype, ".celltype.csv" ];
-  }
-  push( @$tasks, $task_name );
 }
 
 sub add_celltype_validation {
@@ -1209,7 +1209,7 @@ sub addEdgeRTask {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
+      "walltime"  => "24",
       "mem"       => getValue($def, "seurat_mem") 
     },
   };
@@ -1302,7 +1302,7 @@ sub addEdgeRTask {
       sh_direct          => 1,
       pbs                => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
+        "walltime"  => "24",
         "mem"       => "10gb"
       },
     };
@@ -1478,7 +1478,7 @@ sub addDynamicCluster {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
+      "walltime"  => "24",
       "mem"       => getValue($def, "seurat_mem")
     },
   };
@@ -1561,7 +1561,7 @@ sub addSubCluster {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
+      "walltime"  => "24",
       "mem"       => getValue($def, "seurat_mem")
     },
   };
@@ -1613,7 +1613,7 @@ sub addSubClusterChoose {
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
+      "walltime"  => "24",
       "mem"       => getValue($def, "seurat_mem")
     },
   };
@@ -1774,7 +1774,7 @@ sub add_hto_samples_preparation {
     pbs => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
-      "mem"       => "10gb"
+      "mem"       => "40gb"
     },
   };
   push( @$summary, $preparation_task );
@@ -1931,7 +1931,7 @@ sub add_hto {
     pbs => {
       "nodes"     => "1:ppn=$thread",
       "walltime"  => "20",
-      "mem"       => "20gb"
+      "mem"       => "40gb"
     },
   };
   push( @$summary, $hto_task );
@@ -2188,6 +2188,10 @@ sub get_sct_str {
 sub add_individual_qc {
   my ($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file, $qc_files_ref) = @_;
 
+  if(!defined $qc_filter_config_file){
+    $qc_filter_config_file = "";
+  }
+  
   if(!defined $qc_files_ref){
     if(defined $def->{qc_files}){
       $qc_files_ref = "qc_files";
@@ -2257,18 +2261,20 @@ sub add_individual_qc {
     $config->{$individual_qc_task}{parameterSampleFile2}{hto_sample_file} = $hto_sample_file;
   }
     
-  if( ! -e $qc_filter_config_file){
-    open(my $qc, '>', $qc_filter_config_file) or die $!;
-    print $qc "sample,nFeature_cutoff_min,nFeature_cutoff_max,nCount_cutoff,mt_cutoff,cluster_remove\n";
-    my $files = $def->{files};
-    for my $fname (sort keys %$files){
-      print $qc "$fname," . 
-                getValue( $def, "nFeature_cutoff_min" ) . "," . 
-                getValue( $def, "nFeature_cutoff_max" ) . "," . 
-                getValue( $def, "nCount_cutoff" ) . "," .
-                getValue( $def, "mt_cutoff" ) . ",\n";
+  if($qc_filter_config_file ne ""){
+    if( ! -e $qc_filter_config_file){
+      open(my $qc, '>', $qc_filter_config_file) or die $!;
+      print $qc "sample,nFeature_cutoff_min,nFeature_cutoff_max,nCount_cutoff,mt_cutoff,cluster_remove\n";
+      my $files = $def->{files};
+      for my $fname (sort keys %$files){
+        print $qc "$fname," . 
+                  getValue( $def, "nFeature_cutoff_min" ) . "," . 
+                  getValue( $def, "nFeature_cutoff_max" ) . "," . 
+                  getValue( $def, "nCount_cutoff" ) . "," .
+                  getValue( $def, "mt_cutoff" ) . ",\n";
+      }
+      close($qc);
     }
-    close($qc);
   }
   
   push( @$summary, $individual_qc_task );
