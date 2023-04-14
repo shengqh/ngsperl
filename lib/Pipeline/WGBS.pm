@@ -144,8 +144,8 @@ sub getConfig {
     minCpG        => 10,
     minSigCpG     => 5,
     perc_cut      => 0.25,
-    FDR           => 0.5,
-    mincov        => 2,
+    FDR           => 0.05,
+    mincov        => 4,
     chr_size_file => $chr_size_file,
     pbs => {
       "nodes"     => "1:ppn=1",
@@ -231,6 +231,7 @@ sub getConfig {
     parameterSampleFile1_names => \@report_names,
     parameterSampleFile2 => {
       task_name => $task_name,
+      abismal_path  => $config->{abismal}{target_dir} . "/result/",
       dnmtools_path => $config->{DNMTools}{target_dir} . "/result/",
       dnmtoolsdiff_path => $config->{DNMToolsDiff}{target_dir} . "/result/",
       meta_data => "../../" . $task_name . "_meta.tsv",
@@ -241,7 +242,7 @@ sub getConfig {
     pbs                        => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "1",
-      "mem"       => "10gb"
+      "mem"       => "40gb"
     },
   };
   push( @$tasks, "report" );

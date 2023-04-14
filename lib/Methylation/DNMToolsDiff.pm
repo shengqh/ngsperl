@@ -128,7 +128,7 @@ fi
     print $pbs "
 echo methdiff CpGs=`date`
 if [[ ! -s $dmcpgsFile1 &&  ! -s $dmcpgsFile2 ]]; then
-  R --vanilla -f /data/cqs/ywang/source/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} $sampleNames[0],$sampleNames[1] $perc_cut $fdr $mincov
+  R --vanilla -f /data/cqs/softwares/ngsperl/lib/Methylation/dmcpgs.r --args ${result_dir}/${group_name}/${methdiffFile} $sampleNames[0],$sampleNames[1] $perc_cut $fdr $mincov
 fi
 
 ";
