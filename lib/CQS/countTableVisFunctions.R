@@ -47,11 +47,19 @@ getHeatmapOption<-function(countHT, isCorr=FALSE){
 }
 
 theme_bw2 <- function () { 
+  is_ggplot2_newver = packageVersion("ggplot2") >= "3.4.0"
+
+  if(is_ggplot2_newver){
+    eline = element_line(colour = "black", linewidth = 0.5)
+  }else{
+    eline = element_line(colour = "black", size = 0.5)
+  }
+
 	theme_bw() %+replace% 
 		theme(
 			strip.background = element_rect(fill = NA, colour = 'black'),
 			panel.border = element_rect(fill = NA, color = "black"),			
-			axis.line = element_line(colour = "black", size = 0.5)
+			axis.line = eline
 		)
 }
 

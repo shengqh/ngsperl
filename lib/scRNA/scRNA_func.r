@@ -98,11 +98,19 @@ theme_rotate_x_axis_label <- function(angle=90, vjust=0.5, hjust=1) {
 }
 
 theme_bw3 <- function (axis.x.rotate=F, angle=90, vjust=0.5, hjust=1) { 
+  is_ggplot2_newver = packageVersion("ggplot2") >= "3.4.0"
+
+  if(is_ggplot2_newver){
+    eline = element_line(colour = "black", linewidth = 0.5)
+  }else{
+    eline = element_line(colour = "black", size = 0.5)
+  }
+
 	result = theme_bw() +
     theme(
       strip.background = element_rect(fill = NA, colour = 'black'),
       panel.border = element_rect(fill = NA, color = "black"),			
-      axis.line = element_line(colour = "black", linewidth = 0.5)
+      axis.line = eline
     )
   if (axis.x.rotate){
     result = result + theme_rotate_x_axis_label(angle=angle,vjust=vjust,hjust=hjust)
@@ -1482,7 +1490,7 @@ build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_
   return(obj)
 }
 
-get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, label_has_cluster=FALSE){
+get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, label_has_cluster=FALSE, ...){
   group.by="dummy_cluster"
   group.label="dummy_label"
 
@@ -1490,7 +1498,7 @@ get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.ti
 
   group.label=ifelse(label_has_cluster, label.by, group.label)
 
-  g<-get_dim_plot(obj, group.by=group.by, label.by=group.label, label=label, title=title, legend.title=legend.title, reduction=reduction, split.by=split.by, ncol=ncol)
+  g<-get_dim_plot(obj, group.by=group.by, label.by=group.label, label=label, title=title, legend.title=legend.title, reduction=reduction, split.by=split.by, ncol=ncol, ...)
   return(g)
 }
 

@@ -165,13 +165,22 @@ align<-function(data1,data2,by=0,suffixes=c(deparse(substitute(data1)),deparse(s
 }
 
 theme_bw3 <- function (axis.x.rotate=F) { 
+  is_ggplot2_newver = packageVersion("ggplot2") >= "3.4.0"
+
+  if(is_ggplot2_newver){
+    eline = element_line(colour = "black", linewidth = 0.5)
+  }else{
+    eline = element_line(colour = "black", size = 0.5)
+  }
+
   result = theme_bw() +
     theme(
       strip.background = element_rect(fill = NA, colour = 'black'),
       panel.border = element_rect(fill = NA, color = "black"),			
-      axis.line = element_line(colour = "black", linewidth = 0.5),
-      plot.title = element_text(hjust = 0.5)
+      plot.title = element_text(hjust = 0.5),
+      axis.line = eline
     )
+
   if (axis.x.rotate){
     result = result + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
   }
