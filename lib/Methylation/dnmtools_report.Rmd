@@ -23,6 +23,7 @@ library(tidyverse)
 library(data.table)
 library(stringr)
 library(ggpubr)
+library(purrr)
 library(tibble)
 
 source("Pipeline.R")
@@ -38,11 +39,12 @@ knitr::opts_chunk$set(
 )
 
 option_tbl<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
-myoptions<-unlist(split(option_tbl$V1, option_tbl$V2))
+myoptions<-split(option_tbl$V1, option_tbl$V2)
 
-path <- myoptions$dnmtools_path
 project <- myoptions$task_name
-diffpath <- myoptions$dnmtoolsdiff_path
+abismal_path <- myoptions$abismal_path
+dnmtools_path <- myoptions$dnmtools_path
+dnmtoolsdiff_path <- myoptions$dnmtoolsdiff_path
 meta <- myoptions$meta_data
 
 files<-read.table("fileList1.txt", sep="\t", header=FALSE, as.is=TRUE)
@@ -51,6 +53,7 @@ rownames(files)<-files$V2
 hasFastqc<-any(grepl("fastqc_", rownames(files)))
 
 hasWebGestaltAnalysis=file.exists('fileList4.txt')
+
 ```
 
 <br>
@@ -137,14 +140,14 @@ check_and_include_graphics(files["fastqc_raw_adapter_content",1])
 ## Summary of mapping quality
 
 ```{r mapping_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("mapping_summary", "The statistics of WGBS mapping results")}
-pat <- ".mapstats.yaml$"
+pat <- ".mapstats$"
 
-files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+files <- list.files(path = abismal_path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
 
 DT <- list()
 
 for (i in 1:length(files) ) {
-  infile <- paste(path, files[i], sep = "/")
+  infile <- paste(abismal_path, files[i], sep = "/")
   info <- read.delim(infile, header = F, sep = "", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T)
   info <- info %>%
     dplyr::slice(2, 4:9, 11:17) %>%
@@ -158,7 +161,8 @@ for (i in 1:length(files) ) {
 
 mapping_df <- Reduce(rbind, DT)
 mapping_df <- as.data.frame(mapping_df) %>% rownames_to_column("sample")
-write.csv(file=paste0(project, ".abismal.mapping.csv"), mapping_df)
+write.csv(file=paste0(project, "/", project, ".abismal.mapping.csv"), mapping_df)
+
 mfinal <- mapping_df[,c("sample", "num_unique", "num_ambiguous", "num_unmapped")]
 colnames(mfinal) <- c("Sample", "Unique", "Ambiguous", "Unmapped")
 mfinal<-melt(mfinal, id="Sample", variable.name="Read", value.name="Count")
@@ -166,7 +170,7 @@ mfinal$Read<-factor(mfinal$Read, levels=c("Unmapped", "Ambiguous", "Unique"))
   
 
 width=max(2000, 70 * ncol(mapping_df))
-png(file=paste0(project, ".abismal.mapping.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".abismal.mapping.csv.png"), height=1500, width=width, res=300)
 
 g<-ggplot(mfinal, aes(x=Sample, y=Count, fill=Read)) +
   geom_bar(stat="identity", width=0.5) +
@@ -197,12 +201,12 @@ kable(mapping_df, caption="Mapping Quality Summary Table", row.names=F) %>%
 ```{r coverage_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("coverage_summary", "The statistics of coverage proportion")}
 pat <- ".levels$"
 
-files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+files <- list.files(path = dnmtools_path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
 samples <- gsub(".+\\/(.*).levels", "\\1", files)
 DT <- list()
 
 for (i in 1:length(files) ) {
-  infile <- paste(path, files[i], sep = "/")
+  infile <- paste(dnmtools_path, files[i], sep = "/")
   info <- read.delim(infile, header = F, sep = " ", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T)
   info <- info %>%
     mutate_at(c('V1'), ~na_if(., '')) %>%
@@ -222,7 +226,7 @@ levels_df <- Reduce(cbind, DT)
 colnames(levels_df) <- samples
 levels_df <- cbind(info[,c(1:2)], levels_df)
 
-write.csv(file=paste0(project, ".coverage.stat.csv"), levels_df)
+write.csv(file=paste0(project, "/", project, ".coverage.stat.csv"), levels_df)
 
 mlevels <- levels_df %>%
   gather("Sample", "Value", 3:ncol(levels_df))
@@ -235,7 +239,7 @@ site_cov_perc_cpg <- site_cov_perc %>%
   dplyr::filter(Category == "cpg")
 
 width=max(2000, 70 * ncol(levels_df))
-png(file=paste0(project, ".coverage.stat.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".coverage.stat.csv.png"), height=1500, width=width, res=300)
 
 g1<-ggplot(site_cov_perc_cpg, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
@@ -261,12 +265,12 @@ g1
 ```{r coverage_depth_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("coverage_depth_summary", "The Coverage proportion of target bases at different depths")}
 pat <- "_hs_metrics.txt$"
 
-files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+files <- list.files(path = abismal_path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
 samples <- gsub(".+\\/(.*)_hs_metrics.txt", "\\1", files)
 DT <- list()
 
 for (i in 1:length(files) ) {
-  infile <- paste(path, files[i], sep = "/")
+  infile <- paste(abismal_path, files[i], sep = "/")
   info <- read.delim(infile, header = T, sep = "\t", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, nrows = 1)
   info$sample <- gsub(".+\\/(.*)_hs_metrics.txt", "\\1", files[i])
   DT[[files[i]]] <- info
@@ -275,7 +279,7 @@ for (i in 1:length(files) ) {
 hs_met_df <- bind_rows(DT)
 hs_met_df <- hs_met_df[, c(58, 1:54)]
 
-write.csv(file=paste0(project, ".HS.matrics.csv"), hs_met_df)
+write.csv(file=paste0(project, "/", project, ".HS.matrics.csv"), hs_met_df)
 
 cov_perc_depth <- hs_met_df %>%
   dplyr::select(c("sample", starts_with("PCT_TARGET_BASES"))) %>%
@@ -284,7 +288,7 @@ cov_perc_depth <- hs_met_df %>%
   mutate(Depth = factor(Depth, levels = c("1X", "2X", "10X", "20X", "30X", "40X", "50X", "100X")))
 
 width=max(2000, 70 * ncol(levels_df))
-png(file=paste0(project, ".coverage.depth.perc.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".coverage.depth.perc.csv.png"), height=1500, width=width, res=300)
 
 g2<-ggplot(cov_perc_depth, aes(x=sample, y=Percentage, group = Depth, colour=Depth)) +
   geom_line(size = 1.5) +
@@ -310,12 +314,12 @@ g2
 ```{r dup_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("dup_summary", "The duplication rate")}
 pat <- ".sam.dupstats$"
 
-files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+files <- list.files(path = dnmtools_path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
 samples <- gsub(".+\\/(.*).sam.dupstats", "\\1", files)
 DT <- list()
 
 for (i in 1:length(files) ) {
-  infile <- paste(path, files[i], sep = "/")
+  infile <- paste(dnmtools_path, files[i], sep = "/")
   info <- read.delim(infile, header = F, sep = "", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T)
   info <- info %>%
     mutate(V1 = str_replace(V1, ":", "")) %>%
@@ -328,14 +332,14 @@ for (i in 1:length(files) ) {
 
 dup_df <- Reduce(rbind, DT)
 
-write.csv(file=paste0(project, ".dup.rate.csv"), dup_df)
+write.csv(file=paste0(project, "/", project, ".dup.rate.csv"), dup_df)
 
 dup_rate <- as.data.frame(dup_df) %>%
   rownames_to_column("Sample") %>%
   dplyr::select(c("Sample", "duplication_rate"))
 
 width=max(2000, 70 * ncol(levels_df))
-png(file=paste0(project, ".dup.rate.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".dup.rate.csv.png"), height=1500, width=width, res=300)
 
 g3<-ggplot(dup_rate, aes(x=Sample, y=duplication_rate)) +
   geom_bar(stat="identity", width = 0.5, fill = "blue") +
@@ -365,12 +369,12 @@ g3
 ```{r bs_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("bs_summary", "The BS convert rate")}
 pat <- ".bsrate$"
 
-files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+files <- list.files(path = dnmtools_path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
 samples <- gsub(".+\\/(.*).bsrate", "\\1", files)
 bsrate <- c()
 
 for (i in 1:length(files) ) {
-  infile <- paste(path, files[i], sep = "/")
+  infile <- paste(dnmtools_path, files[i], sep = "/")
   info <- read.table(infile, header = F, sep = "", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T, nrows = 1)
   info <- info$V5
   bsrate <- append(bsrate, info)
@@ -378,10 +382,10 @@ for (i in 1:length(files) ) {
 
 bs_overall_df <- data.frame(samples, bsrate)
 
-write.csv(file=paste0(project, ".bs.overall.rate.csv"), bs_overall_df)
+write.csv(file=paste0(project, "/", project, ".bs.overall.rate.csv"), bs_overall_df)
 
 width=max(2000, 70 * ncol(levels_df))
-png(file=paste0(project, ".bs.overall.rate.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".bs.overall.rate.csv.png"), height=1500, width=width, res=300)
 
 g4<-ggplot(bs_overall_df, aes(x=samples, y=bsrate)) +
   geom_bar(stat="identity", width = 0.5, fill = "green") +
@@ -408,12 +412,12 @@ g4
 ```{r bs_cpg_summary,echo=FALSE,results='asis', warning = F, message = F, include = T, eval = T, fig.align="center", fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites")}
 pat <- ".rrbs_summary_metrics$"
 
-files <- list.files(path = path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
+files <- list.files(path = abismal_path, pattern = pat, all.files = TRUE, recursive = TRUE, ignore.case = FALSE, include.dirs = FALSE)
 
 DT <- list()
 
 for (i in 1:length(files) ) {
-  infile <- paste(path, files[i], sep = "/")
+  infile <- paste(abismal_path, files[i], sep = "/")
   info <- read.delim(infile, header = T, sep = "\t", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, nrows = 1)
   sample <- gsub(".+\\/(.*).rrbs_summary_metrics", "\\1", files[i])
   rownames(info) <- sample
@@ -422,16 +426,17 @@ for (i in 1:length(files) ) {
 
 rrbs_met_df <- bind_rows(DT)
 
-write.csv(file=paste0(project, ".bs.CpG.rate.csv"), bs_overall_df)
+write.csv(file=paste0(project, "/", project, ".bs.CpG.rate.csv"), bs_overall_df)
 
-width=max(2000, 70 * ncol(rrbs_met_df))
-png(file=paste0(project, ".bs.CpG.rate.csv.png"), height=1500, width=width, res=300)
 
 rrbs_final <- rrbs_met_df %>%
   rownames_to_column("Sample") %>%
   dplyr::select(Sample, PCT_NON_CPG_BASES_CONVERTED, PCT_CPG_BASES_CONVERTED) %>%
   gather("Site_type", "Percentage", -Sample) %>%
   mutate(Percentage = ifelse(Percentage <= 1, Percentage, 1-(Percentage - 1)))
+
+width=max(2000, 70 * ncol(rrbs_met_df))
+png(file=paste0(project, "/", project, ".bs.CpG.rate.csv.png"), height=1500, width=width, res=300)
 
 g5<-ggplot(rrbs_final, aes(x=Sample, y=Percentage, fill = Site_type)) +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -461,10 +466,10 @@ g5
 fractional_meth <- mlevels %>%
   dplyr::filter(Stat == "fractional_meth") %>%
   mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
-  dplyr::filter(Category = "cpg")
+  dplyr::filter(Category == "cpg")
 
 width=max(2000, 70 * ncol(rrbs_met_df))
-png(file=paste0(project, ".fractional_meth.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".fractional_meth.csv.png"), height=1500, width=width, res=300)
 
 g6<-ggplot(fractional_meth, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
@@ -472,7 +477,8 @@ g6<-ggplot(fractional_meth, aes(x=Sample, y=Value, fill=Category)) +
   ylab("The fraction of methylated sites") +
   ylim(0,1) +
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
+  theme(legend.position="none",
+        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g6)
 
@@ -491,10 +497,10 @@ g6
 mean_meth <- mlevels %>%
   dplyr::filter(Stat == "mean_meth") %>%
   mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
-  dplyr::filter(Category = "cpg")
+  dplyr::filter(Category == "cpg")
 
 width=max(2000, 70 * ncol(rrbs_met_df))
-png(file=paste0(project, ".mean_meth.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".mean_meth.csv.png"), height=1500, width=width, res=300)
 
 g7 <- ggplot(mean_meth, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
@@ -502,7 +508,8 @@ g7 <- ggplot(mean_meth, aes(x=Sample, y=Value, fill=Category)) +
   ylab("The mean of the methylation levels") +
   ylim(0,1) +
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
+  theme(legend.position="none",
+        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g7)
 
@@ -524,7 +531,7 @@ mean_meth_weighted <- mlevels %>%
   dplyr::filter(Category = "cpg")
 
 width=max(2000, 70 * ncol(rrbs_met_df))
-png(file=paste0(project, ".mean_meth_weighted.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".mean_meth_weighted.csv.png"), height=1500, width=width, res=300)
 
 g8 <- ggplot(mean_meth_weighted, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
@@ -532,7 +539,8 @@ g8 <- ggplot(mean_meth_weighted, aes(x=Sample, y=Value, fill=Category)) +
   ylab("mean_meth_weighted") +
   ylim(0,1) +
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
+  theme(legend.position="none",
+        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
         axis.text.y = element_text(size=11, face="bold"))
 print(g8)
 
@@ -548,28 +556,42 @@ g8
 
 ```{r dmcpg_table, include=TRUE, fig.align="center", out.height = "680px", out.width='800px', fig.cap=c("MDS plot based on correlation distance of β value of CpG sites"), echo=FALSE}
 #knitr::include_graphics("./QZ9413_report/methyl_CpG_bvalue_cor_MDS_plot.png")
+mincov <- 4
 cpg.pat <- ".meth$"
 
-cpg.all <- list.files(path = path, pattern = cpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
+cpg.all <- list.files(path = dnmtools_path, pattern = cpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
 cpg.all <- cpg.all[!(str_detect(cpg.all,"all.meth$"))]
+cov.lst <- list()
 cpg.lst <- list()
 for (i in 1:length(cpg.all)) {
 	#read in *.meth files
-	cpg.infile <- paste(path, cpg.all[i], sep = "/")
+	cpg.infile <- paste(dnmtools_path, cpg.all[i], sep = "/")
 	id <- gsub(".*/(.*).meth", "\\1", cpg.all[i])
 	#format cpg data frame
 	DT.cpg <- read.table(cpg.infile, header = F, stringsAsFactors = FALSE)
 	colnames(DT.cpg) <- c("chr", "base", "strand", "Type", id, "coverage")
 	DT.cpg$chrBase <- paste(DT.cpg$chr, DT.cpg$base, sep = ".")
-	DT.cpg <- DT.cpg[,c("chrBase", id)]
+	DT.cov <- DT.cpg[,c("chrBase", "coverage")]
+  DT.cpg <- DT.cpg[,c("chrBase", id)]
+  cov.lst[[id]] <- DT.cov
 	cpg.lst[[id]] <- DT.cpg
 }
 
+cov.all.df <- cov.lst %>% 
+    purrr::reduce(full_join, by='chrBase') %>%
+    dplyr::filter(across(
+      .cols = is.numeric(),
+      .fns = ~. >= mincov)
+    )
+  left_sites <- cov.all.df$chrBase
+  
 cpg.all.df <- cpg.lst %>% 
-  reduce(full_join, by='chrBase') %>%
+  purrr::reduce(full_join, by='chrBase') %>%
+  dplyr::filter(chrBase %in% left_sites) %>%
   column_to_rownames("chrBase")
+saveRDS(cpg.all.df, file = paste0(project, "/", project, ".all.cpg.mincov", mincov, ".rds"))
 
-cpg_bvalue_cor <- cor(cpg.all.df, method = "pearson")
+cpg_bvalue_cor <- cor(cpg.all.df, method = "pearson", use = "complete.obs")
 
 cpg_bvalue_mds <- (1 - cpg_bvalue_cor) %>%
   cmdscale() %>%
@@ -597,11 +619,11 @@ dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2",
   theme_bw()
 
 
-pdf(file = "methyl_CpG_bvalue_cor_MDS_plot.pdf", width = 6, height = 6, pointsize = 8, onefile = T)
+pdf(file = paste0(project, "/", project, ".methyl_CpG_bvalue_cor_MDS_plot.pdf"), width = 6, height = 6, pointsize = 8, onefile = T)
 dms_plot
 invisible(dev.off())
 
-png(file=paste0("methyl_CpG_bvalue_cor_MDS_plot.png"), height=1500, width=1500, res=300)
+png(file=paste0(project, "/", project, ".methyl_CpG_bvalue_cor_MDS_plot.png"), height=1500, width=1500, res=300)
 print(dms_plot)
 invisible(dev.off())
 
@@ -614,15 +636,15 @@ dms_plot
 # differentially methylated CpGs
 
 
-```{r mds, include=TRUE, fig.align="center", echo=FALSE}
+```{r mds, include=TRUE, message = F, warning = F, fig.align="center", echo=FALSE}
 dmcpg.pat <- ".dmcpgs$"
 
-dmcpg.all <- list.files(path = diffpath, pattern = dmcpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
+dmcpg.all <- list.files(path = dnmtoolsdiff_path, pattern = dmcpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
 
 dmcpg.lst <- list()
 for (i in 1:length(dmcpg.all)) {
 	#read in *.meth files
-	dmcpg.infile <- paste(diffpath, dmcpg.all[i], sep = "/")
+	dmcpg.infile <- paste(dnmtoolsdiff_path, dmcpg.all[i], sep = "/")
 	sample <- gsub(".*/(.*).dmcpgs", "\\1", dmcpg.all[i])
 	comparison <- gsub(".*/(.*)/.*.dmcpgs", "\\1", dmcpg.all[i])
 	
@@ -637,9 +659,9 @@ for (i in 1:length(dmcpg.all)) {
 dmcpg_df <- Reduce(rbind, dmcpg.lst)
 colnames(dmcpg_df) <- c("Comparison", "Sample", "Hypo_meth_num", "Links")
 
-dmcpg_sign_file <- read.table(paste0(project, "_dmcpg_sign_file.txt"), sep = "\t", header = T)
+write.table(paste0(project, "/", project, "_dmcpg_sign_file.txt"), sep = "\t", quote = F)
 
-kable(dmcpg_sign_file, caption="Links of differentially methylated CpGs for comparisons", row.names=F) %>% 
+kable(dmcpg_df, caption="Links of differentially methylated CpGs for comparisons", row.names=F) %>% 
         kable_styling()
 ```
 
@@ -666,7 +688,7 @@ for(wga_name in wga_names){
       cur_name = basename(cur_file)
       cur_category = str_sub(cur_name, nchar(prefix) +2, -5)
       result = paste0(result, paste0("### ", cur_category, "\n\n"))
-      result = paste0(result, '```{r include=FALSE}\nanno_df <- read.table("', cur_file, '", sep = "\t", header = T)\n')
+      result = paste0(result, '```{r include=T, warning = F, message = F, echo = F}\nanno_df <- read.table("', cur_file, '", sep = "\t", header = T)\n')
       result = paste0(result, 'anno_df <- anno_df %>% dplyr::select(-c(link, overlapId)) %>% dplyr::filter(FDR <= fdr_cutoff)\n')
       result = paste0(result, 'anno_df %>% DT::datatable(extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv")))\n```\n\n')
     }
