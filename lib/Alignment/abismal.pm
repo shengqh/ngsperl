@@ -34,6 +34,7 @@ sub perform {
 
   my $addqual_perlFile = $config->{$section}{addqual_perlFile};
 
+  my $thread = $config->{$section}{thread};
   my $picard = $config->{$section}{picard};
   my $chrDir=$config->{$section}{chr_dir};
   my $interval_list=$config->{$section}{interval_list};

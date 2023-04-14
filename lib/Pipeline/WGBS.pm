@@ -53,6 +53,7 @@ sub getConfig {
 
   my $targetDir = $def->{target_dir};
 
+  my $thread = getValue($def, "thread");
   my $abismal_index = getValue($def, "abismal_index");
   my $chr_dir = getValue($def, "chr_dir");
   my $chr_size_file = getValue($def, "chr_size_file");
@@ -85,6 +86,7 @@ sub getConfig {
     class      => "Alignment::abismal",
     perform    => 1,
     option     => "",
+    thread     => $thread,
     target_dir => "${targetDir}/abismal",
     chr_dir    => $chr_dir,
     picard     => $picard,
