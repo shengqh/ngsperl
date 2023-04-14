@@ -31,7 +31,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "emailType", "FAIL" );
   initDefaultValue( $def, "cluster",   "slurm" );
-  initDefaultValue( $def, "perform_preprocessing",   0 );
+  initDefaultValue( $def, "perform_preprocessing",   1 );
 
   return $def;
 }
@@ -46,7 +46,7 @@ sub getConfig {
 
   my $email = $def->{email};
 
-  $def->{perform_cutadapt} = 1;
+  $def->{perform_cutadapt} = 0;
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
   my $tasks = [@$individual, @$summary];
