@@ -109,6 +109,8 @@ figureRmd<-function(samples){
     result<-paste0(result, "\n## Cluster in PCA/UMAP\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc6.png"), TRUE))
     result<-paste0(result, "\n## Cell type annotation\n\n")
+    result<-paste0(result, getFigure(paste0(cur_sample, ".celltype.png"), TRUE))
+    result<-paste0(result, "\n## Cell type cluster annotation\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc7.png"), TRUE))
     result<-paste0(result, "\n## Cell type annotation score\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".cta.png"), TRUE))

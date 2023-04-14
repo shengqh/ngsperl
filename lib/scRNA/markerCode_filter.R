@@ -500,10 +500,18 @@ preprocess<-function( SampleInfo,
       
       #cat("\n\n### ", "Fig.6 UMAP result\n\n")
       g<-get_dim_plot(subobj, group.by = "seurat_clusters", label.by="seurat_cell_type", label.size = 4, legend.title="") + 
-        theme(legend.text = element_text(size = 10)) + ggtitle("") + theme(aspect.ratio=1)
+        theme(legend.text = element_text(size = 10)) + ggtitle("")
 
       width = 1500 + max_char * 25
       png(paste0(cur_sample, ".qc7.png"), width=width, height=1500, res=300)
+      print(g)
+      dev.off()
+
+      g<-get_dim_plot_labelby(subobj, label.by="cell_type", label.size = 4, legend.title="") + 
+        theme(legend.text = element_text(size = 10)) + ggtitle("")
+
+      width = 1500 + max_char * 25
+      png(paste0(cur_sample, ".celltype.png"), width=width, height=1500, res=300)
       print(g)
       dev.off()
 
