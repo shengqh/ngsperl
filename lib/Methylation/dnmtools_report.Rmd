@@ -161,7 +161,7 @@ for (i in 1:length(files) ) {
 
 mapping_df <- Reduce(rbind, DT)
 mapping_df <- as.data.frame(mapping_df) %>% rownames_to_column("sample")
-write.csv(file=paste0(project, "_files/", project, ".abismal.mapping.csv"), mapping_df)
+write.csv(file=paste0(project, "/", project, ".abismal.mapping.csv"), mapping_df)
 
 mfinal <- mapping_df[,c("sample", "num_unique", "num_ambiguous", "num_unmapped")]
 colnames(mfinal) <- c("Sample", "Unique", "Ambiguous", "Unmapped")
@@ -170,7 +170,7 @@ mfinal$Read<-factor(mfinal$Read, levels=c("Unmapped", "Ambiguous", "Unique"))
   
 
 width=max(2000, 70 * ncol(mapping_df))
-png(file=paste0(project, "_files/", project, ".abismal.mapping.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".abismal.mapping.csv.png"), height=1500, width=width, res=300)
 
 g<-ggplot(mfinal, aes(x=Sample, y=Count, fill=Read)) +
   geom_bar(stat="identity", width=0.5) +
@@ -226,7 +226,7 @@ levels_df <- Reduce(cbind, DT)
 colnames(levels_df) <- samples
 levels_df <- cbind(info[,c(1:2)], levels_df)
 
-write.csv(file=paste0(project, "_files/", project, ".coverage.stat.csv"), levels_df)
+write.csv(file=paste0(project, "/", project, ".coverage.stat.csv"), levels_df)
 
 mlevels <- levels_df %>%
   gather("Sample", "Value", 3:ncol(levels_df))
@@ -239,7 +239,7 @@ site_cov_perc_cpg <- site_cov_perc %>%
   dplyr::filter(Category == "cpg")
 
 width=max(2000, 70 * ncol(levels_df))
-png(file=paste0(project, "_files/", project, ".coverage.stat.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".coverage.stat.csv.png"), height=1500, width=width, res=300)
 
 g1<-ggplot(site_cov_perc_cpg, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
@@ -279,7 +279,7 @@ for (i in 1:length(files) ) {
 hs_met_df <- bind_rows(DT)
 hs_met_df <- hs_met_df[, c(58, 1:54)]
 
-write.csv(file=paste0(project, "_files/", project, ".HS.matrics.csv"), hs_met_df)
+write.csv(file=paste0(project, "/", project, ".HS.matrics.csv"), hs_met_df)
 
 cov_perc_depth <- hs_met_df %>%
   dplyr::select(c("sample", starts_with("PCT_TARGET_BASES"))) %>%
@@ -288,7 +288,7 @@ cov_perc_depth <- hs_met_df %>%
   mutate(Depth = factor(Depth, levels = c("1X", "2X", "10X", "20X", "30X", "40X", "50X", "100X")))
 
 width=max(2000, 70 * ncol(levels_df))
-png(file=paste0(project, "_files/", project, ".coverage.depth.perc.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".coverage.depth.perc.csv.png"), height=1500, width=width, res=300)
 
 g2<-ggplot(cov_perc_depth, aes(x=sample, y=Percentage, group = Depth, colour=Depth)) +
   geom_line(size = 1.5) +
@@ -332,14 +332,14 @@ for (i in 1:length(files) ) {
 
 dup_df <- Reduce(rbind, DT)
 
-write.csv(file=paste0(project, "_files/", project, ".dup.rate.csv"), dup_df)
+write.csv(file=paste0(project, "/", project, ".dup.rate.csv"), dup_df)
 
 dup_rate <- as.data.frame(dup_df) %>%
   rownames_to_column("Sample") %>%
   dplyr::select(c("Sample", "duplication_rate"))
 
 width=max(2000, 70 * ncol(levels_df))
-png(file=paste0(project, "_files/", project, ".dup.rate.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".dup.rate.csv.png"), height=1500, width=width, res=300)
 
 g3<-ggplot(dup_rate, aes(x=Sample, y=duplication_rate)) +
   geom_bar(stat="identity", width = 0.5, fill = "blue") +
@@ -382,10 +382,10 @@ for (i in 1:length(files) ) {
 
 bs_overall_df <- data.frame(samples, bsrate)
 
-write.csv(file=paste0(project, "_files/", project, ".bs.overall.rate.csv"), bs_overall_df)
+write.csv(file=paste0(project, "/", project, ".bs.overall.rate.csv"), bs_overall_df)
 
 width=max(2000, 70 * ncol(levels_df))
-png(file=paste0(project, "_files/", project, ".bs.overall.rate.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".bs.overall.rate.csv.png"), height=1500, width=width, res=300)
 
 g4<-ggplot(bs_overall_df, aes(x=samples, y=bsrate)) +
   geom_bar(stat="identity", width = 0.5, fill = "green") +
@@ -426,7 +426,7 @@ for (i in 1:length(files) ) {
 
 rrbs_met_df <- bind_rows(DT)
 
-write.csv(file=paste0(project, "_files/", project, ".bs.CpG.rate.csv"), bs_overall_df)
+write.csv(file=paste0(project, "/", project, ".bs.CpG.rate.csv"), bs_overall_df)
 
 
 rrbs_final <- rrbs_met_df %>%
@@ -436,7 +436,7 @@ rrbs_final <- rrbs_met_df %>%
   mutate(Percentage = ifelse(Percentage <= 1, Percentage, 1-(Percentage - 1)))
 
 width=max(2000, 70 * ncol(rrbs_met_df))
-png(file=paste0(project, "_files/", project, ".bs.CpG.rate.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".bs.CpG.rate.csv.png"), height=1500, width=width, res=300)
 
 g5<-ggplot(rrbs_final, aes(x=Sample, y=Percentage, fill = Site_type)) +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -469,7 +469,7 @@ fractional_meth <- mlevels %>%
   dplyr::filter(Category == "cpg")
 
 width=max(2000, 70 * ncol(rrbs_met_df))
-png(file=paste0(project, "_files/", project, ".fractional_meth.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".fractional_meth.csv.png"), height=1500, width=width, res=300)
 
 g6<-ggplot(fractional_meth, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
@@ -500,7 +500,7 @@ mean_meth <- mlevels %>%
   dplyr::filter(Category == "cpg")
 
 width=max(2000, 70 * ncol(rrbs_met_df))
-png(file=paste0(project, "_files/", project, ".mean_meth.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".mean_meth.csv.png"), height=1500, width=width, res=300)
 
 g7 <- ggplot(mean_meth, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
@@ -531,7 +531,7 @@ mean_meth_weighted <- mlevels %>%
   dplyr::filter(Category = "cpg")
 
 width=max(2000, 70 * ncol(rrbs_met_df))
-png(file=paste0(project, "_files/", project, ".mean_meth_weighted.csv.png"), height=1500, width=width, res=300)
+png(file=paste0(project, "/", project, ".mean_meth_weighted.csv.png"), height=1500, width=width, res=300)
 
 g8 <- ggplot(mean_meth_weighted, aes(x=Sample, y=Value, fill=Category)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
@@ -589,7 +589,7 @@ cpg.all.df <- cpg.lst %>%
   purrr::reduce(full_join, by='chrBase') %>%
   dplyr::filter(chrBase %in% left_sites) %>%
   column_to_rownames("chrBase")
-saveRDS(cpg.all.df, file = paste0(project, "_files/", project, ".all.cpg.mincov", mincov, ".rds"))
+saveRDS(cpg.all.df, file = paste0(project, "/", project, ".all.cpg.mincov", mincov, ".rds"))
 
 cpg_bvalue_cor <- cor(cpg.all.df, method = "pearson", use = "complete.obs")
 
@@ -619,11 +619,11 @@ dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2",
   theme_bw()
 
 
-pdf(file = paste0(project, "_files/", project, "methyl_CpG_bvalue_cor_MDS_plot.pdf"), width = 6, height = 6, pointsize = 8, onefile = T)
+pdf(file = paste0(project, "/", project, ".methyl_CpG_bvalue_cor_MDS_plot.pdf"), width = 6, height = 6, pointsize = 8, onefile = T)
 dms_plot
 invisible(dev.off())
 
-png(file=paste0(project, "_files/", project, "methyl_CpG_bvalue_cor_MDS_plot.png"), height=1500, width=1500, res=300)
+png(file=paste0(project, "/", project, ".methyl_CpG_bvalue_cor_MDS_plot.png"), height=1500, width=1500, res=300)
 print(dms_plot)
 invisible(dev.off())
 
@@ -659,7 +659,7 @@ for (i in 1:length(dmcpg.all)) {
 dmcpg_df <- Reduce(rbind, dmcpg.lst)
 colnames(dmcpg_df) <- c("Comparison", "Sample", "Hypo_meth_num", "Links")
 
-write.table(paste0(project, "_files/", project, "_dmcpg_sign_file.txt"), sep = "\t", quote = F)
+write.table(paste0(project, "/", project, "_dmcpg_sign_file.txt"), sep = "\t", quote = F)
 
 kable(dmcpg_df, caption="Links of differentially methylated CpGs for comparisons", row.names=F) %>% 
         kable_styling()
