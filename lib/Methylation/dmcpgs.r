@@ -5,6 +5,8 @@ dmcpgs <- function(file,
                    mincov = 4){
   lst <- list()
   samples <- unlist(strsplit(sample, ","))
+  comparison <- gsub("^.*\/(.*)\.methdiff$", "\\1", file)
+  names <- paste(comparison, samples, sep = "_")
   df <- read.table(file, header = F, sep = "\t")
   colnames(df) <- c("chr", "start", "strand", "type", "pvalue1", "M_s1", "U_s1", "M_s2", "U_s2")
   df$end <- df$start
@@ -19,8 +21,8 @@ dmcpgs <- function(file,
   #get significant subsets
   df1 <- df[which((df$beta_s2 - df$beta_s1 > perc_cut) & (df$FDR1 < FDR)),]
   df2 <- df[which((df$beta_s1 - df$beta_s2 > perc_cut) & (df$FDR2 < FDR)),]
-  lst[[samples[1]]] <- df1
-  lst[[samples[2]]] <- df2
+  lst[[names[1]]] <- df1
+  lst[[names[2]]] <- df2
   return(lst)
 }
 

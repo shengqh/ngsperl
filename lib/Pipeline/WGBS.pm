@@ -31,7 +31,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "emailType", "FAIL" );
   initDefaultValue( $def, "cluster",   "slurm" );
-  initDefaultValue( $def, "perform_preprocessing",   1 );
+  initDefaultValue( $def, "perform_preprocessing",   0 );
 
   return $def;
 }
@@ -46,7 +46,7 @@ sub getConfig {
 
   my $email = $def->{email};
 
-  $def->{perform_cutadapt} = 0;
+  $def->{perform_cutadapt} = 1;
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
   my $tasks = [@$individual, @$summary];
@@ -100,7 +100,8 @@ sub getConfig {
   };
   push(@$tasks, "abismal");
 
-  $config->{DNMTools} = {
+  my $dnmtools_task = "DNMTools";
+  $config->{$dnmtools_task} = {
     class         => "Methylation::DNMTools",
     perform       => 1,
     target_dir    => "${targetDir}/dnmtools",
@@ -116,7 +117,8 @@ sub getConfig {
   };
   push(@$tasks, "DNMTools");
 
-  $config->{annovar} = {
+  my $dnmtoolsannovar_task = "annovar";
+  $config->{$dnmtoolsannovar_task} = {
     class      => "Annotation::Annovar",
     perform    => 1,
     target_dir => "${targetDir}/dnmtoolsAnnovar",
@@ -133,7 +135,8 @@ sub getConfig {
   };
   push(@$tasks, "annovar");
 
-  $config->{DNMToolsDiff} = {
+  my $dnmtoolsdiff_task = "DNMToolsDiff";
+  $config->{$dnmtoolsdiff_task} = {
     class      => "Methylation::DNMToolsDiff",
     perform    => 1,
     target_dir => "${targetDir}/DNMToolsDiff",
@@ -155,7 +158,8 @@ sub getConfig {
   };
   push(@$tasks, "DNMToolsDiff");
 
-  $config->{DNMToolsDiffAnnovar} = {
+  my $dnmtoolsdiffannovar_task = "DNMToolsDiffAnnovar";
+  $config->{$dnmtoolsdiffannovar_task} = {
     class      => "Annotation::Annovar",
     perform    => 1,
     target_dir => "${targetDir}/DNMToolsDiffAnnovar",
@@ -195,7 +199,8 @@ sub getConfig {
 
   my $webgestalt_task = addWebgestalt($config, $def, $tasks, $targetDir, "DNMToolsDiffAnnovarGenes",  [ "DNMToolsDiffAnnovarGenes", ".genename.txt\$" ]);
 
-  $config->{HOMER_DMR} = {
+  my $homer_task = "HOMER_DMR";
+  $config->{$homer_task} = {
     class        => "Homer::FindMotifs",
     perform      => 1,
     target_dir   => "${targetDir}/HOMER_DMR",
@@ -214,12 +219,39 @@ sub getConfig {
 
   my @report_files = ();
   my @report_names = ();
+  my @copy_files   = ();
   if ( defined $config->{fastqc_raw_summary} ) {
     push( @report_files, "fastqc_raw_summary",                   ".FastQC.baseQuality.tsv.png" );
     push( @report_files, "fastqc_raw_summary",                   ".FastQC.sequenceGC.tsv.png" );
     push( @report_files, "fastqc_raw_summary",                   ".FastQC.adapter.tsv.png" );
     push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
   }
+  if(( defined $dnmtools_task ) && ( defined $config->{$dnmtools_task} )) {
+    push( @copy_files, $dnmtools_task, ".amr\$" );
+    push( @copy_files, $dnmtools_task, ".hmr\$" );
+    push( @copy_files, $dnmtools_task, ".pmr\$" );
+    push( @copy_files, $dnmtools_task, ".pmd\$" );
+    #push( @copy_files, $dnmtools, ".bw\$" );
+  }
+  if(( defined $dnmtoolsannovar_task ) && ( defined $config->{$dnmtoolsannovar_task} )) {
+    push( @copy_files, $dnmtoolsannovar_task, ".annovar.final.tsv\$" );
+  }
+  if (( defined $dnmtoolsdiff_task ) && ( defined $config->{$dnmtoolsdiff_task} )) {
+    push( @copy_files, $dnmtoolsdiff_task, ".DMR.filtered\$" );
+    push( @copy_files, $dnmtoolsdiff_task, ".dmcpgs\$" );
+  }
+  if (( defined $dnmtoolsdiffannovar_task ) && ( defined $config->{$dnmtoolsdiffannovar_task} )) {
+    push( @copy_files, $dnmtoolsdiffannovar_task, ".annovar.final.tsv\$" );
+  }
+  if ( defined $webgestalt_task ) {
+    push( @copy_files, $webgestalt_task, "_geneontology_Biological_Process\$" );
+    push( @copy_files, $webgestalt_task, "_geneontology_Cellular_Component\$" );
+    push( @copy_files, $webgestalt_task, "_geneontology_Molecular_Function\$" );
+    push( @copy_files, $webgestalt_task, "_pathway_KEGG\$" );
+  }
+  #if((defined $homer_task ) && (defined $config->{$homer_task} )){
+  #  push(@copy_files, $homer_task, ".DMR.filtered\$" );
+  #}
 
   $config->{report} = {
     class                      => "CQS::BuildReport",
@@ -236,7 +268,8 @@ sub getConfig {
       dnmtoolsdiff_path => $config->{DNMToolsDiff}{target_dir} . "/result/",
       meta_data => "../../" . $task_name . "_meta.tsv",
     },
-    parameterSampleFile3 => [],
+    #parameterSampleFile3 => [],
+    parameterSampleFile3_ref   => \@copy_files,
     parameterSampleFile4_ref => [ $webgestalt_task, ".txt\$" ],
     sh_direct                  => 1,
     pbs                        => {

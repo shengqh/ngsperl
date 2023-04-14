@@ -67,10 +67,10 @@ sub perform {
     my $methdiffFile      = "${group_name}.methdiff";
     my $controlHmrFile   = ${$hmrfiles->{ $sampleNames[0] }}[0];
     my $treatmentHmrFile = ${$hmrfiles->{ $sampleNames[1] }}[0];
-    my $dmrFile1      = basename($controlHmrFile).".DMR";
-    my $dmrFile2      = basename($treatmentHmrFile).".DMR";
-    my $dmcpgsFile1   = basename($controlHmrFile).".dmcpgs";
-    my $dmcpgsFile2   = basename($treatmentHmrFile).".dmcpgs";
+    my $dmrFile1      = ${group_name}."_".basename($controlHmrFile).".DMR";
+    my $dmrFile2      = ${group_name}."_".basename($treatmentHmrFile).".DMR";
+    my $dmcpgsFile1   = ${group_name}."_".basename($controlHmrFile).".dmcpgs";
+    my $dmcpgsFile2   = ${group_name}."_".basename($treatmentHmrFile).".dmcpgs";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $group_name );
     my $pbs_name = basename($pbs_file);
@@ -164,12 +164,12 @@ sub result {
     
     my @sampleNames = @{ $comparisons->{$group_name}; };
 
-    my $controlHmrFile=$sampleNames[0].".hmr.DMR";
-    my $treatmentHmrFile=$sampleNames[1].".hmr.DMR";
+    my $controlHmrFile=${group_name}."_".$sampleNames[0].".hmr.DMR";
+    my $treatmentHmrFile=${group_name}."_".$sampleNames[1].".hmr.DMR";
     my $controlHmrFileFiltered=$controlHmrFile.".filtered";
     my $treatmentHmrFileFiltered=$treatmentHmrFile.".filtered";
-    my $dmcpgsFile1=$sampleNames[0].".dmcpgs";
-    my $dmcpgsFile2=$sampleNames[1].".dmcpgs";
+    my $dmcpgsFile1=${group_name}."_".$sampleNames[0].".dmcpgs";
+    my $dmcpgsFile2=${group_name}."_".$sampleNames[1].".dmcpgs";
 
     @result_files = ();
     push( @result_files, "$cur_dir/${controlHmrFile}" );
