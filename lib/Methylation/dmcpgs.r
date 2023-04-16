@@ -5,7 +5,7 @@ dmcpgs <- function(file,
                    mincov = 4){
   lst <- list()
   samples <- unlist(strsplit(sample, ","))
-  comparison <- gsub("^.*\/(.*)\.methdiff$", "\\1", file)
+  comparison <- gsub("^.*\\/(.*)\\.methdiff$", "\\1", file)
   names <- paste(comparison, samples, sep = "_")
   df <- read.table(file, header = F, sep = "\t")
   colnames(df) <- c("chr", "start", "strand", "type", "pvalue1", "M_s1", "U_s1", "M_s2", "U_s2")
