@@ -1529,8 +1529,6 @@ sub addSubCluster {
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
-    parameterFile4_ref => $signacX_ref,
-    parameterFile5_ref => $singleR_ref,
     parameterSampleFile1    => merge_hash_left_precedent($cur_options, {
       task_name             => getValue( $def, "task_name" ),
       pca_dims              => getValue( $def, "pca_dims" ),
@@ -1558,6 +1556,8 @@ sub addSubCluster {
     }),
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $rename_map,
+    parameterSampleFile4_ref => $signacX_ref,
+    parameterSampleFile5_ref => $singleR_ref,
     output_file_ext      => ".meta.rds,.files.csv",
     sh_direct            => 1,
     pbs                  => {
