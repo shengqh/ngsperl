@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 50;
+use Test::More tests => 53;
 
 { #test is_string
   ok(is_string("string"));
@@ -677,6 +677,35 @@ is_deeply( $cov_map, $cov_expect );
                     'control' => [ 'CVD_001', 'CVD_006' ],
                    }
   );
+}
+
+{
+  my $def = {
+    files => {
+      "S1" => "",
+      "S2" => "",
+      "S3" => "",
+    },
+    perform_split_hto_samples => 0,
+    HTO_samples => {
+      "S1" => {
+        "T1" => "T1",
+        "T2" => "T2",
+      }
+    },
+    pool_sample => 0,
+    pool_sample_groups => {
+      "P1" => ["S2", "T1"]
+    }
+  };
+
+  is_deeply(["S1", "S2", "S3"], get_all_sample_names($def));
+  
+  $def->{perform_split_hto_samples} = 1;
+  is_deeply(["S2", "S3", "T1", "T2"], get_all_sample_names($def));
+
+  $def->{pool_sample} = 1;
+  is_deeply(["P1", "S3", "T2"], get_all_sample_names($def));
 }
 
 1;
