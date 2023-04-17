@@ -42,7 +42,7 @@ cells<-cells[colnames(obj),]
 obj[[seurat_renamed_column]]<-cells[,seurat_renamed_column]
 
 png(file=paste0(outFile, ".rename_cluster.png"), width=4000, height=3000, res=300)
-g<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by=seurat_renamed_column) + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
+g<-MyDimPlot(object = obj, reduction = 'umap', label=TRUE, group.by=seurat_renamed_column) + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
 print(g)
 dev.off()
 

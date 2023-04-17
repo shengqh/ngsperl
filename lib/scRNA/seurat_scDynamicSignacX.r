@@ -311,11 +311,11 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     DefaultAssay(subobj)<-"RNA"
 
     cls<-cur_cts[,grepl(paste0(assay, "_snn_res.+_ct$"), colnames(cur_cts)), drop=F]
-    g1<-DimPlot(subobj, group.by = previous_layer, label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": pre"))
-    g2<-DimPlot(subobj, group.by = "layer", label=T) + ggtitle(paste0(pct, ": ", cur_layer))
+    g1<-MyDimPlot(subobj, group.by = previous_layer, label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": pre"))
+    g2<-MyDimPlot(subobj, group.by = "layer", label=T) + ggtitle(paste0(pct, ": ", cur_layer))
 
     if(check_pre_layer){
-      g3<-DimPlot(subobj, group.by = "pre_layer", label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": post"))
+      g3<-MyDimPlot(subobj, group.by = "pre_layer", label=T) + ggtitle(paste0(pct, ": ", previous_layer, ": post"))
       g<-g1+g3+g2
       width=6900
     }else{
@@ -363,7 +363,7 @@ CC
       cur_meta<-cur_meta[!duplicated(cur_meta[,meta_cl]),]
       cur_meta<-cur_meta[order(cur_meta[,meta_cl]),]
 
-      gg<-DimPlot(subobj, group.by = meta_cl, label=T) + ggtitle(cl) +
+      gg<-MyDimPlot(subobj, group.by = meta_cl, label=T) + ggtitle(cl) +
         scale_color_discrete(labels = cur_meta[,ct])
       if(is.null(g)){
         g=gg
@@ -453,7 +453,7 @@ layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_lay
   #using RNA assay for visualization
   DefaultAssay(obj)<-"RNA"
 
-  g<-DimPlot(obj, group.by = cur_layer, label=T)
+  g<-MyDimPlot(obj, group.by = cur_layer, label=T)
 
   png(paste0(prefix, ".", cur_layer, ".final.png"), width=3300, height=3000, res=300)
   print(g)

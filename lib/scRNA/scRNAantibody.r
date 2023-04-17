@@ -23,7 +23,7 @@ genes<-rownames(adt@data)
 ncol=ceiling(sqrt(1 + length(genes)))
 nrow=ceiling((1 + length(genes)) / ncol)
 
-p1<-DimPlot(obj, reduction = "umap", label=T, group.by="final_seurat_clusters") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
+p1<-MyDimPlot(obj, reduction = "umap", label=T, group.by="final_seurat_clusters") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
 lst<-list("Cluster" = p1)
 
 gene=genes[1]

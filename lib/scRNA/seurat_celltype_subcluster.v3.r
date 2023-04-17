@@ -440,10 +440,10 @@ for(pct in previous_celltypes){
     dev.off()
 
     # umap file
-    g0<-DimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
-    g1<-DimPlot(subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
-    g2<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
-    g3<-DimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
+    g0<-MyDimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    g1<-MyDimPlot(subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
+    g2<-MyDimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
+    g3<-MyDimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
     g<-g0+g1+g2+g3+plot_layout(ncol=2)
     umap_file = paste0(cluster_prefix, ".umap.png")
     png(umap_file, width=3600, height=3000, res=300)

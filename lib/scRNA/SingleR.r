@@ -81,7 +81,7 @@ rm(obj)
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
-g1=DimPlot(major_obj, group.by = ct_name, reduction="umap", label=T)
+g1=MyDimPlot(major_obj, group.by = ct_name, reduction="umap", label=T)
 
 if(has_bubblemap){
   g2<-get_bubble_plot(major_obj, NA, ct_name, bubblemap_file, assay="RNA")

@@ -29,7 +29,7 @@ if(!exists("obj")){
   obj<-read_object(parFile1, parFile3, cluster_name)
 }
 
-g<-DimPlot(obj, group.by = cluster_name, label=T) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
+g<-get_dim_plot_labelby(obj, label.by = cluster_name, label=T) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
 
 edgeRres<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
 edgeRfolder<-dirname(parFile2)

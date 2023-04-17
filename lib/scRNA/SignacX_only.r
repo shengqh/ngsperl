@@ -67,7 +67,7 @@ obj <- AddMetaData(obj, metadata = celltypes$CellStates, col.name = "signacx_Cel
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
-g1=DimPlot(obj, group.by = "signacx_CellStates", reduction="umap", label=T)
+g1=MyDimPlot(obj, group.by = "signacx_CellStates", reduction="umap", label=T)
 
 if(has_bubblemap){
   g2<-get_bubble_plot(obj, NA, "signacx_CellStates", bubblemap_file, assay="RNA")

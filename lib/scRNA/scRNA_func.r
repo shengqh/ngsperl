@@ -129,6 +129,11 @@ get_heatmap_width<-function(nclusters){
   return(result)
 }
 
+MyDimPlot<-function(...){
+  g<-DimPlot(...) + theme(aspect.ratio=1)
+  return(g)
+}
+
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
 MyDoHeatMap<-function(obj, max_cell=5000, ...){
@@ -1040,7 +1045,7 @@ get_dot_width<-function(g, min_width=4400){
   }
   ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot","feature.groups")]),])
   ngroups = length(unique(g$data$feature.groups))
-  width=ngenes * 60 + ngroups * 40 + 400
+  width=ngenes * 70 + ngroups * 40 + 400
   return(max(width, min_width))
 }
 
@@ -1472,9 +1477,9 @@ get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.
   ngroups<-length(unlist(unique(obj[[group.by]])))
   scolors = get_hue_colors(ngroups, random_colors)
 
-  g<-DimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by, ...)+ 
+  g<-MyDimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by, ...)+ 
     scale_color_manual(legend.title, values=scolors, labels = cts, guide = guide_legend(ncol=ncol)) + 
-    ggtitle(title) + theme(aspect.ratio=1)
+    ggtitle(title)
   return(g)
 }
 
@@ -1513,7 +1518,7 @@ get_highlight_cell_plot<-function(obj, group.by, reduction="umap", reorder=TRUE)
     ct_count<-cts[ct]
     pct<-paste0(ct, "(", ct_count, ")")
     cells<-colnames(obj)[obj[[group.by]] == ct]
-    g0<-DimPlot(obj, label=F, cells.highlight =cells, reduction = reduction) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", ct)) + NoLegend()
+    g0<-MyDimPlot(obj, label=F, cells.highlight =cells, reduction = reduction) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", ct)) + NoLegend()
     if(is.null(g)){
       g<-g0
     }else{
@@ -1926,7 +1931,7 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
       scale_color_manual(values = groupColors) +
       NoLegend() + xlab("") + ylab("Gene Expression")
     
-    p1<-DimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
+    p1<-MyDimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
     
     p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T)
     p<-p0+p1+p2+plot_layout(design="AA

@@ -80,7 +80,7 @@ if(!dotPlotOnly){
   ncol=ceiling(sqrt(1 + length(samples)))
   nrow=ceiling((1 + length(samples)) / ncol)
   for(gene in genes){
-    p1<-DimPlot(obj, reduction = "umap", label=T, group.by="final_seurat_clusters") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
+    p1<-MyDimPlot(obj, reduction = "umap", label=T, group.by="final_seurat_clusters") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
     lst<-list("Cluster" = p1)
     sample<-samples[1]
     for (sample in samples){

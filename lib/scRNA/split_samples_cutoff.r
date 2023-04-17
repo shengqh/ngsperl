@@ -274,7 +274,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   pbmc.hashtag<-RunUMAP(pbmc.hashtag, features=rownames(pbmc.hashtag))
   
   png(paste0(output_prefix, ".umap.class.png"), width=1000, height=800)
-  g<-DimPlot(pbmc.hashtag, reduction = "umap", group.by="HTO_classification")
+  g<-MyDimPlot(pbmc.hashtag, reduction = "umap", group.by="HTO_classification")
   print(g)
   dev.off()
   
@@ -294,7 +294,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 
   pbmc.hashtag$HTO_classification=factor(pbmc.hashtag$HTO_classification, levels=hto_names)
   png(paste0(output_prefix, ".umap.all.png"), width=1000, height=800)
-  g<-DimPlot(pbmc.hashtag, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
+  g<-MyDimPlot(pbmc.hashtag, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
     scale_color_manual(values=cols)
   print(g)
   dev.off()

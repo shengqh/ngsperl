@@ -164,7 +164,7 @@ if(!bBetweenCluster){
     obj$sigRate[is.na(obj$sigRate)]<-0
     
     pdf(paste0(outFile, ".", comp, ".sigGenePerc.pdf"), width=14, height=7)
-    p1<-DimPlot(obj, group.by = cluster_name, label=T) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
+    p1<-get_dim_plot_labelby(obj, label.by = cluster_name) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
     p2<-MyFeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red")) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
     g<-ggarrange(p1, p2, ncol = 2, labels = c("A", "B"))
     print(g)

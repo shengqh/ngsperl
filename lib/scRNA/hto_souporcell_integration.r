@@ -200,7 +200,7 @@ for (sample_name in rownames(souporcell_tb)){
     
     #if there are more than 2 tags, use umap
     if(nrow(obj) > 2){
-      g2<-DimPlot(obj, group.by="assignment", pt.size = pt.size) 
+      g2<-get_dim_plot_labelby(obj, lalbl.by="assignment", pt.size = pt.size) 
       gdata<-g2$data
     }else{
       tags<-rownames(obj)
@@ -225,9 +225,9 @@ for (sample_name in rownames(souporcell_tb)){
     dev.off()
   }
   
-  g1<-DimPlot(obj, group.by="HTO_classification", pt.size = pt.size) + ggtitle("HTO")
-  g2<-DimPlot(obj, group.by="souporcell", pt.size = pt.size) + ggtitle("souporcell")
-  g3<-DimPlot(obj, group.by="final", pt.size = pt.size) + ggtitle("integrated")
+  g1<-MyDimPlot(obj, group.by="HTO_classification", pt.size = pt.size) + ggtitle("HTO")
+  g2<-MyDimPlot(obj, group.by="souporcell", pt.size = pt.size) + ggtitle("souporcell")
+  g3<-MyDimPlot(obj, group.by="final", pt.size = pt.size) + ggtitle("integrated")
 
   g1levels<-unique(as.character(g1$data[,3]))
   g1levels<-g1levels[order(g1levels)]

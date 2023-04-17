@@ -52,7 +52,7 @@ rm(obj)
 
 valid_obj$final_seurat_clusters=valid_cell_df$seurat_cellactivity_clusters
 
-gcell<-DimPlot(valid_obj, group.by="final_seurat_clusters", reduction = "umap", label=T) + theme(legend.position = "none") + ggtitle("")
+gcell<-MyDimPlot(valid_obj, group.by="final_seurat_clusters", reduction = "umap", label=T) + theme(legend.position = "none") + ggtitle("")
 
 gg_color_hue <- function(n) {
   hues = seq(15, 375, length = n + 1)
@@ -65,13 +65,13 @@ for(idx in c(1:nrow(clonotypes))) {
   cdr3s_aa=clonotypes$cdr3s_aa[idx]
   cdr3s_cells=strsplit(clonotypes$cells[idx], split = ";")
   names(cdr3s_cells)<-cdr3s_aa
-  cg<-DimPlot(valid_obj, reduction = "umap", cells.highlight = cdr3s_cells, label=F, repel=T) + theme(legend.position = "none") + 
+  cg<-MyDimPlot(valid_obj, reduction = "umap", cells.highlight = cdr3s_cells, label=F, repel=T) + theme(legend.position = "none") + 
     scale_color_manual(values = c("lightgrey", "red")) + ggtitle(cdr3s_aa)
   
   cobj=subset(valid_obj, cells=unlist(cdr3s_cells))
   sc<-data.frame(cell=colnames(cobj), sample=cobj$orig.ident)
   samplelist<-tapply(sc$cell,sc$sample,list)
-  sg<-DimPlot(valid_obj, reduction = "umap", cells.highlight = samplelist, cols.highlight=gg_color_hue(length(samplelist)) , label=F) + theme(legend.position = "top")
+  sg<-MyDimPlot(valid_obj, reduction = "umap", cells.highlight = samplelist, cols.highlight=gg_color_hue(length(samplelist)) , label=F) + theme(legend.position = "top")
   
   pdf(file=paste0(curname, ".umap.pdf"), width=21, height=7)
   p<-ggarrange(gcell, cg, sg, ncol=3)

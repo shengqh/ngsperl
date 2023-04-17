@@ -76,7 +76,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   obj<-RunUMAP(obj, features=rownames(obj))
   
   png(paste0(output_prefix, ".umap.class.png"), width=1000, height=800)
-  g<-DimPlot(obj, reduction = "umap", group.by="HTO_classification")
+  g<-MyDimPlot(obj, reduction = "umap", group.by="HTO_classification")
   print(g)
   dev.off()
   
@@ -96,7 +96,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
 
   obj$HTO_classification=factor(obj$HTO_classification, levels=hto_names)
   png(paste0(output_prefix, ".umap.all.png"), width=1000, height=800)
-  g<-DimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
+  g<-MyDimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
     scale_color_manual(values=cols)
   print(g)
   dev.off()

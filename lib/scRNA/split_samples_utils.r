@@ -232,7 +232,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
     write.csv(alldata, file=paste0(output_prefix, ".csv"))
     
     png(paste0(output_prefix, ".umap.class.png"), width=2000, height=1800, res=300)
-    g<-DimPlot(obj, reduction = "umap", group.by="HTO_classification")
+    g<-MyDimPlot(obj, reduction = "umap", group.by="HTO_classification")
     print(g)
     dev.off()
 
@@ -248,7 +248,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
       cols=rep("gray", length(hto_names))
       names(cols)=hto_names
       cols[tagname]="red"
-      glist[[tagname]] = DimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c(tagname))+
+      glist[[tagname]] = MyDimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c(tagname))+
         scale_color_manual(values=cols) + ggtitle(tagname)
     }
     g<-wrap_plots(glist, nrow = nrow, ncol = ncol)
@@ -262,7 +262,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
     cols[["Doublet"]]="red"
     
     png(paste0(output_prefix, ".umap.all.png"), width=2000, height=1800, res=300)
-    g<-DimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
+    g<-MyDimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
       scale_color_manual(values=cols)
     print(g)
     dev.off()
