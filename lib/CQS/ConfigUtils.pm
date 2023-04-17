@@ -26,6 +26,7 @@ our %EXPORT_TAGS = (
   'all' => [
     qw(
       get_ignore_sample_map
+      get_all_sample_names
       print_trace
       is_string
       is_array
@@ -1969,18 +1970,26 @@ sub merge_hash_right_precedent {
   return $merge_c->merge($a, $b);
 }
 
-sub get_groups_by_pattern_dic {
-  my ($def, $gpattern_dic) = @_;
-  
-  if(!defined $gpattern_dic){
-    $gpattern_dic = $def->{groups_pattern};
-  }
+sub get_all_sample_names {
+  my $def = shift;
 
   my $files = $def->{files};
 
   my $sample_names = {};
   for my $sample_name (keys %$files){
     $sample_names->{$sample_name} = $sample_name;
+  }
+
+  if (getValue($def, "perform_split_hto_samples", 0)){
+    my $HTO_samples = getValue($def, "HTO_samples");
+    for my $hto (keys %$HTO_samples){
+      my $hto_map = $HTO_samples->{$hto};
+      my @hto_sub_samples = (values %$hto_map);
+      delete $sample_names->{$hto};
+      for my $hto_sub_sample (@hto_sub_samples) {
+        $sample_names->{$hto_sub_sample} = $hto_sub_sample;
+      }
+    }
   }
 
   if(getValue($def, "pool_sample", 0)){
@@ -1995,12 +2004,22 @@ sub get_groups_by_pattern_dic {
   }
 
   my @samplenames = sort(uniq(values %$sample_names));
-  #print(@samplenames);
+  return(\@samplenames);
+}
+
+sub get_groups_by_pattern_dic {
+  my ($def, $gpattern_dic) = @_;
+  
+  if(!defined $gpattern_dic){
+    $gpattern_dic = $def->{groups_pattern};
+  }
+
+  my $samplenames = get_all_sample_names($def);
 
   my $groups = {};
   for my $groupname (sort keys %$gpattern_dic){
     my $gpattern = $gpattern_dic->{$groupname};
-    for my $samplename (@samplenames) {
+    for my $samplename (@$samplenames) {
       if($samplename =~ /$gpattern/){
         if (not defined $groups->{$groupname}){
           $groups->{$groupname} = [$samplename];
@@ -2022,26 +2041,12 @@ sub get_groups_by_pattern_value {
     $gpattern = $def->{groups_pattern};
   }
 
-  my $files = $def->{files};
-
-  my @samplenames = ();
-  if (getValue($def, "perform_split_hto_samples", 0)){
-    my $HTO_samples = getValue($def, "HTO_samples");
-    for my $hto (keys %$HTO_samples){
-      my $hto_map = $HTO_samples->{$hto};
-      my @hto_sub_samples = (values %$hto_map);
-      push (@samplenames, @hto_sub_samples);
-    }
-  }else{
-    push (@samplenames, (keys %$files));
-  }
-  @samplenames = sort @samplenames;
-  #print(Dumper(@samplenames));
+  my $samplenames = get_all_sample_names($def);
   
   #print($gpattern);
   #print(Dumper($files));
   my $groups = {};
-  for my $samplename (@samplenames) {
+  for my $samplename (@$samplenames) {
     my $groupname = $samplename;
     if($samplename =~ /$gpattern/){
       $groupname = $1;
@@ -2071,12 +2076,6 @@ sub get_groups_by_pattern_array {
     $gpatterns = $def->{groups_pattern};
   }
 
-  my $files = $def->{files};
-
-  my @samplenames = (keys %$files);
-  
-  #print($gpattern);
-  #print(Dumper($files));
   my $groups = {};
   for my $gpattern (@$gpatterns){
     my $subgroups = get_groups_by_pattern_value($def, $gpattern);

@@ -21,7 +21,7 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw(getValue 
+    qw( 
     getIntermidiateDir
     getIndexName
     initPipelineOptions 
@@ -2100,10 +2100,17 @@ sub checkFileGroupPairNames {
     $remove_missing = 0;
   }
 
+  my $files = {};
   if(!defined $fileKey){
     $fileKey = "files";
   }
-  my $files = getValue($def, $fileKey);
+  if(is_array($fileKey)){
+    for my $fname (@$fileKey){
+      $files->{$fname} = 1;
+    }
+  }else{
+    $files = getValue($def, $fileKey);
+  }
   my $bFailed = 0;
 
   if (!defined $groupKeys){
