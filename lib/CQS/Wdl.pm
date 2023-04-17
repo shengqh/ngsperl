@@ -198,6 +198,8 @@ sub perform {
 
   my $expected = $self->result($config, $section);
 
+  my $run_in_background = get_option( $config, $section, "run_in_background", 0 );
+
   my $shfile = $self->get_task_filename( $pbs_dir, $task_name );
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
@@ -213,6 +215,14 @@ sub perform {
 
     my $expect_file = $expected->{$sample_name}[0];
 
+    my $nohup_str = "";
+    my $background_str = "";
+    if($sh_direct){
+      if($run_in_background){
+        $nohup_str = "nohup ";
+        $background_str = "| tee $log &";
+      }
+    }
     if($check_output_file_pattern ne ""){
       print $sh "
 if [[ 1 -eq \$1 ]]; then
@@ -221,14 +231,14 @@ else
   file_count=\$(find $cur_dir -name $check_output_file_pattern | wc -l) 
 fi
 if [[ \$file_count -eq 0 ]]; then
-  \$MYCMD ./$pbs_name
+  $nohup_str\$MYCMD ./$pbs_name $background_str
 fi
 
 ";
     $expect_file = undef;
     }else{
       print $sh "if [[ ! -s $expect_file ]]; then
-  \$MYCMD ./$pbs_name
+  $nohup_str\$MYCMD ./$pbs_name background_str
 fi
 
 ";
