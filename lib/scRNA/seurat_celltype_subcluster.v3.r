@@ -3,14 +3,14 @@ outFile='crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
-parFile3='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
-parFile4='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_SignacX/result/crs.meta.rds'
-parFile5='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_SingleR/result/crs.meta.rds'
+parSampleFile4='fileList4.txt'
+parSampleFile5='fileList5.txt'
+parFile1='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge/result/crs.final.rds'
+parFile2='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
+parFile3='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
+setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge_dr0.5_02_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -107,38 +107,6 @@ if(!is_file_empty(parSampleFile2)){
   obj<-obj[!(rownames(obj) %in% ignore_genes),]
 }
 
-bHasSignacX<-FALSE
-if(exists("parFile4")){
-  if(parFile4 != ""){
-    signacX<-readRDS(parFile4)
-    assert(rownames(signacX) == rownames(obj@meta.data))
-  
-    ct_map=c('T.CD4.memory'='T.CD4', 
-      'T.CD4.naive'='T.CD4', 
-      'T.CD8.cm'='T.CD8',
-      'T.CD8.em'='T.CD8',
-      'T.CD8.naive'='T.CD8')
-    signacX$signacx_CellStates_slim<-as.character(signacX$signacx_CellStates)
-    for(ct_name in names(ct_map)){
-      signacX$signacx_CellStates_slim[signacX$signacx_CellStates_slim==ct_name]=ct_map[ct_name]
-    }
-  
-    obj<-AddMetaData(obj, signacX$signacx_CellStates_slim, col.name = "signacx_CellStates")
-    bHasSignacX<-TRUE
-  }
-}
-
-bHasSingleR<-FALSE
-if(exists("parFile5")){
-  if(parFile5 != ""){
-    singleR<-readRDS(parFile5)
-    assert(rownames(singleR) == rownames(obj@meta.data))
-  
-    obj<-AddMetaData(obj, singleR$SingleR_labels, col.name = "SingleR")
-    bHasSingleR<-TRUE
-  }
-}
-
 meta<-obj@meta.data
 if(!is_file_empty(parSampleFile3)){
   rename_map = read.table(parSampleFile3, sep="\t", header=F)
@@ -204,6 +172,32 @@ if(!is_file_empty(parSampleFile3)){
   print(g)
   dev.off()
 }
+
+meta<-obj@meta.data
+
+bHasSignacX<-FALSE
+if(exists("parSampleFile4")){
+  meta = fill_meta_info_list(parSampleFile4, meta, "signacx_CellStates", "SignacX")
+  ct_map=c('T.CD4.memory'='T.CD4', 
+    'T.CD4.naive'='T.CD4', 
+    'T.CD8.cm'='T.CD8',
+    'T.CD8.em'='T.CD8',
+    'T.CD8.naive'='T.CD8')
+  meta$SignacX<-as.character(meta$SignacX)
+  for(ct_name in names(ct_map)){
+    meta$SignacX[meta$SignacX==ct_name]=ct_map[ct_name]
+  }
+  bHasSignacX<-TRUE
+}
+
+bHasSingleR<-FALSE
+if(exists('parSampleFile5')){
+  meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
+  bHasSingleR<-TRUE
+}
+
+obj@meta.data<-meta
+
 saveRDS(meta, paste0(outFile, ".meta.rds"))
 
 if(has_bubblemap){
@@ -293,15 +287,15 @@ for(pct in previous_celltypes){
 
   bHasCurrentSignacX<-FALSE
   if(bHasSignacX){
-    sx<-table(subobj$signacx_CellStates)
+    sx<-table(subobj$SignacX)
     sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
     sxnames<-names(sx)
 
-    sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
-    sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
+    sxobj<-subset(subobj, SignacX %in% sxnames)
+    sxobj$SignacX<-as.character(sxobj$SignacX)
 
-    g4<-get_dim_plot_labelby(sxobj, reduction="umap", label.by = "signacx_CellStates", label=T) + ggtitle("SignacX")
-    g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = "signacx_CellStates", label=T) + ggtitle(paste0(subumap, ": SignacX"))
+    g4<-get_dim_plot_labelby(sxobj, reduction="umap", label.by = "SignacX", label=T) + ggtitle("SignacX")
+    g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = "SignacX", label=T) + ggtitle(paste0(subumap, ": SignacX"))
     g<-g4+g5+plot_layout(ncol=2)
 
     signacx_file=paste0(curprefix, ".SignacX.umap.png")
@@ -412,12 +406,12 @@ for(pct in previous_celltypes){
     saveRDS(subobj@meta.data, meta_rds)
     
     if(bHasCurrentSignacX){
-      sx<-table(subobj$signacx_CellStates)
+      sx<-table(subobj$SignacX)
       sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
       sxnames<-names(sx)
       sxnames<-sxnames[sxnames != "Unclassified"]
-      sxobj<-subset(subobj, signacx_CellStates %in% sxnames)
-      sxobj$signacx_CellStates<-as.character(sxobj$signacx_CellStates)
+      sxobj<-subset(subobj, SignacX %in% sxnames)
+      sxobj$SignacX<-as.character(sxobj$SignacX)
     }
 
     if(bHasCurrentSingleR){
@@ -434,7 +428,7 @@ for(pct in previous_celltypes){
     gb<-get_groups_dot(subobj, "display_layer", "orig.ident")
     height = 1100
     if(bHasCurrentSignacX){
-      gb<-gb+get_groups_dot(sxobj, "display_layer", "signacx_CellStates") + plot_layout(ncol=1)
+      gb<-gb+get_groups_dot(sxobj, "display_layer", "SignacX") + plot_layout(ncol=1)
       height = height + 1100
     }
     if(bHasCurrentSingleR){
@@ -496,4 +490,3 @@ for(pct in previous_celltypes){
 setwd(cur_folder)
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
-
