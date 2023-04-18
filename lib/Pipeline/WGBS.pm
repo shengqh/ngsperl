@@ -53,7 +53,7 @@ sub getConfig {
 
   my $targetDir = $def->{target_dir};
 
-  my $thread = getValue($def, "thread");
+  my $thread = getValue($def, "thread", 4);
   my $abismal_index = getValue($def, "abismal_index");
   my $chr_dir = getValue($def, "chr_dir");
   my $chr_size_file = getValue($def, "chr_size_file");
@@ -95,7 +95,7 @@ sub getConfig {
     abismal_index => $abismal_index,
     source_ref => "trimgalore",
     pbs        => {
-      "nodes"     => "1:ppn=1",
+      "nodes"     => "1:ppn=4",
       "walltime"  => "128",
       "mem"       => "80gb"
     },
