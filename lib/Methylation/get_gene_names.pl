@@ -4,6 +4,7 @@ open OUT,">$ARGV[1]";
 while(<IN>){
   chomp;
   next if(/^Chr/);
+  next if(/^chr\s+/);
   @a = split/\t/,$_;
   if($a[6] =~/[,;]+/){
     @b = split/[,;]+/,$a[6];

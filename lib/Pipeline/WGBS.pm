@@ -168,6 +168,7 @@ sub getConfig {
     option     => $annovar_param,
     annovar_db => $annovar_db,
     buildver   => $annovar_buildver,
+    perform_splicing => 0,
     remove_empty_source => 1,
     isBed      => 1,
     source_ref => [ "DNMToolsDiff", ".DMR.filtered\$|\.dmcpgs\$" ],
