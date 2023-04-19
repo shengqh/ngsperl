@@ -579,6 +579,7 @@ for (i in 1:length(cpg.all)) {
 
 cov.all.df <- cov.lst %>% 
     purrr::reduce(full_join, by='chrBase') %>%
+    mutate_at(names(cov.lst), as.numeric) %>%
     dplyr::filter(across(
       .cols = is.numeric(),
       .fns = ~. >= mincov)
@@ -587,6 +588,7 @@ cov.all.df <- cov.lst %>%
   
 cpg.all.df <- cpg.lst %>% 
   purrr::reduce(full_join, by='chrBase') %>%
+  mutate_at(names(cov.lst), as.numeric) %>%
   dplyr::filter(chrBase %in% left_sites) %>%
   column_to_rownames("chrBase")
 saveRDS(cpg.all.df, file = paste0(project, "/", project, ".all.cpg.mincov", mincov, ".rds"))
@@ -608,8 +610,8 @@ cpg_bvalue_mds$type <- meta_df$type
 # Plot MDS
 dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2", 
                       label = colnames(cpg.all.df),
-                      xlab = "CpG b-value Dim 1",
-                      ylab = "CpG b-value Dim 2",
+                      xlab = "MDS 1",
+                      ylab = "MDS 2",
                       color = "group",
                       palette = "jco",
                       size = 1, 
