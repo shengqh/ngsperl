@@ -652,7 +652,7 @@ for (i in 1:length(dmcpg.all)) {
 	#format cpg data frame
 	DT.dmcpg <- read.table(dmcpg.infile, header = T, sep = "\t", stringsAsFactors = FALSE)
 	hypo_CpGs_num <- nrow(DT.dmcpg)
-	link <- paste0("[",sample,"](",dmcpg.infile,")")
+	link <- paste0("[",sample,"](./", project, "/", comparison, "_", sample, ".dmcpgs)")
 	info <- c(comparison, sample, hypo_CpGs_num, link)
 	dmcpg.lst[[i]] <- info
 }
