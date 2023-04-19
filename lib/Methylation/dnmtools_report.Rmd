@@ -528,7 +528,7 @@ g7
 mean_meth_weighted <- mlevels %>%
   dplyr::filter(Stat == "mean_meth_weighted") %>%
   mutate(Category = factor(Category, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
-  dplyr::filter(Category = "cpg")
+  dplyr::filter(Category == "cpg")
 
 width=max(2000, 70 * ncol(rrbs_met_df))
 png(file=paste0(project, "/", project, ".mean_meth_weighted.csv.png"), height=1500, width=width, res=300)
