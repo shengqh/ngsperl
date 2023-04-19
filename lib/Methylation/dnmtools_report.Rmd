@@ -566,7 +566,7 @@ cpg.lst <- list()
 for (i in 1:length(cpg.all)) {
 	#read in *.meth files
 	cpg.infile <- paste(dnmtools_path, cpg.all[i], sep = "/")
-	id <- gsub(".*\\/(.*)\\.meth", "\\1", cpg.all[i])
+	id <- gsub("(.*?)\\.meth$", "\\1", cpg.all[i])
 	#format cpg data frame
 	DT.cpg <- read.table(cpg.infile, header = F, stringsAsFactors = FALSE)
 	colnames(DT.cpg) <- c("chr", "base", "strand", "Type", id, "coverage")
@@ -647,7 +647,7 @@ dmcpg.lst <- list()
 for (i in 1:length(dmcpg.all)) {
 	#read in *.meth files
 	dmcpg.infile <- paste(dnmtoolsdiff_path, dmcpg.all[i], sep = "/")
-	comparison <- gsub(".*\\/(.*)\\/.*\\.dmcpgs", "\\1", dmcpg.all[i])
+	comparison <- gsub("(.*)\\/.*\\.dmcpgs$", "\\1", dmcpg.all[i])
 	sample <- gsub(".*\\/(.*)\\.dmcpgs", "\\1", dmcpg.all[i])
 	sample <- str_replace(sample, paste0(comparison, "_"), "")
 	
