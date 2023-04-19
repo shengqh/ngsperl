@@ -572,6 +572,7 @@ for (i in 1:length(cpg.all)) {
 	colnames(DT.cpg) <- c("chr", "base", "strand", "Type", id, "coverage")
 	DT.cpg$chrBase <- paste(DT.cpg$chr, DT.cpg$base, sep = ".")
 	DT.cov <- DT.cpg[,c("chrBase", "coverage")]
+	colnames(DT.cov) <- c("chrBase", id)
   DT.cpg <- DT.cpg[,c("chrBase", id)]
   cov.lst[[id]] <- DT.cov
 	cpg.lst[[id]] <- DT.cpg
@@ -580,15 +581,12 @@ for (i in 1:length(cpg.all)) {
 cov.all.df <- cov.lst %>% 
     purrr::reduce(full_join, by='chrBase') %>%
     mutate_at(names(cov.lst), as.numeric) %>%
-    dplyr::filter(across(
-      .cols = is.numeric(),
-      .fns = ~. >= mincov)
-    )
-  left_sites <- cov.all.df$chrBase
+    dplyr::filter(if_any(is.numeric, ~ .x > mincov))
+left_sites <- cov.all.df$chrBase
   
 cpg.all.df <- cpg.lst %>% 
   purrr::reduce(full_join, by='chrBase') %>%
-  mutate_at(names(cov.lst), as.numeric) %>%
+  mutate_at(names(cpg.lst), as.numeric) %>%
   dplyr::filter(chrBase %in% left_sites) %>%
   column_to_rownames("chrBase")
 saveRDS(cpg.all.df, file = paste0(project, "/", project, ".all.cpg.mincov", mincov, ".rds"))
