@@ -36,7 +36,7 @@ validation_columns=c()
 has_sctk<-file.exists(parSampleFile3)
 if(has_sctk){
   sctk_map<-read_file_map(parSampleFile3)
-  validation_columns<-c(validation_columns, "DBT")
+  validation_columns<-c(validation_columns, "DF", "SDF", "scds")
 }
 
 has_signacx<-exists('parSampleFile4')
@@ -69,7 +69,7 @@ draw_figure<-function(sample_name, cur_meta, validation_columns){
     theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend() + 
     theme(strip.text.y.right = element_text(angle = 0, hjust = 0))
 
-  height = max(500, length(unique(alltbl$Var1)) * 200) + 500
+  height = max(500, length(unique(alltbl$Var1)) * 150) + 500
   width = max(1000, length(unique(alltbl$Var2)) * 50) + 1000
 
   png(paste0(sample_name, ".validation.png"), width=width, height=height, res=300)
@@ -99,7 +99,11 @@ for(sample_name in sample_names){
   if(has_sctk){
     sctk_file = sctk_map[[sample_name]]
     sctk_meta = readRDS(sctk_file)
-    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, doublet_column, "DBT")
+
+    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "doubletFinder_doublet_label_resolution_1.5", "DF")
+    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scDblFinder_class", "SDF")
+    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scds_hybrid_call", "scds")
+    cur_meta$scds = ifelse(cur_meta$scds, "Doublet", "Singlet")
   }
   
   if(has_signacx){
