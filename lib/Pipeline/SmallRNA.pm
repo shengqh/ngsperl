@@ -592,6 +592,55 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       };
       push @$summary_ref, ("host_genome_tRNA_category");
 
+      if (getValue($def, "perform_host_tRNA_absolute_position")){
+        my $tTask = $countTask . "_tRNA_abs_position";
+        $config->{$tTask} = {
+          class                 => "CQS::ProgramWrapperOneToOne",
+          perform               => 1,
+          target_dir            => $host_intermediate_dir . "/$tTask",
+          option                => "",
+          interpretor           => "python3",
+          program               => "../SmallRNA/absolute_tRNA_position.py",
+          source_arg            => "-i",
+          source_ref            => [ $countTask, ".count.mapped.xml" ],
+          output_to_same_folder => 1,
+          output_arg            => "-o",
+          output_file_prefix => ".tRNA.abs.position",
+          output_ext            => ".tRNA.abs.position",
+          sh_direct             => 1,
+          pbs                   => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        };
+        push @$individual_ref, $tTask;
+
+        my $tVisTask = "host_tRNA_abs_position_vis";
+        $config->{$tVisTask} = {
+          class                     => "CQS::UniqueR",
+          perform                   => 1,
+          target_dir                => $host_genome_dir . "/$tVisTask",
+          rtemplate                 => "../SmallRNA/absolute_tRNA_position.r",
+          output_file_ext           => ".tRNA.Barplot.png",
+          parameterSampleFile1_ref => $tTask,
+          parameterSampleFile2Order => $def->{groups_order},
+          parameterSampleFile2      => $groups,
+          parameterSampleFile3      => $def->{groups_vis_layout},
+          parameterSampleFile4      => {
+            "sample_pattern" => $def->{tRNA_abs_position_sample_pattern},
+          },
+          rCode                     => "",
+          sh_direct                 => 1,
+          pbs                       => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "2",
+            "mem"       => "10gb"
+          },
+        };
+        push @$summary_ref, $tVisTask;
+      }
+
       if ($perform_host_tRnaFragmentHalves_analysis) {
         $tRnaAnalysis->{"tFragment"} = {
           minLength => 0,
