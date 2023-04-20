@@ -99,6 +99,8 @@ processGseaTable=function(gseaTableFile, maxCategoryFdr=0.05) {
             
             categoryDescription<-gsub(url, namelink, fixed=TRUE, categoryDescription)
           }
+        }else{
+          return(NA)
         }
       }
     }
