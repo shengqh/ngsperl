@@ -50,13 +50,11 @@ figureRmd<-function(cts, files){
   idx=1
   for(idx in c(1:length(celltypes))){
     celltype=celltypes[idx]
+    #print(celltype)
+
     result<-paste0(result, paste0("\n\n# ", celltype, "\n\n"))
 
     ct_tbl<-files[files$celltype==celltype,]
-    if(nrow(ct_tbl) == 0){
-      result<-paste0(result, "\n\nAll resolutions have only 1 cluster. Set resolution to 0 in selection table.\n\n")
-      next
-    }
 
     ct_files<-ct_tbl[is.na(ct_tbl$resolution),]
     for(idx in 1:nrow(ct_files)){
@@ -67,11 +65,17 @@ figureRmd<-function(cts, files){
     }
 
     ct_tbl<-ct_tbl[!is.na(ct_tbl$resolution),]
+    if(nrow(ct_tbl) == 0){
+      result<-paste0(result, "\n\nAll resolutions have only 1 cluster. Set resolution to 0 in selection table.\n\n")
+      next
+    }
+
     resolutions<-unique(ct_tbl$resolution)
     
     idy = 1
     for(idy in c(1:length(resolutions))){
       res=resolutions[idy]
+      #print(res)
 
       result<-paste0(result, paste0("\n\n## Resolution ", res, "\n\n"))
       res_tbl=ct_tbl[ct_tbl$resolution == res,]
@@ -79,9 +83,12 @@ figureRmd<-function(cts, files){
       res_map=split(res_tbl$file, res_tbl$type)
 
       heatmap=res_map$heatmap
-      if(file.info(heatmap)$size > 20000){
-        result<-paste0(result, "### Marker genes\n\n")
-        result<-paste0(result, getFigure(heatmap))
+      #print(paste0("heatmap = ",heatmap))
+      if(file.exists(heatmap)){
+        if(file.info(heatmap)$size > 20000){
+          result<-paste0(result, "### Marker genes\n\n")
+          result<-paste0(result, getFigure(heatmap))
+        }
       }
 
       result<-paste0(result, "### UMAP\n\n")
