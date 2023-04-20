@@ -69,8 +69,12 @@ is_seurat_object<-function(obj){
   return("Seurat" %in% class(obj))
 }
 
-read_file_map<-function(file_list_path, do_unlist=TRUE){
-  tbl<-fread(file_list_path, data.table=F, header=F)
+read_file_map<-function(file_list_path, sep="\t", header=F, do_unlist=TRUE){
+  if(grepl('.csv$', file_list_path)){
+    tbl<-read.csv(file_list_path, header=header)
+  }else{
+    tbl<-read.table(file_list_path, sep=sep, header=header)
+  }
   result<-split(tbl$V1, tbl$V2)
   if(do_unlist){
     result<-unlist(result)
