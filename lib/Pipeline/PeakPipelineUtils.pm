@@ -23,6 +23,7 @@ our %EXPORT_TAGS = (
       init_treatments_design_table
       add_chipqc
       addPeakPipelineReport
+      add_bamplot
     )
   ]
 );
@@ -241,4 +242,69 @@ sub addPeakPipelineReport {
     },
   };
   push( @$tasks, "report" );
+}
+
+sub add_bamplot {
+  my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref) = @_;
+
+  my $plotgroups = $def->{plotgroups};
+  if ( !defined $plotgroups ) {
+    my $files         = $def->{files};
+    my @sortedSamples = sort keys %$files;
+    $plotgroups = { getValue( $def, "task_name" ) => \@sortedSamples };
+  }
+  $config->{plotgroups} = $plotgroups;
+
+  my $gffFile;
+  if (defined $def->{"bamplot_gff"}){
+    $gffFile = $def->{"bamplot_gff"};
+  }elsif (defined $def->{annotation_locus}){
+    $gffFile = $target_dir . "/annotation_locus.gff";
+    open(my $fh, '>', $gffFile) or die "Could not open file '$gffFile' $!";
+    my $locusList = $def->{annotation_locus};
+    my $count = 0;
+    for my $locus (@$locusList){
+      $count = $count + 1;
+      $locus =~ s/,//g;
+
+      my $locusName = $locus;
+      $locusName =~ s/:/_/g; 
+      $locusName =~ s/-/_/g; 
+
+      my @parts = split /:/, $locus;
+      my $chr = $parts[0];
+      my $positions = $parts[1];
+      my @pos = split /-/, $positions;
+      my $start = $pos[0];
+      my $end = $pos[1];
+      my $strand = scalar(@parts) >= 3 ? $parts[2] : "+";
+      print $fh $chr . "\t" . $locusName . "\tLOCUS\t" . $start . "\t" . $end . "\t.\t" . $strand . "\t.\n";
+    }
+    close($fh);
+  }else{
+    getValue( $def, "bamplot_gff" );
+  }
+  $config->{"bamplot"} = {
+    class              => "Visualization::Bamplot",
+    perform            => 1,
+    target_dir         => "${target_dir}/" . getNextFolderIndex($def) . "bamplot",
+    option             => getValue( $def, "bamplot_option" ),
+    source_ref         => $bam_ref,
+    groups_ref         => "plotgroups",
+    gff_file           => $gffFile,
+    is_rainbow_color   => 0,
+    is_draw_individual => 0,
+    is_single_pdf      => 1,
+    is_multi_page => getValue($def, "bamplot_multi_page", 1),
+    draw_by_r => getValue($def, "bamplot_draw_by_r", 1),
+    draw_by_r_width => getValue($def, "bamplot_draw_by_r_width", 10),
+    draw_by_r_height => getValue($def, "bamplot_draw_by_r_height", 10),
+    sh_direct          => 1,
+    pbs                => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
+    },
+  };
+  push @$tasks, ("bamplot");
 }
