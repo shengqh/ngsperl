@@ -41,8 +41,15 @@ validation_columns=c()
 
 meta$DBT<-"singlet"
 if(file.exists(parSampleFile3)){
-  meta = fill_meta_info_list(parSampleFile3, meta, doublet_column, "DBT")
-  validation_columns<-c(validation_columns, "DBT")
+  meta = fill_meta_info_list(parSampleFile3, meta, "doubletFinder_doublet_label_resolution_1.5", "DF")
+  validation_columns<-c(validation_columns, "DF")
+  meta = fill_meta_info_list(parSampleFile3, meta, "scDblFinder_class", "SDF")
+  validation_columns<-c(validation_columns, "SDF")
+  meta = fill_meta_info_list(parSampleFile3, meta, "scds_hybrid_call", "scds")
+  meta$scds = ifelse(meta$scds, "Doublet", "Singlet")
+  validation_columns<-c(validation_columns, "scds")
+  # meta = fill_meta_info_list(parSampleFile3, meta, "decontX_contamination", "decontX")
+  # validation_columns<-c(validation_columns, "decontX")
 }
 
 if(exists("parSampleFile4")){
