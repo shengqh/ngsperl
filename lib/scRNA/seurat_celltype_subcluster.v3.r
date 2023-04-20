@@ -107,8 +107,28 @@ if(!is_file_empty(parSampleFile2)){
   obj<-obj[!(rownames(obj) %in% ignore_genes),]
 }
 
+draw_dim_plot<-function(obj, previous_layer, file_path){
+  old_cts = unique(unlist(obj[[previous_layer]]))
+  if(length(old_cts) > 12){
+    ncol = 2
+  }else{
+    ncol = 1
+  }
+  max_char = max(unlist(lapply(as.character(old_cts), nchar))) + 2
+  width = 2000 + max_char * 25 * ncol
+
+  g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", label.size = 4, legend.title="") + 
+        theme(legend.text = element_text(size = 10)) + guides(fill=guide_legend(ncol=ncol))
+  png(file_path, width=width, height=2000, res=300)
+  print(g)
+  dev.off()
+  png()
+}
+
 meta<-obj@meta.data
 if(!is_file_empty(parSampleFile3)){
+  draw_dim_plot(obj, previous_layer, paste0(outFile, ".pre_rename.umap.png"))
+
   rename_map = read.table(parSampleFile3, sep="\t", header=F)
 
   meta[,previous_layer]<-as.character(meta[,previous_layer])
@@ -150,12 +170,6 @@ if(!is_file_empty(parSampleFile3)){
     }
   }
 
-  g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", legend.title="")
-  png(paste0(outFile, ".pre_rename.umap.png"), width=2400, height=2000, res=300)
-  print(g)
-  dev.off()
-  png()
-
   obj@meta.data<-meta
   if("DELETE" %in% meta[,previous_layer]){
     cells = rownames(meta)[meta[,previous_layer] != "DELETE"]
@@ -167,10 +181,7 @@ if(!is_file_empty(parSampleFile3)){
   meta[,previous_layer]<-factor(meta[,previous_layer], levels=names(tb))
   obj@meta.data = meta
 
-  g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", legend.title="")
-  png(paste0(outFile, ".post_rename.umap.png"), width=2400, height=2000, res=300)
-  print(g)
-  dev.off()
+  draw_dim_plot(obj, previous_layer, paste0(outFile, ".post_rename.umap.png"))
 }
 
 meta<-obj@meta.data
