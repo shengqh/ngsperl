@@ -7,10 +7,10 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-parFile4='/home/shengq2/program/projects/ravi_shah/20230327_rnaseq_veteran_hg38/20230327_meta.csv'
+parFile4='/data/stein_lab/mjo_sRNA_data/20210429_qiong_rnaseq_6130_gut_hg38/covariance.txt'
 outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
 
-setwd('/nobackup/h_cqs/ravi_shah_projects/shengq2/20230327_rnaseq_veteran_hg38/genetable/result')
+setwd('/data/stein_lab/mjo_sRNA_data/20210429_qiong_rnaseq_6130_gut_hg38/genetable/result')
 
 ### Parameter setting end ###
 
@@ -69,7 +69,9 @@ covarianceFile<-ifelse(exists("parFile4"), parFile4, "")
 if(file.exists((covarianceFile))){
   covariances<-fread(covarianceFile, header=T, data.table=F)
   has_batch<-"batch" %in% colnames(covariances)
-  batch_map<-unlist(split(covariances$batch, covariances$Sample))
+  if(has_batch){
+    batch_map<-unlist(split(covariances$batch, covariances$Sample))
+  }
 }else{
   has_batch<-FALSE
 }
