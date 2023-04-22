@@ -158,7 +158,6 @@ if [[ ( -s $result_file_addqual_bam ) && ( ! -s $hs_metrics ) ]]; then
     I=$result_file_addqual_bam \\
     O=$hs_metrics \\
     R=$chrDir \\
-    #PER_TARGET_COVERAGE=$per_target_coverage \\
     BAIT_INTERVALS=$interval_list \\
     TARGET_INTERVALS=$interval_list
 fi
