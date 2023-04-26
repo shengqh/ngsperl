@@ -138,6 +138,12 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
       result<-paste0(result,"\n### design table\n\n")
       result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
 
+      heatmap_png<-paste0(celltype_to_filename(ct), ".", comp, ".log_cpm.heatmap.png")
+      if(file.exists(heatmap_png)){
+        result<-paste0(result,"\n### heatmap\n\n")
+        result<-paste0(result, getFigure(heatmap_png))
+      }
+
       sig_file=sig_file_map[[ct]]
       sig_data=read.csv(sig_file, header=T)
       if(nrow(sig_data) == 0){
