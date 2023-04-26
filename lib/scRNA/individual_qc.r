@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='C4_AL_110822_NC'
-outFile='C4_AL_110822_NC'
+sample_name='DM_1'
+outFile='DM_1'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/home/shengq2/program/projects/justin_turner/20221115_7114_8822_scRNA_hg38/20230406_filter_config.csv'
+parFile1='/home/shengq2/program/collaborations/kasey_vickers/20221201_scRNA_9061_mouse/20230419_filter_config.csv'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/raw_qc_sct2/result/C4_AL_110822_NC')
+setwd('/nobackup/vickers_lab/projects/20230419_scRNA_9061_mouse_byTiger/decontX_raw_qc_sct2/result/DM_1')
 
 ### Parameter setting end ###
 
@@ -26,8 +26,7 @@ library(data.table)
 source("scRNA_func.r")
 source("markerCode_filter.R")
 
-option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F)
-myoptions<-split(option_table$V1, option_table$V2)
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
 myoptions$mt_cutoff=as.numeric(myoptions$mt_cutoff)
 myoptions$nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
 myoptions$nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
