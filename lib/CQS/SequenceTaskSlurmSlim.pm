@@ -297,6 +297,8 @@ sub perform {
           die "Task " . $task_section . ", file not exists " . $samplepbs . "\n";
         }
 
+        my $job_name = "${task_name}\@${task_section}\@${sample}";
+
         my $depjid = get_dependent_job_ids( $task_dep_pbs_map, $final_pbs_id_map, $task_section, $task_name, $samplepbs );
 
         $final_index = $final_index + 1;
@@ -320,7 +322,7 @@ else
   file_count=\$(find $cur_dir -name $check_output_file_pattern | wc -l) 
 fi
 if [[ \$file_count -eq 0 ]]; then
-  jid${final_index}=\$(sbatch ${depjid} ${samplepbs} | awk '{print \$NF}') 
+  jid${final_index}=\$(sbatch ${depjid} -J '$job_name' ${samplepbs} | awk '{print \$NF}') 
 else
   jid${final_index}=1000000000
 fi
@@ -328,7 +330,7 @@ fi
         }else{
           print $final_submit "
 if [[ (1 -eq \$1) || ((! -s $expect_file) && (! -d $expect_file)) ]]; then 
-  jid${final_index}=\$(sbatch ${depjid} ${samplepbs} | awk '{print \$NF}') \
+  jid${final_index}=\$(sbatch ${depjid} -J '$job_name' ${samplepbs} | awk '{print \$NF}') \
 else 
   jid${final_index}=1000000000 
 fi
