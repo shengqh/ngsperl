@@ -104,7 +104,7 @@ if(length(unique(meta$orig.ident)) > 1){
 draw_figure(outFile, meta, celltype_column, celltype_cluster_column, validation_columns)
 
 writeLines(validation_columns, "validation_columns.txt")
-if(exists("parFile3")){
+if(file.exists(parFile3)){
   writeLines(parFile3, "iter_png.txt")
 }
 
