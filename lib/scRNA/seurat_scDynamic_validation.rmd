@@ -23,8 +23,7 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 ```{r data, echo = FALSE}
 source("reportFunctions.R")
 
-options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
+myoptions<-read_file_map("fileList1.txt", do_unlist=F)
 
 outFile=myoptions$task_name
 celltype_column=myoptions$celltype_column
@@ -61,7 +60,21 @@ get_last_figure<-function(ct_png, png_type){
 }
 
 resFile<-"cluster.Rmd"
-figureRmd<-function(outFile, cts, iter_png){
+
+choose_figure_rmd<-function(outFile, cts){
+  result<-""
+
+  ct=cts[1]
+  for(ct in cts){
+    ct_name = celltype_to_filename(ct)
+    ct_png = paste0(outFile, ".", ct_name, ".png")
+    result<-paste0(result, paste0("\n\n## ", ct, "\n\n"))
+    result<-paste0(result, getFigure(ct_png))
+  }
+  return(result)
+}
+
+iter_figure_rmd<-function(outFile, cts, iter_png){
   result<-""
 
   ct=cts[1]
@@ -96,7 +109,12 @@ figureRmd<-function(outFile, cts, iter_png){
   }
   return(result)
 }
-cat(figureRmd(outFile, cts, iter_png), file=resFile)
+
+if(is.null(iter_png)){
+  cat(choose_figure_rmd(outFile, cts), file=resFile)
+}else{
+  cat(iter_figure_rmd(outFile, cts, iter_png), file=resFile)
+}
 
 ```
 
