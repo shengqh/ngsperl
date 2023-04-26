@@ -377,6 +377,7 @@ sub getPreprocessionConfig {
     },
     ignore_samples => $def->{ignore_samples},
     files                => $def->{files},
+    raw_files => $def->{raw_files},
     groups               => $def->{groups},
     deseq2_groups        => $def->{deseq2_groups},
     pairs                => $def->{pairs},
