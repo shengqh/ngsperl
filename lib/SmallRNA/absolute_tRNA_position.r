@@ -88,18 +88,20 @@ isotype = group_positions$Isotype[1]
 for(isotype in unique(group_positions$Isotype)){
   cat("Processing", isotype, "...\n")
   isotype_positions = subset(group_positions, Isotype==isotype)
+  max_position = max(isotype_positions$Position)
 
   g<-ggplot(isotype_positions, aes(Position, SumCount, fill=Category)) + 
     geom_bar(stat="Identity") + 
     facet_grid(Transcript~Group, scale="free_y") + 
-    theme_bw3() +
-    theme(strip.text.y.right = element_text(angle = 0, hjust = 0))
+    theme_bw3(TRUE) +
+    scale_x_continuous(breaks=seq(0,max_position,1)) +
+    theme(strip.text.y.right = element_text(angle = 0, hjust = 0)) + xlab("Absolute position") + ylab("Read coverage")
 
   n_transcript = length(unique(isotype_positions$Transcript))
   n_group = length(unique(isotype_positions$Group))
 
-  width=max(2000, n_group * 600 + 1000)
-  height=max(2000, n_transcript * 200)
+  width=min(20000, n_group * max_position * 40 + 600)
+  height=n_transcript * 250 + 100
 
   png(paste0(isotype, ".tRNA.abs_position.png"), width=width, height=height, res=300)
   print(g)
