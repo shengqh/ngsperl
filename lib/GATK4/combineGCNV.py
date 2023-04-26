@@ -23,9 +23,11 @@ parser.add_argument('--annovar_buildver', action='store', nargs='?', help='Annov
 args = parser.parse_args()
 
 if DEBUG:
-  args.input = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/GATK4_CNV_Germline_CombineGCNV/result/linton_exomeseq_2118__fileList1.list"
-  args.output = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/GATK4_CNV_Germline_CombineGCNV/result/linton_exomeseq_2118.tsv"
-  args.bedfile = "T:/Shared/Labs/Linton Lab/20180913_linton_exomeseq_2118_human_cutadapt/xgen-exome-research-panel-targetsae255a1532796e2eaa53ff00001c1b3c.nochr.bed"
+  args.input = "/dors/exrna/20220701_8361_Zhang_DKs_DKO_WGS/result/gatk4_CNV_Germline_07_CombineGCNV.test/result/WGS_8361__fileList1.list"
+  args.output = "/dors/exrna/20220701_8361_Zhang_DKs_DKO_WGS/result/gatk4_CNV_Germline_07_CombineGCNV.test/result/WGS_8361.txt"
+  args.bedfile = "/data/cqs/references/broad/hg19/v0/wgs_calling_regions.v1.interval_list"
+  args.annovar_db = "/data/cqs/references/annovar/humandb/"
+  args.annovar_buildver = "hg19"
 
 logger = logging.getLogger('combineGCNV')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
@@ -62,6 +64,9 @@ logger.info("reading " + args.bedfile + " ...")
 annotationMap = {}
 with open(args.bedfile, "r") as fin:
   for line in fin:
+    if line.startswith('@'):
+      continue
+
     parts = line.rstrip().split('\t')
     if not parts[0] in annotationMap:
       chrList = []
