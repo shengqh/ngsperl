@@ -41,6 +41,7 @@ myoptions<-split(options_table$V1, options_table$V2)
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 reduction<-myoptions$reduction
 assay=ifelse(by_sctransform, "SCT", "RNA")
+pca_dims=as.numeric(myoptions$pca_dims)
 
 previous_layer<-myoptions$celltype_layer
 cur_layer<-myoptions$output_layer
@@ -357,6 +358,12 @@ if(output_heatmap){
   allmarkers<-unique(allmarkers)
   obj<-myScaleData(obj, allmarkers, "RNA")
 }
+
+cat("redo PCA ...\n")
+obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
+
+cat("redo UMAP ...\n")
+obj <- RunUMAP(object = obj, dims=c(1:pca_dims), verbose = FALSE)
 
 cat("saving final object ...\n")
 saveRDS(obj, paste0(outFile, ".final.rds"))
