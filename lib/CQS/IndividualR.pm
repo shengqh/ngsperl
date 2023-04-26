@@ -283,7 +283,6 @@ fi
       print $pbs "export R_LIBS=$rlibs \n\n";
     }
 
-    print $pbs "$init_command\n";
     print $pbs $self->get_init_pbs($config, $section) . "\n";
     
     my $rscript = get_option_include_general($config, $section, "Rscript", "Rscript");
