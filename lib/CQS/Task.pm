@@ -561,11 +561,12 @@ sub open_pbs {
   print $pbs "${pbs_desc}${log_desc}
 
 $path_file
-$init_command
+
+cd '$result_dir'
 
 set -o pipefail
 
-cd '$result_dir'
+$init_command
 
 ";
   if ( defined $final_file ) {
