@@ -79,26 +79,43 @@ figureRmd<-function(obj_map, samples_names){
 
     result<-paste0(result, "\n## Violin plot of nGene,nUMI and mtRNA distribution\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".qc1.png"), FALSE))
+
     result<-paste0(result, "\n## The scatterplot between mtRNA/nGene and nUMI\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".qc2.png"), FALSE))
+
     result<-paste0(result, "\n## The density plot between nUMI/nGene and mtRNA \n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".qc3.png"), FALSE))
+
     result<-paste0(result, "\n## nUMI, nGene, mtRNA, nGene and cell distribution in each cluster\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".qc5.png"), FALSE))
+
     result<-paste0(result, "\n## mtRNA, nGene, nUMI and PC1 in UMAP\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".qc4.png"), FALSE))
+
     result<-paste0(result, "\n## Cluster in PCA/UMAP\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".qc6.png"), FALSE))
+
     result<-paste0(result, "\n## Cell type annotation\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".celltype.png"), FALSE))
+
     result<-paste0(result, "\n## Cell type cluster annotation\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".qc7.png"), FALSE))
+
+    decontX_png<-paste0(cur_sample, ".decontX.png")
+    if(file.exists(decontX_png)){
+      result<-paste0(result, "\n## DecontX\n\n")
+      result<-paste0(result, getFigure(decontX_png, FALSE))
+    }
+
     result<-paste0(result, "\n## Cell type annotation score\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".cta.png"), FALSE))
+
     result<-paste0(result, "\n## Heatmap of highly expressed gene of each cluster\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".heatmap.png"), FALSE))
+    
     result<-paste0(result, "\n## Expression of user defined marker genes\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".bubble.png"), FALSE))
+
     result<-paste0(result, "\n## Validation of ", cur_sample, "\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".validation.png"), FALSE))
     result<-paste0(result, "\n---\n")

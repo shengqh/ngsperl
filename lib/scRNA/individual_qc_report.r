@@ -1,27 +1,27 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='mouse_9622'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
+parSampleFile6='fileList6.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/raw_qc_sct2_report/result')
+setwd('/nobackup/brown_lab/shengq2/test/20230412_9622_scRNA_mouse_test/decontX_raw_qc_report/result')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
 library(Seurat)
 library(reshape2)
+library(SingleCellExperiment)
 
 options(future.globals.maxSize= 10779361280)
 
-option_tbl=read.table(parSampleFile1, sep="\t")
-myoptions = split(option_tbl$V1, option_tbl$V2)
+myoptions = read_file_map(parSampleFile1, do_unlist=FALSE)
 doublet_column = myoptions$doublet_column
 celltype_cluster_column = myoptions$celltype_column
 
@@ -49,6 +49,11 @@ has_singler<-exists('parSampleFile5')
 if(has_singler){
   singler_map<-read_file_map(parSampleFile5)
   validation_columns<-c(validation_columns, "SingleR")
+}
+
+has_decontX<-exists('parSampleFile6')
+if(has_decontX){
+  decontX_map<-read_file_map(parSampleFile6)
 }
 
 draw_figure<-function(sample_name, cur_meta, validation_columns){
@@ -80,7 +85,7 @@ draw_figure<-function(sample_name, cur_meta, validation_columns){
 meta<-NULL
 stats_df<-NULL
 ct_tb<-NULL
-sample_name = sample_names[1]
+sample_name = sample_names[2]
 for(sample_name in sample_names){
   cat("read", sample_name, "...\n")
   obj_file = obj_map[[sample_name]]
@@ -116,6 +121,18 @@ for(sample_name in sample_names){
     singler_file = singler_map[[sample_name]]
     singler_meta = readRDS(singler_file)
     cur_meta = fill_meta_info(sample_name, singler_meta, cur_meta, "SingleR_labels", "SingleR")
+  }
+
+  if(has_decontX){
+    decontX_file = decontX_map[[sample_name]]
+    decontX_meta = readRDS(decontX_file)
+    cur_meta = fill_meta_info(sample_name, decontX_meta, cur_meta, "decontX_contamination", "decontX_contamination", is_character = FALSE)
+    obj@meta.data = cur_meta
+
+    g<-VlnPlot(obj, features = "decontX_contamination", group.by="seurat_cell_type") + xlab("") + theme_bw3(TRUE) + NoLegend()
+    png(paste0(sample_name, ".decontX.png"), width=3300, height=2000, res=300)
+    print(g)
+    dev.off()
   }
 
   rownames(cur_meta)<-paste0(sample_name, "_", rownames(cur_meta))
