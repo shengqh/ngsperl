@@ -182,6 +182,9 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "remove_subtype", "T cells,B cells,Plasma cells,Fibroblasts,Neurons,Epithelial cells,Endothelial cells,Macrophages,Dendritic cells,Ciliated cells"),
   initDefaultValue( $def, "best_resolution_min_markers", 20);
 
+  initDefaultValue( $def, "perform_decontX", 0);
+  initDefaultValue( $def, "remove_decontX", 0);
+
   return $def;
 }
 
@@ -250,6 +253,7 @@ sub getScRNASeqConfig {
   my $sctk_ref = undef;
   my $signacX_ref = undef;
   my $singleR_ref = undef;
+  my $decontX_ref = undef;
 
   if (defined $def->{files}){
     my @report_files = ();
@@ -260,18 +264,32 @@ sub getScRNASeqConfig {
     my $hto_summary_task = undef;
     my $files_def = "files";
 
+    my $perform_decontX = getValue($def, "perform_decontX", 0);
+    my $remove_decontX = $perform_decontX && getValue($def, "remove_decontX", 0);
+    my $prefix = "";
+    if ($perform_decontX){
+      my $decontX_task = "decontX";
+      add_decontX($config, $def, $summary, $target_dir, $decontX_task, "files", "raw_files", {}, 1);
+      $decontX_ref = [$decontX_task, ".meta.rds"];
+
+      if($remove_decontX){
+        $files_def = [$decontX_task, ".counts.rds"];
+        $prefix = "decontX_";
+      }
+    }
+
     if ( getValue($def, "perform_sctk", 0) ){
-      my $sctk_task = "sctk";
-      add_sctk($config, $def, $summary, $target_dir, $sctk_task, "files");
+      my $sctk_task = "${prefix}sctk";
+      add_sctk($config, $def, $summary, $target_dir, $sctk_task, $files_def);
       $sctk_ref = [$sctk_task, ".meta.rds"];
     }
 
     my $raw_individual_qc_task = undef;
     if ( getValue($def, "perform_individual_qc", 1) ){
       my $sct_str = get_sct_str($def);
-      $raw_individual_qc_task = "raw_qc${sct_str}";
+      $raw_individual_qc_task = "${prefix}raw_qc${sct_str}";
 
-      add_individual_qc($config, $def, $summary, $target_dir, $raw_individual_qc_task, $filter_config_file, undef, undef, undef);
+      add_individual_qc($config, $def, $summary, $target_dir, $raw_individual_qc_task, $filter_config_file, $files_def, 0, undef, undef);
 
       my $reduction = "pca";
 
@@ -313,6 +331,7 @@ sub getScRNASeqConfig {
         parameterSampleFile3_ref => $sctk_ref,
         parameterSampleFile4_ref => $signacX_ref,
         parameterSampleFile5_ref => $singleR_ref,
+        parameterSampleFile6_ref => $decontX_ref,
         output_file_ext => ".qc.html",
         sh_direct       => 1,
         pbs             => {
@@ -453,12 +472,14 @@ sub getScRNASeqConfig {
     my $is_preprocessed;
     if ( getValue( $def, "perform_seurat" ) ) {
       my $no_doublets = "";
+
       if(getValue($def, "rawdata_from_qc", 0)){
         if(!defined $raw_individual_qc_task){
           die("trying to build rawdata from qc, please set perform_individual_qc => 1 in your configuration file");
         }
-        $seurat_rawdata = "seurat_rawdata_postqc";
-        add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task );
+        my $sct_str = get_sct_str($def);
+        $seurat_rawdata = "seurat_rawdata_postqc${sct_str}";
+        add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task, $decontX_ref );
         $is_preprocessed = 1;
       }else{
         my $doublets_ref = undef;
@@ -579,13 +600,13 @@ sub getScRNASeqConfig {
 
           my $rename_map = $def->{"dynamic_rename_map"};
 
-          $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref);
+          $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, ".dynamic_subcluster.html");
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_dynamic_choose")) {
             my $choose_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_choose";
             my $table = getValue($def, "dynamic_subclusters_table");
-            addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
+            addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".dynamic_choose.html");
             $obj_ref = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
@@ -783,13 +804,13 @@ sub getScRNASeqConfig {
           };
           my $rename_map = $def->{"multires_rename_map"};
 
-          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref);
+          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, , ".multires_subcluster.html");
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_multires_choose", 0)) {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
             my $table = getValue($def, "multires_subclusters_table");
-            addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table);
+            addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".multires_choose.html");
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
