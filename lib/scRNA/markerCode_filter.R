@@ -456,8 +456,8 @@ preprocess<-function( SampleInfo,
     print(p)
     dev.off()
 
-    plot5<-MyDimPlot(subobj, reduction = "pca",label=T,label.size=4)
-    plot6<-MyDimPlot(subobj, reduction = "umap",label=T,label.size=4)
+    plot5<-MyDimPlot(subobj, reduction = "pca",label=T,label.size=4) + NoLegend()
+    plot6<-MyDimPlot(subobj, reduction = "umap",label=T,label.size=4) + NoLegend()
     
     #cat("\n\n### ", "Fig.5 Boxplot of nUMI,nGene, mtRNA and nCells distribution and PCA, UMAP results\n\n") 
     p<-plot5+plot6+plot_layout(ncol = 2)
