@@ -153,7 +153,7 @@ MyDoHeatMap<-function(obj, max_cell=5000, ...){
 MyFeaturePlot<-function(object, assay="RNA", ...){
   old_assay=DefaultAssay(object)
   DefaultAssay(object)=assay
-  g=FeaturePlot(object=object, ...)
+  g=FeaturePlot(object=object, ...) + theme(aspect.ratio=1)
   DefaultAssay(object)=old_assay
   g
 }
@@ -2110,10 +2110,14 @@ match_cell_names<-function(sample_name, source_meta, target_meta){
   return(source_meta)
 }
 
-fill_meta_info<-function(sample_name, source_meta, target_meta, source_column, target_column){
+fill_meta_info<-function(sample_name, source_meta, target_meta, source_column, target_column, is_character=TRUE){
   source_meta<-match_cell_names(sample_name, source_meta, target_meta)
   cur_cells = intersect(rownames(source_meta), rownames(target_meta))
-  target_meta[cur_cells, target_column] = as.character(source_meta[cur_cells, source_column])
+  if(is_character){
+    target_meta[cur_cells, target_column] = as.character(source_meta[cur_cells, source_column])
+  }else{
+    target_meta[cur_cells, target_column] = source_meta[cur_cells, source_column]
+  }
   return(target_meta)
 }
 
