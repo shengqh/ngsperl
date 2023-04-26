@@ -60,6 +60,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
 
   add_signacx_only
   addSignac
+
+  add_decontX
   
   add_celltype_validation
 
@@ -114,7 +116,10 @@ sub get_marker_gene_dict {
 }
 
 sub add_seurat_rawdata {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, $doublets_ref, $doublet_column, $qc_task) = @_;
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, $doublets_ref, $doublet_column, $qc_task, $decontX_ref) = @_;
+
+  my $cur_decontX_ref = getValue($def, "remove_decontX", 0) ? $decontX_ref : undef;
+
   $config->{$seurat_rawdata} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -144,6 +149,7 @@ sub add_seurat_rawdata {
     parameterSampleFile4_ref => $hto_ref,
     parameterSampleFile5_ref => $doublets_ref,
     parameterSampleFile6_ref => $qc_task,
+    parameterSampleFile7_ref => $cur_decontX_ref,
     parameterFile1 => $def->{filter_config_file},
     output_file_ext      => ".rawobj.rds",
     sh_direct            => 1,
@@ -794,6 +800,42 @@ fi
   push( @$tasks, $singleR_task );
 }
 
+
+sub add_decontX {
+  my ( $config, $def, $tasks, $target_dir, $decontX_task, $files_ref, $raw_files_ref, $cur_options, $by_individual_sample ) = @_;
+
+  if(!defined $by_individual_sample){
+    $by_individual_sample = 0;
+  }
+
+  my $target_folder = $target_dir . "/" . $decontX_task;
+  my $class =  $by_individual_sample ? "CQS::IndividualR" : "CQS::UniqueR";
+  my $init_command = "";
+  $config->{$decontX_task} = {
+    class                => $class,
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $decontX_task,
+    init_command => $init_command,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/decontX.r",
+    parameterSampleFile1_ref   => $files_ref,
+    parameterSampleFile2_ref   => $raw_files_ref,
+    parameterSampleFile3 => merge_hash_left_precedent($cur_options,  {
+      species => getValue( $def, "species" ),
+      remove_decontX => getValue($def, "remove_decontX", 0),
+    }),
+    output_file_ext => ".decontX.meta.rds;.decontX.counts.rds",
+    #no_docker => 1,
+    sh_direct       => 0,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "decontX_walltime", "10"),
+      "mem"       => getValue($def, "decontX_mem", $by_individual_sample ? "40g" : getValue($def, "seurat_mem")),
+    },
+  };
+
+  push( @$tasks, $decontX_task );
+}
+
 sub add_celltype_validation {
   my ( 
     $config, 
@@ -1215,7 +1257,7 @@ sub addEdgeRTask {
     },
   };
 
-  if (-e $cluster_task) {
+  if (!defined $config->{$cluster_task} && -e $cluster_task) {
     $config->{$edgeRtaskname}{parameterFile1} = $cluster_task;
   }else{
     $config->{$edgeRtaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
@@ -1435,7 +1477,7 @@ sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
 
   my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".iter_png.csv,.scDynamic.meta.rds";
-  my $rmd_ext = $by_individual_sample ? ".dynamic_individual.html":".dynamic.html";
+  my $rmd_ext = $by_individual_sample ? ".dynamic_call_individual.html":".dynamic_call.html";
   my $rReportTemplate = $by_individual_sample ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R":"../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.R";
 
   $config->{$scDynamic_task} = {
@@ -1488,7 +1530,20 @@ sub addDynamicCluster {
 }
 
 sub addSubCluster {
-  my ($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref) = @_;
+  my (
+    $config, 
+    $def, 
+    $summary, 
+    $target_dir, 
+    $subcluster_task, 
+    $obj_ref, 
+    $meta_ref, 
+    $essential_gene_task, 
+    $cur_options, 
+    $rename_map, 
+    $signacX_ref, 
+    $singleR_ref,
+    $rmd_ext) = @_;
 
   my $by_integration;
   my $integration_by_harmony;
@@ -1525,7 +1580,7 @@ sub addSubCluster {
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_celltype_subcluster.v3.r",
     rReportTemplate          => "../scRNA/seurat_celltype_subcluster.v3.rmd;reportFunctions.R",
     run_rmd_independent => 1,
-    rmd_ext => ".subcluster.html",
+    rmd_ext => $rmd_ext,
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
     parameterFile3_ref => $essential_gene_task,
@@ -1573,7 +1628,19 @@ sub addSubCluster {
 }
 
 sub addSubClusterChoose {
-  my ($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $celltype_subclusters_table) = @_;
+  my (
+    $config, 
+    $def, 
+    $summary, 
+    $target_dir, 
+    $choose_task, 
+    $obj_ref, 
+    $meta_ref, 
+    $subcluster_task, 
+    $essential_gene_task, 
+    $cur_options, 
+    $celltype_subclusters_table,
+    $rmd_ext) = @_;
 
   $config->{$choose_task} = {
     class                    => "CQS::UniqueR",
@@ -1583,7 +1650,7 @@ sub addSubClusterChoose {
     
     rReportTemplate          => "../scRNA/seurat_celltype_subcluster.choose.rmd;reportFunctions.R",
     run_rmd_independent => 1,
-    rmd_ext => ".choose.html",
+    rmd_ext => $rmd_ext,
 
     parameterFile1_ref => $obj_ref,
     parameterFile2_ref => $meta_ref,
@@ -2187,7 +2254,7 @@ sub get_sct_str {
 }
 
 sub add_individual_qc {
-  my ($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file, $qc_files_ref) = @_;
+  my ($config, $def, $summary, $target_dir, $individual_qc_task, $qc_filter_config_file, $qc_files_ref, $perform_split_hto_samples, $hto_ref, $hto_sample_file) = @_;
 
   if(!defined $qc_filter_config_file){
     $qc_filter_config_file = "";
@@ -2202,7 +2269,9 @@ sub add_individual_qc {
     }
   }
 
-  my $v2 = getValue($def, "individual_qc_v2", 0);
+  #since singleR and signacX depended on the individual qc v2, I will set v2 as default.
+  my $v2 = 1;
+  #my $v2 = getValue($def, "individual_qc_v2", 1);
   my $class = $v2 ? "CQS::IndividualR" : "CQS::UniqueR";
   my $output_object = $v2 ? 1 : 0;
   my $rtemplate = "../scRNA/individual_qc.r";
@@ -2282,6 +2351,27 @@ sub add_individual_qc {
 }
 
 sub add_sctk {
+  my ($config, $def, $summary, $target_dir, $sctk_task, $files_ref) = @_;
+
+  $config->{$sctk_task} = {
+    class                => "CQS::IndividualR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $sctk_task,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/sctk.r",
+    parameterSampleFile1_ref   => $files_ref,
+    output_file_ext => ".meta.rds",
+    #no_docker => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "80gb"
+    },
+  };
+
+  push( @$summary, $sctk_task );
+}
+
+sub add_sctk_old {
   my ($config, $def, $summary, $target_dir, $sctk_task, $files_ref) = @_;
 
   $config->{$sctk_task} = {
