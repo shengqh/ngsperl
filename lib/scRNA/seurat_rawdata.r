@@ -1,15 +1,16 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='P9061'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parSampleFile6='fileList6.txt'
-parFile1='/home/shengq2/program/projects/justin_turner/20221115_7114_8822_scRNA_hg38/20230406_filter_config.csv'
+parSampleFile7='fileList7.txt'
+parFile1='/home/shengq2/program/collaborations/kasey_vickers/20221201_scRNA_9061_mouse/20230419_filter_config.csv'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_rawdata_postqc/result')
+setwd('/nobackup/vickers_lab/projects/20230419_scRNA_9061_mouse_byTiger/seurat_rawdata_postqc_sct2/result')
 
 ### Parameter setting end ###
 
@@ -158,6 +159,9 @@ read_gzip_count_file<-function(files, sample, species){
 raw_objs = list()
 remove_cells = list()
 
+remove_decontX = exists('parSampleFile7')
+decontX_map = read_file_map(parSampleFile7)
+
 is_qc_data = exists('parSampleFile6')
 if(is_qc_data){
   #from qc data
@@ -215,6 +219,7 @@ if(is_qc_data){
     }
     remove_doublets=TRUE
   }
+
 
   #read raw count dat
   file_map<-read_file_map(parSampleFile1)
