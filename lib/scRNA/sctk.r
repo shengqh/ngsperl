@@ -1,9 +1,23 @@
+rm(list=ls()) 
+sample_name='DM_1'
+outFile='DM_1'
+parSampleFile1='fileList1.txt'
+parSampleFile2=''
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3=''
+
+
+setwd('/nobackup/vickers_lab/projects/20230419_scRNA_9061_mouse_byTiger/decontX_sctk/result/DM_1')
+
+### Parameter setting end ###
+
+source("scRNA_func.r")
 library("singleCellTK")
 library("SingleCellExperiment")
-source("scRNA_func.r")
 
-sample_dirs <- read.table("fileList1.txt", header=F)
-sample_map = unlist(split(sample_dirs$V1, sample_dirs$V2))
+sample_map = read_file_map("fileList1.txt")
 
 overwrite=FALSE
 
