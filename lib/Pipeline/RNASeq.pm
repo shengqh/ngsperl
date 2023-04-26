@@ -43,6 +43,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_qc3bam",        0 );
   initDefaultValue( $def, "perform_bamplot",       0 );
   initDefaultValue( $def, "perform_call_variants", 0 );
+  initDefaultValue( $def, "perform_call_variants_by_gatk4", 1 );
   initDefaultValue( $def, "perform_multiqc",       0 );
   initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_webgestaltHeatmap",    0 );
@@ -865,7 +866,7 @@ sub getRNASeqConfig {
 
     my $refine_task;
     my $pass_task;
-    if($def->{perform_call_variants_by_gatk4}){
+    if(getValue($def, "perform_call_variants_by_gatk4", 1)){
       $refine_task = "gatk4_refine";
       $config->{$refine_task} = {
         class => "CQS::ProgramWrapperOneToOne",
