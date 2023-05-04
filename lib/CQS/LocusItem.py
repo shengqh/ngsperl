@@ -79,6 +79,8 @@ def readBedFile(fileName):
     for line in fin:
       if line.startswith("#"):
         continue
+      if line.startswith("@"):
+        continue
       parts = line.rstrip().split('\t')
       chrom = parts[0]
       start = int(parts[1])
