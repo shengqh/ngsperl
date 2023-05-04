@@ -1,16 +1,15 @@
 rm(list=ls()) 
-outFile='P9061'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
-parSampleFile6='fileList6.txt'
-parSampleFile7='fileList7.txt'
-parFile1='/home/shengq2/program/collaborations/kasey_vickers/20221201_scRNA_9061_mouse/20230419_filter_config.csv'
+parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
+parFile1='/home/shengq2/program/collaborations/celestine_wanjalla/20230115_combined_scRNA_hg38/20230410_filter_config.csv'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20230419_scRNA_9061_mouse_byTiger/seurat_rawdata_postqc_sct2/result')
+setwd('/data/wanjalla_lab/projects/20230410_combined_scRNA_hg38/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -26,8 +25,7 @@ library(tidyr)
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
-options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
+myoptions<-read_file_map(parSampleFile2, do_unlist = FALSE)
 
 Mtpattern= myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
@@ -158,9 +156,6 @@ read_gzip_count_file<-function(files, sample, species){
 #read object from either qc seurat object file or original count file
 raw_objs = list()
 remove_cells = list()
-
-remove_decontX = exists('parSampleFile7')
-decontX_map = read_file_map(parSampleFile7)
 
 is_qc_data = exists('parSampleFile6')
 if(is_qc_data){
@@ -327,7 +322,7 @@ for(sample_name in sample_names){
   sobj$project=sample_name    
   sobj$sample=sample_name
 
-  sobj<-RenameCells(object=sobj, new.names=paste0(sample_name, "_", colnames(sobj)))
+  b_rename_cells = all(!startsWith(colnames(sobj), sample_name))
   if(sample_name %in% names(hto_data)) {
     cat("processing HTO demultiplex of", sample_name, "\n")
     raw_objs[[sample_name]] = NULL
@@ -340,9 +335,17 @@ for(sample_name in sample_names){
       sample_obj = subset(validobj, cells=tagcells$cell)
       sample_obj$orig.ident = sample
       sample_obj$sample = sample
+
+      if(b_rename_cells){
+        sample_obj<-RenameCells(object=sample_obj, new.names=paste0(sample_name, "_", colnames(sample_obj)))
+      }
+
       raw_objs[[sample]] = sample_obj
     }
   }else{
+    if(b_rename_cells){
+      sobj<-RenameCells(object=sobj, new.names=paste0(sample_name, "_", colnames(sobj)))
+    }
     raw_objs[[sample_name]] = sobj
   }
 }
