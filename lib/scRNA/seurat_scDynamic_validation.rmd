@@ -102,7 +102,13 @@ iter_figure_rmd<-function(outFile, cts, iter_png){
       result<-paste0(result, paste0("\n\n## Cell type enrichment score\n\n"))
       result<-paste0(result, getFigure(cta_png))
     }
-    
+
+    decontx_file = paste0(getwd(), "/", outFile, ".", ct_name, ".decontX.png")
+    if(file.exists(decontx_file)){
+      result<-paste0(result, paste0("\n\n## Contanimation score by DecontX\n\n"))
+      result<-paste0(result, getFigure(decontx_file))
+    }
+
     result<-paste0(result, paste0("\n\n## Validation\n\n"))
     vc_file = paste0(getwd(), "/", outFile, ".", ct_name, ".png")
     result<-paste0(result, getFigure(vc_file))

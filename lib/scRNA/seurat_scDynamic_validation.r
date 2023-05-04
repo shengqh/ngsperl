@@ -1,16 +1,17 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
-parFile3='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge_dr0.5_01_call/result/crs.iter_png.csv'
+parSampleFile6='fileList6.txt'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge/result/combined.final.rds'
+parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/combined.scDynamic.meta.rds'
+parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/combined.iter_png.csv'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge_dr0.5_01_call_validation/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call_validation/result')
 
 ### Parameter setting end ###
 
@@ -39,6 +40,11 @@ stopifnot(celltype_cluster_column %in% colnames(meta))
 
 validation_columns=c()
 
+has_decontX = exists('parSampleFile6')
+if(has_decontX){
+  meta = fill_meta_info_list(parSampleFile6, meta, "decontX_contamination", "decontX", is_character=FALSE)
+}
+
 meta$DBT<-"singlet"
 if(file.exists(parSampleFile3)){
   meta = fill_meta_info_list(parSampleFile3, meta, "doubletFinder_doublet_label_resolution_1.5", "DF")
@@ -48,8 +54,11 @@ if(file.exists(parSampleFile3)){
   meta = fill_meta_info_list(parSampleFile3, meta, "scds_hybrid_call", "scds")
   meta$scds = ifelse(meta$scds, "Doublet", "Singlet")
   validation_columns<-c(validation_columns, "scds")
-  # meta = fill_meta_info_list(parSampleFile3, meta, "decontX_contamination", "decontX")
-  # validation_columns<-c(validation_columns, "decontX")
+
+  if(!has_decontX){
+    meta = fill_meta_info_list(parSampleFile3, meta, "decontX_contamination", "decontX", is_character=FALSE)    
+    has_decontX = TRUE
+  }
 }
 
 if(exists("parSampleFile4")){
@@ -64,7 +73,14 @@ if(exists('parSampleFile5')){
 
 saveRDS(meta, paste0(outFile, ".meta.rds"))
 
-draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, validation_columns){
+if(has_decontX){
+  obj<-read_object(parFile1)
+  obj@meta.data = meta
+}else{
+  obj<-NA
+}
+
+draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, validation_columns, has_decontX, obj){
   cts = unique(meta[,celltype_column])
 
   ct = cts[1]
@@ -94,6 +110,19 @@ draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, v
     png(paste0(outFile, ".", pct, ".png"), width=width, height=height, res=300)
     print(g)
     dev.off()
+
+    if(has_decontX){
+      g1<-MyFeaturePlot(obj, features = "decontX") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
+      g2<-VlnPlot(obj, features = "decontX", group.by=celltype_cluster_column) + xlab("") + theme_bw3(TRUE) + ggtitle("") + NoLegend()
+      if("DF" %in% colnames(obj@meta.data)){
+        g2$data$DF = obj@meta.data[rownames(g2$data), "DF"]
+        g2<-g2 + facet_grid(DF~.)
+      }
+      g<-g1+g2+plot_layout(design="ABBB")
+      png(paste0(outFile, ".", pct, ".decontX.png"), width=4400, height=1600, res=300)
+      print(g)
+      dev.off()
+    }
   }
 }
 
@@ -101,10 +130,9 @@ if(length(unique(meta$orig.ident)) > 1){
   validation_columns<-c("orig.ident", validation_columns)
 }
 
-draw_figure(outFile, meta, celltype_column, celltype_cluster_column, validation_columns)
+draw_figure(outFile, meta, celltype_column, celltype_cluster_column, validation_columns, has_decontX, obj)
 
 writeLines(validation_columns, "validation_columns.txt")
 if(file.exists(parFile3)){
   writeLines(parFile3, "iter_png.txt")
 }
-
