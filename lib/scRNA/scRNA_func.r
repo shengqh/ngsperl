@@ -1688,26 +1688,32 @@ sub_cluster<-function(subobj,
     cur_npcs = n_half_cell
     cur_pca_dims=1:cur_npcs
   }
-  if(by_harmony){
-    if(redo_harmony){
-      if (length(unique(subobj$batch)) == 1){
-        cat(key, "use old harmony result\n")
-      }else{
-        cat(key, "redo harmony\n")
-        cat("RunPCA ... \n")
-        subobj <- RunPCA(object = subobj, npcs=cur_npcs, assay=assay, verbose=FALSE)
-        cat("RunHarmony ... \n")
-        subobj <- RunHarmony(object = subobj,
-                          assay.use = assay,
-                          reduction = "pca",
-                          dims.use = cur_pca_dims,
-                          group.by.vars = "batch",
-                          do_pca=FALSE)    
-      }
-    }else{
-      #due to very limited cell numbers in small cluster, it may cause problem to redo harmony, 
-      cat(key, "use old harmony result\n")
+
+  if(redo_harmony){
+    if(!("batch" %in% colnames(subobj))){
+      subobj$batch = subobj$orig.ident
     }
+
+    if (length(unique(subobj$batch)) == 1){
+      cat(key, "use old harmony result\n")
+    }else{
+      cat(key, "redo harmony\n")
+      cat("RunPCA ... \n")
+      subobj <- RunPCA(object = subobj, npcs=cur_npcs, assay=assay, verbose=FALSE)
+      cat("RunHarmony ... \n")
+      subobj <- RunHarmony(object = subobj,
+                        assay.use = assay,
+                        reduction = "pca",
+                        dims.use = cur_pca_dims,
+                        group.by.vars = "batch",
+                        do_pca=FALSE)    
+    }
+    if(!("harmony" %in% names(subobj@reductions))){
+      curreduction = "pca";
+      cat(key, "no harmony, use PCA.\n")
+    }
+  }else if (by_harmony) {
+    cat(key, "use old harmony result\n")
     if(!("harmony" %in% names(subobj@reductions))){
       curreduction = "pca";
       cat(key, "no harmony, use PCA.\n")
@@ -2087,6 +2093,13 @@ match_cell_names<-function(sample_name, source_meta, target_meta){
     return(source_meta)
   }
 
+  cur_names<-paste0(sample_name, "_", rownames(target_meta))
+  cur_cells = intersect(rownames(source_meta), cur_names)
+  if(length(cur_cells) > 0){
+    rownames(source_meta)<-gsub(paste0(sample_name, "_"), "", rownames(source_meta))
+    return(source_meta)
+  }
+
   if("project" %in% colnames(target_meta)){
     obj_meta = target_meta[target_meta$project == sample_name,]
   }else{
@@ -2121,13 +2134,13 @@ fill_meta_info<-function(sample_name, source_meta, target_meta, source_column, t
   return(target_meta)
 }
 
-fill_meta_info_list<-function(source_meta_file_list, target_meta, source_column, target_column){
+fill_meta_info_list<-function(source_meta_file_list, target_meta, source_column, target_column, is_character=TRUE){
   source_map<-read_file_map(source_meta_file_list)
   cur_name=names(source_map)[1]
   for(cur_name in names(source_map)){
     source_meta_file=source_map[cur_name]
     source_meta=readRDS(source_meta_file)
-    target_meta=fill_meta_info(cur_name, source_meta, target_meta, source_column, target_column)
+    target_meta=fill_meta_info(cur_name, source_meta, target_meta, source_column, target_column, is_character)
   }
   return(target_meta)
 }
