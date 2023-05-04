@@ -1,8 +1,9 @@
 rm(list=ls()) 
-outFile='mouse_9622'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile6='fileList6.txt'
 parFile1=''
@@ -10,7 +11,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/shengq2/test/20230412_9622_scRNA_mouse_test/decontX_raw_qc_report/result')
+setwd('/data/wanjalla_lab/projects/20230410_combined_scRNA_hg38/raw_qc_sct2_report/result')
 
 ### Parameter setting end ###
 
@@ -129,8 +130,14 @@ for(sample_name in sample_names){
     cur_meta = fill_meta_info(sample_name, decontX_meta, cur_meta, "decontX_contamination", "decontX_contamination", is_character = FALSE)
     obj@meta.data = cur_meta
 
-    g<-VlnPlot(obj, features = "decontX_contamination", group.by="seurat_cell_type") + xlab("") + theme_bw3(TRUE) + NoLegend()
-    png(paste0(sample_name, ".decontX.png"), width=3300, height=2000, res=300)
+    g1<-MyFeaturePlot(obj, features = "decontX_contamination") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
+    g2<-VlnPlot(obj, features = "decontX_contamination", group.by="seurat_cell_type") + xlab("") + theme_bw3(TRUE)  + ggtitle("") + NoLegend()
+    if(has_sctk){
+      g2$data$DF = obj@meta.data[rownames(g2$data), "DF"]
+      g2<-g2 + facet_grid(DF~.)
+    }
+    g<-g1+g2+plot_layout(design="ABBB")
+    png(paste0(sample_name, ".decontX.png"), width=4400, height=1600, res=300)
     print(g)
     dev.off()
   }
