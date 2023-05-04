@@ -579,10 +579,12 @@ do_analysis<-function(tmp_folder,
 
   tb=data.frame("cell"=colnames(obj), "cell_type"=obj$layer4, category=prefix)
 
-  output_file=paste0(prefix,".dynamic.html")
-  rmdfile = "seurat_scDynamic_one_layer_one_resolution.rmd"
-  rmarkdown::render(rmdfile, output_file=output_file)
-  return(list(html=output_file, ct_count=tb))
+  if(by_individual_sample){
+    output_file=paste0(prefix,".dynamic.html")
+    rmdfile = "seurat_scDynamic_one_layer_one_resolution.rmd"
+    rmarkdown::render(rmdfile, output_file=output_file)
+    return(list(html=output_file, ct_count=tb))
+  }
 }
 
 if(by_individual_sample){
@@ -670,9 +672,9 @@ if(by_individual_sample){
   writeLines(result_list, paste0(prefix, ".samples.list"))
   write.table(all_ct_counts, paste0(prefix, ".ct_count.tsv"), sep="\t", row.names=T)
 
-  output_file=paste0(prefix,".dynamic_individual.html")
-  rmdfile = "seurat_scDynamic_one_layer_one_resolution_summary.rmd"
-  rmarkdown::render(rmdfile, output_file=output_file)
+  # output_file=paste0(prefix,".dynamic_individual.html")
+  # rmdfile = "seurat_scDynamic_one_layer_one_resolution_summary.rmd"
+  # rmarkdown::render(rmdfile, output_file=output_file)
 }else{
   cur_folder = getwd()
   tmp_folder = paste0(cur_folder, "/details")
