@@ -23,6 +23,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addCutadapt
   addFastqLen
   addExtractSingleEndFastqFromPairend
+  add_fastq_join
   )
   ] );
 
@@ -694,6 +695,12 @@ sub getPreprocessionConfig {
     addExtractSingleEndFastqFromPairend($config, $def, $individual, $summary, $extract_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref, $cluster );
     $source_ref = [$extract_task, ".se.fastq.gz"];
     addFastqLen($config, $def, $individual, $summary, "fastq_len_extract", $preprocessing_dir, $source_ref, $cluster );
+  }elsif($def->{perform_fastq_join}){
+    my $extract_task = "fastq_join";
+    my $fastqc_task = "fastqc_fastq_join";
+    add_fastq_join($config, $def, $individual, $summary, $extract_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref, $cluster );
+    $source_ref = [$extract_task, ".join"];
+    addFastqLen($config, $def, $individual, $summary, "fastq_len_extract", $preprocessing_dir, $source_ref, $cluster );
   }
 
   if ( $def->{perform_fastqc} ) {
@@ -780,6 +787,41 @@ sub addExtractSingleEndFastqFromPairend {
 
   if ( $def->{perform_fastqc} ) {
     addFastQC( $config, $def, $individual, $summary, $fastqc_task, [ $extract_task, ".se.fastq.gz" ], $preprocessing_dir );
+  }
+}
+
+sub add_fastq_join {
+  my ($config, $def, $individual, $summary, $fastq_join_task, $fastqc_task, $intermediate_dir, $preprocessing_dir, $source_ref) = @_;
+  $config->{$fastq_join_task} = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "$intermediate_dir/$fastq_join_task",
+    option                => "fastq-join __FILE__ -o __NAME__ ",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "",
+    source_ref            => $source_ref,
+    source_arg            => "",
+    source_join_delimiter => " ",
+    no_output             => 0,
+    output_to_same_folder => 1, 
+    output_arg            => "-o",
+    output_ext            => ".join",
+    sh_direct             => 0,
+    use_tmp_folder        => 1,
+    no_docker => 1,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
+    },
+  };
+  push @$individual, ($fastq_join_task);
+
+  get_result_file($config, $fastq_join_task, "");
+
+  if ( $def->{perform_fastqc} ) {
+    addFastQC( $config, $def, $individual, $summary, $fastqc_task, $fastq_join_task, $preprocessing_dir );
   }
 }
 
