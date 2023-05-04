@@ -496,6 +496,11 @@ sub getPrepareConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  if(defined $def->{paired_end_validation_files}){
+    $config->{paired_end_validation_files} = $def->{paired_end_validation_files};
+    addPairendFastqValidation($config, $def, $individual, $preprocessing_dir, "paired_end_validation", "paired_end_validation_files");
+  }
+
   my $intermediate_dir = getIntermidiateDir($preprocessing_dir, $def);
 
   #nta for microRNA and tRNA
