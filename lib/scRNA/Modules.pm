@@ -846,11 +846,12 @@ sub add_celltype_validation {
     $object_ref, 
     $meta_ref, 
     $call_files_ref, 
+    $celltype_column, 
+    $rmd_ext,    
     $signacX_ref, 
     $singleR_ref, 
-    $sctk_ref, 
-    $celltype_column, 
-    $rmd_ext ) = @_;
+    $sctk_ref,
+    $decontX_ref ) = @_;
     
   my $doublet_column = getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
 
@@ -876,7 +877,7 @@ sub add_celltype_validation {
     parameterSampleFile3_ref => $sctk_ref,
     parameterSampleFile4_ref => $signacX_ref,
     parameterSampleFile5_ref => $singleR_ref,
-
+    parameterSampleFile6_ref => $decontX_ref,
     output_file_ext      => ".meta.rds",
     output_other_ext  => "",
     sh_direct            => 1,
