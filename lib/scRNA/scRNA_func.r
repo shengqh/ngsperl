@@ -1689,7 +1689,12 @@ sub_cluster<-function(subobj,
     cur_pca_dims=1:cur_npcs
   }
 
+  if(by_harmony & !("harmony" %in% names(subobj@reductions))){
+    redo_harmony=TRUE
+  }
+
   if(redo_harmony){
+    curreduction = "harmony";
     if(!("batch" %in% colnames(subobj))){
       subobj$batch = subobj$orig.ident
     }
@@ -1732,6 +1737,7 @@ sub_cluster<-function(subobj,
     cat(key, "RunPCA\n")
     subobj<-RunPCA(subobj, npcs=cur_npcs)
   }
+  cat("curreduction =", curreduction, "\n")
 
   cat(key, "FindNeighbors\n")
   subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
