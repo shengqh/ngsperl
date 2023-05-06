@@ -2360,6 +2360,11 @@ sub add_sctk {
     target_dir           => $target_dir . "/" . $sctk_task,
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/sctk.r",
     parameterSampleFile1_ref   => $files_ref,
+    parameterSampleFile2 => {
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+    },
     output_file_ext => ".meta.rds",
     #no_docker => 1,
     pbs => {
