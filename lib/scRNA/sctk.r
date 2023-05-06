@@ -1,23 +1,30 @@
 rm(list=ls()) 
-sample_name='DM_1'
-outFile='DM_1'
+sample_name='Adipose_9240'
+outFile='Adipose_9240'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20230419_scRNA_9061_mouse_byTiger/decontX_sctk/result/DM_1')
+setwd('/data/wanjalla_lab/projects/20230410_combined_scRNA_hg38_test_vst2/decontX_sctk/result/Adipose_9240')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
 library("singleCellTK")
 library("SingleCellExperiment")
+library("Seurat")
 
 sample_map = read_file_map("fileList1.txt")
+
+myoptions = read_file_map("fileList2.txt", do_unlist=FALSE)
+nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
+nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
+nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
+
 
 overwrite=FALSE
 
@@ -37,10 +44,15 @@ for (sample_name in names(sample_map)){
     cat("  read_scrna_data\n")
     lst = read_scrna_data(countfile)
     counts<-lst$counts
-    sce <- SingleCellExperiment(assays=list(counts=counts))
+    rawobj = CreateSeuratObject(counts = counts, project = sample_name)
+    rawobj<-subset(rawobj, subset = nFeature_RNA >= nFeature_cutoff_min & nFeature_RNA <= nFeature_cutoff_max & nCount_RNA >= nCount_cutoff)
+
+    sce <- as.SingleCellExperiment(rawobj)
+    rm(rawobj)
 
     cat("  runCellQC\n")
-    sce = runCellQC(sce, algorithms= c("QCMetrics", "scrublet", "doubletFinder", "scDblFinder", "cxds", "bcds", "cxds_bcds_hybrid", "decontX"))
+    #sce = runCellQC(sce, algorithms= c("QCMetrics", "scrublet", "doubletFinder", "scDblFinder", "cxds", "bcds", "cxds_bcds_hybrid", "decontX"))
+    sce = runCellQC(sce, algorithms= c("QCMetrics", "doubletFinder", "scDblFinder", "cxds", "bcds", "cxds_bcds_hybrid", "decontX"))
 
     saveRDS(sce, sctk_rds)
   }
