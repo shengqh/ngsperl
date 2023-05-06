@@ -3,6 +3,8 @@ import sys
 import logging
 import os
 
+from collections import defaultdict
+
 def initialize_logger(logfile, logname, isdebug):
   logger = logging.getLogger(logname)
   loglevel = logging.DEBUG if isdebug else logging.INFO
@@ -24,13 +26,20 @@ def initialize_logger(logfile, logname, isdebug):
  
   return(logger)
 
+DEBUG=False
+NotDEBUG=not DEBUG
+
 parser = argparse.ArgumentParser(description="Summarize the fastqc result.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument('-i', '--input', action='store', nargs='?', help='Input fastqc data file list', required=True)
-parser.add_argument('-o', '--output', action='store', nargs='?', help="Output summary prefix", required=False)
+parser.add_argument('-i', '--input', action='store', nargs='?', help='Input fastqc data file list', required=NotDEBUG)
+parser.add_argument('-o', '--output', action='store', nargs='?', help="Output summary prefix", required=NotDEBUG)
 
 args = parser.parse_args()
+
+if DEBUG:
+  args.input = "/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/preprocessing/fastqc_raw_summary/result/fileList1.txt"
+  args.output = "/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/preprocessing/fastqc_raw_summary/result/P9880.FastQC"
 
 logger = initialize_logger(args.output + ".log", 'fastQCSummary', False)
 
@@ -45,14 +54,16 @@ class Section:
     self.header = ""
     self.data = {}
 
-sections = [Section("adapter", ">>Adapter Content", "#Position"), 
-            Section("baseQuality", ">>Per base sequence quality", "#Base"),
+sections = [Section("baseQuality", ">>Per base sequence quality", "#Base"),
             Section("baseContent", ">>Per base sequence content", "#Base"),
             Section("sequenceGC", ">>Per sequence GC content", "#GC Content")]
 summary={}
 reads={}
 overrepresented={}
 overrepresentedHeader = ""
+adapter=defaultdict(dict)
+all_adapters = {}
+
 has_error = False
 with open(args.input, "r") as flistin:
   for line in flistin:
@@ -115,6 +126,28 @@ with open(args.input, "r") as flistin:
           bInOver = False
           continue
 
+
+        if sline.startswith(">>Adapter Content"):
+          bInAdapter = True
+          continue
+
+        if bInAdapter:
+          if sline.startswith("#Position"):
+            adapter_headers = sline[1:].rstrip().split('\t')
+            adapter[sampleName][datafilePrefix] = []
+            for ah in adapter_headers[1:]:
+              all_adapters[ah] = 1
+            continue
+          if not sline.startswith(">>END_MODULE"):
+            parts = sline.rstrip().split('\t')
+            ad_dic = {}
+            for idx in range(1, len(adapter_headers)):
+              ad_dic[adapter_headers[idx]] = parts[idx]
+            adapter[sampleName][datafilePrefix].append([parts[0], ad_dic])
+          else:
+            bInOver = False
+          continue
+
         for section in sections:
           if sline.startswith(section.sectionTag):
             section.inSection = True
@@ -123,7 +156,11 @@ with open(args.input, "r") as flistin:
           
           if section.inSection:
             if sline.startswith(section.headerTag):
-              section.header = sline[1:].rstrip()
+              cur_header = sline[1:].rstrip()
+              if section.header == "":
+                section.header = cur_header
+              elif section.header != cur_header:
+                raise Exception(f"Header not match:\n{section.header}\n{cur_header}\n")
               continue
 
             if sline.startswith(">>END_MODULE"):
@@ -132,7 +169,7 @@ with open(args.input, "r") as flistin:
 
             section.data[sampleName][datafilePrefix].append(sline.rstrip())
             continue
-
+      
 output_prefix = "error." + args.output if has_error else args.output
 
 with open(output_prefix + ".summary.tsv", "w") as fout:
@@ -151,11 +188,30 @@ with open(output_prefix + ".reads.tsv", "w") as fout:
       fout.write("%s\t%s\t%s\n" % (skey, skey if slen==1 else vkey, vvalue))
 
 with open(output_prefix + ".overrepresented.tsv", "w") as fout:
-  fout.write("Sample\tiFile\t%s\n" % overrepresentedHeader)
+  fout.write("Sample\tFile\t%s\n" % overrepresentedHeader)
   for skey, svalue in sorted(overrepresented.items()):
     slen = len(svalue)
     for vkey, vvalue in sorted(svalue.items()):
       fout.write("%s\t%s\t%s\n" % (skey, skey if slen==1 else vkey, vvalue))
+
+with open(output_prefix + ".adapter.tsv", "w") as fout:
+  all_adapters_names = sorted(all_adapters.keys())
+  all_adapters_names = [an for an in all_adapters_names if not "Poly" in an]
+  fout.write("Sample\tFile\tPosition\t%s\n" % "\t".join(all_adapters_names))
+  for skey, svalue in sorted(adapter.items()):
+    slen = len(svalue)
+    for vkey, vvalue in sorted(svalue.items()):
+      sample = skey if slen==1 else vkey
+      for pvalue in vvalue:
+        pos = pvalue[0]
+        pos_dic = pvalue[1]
+        fout.write(f"{skey}\t{sample}\t{pos}")
+        for an in all_adapters_names:
+          if an in pos_dic:
+            fout.write(f"\t{pos_dic[an]}")
+          else:
+            fout.write(f"\t0.0")
+        fout.write("\n")
 
 for section in sections:
   with open("%s.%s.tsv" % (output_prefix, section.fileName), "w") as fout:
