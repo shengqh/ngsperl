@@ -1,27 +1,29 @@
 ##predefined_condition_begin
 
-rootdir<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/deseq2_miRNA/result"
-inputfile<-"3018_61.define" 
+rootdir<-"/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/nonhost_genome/deseq2_custom_group_reads_TotalReads/result"
+inputfile<-"P9880.define" 
 
-showLabelInPCA<-1
-showDEGeneCluster<-1
 pvalue<-0.05
+useRawPvalue<-1
 foldChange<-1.5
 minMedianInGroup<-5
+  
+detectedInBothGroup<-0
+showLabelInPCA<-1
+showDEGeneCluster<-0
 addCountOne<-0
 usePearsonInHCA<-0
 top25only<-0
-detectedInBothGroup<-1
 performWilcox<-0
-useRawPvalue<-1
-textSize<-9
+textSize<-11
 transformTable<-0
-exportSignificantGeneName<-1
+exportSignificantGeneName<-0
 thread<-8
-outputPdf<-FALSE
-showVolcanoLegend<-0
 
-libraryFile<-"/scratch/cqs/shengq1/vickers/20170222_smallRNA_3018_61_human_v3/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/3018_61.Category.Table.csv"
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-FALSE;showLabelInPCA<-TRUE;top25cvInHCA<-FALSE;
+cooksCutoff<-FALSE
+
+libraryFile<-"/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/P9880.Category.Table.csv"
 libraryKey<-"TotalReads"
 
 ##predefined_condition_end
@@ -142,6 +144,7 @@ library("RColorBrewer")
 library("BiocParallel")
 library("ggrepel")
 library("stringr")
+library("data.table")
 
 setwd(rootdir)  
 comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
@@ -404,10 +407,14 @@ sigTableAll<-NULL
 sigTableAllGene<-NULL
 sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","FoldChange")
 
+n_first=-1
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
   myoptions = split(options_table$V1, options_table$V2)
   feature_name_regex = myoptions$feature_name_regex
+  if("n_first" %in% names(myoptions)){
+    n_first = as.numeric(myoptions$n_first)
+  }
 }else{
   feature_name_regex=NA
 }
@@ -419,10 +426,14 @@ for(countfile_index in c(1:length(countfiles))){
   countfile = countfiles[countfile_index]
   comparisons = comparisons_data[comparisons_data$CountFile == countfile,]
   
-  if (grepl(".csv$",countfile)) {
-    data<-read.csv(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
-  } else {
-    data<-read.delim(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE, sep=countSep)
+  if(n_first != -1){
+    data<-data.frame(fread(countfile, nrows=n_first), row.names=idIndex,check.names=FALSE)
+  }else{
+    if (grepl(".csv$",countfile)) {
+      data<-read.csv(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
+    } else {
+      data<-read.delim(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE, sep=countSep)
+    }
   }
   
   if(transformTable){
@@ -435,6 +446,11 @@ for(countfile_index in c(1:length(countfiles))){
         rownames(data) = str_match(rownames(data), feature_name_regex)[,2]
       }
     }
+  }
+
+  if(n_first < nrow(data)){
+    print(paste0("use first ", n_first, " features"))
+    data = data[c(1:n_first),]
   }
 
   data<-data[,colnames(data) != "Feature_length"]

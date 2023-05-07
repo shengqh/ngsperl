@@ -65,11 +65,15 @@ sub getSmallRNAConfig {
 
   my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library || $search_refseq_genome;
 
+  my $search_custom_group_by_gene  = getValue($def, "search_custom_group_by_gene", 0);
+
   my $perform_annotate_unmapped_reads    = getValue( $def, "perform_annotate_unmapped_reads" );
   my $perform_class_independent_analysis = getValue( $def, "perform_class_independent_analysis", 1 );
   my $perform_short_reads_source         = $search_host_genome && getValue( $def, "perform_short_reads_source" );
 
   my $perform_bacteria_count         = getValue( $def, "perform_bacteria_count", 0 );
+
+  my $de_top_reads = getValue($def, "de_top_reads", 20000);
 
   my $blast_top_reads      = getValue( $def, "blast_top_reads" );
   my $blast_unmapped_reads = getValue( $def, "blast_unmapped_reads" );
@@ -487,11 +491,9 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         sh_direct       => 1,
         cluster         => $cluster,
         pbs             => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "72",
-          "mem"       => "40gb"
+          "mem"       => getValue($def, "bowtie1_genome_1mm_NTA_smallRNA_count_mem", "80gb")
         },
       },
     };
@@ -1075,7 +1077,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       addDEseq2( $config, $def, $summary_ref, "miRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$" ],
-        $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
       addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA", [ "miRNA_isomiR", "miRNA_NTA", "miRNA_isomiR_NTA" ],
         $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout", $libraryKey );
       push @visual_source_reads, "miRNA_reads";
@@ -1119,7 +1121,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           push( @visual_source, $biotype_name );
 
           addDEseq2( $config, $def, $summary_ref, "${biotype_name}_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.read.count\$" ],
-            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
           push @visual_source_reads, "${biotype_name}_reads";
         }
       }
@@ -1131,7 +1133,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       for my $tKey (sort keys %$tRnaAnalysis){
         my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
         addDEseq2( $config, $def, $summary_ref, $tKey,           [ $tTableTask, ".tRNA.count\$" ],           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        addDEseq2( $config, $def, $summary_ref, "${tKey}_reads",     [ $tTableTask, ".tRNA.read.count\$" ],      $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $summary_ref, "${tKey}_reads",     [ $tTableTask, ".tRNA.read.count\$" ],      $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
         addDEseq2( $config, $def, $summary_ref, "${tKey}_aminoacid", [ $tTableTask, ".tRNA.aminoacid.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
     }
@@ -1679,13 +1681,15 @@ fi
     my $nonhost_genome_count_xml = [];
     my $microbial_genome_count_xml = [];
     for my $nonhostGroup (@nonhost_genome_groups) {
+      my $force_species_file = $nonhostGroup =~ /custom/;
       addNonhostDatabase(
         $config, $def, $individual_ref, $summary_ref, "${nonhostGroup}_pm", $nonhost_genome_dir,    #general option
         $def->{"bowtie1_${nonhostGroup}_index"}, $identical_ref,                                    #bowtie option
         $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                                #count option
         $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{"${nonhostGroup}_species_map"},    #table option
         $identical_count_ref,
-        $nonhostXml
+        $nonhostXml,
+        $force_species_file
       );
 
       addNonhostVis(
@@ -1709,7 +1713,7 @@ fi
         addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}", [ "bowtie1_${nonhostGroup}_pm_table", ".Species.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}_reads", [ "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ],
-          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
       }
       push @name_for_mapPercentage,      ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
       push @files_for_annotate_unmapped, ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
@@ -2248,12 +2252,18 @@ fi
     parameterSampleFile2      => $def->{tRNA_vis_group},
     parameterSampleFile2Order => $def->{groups_order},
     parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
+    parameterSampleFile4 => {
+      "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
+      "draw_umap" => getValue($def, "draw_umap", 0),
+      "heatmap_cexCol" => $def->{heatmap_cexCol},
+      top => 20000,
+    },
     rCode                     => $def->{correlation_rcode} . $R_font_size,
     sh_direct                 => 1,
     pbs                       => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "10",
-      "mem"       => "20gb"
+      "mem"       => "40gb"
     },
   };
 

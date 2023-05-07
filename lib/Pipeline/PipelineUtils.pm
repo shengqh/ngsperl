@@ -465,7 +465,7 @@ sub getOutputFormat {
 }
 
 sub addDEseq2 {
-  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey, $feature_name_regex ) = @_;
+  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey, $feature_name_regex, $n_first ) = @_;
 
   my $taskName = getDEseq2TaskName( $taskKey, $libraryKey, $def );
 
@@ -482,6 +482,10 @@ sub addDEseq2 {
   if($filterBaseMean){
     #die("filterBaseMean");
     $rCode = $rCode . "filterBaseMean=1;filterBaseMeanValue=" . getValue($def, "filterBaseMeanValue", 30) . ";";
+  }
+
+  if(not defined $n_first){
+    $n_first = -1;
   }
 
   $config->{$taskName} = {
@@ -510,6 +514,7 @@ sub addDEseq2 {
     rCode                        => $rCode,
     parameterSampleFile1 => {
       feature_name_regex => $feature_name_regex,
+      n_first => $n_first,
     },
     pbs                          => {
       "nodes"     => "1:ppn=" . $def->{max_thread},
