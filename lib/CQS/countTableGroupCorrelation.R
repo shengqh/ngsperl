@@ -26,12 +26,12 @@ library(colorRamps)
 library(genefilter)
 library(limma)
 
-is_one<-function(value){
-  if(is.na(value)){
-    return(FALSE)
-  }
+is_one<-function(value, defaultValue=FALSE){
   if(is.null(value)){
-    return(FALSE)
+    return(defaultValue)
+  }
+  if(is.na(value)){
+    return(defaultValue)
   }
   return(value == '1')
 }
@@ -50,10 +50,13 @@ if(exists("parSampleFile4")){
       heatmap_cexCol<-as.numeric(heatmap_cexCol)
     }
   }
+
+  n_first = as.numeric(myoptions$n_first)
 }else{
   draw_all_groups_in_HCA<-FALSE
   draw_umap<-FALSE
   heatmap_cexCol<-NA
+  n_first = -1
 }
 
 countTableFileList<-parSampleFile1
@@ -294,10 +297,14 @@ for (i in 1:nrow(countTableFileAll)) {
   
   print(paste0("Reading ",countTableFile))
   
-  if (grepl(".csv$",countTableFile)) {
-    count<-read.csv(countTableFile,header=T,row.names=1,as.is=T,check.names=FALSE)
-  } else {
-    count<-read.delim(countTableFile,header=T,row.names=1,as.is=T,check.names=FALSE)
+  if(n_first != -1){
+    data<-data.frame(fread(countfile, nrows=n_first), row.names=idIndex,check.names=FALSE)
+  }else{
+    if (grepl(".csv$",countfile)) {
+      data<-read.csv(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
+    } else {
+      data<-read.delim(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
+    }
   }
   
   if(transformTable){
@@ -310,6 +317,11 @@ for (i in 1:nrow(countTableFileAll)) {
   
   if (ncol(count)<2) {
     next;
+  }
+
+  if(nrow(count) > top){
+    print(paste0("Using first ", top, " features"))
+    count = count[c(1:top),]
   }
   
   if(!is.na(genes)){
