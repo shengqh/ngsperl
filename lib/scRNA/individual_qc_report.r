@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='scRNA'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -11,7 +11,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230410_combined_scRNA_hg38/raw_qc_sct2_report/result')
+setwd('/nobackup/shah_lab/shengq2/20230505_Vandy_AS_scRNA_vst2/decontX_raw_qc_report/result')
 
 ### Parameter setting end ###
 
@@ -86,7 +86,7 @@ draw_figure<-function(sample_name, cur_meta, validation_columns){
 meta<-NULL
 stats_df<-NULL
 ct_tb<-NULL
-sample_name = sample_names[2]
+sample_name = sample_names[1]
 for(sample_name in sample_names){
   cat("read", sample_name, "...\n")
   obj_file = obj_map[[sample_name]]
@@ -107,9 +107,14 @@ for(sample_name in sample_names){
     sctk_meta = readRDS(sctk_file)
 
     cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "doubletFinder_doublet_label_resolution_1.5", "DF")
-    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scDblFinder_class", "SDF")
+
+    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, c("scDblFinder_doublet_call", "scDblFinder_class"), "SDF")
+
     cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scds_hybrid_call", "scds")
-    cur_meta$scds = ifelse(cur_meta$scds, "Doublet", "Singlet")
+
+    if(is.logical(cur_meta$scds)){
+      cur_meta$scds = ifelse(cur_meta$scds, "Doublet", "Singlet")
+    }
   }
   
   if(has_signacx){
@@ -159,4 +164,3 @@ write.csv(stats_df, "sample_summary.csv", row.names=F)
 ct_tb<-acast(ct_tb, "Sample~Var1",  value.var="Freq", fill=0)
 write.csv(ct_tb, "sample_celltype.csv", row.names=TRUE)
 writeLines(validation_columns, "validation_columns.txt")
-

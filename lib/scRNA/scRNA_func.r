@@ -2129,24 +2129,29 @@ match_cell_names<-function(sample_name, source_meta, target_meta){
   return(source_meta)
 }
 
-fill_meta_info<-function(sample_name, source_meta, target_meta, source_column, target_column, is_character=TRUE){
+fill_meta_info<-function(sample_name, source_meta, target_meta, source_columns, target_column, is_character=TRUE){
   source_meta<-match_cell_names(sample_name, source_meta, target_meta)
   cur_cells = intersect(rownames(source_meta), rownames(target_meta))
-  if(is_character){
-    target_meta[cur_cells, target_column] = as.character(source_meta[cur_cells, source_column])
-  }else{
-    target_meta[cur_cells, target_column] = source_meta[cur_cells, source_column]
+  for(source_column in source_columns){
+    if(source_column %in% colnames(source_meta)){
+      if(is_character){
+        target_meta[cur_cells, target_column] = as.character(source_meta[cur_cells, source_column])
+      }else{
+        target_meta[cur_cells, target_column] = source_meta[cur_cells, source_column]
+      }
+      break
+    }
   }
   return(target_meta)
 }
 
-fill_meta_info_list<-function(source_meta_file_list, target_meta, source_column, target_column, is_character=TRUE){
+fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns, target_column, is_character=TRUE){
   source_map<-read_file_map(source_meta_file_list)
   cur_name=names(source_map)[1]
   for(cur_name in names(source_map)){
     source_meta_file=source_map[cur_name]
     source_meta=readRDS(source_meta_file)
-    target_meta=fill_meta_info(cur_name, source_meta, target_meta, source_column, target_column, is_character)
+    target_meta=fill_meta_info(cur_name, source_meta, target_meta, source_columns, target_column, is_character)
   }
   return(target_meta)
 }
