@@ -21,10 +21,8 @@ library("Seurat")
 sample_map = read_file_map("fileList1.txt")
 
 myoptions = read_file_map("fileList2.txt", do_unlist=FALSE)
-nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
-nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
-nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
-
+nFeature_cutoff_min=max(as.numeric(myoptions$nFeature_cutoff_min) - 50, 100)
+nCount_cutoff=max(as.numeric(myoptions$nCount_cutoff) - 50, 200)
 
 overwrite=FALSE
 
