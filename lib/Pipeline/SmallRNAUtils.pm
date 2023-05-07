@@ -256,7 +256,7 @@ sub initializeSmallRNADefaultOptions {
 }
 
 sub addNonhostDatabase {
-  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption, $count_ref, $nonhostXml ) = @_;
+  my ( $config, $def, $individual, $summary, $taskKey, $parentDir, $bowtieIndex, $sourceRef, $countOption, $tableOption, $count_ref, $nonhostXml, $force_species_file ) = @_;
 
   my $bowtie1Task      = "bowtie1_" . $taskKey;
   my $bowtie1CountTask = "bowtie1_" . $taskKey . "_count";
@@ -297,6 +297,7 @@ sub addNonhostDatabase {
     option     => $tableOption,
     source_ref => [ $bowtie1CountTask, ".xml" ],
     prefix     => $taskKey . "_",
+    force_species_file => $force_species_file,
     sh_direct  => 1,
     cluster    => $def->{cluster},
     pbs        => {

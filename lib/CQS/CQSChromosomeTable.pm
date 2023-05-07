@@ -39,6 +39,8 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
+  my $force_species_file = get_option($config, $section, "force_species_file", 0);
+
   if ( defined $config->{$section}{groups} || defined $config->{$section}{groups_ref} ) {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir );
     my $groups = get_raw_files( $config, $section, "groups" );
@@ -49,6 +51,8 @@ sub perform {
       my $outputfile = $self->get_file( $result_dir, "${task_name}_${group_name}", ".count",    0 );
       my $outputname = basename($outputfile);
 
+      my $specics_file = basename($self->get_file( $result_dir, "${task_name}_${group_name}", ".Species.count", 0 ));
+
       open( FL, ">$filelist" ) or die "Cannot create $filelist";
       for my $sample_name ( sort @samples ) {
         my @count_files = @{ $raw_files{$sample_name} };
@@ -58,17 +62,27 @@ sub perform {
       close(FL);
 
       print $pbs "
-if [ ! -s $outputname ]; then
-  cqstools chromosome_table $option -o $outputname -l $filelist
-fi
+cqstools chromosome_table $option -o $outputname -l $filelist
+
 ";
+      if($force_species_file){
+        print $pbs "
+  if [[ ! -s $specics_file && -s $outputname ]]; then
+    cp $outputname $specics_file
+  fi
+  ";
+      }
     }
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   else {
     my $filelist   = $self->get_file( $pbs_dir,    ${task_name}, ".filelist", 0 );
     my $outputfile = $self->get_file( $result_dir, ${task_name}, ".count",    0 );
     my $outputname = basename($outputfile);
+
+    my $specics_file = basename($self->get_file( $result_dir, $task_name, ".Species.count", 0 ));
+
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $outputname );
 
     open( FL, ">$filelist" ) or die "Cannot create $filelist";
@@ -81,7 +95,16 @@ fi
 
     print $pbs "
 cqstools chromosome_table $option -o $outputname -l $filelist
+
 ";
+
+    if($force_species_file){
+      print $pbs "
+if [[ ! -s $specics_file && -s $outputname ]]; then
+  cp $outputname $specics_file
+fi
+";
+    }
     $self->close_pbs( $pbs, $pbs_file );
   }
 }
