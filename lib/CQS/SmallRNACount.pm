@@ -30,10 +30,10 @@ sub perform {
 
   my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
 
-  my $r_script = dirname(__FILE__) . "/smallRNAPosition.R";
-  if ( !-e $r_script ) {
-    die "File not found : " . $r_script;
-  }
+  # my $r_script = dirname(__FILE__) . "/smallRNAPosition.R";
+  # if ( !-e $r_script ) {
+  #   die "File not found : " . $r_script;
+  # }
 
   my $fastaFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 0 );
   if ( defined $fastaFile ) {
@@ -113,16 +113,16 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
     print $pbs "cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
 ";
-    if ( $option !~ /noCategory/ ) {
-      print $pbs "
-count=`ls -1 *.position 2>/dev/null | wc -l`
-if [[ \$count != 0 ]]; then 
-  for positionFile in *.position; do
-    R --vanilla -f $r_script --args \$positionFile
-  done    
-fi
-";
-    }
+#     if ( $option !~ /noCategory/ ) {
+#       print $pbs "
+# count=`ls -1 *.position 2>/dev/null | wc -l`
+# if [[ \$count != 0 ]]; then 
+#   for positionFile in *.position; do
+#     R --vanilla -f $r_script --args \$positionFile
+#   done    
+# fi
+# ";
+#     }
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -156,9 +156,9 @@ sub result {
     my @result_files = ();
     my $countFile    = "${cur_dir}/${sample_name}.count";
     push( @result_files, $countFile );
-    if ( $option !~ /noCategory/ ) {
-      push( @result_files, "${cur_dir}/${sample_name}.tRNA.position" );
-    }
+    # if ( $option !~ /noCategory/ ) {
+    #   push( @result_files, "${cur_dir}/${sample_name}.tRNA.position" );
+    # }
     push( @result_files, "${countFile}.mapped.xml" );
     push( @result_files, "${cur_dir}/${sample_name}.info" );
 
