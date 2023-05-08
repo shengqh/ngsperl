@@ -2256,7 +2256,7 @@ fi
       "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
       "draw_umap" => getValue($def, "draw_umap", 0),
       "heatmap_cexCol" => $def->{heatmap_cexCol},
-      top => 20000,
+      n_first => 20000,
     },
     rCode                     => $def->{correlation_rcode} . $R_font_size,
     sh_direct                 => 1,
@@ -2885,59 +2885,21 @@ fi
         }
       }
 
-      if ( defined $config->{bowtie1_bacteria_group1_pm_table} ) {
-        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.Species.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group1_.*.Species.count.PCA.png" );
-        push( @report_names, "correlation_group1_heatmap", "correlation_group1_pca" );
+      for my $ngg (@nonhost_genome_groups){
+        push( @report_files, "count_table_correlation",    "${ngg}_.*.Species.count.heatmap.png" );
+        push( @report_files, "count_table_correlation",    "${ngg}_.*.Species.count.PCA.png" );
+        push( @report_names, "correlation_${ngg}_heatmap", "correlation_${ngg}_pca" );
 
         if ($hasGroupHeatmap) {
-          push( @report_files, "count_table_correlation",          "bacteria_group1_.*.Species.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",          "bacteria_group1_.*.Species.count.Group.Correlation.Cluster.png" );
-          push( @report_names, "correlation_group1_group_heatmap", "correlation_group1_corr_cluster" );
+          push( @report_files, "count_table_correlation",          "${ngg}_.*.Species.count.Group.heatmap.png" );
+          push( @report_files, "count_table_correlation",          "${ngg}_.*.Species.count.Group.Correlation.Cluster.png" );
+          push( @report_names, "correlation_${ngg}_group_heatmap", "correlation_${ngg}_corr_cluster" );
         }
 
         if(defined $pairs){
           for my $comparison (sort keys %$pairs){
-            push( @report_files, "deseq2_bacteria_group1_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
-            push( @report_names, "deseq2_group1_volcano_${comparison}" );
-          }
-        }
-      }
-
-      if ( defined $config->{bowtie1_bacteria_group2_pm_table} ) {
-        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.Species.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "bacteria_group2_.*.Species.count.PCA.png" );
-        push( @report_names, "correlation_group2_heatmap", "correlation_group2_pca" );
-
-        if ($hasGroupHeatmap) {
-          push( @report_files, "count_table_correlation",          "bacteria_group2_.*.Species.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",          "bacteria_group2_.*.Species.count.Group.Correlation.Cluster.png" );
-          push( @report_names, "correlation_group2_group_heatmap", "correlation_group2_corr_cluster" );
-        }
-
-        if(defined $pairs){
-          for my $comparison (sort keys %$pairs){
-            push( @report_files, "deseq2_bacteria_group2_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
-            push( @report_names, "deseq2_group2_volcano_${comparison}" );
-          }
-        }
-      }
-
-      if ( defined $config->{bowtie1_virus_group6_pm_table} ) {
-        push( @report_files, "count_table_correlation",    "virus_group6_.*.Species.count.heatmap.png" );
-        push( @report_files, "count_table_correlation",    "virus_group6_.*.Species.count.PCA.png" );
-        push( @report_names, "correlation_group6_heatmap", "correlation_group6_pca" );
-
-        if ($hasGroupHeatmap) {
-          push( @report_files, "count_table_correlation",          "virus_group6_.*.Species.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",          "virus_group6_.*.Species.count.Group.Correlation.Cluster.png" );
-          push( @report_names, "correlation_group6_group_heatmap", "correlation_group6_corr_cluster" );
-        }
-
-        if(defined $pairs){
-          for my $comparison (sort keys %$pairs){
-            push( @report_files, "deseq2_virus_group6_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
-            push( @report_names, "deseq2_group6_volcano_${comparison}" );
+            push( @report_files, "deseq2_${ngg}_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_names, "deseq2_${ngg}_volcano_${comparison}" );
           }
         }
       }
@@ -3065,6 +3027,12 @@ fi
       "normalize_by" => getValue($def, "normalize_by"),
       "refseq_bacteria_count" => $refseq_bacteria_count, 
     };
+
+    my $nonhost_genome_groups_hash = {};
+    for my $i (0 .. $#nonhost_genome_groups) {
+      $nonhost_genome_groups_hash->{$nonhost_genome_groups[$i]} = $nonhost_genome_group_names[$i];
+    }
+
     $config->{report} = {
       class                      => "CQS::BuildReport",
       perform                    => 1,
@@ -3079,6 +3047,7 @@ fi
       parameterSampleFile5       => $def->{software_version},
       parameterSampleFile6       => $def->{groups},
       parameterSampleFile7       => $def->{pairs},
+      parameterSampleFile8      => $nonhost_genome_groups_hash,
       sh_direct                  => 1,
       pbs                        => {
         "nodes"    => "1:ppn=1",

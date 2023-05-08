@@ -1,20 +1,18 @@
 ---
 title: "smallRNA Sequencing Analysis Report"
-date: "`r format(Sys.time())`"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
-  html_document:
-    toc: true
-    toc_depth: 2
-    number_sections: true
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: false
 ---
 
-<style type="text/css">
-.main-container {
-  max-width: 90%;
-  margin-left: auto;
-  margin-right: auto;
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
 }
-</style>
+```
+
 ```{r setup, include=FALSE}
 library(kableExtra)
 library(tidyverse)
@@ -22,7 +20,7 @@ library(tidyverse)
 source("Functions.R")
 source("Pipeline.R")
 
-knitr::opts_chunk$set(fig.width=8, fig.height=6, out.width="80%")
+knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, results = 'hide', fig.width=8, fig.height = 6,tidy = TRUE, tidy.opts = list(comment = FALSE))
 
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 files=split(files$V1, files$V2)
@@ -78,6 +76,7 @@ getCategory2<-function(category1, category2, description){
 categoryRmd<-function(dfCategory, fileName, header){
   hasFile<-FALSE
   result<-""
+  i=1
   for(i in c(1:nrow(dfCategory))){
     section=dfCategory$Section[i]
     category=dfCategory$Category[i]
@@ -155,8 +154,9 @@ if(hasSNORNA){
 
 hasHostGenome<-categoryRmd(hostGenome, hostGenomeFile, "")
 
+nggs=read.table('fileList8.txt', sep="\t", header=FALSE, stringsAsFactor=FALSE)
 nonhostGenomeFile="nonhostgenome.Rmd"
-nonhostGenome<-data.frame(Section=c("###", "###"), Category=c("group1", "group2"), Name=c("Microbime bacteria", "Environment bacteria"))
+nonhostGenome<-data.frame(Section="###", Category=nggs$V2, Name=nggs$V1)
 hasNonhostGenome<-categoryRmd(nonhostGenome, nonhostGenomeFile, "## Non-host genome\n\n")
 
 nonhostLibraryFile="nonhostlibrary.Rmd"
@@ -166,11 +166,12 @@ hasNonhostLibrary<-categoryRmd(nonhostLibrary, nonhostLibraryFile, "## Non-host 
 categories = c("species", "genus", "family", "order", "class", "phylum")
 
 nonhostBacteriaAggFile="nonhostBacteriaAgg.Rmd"
-nonhostBacteriaAgg=NULL
-for(cat in categories){
-  nonhostBacteriaAgg<-rbind(nonhostBacteriaAgg, data.frame(Section=c("###"), Category=c(paste0("refseq_bacteria_", cat, "_agg")), Name=c(paste0("Bacteria ", cat, " aggregated count"))))
-}
-hasRefBacteriaAgg<-categoryRmd(nonhostBacteriaAgg, nonhostBacteriaAggFile, "## Refseq bacteria aggregated count \n\n")
+# nonhostBacteriaAgg=NULL
+# for(cat in categories){
+#   nonhostBacteriaAgg<-rbind(nonhostBacteriaAgg, data.frame(Section=c("###"), Category=c(paste0("refseq_bacteria_", cat, "_agg")), Name=c(paste0("Bacteria ", cat, " aggregated count"))))
+# }
+# hasRefBacteriaAgg<-categoryRmd(nonhostBacteriaAgg, nonhostBacteriaAggFile, "## Refseq bacteria aggregated count \n\n")
+hasRefBacteriaAgg<-FALSE
 
 nonhostBacteriaEstFile="nonhostBacteriaEst.Rmd"
 nonhostBacteriaEst=NULL
@@ -181,6 +182,12 @@ hasRefBacteriaEst<-categoryRmd(nonhostBacteriaEst, nonhostBacteriaEstFile, "## R
 
 hasHostDEseq2<-any(grepl("deseq2_host_vis", names(files)))
 
+if ("DE_use_raw_pvalue" %in% names(option_map) & option_map$DE_use_raw_pvalue=="1") {
+  pValueText="p value"
+} else {
+  pValueText="FDR adjusted p value"
+}
+deseq2criteria<-paste0("absolute fold change >= ", option_map$DE_fold_change, " and ", pValueText, " <= ", option_map$DE_pvalue)  
 ```
 
 <br>
@@ -279,12 +286,12 @@ if(hasNonhostGenome | hasNonhostLibrary){
 ```
 <br>
 
-```{r nonhostgenome, include=hasNonhostGenome, child=nonhostGenomeFile} 
+```{r nonhostgenome, eval=hasNonhostGenome, child=nonhostGenomeFile} 
 ```
 
 <br>
 
-```{r nonhostlibrary, include=hasNonhostLibrary, child=nonhostLibraryFile} 
+```{r nonhostlibrary, eval=hasNonhostLibrary, child=nonhostLibraryFile} 
 ```
 
 ```{r bacteria_count_vis,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("bacteria_count_vis", "Bacteria count", trunk.eval=has_file(files,"bacteria_count_vis")), eval=has_file(files,"bacteria_count_vis")}
@@ -304,15 +311,15 @@ check_and_include_graphics(files$nonhost_overlap_bar)
 ```
 
 ```{r, echo=FALSE, results='asis'}
-if(hasRefBacteriaAgg){
+if(hasRefBacteriaEst){
   cat("# Refseq bacteria")
 }
 ```
 
-```{r refBacteriaAgg, include=hasRefBacteriaAgg, child=nonhostBacteriaAggFile} 
+```{r refBacteriaAgg, eval=hasRefBacteriaAgg, child=nonhostBacteriaAggFile} 
 ```
 
-```{r refBacteriaEst, include=hasRefBacteriaEst, child=nonhostBacteriaEstFile} 
+```{r refBacteriaEst, eval=hasRefBacteriaEst, child=nonhostBacteriaEstFile} 
 ```
 
 ```{r teardown, include=FALSE}
@@ -335,6 +342,7 @@ if(file.exists(nonhostBacteriaEstFile)){
 # Software versions
 ```{r softwareVersion, echo=FALSE, results='asis'}
 versions<-display_versions()
+versions<-versions[!duplicated(versions$Software),]
 ```
 
 # Description
