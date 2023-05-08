@@ -768,17 +768,11 @@ sub add_singleR_cell {
 
   my $target_folder = $target_dir . "/" . $singleR_task;
   my $class =  $by_individual_sample ? "CQS::IndividualR" : "CQS::UniqueR";
-  my $init_command = $by_individual_sample ? "
-mkdir -p $target_folder/result/.cache
-if [[ ! -s .cache ]]; then
-  ln -s ../.cache .cache
-fi
-" : "";
   $config->{$singleR_task} = {
     class                => $class,
     perform              => 1,
     target_dir           => $target_dir . "/" . $singleR_task,
-    init_command => $init_command,
+    init_command => "",
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SingleR.r",
     parameterSampleFile1_ref   => $obj_ref,
     parameterSampleFile2 => merge_hash_left_precedent($cur_options,  {
@@ -788,6 +782,7 @@ fi
       by_sctransform        => getValue( $def, "by_sctransform" ),
     }),
     output_file_ext => ".SingleR.png;.SingleR.rds;.meta.rds",
+    post_command => "rm -rf .cache",
     #no_docker => 1,
     sh_direct       => 0,
     pbs             => {
