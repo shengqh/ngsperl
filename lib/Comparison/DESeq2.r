@@ -448,11 +448,6 @@ for(countfile_index in c(1:length(countfiles))){
     }
   }
 
-  if(n_first < nrow(data)){
-    print(paste0("use first ", n_first, " features"))
-    data = data[c(1:n_first),]
-  }
-
   data<-data[,colnames(data) != "Feature_length"]
   colClass<-sapply(data, class)
   countNotNumIndex<-which((colClass!="numeric" & colClass!="integer") | grepl("Gene_Id", colnames(data)))
