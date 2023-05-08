@@ -5,12 +5,11 @@ parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2=''
-parFile3=''
-parFile4='/data/stein_lab/mjo_sRNA_data/20210429_qiong_rnaseq_6130_gut_hg38/covariance.txt'
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
+parFile2='/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/P9880.Category.Table.csv'
+parFile3='/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/preprocessing/fastqc_post_trim_summary/result/P9880.countInFastQcVis.Result.Reads.csv'
+useLeastGroups<-FALSE;showLabelInPCA<-FALSE;totalCountKey='Reads for Mapping';minMedian=0;minMedianInGroup=1;textSize=9;groupTextSize=10;
 
-setwd('/data/stein_lab/mjo_sRNA_data/20210429_qiong_rnaseq_6130_gut_hg38/genetable/result')
+setwd('/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/data_visualization/count_table_correlation_TotalReads/result')
 
 ### Parameter setting end ###
 
@@ -129,6 +128,10 @@ if(!exists("transformTable")){
 
 if(!exists("suffix")){
   suffix<-""
+}
+
+if(!exists("idIndex")){
+  idIndex<-1
 }
 
 task_suffix<-suffix
@@ -298,12 +301,12 @@ for (i in 1:nrow(countTableFileAll)) {
   print(paste0("Reading ",countTableFile))
   
   if(n_first != -1){
-    data<-data.frame(fread(countfile, nrows=n_first), row.names=idIndex,check.names=FALSE)
+    count<-data.frame(fread(countTableFile, nrows=n_first), row.names=idIndex,check.names=FALSE)
   }else{
-    if (grepl(".csv$",countfile)) {
-      data<-read.csv(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
+    if (grepl(".csv$",countTableFile)) {
+      count<-read.csv(countTableFile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
     } else {
-      data<-read.delim(countfile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
+      count<-read.delim(countTableFile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
     }
   }
   
@@ -317,11 +320,6 @@ for (i in 1:nrow(countTableFileAll)) {
   
   if (ncol(count)<2) {
     next;
-  }
-
-  if(nrow(count) > top){
-    print(paste0("Using first ", top, " features"))
-    count = count[c(1:top),]
   }
   
   if(!is.na(genes)){
