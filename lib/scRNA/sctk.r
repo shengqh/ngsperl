@@ -43,7 +43,7 @@ for (sample_name in names(sample_map)){
     lst = read_scrna_data(countfile)
     counts<-lst$counts
     rawobj = CreateSeuratObject(counts = counts, project = sample_name)
-    rawobj<-subset(rawobj, subset = nFeature_RNA >= nFeature_cutoff_min & nFeature_RNA <= nFeature_cutoff_max & nCount_RNA >= nCount_cutoff)
+    rawobj<-subset(rawobj, subset = nFeature_RNA >= nFeature_cutoff_min & nCount_RNA >= nCount_cutoff)
 
     sce <- as.SingleCellExperiment(rawobj)
     rm(rawobj)
