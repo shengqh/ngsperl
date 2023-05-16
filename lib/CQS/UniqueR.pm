@@ -52,6 +52,7 @@ sub perform {
   $self->prepare_data($config, $section);
   
   my $init_command = get_option($config, $section, "init_command", "");
+  my $post_command = get_option($config, $section, "post_command", "");
   my $rCode = $self->getRcode( $config, $section );
   my $output_file     = get_option( $config, $section, "output_file",     "" );
   my $output_to_result_directory = get_option( $config, $section, "output_to_result_directory", 0 );
@@ -288,9 +289,13 @@ cd $result_dir
 $rmd_command
 
 ";
+
       close($rs);
     }
   }
+
+  print $pbs "\n\n$post_command\n\n";
+  
   $self->close_pbs( $pbs, $pbs_file );
 }
 
