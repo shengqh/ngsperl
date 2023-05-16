@@ -54,6 +54,6 @@ for (sample_name in names(sample_map)){
   meta=colData(sce)
   saveRDS(meta, paste0(sample_name, ".decontX.meta.rds"))
 
-  counts = round(decontXcounts(sce))
+  counts = ceiling(decontXcounts(sce))
   saveRDS(counts, paste0(sample_name, ".decontX.counts.rds"))
 }
