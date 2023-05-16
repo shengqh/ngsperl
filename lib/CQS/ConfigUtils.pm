@@ -2107,8 +2107,10 @@ sub get_correlation_groups_by_pattern {
 
   my $gpattern_dic = $def->{correlation_groups_pattern_dic};
   if(defined $gpattern_dic){
-    print Dumper(longmess());
-    die "correlation_groups_pattern has to be hash " if not is_hash($gpattern_dic);
+    if(not is_hash($gpattern_dic)){
+      print Dumper(longmess());
+      die "correlation_groups_pattern has to be hash";
+    }
 
     my $result = {};
     for my $gpattern_key (sort keys %$gpattern_dic){
