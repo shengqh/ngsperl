@@ -60,7 +60,12 @@ def split(json_file, cell_hashtag_file, hashtag_sample_file, output_folder, logg
       os.mkdir(sample_folder)
     
     sample_file = os.path.join(sample_folder, "all_contig_annotations.json")
-    sample_data = [record for record in json_data if record['barcode'] in barcode_dict and samples_dict[barcode_dict[record['barcode']]] == sample_name]
+    sample_data = []
+    for record in json_data:
+      if record['barcode'] in barcode_dict:
+        if barcode_dict[record['barcode']] in samples_dict:
+          if samples_dict[barcode_dict[record['barcode']]] == sample_name:
+            sample_data.append(record)
     logger.info("writing %s" % sample_file)
     with open(sample_file, "wt") as fout:
       json.dump(sample_data, fout, indent=4)
@@ -86,10 +91,10 @@ def main():
   args = parser.parse_args()
   
   if DEBUG:
-    args.input="/data/cqs/alexander_gelbard_data/AG_5126_10X/VDJ/5126-AG-4/all_contig_annotations.json"
-    args.cell_hashtag="/scratch/cqs/alexander_gelbard_projects/20201202_5126_scRNA_split/split_samples/result/COVID/COVID.HTO.csv"
-    args.hashtag_sample="/scratch/cqs/alexander_gelbard_projects/20201202_5126_scRNA_split/split_bam/result/fileList_3_COVID.txt"
-    args.output="/scratch/cqs/alexander_gelbard_projects/20201202_5126_scRNA_split/clonotype_split/result/"
+    args.input="/data/cqs/annet_kirabo_data/20210809_6383_AP_ECCITE/TCR/6383-AP-1/all_contig_annotations.json"
+    args.cell_hashtag="/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/hto_samples_cutoff_souporcell_integration/result/AP_1.HTO.csv"
+    args.hashtag_sample="/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/clonotype_01_split/result/fileList_3_AP_1.txt"
+    args.output="/nobackup/kirabo_lab/shengq2/20220506_6383_scRNA_human/clonotype_01_split/result/"
 
   check_file(args.input, parser)
   check_file(args.cell_hashtag, parser)
