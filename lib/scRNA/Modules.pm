@@ -23,6 +23,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_scRNABatchQC
 
   add_sctk
+  add_remove_doublets
 
   add_hto_samples_preparation  
   add_hto_gmm_demux
@@ -37,6 +38,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_clonotype_split
 
   add_individual_qc
+
+  add_individual_qc_tasks
 
   add_gliph2
 
@@ -197,7 +200,7 @@ sub add_seurat_merge_object {
 }
 
 sub add_seurat {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets, $is_preprocessed) = @_;
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets, $is_preprocessed, $prefix) = @_;
 
   my $seurat_task;
   my $reduction;
@@ -215,18 +218,18 @@ sub add_seurat {
   if($by_integration){
     my $integration_by_harmony = getValue( $def, "integration_by_harmony", 1);
     if($integration_by_harmony){
-      $seurat_task = "seurat${no_doublets}${sct_str}_harmony";
+      $seurat_task = "${prefix}seurat${sct_str}_harmony";
       $preprocessing_rscript = "../scRNA/seurat_harmony.r";
       $reduction = "harmony";
       $rmd_ext = $rmd_ext . ".harmony";
     }else{
-      $seurat_task = "seurat${no_doublets}${sct_str}_integration";
+      $seurat_task = "${prefix}seurat${sct_str}_integration";
       $preprocessing_rscript = "../scRNA/seurat_integration.r";
       $reduction = "pca";
       $rmd_ext = $rmd_ext . ".integration";
     }
   }else{
-    $seurat_task = "seurat${no_doublets}${sct_str}_merge";
+    $seurat_task = "${prefix}seurat${sct_str}_merge";
     $preprocessing_rscript = "../scRNA/seurat_merge.r";
     $reduction = "pca";
     $rmd_ext = $rmd_ext . ".merge";
@@ -2402,6 +2405,31 @@ R --vanilla -f sctk.r
   push( @$summary, $sctk_task );
 }
 
+sub add_remove_doublets {
+  my ($config, $def, $summary, $target_dir, $task_name, $files_ref, $doublet_meta_ref, $doublet_column) = @_;
+
+  $config->{$task_name} = {
+    class                => "CQS::IndividualR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . $task_name,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_remove_doublets.r",
+    parameterSampleFile1_ref   => $files_ref,
+    parameterSampleFile2 => {
+      doublet_column => $doublet_column,
+    },
+    parameterSampleFile3_ref => $doublet_meta_ref,
+    output_file_ext => ".nodoublets.counts.rds",
+    #no_docker => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "80gb"
+    },
+  };
+
+  push( @$summary, $task_name );
+}
+
 sub add_gliph2 {
   my ($config, $def, $summary, $target_dir, $meta_ref, $clonotype_convert, $hla_merge) = @_;
 
@@ -2729,4 +2757,71 @@ sub add_bubble_plots {
   push( @$summary, $bubble_task );
 }
 
+sub add_individual_qc_tasks{
+  my ($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref) = @_;
+
+  my $sct_str = get_sct_str($def);
+  my $raw_individual_qc_task = "${prefix}raw_qc${sct_str}";
+
+  add_individual_qc($config, $def, $summary, $target_dir, $raw_individual_qc_task, $filter_config_file, $files_def, 0, undef, undef);
+
+  my $reduction = "pca";
+
+  my $signacX_ref = undef;
+  if (getValue( $def, "perform_SignacX", 0 ) ) {
+    my $signacX_task = $raw_individual_qc_task . "_SignacX";
+    add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $raw_individual_qc_task, $reduction, 1);
+    $signacX_ref = [ $signacX_task, ".meta.rds" ];
+  }
+
+  my $singleR_ref = undef;
+  if (getValue( $def, "perform_SingleR", 0 ) ) {
+    my $singleR_task = $raw_individual_qc_task . "_SingleR";
+    my $cur_options = {
+      task_name => $def->{task_name},
+      reduction => $reduction, 
+    };
+    add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $raw_individual_qc_task, $cur_options, 1 );
+    $singleR_ref = [ $singleR_task, ".meta.rds" ];
+  }
+
+  my $qc_report_task = $raw_individual_qc_task . "_report";
+  $config->{$qc_report_task} = {
+    class => "CQS::UniqueR",
+    perform => 1,
+    target_dir => $target_dir . "/" . $qc_report_task,
+    rtemplate => "../scRNA/scRNA_func.r,../scRNA/individual_qc_report.r",
+    rReportTemplate => "../scRNA/individual_qc_report.Rmd;reportFunctions.R",
+    run_rmd_independent => 1,
+    rmd_ext => ".${prefix}qc.html",
+    parameterSampleFile1 => {
+      species => getValue( $def, "species" ),
+      prefix => $project_name,
+      reduction => $reduction,
+      bubblemap_file => $def->{bubblemap_file},
+      by_sctransform => getValue( $def, "by_sctransform", 0 ),
+      use_sctransform_v2 => getValue( $def, "use_sctransform_v2", 0 ),
+      doublet_column => getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5")),
+    },
+    parameterSampleFile2_ref => $raw_individual_qc_task,
+    parameterSampleFile3_ref => $sctk_ref,
+    parameterSampleFile4_ref => $signacX_ref,
+    parameterSampleFile5_ref => $singleR_ref,
+    parameterSampleFile6_ref => $decontX_ref,
+    output_file_ext => ".${prefix}qc.html",
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => getValue($def, "seurat_mem") 
+    },
+  };
+
+  push(@$summary, $qc_report_task);
+
+  return($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task);
+}
+
+
 1;
+
