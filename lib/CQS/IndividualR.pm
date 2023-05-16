@@ -68,7 +68,8 @@ sub perform {
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
 
-  my $raw_files = get_raw_files($config, $section, "parameterSampleFile1");
+  my $source_key = $self->get_pbs_key($config, $section);
+  my $raw_files = get_raw_files($config, $section, $source_key);
 
   my @sample_names = ( sort keys %$raw_files );
   my $has_multi_samples = scalar(@sample_names) > 1;

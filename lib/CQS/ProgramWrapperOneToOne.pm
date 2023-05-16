@@ -28,7 +28,23 @@ sub new {
 
 sub get_pbs_key {
   my ($self, $config, $section) = @_;
-  return(has_raw_files($config, $section, "source") ? "source" : "parameterSampleFile1");
+
+  my $has_source = has_raw_files($config, $section, "source");
+  my $has_parameterSampleFile1 = has_raw_files($config, $section, "parameterSampleFile1");
+
+  if( $has_source && $has_parameterSampleFile1){
+    die("Cannot define source and parameterSampleFile1 at same time for section $section");
+  }
+  
+  if( $has_source){
+    return("source");
+  }
+
+  if( $has_parameterSampleFile1){
+    return("parameterSampleFile1");
+  }
+
+  die("Define source or parameterSampleFile1 for section $section first!");
 }
 
 sub perform {
