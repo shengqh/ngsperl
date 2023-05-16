@@ -35,6 +35,13 @@ myoptions$pca_dims=as.numeric(myoptions$pca_dims)
 myoptions$Remove_MtRNA=is_one(myoptions$Remove_MtRNA)
 myoptions$Remove_rRNA=is_one(myoptions$Remove_rRNA)
 
+regress_by_percent_mt=is_one(myoptions$regress_by_percent_mt)
+if(regress_by_percent_mt){
+  vars.to.regress=c("percent.mt")
+}else{
+  vars.to.regress=NULL
+}
+
 Ensemblfile=myoptions$ensembl_gene_map_file
 bubblemap_file = myoptions$bubblemap_file
 bubblemap_width=to_numeric(myoptions$bubblemap_width, 6000)
@@ -124,7 +131,8 @@ for (i in 1:nrow(SampleInfos)) {
                     species = species,
                     by_sctransform = by_sctransform,
                     use_sctransform_v2 = use_sctransform_v2,
-                    output_object = output_object)
+                    output_object = output_object,
+                    vars.to.regress = vars.to.regress)
   
   object.list<-c(object.list, info)
 }
