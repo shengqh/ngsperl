@@ -101,6 +101,7 @@ our %EXPORT_TAGS = (
     get_next_index
     add_extract_bam_locus
     has_comparison
+    add_featurecount
     )
   ]
 );
@@ -3435,6 +3436,46 @@ samtools index __OUTPUT__
 sub has_comparison {
   my $def = shift;
   return ((defined $def->{pairs}) || (defined $def->{pairs_config}));
+}
+
+sub add_featurecount {
+  my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref, $transcript_gtf, $no_docker) = @_;
+
+  my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "$task_name";
+  $config->{$task_name} = {
+    class         => "Count::FeatureCounts",
+    perform       => 1,
+    target_dir    => $featureCountFolder,
+    option        => getValue($def, "featureCounts_option", "-g gene_id -t exon"),
+    source_ref    => $bam_ref,
+    gff_file      => $transcript_gtf,
+    is_paired_end => is_paired_end($def),
+    no_docker => $no_docker,
+    sh_direct     => 0,
+    pbs           => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "40gb"
+    },
+  };
+  $config->{"${task_name}_summary"} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${featureCountFolder}_summary",
+    option                   => "",
+    rtemplate                => "../Alignment/AlignmentUtils.r,../Alignment/STARFeatureCount.r",
+    output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+    parameterSampleFile2_ref => [ $task_name, ".count.summary" ],
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+
+  push @$tasks, $task_name;
+  push @$tasks, "${task_name}_summary";
 }
 
 1;
