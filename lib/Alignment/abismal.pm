@@ -106,7 +106,7 @@ sub perform {
     print $pbs "
 if [[ ! -s $result_file_raw && ! -s $result_file_bam ]]; then
   echo abismal=`date`
-  singularity exec -B $mybinds /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools abismal -t $thread -i $abismal_index $sample_files_str -s $map_stat -o $result_file_raw
+  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools abismal -t $thread -i $abismal_index $sample_files_str -s $map_stat -o $result_file_raw
   samtools sort -@ $thread -O BAM -o $result_file_bam $result_file_raw
 fi
 ";
