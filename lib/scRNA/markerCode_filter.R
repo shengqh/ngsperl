@@ -124,8 +124,6 @@ Plot_predictcelltype<-function(predict_celltype,method="cta",topn=3) {
   ora_mat<--log10(ora_mat) 
   if (method=="cta") plotfunction_celltype(cta_mat)
   if (method=="ora") plotfunction_celltype(ora_mat)
-  
-  
 }
 
 ##
@@ -282,7 +280,8 @@ preprocess<-function( SampleInfo,
                       species=NULL,
                       by_sctransform=0,
                       use_sctransform_v2=0,
-                      output_object=0) {
+                      output_object=0,
+                      vars.to.regress=c("percent.mt")) {
 
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
@@ -407,14 +406,12 @@ preprocess<-function( SampleInfo,
       next
     }
 
-    vars.to.regress = c("percent.mt")
-
     #no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
     #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
     subobj <- NormalizeData(subobj)
     subobj <- FindVariableFeatures(subobj, selection.method = "vst", nfeatures = 2000)
     var.genes <- VariableFeatures(subobj)
-    subobj <- ScaleData(subobj, vars.to.regress = vars.to.regress)
+    subobj <- ScaleData(subobj, vars.to.regress=vars.to.regress)
 
     if(by_sctransform){
       subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress, use_sctransform_v2=use_sctransform_v2)
