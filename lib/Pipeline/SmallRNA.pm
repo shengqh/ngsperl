@@ -1668,7 +1668,7 @@ fi
         }
       }
       addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_read", [ $refseq_bacteria_table, ".read.count\$" ],
-        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
     }
   }
 
