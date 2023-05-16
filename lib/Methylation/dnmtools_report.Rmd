@@ -42,11 +42,11 @@ option_tbl<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
 myoptions<-split(option_tbl$V1, option_tbl$V2)
 
 project <- myoptions$task_name
+meta <- myoptions$meta_data
 abismal_path <- myoptions$abismal_path
 dnmtools_path <- myoptions$dnmtools_path
 MethylKitCorr_path <- myoptions$MethylKitCorr_path
 MethylKitDiff_path <- myoptions$MethylKitDiff_path
-meta <- myoptions$meta_data
 
 files<-read.table("fileList1.txt", sep="\t", header=FALSE, as.is=TRUE)
 rownames(files)<-files$V2

@@ -45,7 +45,7 @@ sub_diff <- calculateDiffMeth(sub_obj,
 diff_res <- getMethylDiff(sub_diff, difference = diff, qvalue = qvalue, type = "all")
 diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", grp1), paste0("hypo_in_", grp2))
 saveRDS(sub_diff, file = paste0(comps, "_test.rds"))
-saveRDS(sub_diff, file = paste0(comps, "_methyldiff.rds"))
+saveRDS(diff_res, file = paste0(comps, "_methyldiff.rds"))
 
 diff_res_grp2 <- getMethylDiff(sub_diff, difference = diff, qvalue = qvalue, type = "hypo")
 diff_res_grp2$direction <- paste0("hypo_in_", grp2)
