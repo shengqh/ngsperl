@@ -353,9 +353,11 @@ normalize_by_read<-option_map['normalize_by']
 if(normalize_by_read == "FeatureReads"){
   if(!hasNonhostGenome){
     normalize_by_read = "total host smallRNA reads"
+  }else{
+    normalize_by_read = "total feature reads"
   }
 }else{
-  normalize_by_read = "total mappable reads"
+  normalize_by_read = "total reads"
 }
 ```
 
