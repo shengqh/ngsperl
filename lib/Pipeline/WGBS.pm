@@ -65,7 +65,8 @@ sub getConfig {
   my $picard = getValue($def, "picard");
   my $interval_list = getValue($def, "interval_list");
 
-  $config->{trimgalore} = {
+  my $trimgalore_task = "trimgalore";
+  $config->{$trimgalore_task} = {
     class      => "Trimmer::TrimGalore",
     perform    => 1,
     target_dir => "${targetDir}/trimgalore",
@@ -82,7 +83,8 @@ sub getConfig {
   };
   push(@$tasks, "trimgalore");
 
-  $config->{abismal} = {
+  my $abismal_task = "abismal";
+  $config->{$abismal_task} = {
     class      => "Alignment::abismal",
     perform    => 1,
     option     => "",
@@ -145,6 +147,7 @@ sub getConfig {
     option                   => "",
     rtemplate                => "../Methylation/prepare_CpG_input.R",
     output_file_ext          => ".CpG.txt",#;.corr_MDS_plot.png
+    source_ref => [ "DNMTools", ".meth\$" ],
     #parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
     sh_direct                => 1,
     pbs                      => {
@@ -160,10 +163,17 @@ sub getConfig {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => "${targetDir}/methylkitcorr",
-    option                   => " --args ${task_name} hg19 group 4 ",
+    #option                   => " --args ${task_name} hg19 group 4 ",
     rtemplate                => "../Methylation/methylkit_corr.R",
     output_file_ext          => "_corr_MDS_plot.png;_corr_MDS_plot.pdf",
+    parameterSampleFile2 => {
+      task_name => $task_name,
+      org       => "hg19",
+      var       => "group",
+      mincov     => 4
+    },
     #parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
+    source_ref => [ "MethylKitPreparation", ".CpG.txt\$" ],
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",
@@ -178,10 +188,17 @@ sub getConfig {
     class                    => "CQS::IndividualR",
     target_dir               => "${targetDir}/methylkitdiff",
     rtemplate                => "../Methylation/methylkit_diff.R",
-    option                   => " --args ${task_name} 25 0.01 16 ",
+    #option                   => " --args ${task_name} 25 0.01 16 ",
+    parameterSampleFile3 => {
+      task_name => $task_name,
+      diff      => 25,
+      qvalue    => 0.01,
+      ncore     => 16
+    },
     parameterSampleFile1_ref => "pairs",
     parameterSampleFile2_ref => "groups",
     output_file_ext          => ".dmcpgs",
+    source_ref => [ "MethylKitCorr", ".rds\$" ],
     pbs                      => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
@@ -227,7 +244,7 @@ sub getConfig {
     perform_splicing => 0,
     remove_empty_source => 1,
     isBed      => 1,
-    source_ref => [ "MethylKitDiff", "\.dmcpgs\$" ],
+    source_ref => [ "MethylKitDiff", ".dmcpgs\$" ],
     pbs        => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
@@ -290,13 +307,14 @@ sub getConfig {
     push( @copy_files, $dnmtools_task, ".hmr\$" );
     push( @copy_files, $dnmtools_task, ".pmr\$" );
     push( @copy_files, $dnmtools_task, ".pmd\$" );
-    #push( @copy_files, $dnmtools, ".bw\$" );
   }
   if(( defined $dnmtoolsannovar_task ) && ( defined $config->{$dnmtoolsannovar_task} )) {
     push( @copy_files, $dnmtoolsannovar_task, ".annovar.final.tsv\$" );
   }
+  if (( defined $methylkitcorr_task ) && ( defined $config->{$methylkitcorr_task} )) {
+    push( @copy_files, $methylkitcorr_task, ".pdf\$|.png\$|.rds\$" );
+  }
   if (( defined $methylkitdiff_task ) && ( defined $config->{$methylkitdiff_task} )) {
-      #push( @copy_files, $methylkitdiff_task, ".DMR.filtered\$" );
     push( @copy_files, $methylkitdiff_task, ".dmcpgs\$" );
   }
   if (( defined $methylkitdiffannovar_task ) && ( defined $config->{$methylkitdiffannovar_task} )) {
@@ -308,9 +326,6 @@ sub getConfig {
     push( @copy_files, $webgestalt_task, "_geneontology_Molecular_Function\$" );
     push( @copy_files, $webgestalt_task, "_pathway_KEGG\$" );
   }
-  #if((defined $homer_task ) && (defined $config->{$homer_task} )){
-  #  push(@copy_files, $homer_task, ".DMR.filtered\$" );
-  #}
 
   $config->{report} = {
     class                      => "CQS::BuildReport",
@@ -322,15 +337,14 @@ sub getConfig {
     parameterSampleFile1_names => \@report_names,
     parameterSampleFile2 => {
       task_name => $task_name,
-      abismal_path  => $config->{abismal}{target_dir} . "/result/",
-      dnmtools_path => $config->{DNMTools}{target_dir} . "/result/",
-      MethylKitCorr_path => $config->{MethylKitCorr}{target_dir} . "/result/",
-      MethylKitDiff_path => $config->{MethylKitDiff}{target_dir} . "/result/",
       meta_data => "../../" . $task_name . "_meta.tsv",
     },
-    #parameterSampleFile3 => [],
-    parameterSampleFile3_ref   => \@copy_files,
-    parameterSampleFile4_ref => [ $webgestalt_task, ".txt\$" ],
+    parameterSampleFile3   => \@copy_files,
+    parameterSampleFile4_ref   => [ $webgestalt_task, ".txt\$" ],
+    parameterSampleFile5_ref   => [ $abismal_task ],
+    parameterSampleFile6_ref   => [ $dnmtools_task ],
+    parameterSampleFile7_ref   => [ $methylkitcorr_task, ".pdf\$|.png\$" ],
+    parameterSampleFile8_ref   => [ $methylkitdiff_task ],
     sh_direct                  => 1,
     pbs                        => {
       "nodes"     => "1:ppn=1",

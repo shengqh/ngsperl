@@ -4,11 +4,12 @@ require(methylKit)
 require(ggpubr)
 require(Cairo)
 
-args = commandArgs(trailingOnly=TRUE)
-project = args[1]
-assembly = args[2]
-var = args[3]
-mincov = as.numeric(args[4])
+params <- read.table(parSampleFile2, sep = "\t", header = F)
+params %>% column_to_rownames("V2") %>% t() %>% data.frame()
+project <- params$task_name
+assembly = params$org
+var = params$var
+mincov = as.numeric(params$mincov)
 
 #prepare to find all specific format files
 input_path <- paste("..", "..", "methylkitprep", "result", sep="/")

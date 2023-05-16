@@ -3,18 +3,16 @@ require(tidyverse)
 require(methylKit)
 require(ggpubr)
 require(Cairo)
-#test
-wrkdir <- "/nobackup/h_cqs/ywang/PI_Coffey/20230301_Coffey_methylation_QZ9413/analysis/dev_test2/methylkitdiff/result/DLD1_vs_DKs8"
-setwd(wrkdir)
 
-args = commandArgs(trailingOnly=TRUE)
-project = args[1]
-diff = as.numeric(args[2])
-qvalue = as.numeric(args[3])
-ncore = as.numeric(args[4])
+params <- read.table(parSampleFile3, sep = "\t", header = F)
+params %>% column_to_rownames("V2") %>% t() %>% data.frame()
+project <- params$task_name
+diff <- as.numeric(params$diff)
+qvalue <- as.numeric(params$qvalue)
+ncore <- as.numeric(params$ncore)
 
-comparison <- read.table("fileList1.txt", sep = "\t", header = F)
-groups <- read.table("fileList2.txt", sep = "\t", header = F)
+comparison <- read.table(parSampleFile1, sep = "\t", header = F)
+groups <- read.table(parSampleFile2, sep = "\t", header = F)
 
 comps <- comparison[1, "V2"]
 grp1 <- comparison[1, "V1"]
