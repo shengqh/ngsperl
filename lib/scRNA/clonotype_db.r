@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='AG3669'
+outFile='AK6383'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
@@ -10,7 +10,7 @@ parFile4='/data/cqs/references/scrna/TCR_clonotypedatabases/vdjdb.csv'
 outputDirectory='.'
 
 
-setwd('/data/h_gelbard_lab/projects/20220508_scRNA_3669/clonotype_04_db/result')
+setwd('/nobackup/h_cqs/shengq2/bugfix/clonotype_05_db')
 
 ### Parameter setting end ###
 
@@ -187,11 +187,9 @@ for (parFile1 in file_map$V1){
   #vdjdb
   vdjdb[] <- lapply(vdjdb, as.character)
   vdjdb_tra <-
-    vdjdb[which(vdjdb$gene == "TRA") &&
-            which(vdjdb$species == "HomoSapiens"),]
+    vdjdb[which(vdjdb$gene == "TRA" & vdjdb$species == "HomoSapiens"),]
   vdjdb_trb <-
-    vdjdb[which(vdjdb$gene == "TRB") &&
-            which(vdjdb$species == "HomoSapiens"),]
+    vdjdb[which(vdjdb$gene == "TRB" & vdjdb$species == "HomoSapiens"),]
 
   vdjdb_list <- list()
   for (k in 1:4) {
@@ -286,3 +284,4 @@ for (parFile1 in file_map$V1){
     quote = F
   )
 }
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
