@@ -46,8 +46,8 @@ finalList<-finalList[names(finalList) != "rawobj"]
 
 essential_genes=read.table(parFile2, sep="\t" ,header=F)$V1
 
-by_sctransform<-ifelse(myoptions$by_sctransform == "1", TRUE, FALSE)
-regress_by_percent_mt<-ifelse(myoptions$regress_by_percent_mt == "1", TRUE, FALSE)
+by_sctransform<-is_one(myoptions$by_sctransform)
+regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 
 if(regress_by_percent_mt){
   vars.to.regress="percent.mt"
