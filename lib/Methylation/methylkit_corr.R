@@ -1,11 +1,11 @@
-require(GenomicRanges)
-require(tidyverse)
-require(methylKit)
-require(ggpubr)
-require(Cairo)
+require(GenomicRanges, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(tidyverse, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(methylKit, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(ggpubr, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(Cairo, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
 
 params <- read.table(parSampleFile2, sep = "\t", header = F)
-params %>% column_to_rownames("V2") %>% t() %>% data.frame()
+params <- params %>% column_to_rownames("V2") %>% t() %>% data.frame()
 project <- params$task_name
 assembly = params$org
 var = params$var
@@ -42,8 +42,8 @@ saveRDS(filtered.cpg.meth, paste0(project, ".filtered.cpg.meth.rds"))
 
 cpg_bvalue_df <- data.frame(filtered.cpg.meth) %>%
   mutate(id = paste(chr, start, end, sep = "_"))
-for(i in length(file.id)){
-  id <- file.id[1]
+for(i in 1:length(file.id)){
+  id <- file.id[i]
   ncs <- paste0("numCs", i)
   cov <- paste0("coverage", i)
   cpg_bvalue_df[, id] <- cpg_bvalue_df[, ncs] / cpg_bvalue_df[, cov]
@@ -77,10 +77,10 @@ dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2",
   theme_bw()
 
 
-CairoPDF(file = paste0("../result/", project, "_methyl_CpG_bvalue_corr_MDS_plot.pdf"), width = 4, height = 3, pointsize = 8, onefile = T)
+CairoPDF(file = paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.pdf"), width = 4, height = 3, pointsize = 8, onefile = T)
 dms_plot
 dev.off()
 
-CairoPNG(file=paste0("../result/", project, "_methyl_CpG_bvalue_corr_MDS_plot.png"), height=1500, width=1500, res=300)
+CairoPNG(file=paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.png"), height=1500, width=1500, res=300)
 print(dms_plot)
 dev.off()

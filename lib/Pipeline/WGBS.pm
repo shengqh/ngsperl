@@ -165,7 +165,7 @@ sub getConfig {
     target_dir               => "${targetDir}/methylkitcorr",
     #option                   => " --args ${task_name} hg19 group 4 ",
     rtemplate                => "../Methylation/methylkit_corr.R",
-    output_file_ext          => "_methyl_CpG_bvalue_corr_MDS_plot.png;_methyl_CpG_bvalue_corr_MDS_plot.pdf",
+    output_file_ext          => "_methyl_CpG_bvalue_corr_MDS_plot.png;_methyl_CpG_bvalue_corr_MDS_plot.pdf;.filtered.cpg.meth.rds",
     parameterSampleFile2 => {
       task_name => $task_name,
       org       => "hg19",
@@ -185,11 +185,12 @@ sub getConfig {
 
   my $methylkitdiff_task = "MethylKitDiff";
   $config->{$methylkitdiff_task} = {
-    class                    => "Methylation::MethylKitResult",
+    class                    => "Methylation::MethylKitDiff",
     target_dir               => "${targetDir}/methylkitdiff",
     rtemplate                => "../Methylation/methylkit_diff.R",
     #option                   => " --args ${task_name} 25 0.01 16 ",
-    parameterSampleFile1_ref => "pairs",
+    source_ref => "pairs",
+    #parameterSampleFile1_ref => "pairs",
     parameterSampleFile2_ref => "groups",
     parameterSampleFile3 => {
       task_name => $task_name,
@@ -197,7 +198,7 @@ sub getConfig {
       qvalue    => 0.01,
       ncore     => 16
     },
-    parameterSampleFile4_ref => [ "MethylKitCorr", ".rds\$" ],
+    parameterSampleFile4_ref => [ "MethylKitCorr", ".filtered.cpg.meth.rds\$" ],
     output_file_ext          => ".dmcpgs",
     pbs                      => {
       "nodes"     => "1:ppn=1",

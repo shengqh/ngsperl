@@ -1,22 +1,27 @@
-require(GenomicRanges)
-require(tidyverse)
-require(methylKit)
-require(ggpubr)
-require(Cairo)
+require(GenomicRanges, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(tidyverse, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(methylKit, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(ggpubr, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(Cairo, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
 
 params <- read.table(parSampleFile3, sep = "\t", header = F)
-params %>% column_to_rownames("V2") %>% t() %>% data.frame()
+params <- params %>% column_to_rownames("V2") %>% t() %>% data.frame()
 project <- params$task_name
 diff <- as.numeric(params$diff)
 qvalue <- as.numeric(params$qvalue)
 ncore <- as.numeric(params$ncore)
 
-comparison <- read.table(parSampleFile1, sep = "\t", header = F)
-groups <- read.table(parSampleFile2, sep = "\t", header = F)
+#comparison <- read.table(parSampleFile1, sep = "\t", header = F)
+#
+#comps <- comparison[1, "V2"]
+#grp1 <- comparison[1, "V1"]
+#grp2 <- comparison[2, "V1"]
 
-comps <- comparison[1, "V2"]
-grp1 <- comparison[1, "V1"]
-grp2 <- comparison[2, "V1"]
+comps <- sample_name
+grp1 <- strsplit(comps, split = "_vs_")[[1]][2]
+grp2 <- strsplit(comps, split = "_vs_")[[1]][1]
+
+groups <- read.table(parSampleFile2, sep = "\t", header = F)
 
 groups <- groups[groups$V2 %in% c(grp1, grp2), ]
 samples1 <- groups[groups$V2 == grp1, "V1"]
