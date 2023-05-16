@@ -50,7 +50,11 @@ if(exists("parSampleFile4")){
     }
   }
 
-  n_first = as.numeric(myoptions$n_first)
+  if("n_first" %in% names(myoptions)){
+    n_first = as.numeric(myoptions$n_first)
+  }else{
+    n_first = -1
+  }
 }else{
   draw_all_groups_in_HCA<-FALSE
   draw_umap<-FALSE
