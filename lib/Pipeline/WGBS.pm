@@ -185,7 +185,7 @@ sub getConfig {
 
   my $methylkitdiff_task = "MethylKitDiff";
   $config->{$methylkitdiff_task} = {
-    class                    => "CQS::IndividualR",
+    class                    => "Methylation::MethylKitResult",
     target_dir               => "${targetDir}/methylkitdiff",
     rtemplate                => "../Methylation/methylkit_diff.R",
     #option                   => " --args ${task_name} 25 0.01 16 ",
