@@ -267,81 +267,58 @@ sub getScRNASeqConfig {
     my $perform_decontX = getValue($def, "perform_decontX", 0);
     my $remove_decontX = $perform_decontX && getValue($def, "remove_decontX", 0);
     my $prefix = "";
+
+    my $raw_individual_qc_task = undef;
+    my $qc_report_task = undef;
+
+    my $perform_sctk = getValue($def, "perform_sctk", 0);
+    my $remove_doublets = getValue($def, "remove_doublets", 0);
+    my $perform_individual_qc = getValue($def, "perform_individual_qc", 1);
+
+    my $decontX_task = undef;
     if ($perform_decontX){
-      my $decontX_task = "decontX";
+      $decontX_task = "decontX";
       add_decontX($config, $def, $summary, $target_dir, $decontX_task, "files", "raw_files", {}, 1);
       $decontX_ref = [$decontX_task, ".meta.rds"];
-
-      if($remove_decontX){
-        $files_def = [$decontX_task, ".counts.rds"];
-        $prefix = "decontX_";
-      }
     }
 
-    if ( getValue($def, "perform_sctk", 0) ){
-      my $sctk_task = "${prefix}sctk";
+    if ( $perform_sctk ){
+      my $sctk_task = "sctk";
       add_sctk($config, $def, $summary, $target_dir, $sctk_task, $files_def);
       $sctk_ref = [$sctk_task, ".meta.rds"];
     }
 
-    my $raw_individual_qc_task = undef;
-    if ( getValue($def, "perform_individual_qc", 1) ){
-      my $sct_str = get_sct_str($def);
-      $raw_individual_qc_task = "${prefix}raw_qc${sct_str}";
+    if ( $perform_individual_qc ){
+      ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+    }
 
-      add_individual_qc($config, $def, $summary, $target_dir, $raw_individual_qc_task, $filter_config_file, $files_def, 0, undef, undef);
+    if ($perform_decontX && $remove_decontX){
+      $files_def = [$decontX_task, ".counts.rds"];
+      $prefix = "decontX_";
 
-      my $reduction = "pca";
-
-      if (getValue( $def, "perform_SignacX", 0 ) ) {
-        my $signacX_task = $raw_individual_qc_task . "_SignacX";
-        add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $raw_individual_qc_task, $reduction, 1);
-        $signacX_ref = [ $signacX_task, ".meta.rds" ];
+      if ( $perform_sctk ){
+        my $sctk_task = "${prefix}sctk";
+        add_sctk($config, $def, $summary, $target_dir, $sctk_task, $files_def);
+        $sctk_ref = [$sctk_task, ".meta.rds"];
       }
 
-      if (getValue( $def, "perform_SingleR", 0 ) ) {
-        my $singleR_task = $raw_individual_qc_task . "_SingleR";
-        my $cur_options = {
-          task_name => $def->{task_name},
-          reduction => $reduction, 
-        };
-        add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $raw_individual_qc_task, $cur_options, 1 );
-        $singleR_ref = [ $singleR_task, ".meta.rds" ];
+      if ( $perform_individual_qc ){
+        ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
       }
+    }
 
-      my $qc_report_task = $raw_individual_qc_task . "_report";
-      $config->{$qc_report_task} = {
-        class => "CQS::UniqueR",
-        perform => 1,
-        target_dir => $target_dir . "/" . $qc_report_task,
-        rtemplate => "../scRNA/scRNA_func.r,../scRNA/individual_qc_report.r",
-        rReportTemplate => "../scRNA/individual_qc_report.Rmd;reportFunctions.R",
-        run_rmd_independent => 1,
-        rmd_ext => ".qc.html",
-        parameterSampleFile1 => {
-          species => getValue( $def, "species" ),
-          prefix => $project_name,
-          reduction => $reduction,
-          bubblemap_file => $def->{bubblemap_file},
-          by_sctransform => getValue( $def, "by_sctransform", 0 ),
-          use_sctransform_v2 => getValue( $def, "use_sctransform_v2", 0 ),
-          doublet_column => getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5")),
-        },
-        parameterSampleFile2_ref => $raw_individual_qc_task,
-        parameterSampleFile3_ref => $sctk_ref,
-        parameterSampleFile4_ref => $signacX_ref,
-        parameterSampleFile5_ref => $singleR_ref,
-        parameterSampleFile6_ref => $decontX_ref,
-        output_file_ext => ".qc.html",
-        sh_direct       => 1,
-        pbs             => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => getValue($def, "seurat_mem") 
-        },
-      };
+    if ( $perform_sctk && $remove_doublets){
+      my $doublet_column = getValue($def, "remove_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
+      my $nodoublets_task = "${prefix}nd";
+      
+      add_remove_doublets($config, $def, $summary, $target_dir, $nodoublets_task, $files_def, $sctk_ref, $doublet_column);
+      
+      $files_def = [$nodoublets_task, ".counts.rds"];
+      $prefix = "${prefix}nd_";
 
-      push(@$summary, $qc_report_task);
+      if ( $perform_individual_qc ){
+        ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+      }
     }
 
     my $files = $def->{files};
@@ -370,10 +347,10 @@ sub getScRNASeqConfig {
       }
     }
 
-    if(getValue($def, "perform_scDblFinder", 0)){
-      add_scDblFinder($config, $def, $individual, $target_dir, "scDblFinder", "files" );
-      #$files_def = "scDblFinder";
-    }
+    # if(getValue($def, "perform_scDblFinder", 0)){
+    #   add_scDblFinder($config, $def, $individual, $target_dir, "scDblFinder", "files" );
+    #   #$files_def = "scDblFinder";
+    # }
 
     if( $perform_split_hto_samples ) {
       my $preparation_task = add_hto_samples_preparation($config, $def, $summary, $target_dir, $hto_file_ref, $hto_raw_file_ref);
@@ -415,7 +392,7 @@ sub getScRNASeqConfig {
       }
 
       if($perform_clonotype_analysis){
-        my $split_task = add_clonotype_split($config, $def, $individual, $target_dir, $hto_ref, $clono_key);
+        my $split_task = add_clonotype_split($config, $def, $individual, $target_dir, $hto_bam_ref, $clono_key);
         $clonotype_ref = [$split_task, "all_contig_annotations.json"];
       }
 
@@ -471,30 +448,21 @@ sub getScRNASeqConfig {
     my $seurat_rawdata;
     my $is_preprocessed;
     if ( getValue( $def, "perform_seurat" ) ) {
-      my $no_doublets = "";
-
       if(getValue($def, "rawdata_from_qc", 0)){
         if(!defined $raw_individual_qc_task){
           die("trying to build rawdata from qc, please set perform_individual_qc => 1 in your configuration file");
         }
         my $sct_str = get_sct_str($def);
-        $seurat_rawdata = "seurat_rawdata_postqc${sct_str}";
+        $seurat_rawdata = "${prefix}seurat_rawdata_postqc${sct_str}";
         add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task, $decontX_ref );
         $is_preprocessed = 1;
       }else{
-        my $doublets_ref = undef;
-        my $doublet_column = undef;
-        if(getValue($def, "remove_doublets", 0) && (defined $sctk_ref)){
-          $doublets_ref = $sctk_ref;
-          $doublet_column = getValue($def, "remove_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
-          $no_doublets = "_nodoublets";
-        }
-        $seurat_rawdata = "seurat_rawdata${no_doublets}";
+        $seurat_rawdata = "${prefix}seurat_rawdata";
 
         if (getValue($def, "merge_seurat_object", 0)){
-          add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, $files_def, $doublets_ref, $doublet_column, 0, {});
+          add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, $files_def, undef, undef, 0, {});
         }else{
-          add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, $doublets_ref, $doublet_column );
+          add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef );
         }
         $is_preprocessed = 0;
       }
@@ -502,7 +470,7 @@ sub getScRNASeqConfig {
       push (@report_files, ($seurat_rawdata, "rawobj.rds"));
       push (@report_names, "raw_obj");
 
-      my ($seurat_task, $reduction) = add_seurat($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets, $is_preprocessed);
+      my ($seurat_task, $reduction) = add_seurat($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, 0, $is_preprocessed, $prefix);
       my $obj_ref = [$seurat_task, ".final.rds"];
 
       push (@report_files, ($seurat_task, ".final.png", 
