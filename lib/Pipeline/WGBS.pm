@@ -344,7 +344,7 @@ sub getConfig {
       MethylKitDiff_path => $config->{MethylKitDiff}{target_dir} . "/result/",
     },
     parameterSampleFile3   => \@copy_files,
-    prameterSampleFile4_ref   => $webgestalt_task,
+    parameterSampleFile4_ref   => $webgestalt_task,
     parameterSampleFile5_ref   => $abismal_task ,
     parameterSampleFile6_ref   => $dnmtools_task ,
     parameterSampleFile7_ref   => [ $methylkitcorr_task, ".pdf\$|.png\$" ],
