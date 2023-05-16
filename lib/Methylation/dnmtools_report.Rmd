@@ -44,7 +44,8 @@ myoptions<-split(option_tbl$V1, option_tbl$V2)
 project <- myoptions$task_name
 abismal_path <- myoptions$abismal_path
 dnmtools_path <- myoptions$dnmtools_path
-dnmtoolsdiff_path <- myoptions$dnmtoolsdiff_path
+MethylKitCorr_path <- myoptions$MethylKitCorr_path
+MethylKitDiff_path <- myoptions$MethylKitDiff_path
 meta <- myoptions$meta_data
 
 files<-read.table("fileList1.txt", sep="\t", header=FALSE, as.is=TRUE)
@@ -555,79 +556,80 @@ g8
 
 
 ```{r dmcpg_table, include=TRUE, fig.align="center", out.height = "680px", out.width='800px', fig.cap=c("MDS plot based on correlation distance of β value of CpG sites"), echo=FALSE}
-#knitr::include_graphics("./QZ9413_report/methyl_CpG_bvalue_cor_MDS_plot.png")
-mincov <- 4
-cpg.pat <- ".meth$"
+knitr::include_graphics(paste0(MethylKitCorr_path, project, "_methyl_CpG_bvalue_corr_MDS_plot.png"))
 
-cpg.all <- list.files(path = dnmtools_path, pattern = cpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
-cpg.all <- cpg.all[!(str_detect(cpg.all,"all.meth$"))]
-cov.lst <- list()
-cpg.lst <- list()
-for (i in 1:length(cpg.all)) {
-	#read in *.meth files
-	cpg.infile <- paste(dnmtools_path, cpg.all[i], sep = "/")
-	id <- gsub("(.*?)\\.meth$", "\\1", cpg.all[i])
-	#format cpg data frame
-	DT.cpg <- read.table(cpg.infile, header = F, stringsAsFactors = FALSE)
-	colnames(DT.cpg) <- c("chr", "base", "strand", "Type", id, "coverage")
-	DT.cpg$chrBase <- paste(DT.cpg$chr, DT.cpg$base, sep = ".")
-	DT.cov <- DT.cpg[,c("chrBase", "coverage")]
-	colnames(DT.cov) <- c("chrBase", id)
-  DT.cpg <- DT.cpg[,c("chrBase", id)]
-  cov.lst[[id]] <- DT.cov
-	cpg.lst[[id]] <- DT.cpg
-}
-
-cov.all.df <- cov.lst %>% 
-    purrr::reduce(full_join, by='chrBase') %>%
-    mutate_at(names(cov.lst), as.numeric) %>%
-    dplyr::filter(if_any(is.numeric, ~ .x > mincov))
-left_sites <- cov.all.df$chrBase
-  
-cpg.all.df <- cpg.lst %>% 
-  purrr::reduce(full_join, by='chrBase') %>%
-  mutate_at(names(cpg.lst), as.numeric) %>%
-  dplyr::filter(chrBase %in% left_sites) %>%
-  column_to_rownames("chrBase")
-saveRDS(cpg.all.df, file = paste0(project, "/", project, ".all.cpg.mincov", mincov, ".rds"))
-
-cpg_bvalue_cor <- cor(cpg.all.df, method = "pearson", use = "complete.obs")
-
-cpg_bvalue_mds <- (1 - cpg_bvalue_cor) %>%
-  cmdscale() %>%
-  as_tibble()
-
-colnames(cpg_bvalue_mds) <- c("Dim.1", "Dim.2")
-#rownames(cpg_bvalue_mds) <- colnames(cpg_bvalue_df)
-meta_df <- read.table(meta, sep = "\t", header = T)
-#cpg_bvalue_mds$group <- c(rep("DKs8", 4), rep("DLD1", 5), rep("Kidney", 3))
-#cpg_bvalue_mds$type <- c("cell", "EV", "EV", "EV", "cell", "EV", "EV", "EV", "EV", "EV", "cell", "EV")
-cpg_bvalue_mds$group <- meta_df$group
-cpg_bvalue_mds$type <- meta_df$type
-
-# Plot MDS
-dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2", 
-                      label = colnames(cpg.all.df),
-                      xlab = "MDS 1",
-                      ylab = "MDS 2",
-                      color = "group",
-                      palette = "jco",
-                      size = 1, 
-                      ellipse = F,
-                      ellipse.type = "norm",
-                      repel = TRUE) + 
-  theme_bw()
-
-
-pdf(file = paste0(project, "/", project, ".methyl_CpG_bvalue_cor_MDS_plot.pdf"), width = 6, height = 6, pointsize = 8, onefile = T)
-dms_plot
-invisible(dev.off())
-
-png(file=paste0(project, "/", project, ".methyl_CpG_bvalue_cor_MDS_plot.png"), height=1500, width=1500, res=300)
-print(dms_plot)
-invisible(dev.off())
-
-dms_plot
+#mincov <- 4
+#cpg.pat <- ".meth$"
+#
+#cpg.all <- list.files(path = dnmtools_path, pattern = cpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
+#cpg.all <- cpg.all[!(str_detect(cpg.all,"all.meth$"))]
+#cov.lst <- list()
+#cpg.lst <- list()
+#for (i in 1:length(cpg.all)) {
+#	#read in *.meth files
+#	cpg.infile <- paste(dnmtools_path, cpg.all[i], sep = "/")
+#	id <- gsub("(.*?)\\.meth$", "\\1", cpg.all[i])
+#	#format cpg data frame
+#	DT.cpg <- read.table(cpg.infile, header = F, stringsAsFactors = FALSE)
+#	colnames(DT.cpg) <- c("chr", "base", "strand", "Type", id, "coverage")
+#	DT.cpg$chrBase <- paste(DT.cpg$chr, DT.cpg$base, sep = ".")
+#	DT.cov <- DT.cpg[,c("chrBase", "coverage")]
+#	colnames(DT.cov) <- c("chrBase", id)
+#  DT.cpg <- DT.cpg[,c("chrBase", id)]
+#  cov.lst[[id]] <- DT.cov
+#	cpg.lst[[id]] <- DT.cpg
+#}
+#
+#cov.all.df <- cov.lst %>% 
+#    purrr::reduce(full_join, by='chrBase') %>%
+#    mutate_at(names(cov.lst), as.numeric) %>%
+#    dplyr::filter(if_any(is.numeric, ~ .x > mincov))
+#left_sites <- cov.all.df$chrBase
+#  
+#cpg.all.df <- cpg.lst %>% 
+#  purrr::reduce(full_join, by='chrBase') %>%
+#  mutate_at(names(cpg.lst), as.numeric) %>%
+#  dplyr::filter(chrBase %in% left_sites) %>%
+#  column_to_rownames("chrBase")
+#saveRDS(cpg.all.df, file = paste0(project, "/", project, ".all.cpg.mincov", mincov, ".rds"))
+#
+#cpg_bvalue_cor <- cor(cpg.all.df, method = "pearson", use = "complete.obs")
+#
+#cpg_bvalue_mds <- (1 - cpg_bvalue_cor) %>%
+#  cmdscale() %>%
+#  as_tibble()
+#
+#colnames(cpg_bvalue_mds) <- c("Dim.1", "Dim.2")
+##rownames(cpg_bvalue_mds) <- colnames(cpg_bvalue_df)
+#meta_df <- read.table(meta, sep = "\t", header = T)
+##cpg_bvalue_mds$group <- c(rep("DKs8", 4), rep("DLD1", 5), rep("Kidney", 3))
+##cpg_bvalue_mds$type <- c("cell", "EV", "EV", "EV", "cell", "EV", "EV", "EV", "EV", "EV", "cell", "EV")
+#cpg_bvalue_mds$group <- meta_df$group
+#cpg_bvalue_mds$type <- meta_df$type
+#
+## Plot MDS
+#dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2", 
+#                      label = colnames(cpg.all.df),
+#                      xlab = "MDS 1",
+#                      ylab = "MDS 2",
+#                      color = "group",
+#                      palette = "jco",
+#                      size = 1, 
+#                      ellipse = F,
+#                      ellipse.type = "norm",
+#                      repel = TRUE) + 
+#  theme_bw()
+#
+#
+#pdf(file = paste0(project, "/", project, ".methyl_CpG_bvalue_cor_MDS_plot.pdf"), width = 6, height = 6, pointsize = 8, onefile = T)
+#dms_plot
+#invisible(dev.off())
+#
+#png(file=paste0(project, "/", project, ".methyl_CpG_bvalue_cor_MDS_plot.png"), height=1500, width=1500, res=300)
+#print(dms_plot)
+#invisible(dev.off())
+#
+#dms_plot
 ```
 
 
@@ -639,12 +641,12 @@ dms_plot
 ```{r mds, include=TRUE, message = F, warning = F, fig.align="center", echo=FALSE}
 dmcpg.pat <- ".dmcpgs$"
 
-dmcpg.all <- list.files(path = dnmtoolsdiff_path, pattern = dmcpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
+dmcpg.all <- list.files(path = MethylKitDiff_path, pattern = dmcpg.pat, all.files = FALSE, recursive = T, ignore.case = FALSE, include.dirs = FALSE)
 
 dmcpg.lst <- list()
 for (i in 1:length(dmcpg.all)) {
 	#read in *.meth files
-	dmcpg.infile <- paste(dnmtoolsdiff_path, dmcpg.all[i], sep = "/")
+	dmcpg.infile <- paste(MethylKitDiff_path, dmcpg.all[i], sep = "/")
 	comparison <- gsub("(.*)\\/.*\\.dmcpgs$", "\\1", dmcpg.all[i])
 	sample <- gsub(".*\\/(.*)\\.dmcpgs", "\\1", dmcpg.all[i])
 	sample <- str_replace(sample, paste0(comparison, "_"), "")

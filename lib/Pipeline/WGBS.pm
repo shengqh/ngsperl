@@ -137,57 +137,113 @@ sub getConfig {
   };
   push(@$tasks, "annovar");
 
-  my $dnmtoolsdiff_task = "DNMToolsDiff";
-  $config->{$dnmtoolsdiff_task} = {
-    class      => "Methylation::DNMToolsDiff",
-    perform    => 1,
-    target_dir => "${targetDir}/DNMToolsDiff",
-    option     => "",
-    source_ref    => "pairs",
-    methfile_ref  => [ "DNMTools", "^(?!.*?all).*\.meth\$" ],
-    hmrfile_ref   => [ "DNMTools", ".hmr\$" ],
-    minCpG        => 10,
-    minSigCpG     => 5,
-    perc_cut      => 0.25,
-    FDR           => 0.05,
-    mincov        => 4,
-    chr_size_file => $chr_size_file,
-    pbs => {
+  my $methylkitprep_task = "MethylKitPreparation";
+  $config->{$methylkitprep_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${targetDir}/methylkitprep",
+    option                   => "",
+    rtemplate                => "../Methylation/prepare_CpG_input.R",
+    output_file_ext          => ".CpG.txt",#;.corr_MDS_plot.png
+    #parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
+    sh_direct                => 1,
+    pbs                      => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => "60gb"
+      "walltime"  => "2",
+      "mem"       => "10gb"
     },
   };
-  push(@$tasks, "DNMToolsDiff");
+  push(@$tasks, "MethylKitPreparation");
 
-  my $dnmtoolsdiffannovar_task = "DNMToolsDiffAnnovar";
-  $config->{$dnmtoolsdiffannovar_task} = {
+  my $methylkitcorr_task = "MethylKitCorr";
+  $config->{$methylkitcorr_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${targetDir}/methylkitcorr",
+    option                   => " --args ${task_name} hg19 group 4 ",
+    rtemplate                => "../Methylation/methylkit_corr.R",
+    output_file_ext          => "_corr_MDS_plot.png;_corr_MDS_plot.pdf",
+    #parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "80gb"
+    },
+  };
+  push(@$tasks, "MethylKitCorr");
+
+  my $methylkitdiff_task = "MethylKitDiff";
+  $config->{$methylkitdiff_task} = {
+    class                    => "CQS::IndividualR",
+    target_dir               => "${targetDir}/methylkitdiff",
+    rtemplate                => "../Methylation/methylkit_diff.R",
+    option                   => " --args ${task_name} 25 0.01 16 ",
+    parameterSampleFile1_ref => "pairs",
+    parameterSampleFile2_ref => "groups",
+    output_file_ext          => ".dmcpgs",
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "80gb"
+    },
+  };
+  push(@$tasks, "MethylKitDiff");
+
+
+#  my $dnmtoolsdiff_task = "DNMToolsDiff";
+#  $config->{$dnmtoolsdiff_task} = {
+#    class      => "Methylation::DNMToolsDiff",
+#    perform    => 1,
+#    target_dir => "${targetDir}/DNMToolsDiff",
+#    option     => "",
+#    source_ref    => "pairs",
+#    methfile_ref  => [ "DNMTools", "^(?!.*?all).*\.meth\$" ],
+#    hmrfile_ref   => [ "DNMTools", ".hmr\$" ],
+#    parameterSampleFile1_ref => "pairs",
+#    parameterSampleFile2_ref => "groups",
+#    minCpG        => 10,
+#    minSigCpG     => 5,
+#    perc_cut      => 0.25,
+#    FDR           => 0.05,
+#    mincov        => 4,
+#    chr_size_file => $chr_size_file,
+#    pbs => {
+#      "nodes"     => "1:ppn=1",
+#      "walltime"  => "12",
+#      "mem"       => "60gb"
+#    },
+#  };
+#  push(@$tasks, "DNMToolsDiff");
+
+  my $methylkitdiffannovar_task = "MethylKitDiffAnnovar";
+  $config->{$methylkitdiffannovar_task} = {
     class      => "Annotation::Annovar",
     perform    => 1,
-    target_dir => "${targetDir}/DNMToolsDiffAnnovar",
+    target_dir => "${targetDir}/MethylKitDiffAnnovar",
     option     => $annovar_param,
     annovar_db => $annovar_db,
     buildver   => $annovar_buildver,
     perform_splicing => 0,
     remove_empty_source => 1,
     isBed      => 1,
-    source_ref => [ "DNMToolsDiff", ".DMR.filtered\$|\.dmcpgs\$" ],
+    source_ref => [ "MethylKitDiff", "\.dmcpgs\$" ],
     pbs        => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "40gb"
     },
   };
-  push(@$tasks, "DNMToolsDiffAnnovar");
+  push(@$tasks, "MethylKitDiffAnnovar");
 
-  $config->{DNMToolsDiffAnnovarGenes} = {
+  $config->{MethylKitDiffAnnovarGenes} = {
     class              => "CQS::ProgramWrapperOneToOne",
     perform            => 1,
-    target_dir         => "$targetDir/DNMToolsDiffAnnovarGenes",
+    target_dir         => "$targetDir/MethylKitDiffAnnovarGenes",
     interpretor => "perl",
     program => "../Methylation/get_gene_names.pl",
     #parameterSampleFile1_ref => [ "DNMToolsDiffAnnovar" ],
-    source_ref => ["DNMToolsDiffAnnovar", ".dmcpgs.annovar.final.tsv\$" ],
+    source_ref => ["MethylKitDiffAnnovar", ".dmcpgs.annovar.final.tsv\$" ],
     output_file_prefix => ".dmcpgs.annovar.final.tsv.genename.txt",
     output_ext => ".dmcpgs.annovar.final.tsv.genename.txt",
     output_by_file => 0,
@@ -198,27 +254,27 @@ sub getConfig {
       "mem"       => "10gb"
     },
   };
-  push(@$tasks, "DNMToolsDiffAnnovarGenes");
+  push(@$tasks, "MethylKitDiffAnnovarGenes");
 
-  my $webgestalt_task = addWebgestalt($config, $def, $tasks, $targetDir, "DNMToolsDiffAnnovarGenes",  [ "DNMToolsDiffAnnovarGenes", ".genename.txt\$" ]);
+  my $webgestalt_task = addWebgestalt($config, $def, $tasks, $targetDir, "MethylKitDiffAnnovarGenes",  [ "MethylKitDiffAnnovarGenes", ".genename.txt\$" ]);
 
-  my $homer_task = "HOMER_DMR";
-  $config->{$homer_task} = {
-    class        => "Homer::FindMotifs",
-    perform      => 1,
-    target_dir   => "${targetDir}/HOMER_DMR",
-    option       => "-nomotif",
-    homer_genome => "hg19",
-    source_ref   => [ "DNMToolsDiff", ".DMR.filtered\$" ],
-    remove_empty_source => 1,
-    sh_direct    => 0,
-    pbs          => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "40gb"
-    },
-  };
-  push(@$tasks, "HOMER_DMR");
+#  my $homer_task = "HOMER_DMR";
+#  $config->{$homer_task} = {
+#    class        => "Homer::FindMotifs",
+#    perform      => 1,
+#    target_dir   => "${targetDir}/HOMER_DMR",
+#    option       => "-nomotif",
+#    homer_genome => "hg19",
+#    source_ref   => [ "DNMToolsDiff", ".DMR.filtered\$" ],
+#    remove_empty_source => 1,
+#    sh_direct    => 0,
+#    pbs          => {
+#      "nodes"     => "1:ppn=1",
+#      "walltime"  => "2",
+#      "mem"       => "40gb"
+#    },
+#  };
+#  push(@$tasks, "HOMER_DMR");
 
   my @report_files = ();
   my @report_names = ();
@@ -239,12 +295,12 @@ sub getConfig {
   if(( defined $dnmtoolsannovar_task ) && ( defined $config->{$dnmtoolsannovar_task} )) {
     push( @copy_files, $dnmtoolsannovar_task, ".annovar.final.tsv\$" );
   }
-  if (( defined $dnmtoolsdiff_task ) && ( defined $config->{$dnmtoolsdiff_task} )) {
-    push( @copy_files, $dnmtoolsdiff_task, ".DMR.filtered\$" );
-    push( @copy_files, $dnmtoolsdiff_task, ".dmcpgs\$" );
+  if (( defined $methylkitdiff_task ) && ( defined $config->{$methylkitdiff_task} )) {
+      #push( @copy_files, $methylkitdiff_task, ".DMR.filtered\$" );
+    push( @copy_files, $methylkitdiff_task, ".dmcpgs\$" );
   }
-  if (( defined $dnmtoolsdiffannovar_task ) && ( defined $config->{$dnmtoolsdiffannovar_task} )) {
-    push( @copy_files, $dnmtoolsdiffannovar_task, ".annovar.final.tsv\$" );
+  if (( defined $methylkitdiffannovar_task ) && ( defined $config->{$methylkitdiffannovar_task} )) {
+    push( @copy_files, $methylkitdiffannovar_task, ".annovar.final.tsv\$" );
   }
   if ( defined $webgestalt_task ) {
     push( @copy_files, $webgestalt_task, "_geneontology_Biological_Process\$" );
@@ -268,7 +324,8 @@ sub getConfig {
       task_name => $task_name,
       abismal_path  => $config->{abismal}{target_dir} . "/result/",
       dnmtools_path => $config->{DNMTools}{target_dir} . "/result/",
-      dnmtoolsdiff_path => $config->{DNMToolsDiff}{target_dir} . "/result/",
+      MethylKitCorr_path => $config->{MethylKitCorr}{target_dir} . "/result/",
+      MethylKitDiff_path => $config->{MethylKitDiff}{target_dir} . "/result/",
       meta_data => "../../" . $task_name . "_meta.tsv",
     },
     #parameterSampleFile3 => [],
