@@ -99,10 +99,7 @@ sub perform {
     print $rf "rm(list=ls()) \n";
     print $rf "sample_name='$sample_name'\n";
 
-    my $all_results =  $self->result( $config, $section );
-    my $cur_results = $all_results->{$sample_name};
-    #print(Dumper($all_results));
-    my $final_file = $cur_results->[0];
+    my $final_file = $self->get_absolute_final_file($config, $section, $sample_name);
 
     my $output_file_r = $sample_name . $output_file;
 
