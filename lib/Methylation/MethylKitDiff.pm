@@ -35,31 +35,70 @@ sub result {
   my $comparisons = get_raw_files( $config, $section );
 
   my $result = {};
-  for my $group_name ( keys %{$comparisons} ) {
+  for my $comparison_name ( keys %{$comparisons} ) {
     my @result_files = ();
-    my $cur_dir      = $result_dir . "/$group_name";
+    my $cur_dir      = $result_dir . "/$comparison_name";
     my $filtered;
-    my @sampleNames = @{ $comparisons->{$group_name}; };
+    my @group_names = @{ $comparisons->{$comparison_name}; };
 
-    my $dmcpgsFile1=${group_name}."_".$sampleNames[0].".dmcpgs";
-    my $dmcpgsFile2=${group_name}."_".$sampleNames[1].".dmcpgs";
+    my $dmcpgsFile1=${comparison_name}."_".$group_names[0].".dmcpgs";
+    my $dmcpgsFile2=${comparison_name}."_".$group_names[1].".dmcpgs";
 
     @result_files = ();
     push( @result_files, "$cur_dir/${dmcpgsFile1}" );
     $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-      $result->{$group_name . "_" . $sampleNames[0]} = $filtered;
+      $result->{$comparison_name . "_" . $group_names[0]} = $filtered;
     }
     
     @result_files = ();
     push( @result_files, "$cur_dir/${dmcpgsFile2}" );
     $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-      $result->{$group_name . "_" . $sampleNames[1]} = $filtered;
+      $result->{$comparison_name . "_" . $group_names[1]} = $filtered;
     }
   }
 
   return $result;
+}
+
+sub get_absolute_final_file {
+  my ( $self, $config, $section, $comparison_name ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
+
+  my $comparisons = get_raw_files( $config, $section );
+
+  my $cur_dir      = $result_dir . "/$comparison_name";
+
+  my @group_names = @{ $comparisons->{$comparison_name} };
+
+  my $dmcpgsFile1=${comparison_name}."_".$group_names[0].".dmcpgs";
+
+  return( "$cur_dir/${dmcpgsFile1}" );
+}
+
+sub get_result_pbs {
+  my ( $self, $config, $section ) = @_;
+  
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
+  
+  my $comparisons = get_raw_files( $config, $section );
+
+  my $result = {};
+  
+  for my $comparison_name ( sort keys %$comparisons ) {
+    my $pbs_file = $self->get_pbs_filename( $pbs_dir, $comparison_name );
+
+    my @group_names = @{ $comparisons->{$comparison_name} };
+
+    $result->{$comparison_name . "_" . $group_names[0]} = $pbs_file;
+    $result->{$comparison_name . "_" . $group_names[1]} = $pbs_file;
+  }
+
+  #print(Dumper($result));
+  
+  return ($result);
 }
 
 1;
