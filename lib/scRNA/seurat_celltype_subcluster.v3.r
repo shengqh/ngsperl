@@ -1,16 +1,17 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='combined'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge_dr0.5_01_call/result/crs.scDynamic.meta.rds'
-parFile3='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
+parSampleFile6='fileList6.txt'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge/result/combined.final.rds'
+parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/combined.scDynamic.meta.rds'
+parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/essential_genes/result/combined.txt'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge_dr0.5_02_subcluster_rh/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -217,6 +218,12 @@ if(has_bubblemap){
   bubble_genes<-unique(genes_df$gene)
 }
 
+if(file.exists('fileList6.txt')){
+  bubble_file_map = read_file_map('fileList6.txt')
+}else{
+  bubble_file_map = c()
+}
+
 resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.5, by = 0.1))
 
 layer4map<-split(tiers$Layer4, tiers$Celltype.name)
@@ -255,7 +262,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[4]
+pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -482,7 +489,14 @@ for(pct in previous_celltypes){
     cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
     if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file)
+      if(pct %in% names(bubble_file_map)){
+        sub_bubble_file = bubble_file_map[[pct]]
+        cur_bubblemap_files = c(bubblemap_file, sub_bubble_file)
+      }else{
+        cur_bubblemap_files = bubblemap_file
+      }
+      
+      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_files)
 
       dot_file = paste0(cluster_prefix, ".dot.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)

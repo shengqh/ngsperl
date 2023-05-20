@@ -906,7 +906,7 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   }
 }
 
-read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
+do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
   library("readxl")
   library("tidyr")
   
@@ -977,6 +977,21 @@ read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
   genes$cell_type=factor(genes$cell_type, levels=unique(genes$cell_type))
   
   return(genes)
+}
+
+read_bubble_genes<-function(bubblemap_files, allgenes=c(), species=NULL){
+  result = NULL
+  for(bubblemap_file in bubblemap_files){
+    genes = do_read_bubble_genes(bubblemap_file, allgenes, species)
+    if(is.null(result)){
+      result = genes
+    }else{
+      result = rbind(result, genes)
+    }
+  }
+  result$cell_type=factor(result$cell_type, levels=unique(result$cell_type))
+  
+  return(result)
 }
 
 find_number_of_reduction<-function(obj, reduction="pca"){
