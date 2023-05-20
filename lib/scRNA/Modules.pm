@@ -1612,6 +1612,7 @@ sub addSubCluster {
     parameterSampleFile3 => $rename_map,
     parameterSampleFile4_ref => $signacX_ref,
     parameterSampleFile5_ref => $singleR_ref,
+    parameterSampleFile6 => $def->{dynamic_bubble_file},
     output_file_ext      => ".meta.rds,.files.csv",
     sh_direct            => 1,
     pbs                  => {
@@ -2728,7 +2729,7 @@ sub add_clustree_rmd {
 
 sub add_bubble_plots {
   my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name, $rmd_ext) = @_;
-  my $p2key = (-e $meta_ref) ? "parameterFile2" : "parameterFile2_ref";
+  my $p2key = defined($meta_ref) ? ((-e $meta_ref) ? "parameterFile2" : "parameterFile2_ref") : "parameterFile2";
   $config->{$bubble_task} = {
     class                => "CQS::UniqueR",
     perform              => 1,
