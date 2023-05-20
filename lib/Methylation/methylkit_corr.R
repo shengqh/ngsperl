@@ -1,8 +1,8 @@
-require(GenomicRanges, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
-require(tidyverse, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
-require(methylKit, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
-require(ggpubr, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
-require(Cairo, lib.loc = "/data/cqs/ywang/soft/R_4.1/Packages")
+require(GenomicRanges)
+require(tidyverse)
+require(methylKit)
+require(ggpubr)
+require(Cairo)
 
 params <- read.table(parSampleFile2, sep = "\t", header = F)
 params <- params %>% column_to_rownames("V2") %>% t() %>% data.frame()
