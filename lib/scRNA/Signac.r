@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20230512_Vandy_AS_scRNA_sct2_atac/signac_individual/result/AS01')
+setwd('/nobackup/shah_lab/shengq2/20230517_Vandy_AS_scRNA_sct2_atac/signac_individual/result/AS01')
 
 ### Parameter setting end ###
 
@@ -86,6 +86,12 @@ pbmc <- subset(
     nucleosome_signal < max_nucleosome_signal &
     TSS.enrichment > min_TSS_enrichment
 )
+
+saveRDS(pbmc, "obj.rds")
+
+frags <- Fragments(object = pbmc)
+allfragpaths <- sapply(X = frags, FUN = GetFragmentData, slot = "path")
+fragpath <- GetFragmentData(object = allfragpaths, slot = "path")
 
 peaks <- CallPeaks(pbmc, macs2.path=macs_path)
 
