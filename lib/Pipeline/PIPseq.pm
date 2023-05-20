@@ -93,8 +93,8 @@ $pipseeker_docker_command count --input-path __FILE__ --id __NAME__ --output-roo
   my $pipseeker_qc = "qc";
 
   if(getValue($def, "perform_individual_qc", 1)){
-    my $qc_pattern = getValue($def, "qc_pattern", "sensitivity_[345]");
-    add_individual_qc($config, $def, $summary, $target_dir, $pipseeker_qc, undef, 0, undef, undef, [$pipseeker, $qc_pattern]);
+    my $qc_pattern = getValue($def, "qc_pattern", "sensitivity_[12345]");
+    add_individual_qc($config, $def, $summary, $target_dir, $pipseeker_qc, undef, [$pipseeker, $qc_pattern], undef, undef, undef);
   }
 
   return ($config);
