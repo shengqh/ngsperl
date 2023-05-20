@@ -16,6 +16,7 @@ setwd('/nobackup/shah_lab/shengq2/20230512_Vandy_AS_scRNA_sct2_atac/archR/result
 source("scRNA_func.r")
 
 #https://www.archrproject.com/articles/Articles/tutorial.html
+#https://github.com/GreenleafLab/ArchR_Website/blob/ui_updates/bookdown/21_MultiomicDataAnalysis.Rmd
 
 library(ArchR)
 set.seed(20230512)
@@ -25,6 +26,11 @@ minTSS=to_numeric(myoptions$minTSS, 4)
 minFrags=to_numeric(myoptions$minFrags, 1000)
 threads=to_numeric(myoptions$threads, 8)
 genome=get_value(myoptions$genome, "hg38")
+sampleCells=to_numeric(myoptions$sampleCells, 10000)
+minDist=to_numeric(myoptions$minDist, 0.8)
+
+lsi_resolution=to_numeric(myoptions$lsi_resolution, 0.2)
+cluster_resolution=to_numeric(myoptions$cluster_resolution, 0.4)
 
 addArchRThreads(threads = threads) 
 
@@ -37,54 +43,62 @@ addArchRGenome(genome)
 ArrowFiles <- createArrowFiles(
   inputFiles = inputFiles,
   sampleNames = names(inputFiles),
-  minTSS = 4, #Dont set this too high because you can always increase later
-  minFrags = 1000, 
+  minTSS = minTSS, #Dont set this too high because you can always increase later
+  minFrags = minFrags, 
   addTileMat = TRUE,
   addGeneScoreMat = TRUE
-)
-
-#Inferring Doublets
-doubScores <- addDoubletScores(
-  input = ArrowFiles,
-  k = 10, #Refers to how many cells near a "pseudo-doublet" to count.
-  knnMethod = "UMAP", #Refers to the embedding to use for nearest neighbor search.
-  LSIMethod = 1
 )
 
 #Creating an ArchRProject
 proj <- ArchRProject(
   ArrowFiles = ArrowFiles, 
   outputDirectory = ".",
-  copyArrows = TRUE #This is recommened so that you maintain an unaltered copy for later usage.
+  copyArrows = FALSE #
+  #copyArrows = TRUE #This is recommened so that you maintain an unaltered copy for later usage.
 )
 
-getAvailableMatrices(proj)
+#Filtering doublets
+proj <- addDoubletScores(proj, useMatrix = "TileMatrix", force = TRUE)
+proj <- filterDoublets(proj)
 
-proj <- filterDoublets(ArchRProj = proj)
+#getAvailableMatrices(proj)
 
 #Dimensionality Reduction and Clustering
 
 #ArchR implements an iterative LSI dimensionality reduction
-proj <- addIterativeLSI(ArchRProj = proj, useMatrix = "TileMatrix", name = "IterativeLSI")
+proj <- addIterativeLSI(
+  ArchRProj = proj, 
+  clusterParams = list(
+    resolution = lsi_resolution, 
+    sampleCells = sampleCells,
+    n.start = 10
+  ),
+  saveIterations = FALSE,
+  useMatrix = "TileMatrix", 
+  depthCol = "nFrags",
+  name = "LSI_ATAC"
+)
 
-proj <- addClusters(input = proj, reducedDims = "IterativeLSI")
+proj <- addClusters(input = proj, reducedDims = "LSI_ATAC")
 
 #Visualizing in a 2D UMAP Embedding
-proj <- addUMAP(ArchRProj = proj, reducedDims = "IterativeLSI")
+proj <- addUMAP(proj, reducedDims = "LSI_ATAC", name = "UMAP_ATAC", minDist = minDist, force = TRUE)
 
-p1 <- plotEmbedding(ArchRProj = proj, colorBy = "cellColData", name = "Clusters", embedding = "UMAP") + theme(aspect.ratio=1)
+proj <- addClusters(proj, reducedDims = "LSI_ATAC", name = "Clusters_ATAC", resolution = cluster_resolution, force = TRUE)
+
+p1 <- plotEmbedding(ArchRProj = proj, colorBy = "cellColData", name = "Clusters_ATAC", embedding = "UMAP_ATAC") + theme(aspect.ratio=1)
 png(paste0(outFile, ".cluster.umap.png"), width=3000, height=2500, res=300)
 print(p1)
 dev.off()
 
 if(length(inputFiles) > 0){
-  p1 <- plotEmbedding(ArchRProj = proj, colorBy = "cellColData", name = "Sample", embedding = "UMAP") + theme(aspect.ratio=1)
-  png(paste0(outFile, ".sample.umap.png"), width=3000, height=2500, res=300)
+  p1 <- plotEmbedding(ArchRProj = proj, colorBy = "cellColData", name = "Sample", embedding = "UMAP_ATAC") + theme(aspect.ratio=1)
+  png(paste0(outFile, ".sample.umap.all.png"), width=3000, height=2500, res=300)
   print(p1)
   dev.off()
 }
 
-saveArchRProject(proj, outFile)
+#saveArchRProject(proj, outFile)
 
 #Assigning Clusters with Gene Scores
 
