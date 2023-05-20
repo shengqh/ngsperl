@@ -145,6 +145,7 @@ sub getConfig {
     perform                  => 1,
     target_dir               => "${targetDir}/methylkitprep",
     option                   => "",
+    docker_command           => singularity_prefix() . " /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
     rtemplate                => "../Methylation/prepare_CpG_input.R",
     output_file_ext          => ".CpG.txt",
     source_ref => [ "DNMTools", ".meth\$" ],
@@ -164,6 +165,7 @@ sub getConfig {
     perform                  => 1,
     target_dir               => "${targetDir}/methylkitcorr",
     #option                   => " --args ${task_name} hg19 group 4 ",
+    docker_command           => singularity_prefix() . " /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
     rtemplate                => "../Methylation/methylkit_corr.R",
     output_file_ext          => "_methyl_CpG_bvalue_corr_MDS_plot.png;_methyl_CpG_bvalue_corr_MDS_plot.pdf;.filtered.cpg.meth.rds",
     parameterSampleFile2 => {
@@ -187,6 +189,7 @@ sub getConfig {
   $config->{$methylkitdiff_task} = {
     class                    => "Methylation::MethylKitDiff",
     target_dir               => "${targetDir}/methylkitdiff",
+    docker_command           => singularity_prefix() . " /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
     rtemplate                => "../Methylation/methylkit_diff.R",
     #option                   => " --args ${task_name} 25 0.01 16 ",
     source_ref => "pairs",
@@ -332,6 +335,7 @@ sub getConfig {
     class                      => "CQS::BuildReport",
     perform                    => 1,
     target_dir                 => "$targetDir/report",
+    docker_command           => singularity_prefix() . " /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
     report_rmd_file            => "../Methylation/dnmtools_report.Rmd",
     additional_rmd_files       => "../Pipeline/Pipeline.R;reportFunctions.R",
     parameterSampleFile1_ref   => \@report_files,
