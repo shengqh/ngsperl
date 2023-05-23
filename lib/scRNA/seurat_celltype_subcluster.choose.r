@@ -13,6 +13,7 @@ setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct
 ### Parameter setting end ###
 
 source("scRNA_func.r")
+library(tools)
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -366,7 +367,12 @@ cat("redo UMAP ...\n")
 obj <- RunUMAP(object = obj, dims=c(1:pca_dims), verbose = FALSE)
 
 cat("saving final object ...\n")
-saveRDS(obj, paste0(outFile, ".final.rds"))
+final_file = paste0(outFile, ".final.rds")
+saveRDS(obj, final_file)
+
+cat("calculate md5sum ...\n")
+md5 = md5sum(final_file)
+writeLines(md5, paste0(final_file, ".md5"))
 
 cat("output figures ...\n")
 
