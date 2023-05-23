@@ -1452,6 +1452,7 @@ myScaleData<-function(object, features, assay, ...){
 }
 
 get_top10_markers<-function(markers){
+  library(tidyverse)
   markers=markers[markers$p_val_adj < 0.05,]
   top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
   return(top10)
