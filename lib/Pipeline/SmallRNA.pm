@@ -1811,6 +1811,63 @@ fi
       addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome",       \@nonhost_genome_groups,      $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
       addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads", \@nonhost_genome_group_reads, $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
     }
+
+    #my $is_custom_analyzed = 0;
+    if (getValue($def, "search_nonhost_genome_custom_group") && defined $def->{custom_group_gtf}){
+      #$is_custom_analyzed = 1;
+      my $intermediate_dir = getIntermidiateDir($nonhost_genome_dir, $def);
+
+      my $nonhostGroup = "custom_group";
+      my $bowtie1Task = "bowtie1_${nonhostGroup}_pm";
+
+      my $gene_bam_task = $bowtie1Task . "_gene";
+      $config->{$gene_bam_task} = {
+        class                    => "CQS::ProgramWrapperOneToOne",
+        perform                  => 1,
+        target_dir               => "$intermediate_dir/$gene_bam_task",
+        option                   => "",
+        interpretor              => "python3",
+        program                  => "../SmallRNA/identicalBamToFullBam.py",
+        first_file_only          => 1,
+        source_ref               => [$bowtie1Task, '.bam$'],
+        source_arg               => "-i",
+        parameterSampleFile2_ref => ["bowtie1_genome_unmapped_reads", "unmapped.fastq.dupcount\$"],
+        parameterSampleFile2_arg => "-c",
+        output_to_same_folder    => 1,
+        output_file_prefix => ".bam",
+        output_ext               => ".bam",
+        output_arg               => "-o",
+        sh_direct                => 0,
+        pbs                      => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "72",
+          "mem"      => "40gb"
+        },
+      };
+      push(@$individual_ref, $gene_bam_task);
+
+      my $feature_count_task = "${gene_bam_task}_count";
+      $def->{"featureCounts_option"} = getValue($def, "featureCounts_option", "-g gene_name -t exon");
+      add_featurecount($config, $def, $individual_ref, $intermediate_dir, $feature_count_task, [$gene_bam_task, '.bam$'], getValue($def, "custom_group_gtf"), 1);
+
+      my $gene_table_task = "bowtie1_${nonhostGroup}_pm_gene_table";
+      #my $name_map_file = $def->{name_map_file};
+      $config->{$gene_table_task} = {
+        class                     => "CQS::CQSDatatable",
+        perform                   => 1,
+        target_dir                => "$nonhost_genome_dir/$gene_table_task",
+        option                    => "-k 0 -v 6 -e --fillMissingWithZero",
+        source_ref                => [$feature_count_task, ".count"],
+        output_proteincoding_gene => 0,
+        sh_direct                 => 1,
+        pbs                       => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "40gb"
+        },
+      };
+      push(@$summary_ref, $gene_table_task);
+    }
   }
 
   #Mapping unmapped reads to nonhost library
