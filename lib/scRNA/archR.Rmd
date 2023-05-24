@@ -1,0 +1,156 @@
+---
+title: "scATAC QC"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+    number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, results = 'hide', fig.width=7, fig.height = 4,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#load the library and set the parameters and load our own function
+library(Seurat)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(pheatmap)
+library(RCurl)
+library(knitr)
+library(kableExtra)
+library(ArchR)
+source("scRNA_func.r")
+source("reportFunctions.R")
+```
+
+# Project settings
+
+## Sample files 
+
+```{r, echo=FALSE, results="asis"}
+file_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F)
+file_table=file_table[,c("V2", "V1")]
+colnames(file_table)<-c("Name", "Path")
+print(kable(file_table))
+
+obj_map<-split(file_table$Path, file_table$Name)
+samples_names=names(obj_map)
+```
+
+## Parameters
+
+```{r, echo=FALSE, results="asis"}
+option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F)
+option_table=option_table[,c("V2", "V1")]
+colnames(option_table)<-c("Parameter", "Value")
+print(kable(option_table))
+
+myoptions<-split(option_table$Value, option_table$Parameter)
+task_name=myoptions$task_name
+```
+
+# Quality control
+
+```{r, results="asis"}
+proj<-readRDS(paste0(task_name, ".atac_peaks.rds"))
+meta = data.frame(proj@cellColData)
+```
+
+## Filters
+
+```{r, results="asis"}
+include_graphics(paste0(task_name, ".TSSEnrichment.png"))
+```
+
+## Cluster UMAP
+
+```{r, results="asis"}
+include_graphics(paste0(task_name, ".cluster.umap.png"))
+```
+## Sample UMAP
+
+```{r, results="asis"}
+include_graphics(paste0(task_name, ".sample.umap.all.png"))
+```
+
+## TSSEnrichment
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, TSSEnrichment)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+
+```
+
+## ReadsInPeaks
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, ReadsInPeaks)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```
+
+## FRIP: fraction of all mapped reads that fall into the called peak regions
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, FRIP)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+```
+
+## ReadsInTSS
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, ReadsInTSS)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```
+
+## ReadsInPromoter
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, ReadsInPromoter)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```
+
+## PromoterRatio
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, PromoterRatio)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+```
+
+## ReadsInBlacklist
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, ReadsInBlacklist)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```
+
+## BlacklistRatio
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, BlacklistRatio)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+```
+
+## NucleosomeRatio
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, NucleosomeRatio)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+```
+
+## nMonoFrags
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, nMonoFrags)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```
+
+## DoubletScore
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, DoubletScore)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```
+
+## DoubletEnrichment
+
+```{r, results="asis"}
+ggplot(meta, aes(Sample, DoubletEnrichment)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```
