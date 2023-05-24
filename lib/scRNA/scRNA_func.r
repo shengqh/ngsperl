@@ -2184,3 +2184,9 @@ fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns
   }
   return(target_meta)
 }
+
+check_md5<-function(filepath, expect_md5){
+  library(tools)
+  md5=md5sum(filepath)
+  stopifnot(md5 == expect_md5)
+}
