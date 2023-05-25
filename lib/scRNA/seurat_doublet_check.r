@@ -54,10 +54,10 @@ for(idx in c(1:nrow(doublet_options))){
   
   doublet_cells=colnames(obj)[obj@meta.data[,doublet_col]=="Doublet"]
   
-  g1<-DimPlot(obj, group.by = myoptions$cluster_layer, label=T) + ggtitle(myoptions$celltype_layer)+
+  g1<-MyDimPlot(obj, group.by = myoptions$cluster_layer, label=T) + ggtitle(myoptions$celltype_layer)+
     scale_color_discrete(labels = levels(obj@meta.data[,myoptions$cluster_celltype_layer]))
   
-  g2<-DimPlot(obj, label=F, cells.highlight =doublet_cells) + 
+  g2<-MyDimPlot(obj, label=F, cells.highlight =doublet_cells) + 
     ggtitle("DoubletFinder") + scale_color_discrete(type=c("gray", "red"), labels = c("Singlet", "Doublet"))
   
   if(has_bubblemap){

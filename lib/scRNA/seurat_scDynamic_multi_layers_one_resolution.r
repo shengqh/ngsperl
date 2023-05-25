@@ -197,7 +197,7 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     }
     
     #g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
-    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    g0<-MyDimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
 
     subobj<-subset(obj, cells=cells)
 

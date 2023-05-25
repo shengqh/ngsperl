@@ -278,16 +278,16 @@ for(pct in previous_celltypes){
       }
     }
 
-    g0<-DimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
-    g1<-DimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
+    g0<-MyDimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    g1<-MyDimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0(pct, ": old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
     if(bHasCurrentSignacX){
-      g2<-DimPlot(sxobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle(paste0(pct, ": signacx"))
+      g2<-MyDimPlot(sxobj, reduction="umap", group.by = "signacx_CellStates", label=F) + ggtitle(paste0(pct, ": signacx"))
     }else{
-      g2<-DimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
+      g2<-MyDimPlot(subobj, reduction="umap", group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
     }
     g<-g0+g1+g2+get_groups_dot(subobj, "seurat_clusters", "orig.ident")
     for(umap_name in umap_names){
-      gu<-DimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0("res", cur_resolution, ": ", umap_name)) + scale_color_discrete(labels = ct$display_layer)
+      gu<-MyDimPlot(subobj, reduction=umap_name, group.by = "seurat_clusters", label=T) + ggtitle(paste0("res", cur_resolution, ": ", umap_name)) + scale_color_discrete(labels = ct$display_layer)
       g<-g+gu
     }
     if(bHasCurrentSignacX){
