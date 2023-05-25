@@ -147,7 +147,10 @@ get_heatmap_width<-function(nclusters){
 }
 
 MyDimPlot<-function(...){
-  g<-DimPlot(...) + theme(aspect.ratio=1)
+  #set raster=FALSE 
+  #When number of cells larger than 100000, it might throw error: 
+  #Problem while converting geom to grob, Error occurred in the 1st layer.
+  g<-DimPlot(raster=FALSE, ...) + theme(aspect.ratio=1)
   return(g)
 }
 
