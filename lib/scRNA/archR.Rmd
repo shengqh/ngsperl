@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, results = 'hide', fig.width=7, fig.height = 4,tidy = TRUE, tidy.opts = list(comment = FALSE))
+knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, results='asis', fig.width=7, fig.height = 4,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
 
 ```{css, echo=FALSE}
@@ -30,13 +30,32 @@ library(kableExtra)
 library(ArchR)
 source("scRNA_func.r")
 source("reportFunctions.R")
+
+plotRidges<-function(proj, name){
+  g1 <- plotGroups(
+    ArchRProj = proj, 
+    groupBy = "Sample", 
+    colorBy = "cellColData", 
+    name = "TSSEnrichment",
+    plotAs = "ridges"
+  )
+  g2 <- plotGroups(
+    ArchRProj = proj, 
+    groupBy = "Clusters_ATAC", 
+    colorBy = "cellColData", 
+    name = "TSSEnrichment",
+    plotAs = "ridges"
+  )
+  g<-g1+g2
+  g
+}
 ```
 
 # Project settings
 
 ## Sample files 
 
-```{r, echo=FALSE, results="asis"}
+```{r, echo=FALSE}
 file_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F)
 file_table=file_table[,c("V2", "V1")]
 colnames(file_table)<-c("Name", "Path")
@@ -48,7 +67,7 @@ samples_names=names(obj_map)
 
 ## Parameters
 
-```{r, echo=FALSE, results="asis"}
+```{r, echo=FALSE}
 option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F)
 option_table=option_table[,c("V2", "V1")]
 colnames(option_table)<-c("Parameter", "Value")
@@ -60,97 +79,112 @@ task_name=myoptions$task_name
 
 # Quality control
 
-```{r, results="asis"}
+```{r}
 proj<-readRDS(paste0(task_name, ".atac_peaks.rds"))
 meta = data.frame(proj@cellColData)
 ```
 
 ## Filters
 
-```{r, results="asis"}
+```{r}
 include_graphics(paste0(task_name, ".TSSEnrichment.png"))
 ```
 
 ## Cluster UMAP
 
-```{r, results="asis"}
+```{r}
 include_graphics(paste0(task_name, ".cluster.umap.png"))
 ```
+
 ## Sample UMAP
 
-```{r, results="asis"}
+```{r}
 include_graphics(paste0(task_name, ".sample.umap.all.png"))
 ```
 
 ## TSSEnrichment
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, TSSEnrichment)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
-
+```{r, fig.height=10}
+plotRidges(proj, "TSSEnrichment")
 ```
 
 ## ReadsInPeaks
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, ReadsInPeaks)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "ReadsInPeaks")
 ```
 
 ## FRIP: fraction of all mapped reads that fall into the called peak regions
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, FRIP)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "FRIP")
 ```
 
 ## ReadsInTSS
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, ReadsInTSS)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "ReadsInTSS")
 ```
 
 ## ReadsInPromoter
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, ReadsInPromoter)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "ReadsInPromoter")
+#ggplot(meta, aes(Sample, ReadsInPromoter)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
 ```
 
 ## PromoterRatio
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, PromoterRatio)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "PromoterRatio")
 ```
 
 ## ReadsInBlacklist
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, ReadsInBlacklist)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "ReadsInBlacklist")
 ```
 
 ## BlacklistRatio
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, BlacklistRatio)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "BlacklistRatio")
 ```
 
 ## NucleosomeRatio
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, NucleosomeRatio)) + geom_violin() + geom_boxplot(width=0.1) + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "NucleosomeRatio")
 ```
 
-## nMonoFrags
+## log10(nFrags)
 
-```{r, results="asis"}
-ggplot(meta, aes(Sample, nMonoFrags)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
+```{r, fig.height=10}
+plotRidges(proj, "log10(nFrags)")
 ```
 
 ## DoubletScore
 
-```{r, results="asis"}
+```{r}
+# plotGroups(
+#   ArchRProj = proj, 
+#   groupBy = "Sample", 
+#   colorBy = "cellColData", 
+#   name = "DoubletScore",
+#   plotAs = "ridges"
+# )
 ggplot(meta, aes(Sample, DoubletScore)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
 ```
 
 ## DoubletEnrichment
 
-```{r, results="asis"}
+```{r}
+# plotGroups(
+#   ArchRProj = proj, 
+#   groupBy = "Sample", 
+#   colorBy = "cellColData", 
+#   name = "DoubletEnrichment",
+#   plotAs = "ridges"
+# )
 ggplot(meta, aes(Sample, DoubletEnrichment)) + geom_violin() + geom_boxplot(width=0.1) + scale_y_continuous(trans='log2') + theme_bw3() + xlab("")
 ```
