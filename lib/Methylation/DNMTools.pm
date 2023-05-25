@@ -69,7 +69,7 @@ echo DNMTools=`date`
 
 if [ ! -s ${sample_name}.formatted.sam ]; then
    echo dnmtools format=`date`
-   singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools format -f abismal -o ${sample_name}.formatted.sam $sampleFile
+   singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools format -f abismal -o ${sample_name}.formatted.sam $sampleFile
 fi
 
 if [[ -s ${sample_name}.formatted.sam ]]; then
@@ -78,7 +78,7 @@ fi
 
 if [ ! -s ${sample_name}.sam ]; then
    echo dnmtools uniq=`date`
-   singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools uniq -D -S ${sample_name}.sam.dupstats ${sample_name}.formatted.sam ${sample_name}.sam
+   singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools uniq -D -S ${sample_name}.sam.dupstats ${sample_name}.formatted.sam ${sample_name}.sam
 fi
 
 if [[ -s ${sample_name}.sam ]]; then
@@ -87,39 +87,39 @@ fi
 
 if [ ! -s ${sample_name}.bsrate ]; then
   echo dnmtools bsrate=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools bsrate -c $chrDir ${sample_name}.sam -o ${sample_name}.bsrate
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools bsrate -c $chrDir ${sample_name}.sam -o ${sample_name}.bsrate
 fi
 
 
 if [ ! -s ${sample_name}.all.meth ]; then
   echo dnmtools counts=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools counts -c $chrDir -o ${sample_name}.all.meth ${sample_name}.sam
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools counts -c $chrDir -o ${sample_name}.all.meth ${sample_name}.sam
 fi
 
 if [ ! -s ${sample_name}.levels ]; then
   echo dnmtools levels=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools levels -o ${sample_name}.levels ${sample_name}.all.meth
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools levels -o ${sample_name}.levels ${sample_name}.all.meth
 fi
 
 if [ ! -s ${sample_name}.meth ]; then
   echo dnmtools sym=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools sym -m -o ${sample_name}.meth ${sample_name}.all.meth
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools sym -m -o ${sample_name}.meth ${sample_name}.all.meth
 fi
 
 
 if [ ! -s ${sample_name}.hmr ]; then
   echo dnmtools hmr=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools hmr -o ${sample_name}.hmr -p ${sample_name}.hmrparams ${sample_name}.meth
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools hmr -o ${sample_name}.hmr -p ${sample_name}.hmrparams ${sample_name}.meth
 fi
 
 if [ ! -s ${sample_name}.pmr ]; then
   echo dnmtools pmr=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools hmr -partial -o ${sample_name}.pmr -p ${sample_name}.pmrparams ${sample_name}.meth
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools hmr -partial -o ${sample_name}.pmr -p ${sample_name}.pmrparams ${sample_name}.meth
 fi
 
 if [ ! -s ${sample_name}.pmd ]; then
   echo dnmtools pmd=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools pmd -o ${sample_name}.pmd -p ${sample_name}.pmdparams ${sample_name}.meth
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools pmd -o ${sample_name}.pmd -p ${sample_name}.pmdparams ${sample_name}.meth
 fi
 
 
@@ -131,7 +131,7 @@ do
     p1='/\\b';p2='\\b/p'
     pat=\"\$p1\$chr\$p2\"
     sed -n \$pat ${sample_name}.sam > ${sample_name}.\${chr}.sam
-    singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools states -c $chrDir -o ${sample_name}.\${chr}.epiread ${sample_name}.\${chr}.sam
+    singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools states -c $chrDir -o ${sample_name}.\${chr}.epiread ${sample_name}.\${chr}.sam
     rm ${sample_name}.\${chr}.sam
   fi
 done
@@ -144,11 +144,11 @@ fi
 
 if [ ! -s ${sample_name}.allelic ]; then
   echo dnmtools allelic=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools allelic -c $chrDir -o ${sample_name}.allelic ${sample_name}.epiread
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools allelic -c $chrDir -o ${sample_name}.allelic ${sample_name}.epiread
 fi
 if [ ! -s ${sample_name}.amr ]; then
   echo dnmtools amrfinder=`date`
-  singularity exec /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools amrfinder -c $chrDir -o ${sample_name}.amr ${sample_name}.epiread
+  singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools amrfinder -c $chrDir -o ${sample_name}.amr ${sample_name}.epiread
 fi
 
 
