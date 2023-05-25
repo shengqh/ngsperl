@@ -107,14 +107,6 @@ obj[["subumap"]] <- CreateDimReducObject(embeddings = subumap, key = "SUBUMAP_",
 
 clcounts<-table(obj[[cur_layer]])
 
-if(parSampleFile2 != ""){
-  ignore_gene_files=read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
-  ignore_genes=unlist(lapply(ignore_gene_files$V1, function(x){
-    readLines(x)
-  }))
-  obj<-obj[!(rownames(obj) %in% ignore_genes),]
-}
-
 if(has_bubblemap){
   allgenes<-rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes, species = myoptions$species)
