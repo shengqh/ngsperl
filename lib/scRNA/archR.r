@@ -1,6 +1,5 @@
 rm(list=ls()) 
-sample_name='AS01'
-outFile='AS01'
+outFile='as_multiome'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20230517_Vandy_AS_scRNA_sct2_atac/archR_individual/result/AS01')
+setwd('/nobackup/shah_lab/shengq2/20230517_Vandy_AS_scRNA_sct2_atac/archR_all/result')
 
 ### Parameter setting end ###
 
@@ -79,13 +78,24 @@ getTSSEnrichmentPlot<-function(Metadata, sample_name, filterTSS, filterFrags) {
   return(gg)
 }
 
-# for(s_name in names(inputFiles)){
-#   Metadata<-readRDS(paste0('QualityControl/', s_name, "/", s_name, "-Pre-Filter-Metadata.rds"))
-#   gtss<-getTSSEnrichmentPlot(Metadata, s_name, minTSS, minFrags) + theme(aspect.ratio=1)
-#   png(paste0(s_name, ".TSSEnrichment.png"), width=900, height=1200, res=300)
-#   print(gtss)
-#   dev.off()
-# }
+g = NULL
+for(s_name in names(inputFiles)){
+  Metadata<-readRDS(paste0('QualityControl/', s_name, "/", s_name, "-Pre-Filter-Metadata.rds"))
+  gtss<-getTSSEnrichmentPlot(Metadata, s_name, minTSS, minFrags) + theme(aspect.ratio=1)
+  gtss$data$Sample=s_name
+  if(is.null(g)){
+    g=gtss
+  }else{
+    g$data = rbind(g$data, gtss$data)
+  }
+}
+nsample=length(inputFiles)
+ncol=ceiling(sqrt(nsample))
+nrow=ceiling(nsample/ncol)
+gg<-g+facet_wrap(~Sample) + theme_bw3() + ggtitle("") + NoLegend()
+png(paste0(outFile, ".TSSEnrichment.png"), width=ncol * 600, height=nrow*600, res=300)
+print(gg)
+dev.off()
 
 #Creating an ArchRProject
 proj <- ArchRProject(
