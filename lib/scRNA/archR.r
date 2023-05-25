@@ -163,16 +163,15 @@ png(paste0(outFile, ".cluster.umap.png"), width=2000, height=1700, res=300)
 print(p1)
 dev.off()
 
-if(length(inputFiles) > 1){
-  p1 <- plotEmbedding(
-    ArchRProj = proj, 
-    colorBy = "cellColData", 
-    name = "Sample", 
-    embedding = "UMAP_ATAC") + theme(aspect.ratio=1)
-  png(paste0(outFile, ".sample.umap.all.png"), width=1500, height=1200, res=300)
-  print(p1)
-  dev.off()
-}
+p1 <- plotEmbedding(
+  ArchRProj = proj, 
+  colorBy = "cellColData", 
+  name = "Sample", 
+  embedding = "UMAP_ATAC") + theme(aspect.ratio=1) 
+p1 <- p1 + facet_wrap(~color) + theme_bw3() + scale_color_manual(values=rep("black", nsample)) + NoLegend()
+png(paste0(outFile, ".sample.umap.all.png"), width=ncol * 600, height=nrow*600, res=300)
+print(p1)
+dev.off()
 
 proj <- addGroupCoverages(ArchRProj = proj, groupBy = "Clusters_ATAC")
 proj <- addReproduciblePeakSet(ArchRProj = proj, groupBy = "Clusters_ATAC")
