@@ -2189,6 +2189,7 @@ fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns
 }
 
 check_md5<-function(filepath, expect_md5){
+  cat("checking md5 of", filepath, "\n")
   library(tools)
   md5=md5sum(filepath)
   stopifnot(md5 == expect_md5)
