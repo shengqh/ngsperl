@@ -256,6 +256,11 @@ sub getScRNASeqConfig {
   my $decontX_ref = undef;
 
   if (defined $def->{files}){
+    if(defined $def->{atac_files}){
+      my $multiome_task = "multiome_qc";
+      add_multiome_qc($config, $def, $summary, $target_dir, $multiome_task);
+    }
+
     my @report_files = ();
     my @report_names = ();
     my $hto_task = undef;

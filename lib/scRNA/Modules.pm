@@ -89,6 +89,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_clustree_rmd
 
   add_bubble_plots
+
+  add_multiome_qc
 )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -1674,7 +1676,6 @@ sub addSubClusterChoose {
       summary_layer_file    => $def->{summary_layer_file},
       output_layer          => "cell_type",
     }),
-    parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $celltype_subclusters_table,
     output_file_ext      => ".meta.rds",
     output_other_ext  => ".final.rds,.meta.csv,.umap.csv,.umap.png",
@@ -2821,6 +2822,76 @@ sub add_individual_qc_tasks{
   push(@$summary, $qc_report_task);
 
   return($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task);
+}
+
+sub add_multiome_qc {
+  my ($config, $def, $summary, $target_dir, $multiome_qc_task, $qc_filter_config_file) = @_;
+
+  if(!defined $qc_filter_config_file){
+    $qc_filter_config_file = "";
+  }
+  
+  my $qc_files_ref = "files";
+  $config->{atac_files} = $def->{atac_files};
+  $config->{raw_files}= $def->{raw_files};
+
+  $config->{$multiome_qc_task} = {
+    class => "CQS::IndividualR",
+    target_dir => "${target_dir}/${multiome_qc_task}",
+    rtemplate => "../scRNA/multiome_qc.r",
+    rReportTemplate => "../scRNA/multiome_qc.Rmd;reportFunctions.R;../scRNA/scRNA_func.r",
+    run_rmd_independent => 1,
+    rmd_ext => ".multiome_qc.html",
+    option => "",
+    parameterSampleFile1_ref => $qc_files_ref,
+    parameterSampleFile2 => {
+      email => $def->{email},
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      use_sctransform_v2 => getValue( $def, "use_sctransform_v2", 0 ),
+      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      species               => getValue( $def, "species" ),
+      db_markers_file       => getValue( $def, "markers_file" ),
+      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+      annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file" ),
+      tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+      bubblemap_file => $def->{bubblemap_file},
+      bubblemap_width => $def->{bubblemap_width},
+      bubblemap_height => $def->{bubblemap_height},
+      Mtpattern             => getValue( $def, "Mtpattern" ),
+      rRNApattern           => getValue( $def, "rRNApattern" ),
+      Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+      Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+      mt_cutoff             => getValue( $def, "mt_cutoff" ),
+      resolution            => getValue( $def, "resolution" ),
+      pca_dims              => getValue( $def, "pca_dims" ),
+      ensembl_gene_map_file => $def->{"ensembl_gene_map_file"},
+
+      nCount_ATAC_min => getValue($def, "nCount_ATAC_min", 1000),
+      nCount_ATAC_max => getValue($def, "nCount_ATAC_max", 100000),
+      max_nucleosome_signal => getValue($def, "max_nucleosome_signal", 2),
+      min_TSS_enrichment => getValue($def, "min_TSS_enrichment", 1),
+      macs_path => $def->{"macs_path"},
+    },
+    parameterSampleFile3_ref => "atac_files",
+    parameterSampleFile4_ref => "raw_files",
+    parameterFile1 => "",
+    parameterFile2 => getValue($def, "signac_annotation_file"),
+    output_file_ext => ".rds",
+    samplename_in_result => 1,
+    can_result_be_empty_file => 0,
+    remove_empty_parameter => 1,
+    sh_direct => 0,
+    pbs => {
+      "nodes" => "1:ppn=1",
+      "walltime" => "10",
+      "mem" => getValue($def, "qc_mem", "80gb"),
+    },
+  };
 }
 
 
