@@ -35,6 +35,7 @@ sub initializeDefaultOptions {
   my $def = shift;
 
   initDefaultValue( $def, "perform_preprocessing",     1 );
+  initDefaultValue( $def, "generate_md5",     0 );
   initDefaultValue( $def, "perform_check_fastq_duplicate", 1);
   initDefaultValue( $def, "cluster",                   'slurm' );
   initDefaultValue( $def, "sra_to_fastq",              0 );
@@ -308,6 +309,9 @@ sub getPreprocessionConfig {
       }
     }
   }
+  if (defined $def->{covariant_patterns}){
+    $def->{covariance_patterns} = $def->{covariant_patterns};
+  }
 
   if (defined $def->{covariance_patterns}){
     $def->{covariance_file} = create_covariance_file_by_pattern($def);
@@ -407,6 +411,32 @@ sub getPreprocessionConfig {
     defined $is_pairend or die "Define is_paired_end first!";
     defined $def->{is_restricted_data} or die "Define is_restricted_data first!";
     #defined $def->{sra_table} or die "Define sra_table first, can be downloaded from ftp://ftp.ncbi.nlm.nih.gov/sra/reports/Metadata/SRA_Accessions.tab";
+  }
+
+  if($def->{generate_md5}){
+    $config->{md5} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "md5",
+      check_program => 0,
+      program => "md5sum",
+      option => " __FILE__ > __OUTPUT__
+      ",
+      source_arg => "",
+      source_join_delimiter => " ",
+      source_ref => $source_ref,
+      output_arg => "",
+      output_file_prefix => ".md5",
+      output_file_ext => ".md5",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 1,
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      }
+    };
+    push @$individual, ("md5");
   }
 
   if ( $def->{merge_fastq} ) {
