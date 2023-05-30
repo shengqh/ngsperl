@@ -257,8 +257,15 @@ sub getScRNASeqConfig {
 
   if (defined $def->{files}){
     if(defined $def->{atac_files}){
+      $config->{atac_files} = $def->{atac_files};
+      my $fragment_cells_task = undef;
+      if(getValue($def, "perform_fragment_cells", 1)){
+        $fragment_cells_task = "fragment_cells";
+        add_fragment_cells($config, $def, $individual, $target_dir, $fragment_cells_task, "atac_files");
+      }
+
       my $multiome_task = "multiome_qc";
-      add_multiome_qc($config, $def, $summary, $target_dir, $multiome_task);
+      add_multiome_qc($config, $def, $summary, $target_dir, $multiome_task, undef, $fragment_cells_task);
     }
 
     my @report_files = ();

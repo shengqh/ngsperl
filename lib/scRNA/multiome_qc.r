@@ -5,6 +5,7 @@ parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
+parSampleFile5='fileList5.txt'
 parFile1=''
 parFile2='/data/cqs/references/scrna/EnsDb.Hsapiens.v86.GRanges.UCSC.rds'
 parFile3=''
@@ -40,6 +41,7 @@ macs2_path=get_value(myoptions$macs2_path, NULL)
 
 counts_file_map = read_file_map(parSampleFile1, do_unlist=FALSE)
 fragments_file_map = read_file_map(parSampleFile3, do_unlist=FALSE)
+fragments_cell_map = read_file_map(parSampleFile5, do_unlist=FALSE)
 
 counts_file = counts_file_map[[sample_name]]
 if(dir.exists(counts_file)){
@@ -47,9 +49,20 @@ if(dir.exists(counts_file)){
 }else{
   counts <- Read10X_h5(counts_file)
 }
-fragpath = fragments_file_map[[sample_name]]
 
-annotation <- readRDS(parFile2)
+frag_cells_file = fragments_cell_map[[sample_name]]
+frag_cells = readLines(frag_cells_file)
+
+gex_cells = colnames(counts)
+gex_cells = gex_cells[order(gex_cells)]
+writeLines(gex_cells, paste0(outFile, ".gex.cells.txt"))
+writeLines(frag_cells, paste0(outFile, ".frag.cells.txt"))
+
+print(table(colnames(counts) %in% frag_cells))
+
+stopifnot(all(colnames(counts) %in% frag_cells))
+
+#annotation <- readRDS(parFile2)
 
 # create a Seurat object containing the RNA adata
 obj <- CreateSeuratObject(
@@ -57,10 +70,31 @@ obj <- CreateSeuratObject(
   assay = "RNA"
 )
 
+annotation <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
+seqlevelsStyle(annotation) <- "UCSC"
+saveRDS(annotation, 'EnsDb.Hsapiens.v86.UCSC.rds')
+
+fragpath = fragments_file_map[[sample_name]]
+
+# create fragment object
+frag_obj = CreateFragmentObject(fragpath)
+
+
+
+peaks = CallPeaks(frag_obj)
+peaks <- keepStandardChromosomes(peaks, pruning.mode = "coarse")
+peaks <- subsetByOverlaps(x = peaks, ranges = blacklist_hg38_unified, invert = TRUE)
+
+# quantify counts in each peak
+macs2_counts <- FeatureMatrix(
+  fragments = frag_obj,
+  features = peaks,
+  cells = colnames(obj)
+)
+
 # create ATAC assay and add it to the object
 obj[["ATAC"]] <- CreateChromatinAssay(
-  counts = counts$Peaks,
-  sep = c(":", "-"),
+  counts = macs2_counts,
   fragments = fragpath,
   annotation = annotation
 )

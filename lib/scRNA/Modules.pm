@@ -91,6 +91,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_bubble_plots
 
   add_multiome_qc
+
+  add_fragment_cells
 )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -2825,7 +2827,7 @@ sub add_individual_qc_tasks{
 }
 
 sub add_multiome_qc {
-  my ($config, $def, $summary, $target_dir, $multiome_qc_task, $qc_filter_config_file) = @_;
+  my ($config, $def, $summary, $target_dir, $multiome_qc_task, $qc_filter_config_file, $fragment_cells_task) = @_;
 
   if(!defined $qc_filter_config_file){
     $qc_filter_config_file = "";
@@ -2879,6 +2881,7 @@ sub add_multiome_qc {
     },
     parameterSampleFile3_ref => "atac_files",
     parameterSampleFile4_ref => "raw_files",
+    parameterSampleFile5_ref => $fragment_cells_task,
     parameterFile1 => "",
     parameterFile2 => getValue($def, "signac_annotation_file"),
     output_file_ext => ".rds",
@@ -2886,6 +2889,7 @@ sub add_multiome_qc {
     can_result_be_empty_file => 0,
     remove_empty_parameter => 1,
     sh_direct => 0,
+    no_docker => 1,
     pbs => {
       "nodes" => "1:ppn=1",
       "walltime" => "10",
@@ -2894,6 +2898,34 @@ sub add_multiome_qc {
   };
 }
 
+sub add_fragment_cells {
+  my ($config, $def, $tasks, $target_dir, $fragment_cells_task, $fragment_ref ) = @_;
+
+  $config->{$fragment_cells_task} = {
+    class                    => "CQS::ProgramWrapperOneToOne",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $fragment_cells_task,
+    option                   => "",
+    source_arg => "-i", 
+    source_ref => $fragment_ref,
+    interpretor => "python3",
+    program             => "../scRNA/fragment_cells.py",
+    check_program        => 1,
+    output_arg           => "-o",
+    samplename_in_result => 1,
+    output_file_prefix => ".cells.txt",
+    output_file_ext      => ".cells.txt",
+    sh_direct            => 0,
+    output_to_same_folder => 1,
+    no_docker            => 0,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, $fragment_cells_task );
+}
 
 1;
 
