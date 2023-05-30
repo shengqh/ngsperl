@@ -97,7 +97,7 @@ sub perform {
   my $designfilename = "${task_name}.define";
   my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
-  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tdesignFormula\tcontrast\tcollapse_by\n";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tdesignFormula\tcontrast\tcollapse_by\tpairOnlyCovariant\n";
 
   for my $comparisonIndex ( 0 .. $#comparison_names ) {
     my $comparison_name = $comparison_names[$comparisonIndex];
@@ -112,6 +112,7 @@ sub perform {
     my $contrast="";
     my $designFormula="";
     my $collapse_by="";
+    my $pairOnlyCovariant="";
     if (is_array($comp_def)){
       $group_names = $comp_def;
       $covariate_names = [];
@@ -135,7 +136,10 @@ sub perform {
         }
       }
       if (defined $comp_def->{"collapse_by"}) {
-          $collapse_by = $comp_def->{collapse_by};
+        $collapse_by = $comp_def->{collapse_by};
+      }
+      if (defined $comp_def->{"pairOnlyCovariant"}) {
+        $pairOnlyCovariant = $comp_def->{pairOnlyCovariant};
       }
     }else{
       die("Comparison $comparison_name is not defined correctly, check your configuration");
@@ -219,7 +223,7 @@ sub perform {
     if ( ref $curcountfile eq ref [] ) {
       $curcountfile = $curcountfile->[0];
     }
-    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$designFormula\t$contrast\t$collapse_by\n";
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$designFormula\t$contrast\t$collapse_by\t$pairOnlyCovariant\n";
   }
   close($df);
 
@@ -263,6 +267,8 @@ libraryKey<-\"$libraryKey\"
 ";
   }
   
+  print $rf "#predefined_condition_end\n";
+
   while (<$rt>) {
     if ( $_ !~ 'predefined_condition_end' ) {
       next;

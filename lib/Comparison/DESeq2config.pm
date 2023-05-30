@@ -99,6 +99,8 @@ sub perform {
     my $comparisonTitle = $comparisonTitles->[$comparisonIndex];
     $first++;
 
+    my $pairOnlyCovariant="";
+
     my $design_file = $comparisons->{$comparison_name};
 
     my $filename = "${comparison_name}.design";
@@ -157,6 +159,8 @@ libraryKey<-\"$libraryKey\"
 ";
   }
   
+  print $rf "#predefined_condition_end\n";
+
   while (<$rt>) {
     if ( $_ !~ 'predefined_condition_end' ) {
       next;

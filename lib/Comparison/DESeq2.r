@@ -1,32 +1,27 @@
-##predefined_condition_begin
 
-rootdir<-"/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/nonhost_genome/deseq2_custom_group_reads_TotalReads/result"
-inputfile<-"P9880.define" 
+rootdir<-"/nobackup/shah_lab/shengq2/20230526_mona_VR2527_rnaseq_hg38/deseq2_proteincoding_genetable/result"
+inputfile<-"VR2527.define" 
 
 pvalue<-0.05
-useRawPvalue<-1
+useRawPvalue<-0
 foldChange<-1.5
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
-showLabelInPCA<-1
+showLabelInPCA<-0
 showDEGeneCluster<-0
 addCountOne<-0
-usePearsonInHCA<-0
+usePearsonInHCA<-1
 top25only<-0
 performWilcox<-0
-textSize<-11
+textSize<-10
 transformTable<-0
-exportSignificantGeneName<-0
+exportSignificantGeneName<-1
 thread<-8
 
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-FALSE;showLabelInPCA<-TRUE;top25cvInHCA<-FALSE;
-cooksCutoff<-FALSE
-
-libraryFile<-"/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/P9880.Category.Table.csv"
-libraryKey<-"TotalReads"
-
-##predefined_condition_end
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;top25cvInHCA<-FALSE;
+cooksCutoff<-0.99
+#predefined_condition_end
 
 options(bitmapType='cairo')
 
@@ -482,6 +477,16 @@ for(countfile_index in c(1:length(countfiles))){
   for(comparison_index in c(1:nrow(comparisons))){
     comparisonName=comparisons$ComparisonName[comparison_index]
     comparisonTitle=comparisons$ComparisonTitle[comparison_index]
+
+    if ("pairOnlyCovariant" %in% colnames(comparisons)) {
+      pairOnlyCovariant=comparisons$pairOnlyCovariant[comparison_index]
+      if (is.na(pairOnlyCovariant) || (pairOnlyCovariant=="")) {
+        pairOnlyCovariant=NULL
+      }
+    }else{
+      pairOnlyCovariant=NULL
+    }
+
     if ("designFormula" %in% colnames(comparisons)) {
       designFormula=comparisons$designFormula[comparison_index]
       print(paste0("designFormula = ", designFormula, "\n"))
@@ -493,6 +498,7 @@ for(countfile_index in c(1:length(countfiles))){
     } else {
       designFormula=NULL
     }
+
     if ("contrast" %in% colnames(comparisons)) {
       contrast=comparisons$contrast[comparison_index]
       if (is.na(contrast) || (contrast=="")) {
@@ -503,6 +509,7 @@ for(countfile_index in c(1:length(countfiles))){
     } else {
       contrast=NULL
     }
+
     if ("collapse_by" %in% colnames(comparisons)) {
       collapse_by=comparisons$collapse_by[comparison_index]
       if (is.na(collapse_by) || (collapse_by=="")) {
@@ -521,6 +528,15 @@ for(countfile_index in c(1:length(countfiles))){
     
     designData<-read.table(designFile, sep="\t", header=T)
     designData$Condition<-factor(designData$Condition, levels=gnames)
+
+    if(!is.null(pairOnlyCovariant)){
+      if(!any(colnames(designData) == pairOnlyCovariant)){
+        stop(paste0("Cannot find pairOnlyCovariant ", pairOnlyCovariant, " in ",designFile))
+      }
+      tbl = table(designData[,pairOnlyCovariant])
+      tbl = tbl[tbl == 2]
+      designData=designData[designData[,pairOnlyCovariant] %in% names(tbl),,drop=F]
+    }
     
     missedSamples<-as.character(designData$Sample)[!(as.character(designData$Sample) %in% colnames(countData))]
     if(length(missedSamples) > 0){

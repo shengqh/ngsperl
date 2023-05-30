@@ -142,7 +142,8 @@ sub perform {
   my $designfilename = "${task_name}.define";
   my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
-  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\n";
+  #print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\n";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tpairOnlyCovariant\n";
 
   for my $comparisonIndex ( 0 .. $#comparison_names ) {
     my $comparison_name = $comparison_names[$comparisonIndex];
@@ -150,6 +151,7 @@ sub perform {
     $first++;
 
     my $covariances = {};
+    my $pairOnlyCovariant="";
 
     my $gNames = $comparisons->{$comparison_name};
     my @group_names;
@@ -159,6 +161,10 @@ sub perform {
       for my $key ( sort keys %$gNames ) {
         next if ( $key eq "groups" );
         $covariances->{$key} = $gNames->{$key};
+      }
+
+      if (defined $gNames->{"pairOnlyCovariant"}) {
+        $pairOnlyCovariant = $gNames->{pairOnlyCovariant};
       }
     }
     else {
@@ -245,7 +251,7 @@ sub perform {
     if ( ref $curcountfile eq ref [] ) {
       $curcountfile = $curcountfile->[0];
     }
-    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\n";
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$pairOnlyCovariant\n";
   }
   close($df);
 
@@ -287,7 +293,9 @@ libraryFile<-\"$libraryFile\"
 libraryKey<-\"$libraryKey\"
 ";
   }
-  
+
+  print $rf "#predefined_condition_end\n";
+
   while (<$rt>) {
     if ( $_ !~ 'predefined_condition_end' ) {
       next;
