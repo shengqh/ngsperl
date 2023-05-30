@@ -5,11 +5,12 @@ parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2='/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/P9880.Category.Table.csv'
-parFile3='/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/preprocessing/fastqc_post_trim_summary/result/P9880.countInFastQcVis.Result.Reads.csv'
-useLeastGroups<-FALSE;showLabelInPCA<-FALSE;totalCountKey='Reads for Mapping';minMedian=0;minMedianInGroup=1;textSize=9;groupTextSize=10;
+parFile2=''
+parFile3=''
+parFile4='/home/shengq2/program/RaviMartyLarsonCoefs/20230526_mona_rnaseq/20230526_meta.tsv'
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
 
-setwd('/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/data_visualization/count_table_correlation_TotalReads/result')
+setwd('/nobackup/shah_lab/shengq2/20230526_mona_VR2527_rnaseq_hg38/genetable/result')
 
 ### Parameter setting end ###
 
@@ -197,7 +198,7 @@ unByteCodeAssign(stats:::plotNode)
 # Now raise the interpreted code recursion limit (you may need to adjust this,
 #  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
 options(expressions=5e4)
-drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width=3000, height=3000,scalePCs=TRUE){
+drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width=3600, height=3000,scalePCs=TRUE){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
@@ -228,10 +229,10 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
     }
     g<-g+scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
       scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(yintercept=0), size=.2) + 
-      geom_vline(aes(xintercept=0), size=.2) + 
+      geom_hline(aes(yintercept=0), linewidth=.2) + 
+      geom_vline(aes(xintercept=0), linewidth=.2) + 
       xlab(pcalabs[1]) + ylab(pcalabs[2]) +
-      theme_bw2()
+      theme_bw2() + theme(aspect.ratio=1)
     
     for(format in outputFormat){
       if("PDF" == format){
@@ -573,7 +574,7 @@ for (i in 1:nrow(countTableFileAll)) {
     }
 
     #density plot
-    dataForPlot<-melt(countHT)
+    dataForPlot<-reshape2::melt(countHT)
     colnames(dataForPlot)[2]<-"Sample"
     p<-ggplot(dataForPlot, aes(value, colour = Sample)) +geom_density() + theme_bw2() + xlab(ylab)
     if(ncol(countHT) > 20){
@@ -590,12 +591,6 @@ for (i in 1:nrow(countTableFileAll)) {
       dev.off()
     }
     
-    #pca plot
-    print(paste0("Drawing PCA for ", title, " samples."))
-    drawPCA(paste0(outputFilePrefix,curSuffix,".PCA"), countHT, showLabelInPCA, groups, colors, outputFormat, width=1600, height=1500)
-    
-    
-    
     #hca plot
     hcaOption<-getHeatmapOption(countHT)
     if(!is.na(hasRowNames) & hasRowNames){
@@ -605,39 +600,56 @@ for (i in 1:nrow(countTableFileAll)) {
       hcaOption$cexCol<-heatmap_cexCol
     }
     
-    width=min(8000, max(1500, 50 * ncol(countHT)))
-    if (ncol(countHT)>1 & nrow(countHT)>1) {
-      print(paste0("Drawing heatmap for ", title, " samples."))
-      if (hasMultipleGroup) {
-        legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
-      }else{
-        legendfun<-NULL
-      }
+    if(exists("top25cvInHCA") && top25cvInHCA){
+      rv<-rowVars(countNumVsd)
+      countVar25<-countNumVsd[rv>=quantile(rv)[4],]
+      write.csv(countVar25, paste0(outputFilePrefix,curSuffix,".heatmap.top25variance.csv"))
+  
+      countList = list(countHT, countVar25)
+      names(countList)=c("all", "top25vars")
+    }else{
+      countList = list(countHT)
+      names(countList)=c("all")
+    }
+    
+    cur_name=names(countList)[2]
+    for(cur_name in names(countList)){
+      cur_counts = countList[[cur_name]]
       
-      if(exists("top25cvInHCA") && top25cvInHCA){
-        rv<-rowVars(countNumVsd)
-        countHT<-countNumVsd[rv>=quantile(rv)[4],]
-        write.csv(countHT, paste0(outputFilePrefix,curSuffix,".heatmap.top25variance.csv"))
-      }
+      #pca plot
+      print(paste0("Drawing PCA for ", title, " samples using ", cur_name, " genes."))
+      gene_suffix = ifelse(cur_name == "all", "", ".top25vars")
+      
+      drawPCA(paste0(outputFilePrefix, curSuffix, gene_suffix, ".PCA"), cur_counts, showLabelInPCA, groups, colors, outputFormat, width=1600, height=1500)
 
-      for(format in outputFormat){
-        if("PDF" == format){
-          pdf(paste0(outputFilePrefix,curSuffix,".heatmap.pdf"),width=10,height=10)
+      width=min(8000, max(1500, 50 * ncol(cur_counts)))
+      if (ncol(cur_counts)>1 & nrow(cur_counts)>1) {
+        print(paste0("Drawing heatmap for ", title, " samples using ", cur_name, " genes."))
+        if (hasMultipleGroup) {
+          legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
         }else{
-          png(paste0(outputFilePrefix,curSuffix,".heatmap.png"),width=width,height=width,res=300)
+          legendfun<-NULL
         }
         
-        if(hasMultipleGroup){
-          curColSideColors<-conditionColors[,1]
-          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=curColSideColors,cexCol=hcaOption$cexCol, ColSideLabs="")
-        } else {
-          heatmap3(countHT,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
+        for(format in outputFormat){
+          if("PDF" == format){
+            pdf(paste0(outputFilePrefix,cur_name,gene_suffix,".heatmap.pdf"),width=10,height=10)
+          }else{
+            png(paste0(outputFilePrefix,cur_name,gene_suffix,".heatmap.png"),width=width,height=width,res=300)
+          }
+          
+          if(hasMultipleGroup){
+            curColSideColors<-conditionColors[,1]
+            heatmap3(cur_counts,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,legendfun=legendfun,ColSideColors=curColSideColors,cexCol=hcaOption$cexCol, ColSideLabs="")
+          } else {
+            heatmap3(cur_counts,distfun=distf,balanceColor=TRUE,useRaster=FALSE,margin=hcaOption$margin,showRowDendro=hcaOption$showRowDendro,labRow=hcaOption$labRow,Rowv=hcaOption$Rowv,col=hmcols,cexCol=hcaOption$cexCol)
+          }
+          
+          dev.off()
         }
-        
-        dev.off()
+      } else {
+        print(paste0("Not enough samples or genes. Can't Draw heatmap for ", title, " samples."))
       }
-    } else {
-      print(paste0("Not enough samples or genes. Can't Draw heatmap for ", title, " samples."))
     }
     
     if (ncol(countNumVsd)>1 & nrow(countNumVsd)>1) {
