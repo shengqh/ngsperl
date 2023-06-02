@@ -675,6 +675,7 @@ kable(dmcpg_df, caption="Links of differentially methylated CpGs for comparisons
 wga_rmd = "webGestaltAnalysis.rmd"
 
 wga_files=read.table('fileList4.txt', sep="\t", header=FALSE, stringsAsFactors = FALSE)
+wga_files=wga_files[str_detect(wga_files$V1, "txt$"),]
 wga_names=unique(wga_files$V2)
 
 fdr_cutoff <- 0.1
