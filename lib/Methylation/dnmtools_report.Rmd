@@ -691,7 +691,7 @@ for(wga_name in wga_names){
       cur_name = basename(cur_file)
       cur_category = str_sub(cur_name, nchar(prefix) +2, -5)
       result = paste0(result, paste0("### ", cur_category, "\n\n"))
-      result = paste0(result, '```{r include=T, warning = F, message = F, echo = F}\nanno_df <- read.table("', cur_file, '", sep = "\t", header = T)\n')
+      result = paste0(result, '```{r include=T, warning = F, message = F, echo = F}\nanno_df <- read.table("', cur_file, '", sep = "\\t", header = T)\n')
       result = paste0(result, 'anno_df <- anno_df %>% dplyr::select(-c(link, overlapId)) %>% dplyr::filter(FDR <= fdr_cutoff)\n')
       result = paste0(result, 'anno_df %>% DT::datatable(extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv")))\n```\n\n')
     }

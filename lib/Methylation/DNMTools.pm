@@ -72,9 +72,9 @@ if [ ! -s ${sample_name}.formatted.sam ]; then
    singularity exec -c -e -B /home,/gpfs23,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools format -f abismal -o ${sample_name}.formatted.sam $sampleFile
 fi
 
-if [[ -s ${sample_name}.formatted.sam ]]; then
-  rm $sampleFile
-fi
+#if [[ -s ${sample_name}.formatted.sam ]]; then
+#  rm $sampleFile
+#fi
 
 if [ ! -s ${sample_name}.sam ]; then
    echo dnmtools uniq=`date`
