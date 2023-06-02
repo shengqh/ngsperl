@@ -660,7 +660,7 @@ for (i in 1:length(dmcpg.all)) {
 }
 
 dmcpg_df <- Reduce(rbind, dmcpg.lst)
-colnames(dmcpg_df) <- c("Comparison", "Sample", "Hypo_meth_num", "Links")
+colnames(dmcpg_df) <- c("Comparison", "Hypo_in_Sample", "Hypo_meth_num", "Links")
 
 write.table(paste0(project, "/", project, "_dmcpg_sign_file.txt"), sep = "\t", quote = F)
 
