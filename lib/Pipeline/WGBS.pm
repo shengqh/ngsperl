@@ -129,6 +129,7 @@ sub getConfig {
     option     => $annovar_param,
     annovar_db => $annovar_db,
     buildver   => $annovar_buildver,
+    perform_splicing => 0,
     isBed      => 1,
     source_ref => [ "DNMTools", ".hmr\$|.amr\$|.pmr\$|.pmd\$" ],
     pbs        => {
