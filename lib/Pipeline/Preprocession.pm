@@ -19,7 +19,6 @@ our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = ( 'all' => [qw(
   getPreprocessionConfig
-  addPairendFastqValidation
   addCutadapt
   addFastqLen
   addExtractSingleEndFastqFromPairend
@@ -58,34 +57,6 @@ sub initializeDefaultOptions {
   # initDefaultValue( $def, "toc_depth", "3");
 
   return $def;
-}
-
-sub addPairendFastqValidation {
-  my ($config, $def, $individual, $parent_dir, $task_name, $source_ref) = @_;
-  $config->{"$task_name"} = {
-    class => "CQS::ProgramWrapperOneToOne",
-    target_dir => $parent_dir . "/" . getNextFolderIndex($def) . "$task_name",
-    option => "",
-    use_tmp_folder => 1,
-    suffix  => "_qc",
-    interpretor => "python3",
-    program => "../QC/validatePairendFastq.py",
-    source_arg => "-i",
-    source_ref => $source_ref,
-    output_arg => "-o",
-    output_file_prefix => ".txt",
-    output_file_ext => ".txt",
-    output_to_same_folder => 1,
-    can_result_be_empty_file => 1,
-    use_tmp_folder => getValue($def, "use_tmp_folder_paired_end_validation", 0),
-    sh_direct   => 0,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "6",
-      "mem"       => "10gb"
-    }
-  };
-  push(@$individual, $task_name);
 }
 
 sub addCutadapt {
