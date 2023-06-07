@@ -72,6 +72,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addCellRangerVdj
   addCellRangerMulti
 
+  addDoubletFinder_individual
   addDoubletFinder
   addAntibody
   addMarkerGenes
@@ -1040,6 +1041,34 @@ sub addCellRangerMulti {
     push(@$tasks, $task_name);
 }
 
+sub addDoubletFinder_individual {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref ) = @_;
+  my $by_sctransform = getValue( $def, "by_sctransform" );
+  my $threads = $by_sctransform ? getValue($def, "sctransform_thread", 8) : 1;
+  $config->{$task_name} = {
+    class                    => "CQS::IndividualR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_doublet_finder.r",
+    parameterSampleFile1_ref => $object_ref,
+    parameterSampleFile2     => {
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      use_sctransform_v2    => getValue( $def, "use_sctransform_v2" ),
+      threads => $threads,
+    },
+    output_file_ext      => ".meta.rds",
+    output_other_ext  => ".meta.csv,.options.csv",
+    sh_direct            => 0,
+    pbs                  => {
+      "nodes"     => "1:ppn=${threads}",
+      "walltime"  => "12",
+      "mem"       => getValue($def, "seurat_mem") 
+    },
+  };
+  push( @$tasks, $task_name );
+}
+
 sub addDoubletFinder {
   my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref ) = @_;
   $config->{$task_name} = {
@@ -1052,6 +1081,7 @@ sub addDoubletFinder {
     parameterSampleFile1     => {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
+      use_sctransform_v2    => getValue( $def, "use_sctransform_v2" ),
     },
     output_file_ext      => ".meta.rds",
     output_other_ext  => ".meta.csv,.options.csv",
@@ -2762,7 +2792,7 @@ sub add_bubble_plots {
 }
 
 sub add_individual_qc_tasks{
-  my ($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref) = @_;
+  my ($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref) = @_;
 
   my $sct_str = get_sct_str($def);
   my $raw_individual_qc_task = "${prefix}raw_qc${sct_str}";
@@ -2812,12 +2842,13 @@ sub add_individual_qc_tasks{
     parameterSampleFile4_ref => $signacX_ref,
     parameterSampleFile5_ref => $singleR_ref,
     parameterSampleFile6_ref => $decontX_ref,
+    parameterSampleFile7_ref => $doublet_finder_ref,
     output_file_ext => ".${prefix}qc.html",
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "10",
-      "mem"       => getValue($def, "seurat_mem") 
+      "mem"       => getValue($def, "seurat_mem", "40gb") 
     },
   };
 
@@ -2883,8 +2914,8 @@ sub add_multiome_qc {
     parameterSampleFile4_ref => "raw_files",
     parameterSampleFile5_ref => $fragment_cells_task,
     parameterFile1 => "",
-    parameterFile2 => getValue($def, "signac_annotation_file"),
-    output_file_ext => ".rds",
+    parameterFile2 => getValue($def, "signac_annotation_file", ""),
+    output_file_ext => ".obj.rds",
     samplename_in_result => 1,
     can_result_be_empty_file => 0,
     remove_empty_parameter => 1,
