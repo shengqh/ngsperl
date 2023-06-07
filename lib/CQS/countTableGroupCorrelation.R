@@ -633,9 +633,9 @@ for (i in 1:nrow(countTableFileAll)) {
         
         for(format in outputFormat){
           if("PDF" == format){
-            pdf(paste0(outputFilePrefix,cur_name,gene_suffix,".heatmap.pdf"),width=10,height=10)
+            pdf(paste0(outputFilePrefix,curSuffix,gene_suffix,".heatmap.pdf"),width=10,height=10)
           }else{
-            png(paste0(outputFilePrefix,cur_name,gene_suffix,".heatmap.png"),width=width,height=width,res=300)
+            png(paste0(outputFilePrefix,curSuffix,gene_suffix,".heatmap.png"),width=width,height=width,res=300)
           }
           
           if(hasMultipleGroup){
