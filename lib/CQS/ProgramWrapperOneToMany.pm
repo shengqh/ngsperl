@@ -77,7 +77,7 @@ sub perform {
   my $iteration_map = get_iteration_map($config, $section, $parameterSampleFile1);
   my $max_length = int(get_option( $config, $section, "iteration_fill_length", 3));
   my $iteration_zerobased = get_option( $config, $section, "iteration_zerobased", 0 );
-  my $iteration_in_key = get_option( $config, $section, "iteration_in_key", "_" );
+  my $iteration_in_key = get_option( $config, $section, "iteration_in_key", "_ITER_" );
 
   my $hasMultiple = scalar(keys %$parameterSampleFile1) > 1;
   my $shfile;
@@ -213,7 +213,7 @@ sub result {
   my $max_length = int(get_option( $config, $section, "iteration_fill_length", 3));
   my $samplename_in_result = get_option( $config, $section, "samplename_in_result", 1 );
   my $zfill_iter_in_result = get_option( $config, $section, "zfill_iter_in_result", 0);
-  my $iteration_in_key = get_option( $config, $section, "iteration_in_key", "_" );
+  my $iteration_in_key = get_option( $config, $section, "iteration_in_key", "_ITER_" );
 
   my ($source_files, $source_file_arg, $source_file_join_delimiter) = get_parameter_sample_files( $config, $section, "source" );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
