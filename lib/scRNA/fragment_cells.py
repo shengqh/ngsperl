@@ -32,6 +32,8 @@ def get_cells(input_file, output_file, logger):
   count = 0
   with gzip.open(input_file, "rt") as fin:
     for line in fin:
+      if line.startswith('#'):
+        continue
       parts = line.split('\t')
       cell = parts[3]
       cell_hash[cell] = 1
