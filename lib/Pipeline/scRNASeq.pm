@@ -254,6 +254,7 @@ sub getScRNASeqConfig {
   my $signacX_ref = undef;
   my $singleR_ref = undef;
   my $decontX_ref = undef;
+  my $doublet_finder_ref = undef;
 
   if (defined $def->{files}){
     if(defined $def->{atac_files}){
@@ -314,22 +315,38 @@ sub getScRNASeqConfig {
         $sctk_ref = [$sctk_task, ".meta.rds"];
       }
 
+      if(getValue($def, "perform_doublet_finder", 0)){
+        my $df_task = "${prefix}doublet_finder";
+        addDoubletFinder_individual($config, $def, $summary, $target_dir, $df_task, $files_def);
+        $doublet_finder_ref = [$df_task, ".meta.rds"];
+      }
+
       if ( $perform_individual_qc ){
-        ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+        ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref);
       }
     }
 
-    if ( $perform_sctk && $remove_doublets){
-      my $doublet_column = getValue($def, "remove_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
+    if($remove_doublets){
+      my $doublets_ref = undef;
+      my $doublet_column = undef;
       my $nodoublets_task = "${prefix}nd";
-      
-      add_remove_doublets($config, $def, $summary, $target_dir, $nodoublets_task, $files_def, $sctk_ref, $doublet_column);
-      
-      $files_def = [$nodoublets_task, ".counts.rds"];
-      $prefix = "${prefix}nd_";
+      if (defined $doublet_finder_ref){
+        $doublets_ref = $doublet_finder_ref;
+        $doublet_column = getValue($def, "remove_doublet_column", getValue($def, "doublet_column", "DF.classifications_highest"));
+      }elsif ($perform_sctk){
+        $doublets_ref = $sctk_ref;
+        $doublet_column = getValue($def, "remove_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
+      }
 
-      if ( $perform_individual_qc ){
-        ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+      if(defined $doublets_ref){  
+        add_remove_doublets($config, $def, $summary, $target_dir, $nodoublets_task, $files_def, $doublets_ref, $doublet_column);
+        
+        $files_def = [$nodoublets_task, ".counts.rds"];
+        $prefix = "${prefix}nd_";
+
+        if ( $perform_individual_qc ){
+          ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+        }
       }
     }
 
@@ -496,12 +513,6 @@ sub getScRNASeqConfig {
 
       my $localization_ref = [ $seurat_task, ".final.rds" ];
 
-      my $df_task = undef;
-      if(getValue($def, "perform_doublet_finder", 0)){
-        $df_task = $seurat_task . "_doublet_finder";
-        addDoubletFinder($config, $def, $summary, $target_dir, $df_task, $obj_ref, undef );
-      }
-
       if(!defined $signacX_ref) {
         if (getValue( $def, "perform_SignacX", 0 ) ) {
           my $signacX_task = $seurat_task . "_SignacX";
@@ -625,10 +636,10 @@ sub getScRNASeqConfig {
               addClonotypeCluster($config, $def, $summary, $target_dir, $clonotype_db . "_cluster", $clonotype_db, $meta_ref, ".clonotype.db.cluster.csv,.clonotype.sub.db.cluster.csv");
             }
 
-            if(defined $df_task){
-              my $doublet_check_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_doublet_check";
-              add_doublet_check($config, $def, $summary, $target_dir, $doublet_check_task, $obj_ref, $df_task );
-            }
+            # if(defined $df_task){
+            #   my $doublet_check_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_doublet_check";
+            #   add_doublet_check($config, $def, $summary, $target_dir, $doublet_check_task, $obj_ref, $df_task );
+            # }
           }
         }
       }
