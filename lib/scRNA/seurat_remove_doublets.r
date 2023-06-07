@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='ENCDO068KYD'
-outFile='ENCDO068KYD'
+sample_name='DKO_F'
+outFile='DKO_F'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20230504_encode_liver_scRNA_atac_sct2/decontX_nodoublets/result/ENCDO068KYD')
+setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd/result/DKO_F')
 
 ### Parameter setting end ###
 
@@ -42,6 +42,9 @@ lst = read_scrna_data(file_path, keep_seurat_object)
 counts = lst$counts  
 
 smeta = readRDS(doublet_file)
+if(doublet_column == "DF.classifications_highest"){
+  doublet_column=colnames(smeta)[ncol(smeta)]
+}
 dcells = rownames(smeta)[smeta[,doublet_column] %in% c("Doublet", "doublet")]
 
 if(!all(dcells %in% colnames(counts))){
@@ -51,4 +54,3 @@ if(!all(dcells %in% colnames(counts))){
 filtered_counts<-counts[,!(colnames(counts) %in% dcells)]
 
 saveRDS(filtered_counts, paste0(sample_name, ".nodoublets.counts.rds"))
-
