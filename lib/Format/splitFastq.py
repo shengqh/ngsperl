@@ -29,7 +29,7 @@ def get_record_per_file(logger, input_files, trunk_number):
   logger.info("Total %d reads, each file should have almost %d reads." % (total_record, result))
   return (result)
 
-def split_by_trunk(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber, startTrunk=1, fill_length=3, compresslevel=1): 
+def split_by_trunk(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumber, startTrunk=1, fill_length=3, compresslevel=1, total_read=0): 
   if isPairedEnd:
     read1files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 0]
     read2files = [inputFiles[idx] for idx in range(0, len(inputFiles)) if idx % 2 == 1]
@@ -37,7 +37,10 @@ def split_by_trunk(logger, inputFiles, isPairedEnd, outputFilePrefix, trunkNumbe
   else:
     input_array = [inputFiles]
 
-  recordPerFile = get_record_per_file(logger, input_array[0], trunkNumber)
+  if total_read > 0:
+    recordPerFile = math.ceil(total_read / trunkNumber)
+  else:
+    recordPerFile = get_record_per_file(logger, input_array[0], trunkNumber)
 
   fileIndex = 0
   for read_files in input_array:
@@ -92,24 +95,35 @@ def main():
   parser.add_argument('-o', '--outputPrefix', action='store', nargs='?', default="-", help="Output file prefix", required=NOT_DEBUG)
   parser.add_argument('--is_single_end', action='store', nargs='?', help="Is single end?")
   parser.add_argument('--trunk', action='store', nargs='?', type=int, default=50, help="Number of small files")
+  parser.add_argument('--total_reads', action='store', nargs='?', type=int, default=0, help="Total reads in input")
+  parser.add_argument('--start_trunk', action='store', nargs='?', type=int, default=1, help="Trunk starts from (default 1)")
   parser.add_argument('--fill_length', action='store', nargs='?', type=int, default=3, help="Trunk name length (fill with zero)")
   parser.add_argument('--compresslevel', action='store', nargs='?', type=int, default=1, help="Compress level, 1: fastest, 9: slowest")
 
   args = parser.parse_args()
   
   if DEBUG:
-    dfolder = "/scratch/vickers_lab/projects/20200708_smallRNA_KCV_3018_45_46_human_v5_byTiger/preprocessing/identical/result/"
-    args.input = "%sCB10C_clipped_identical.fastq.gz,%sCB10C_clipped_identical.fastq.gz,%sCB11C_clipped_identical.fastq.gz,%sCB11C_clipped_identical.fastq.gz" % (dfolder, dfolder, dfolder, dfolder)
-    args.outputPrefix = "/scratch/cqs/shengq2/temp/splitFastqTest"
-    args.is_single_end = True
-    args.trunk = 4
+    args.input = "/data/jbrown_lab/2023/20230602_10026_wgs_Human_Cholangiocyte_Cell/10026-DB-0001_S1_L005_R1_001.fastq.gz,/data/jbrown_lab/2023/20230602_10026_wgs_Human_Cholangiocyte_Cell/10026-DB-0001_S1_L005_R2_001.fastq.gz"
+    args.outputPrefix = "/nobackup/brown_lab/projects/20230602_wgs_10026_hg38/bwa_00_splitFastq/result/DB_0001"
+    args.is_single_end = False
+    args.total_reads = 1168866345
+    args.trunk = 20
   
   logger = logging.getLogger('splitFastq')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
   
   inputFiles = args.input.split(",")
   
-  split_by_trunk(logger, inputFiles, not args.is_single_end, args.outputPrefix, args.trunk, args.fill_length, args.compresslevel)
+  split_by_trunk(
+    logger = logger, 
+    inputFiles = inputFiles,
+    isPairedEnd= not args.is_single_end,
+    outputFilePrefix= args.outputPrefix, 
+    trunkNumber= args.trunk,
+    startTrunk=args.start_trunk,
+    fill_length= args.fill_length,
+    compresslevel= args.compresslevel,
+    total_read= args.total_reads)
   
 if __name__ == "__main__":
     main()
