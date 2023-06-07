@@ -70,6 +70,8 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "bwa_option", "" );
   }
 
+  initDefaultValue( $def, "mark_duplicates_use_tmp_folder", 0 );
+
   if(defined $def->{"ref_fasta_dict"} && (! defined $def->{"chromosome_names"})){
     my $dictFile = getValue($def, "ref_fasta_dict");
     my $primary_chromosome_only = getValue($def, "primary_chromosome_only", 1);
@@ -500,6 +502,10 @@ sub getConfig {
   push @$individual, @$summary;
   $summary = $individual;
 
+  if(defined $def->{annotation_genes}){
+    addGeneLocus($config, $def, $summary, $target_dir);
+  }
+
   $config->{general}{interval_list_file} = getValue($def, "interval_list_file");
 
   my $gatk_prefix = getValue($def, "gatk_prefix");
@@ -660,14 +666,17 @@ fi
 
     my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
     if ($perform_mark_duplicates) {
-      my $markduplicates = "markduplicates";
-
-      addMarkduplicates($config, $def, $summary, $target_dir, $markduplicates, $bam_section);
-
-      $bam_section = "markduplicates";
+      my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
+      if(!defined $config->{bwa_02_markduplicates}){
+        #if perform_split_fastq, markduplicates might be added with split_fastq tasks.
+        my $markduplicates = "markduplicates";
+        addMarkduplicates($config, $def, $summary, $target_dir, $markduplicates, $bam_section);
+        $bam_section = "markduplicates";
+      }
     }
 
     my $bam_recalibration_section = add_bam_recalibration($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
+    
     my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, [ $bam_recalibration_section, '.bam$']);
 
     if($def->{perform_extract_bam}){
