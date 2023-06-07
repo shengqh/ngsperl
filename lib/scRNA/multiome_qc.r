@@ -1,17 +1,16 @@
 rm(list=ls()) 
-sample_name='ENCDO068KYD'
-outFile='ENCDO068KYD'
+sample_name='AS01'
+outFile='AS01'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
-parSampleFile5='fileList5.txt'
 parFile1=''
 parFile2='/data/cqs/references/scrna/EnsDb.Hsapiens.v86.GRanges.UCSC.rds'
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20230523_encode_liver_multiome/multiome_qc/result/ENCDO068KYD')
+setwd('/nobackup/shah_lab/shengq2/20230530_Vandy_AS_multiome/multiome_qc/result/AS01')
 
 ### Parameter setting end ###
 
@@ -41,26 +40,35 @@ macs2_path=get_value(myoptions$macs2_path, NULL)
 
 counts_file_map = read_file_map(parSampleFile1, do_unlist=FALSE)
 fragments_file_map = read_file_map(parSampleFile3, do_unlist=FALSE)
-fragments_cell_map = read_file_map(parSampleFile5, do_unlist=FALSE)
+
+if(exists('parSampleFile5')){
+  fragments_cell_map = read_file_map(parSampleFile5, do_unlist=FALSE)
+}else{
+  fragments_cell_map = NULL
+}
 
 counts_file = counts_file_map[[sample_name]]
 if(dir.exists(counts_file)){
   counts <- Read10X(counts_file)
+  atac_cells = colnames(counts)
 }else{
   counts <- Read10X_h5(counts_file)
+  peaks_count = counts$Peaks
+  atac_cells = colnames(peaks_count)
+  counts = counts$`Gene Expression`
 }
 
-frag_cells_file = fragments_cell_map[[sample_name]]
-frag_cells = readLines(frag_cells_file)
+# frag_cells_file = fragments_cell_map[[sample_name]]
+# frag_cells = readLines(frag_cells_file)
 
-gex_cells = colnames(counts)
-gex_cells = gex_cells[order(gex_cells)]
-writeLines(gex_cells, paste0(outFile, ".gex.cells.txt"))
-writeLines(frag_cells, paste0(outFile, ".frag.cells.txt"))
+# gex_cells = colnames(counts)
+# gex_cells = gex_cells[order(gex_cells)]
+# writeLines(gex_cells, paste0(outFile, ".gex.cells.txt"))
+# writeLines(frag_cells, paste0(outFile, ".frag.cells.txt"))
 
-print(table(colnames(counts) %in% frag_cells))
+# print(table(colnames(counts) %in% frag_cells))
 
-stopifnot(all(colnames(counts) %in% frag_cells))
+# stopifnot(all(colnames(counts) %in% frag_cells))
 
 #annotation <- readRDS(parFile2)
 
@@ -70,16 +78,18 @@ obj <- CreateSeuratObject(
   assay = "RNA"
 )
 
-annotation <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
-seqlevelsStyle(annotation) <- "UCSC"
-saveRDS(annotation, 'EnsDb.Hsapiens.v86.UCSC.rds')
+if(file.exists(parFile2)){
+  annotation = readRDS(parFile2)
+}else{
+  annotation <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
+  seqlevelsStyle(annotation) <- "UCSC"
+  #saveRDS(annotation, 'EnsDb.Hsapiens.v86.UCSC.rds')
+}
 
 fragpath = fragments_file_map[[sample_name]]
 
 # create fragment object
 frag_obj = CreateFragmentObject(fragpath)
-
-
 
 peaks = CallPeaks(frag_obj)
 peaks <- keepStandardChromosomes(peaks, pruning.mode = "coarse")
@@ -89,7 +99,7 @@ peaks <- subsetByOverlaps(x = peaks, ranges = blacklist_hg38_unified, invert = T
 macs2_counts <- FeatureMatrix(
   fragments = frag_obj,
   features = peaks,
-  cells = colnames(obj)
+  cells = atac_cells
 )
 
 # create ATAC assay and add it to the object
@@ -126,28 +136,102 @@ obj <- subset(
     TSS.enrichment > min_TSS_enrichment
 )
 
-saveRDS(obj, "obj.rds")
+DefaultAssay(obj) <- "RNA"
+obj <- do_sctransform(obj, use_sctransform_v2=TRUE, mc.cores=8)
+obj <- RunPCA(obj)
 
-frags <- Fragments(object = obj)
-allfragpaths <- sapply(X = frags, FUN = GetFragmentData, slot = "path")
-fragpath <- GetFragmentData(object = allfragpaths, slot = "path")
+DefaultAssay(obj) <- "ATAC"
+obj <- FindTopFeatures(obj, min.cutoff = 5)
+obj <- RunTFIDF(obj)
+obj <- RunSVD(obj)
 
-peaks <- CallPeaks(obj, macs2.path=macs_path)
-
-# remove peaks on nonstandard chromosomes and in genomic blacklist regions
-peaks <- keepStandardChromosomes(peaks, pruning.mode = "coarse")
-peaks <- subsetByOverlaps(x = peaks, ranges = blacklist_hg38_unified, invert = TRUE)
-
-# quantify counts in each peak
-macs2_counts <- FeatureMatrix(
-  fragments = Fragments(obj),
-  features = peaks,
-  cells = colnames(obj)
+# build a joint neighbor graph using both assays
+obj <- FindMultiModalNeighbors(
+  object = obj,
+  reduction.list = list("pca", "lsi"), 
+  dims.list = list(1:20, 2:10),
+  verbose = TRUE
 )
 
-# create a new assay using the MACS2 peak set and add it to the Seurat object
-obj[["peaks"]] <- CreateChromatinAssay(
-  counts = macs2_counts,
-  fragments = fragpath,
-  annotation = annotation
+obj <- FindClusters(obj, resolution = 0.5, verbose = FALSE, graph.name="wsnn")
+obj$seurat_clusters_BiMod <- obj$seurat_clusters
+
+# build a joint UMAP visualization
+obj <- RunUMAP(
+  object = obj,
+  nn.name = "weighted.nn",
+  assay = "RNA",
+  verbose = TRUE
 )
+
+ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
+                             species = myoptions$species,
+                             curated_markers_file = myoptions$curated_markers_file,
+                             HLA_panglao5_file = myoptions$HLA_panglao5_file)
+
+cell_activity_database<-ctdef$cell_activity_database
+
+cluster="seurat_clusters"
+data_norm=get_seurat_average_expression(obj, cluster)
+
+predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
+
+if(length(predict_celltype$max_cta) > 1){
+  cta_png_file=paste0(sample_name, ".cta.png")
+  Plot_predictcelltype_ggplot2( predict_celltype, 
+                        filename=cta_png_file)
+}
+
+new_cluster_ids<-names(predict_celltype$max_cta)
+names(new_cluster_ids) = colnames(data_norm)
+obj$cell_type = unlist(new_cluster_ids[as.character(obj$seurat_clusters)])
+obj$seurat_cell_type = paste0(obj$seurat_clusters, ": ", obj$cell_type)
+
+g1<-get_dim_plot_labelby(obj, reduction="umap", label.by="cell_type") + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle("Cell type")
+png(paste0(sample_name, ".umap.cell_type.png"), width=1800, height=1500, res=300)
+print(g1)
+dev.off()
+
+g2<-get_dim_plot(obj, reduction="umap", group.by="seurat_clusters", label.by="seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat cell type")
+png(paste0(sample_name, ".umap.seurat_cell_type.png"), width=1800, height=1500, res=300)
+print(g2)
+dev.off()
+
+if(file.exists(myoptions$bubblemap_file)){
+  g<-get_bubble_plot(obj = obj, 
+    bubblemap_file = myoptions$bubblemap_file, 
+    group.by = "seurat_cell_type")
+  dot_file = paste0(sample_name, ".dot.png")
+  png(dot_file, width=get_dot_width(g), height=get_dot_height(obj, "seurat_cell_type"), res=300)
+  print(g)
+  dev.off()
+}
+
+saveRDS(obj, paste0(sample_name, ".obj.rds"))
+
+# #Linking peaks to genes
+# DefaultAssay(obj) <- "ATAC"
+
+# # first compute the GC content for each peak
+# obj <- RegionStats(obj, genome = BSgenome.Hsapiens.UCSC.hg38)
+
+# # link peaks to genes
+# obj <- LinkPeaks(
+#   object = obj,
+#   peak.assay = "ATAC",
+#   expression.assay = "SCT",
+#   genes.use = c("COL4A5", "ADAMTS1")
+# )
+
+# p1 <- CoveragePlot(
+#   object = obj,
+#   region = "COL4A5",
+#   features = "COL4A5",
+#   expression.assay = "SCT",
+#   extend.upstream = 500,
+#   extend.downstream = 10000
+# )
+
+# png(paste0(sample_name, ".coverage.COL4A5.png"), width=3300, height=3000, res=300)
+# print(p1)
+# dev.off()
