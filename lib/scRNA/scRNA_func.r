@@ -150,7 +150,7 @@ MyDimPlot<-function(...){
   #set raster=FALSE 
   #When number of cells larger than 100000, it might throw error: 
   #Problem while converting geom to grob, Error occurred in the 1st layer.
-  g<-DimPlot(raster=FALSE, ...) + theme(aspect.ratio=1)
+  g<-DimPlot(raster=FALSE, repel=TRUE, ...) + theme(aspect.ratio=1)
   return(g)
 }
 
@@ -1099,7 +1099,11 @@ get_dot_height<-function(obj, group.by){
 }
 
 get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL, use_blue_yellow_red=TRUE, species=NULL){
+  old_assay = DefaultAssay(obj)
+  DefaultAssay(obj) = assay
   allgenes=rownames(obj)
+  DefaultAssay(obj) = old_assay
+  
   genes_df <- read_bubble_genes(bubblemap_file, allgenes, species=species)
   gene_groups=split(genes_df$gene, genes_df$cell_type)
 
