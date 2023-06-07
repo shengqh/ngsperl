@@ -27,6 +27,7 @@ our %EXPORT_TAGS = (
     initPipelineOptions 
     readChromosomeFromDictFile
     addPreprocess 
+    addPairendFastqValidation
     addFastQC 
     addBlastn 
     addBowtie 
@@ -80,6 +81,7 @@ our %EXPORT_TAGS = (
     get_expect_trunk
     add_BWA_and_summary_scatter
     addMarkduplicates
+    addMarkduplicates_merge    
     addSequenceTask
     addFilesFromSraRunTable
     addWebgestalt
@@ -195,6 +197,34 @@ sub getNextFolderIndex {
   }
 
   return $result;
+}
+
+sub addPairendFastqValidation {
+  my ($config, $def, $individual, $parent_dir, $task_name, $source_ref) = @_;
+  $config->{"$task_name"} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => $parent_dir . "/" . getNextFolderIndex($def) . "$task_name",
+    option => "",
+    use_tmp_folder => 1,
+    suffix  => "_qc",
+    interpretor => "python3",
+    program => "../QC/validatePairendFastq.py",
+    source_arg => "-i",
+    source_ref => $source_ref,
+    output_arg => "-o",
+    output_file_prefix => ".txt",
+    output_file_ext => ".txt",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 1,
+    use_tmp_folder => getValue($def, "use_tmp_folder_paired_end_validation", 0),
+    sh_direct   => 0,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "6",
+      "mem"       => "10gb"
+    }
+  };
+  push(@$individual, $task_name);
 }
 
 sub addFastQC {
@@ -2394,22 +2424,26 @@ sub add_merge_bam {
     class                 => "CQS::ProgramWrapperManyToOne",
     perform               => 1,
     target_dir            => "$target_dir/$merge_name",
-    option                => "-t 8 __OUTPUT__ __INPUT__",
+    option                => "
+sambamba merge -t 8 __OUTPUT__ \\
+  __INPUT__ 
+",
     interpretor           => "",
     check_program         => 0,
-    program               => "sambamba merge",
+    program               => "",
     source_ref            => $source_ref,
     source_arg            => "",
-    source_join_delimiter => " ",
+    source_join_delimiter => " \\\n  ",
     output_to_same_folder => 1,
     output_arg            => "-o",
     output_file_prefix    => ".bam",
     output_file_ext       => ".bam,.bam.bai",
+    use_tmp_folder => getValue($def, "merge_bam_use_tmp_folder", 0),
     sh_direct             => 1,
     pbs                   => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+      "nodes"     => "1:ppn=" . getValue($def, "merge_bam_threads", 8),
+      "walltime"  => "48",
+      "mem"       => "40gb"
     },
   };
 
@@ -2471,6 +2505,7 @@ sub add_split_fastq_dynamic {
     iteration_arg         => "",
     iteration_fill_length => 3,
     sh_direct             => 1,
+    use_tmp_folder => 0, #for split fastq, we don't need tmp folder
     pbs                   => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "10",
@@ -2500,6 +2535,8 @@ sub add_split_fastq {
     source_ref      => $source_ref,
     source_arg            => "-i",
     source_join_delimiter => ",",
+    parameterSampleFile2_arg => "--total_reads",
+    parameterSampleFile2 => $def->{"total_reads"},
     output_to_same_folder => 1,
     output_arg            => "-o",
     output_file_prefix    => "",
@@ -2509,6 +2546,7 @@ sub add_split_fastq {
     iteration             => getValue($def, "aligner_scatter_count"),
     iteration_fill_length => 3,
     zfill_iter_in_result  => 1,
+    use_tmp_folder => getValue($def, "split_fastq_use_tmp_folder", 0),
     sh_direct             => 1,
     pbs                   => {
       "nodes"     => "1:ppn=1",
@@ -2671,13 +2709,25 @@ sub add_BWA_and_summary_scatter {
     die 'wrong perform_split_fastq value, it should be one of [ 0, "by_dynamic", "by_file", "by_scatter"]';
   }
 
+  if(getValue($def, "perform_paired_end_validation", 1)){
+    my $fastq_validator = $splitFastq . "_validation";
+    addPairendFastqValidation($config, $def, $tasks, $target_dir, $fastq_validator, $splitFastq);
+  }
+
   my $rg_name_regex = "(.+)_ITER_";
 
   my $bwa = "bwa_01_alignment";
   add_BWA($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
 
-  my $mergeBam = "bwa_02_merge";
-  add_merge_bam($config, $def, $tasks, $target_dir, $mergeBam, $bwa, $rg_name_regex); 
+  my $bam_section = undef;
+  # my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
+  # if ($perform_mark_duplicates) {
+  #   $bam_section = "bwa_02_markduplicates";
+  #   addMarkduplicates_merge($config, $def, $tasks, $target_dir, $bam_section, $bwa);
+  # }else{
+    $bam_section = "bwa_02_merge";
+    add_merge_bam($config, $def, $tasks, $target_dir, $bam_section, $bwa); 
+  # }
 
   my $bwa_summary = "bwa_03_summary";
   add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
@@ -2691,8 +2741,63 @@ sub add_BWA_and_summary_scatter {
       add_pairedend_fastq_to_ubam($config, $def, $tasks, $target_dir, $ubam_fastq, [$merge_fastq, ".fq.gz"]);
     }
   }
-  return( [ $mergeBam, ".bam\$" ], $mergeBam);
+  return( [ $bam_section, ".bam\$" ], $bam_section);
 }
+
+
+sub addMarkduplicates_merge {
+  my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
+
+  my $mem = getValue($def, "mark_duplicates_mem", "40gb");
+  #replace gb with empty and minus 2
+  my $java_memory_size = $mem;
+  $java_memory_size =~ s/gb//g;
+  $java_memory_size = $java_memory_size - 2;
+
+  #default is the location in gatk docker
+  my $picard_jar = getValue($def, "picard_jar", "/opt/picard.jar");
+
+  my $sort_order = getValue($def, "sort_order", "coordinate");
+
+  $config->{$task_name} = {
+    class                 => "CQS::ProgramWrapperManyToOne",
+    perform               => 1,
+    target_dir            => "$target_dir/$task_name",
+    option                => "
+java -Dsamjdk.compression_level=2 -Xms${java_memory_size}g -jar $picard_jar \\
+  MarkDuplicates \\
+  INPUT=__INPUT__ \\
+  OUTPUT=__OUTPUT__ \\
+  METRICS_FILE=__NAME__.duplicate_metrics.txt \\
+  VALIDATION_STRINGENCY=SILENT \\
+  OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 \\
+  ASSUME_SORT_ORDER=\"$sort_order\" \\
+  CLEAR_DT=\"false\" \\
+  ADD_PG_TAG_TO_READS=false
+",
+    interpretor           => "",
+    check_program         => 0,
+    program               => "",
+    source_ref            => $source_ref,
+    source_arg            => "",
+    source_join_delimiter => " \\\n  INPUT=",
+    output_to_same_folder => 1,
+    output_arg            => "-o",
+    output_file_prefix    => ".duplicates_marked.bam",
+    output_file_ext       => ".duplicates_marked.bam,.duplicates_marked.bai",
+    use_tmp_folder => getValue($def, "mark_duplicates_use_tmp_folder", 0),
+    sh_direct             => 0,
+    docker_prefix        => "picard_",
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "mark_duplicates_walltime", "48"),
+      "mem"       => getValue($def, "mark_duplicates_mem", "40gb")
+    },
+  };
+
+  push(@$tasks, $task_name);
+}
+
 
 sub addMarkduplicates {
   my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
@@ -2728,6 +2833,7 @@ fi
     output_file_prefix    => ".duplicates_marked.bam",
     output_file_ext       => ".duplicates_marked.bam, .duplicates_marked.bam.bai",
     sh_direct             => 0,
+    use_tmp_folder => getValue($def, "mark_duplicates_use_tmp_folder", 1),
     pbs                   => {
       "nodes"    => "1:ppn=8",
       "walltime" => "24",
