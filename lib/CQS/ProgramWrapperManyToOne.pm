@@ -24,7 +24,7 @@ sub new {
   return $self;
 }
 
-sub get_joined_files {
+sub my_get_joined_files {
   my ( $sample_name_map, $sample_name, $parameterSampleFile1, $join_delimiter ) = @_;
   my $pfiles                  = [];
   my $individual_sample_names = $sample_name_map->{$sample_name};
@@ -98,7 +98,7 @@ sub perform {
   my $sample_name_map = get_interation_sample_subsample_map($parameterSampleFile1);
 
   for my $sample_name ( sort keys %$sample_name_map ) {
-    my $input_file = get_joined_files($sample_name_map, $sample_name, $parameterSampleFile1, $parameterSampleFile1JoinDelimiter);
+    my $input_file = my_get_joined_files($sample_name_map, $sample_name, $parameterSampleFile1, $parameterSampleFile1JoinDelimiter);
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
 
@@ -121,7 +121,7 @@ sub perform {
     if ( not $bFound2 ) {
       $curOption = $curOption . " " . $param_option2;
     }else{
-      my $param2 = get_joined_files($sample_name_map, $sample_name, $parameterSampleFile2, $parameterSampleFile2JoinDelimiter);
+      my $param2 = my_get_joined_files($sample_name_map, $sample_name, $parameterSampleFile2, $parameterSampleFile2JoinDelimiter);
       if ($param2 ne ""){
         if ($g_option =~ /__INPUT2__/){
           $g_option =~ s/__INPUT2__/$param2/g;
@@ -134,7 +134,7 @@ sub perform {
     if ( not $bFound3 ) {
       $curOption = $curOption . " " . $param_option3;
     }else{
-      my $param3 = get_joined_files($sample_name_map, $sample_name, $parameterSampleFile3, $parameterSampleFile3JoinDelimiter);
+      my $param3 = my_get_joined_files($sample_name_map, $sample_name, $parameterSampleFile3, $parameterSampleFile3JoinDelimiter);
       if ($param3 ne ""){
         if ($g_option =~ /__INPUT3__/){
           $g_option =~ s/__INPUT3__/$param3/g;
