@@ -581,7 +581,7 @@ sub getRNASeqConfig {
     my $de_source=$count_file_ref;
     if ( $def->{perform_proteincoding_gene} ) {
       $de_prefix="proteincoding_genetable";
-      if(defined $config->{gene_table}){
+      if(defined $config->{genetable}){
         $de_source=[ "genetable", ".proteincoding.count\$" ];
       }
     }
