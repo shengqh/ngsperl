@@ -1,14 +1,14 @@
 
-rootdir<-"/nobackup/shah_lab/shengq2/20230526_mona_VR2527_rnaseq_hg38/deseq2_proteincoding_genetable/result"
-inputfile<-"VR2527.define" 
+rootdir<-"/data/h_gelbard_lab/projects/20230606_9686_AG_RNAseq_iSGS_estrogen/deseq2_proteincoding_genetable/result"
+inputfile<-"RNAseq_human.define" 
 
 pvalue<-0.05
 useRawPvalue<-0
-foldChange<-1.5
+foldChange<-2
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
-showLabelInPCA<-0
+showLabelInPCA<-1
 showDEGeneCluster<-0
 addCountOne<-0
 usePearsonInHCA<-1
@@ -19,7 +19,7 @@ transformTable<-0
 exportSignificantGeneName<-1
 thread<-8
 
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;top25cvInHCA<-FALSE;
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-TRUE;top25cvInHCA<-FALSE;
 cooksCutoff<-0.99
 #predefined_condition_end
 
@@ -985,15 +985,9 @@ for(countfile_index in c(1:length(countfiles))){
     
     write.csv(diffResult, file=paste0(prefix, "_DESeq2_volcanoPlot.csv"))
     
-    if(useRawPvalue == 1){
-      yname=bquote(p~value)
-      yvar="pvalue"
-    }else{
-      yname=bquote(Adjusted~p~value)
-      yvar="padj"
-    }
+    yname=bquote(-log10(p~value))
     xname=bquote(log[2]~Fold~Change)
-    p<-ggplot(diffResult,aes_string(x="log2FoldChange",y=yvar))+
+    p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
       scale_y_continuous(trans=reverselog_trans(10),name=yname) +
       geom_point(aes(size=log10BaseMean,colour=colour))+
       scale_color_manual(values=changeColours,guide = FALSE)+
@@ -1025,17 +1019,40 @@ for(countfile_index in c(1:length(countfiles))){
         diffResult$Feature_gene_name=rownames(diffResult)
       }
 
-      p<-EnhancedVolcano(diffResult,
-          lab = diffResult$Feature_gene_name,
-          x = 'log2FoldChange',
-          y = yvar,
-          title = comparisonTitle,
-          pCutoff = pvalue,
-          FCcutoff = log2(foldChange),
-          pointSize = 3.0,
-          labSize = 6.0,
-          colAlpha = 1,
-          subtitle = NULL) + ylab(yname)
+      if(packageVersion("EnhancedVolcano") == '1.8.0'){
+        if(useRawPvalue == 1){
+          yname=bquote(-log10(p~value))
+          yvar="pvalue"
+        }else{
+          yname=bquote(-log10(adjusted~p~value))
+          yvar="padj"
+        }
+        p<-EnhancedVolcano(diffResult,
+            lab = diffResult$Feature_gene_name,
+            x = 'log2FoldChange',
+            y = yvar,
+            title = comparisonTitle,
+            pCutoff = pvalue,
+            FCcutoff = log2(foldChange),
+            pointSize = 3.0,
+            labSize = 6.0,
+            colAlpha = 1,
+            subtitle = NULL) + ylab(yname)
+      }else{
+        yname=bquote(-log10(p~value))
+        p<-EnhancedVolcano(diffResult,
+            lab = diffResult$Feature_gene_name,
+            x = 'log2FoldChange',
+            y = 'pvalue',
+            title = comparisonTitle,
+            pCutoff = pvalue,
+            pCutoffCol = yvar,
+            FCcutoff = log2(foldChange),
+            pointSize = 3.0,
+            labSize = 6.0,
+            colAlpha = 1,
+            subtitle = NULL) + ylab(yname)
+      }
       filePrefix<-paste0(prefix,"_DESeq2_volcanoEnhanced")
       drawPlot(filePrefix, outputFormat, 10, 10, 3000, 3000, p, "Volcano")
     }
