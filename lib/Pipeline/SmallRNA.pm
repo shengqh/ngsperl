@@ -26,8 +26,8 @@ our $VERSION = '0.06';
 sub getUniqueGroups {
   my ($def) = @_;
   my $result = "";
-  if (defined $def->{unique_groups}){
-    my $uni_groups = $def->{unique_groups};
+  if (defined $def->{unique_group_names}){
+    my $uni_groups = $def->{unique_group_names};
     my @uniqueGroups;
     if (is_string($uni_groups)){
       @uniqueGroups = split(/[,;]/, $uni_groups);
@@ -197,6 +197,26 @@ sub getSmallRNAConfig {
       "Row_Group" => $groups->{".row"},
       "Groups"    => $groups->{".order"}
     };
+  }
+
+  if(defined $groups && defined $def->{unique_group_names}){
+    my $unique_group_names = $def->{unique_group_names};
+    my $unique_groups = {};
+    for my $ugname (@$unique_group_names){
+      my $ugroup = $groups->{$ugname};
+      if(defined $ugroup){
+        $unique_groups->{$ugname} = $ugroup;
+      }
+    }
+    $def->{unique_groups} = $unique_groups;
+  }else{
+    #assuming the groups are unique
+    $def->{unique_groups} = $groups;
+  }
+  my $unique_groups = $def->{unique_groups};
+
+  if ( !defined $def->{tRNA_vis_group} ) {
+    $def->{tRNA_vis_group} = $def->{unique_groups};
   }
 
   if ( !defined $def->{groups_smallRNA_vis_layout} ) {
@@ -624,16 +644,17 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           perform                   => 1,
           target_dir                => $host_genome_dir . "/$tVisTask",
           rtemplate                 => "../SmallRNA/absolute_tRNA_position.r",
-          output_file_ext           => ".tRNA.Barplot.png",
+          output_file_ext           => ".succeed",
           parameterSampleFile1_ref => $tTask,
           parameterSampleFile2Order => $def->{groups_order},
-          parameterSampleFile2      => $groups,
+          parameterSampleFile2      => $unique_groups,
           parameterSampleFile3      => $def->{groups_vis_layout},
           parameterSampleFile4      => {
             "sample_pattern" => $def->{tRNA_abs_position_sample_pattern},
           },
           rCode                     => "",
           sh_direct                 => 1,
+          can_result_be_empty_file => 1,
           pbs                       => {
             "nodes"     => "1:ppn=1",
             "walltime"  => "2",
@@ -808,11 +829,8 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       #   push @$summary_ref, $tRHCategory;
       # }
 
-      if ( $def->{perform_host_tRNA_start_position} && $def->{groups}) {
+      if ( $def->{perform_host_tRNA_start_position} && $def->{unique_groups}) {
         my $tTask = "host_genome_tRNA_start_position_vis";
-        if ( !defined $def->{tRNA_vis_group} ) {
-          $def->{tRNA_vis_group} = $groups;
-        }
         addPositionVis(
           $config, $def,
           $summary_ref,
@@ -994,6 +1012,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           );
         }
       }
+
       if ( $def->{hasYRNA} ) {
         push @name_for_readSummary, "Host yRNA";
         push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count\$" );
@@ -1043,9 +1062,10 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         push @table_for_countSum,    ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.count\$" );
         push @table_for_readSummary, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.read.count\$" );
         push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.count\$" );
-        if ( $def->{read_correlation} ) {
-          push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.read.count\$", );
-        }
+        # Due to the low read count of ERV sequence, we do not do correlation analysis for ERV
+        # if ( $def->{read_correlation} ) {
+        #   push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.read.count\$", );
+        # }
       }
 
       if ( $def->{read_correlation} ) {
@@ -1120,9 +1140,12 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, $biotype_feature_regex );
           push( @visual_source, $biotype_name );
 
-          addDEseq2( $config, $def, $summary_ref, "${biotype_name}_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.read.count\$" ],
-            $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
-          push @visual_source_reads, "${biotype_name}_reads";
+          #Due to the fact that the read counts of ERV sequences are too low, we don't do DE analysis for ERV sequences
+          if ($biotype ne "ERV"){
+            addDEseq2( $config, $def, $summary_ref, "${biotype_name}_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.read.count\$" ],
+              $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
+            push @visual_source_reads, "${biotype_name}_reads";
+          }
         }
       }
 
@@ -1184,6 +1207,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             #        parameterSampleFile3_ref => $trna_sig_result,
           }
         );
+
         if ( $def->{hasYRNA} ) {
           addPositionVis(
             $config, $def,
@@ -1196,6 +1220,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             }
           );
         }
+
         if ( $def->{hasSnRNA} ) {
           addPositionVis(
             $config, $def,
@@ -1208,6 +1233,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             }
           );
         }
+        
         if ( $def->{hasSnoRNA} ) {
           addPositionVis(
             $config, $def,
@@ -1676,6 +1702,12 @@ fi
   my @overlap      = ();
   my @overlapNames = ();
 
+  # if ($search_nonhost_genome && $search_custom_group_by_gene){
+  #   my $nonhostGroup = "";
+  #   my $bowtie1Task = "custom_bowtie1_pm";
+  #   addBowtie( $config, $def, $individual_ref, $bowtie1Task, $nonhost_genome_dir, $def->{"bowtie1_${nonhostGroup}_index"}, $sourceRef, $def->{bowtie1_option_pm} );
+  # }
+
   #Mapping unmapped reads to nonhost genome
   if ($search_nonhost_genome) {
     my $nonhost_genome_count_xml = [];
@@ -1689,7 +1721,7 @@ fi
         $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{"${nonhostGroup}_species_map"},    #table option
         $identical_count_ref,
         $nonhostXml,
-        $force_species_file
+        $force_species_file       
       );
 
       addNonhostVis(
@@ -2876,7 +2908,7 @@ fi
 
         if(defined $pairs){
           for my $comparison (sort keys %$pairs){
-            push( @report_files, "deseq2_miRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_files, "deseq2_miRNA_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
             push( @report_names, "deseq2_mirna_volcano_${comparison}" );
           }
         }
@@ -2887,7 +2919,7 @@ fi
           push( @report_names, "correlation_trna_heatmap", "correlation_trna_pca" );
           if(defined $pairs){
             for my $comparison (sort keys %$pairs){
-              push( @report_files, "deseq2_tRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+              push( @report_files, "deseq2_tRNA_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
               push( @report_names, "deseq2_trna_volcano_${comparison}" );
             }
           }
@@ -2897,7 +2929,7 @@ fi
           push( @report_names, "correlation_rrna_heatmap", "correlation_rrna_pca" );
           if(defined $pairs){
             for my $comparison (sort keys %$pairs){
-              push( @report_files, "deseq2_rRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+              push( @report_files, "deseq2_rRNA_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
               push( @report_names, "deseq2_rrna_volcano_${comparison}" );
             }
           }
@@ -2908,7 +2940,7 @@ fi
             push( @report_names, "correlation_yrna_heatmap", "correlation_yrna_pca" );
             if(defined $pairs){
               for my $comparison (sort keys %$pairs){
-                push( @report_files, "deseq2_yRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+                push( @report_files, "deseq2_yRNA_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
                 push( @report_names, "deseq2_yrna_volcano_${comparison}" );
               }
             }
@@ -2919,7 +2951,7 @@ fi
           push( @report_names, "correlation_snrna_heatmap", "correlation_snrna_pca" );
           if(defined $pairs){
             for my $comparison (sort keys %$pairs){
-              push( @report_files, "deseq2_snRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+              push( @report_files, "deseq2_snRNA_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
               push( @report_names, "deseq2_snrna_volcano_${comparison}" );
             }
           }
@@ -2929,7 +2961,7 @@ fi
           push( @report_names, "correlation_snorna_heatmap", "correlation_snorna_pca" );
           if(defined $pairs){
             for my $comparison (sort keys %$pairs){
-              push( @report_files, "deseq2_snoRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+              push( @report_files, "deseq2_snoRNA_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
               push( @report_names, "deseq2_snorna_volcano_${comparison}" );
             }
           }
@@ -2955,7 +2987,7 @@ fi
 
         if(defined $pairs){
           for my $comparison (sort keys %$pairs){
-            push( @report_files, "deseq2_${ngg}_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_files, "deseq2_${ngg}_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
             push( @report_names, "deseq2_${ngg}_volcano_${comparison}" );
           }
         }
@@ -2974,7 +3006,7 @@ fi
 
         if(defined $pairs){
           for my $comparison (sort keys %$pairs){
-            push( @report_files, "deseq2_nonhost_tRNA_anticodon_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_files, "deseq2_nonhost_tRNA_anticodon_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
             push( @report_names, "deseq2_trnalib_volcano_${comparison}" );
           }
         }
@@ -2993,7 +3025,7 @@ fi
 
         if(defined $pairs){
           for my $comparison (sort keys %$pairs){
-            push( @report_files, "deseq2_nonhost_rRNA_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_files, "deseq2_nonhost_rRNA_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
             push( @report_names, "deseq2_rrnalib_volcano_${comparison}" );
           }
         }
@@ -3016,7 +3048,7 @@ fi
 
             if(defined $pairs){
               for my $comparison (sort keys %$pairs){
-                push( @report_files, "deseq2_refseq_bacteria_${level}_aggregated_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+                push( @report_files, "deseq2_refseq_bacteria_${level}_aggregated_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
                 push( @report_names, "deseq2_refseq_bacteria_${level}_agg_volcano_${comparison}" );
               }
             }
@@ -3035,7 +3067,7 @@ fi
 
             if(defined $pairs){
               for my $comparison (sort keys %$pairs){
-                push( @report_files, "deseq2_refseq_bacteria_${level}_estimated_${DE_library_key}", "${comparison}_.+_volcanoEnhanced.png" );
+                push( @report_files, "deseq2_refseq_bacteria_${level}_estimated_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
                 push( @report_names, "deseq2_refseq_bacteria_${level}_est_volcano_${comparison}" );
               }
             }
@@ -3085,9 +3117,12 @@ fi
       "refseq_bacteria_count" => $refseq_bacteria_count, 
     };
 
-    my $nonhost_genome_groups_hash = {};
-    for my $i (0 .. $#nonhost_genome_groups) {
-      $nonhost_genome_groups_hash->{$nonhost_genome_groups[$i]} = $nonhost_genome_group_names[$i];
+    my $nonhost_genome_groups_hash = undef;
+    if($#nonhost_genome_groups > 0){
+      $nonhost_genome_groups_hash = {};
+      for my $i (0 .. $#nonhost_genome_groups) {
+        $nonhost_genome_groups_hash->{$nonhost_genome_groups[$i]} = $nonhost_genome_group_names[$i];
+      }
     }
 
     $config->{report} = {
