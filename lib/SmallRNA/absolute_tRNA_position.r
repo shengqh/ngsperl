@@ -60,7 +60,7 @@ position_map = read_file_map(parSampleFile1)
 
 group_map = read_file_map(parSampleFile2, reverse=TRUE)
 
-if(myoptions$sample_pattern != ""){
+if(!is.na(myoptions$sample_pattern)){
   group_map=group_map[grepl(myoptions$sample_pattern, names(group_map))]
 }
 position_map=position_map[names(group_map)]
@@ -107,4 +107,6 @@ for(isotype in unique(group_positions$Isotype)){
   print(g)
   dev.off()
 }
+
+writeLines("succeed", paste0(outFile, ".succeed"))
 cat("Done\n")
