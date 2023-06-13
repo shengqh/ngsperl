@@ -268,11 +268,27 @@ sub getPreprocessionConfig {
   }
 
   if(defined $def->{groups}){
+    my $groups = $def->{groups};
+    if(defined $def->{unique_group_names}){
+      my $unique_group_names = $def->{unique_group_names};
+      my $unique_groups = {};
+      for my $ugname (@$unique_group_names){
+        my $ugroup = $groups->{$ugname};
+        if(defined $ugroup){
+          $unique_groups->{$ugname} = $ugroup;
+        }
+      }
+      $def->{unique_groups} = $unique_groups;
+    }else{
+      #assuming the groups are unique
+      $def->{unique_groups} = $groups;
+    }
+
     if(not defined $def->{correlation_groups}){
       if(defined $def->{correlation_groups_dic}){
         my $correlationGroups = get_pair_group_sample_map( $def->{correlation_groups_dic}, $def->{groups} );
         if ( getValue( $def, "correlation_all", 1 ) and (not defined $correlationGroups->{all}) ) {
-          $correlationGroups->{all} = $def->{groups};
+          $correlationGroups->{all} = $def->{unique_groups};
         }
         $def->{correlation_groups} = $correlationGroups;
       }else{

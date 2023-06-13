@@ -2119,7 +2119,7 @@ sub get_correlation_groups_by_pattern {
     }
     return($result);
   }else{
-    my $groups = $def->{groups};
+    my $groups = defined $def->{unique_groups} ? $def->{unique_groups} : $def->{groups};
     return({all => $groups});
   }
 }
