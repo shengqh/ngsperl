@@ -1046,7 +1046,7 @@ for(countfile_index in c(1:length(countfiles))){
             y = 'pvalue',
             title = comparisonTitle,
             pCutoff = pvalue,
-            pCutoffCol = yvar,
+            pCutoffCol = "padj",
             FCcutoff = log2(foldChange),
             pointSize = 3.0,
             labSize = 6.0,
