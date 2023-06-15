@@ -587,6 +587,19 @@ sub getScRNASeqConfig {
           };
 
           my $rename_map = $def->{"dynamic_rename_map"};
+          if(defined $def->{dynamic_delete_celltypes}){
+            my $delete_cts = $def->{dynamic_delete_celltypes};
+            for my $dct (@$delete_cts){
+              if(!defined $rename_map){
+                $rename_map = {};
+              }
+              $rename_map->{$dct} = {
+                from => $dct,
+                cluster => -1,
+                to => "DELETE",
+              };
+            }
+          }
 
           $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, ".dynamic_subcluster.html");
           $meta_ref = [$subcluster_task, ".meta.rds"];
