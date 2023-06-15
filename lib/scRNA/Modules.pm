@@ -1591,7 +1591,7 @@ sub addSubCluster {
         $subcluster_redo_harmony = !getValue( $def, "integration_by_harmony" );
       }
 
-      if (!($subcluster_task =~ /rh_/)){
+      if (!($subcluster_task =~ /_rh/)){
         $subcluster_task = $subcluster_task . "_rh";
       }
       $cur_options->{reduction} = "harmony";
