@@ -48,9 +48,9 @@ def findGTEx(inputFile, gtexFolder, outputFile, logger):
       with open(gtexfile, 'r') as reader: 
         sr = csv.DictReader(reader, delimiter='\t')
         for row in sr:
-          key1 = row["snp_chrom"] + "_" + row["snp_pos"] + "_" + row["ref"] + "_" + row["alt"];
-          key2 = row["snp_chrom"] + "_" + row["snp_pos"] + "_" + row["alt"] + "_" + row["ref"];
-          key = "";
+          key1 = row["snp_chrom"] + "_" + row["snp_pos"] + "_" + row["ref"] + "_" + row["alt"]
+          key2 = row["snp_chrom"] + "_" + row["snp_pos"] + "_" + row["alt"] + "_" + row["ref"]
+          key = ""
           if key1 in snps:
             key = key1
           elif key2 in snps:
