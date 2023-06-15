@@ -1,17 +1,15 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='P6487'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parSampleFile6='fileList6.txt'
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge/result/combined.final.rds'
-parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/combined.scDynamic.meta.rds'
-parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/essential_genes/result/combined.txt'
+parFile1='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge/result/P6487.final.rds'
+parFile2='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_01_call/result/P6487.scDynamic.meta.rds'
+parFile3='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/essential_genes/result/P6487.txt'
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
+setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_02_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -148,11 +146,15 @@ if(!is_file_empty(parSampleFile3)){
       }
       submeta<-meta[meta[,previous_layer] == from,]
 
-      if(!(all(cluster %in% unlist(submeta[,previous_cluster])))){
-        stop(paste0("Cannot find cluster ", paste0(cluster, collapse = "/"), " in cell type ", from, " of cluster ", previous_cluster))
-      }
+      if(cluster == "-1"){
+        cells<-rownames(submeta)
+      }else{
+        if(!(all(cluster %in% unlist(submeta[,previous_cluster])))){
+          stop(paste0("Cannot find cluster ", paste0(cluster, collapse = "/"), " in cell type ", from, " of cluster ", previous_cluster))
+        }
 
-      cells<-rownames(submeta)[submeta[,previous_cluster] %in% cluster]
+        cells<-rownames(submeta)[submeta[,previous_cluster] %in% cluster]
+      }
       meta[cells,previous_layer]<-to
     }
   }else{
