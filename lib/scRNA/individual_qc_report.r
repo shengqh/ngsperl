@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='scRNA'
+outFile='P6487'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile6='fileList6.txt'
+parSampleFile7='fileList7.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20230505_Vandy_AS_scRNA_vst2/decontX_raw_qc_report/result')
+setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_raw_qc_sct2_report/result')
 
 ### Parameter setting end ###
 
@@ -34,12 +34,6 @@ sample_names=names(obj_map)
 
 validation_columns=c()
 
-has_sctk<-file.exists(parSampleFile3)
-if(has_sctk){
-  sctk_map<-read_file_map(parSampleFile3)
-  validation_columns<-c(validation_columns, "DF", "SDF", "scds")
-}
-
 has_signacx<-exists('parSampleFile4')
 if(has_signacx){
   signacx_map<-read_file_map(parSampleFile4)
@@ -57,11 +51,22 @@ if(has_decontX){
   decontX_map<-read_file_map(parSampleFile6)
 }
 
-draw_figure<-function(sample_name, cur_meta, validation_columns){
+has_doublet_finder<-exists('parSampleFile7')
+if(has_doublet_finder){
+  doublet_finder_map<-read_file_map(parSampleFile7)
+}
+
+has_sctk<-file.exists(parSampleFile3)
+if(has_sctk){
+  sctk_map<-read_file_map(parSampleFile3)
+  validation_columns<-c(validation_columns, "sctk_DF", "sctk_SDF", "sctk_scds")
+}
+
+draw_figure<-function(sample_name, cur_meta, cur_validation_columns){
   alltbl=NULL
 
   col_name="SignacX"
-  for(col_name in validation_columns){
+  for(col_name in cur_validation_columns){
     tbl = data.frame(table(cur_meta[,"seurat_cell_type"], cur_meta[,col_name]))
     tbl$Category=col_name
     alltbl<-rbind(alltbl, tbl)
@@ -73,7 +78,8 @@ draw_figure<-function(sample_name, cur_meta, validation_columns){
     geom_bar(width=0.5, stat = "identity") + 
     facet_grid(Var1~Category, scales = "free", space='free_x') + 
     theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend() + 
-    theme(strip.text.y.right = element_text(angle = 0, hjust = 0))
+    theme(strip.text.y.right = element_text(angle = 0, hjust = 0),
+          strip.text.x.top = element_text(angle = 90, hjust = 0))
 
   height = max(500, length(unique(alltbl$Var1)) * 150) + 500
   width = max(1000, length(unique(alltbl$Var2)) * 50) + 1000
@@ -102,15 +108,20 @@ for(sample_name in sample_names){
 
   ct_tb<-rbind(ct_tb, ct_df)
 
+  cur_validation_columns = validation_columns;
+  
+  df_column = ""
+  
   if(has_sctk){
     sctk_file = sctk_map[[sample_name]]
     sctk_meta = readRDS(sctk_file)
 
-    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "doubletFinder_doublet_label_resolution_1.5", "DF")
+    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "doubletFinder_doublet_label_resolution_1.5", "sctk_DF")
+    df_column = "sctk_DF"
 
-    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, c("scDblFinder_doublet_call", "scDblFinder_class"), "SDF")
+    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, c("scDblFinder_doublet_call", "scDblFinder_class"), "sctk_SDF")
 
-    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scds_hybrid_call", "scds")
+    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scds_hybrid_call", "sctk_scds")
 
     if(is.logical(cur_meta$scds)){
       cur_meta$scds = ifelse(cur_meta$scds, "Doublet", "Singlet")
@@ -128,17 +139,34 @@ for(sample_name in sample_names){
     singler_meta = readRDS(singler_file)
     cur_meta = fill_meta_info(sample_name, singler_meta, cur_meta, "SingleR_labels", "SingleR")
   }
+  
+  if(has_doublet_finder){
+    df_file = doublet_finder_map[[sample_name]]
+    df_meta = readRDS(df_file)
+
+    df_option_file = gsub(".meta.rds", ".options.csv", df_file)
+    df_option = read.csv(df_option_file)
+    
+    idx=1
+    for(idx in c(1:nrow(df_option))){
+      df_rate = df_option$doublet_rate[idx]
+      df_label = df_option$label[idx]
+      df_column = paste0("DF_", round(df_rate, 3))
+      cur_meta = fill_meta_info(sample_name, df_meta, cur_meta, df_label, df_column)
+      cur_validation_columns = c(cur_validation_columns, df_column)
+    }
+  }
 
   if(has_decontX){
     decontX_file = decontX_map[[sample_name]]
     decontX_meta = readRDS(decontX_file)
     cur_meta = fill_meta_info(sample_name, decontX_meta, cur_meta, "decontX_contamination", "decontX_contamination", is_character = FALSE)
     obj@meta.data = cur_meta
-
+    
     g1<-MyFeaturePlot(obj, features = "decontX_contamination") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
     g2<-VlnPlot(obj, features = "decontX_contamination", group.by="seurat_cell_type") + xlab("") + theme_bw3(TRUE)  + ggtitle("") + NoLegend()
-    if(has_sctk){
-      g2$data$DF = obj@meta.data[rownames(g2$data), "DF"]
+    if(df_column != ""){
+      g2$data$DF = obj@meta.data[rownames(g2$data), df_column]
       g2<-g2 + facet_grid(DF~.)
     }
     g<-g1+g2+plot_layout(design="ABBB")
@@ -146,13 +174,13 @@ for(sample_name in sample_names){
     print(g)
     dev.off()
   }
-
+  
   rownames(cur_meta)<-paste0(sample_name, "_", rownames(cur_meta))
   cat("save meta ...\n")
   saveRDS(cur_meta, paste0(sample_name, ".meta.rds"))
 
   cat("draw_figure ...\n")
-  draw_figure(sample_name, cur_meta, validation_columns)
+  draw_figure(sample_name, cur_meta, cur_validation_columns)
 }
 
 stats_df<-stats_df[,colnames(stats_df) != "tringsAsFactors"]
