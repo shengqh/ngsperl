@@ -1953,8 +1953,10 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
   names(groupColors)<-display_group_levels
 
   if(!is_between_cluster){
-    gmap<-unlist(split(design_data$Group, design_data$Sample))
-    gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
+    ddata<-design_data[!duplicated(design_data$Sample),]
+
+    gmap<-unlist(split(ddata$Group, ddata$Sample))
+    gdismap<-unlist(split(ddata$DisplayGroup, ddata$Sample))
 
     cell_obj$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
     cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
