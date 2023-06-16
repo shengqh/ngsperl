@@ -88,6 +88,7 @@ our %EXPORT_TAGS = (
       get_interation_sample_subsample_map
       get_interation_subsample_sample_map
       get_groups
+      get_unique_groups
       get_correlation_groups_by_pattern
       get_covariances
       getGroupPickResult
@@ -2098,6 +2099,37 @@ sub get_groups_by_pattern {
   }
 }
 
+sub get_unique_groups {
+  my $groups = shift;
+  my $file_dic = {};
+  for my $g (sort keys %$groups){
+    my $samples = $groups->{$g};
+    for my $s (@$samples){
+      if(not defined $file_dic->{$s}){
+        $file_dic->{$s} = [$g];
+      }else{
+        my $cur_groups= $file_dic->{$s};
+        push @$cur_groups, $g;
+        $file_dic->{$s} = $cur_groups;
+      }
+    }
+  }
+  my $result = {};
+  for my $s (sort keys %$file_dic){
+    my $groups = $file_dic->{$s};
+    my $groups_str = join(":", sort @$groups);
+    if(not defined $result->{$groups_str}){
+      $result->{$groups_str} = [$s];
+    }else{
+      my $cur_files= $result->{$groups_str};
+      push @$cur_files, $s;
+      $result->{$groups_str} = $cur_files;
+    }
+  }
+
+  return($result);
+}
+
 sub get_correlation_groups_by_pattern {
   my ($def) = @_;
 
@@ -2119,8 +2151,11 @@ sub get_correlation_groups_by_pattern {
     }
     return($result);
   }else{
-    my $groups = defined $def->{unique_groups} ? $def->{unique_groups} : $def->{groups};
-    return({all => $groups});
+    if(defined $def->{unique_groups}){
+      return({all => $def->{unique_groups}});
+    }else{
+      return({all => get_unique_groups($def->{groups})});
+    }
   }
 }
 

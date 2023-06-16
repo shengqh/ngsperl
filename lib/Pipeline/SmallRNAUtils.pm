@@ -497,6 +497,8 @@ sub getPrepareConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  $def = $config->{def};
+
   if(defined $def->{paired_end_validation_files}){
     $config->{paired_end_validation_files} = $def->{paired_end_validation_files};
     addPairendFastqValidation($config, $def, $individual, $preprocessing_dir, "paired_end_validation", "paired_end_validation_files");

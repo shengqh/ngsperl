@@ -235,6 +235,18 @@ sub getPreprocessionConfig {
     }
   }
 
+  if (defined $def->{files}) {
+    my $all_sample_names = get_all_sample_names($def);
+
+    if(not defined $def->{groups}){
+      my $files = $def->{files};
+      my $sampleNames = [keys %$files];
+      $def->{groups} = {"All" => $sampleNames};
+    }
+
+    checkFileGroupPairNames($def, ["groups"], ["pairs"], $all_sample_names, getValue($def, "remove_missing_samples_in_group", 0));
+  }
+
   if(defined $def->{ignore_samples}){
     my $ignore_samples = $def->{ignore_samples};
     
@@ -280,8 +292,7 @@ sub getPreprocessionConfig {
       }
       $def->{unique_groups} = $unique_groups;
     }else{
-      #assuming the groups are unique
-      $def->{unique_groups} = $groups;
+      $def->{unique_groups} = get_unique_groups($groups);
     }
 
     if(not defined $def->{correlation_groups}){
@@ -767,6 +778,8 @@ sub getPreprocessionConfig {
     }
   }
 
+  $config->{def} = $def;
+  
   return ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster, $run_cutadapt_test );
 }
 

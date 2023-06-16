@@ -23,7 +23,7 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.06';
 
-sub getUniqueGroups {
+sub get_unique_groups_str {
   my ($def) = @_;
   my $result = "";
   if (defined $def->{unique_group_names}){
@@ -46,6 +46,9 @@ sub getSmallRNAConfig {
   initializeSmallRNADefaultOptions($def);
 
   my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref ) = getPrepareConfig( $def, 1 );
+
+  $def = $config->{def};
+  delete $config->{def};
 
   #merge summary and individual 
   push @$individual_ref, @$summary_ref;
@@ -198,22 +201,6 @@ sub getSmallRNAConfig {
       "Groups"    => $groups->{".order"}
     };
   }
-
-  if(defined $groups && defined $def->{unique_group_names}){
-    my $unique_group_names = $def->{unique_group_names};
-    my $unique_groups = {};
-    for my $ugname (@$unique_group_names){
-      my $ugroup = $groups->{$ugname};
-      if(defined $ugroup){
-        $unique_groups->{$ugname} = $ugroup;
-      }
-    }
-    $def->{unique_groups} = $unique_groups;
-  }else{
-    #assuming the groups are unique
-    $def->{unique_groups} = $groups;
-  }
-  my $unique_groups = $def->{unique_groups};
 
   if ( !defined $def->{tRNA_vis_group} ) {
     $def->{tRNA_vis_group} = $def->{unique_groups};
@@ -647,7 +634,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           output_file_ext           => ".succeed",
           parameterSampleFile1_ref => $tTask,
           parameterSampleFile2Order => $def->{groups_order},
-          parameterSampleFile2      => $unique_groups,
+          parameterSampleFile2      => $def->{unique_groups},
           parameterSampleFile3      => $def->{groups_vis_layout},
           parameterSampleFile4      => {
             "sample_pattern" => $def->{tRNA_abs_position_sample_pattern},
@@ -2438,7 +2425,7 @@ fi
   }
 
   if ( $search_host_genome && $search_nonhost_database ) {
-    my $cur_r_code = $R_font_size . " " . getUniqueGroups($def);
+    my $cur_r_code = $R_font_size . " " . get_unique_groups_str($def);
     $config->{reads_in_tasks_pie} = {
       class                => "CQS::UniqueR",
       suffix               => "_pie",
@@ -2484,7 +2471,7 @@ fi
     push @$summary_ref, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
 
     if($perform_nonhost_genome_count){  
-      my $rCode = getUniqueGroups($def);
+      my $rCode = get_unique_groups_str($def);
       $config->{host_microbial_vis} = {
         class                     => "CQS::UniqueR",
         perform                   => 1,
@@ -2492,15 +2479,13 @@ fi
         rtemplate                 => "../SmallRNA/hostMicrobialVis.r",
         output_file               => ".reads",
         output_file_ext           => ".pdf",
-        parameterSampleFile1      => $groups,
+        parameterSampleFile1      => $def->{unique_groups},
         parameterSampleFile2      => $def->{groups_vis_layout},
         parameterFile1_ref        => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv"],
         parameterFile2_ref        => [ "microbial_genome_count", ".microbial.tsv\$" ],
         sh_direct                 => 1,
         rCode                     => $rCode,
         pbs                       => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
           "walltime"  => "1",
           "mem"       => "10gb"
