@@ -5,7 +5,7 @@ use File::Spec;
 use File::Basename;
 use CQS::ConfigUtils;
 use Data::Dumper;
-use Test::More tests => 53;
+use Test::More tests => 54;
 
 { #test is_string
   ok(is_string("string"));
@@ -706,6 +706,24 @@ is_deeply( $cov_map, $cov_expect );
 
   $def->{pool_sample} = 1;
   is_deeply(["P1", "S3", "T2"], get_all_sample_names($def));
+}
+
+{
+  my $groups = {
+    "G1" => ["S1", "S2"],
+    "G2" => ["S3", "S4"],
+    "G3" => ["S1", "S3"],
+  };
+   
+  my $unique_groups = get_unique_groups($groups);
+  is_deeply({
+          'G2:G3' => [                       'S3'                     ],
+          'G2' => [                    'S4'                  ],
+          'G1' => [                    'S2'                  ],
+          'G1:G3' => [                       'S1'                     ]
+        },
+        $unique_groups
+        );
 }
 
 1;
