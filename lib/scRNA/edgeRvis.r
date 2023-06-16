@@ -104,6 +104,15 @@ for (prefix in rownames(edgeRres)){
         melt_cpm$Group<-factor(gdismap[as.character(melt_cpm$Sample)], levels=names(groupColors))
       }
       
+      cell_obj = ScaleData(cell_obj, features=siggenes$gene, assay="RNA", vars.to.regress="percent.mt")
+      g<-MyDoHeatMap(cell_obj, assay="RNA", features=siggenes$gene, group.by="DisplayGroup")
+      png(paste0(prefix, ".sig_gene.heatmap.png"), 
+          width=4000, 
+          height=get_heatmap_height(nrow(siggenes)), 
+          res=300)
+      print(g)
+      dev.off()
+
       coords<-data.frame(Embeddings(cell_obj, reduction=reduction))
 
       colnames(coords)<-c("UMAP_1", "UMAP_2")
