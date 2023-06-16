@@ -46,6 +46,7 @@ g<-ggplot(mFigData) + geom_bar(aes(y = Percentage, x = Sample, fill = Category),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
         strip.background =element_blank(), 
-        panel.background = element_blank())
+        panel.background = element_blank(),
+        strip.text.x.top = element_text(angle = 90, hjust = 0))
 print(g)
 dev.off()
