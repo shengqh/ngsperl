@@ -1405,6 +1405,11 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         push @length_dist_count, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".snoRNA.read.count\$" );
       }
 
+      if ( $def->{hasERV} ) {
+        push @length_dist_names, "ERV";
+        push @length_dist_count, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".ERV.read.count\$" );
+      }
+
       push @length_dist_names, ( "osDR", "Genome", "fastq_len", "category" );
       push @length_dist_count, (
         "bowtie1_genome_1mm_NTA_smallRNA_table",    ".other.read.count\$",         #other
@@ -2861,6 +2866,9 @@ fi
     }
 
     if ( defined $config->{bowtie1_genome_1mm_NTA_smallRNA_category} ) {
+      push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" );
+      push( @report_names, "category_table" );
+
       if ( !defined $config->{read_summary} ) {
         push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category1.Barplot.png" );
         push( @report_files, "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category2.Barplot.png" );
@@ -2948,6 +2956,18 @@ fi
             for my $comparison (sort keys %$pairs){
               push( @report_files, "deseq2_snoRNA_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
               push( @report_names, "deseq2_snorna_volcano_${comparison}" );
+            }
+          }
+
+          if($def->{hasERV}){
+            push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.ERV.count.heatmap.png" );
+            push( @report_files, "count_table_correlation",  "smallRNA_1mm_.+.ERV.count.PCA.png" );
+            push( @report_names, "correlation_ERV_heatmap", "correlation_ERV_pca" );
+            if(defined $pairs){
+              for my $comparison (sort keys %$pairs){
+                push( @report_files, "deseq2_ERV_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
+                push( @report_names, "deseq2_ERV_volcano_${comparison}" );
+              }
             }
           }
 

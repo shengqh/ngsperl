@@ -1,6 +1,18 @@
+rm(list=ls()) 
+outFile='CM_8643_bakeoff.length'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3=''
+textSize=9;groupTextSize=10;
+
+setwd('/nobackup/vickers_lab/projects/20230607_8643_CM_smRNA_human_bakeoff_v2022/data_visualization/host_length_dist_category/result')
+
+### Parameter setting end ###
 
 source("countTableVisFunctions.R")
-
 library(ggplot2)
 library(data.table)
 library(reshape2)

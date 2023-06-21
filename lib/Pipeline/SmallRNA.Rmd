@@ -152,6 +152,11 @@ if(hasSNORNA){
   hostGenome<-rbind(hostGenome, data.frame(Section=c("##"), Category=c("snorna"), Name=c("snoRNA")))
 }
 
+hasERV<-any(grepl("correlation_ERV_", names(files)))
+if(hasERV){
+  hostGenome<-rbind(hostGenome, data.frame(Section=c("##"), Category=c("ERV"), Name=c("ERV")))
+}
+
 hasHostGenome<-categoryRmd(hostGenome, hostGenomeFile, "")
 
 nonhostGenomeFile="nonhostgenome.Rmd"
@@ -247,13 +252,23 @@ check_and_include_graphics(files$fastq_len)
 ```
 
 # Host genome
+
 ## Overall 
+
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_bar", "Read distribution", trunk.eval=has_category_mapped_bar), eval=has_category_mapped_bar}
 check_and_include_graphics(files$category_mapped_bar)
 ```
 
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_group", "Read distribution in grouped samples", trunk.eval=has_file(files,"category_mapped_group")),eval=has_file(files,"category_mapped_group")}
 check_and_include_graphics(files$category_mapped_group)
+```
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_mapped_bar", "Read distribution", trunk.eval=has_file(files,"category_table")), eval=has_file(files,"category_table")}
+tbl = read.csv(files$category_table, header=TRUE, row.names=1, stringsAsFactor=FALSE)
+ttbl = data.frame(t(tbl))
+print(kable(ttbl, caption=tabRef("categoryTable", "Host genome category table"), row.names=TRUE) %>%
+        kable_styling() %>%
+        htmltools::HTML())
 ```
 
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("category_smallrna_bar", "smallRNA read distribution", trunk.eval=has_file(files,"category_smallrna_bar")), eval=has_file(files,"category_smallrna_bar")}
