@@ -244,7 +244,9 @@ sub getPreprocessionConfig {
       $def->{groups} = {"All" => $sampleNames};
     }
 
-    checkFileGroupPairNames($def, ["groups"], ["pairs"], $all_sample_names, getValue($def, "remove_missing_samples_in_group", 0));
+    if(!defined $def->{HTO_samples}){
+      checkFileGroupPairNames($def, ["groups"], ["pairs"], $all_sample_names, getValue($def, "remove_missing_samples_in_group", 0));
+    }
   }
 
   if(defined $def->{ignore_samples}){
@@ -313,17 +315,6 @@ sub getPreprocessionConfig {
 
   if (defined $def->{covariance_patterns}){
     $def->{covariance_file} = create_covariance_file_by_pattern($def);
-  }
-
-  if (defined $def->{files}) {
-    my $all_sample_names = get_all_sample_names($def);
-    checkFileGroupPairNames($def, ["groups"], ["pairs"], $all_sample_names, getValue($def, "remove_missing_samples_in_group", 0));
-
-    if(not defined $def->{groups}){
-      my $files = $def->{files};
-      my $sampleNames = [keys %$files];
-      $def->{groups} = {"All" => $sampleNames};
-    }
   }
 
   $def = initializeDefaultOptions($def);
@@ -412,29 +403,38 @@ sub getPreprocessionConfig {
   }
 
   if($def->{generate_md5}){
-    $config->{md5} = {
-      class => "CQS::ProgramWrapperOneToOne",
-      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "md5",
-      check_program => 0,
-      program => "md5sum",
-      option => " __FILE__ > __OUTPUT__
-      ",
-      source_arg => "",
-      source_join_delimiter => " ",
-      source_ref => $source_ref,
-      output_arg => "",
-      output_file_prefix => ".md5",
-      output_file_ext => ".md5",
-      output_to_same_folder => 1,
-      can_result_be_empty_file => 1,
-      sh_direct   => 0,
-      pbs => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
+    $config = add_md5($config, $def, $individual, $preprocessing_dir, $source_ref);
+  }
+
+  if (defined $def->{files}) {
+    if(getValue($def, "perform_md5_validation", 0)){
+      die "Define md5_files first if you want to validate file m5." if not defined $def->{md5_files};
+
+      if(!defined $config->{md5_merge}){
+        $config = add_md5($config, $def, $individual, $preprocessing_dir, $source_ref);
       }
-    };
-    push @$individual, ("md5");
+
+      $config->{md5_validation} = {
+        class                    => "CQS::UniqueR",
+        perform                  => 1,
+        target_dir               => $preprocessing_dir . "/" . getNextFolderIndex($def) . "md5_validation",
+        rtemplate                => "countTableVisFunctions.R,../QC/validateMD5.r",
+        output_file              => ".csv",
+        output_file_ext          => ".csv",
+        output_other_ext         => ".png",
+        parameterFile1_ref => "md5_merge",
+        parameterSampleFile1_ref => $source_ref,
+        parameterSampleFile2     => {
+          "md5files" => $def->{md5_files},
+        },
+        sh_direct                => 1,
+        pbs                      => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      }      
+    }
   }
 
   if ( $def->{merge_fastq} ) {
