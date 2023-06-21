@@ -1491,8 +1491,8 @@ sub addComparison {
     push( @deByOptions, "DE_by_cluster" );
   }
 
-  print("perform_comparison=" . $perform_comparison , "\n");
-  print("DE_by_sample=" . $DE_by_sample , "\n");
+  #print("perform_comparison=" . $perform_comparison , "\n");
+  #print("DE_by_sample=" . $DE_by_sample , "\n");
   
   if ( $perform_comparison ) {
     if ( defined $def->{"DE_cluster_pairs"} ) {
@@ -1646,7 +1646,7 @@ sub addSubCluster {
     parameterSampleFile3 => $rename_map,
     parameterSampleFile4_ref => $signacX_ref,
     parameterSampleFile5_ref => $singleR_ref,
-    parameterSampleFile6 => $def->{dynamic_bubble_file},
+    parameterSampleFile6 => $def->{dynamic_bubble_files},
     output_file_ext      => ".meta.rds,.files.csv",
     sh_direct            => 1,
     pbs                  => {
