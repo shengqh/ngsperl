@@ -866,6 +866,53 @@ filterCountTable<-function(countNum,validSampleToGroup,minMedian=1,minMedianInGr
   return(result)
 }
 
+read_file_map<-function(file_list_path, sep="\t", header=F, do_unlist=TRUE){
+  if(grepl('.csv$', file_list_path)){
+    tbl<-read.csv(file_list_path, header=header)
+  }else{
+    tbl<-read.table(file_list_path, sep=sep, header=header)
+  }
+  result<-split(tbl$V1, tbl$V2)
+  if(do_unlist){
+    result<-unlist(result)
+  }
+  return(result)
+}
+
+
+check_mc_cores<-function(mc.cores) {  
+  if(.Platform$OS.type == "windows") {
+    mc.cores=1
+  }else{
+    mc.cores=min(parallel::detectCores() - 1, max(1, mc.cores))
+  }
+  return(mc.cores)
+}
+
+to_numeric<-function(value, defaultValue){
+  if(is.null(value)){
+    return(defaultValue)
+  }
+  if(is.na(value)){
+    return(defaultValue)
+  }
+  if(value == ""){
+    return(defaultValue)
+  }
+  return(as.numeric(value))
+}
+
+is_one<-function(value, defaultValue=FALSE){
+  if(is.null(value)){
+    return(defaultValue)
+  }
+  if(is.na(value)){
+    return(defaultValue)
+  }
+  return(value == '1')
+}
+
+
 ###############################################################################
 # End funtions in count table barplot and pie chart
 # Start defining parameters for functions
