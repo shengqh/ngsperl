@@ -104,6 +104,7 @@ our %EXPORT_TAGS = (
     add_extract_bam_locus
     has_comparison
     add_featurecount
+    add_md5
     )
   ]
 );
@@ -3582,6 +3583,55 @@ sub add_featurecount {
 
   push @$tasks, $task_name;
   push @$tasks, "${task_name}_summary";
+}
+
+sub add_md5 {
+  my ($config, $def, $tasks, $target_dir, $source_ref) = @_;
+  $config->{md5} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => $target_dir . "/" . getNextFolderIndex($def) . "md5",
+    check_program => 0,
+    program => "",
+    option => "
+rm -f tmp.md5
+
+md5sum __FILE__ >> tmp.md5
+
+mv tmp.md5 __OUTPUT__
+",
+    source_arg => "",
+    source_join_delimiter => " >> tmp.md5 \nmd5sum ",
+    source_ref => $source_ref,
+    output_arg => "",
+    output_file_prefix => ".md5",
+    output_file_ext => ".md5",
+    output_to_same_folder => 0,
+    can_result_be_empty_file => 0,
+    sh_direct   => 0,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    }
+  };
+  push @$tasks, ("md5");
+
+  $config->{md5_merge} = {
+    class => "CQS::UniqueR",
+    target_dir => $target_dir . "/" . getNextFolderIndex($def) . "md5_merge",
+    check_program => 0,
+    rtemplate                => "../QC/validateMD5merge.r",
+    parameterSampleFile1_ref => "md5",
+    output_file_ext => ".md5.txt",
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    }
+  };
+  push @$tasks, ("md5_merge");
+  return($config);
 }
 
 1;
