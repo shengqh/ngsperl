@@ -109,6 +109,12 @@ figureRmd<-function(cts, files){
         result<-paste0(result, getFigure(dot))
       }
 
+      if("dot_celltype_specific" %in% names(res_map)){
+        result<-paste0(result, "### Cell type specific bubble plot\n\n")
+        dot=res_map$dot_celltype_specific
+        result<-paste0(result, getFigure(dot))
+      }
+
       result<-paste0(result, "### Sample/Cluster\n\n")
       bar=res_map$bar
       result<-paste0(result, getFigure(bar))

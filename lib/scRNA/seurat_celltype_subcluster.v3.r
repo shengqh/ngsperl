@@ -1,15 +1,17 @@
 rm(list=ls()) 
-outFile='P6487'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge/result/P6487.final.rds'
-parFile2='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_01_call/result/P6487.scDynamic.meta.rds'
-parFile3='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/essential_genes/result/P6487.txt'
+parSampleFile6='fileList6.txt'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge/result/combined.final.rds'
+parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/combined.scDynamic.meta.rds'
+parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/essential_genes/result/combined.txt'
 
 
-setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_02_subcluster_rh/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -146,7 +148,7 @@ if(!is_file_empty(parSampleFile3)){
       }
       submeta<-meta[meta[,previous_layer] == from,]
 
-      if(cluster == "-1"){
+      if(all(cluster == "-1")){
         cells<-rownames(submeta)
       }else{
         if(!(all(cluster %in% unlist(submeta[,previous_cluster])))){
@@ -217,11 +219,18 @@ saveRDS(meta, paste0(outFile, ".meta.rds"))
 if(has_bubblemap){
   allgenes<-rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes, species = myoptions$species)
-  bubble_genes<-unique(genes_df$gene)
+  essential_genes<-unique(c(essential_genes, genes_df$gene))
 }
 
 if(file.exists('fileList6.txt')){
   bubble_file_map = read_file_map('fileList6.txt')
+  for(bffile in bubble_file_map){
+    if(!file.exists(bffile)){
+      stop(paste0("Cannot find bubble file ", bffile))
+    }
+    genes_df <- read_bubble_genes(bffile, allgenes, species = myoptions$species)
+    essential_genes<-unique(c(essential_genes, genes_df$gene))
+  }
 }else{
   bubble_file_map = c()
 }
@@ -259,6 +268,14 @@ if(!dir.exists(tmp_folder)){
   dir.create(tmp_folder)
 }
 setwd(tmp_folder)
+
+get_bubblemap_file<-function(pct, bubble_file_map, bubblemap_file){
+  if(pct %in% names(bubble_file_map)){
+    return(bubble_file_map[[pct]])
+  }else{
+    return(bubblemap_file)
+  }
+}
 
 filelist<-NULL
 allmarkers<-NULL
@@ -490,15 +507,8 @@ for(pct in previous_celltypes){
     
     cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
-    if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-      if(pct %in% names(bubble_file_map)){
-        sub_bubble_file = bubble_file_map[[pct]]
-        cur_bubblemap_files = c(bubblemap_file, sub_bubble_file)
-      }else{
-        cur_bubblemap_files = bubblemap_file
-      }
-      
-      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_files)
+    if(has_bubblemap){
+      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file)
 
       dot_file = paste0(cluster_prefix, ".dot.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
@@ -506,6 +516,18 @@ for(pct in previous_celltypes){
       dev.off()
 
       cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot", cur_resolution, pct))
+    }
+
+    if(pct %in% names(bubble_file_map)){
+      cur_bubblemap_file = bubble_file_map[[pct]]
+      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_file)
+
+      dot_file = paste0(cluster_prefix, ".dot_celltype_specific.png")
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
+      print(g)
+      dev.off()
+
+      cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot_celltype_specific", cur_resolution, pct))
     }
 
     filelist<-rbind(filelist, cur_df)
