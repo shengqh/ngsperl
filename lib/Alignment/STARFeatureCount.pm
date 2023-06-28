@@ -52,17 +52,11 @@ sub perform {
   my $star                    = get_option( $config, $section, "star_location",           "STAR" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
-  my $output_sort_by_coordinate = getSortByCoordinate( $config, $section, 1 );
-  my $delete_star_featureCount_bam  = get_option( $config, $section, "delete_star_featureCount_bam", 0 );
 
-  if ($delete_star_featureCount_bam) {
-    $output_sort_by_coordinate = 0;
-  }
+  my $output_sort_by_coordinate = 1;
+  my $delete_star_featureCount_bam  = 0;
+  my $output_unsorted = 0;
 
-  my $output_unsorted = get_option( $config, $section, "output_unsorted", 0 );
-  if ( !$output_sort_by_coordinate && !$output_unsorted ) {
-    $output_unsorted = 1;
-  }
   my $output_format = "--outSAMtype BAM";
 
   #always output unsorted
@@ -189,7 +183,7 @@ fi
 
 if [[ \$status -eq 0 ]]; then
   echo performing featureCounts ...
-  featureCounts $featureCountOption -T $thread -a $gffFile -o $final_file $unsorted
+  featureCounts $featureCountOption -T $thread -a $gffFile -o $final_file $final_bam
   status=\$?
   if [[ \$status -eq 0 ]]; then
     touch ${sample_name}.featureCount.succeed
@@ -245,20 +239,18 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $output_sort_by_coordinate = getSortByCoordinate( $config, $section );
+
+  my $output_sort_by_coordinate = 1;
+  my $delete_star_featureCount_bam  = 0;
+  my $output_unsorted = 0;
+
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
-  my $delete_star_featureCount_bam  = get_option( $config, $section, "delete_star_featureCount_bam", 0 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my $cur_dir = $output_to_same_folder ? $result_dir : $result_dir . "/$sample_name";
 
     my @result_files              = ();
-    my $output_sort_by_coordinate = get_option( $config, $section, "output_sort_by_coordinate", 1 );
-    my $output_unsorted           = get_option( $config, $section, "output_unsorted", 0 );
-    if ( !$output_sort_by_coordinate && !$output_unsorted ) {
-      $output_unsorted = 1;
-    }
 
     push( @result_files, "$cur_dir/${sample_name}.count.summary" );
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
