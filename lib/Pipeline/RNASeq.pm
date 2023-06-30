@@ -301,7 +301,7 @@ sub getRNASeqConfig {
           class         => "Count::FeatureCounts",
           perform       => 1,
           target_dir    => $featureCountFolder,
-          option        => "-g gene_id -t exon",
+          option        => getValue($def, "featureCount_option", "-g gene_id -t exon"),
           source_ref    => $source_ref,
           gff_file      => $transcript_gtf,
           is_paired_end => is_paired_end($def),
@@ -458,13 +458,19 @@ sub getRNASeqConfig {
         "mem"       => "10gb"
       },
     };
+    push (@$summary, $cpm_task);
 
     my $deconvolution_task = "deconvolution_2_call";
     $config->{$deconvolution_task} = {
       class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
       target_dir            => "$target_dir/$deconvolution_task",
-      init_command          => "source activate " . getValue($def, "deconvolution_conda"),
+      init_command          => "
+source activate " . getValue($def, "deconvolution_conda") . "
+
+export NUMEXPR_MAX_THREADS=12
+
+",
       option                => "-b $basicMatrix_file -n __NAME__",
       interpretor           => "python3",
       check_program         => 1,
@@ -477,18 +483,43 @@ sub getRNASeqConfig {
       no_input              => 1,
       no_output             => 1,
       output_arg            => "",
-      output_file_ext       => ".txt",
+      output_file_ext       => "__NAME__/__NAME___deconvolutionCoefs.csv,__NAME__/__NAME__-NUSVR_supportVectors.csv",
       no_docker             => 1,
       use_tmp_folder        => 0,
       sh_direct             => 0,
       pbs                   => {
-        "nodes"     => "1:ppn=8",
-        "walltime"  => "10",
+        "nodes"     => "1:ppn=12",
+        "walltime"  => "24",
         "mem"       => "40gb"
       },
     };
-
     push (@$summary, $deconvolution_task);
+
+    my $merge_task = "deconvolution_3_merge";
+    $config->{$merge_task} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "$target_dir/$merge_task",
+      init_command          => "source activate " . getValue($def, "deconvolution_conda"),
+      option                => "-i __FILE__ -o __NAME__",
+      interpretor           => "python3",
+      check_program         => 1,
+      program               => "../Deconvolution/merge.py",
+      parameterSampleFile1_ref => $deconvolution_task,
+      output_arg            => "-o",
+      output_ext            => "",
+      output_file_ext       => ".fractions.csv,.bestCoef.csv",
+      no_docker             => 1,
+      use_tmp_folder        => 0,
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+
+    push (@$summary, $merge_task);
   }
 
   if ( $def->{perform_correlation} ) {
@@ -1320,10 +1351,10 @@ fi
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
         if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
-          push( @report_files, $linkTaskName, $key . "_geneontology_Biological_Process.html.rds" );
-          push( @report_files, $linkTaskName, $key . "_geneontology_Cellular_Component.html.rds" );
-          push( @report_files, $linkTaskName, $key . "_geneontology_Molecular_Function.html.rds" );
-          push( @report_files, $linkTaskName, $key . "_pathway_KEGG.html.rds" );
+          push( @report_files, $linkTaskName, "/" . $key . "_geneontology_Biological_Process.html.rds" );
+          push( @report_files, $linkTaskName, "/" . $key . "_geneontology_Cellular_Component.html.rds" );
+          push( @report_files, $linkTaskName, "/" . $key . "_geneontology_Molecular_Function.html.rds" );
+          push( @report_files, $linkTaskName, "/" . $key . "_pathway_KEGG.html.rds" );
         }
         else {
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
