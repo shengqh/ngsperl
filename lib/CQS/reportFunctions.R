@@ -154,10 +154,6 @@ printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0
     tbl<-data.frame(fread(filepath, check.names=F))
   }
 
-  if(digits > 0){
-    tbl <- tbl %>% dplyr::mutate_if(is.numeric, format, digits=digits, nsmall=nsmall)
-  }
-
   output_paged_table( tbl=tbl,
                       rownames=row.names > 0,
                       escape=escape,
