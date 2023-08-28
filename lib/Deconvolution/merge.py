@@ -112,7 +112,7 @@ name_map = {
   "intestinal enteroendocrine cell/paneth cell of epithelium of small intestine/transit amplifying cell of small intestine": "enteroendocrine/paneth/transit of intestine"
 }  
 
-def draw_figure(df, name_map, filename, top_num = 5):
+def draw_figure(df, name_map, file_prefix, top_num = 5):
   top = list()
   for col in df.columns:
     cur_top = df.nlargest(top_num, col).index.tolist()
@@ -122,10 +122,12 @@ def draw_figure(df, name_map, filename, top_num = 5):
   top_df = df.loc[top]
   top_renamed = top_df.rename(index = name_map)
 
-  sns_plot = sns.heatmap(top_renamed, cmap = "RdBu_r", center = 0, xticklabels=True, yticklabels=True)
-  sns_plot.figure.savefig(filename, bbox_inches='tight')
+  top_renamed.to_csv(file_prefix + ".top.csv", sep = ",", header = True, index = True)
 
-draw_figure(fracs, name_map, datasetName + ".fractions.pdf")
-draw_figure(bestCoef, name_map, datasetName + ".bestCoef.pdf")
+  sns_plot = sns.heatmap(top_renamed, cmap = "RdBu_r", center = 0, xticklabels=True, yticklabels=True)
+  sns_plot.figure.savefig(file_prefix + ".top.pdf", bbox_inches='tight')
+
+draw_figure(fracs, name_map, datasetName + ".fractions")
+draw_figure(bestCoef, name_map, datasetName + ".bestCoef")
 
 logger.info("done.")
