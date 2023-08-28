@@ -165,6 +165,8 @@ sub initializeSmallRNADefaultOptions {
 
   initDefaultValue( $def, "consider_miRNA_NTA", 1 );
 
+  initDefaultValue( $def, "search_nonhost_genome_custom_group", 0 );
+
   if ($def->{search_nonhost_genome_custom_group}){
     my $custom_group_name = getValue($def, "nonhost_genome_custom_group_name");
     if (defined $def->{customed_db}) {

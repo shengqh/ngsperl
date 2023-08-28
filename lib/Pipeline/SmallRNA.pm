@@ -1837,7 +1837,7 @@ fi
     }
 
     #my $is_custom_analyzed = 0;
-    if (getValue($def, "search_nonhost_genome_custom_group") && defined $def->{custom_group_gtf}){
+    if (getValue($def, "search_nonhost_genome_custom_group", 0) && defined $def->{custom_group_gtf}){
       #$is_custom_analyzed = 1;
       my $intermediate_dir = getIntermidiateDir($nonhost_genome_dir, $def);
 
