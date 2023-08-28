@@ -51,8 +51,17 @@ figureRmd<-function(samples, hto_samples){
     hto_file = paste0(sample, ".HTO.csv")
     htos = read.csv(hto_file, check.names = F, row.names=1)
 
+    tags = unique(htos$HTO)
+    tags = tags[!tags %in% c("Doublet", "Negative")]
+
     result<-paste0(result, paste0("\n\n## Hashtag/Cell table\n\n"))
     result<-paste0(result, getTable(paste0(sample, ".HTO.tag_cell.csv")))
+
+    result<-paste0(result, paste0("\n\n## Hashtag Cutoff\n\n"))
+    for(tag in tags){
+      result<-paste0(result, paste0("\n\n### ", tag, "\n\n"))
+      result<-paste0(result, getFigure(paste0(sample, ".HTO.", tag, ".cutoff.png")))
+    }
 
     result<-paste0(result, paste0("\n\n## Hashtag Abundance Distribution\n\n"))
     result<-paste0(result, getFigure(paste0(sample, ".HTO.class.dist.png")))
