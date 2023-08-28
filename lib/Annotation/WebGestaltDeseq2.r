@@ -62,7 +62,7 @@ for (comparison in comparisons){
 	      enriched$geneUp[idx]<-geneUp
 	      enriched$geneDown[idx]<-geneDown
 	    }
-  		enriched$geneSet[idx]<-paste0("[", entry$geneSet, "](", entry$link, ")")
+  		enriched$geneSet[idx]<-paste0("[", entry$geneSet, "](", entry$link, "){target='_blank'}")
   		enriched$link[idx]<-""
     }
 
