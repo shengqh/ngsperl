@@ -59,15 +59,28 @@ sub initializeDefaultOptions {
       my $macs2_genome    = getValue( $def, "macs2_genome" );      #hs
       my $macs2_peak_type = getValue( $def, "macs2_peak_type" );
       my $pairend         = is_paired_end( $def );
-      my $defaultOption   = "-B -q 0.01 -g " . $macs2_genome;
-      if ( $macs2_peak_type ne "narrow" ) {
-        $defaultOption = "--broad " . $defaultOption;
+      if($macs2_peak_type eq "broad"){
+        if(defined $def->{"macs2_broad_option"}){
+          $def->{"macs2_option"} = $def->{"macs2_broad_option"};
+        }
       }
-      if ($pairend) {
-        $defaultOption = "-f BAMPE " . $defaultOption;
+      if($macs2_peak_type eq "narrow"){
+        if(defined $def->{"macs2_narrow_option"}){
+          $def->{"macs2_option"} = $def->{"macs2_narrow_option"};
+        }
       }
 
-      $def->{"macs2_option"} = $defaultOption;
+      if(!defined $def->{"macs2_option"}){
+        my $defaultOption   = "-B -q 0.01 -g " . $macs2_genome;
+        if ( $macs2_peak_type ne "narrow" ) {
+          $defaultOption = "--broad " . $defaultOption;
+        }
+        if ($pairend) {
+          $defaultOption = "-f BAMPE " . $defaultOption;
+        }
+
+        $def->{"macs2_option"} = $defaultOption;
+      }
     }
   }
 
