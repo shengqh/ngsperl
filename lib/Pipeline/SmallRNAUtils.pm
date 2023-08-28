@@ -95,7 +95,9 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "perform_annotate_unmapped_reads",   0 );
   initDefaultValue( $def, "perform_nonhost_rRNA_coverage",     0 );
   initDefaultValue( $def, "perform_nonhost_tRNA_coverage",     0 );
+  
   initDefaultValue( $def, "perform_host_tRNA_start_position",  1 );
+  initDefaultValue( $def, "perform_host_tRNA_absolute_position",     1 );
   initDefaultValue( $def, "perform_host_rRNA_coverage",        1 );
   initDefaultValue( $def, "perform_host_length_dist_category", 1 );
   initDefaultValue( $def, "search_combined_nonhost",           0 );
