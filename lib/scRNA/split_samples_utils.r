@@ -317,7 +317,7 @@ draw_cutoff<-function(prefix, values, cut_off){
   dev.off()
 }
 
-do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by_HTODemux=FALSE, cutoff_startval=0.5, cur_tags=NULL){
+do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by="demuxmix", cutoff_startval=0.5, cur_tags=NULL, cutoff_tbl=NULL ){
   library(scDemultiplex)
   library(tictoc)
 
@@ -328,37 +328,81 @@ do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by_HTODemux=FALSE
   p.cut=0.001
 
   refine_rds<-paste0(fname, ".scDemultiplex.refine.rds")
-  if(!file.exists(refine_rds)){
-    if(init_by_HTODemux){
-      print(paste0("starting ", fname, " by HTODemux ..."))
-      tic()
-      obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
-      toc1=toc()
-      obj$HTO_classification[obj$HTO_classification.global == "Doublet"] = "Doublet"
-      obj$HTODemux = obj$HTO_classification
-      obj$HTODemux.global = obj$HTO_classification.global
-      obj$HTO_classification = NULL
-      obj$HTO_classification.global = NULL
-      init_column = "HTODemux";
-    }else{
-      print(paste0("starting ", fname, " by cutoff ..."))
-      tic()
-      obj<-demulti_cutoff(obj, output_prefix, cutoff_startval, mc.cores=nrow(obj))
-      toc1=toc()
-      init_column = "scDemultiplex_cutoff";
-    }
-    tic(paste0("refining ", fname, " ...\n"))
-    obj<-demulti_refine(obj, p.cut, init_column=init_column, mc.cores=nrow(obj))
-    toc2=toc()
-    saveRDS(obj, refine_rds)
 
-    saveRDS(list("cutoff"=toc1, "refine"=toc2), paste0(output_prefix, ".scDemultiplex.tictoc.rds"))
+  if(init_by == "demuxmix"){
+    library('demuxmix')
+    library('dplyr')
+    print(paste0("starting ", fname, " by demuxmix ..."))
+    tic()
+
+    hto_counts <- as.matrix(GetAssayData(obj[["HTO"]], slot = "counts"))
+    dmm <- demuxmix(hto_counts, model = "naive")
+    dmm_calls <- dmmClassify(dmm)
+    toc1=toc()
+
+    obj$demuxmix <- case_when(
+      dmm_calls$Type == "multiplet" ~ "Doublet",
+      dmm_calls$Type %in% c("negative", "uncertain") ~ "Negative",
+      .default = dmm_calls$HTO)
+
+    obj$demuxmix.global <- case_when(
+      dmm_calls$Type == "multiplet" ~ "Doublet",
+      dmm_calls$Type %in% c("negative", "uncertain") ~ "Negative",
+      .default = "Singlet")
+
+    obj$HTO_classification<-obj$demuxmix
+    obj$HTO_classification.global<-obj$demuxmix.global
+
+    init_column = "demuxmix";
+  }else if(init_by == "HTODemux"){
+    print(paste0("starting ", fname, " by HTODemux ..."))
+    tic()
+    obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
+    toc1=toc()
+    obj$HTO_classification[obj$HTO_classification.global == "Doublet"] = "Doublet"
+    obj$HTODemux = obj$HTO_classification
+    obj$HTODemux.global = obj$HTO_classification.global
+
+    init_column = "HTODemux"
   }else{
-    obj<-readRDS(refine_rds)
+    print(paste0("starting ", fname, " by cutoff ..."))
+    cutoff_list = NULL
+    if(!is.null(cutoff_tbl)){
+      if(fname %in% cutoff_tbl$V3){
+        cur_cutoff_tbl = cutoff_tbl[cutoff_tbl$V3==fname,]
+        cutoff_list = split(cur_cutoff_tbl$V1, cur_cutoff_tbl$V2)
+      }
+    }
+    tic()
+    obj<-demulti_cutoff(obj, output_prefix, cutoff_startval, mc.cores=nrow(obj), cutoff_list=cutoff_list)
+    toc1=toc()
+
+    obj$HTO_classification<-obj$scDemultiplex_cutoff
+    obj$HTO_classification.global<-obj$scDemultiplex_cutoff.global
+
+    obj$scDemultiplex<-obj$scDemultiplex_cutoff
+    obj$scDemultiplex.global<-obj$scDemultiplex_cutoff.global
+
+    init_column = "scDemultiplex_cutoff";
   }
 
-  obj$HTO_classification<-obj$scDemultiplex
-  obj$HTO_classification.global<-obj$scDemultiplex.global
+  if (nrow(obj) <= 2){
+    cat(paste0("There are only ", nrow(obj), " hashtags, refinement ignored.\n"))
+    toc2=NULL
+  }else{
+    cat(paste0("output ", init_by, " result...\n"))
+    output_post_classification(obj, paste0(output_prefix, ".", init_by))
+
+    tic(paste0("refining ", fname, " ...\n"))
+    obj<-demulti_refine(obj, p.cut, init_column=init_column, mc.cores=nrow(obj), iterations = 3)
+    toc2=toc()
+
+    obj$HTO_classification<-obj$scDemultiplex
+    obj$HTO_classification.global<-obj$scDemultiplex.global
+  }
+  saveRDS(obj, refine_rds)
+
+  saveRDS(list("cutoff"=toc1, "refine"=toc2), paste0(output_prefix, ".scDemultiplex.tictoc.rds"))
 
   cat(paste0("output result...\n"))
   output_post_classification(obj, output_prefix)
