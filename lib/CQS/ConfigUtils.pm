@@ -1616,6 +1616,9 @@ sub get_version_files {
 
   my $result = {};
   for my $task_section ( keys %$config ) {
+    if(!is_hash($config->{$task_section})) {
+      next;
+    }
     my $classname = $config->{$task_section}{class};
     if ( !defined $classname ) {
       next;
