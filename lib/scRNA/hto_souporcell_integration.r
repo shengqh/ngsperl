@@ -1,18 +1,20 @@
 rm(list=ls()) 
-outFile='AK6383'
+outFile='GPA'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
+parSampleFile5='fileList5.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/kirabo_lab/shengq2/20230206_6383_scRNA_human/hto_samples_scDemultiplex_HTODemux_souporcell_integration/result')
+setwd('/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/hto_samples_scDemultiplex_cutoff_souporcell_integration/result')
 
 ### Parameter setting end ###
 
+source("scRNA_func.r")
 library(Seurat)
 library(patchwork)
 library(ggplot2)
@@ -32,6 +34,10 @@ if(exists("parSampleFile4")){
   ignore_map=list()
 }
 
+souporcell_samples = read.table(parSampleFile5, sep="\t")
+souporcell_samples = souporcell_samples[grepl("souporcell", souporcell_samples$V2),,drop=F]
+souporcell_samples$V4 = gsub("souporcell_", "", souporcell_samples$V2)
+
 get_max_row<-function(x){
   x<-x[order(x, decreasing = T)]
   if(names(x)[1] %in% c("Doublet", "Negative")){
@@ -45,8 +51,10 @@ get_max_row<-function(x){
   }
 }
 
-sample_name=rownames(souporcell_tb)[4]
+sample_name=rownames(souporcell_tb)[3]
 for (sample_name in rownames(souporcell_tb)){
+  cat("processing", sample_name, "\n")
+
   s1<-read.csv(cutoff_tb[sample_name, "V1"], row.names=1, check.names=F)
   s2<-read.table(souporcell_tb[sample_name, "V1"], row.names=1, header=T, check.names=F)
   obj<-readRDS(umap_rds_tb[sample_name, "V1"])
@@ -75,6 +83,12 @@ for (sample_name in rownames(souporcell_tb)){
   
   cmap<-unlist(apply(tb,2,get_max_row))
   names(cmap) = colnames(tb)
+
+  if(sample_name %in% souporcell_samples$V3){
+    cur_souporcell = souporcell_samples[souporcell_samples$V3 == sample_name,]
+    cur_map = split(cur_souporcell$V2, cur_souporcell$V4)
+    cmap[names(cur_map)] = unlist(cur_map)
+  }
   
   final<-unlist(apply(s, 1, function(x){
     #print(x['HTO.global'])
@@ -160,6 +174,8 @@ for (sample_name in rownames(souporcell_tb)){
   
   tags<-unlist(cmap)
   tags<-tags[order(tags)]
+
+  tags = tags[tags %in% rownames(obj)]
   #tags<-gsub("-",".",tags)
   hto_final<-s[,c(tags, "Final")]
   hto_final$HTO.global=unlist(lapply(hto_final$Final, function(x){
@@ -187,7 +203,10 @@ for (sample_name in rownames(souporcell_tb)){
   ss<-s[s$status=="singlet",]
   ss_assign<-unique(ss$assignment)
   ss_assign<-ss_assign[order(ss_assign)]
+
+  assign=ss_assign[1]
   for (assign in ss_assign){
+    cat("plot", assign, "\n")
     title = ""
     if(!is.null(ignore_souporcells)){
       if(assign %in% ignore_souporcells){
@@ -200,25 +219,27 @@ for (sample_name in rownames(souporcell_tb)){
     
     #if there are more than 2 tags, use umap
     if(nrow(obj) > 2){
-      g2<-get_dim_plot_labelby(obj, lalbl.by="assignment", pt.size = pt.size) 
-      gdata<-g2$data
+      celllist = list(assign = colnames(obj)[obj$assignment == assign])
+      g2<-DimPlot(obj, reduction="umap", cells.highlight = celllist, group.by="assignment") +
+        ggtitle(paste0("Cluster ", assign, title)) 
+      g2$data$highlight=dplyr::recode(g2$data$highlight, Unselected="Other")
     }else{
       tags<-rownames(obj)
       gdata<-FetchData(obj, c(tags, "assignment"))
       g2<-ggplot(gdata, aes(.data[[tags[1]]], .data[[tags[2]]], color=assignment)) + geom_point() + theme_bw() 
       gdata<-g2$data
+      gdata$assignment<-as.character(gdata$assignment)
+      gdata$assignment[gdata$assignment != assign] <- "Other"
+      gdata$assignment[gdata$assignment == assign] <- unlist(s[rownames(gdata)[gdata$assignment==assign], "HTO"])
+      
+      groups<-unique(as.character(gdata$assignment))
+      groups<-groups[order(groups)]
+      col1<-c(rainbow(length(groups)-1), "grey")
+      names(col1)<-c(groups[groups != "Other"], "Other")
+      g2<-g2+ ggtitle(paste0("soupor cluster ", assign, title)) + scale_color_manual(values=col1)
+      g2$data<-rbind(gdata[gdata$assignment == "Other",], gdata[gdata$assignment != "Other",])
+      g2$data[,3]=factor(g2$data[,3], levels=groups)
     }
-    gdata$assignment<-as.character(gdata$assignment)
-    gdata$assignment[gdata$assignment != assign] <- "Other"
-    gdata$assignment[gdata$assignment == assign] <- unlist(s[rownames(gdata)[gdata$assignment==assign], "HTO"])
-    
-    groups<-unique(as.character(gdata$assignment))
-    groups<-groups[order(groups)]
-    col1<-c(rainbow(length(groups)-1), "grey")
-    names(col1)<-c(groups[groups != "Other"], "Other")
-    g2<-g2+ ggtitle(paste0("soupor cluster ", assign, title)) + scale_color_manual(values=col1)
-    g2$data<-rbind(gdata[gdata$assignment == "Other",], gdata[gdata$assignment != "Other",])
-    g2$data[,3]=factor(g2$data[,3], levels=groups)
 
     png(paste0(sample_name, ".soupor_cluster", assign, ".png"), width=1500, height=1000, res=300)
     print(g2)
