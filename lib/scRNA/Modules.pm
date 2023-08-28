@@ -930,7 +930,7 @@ fi
     source_ref => $count_source,
     output_arg => "",
     output_file_prefix => "/filtered_feature_bc_matrix.h5",
-    output_file_ext => "/filtered_feature_bc_matrix.h5",
+    output_file_ext => "/filtered_feature_bc_matrix.h5,/metrics_summary.csv",
     output_to_same_folder => 1,
     can_result_be_empty_file => 0,
     sh_direct   => $sh_direct,
@@ -1003,39 +1003,40 @@ sub addCellRangerMulti {
       
     my $job_arg = "";
     if((defined $jobmode) and ($jobmode ne "")){
-    $job_arg = "--jobmode=$jobmode";
+      $job_arg = "--jobmode=$jobmode";
     }
 
     my $sh_direct = $job_arg =~ /slurm/;
     $config->{$task_name} = {
-        class => "CQS::ProgramWrapperOneToOne",
-        target_dir => "${target_dir}/$task_name",
-        docker_prefix => "cellranger_",
-        program => "cellranger",
-        check_program => 0,
-        option => " multi --disable-ui --id=__NAME__ --csv=$csv_config $job_arg
-        if [[ -s __NAME__/outs ]]; then
-          rm -rf __NAME__/SC_MULTI_CS
-          mkdir __NAME__/log
-          mv __NAME__/_* __NAME__/log   
-          mv __NAME__/outs/* __NAME__
-          rm -rf __NAME__/outs
-        fi
-        #__OUTPUT__
-        ",
-        source_arg => "",
-        source_ref => $count_source,
-        output_arg => "",
-        output_file_prefix => "/multi/count/raw_feature_bc_matrix.h5",
-        output_file_ext => "/multi/count/raw_feature_bc_matrix.h5",
-        output_to_same_folder => 1,
-        can_result_be_empty_file => 0,
-        sh_direct   => $sh_direct,
-        pbs => {
-            "nodes"     => "1:ppn=" . getValue($def, "cellranger_count_cpu", 8),
-            "walltime"  => getValue($def, "cellranger_count_walltime", 48),
-            "mem"       => getValue($def, "cellranger_count_mem", "40gb"),
-        },
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => "${target_dir}/$task_name",
+      docker_prefix => "cellranger_",
+      program => "cellranger",
+      check_program => 0,
+      option => " multi --disable-ui --id=__NAME__ --csv=$csv_config $job_arg
+      if [[ -s __NAME__/outs ]]; then
+        rm -rf __NAME__/SC_MULTI_CS
+        mkdir __NAME__/log
+        mv __NAME__/_* __NAME__/log   
+        mv __NAME__/outs/* __NAME__
+        rm -rf __NAME__/outs
+      fi
+      #__OUTPUT__
+      ",
+      source_arg => "",
+      source_ref => $count_source,
+      output_arg => "",
+      output_file_prefix => "/per_sample_outs/count___NAME__/count/sample_filtered_feature_bc_matrix.h5",
+      output_file_ext => "/per_sample_outs/count___NAME__/count/sample_filtered_feature_bc_matrix.h5,/per_sample_outs/count___NAME__/metrics_summary.csv,/multi/count/raw_feature_bc_matrix.h5",
+      output_to_same_folder => 1,
+      samplename_in_result => 1,
+      can_result_be_empty_file => 0,
+      sh_direct   => $sh_direct,
+      pbs => {
+          "nodes"     => "1:ppn=" . getValue($def, "cellranger_count_cpu", 8),
+          "walltime"  => getValue($def, "cellranger_count_walltime", 48),
+          "mem"       => getValue($def, "cellranger_count_mem", "40gb"),
+      },
     };
 
     push(@$tasks, $task_name);
@@ -1865,7 +1866,8 @@ sub add_hto_samples_preparation {
       hto_filter_by_exp => getValue($def, "hto_filter_by_exp", 1),
       hto_min_count => getValue($def, "hto_min_count", 2),
     },
-    parameterSampleFile3_ref => $hto_raw_file_ref,
+    #don't use raw object. It would make the normalized count shifted to right.
+    #parameterSampleFile3_ref => $hto_raw_file_ref,
     output_perSample_file => "parameterSampleFile1",
     output_perSample_file_byName => 1,
     output_perSample_file_ext => ".hto.rds;.barcodes.tsv",
@@ -1975,19 +1977,16 @@ sub add_hto {
   my $method = "";
   my $r_script = undef;
   my $scDemultiplex_cutoff_startval = undef;
-  my $scDemultiplex_init_by_HTODemux = undef;
+  my $scDemultiplex_init_by = undef;
   my $thread = 1;
   if ( getValue($def, "split_hto_samples_by_scDemultiplex", 0)){
-    $r_script = "../scRNA/split_samples_utils.r,../scRNA/split_samples_scDemultiplex.r";
-    $hto_task = "hto_samples_scDemultiplex";
+    $r_script = "../scRNA/scRNA_func.r,../scRNA/split_samples_utils.r,../scRNA/split_samples_scDemultiplex.r";
     $rmd_ext = ".scDemultiplex.html";
     $method = "scDemultiplex";
-    $scDemultiplex_init_by_HTODemux = getValue($def, "scDemultiplex_init_by_HTODemux", 0);
-    if($scDemultiplex_init_by_HTODemux){
-      $hto_task = $hto_task . "_HTODemux";
-    }else{
+    $scDemultiplex_init_by = getValue($def, "scDemultiplex_init_by", "demuxmix");
+    $hto_task = "hto_samples_scDemultiplex_$scDemultiplex_init_by";
+    if ($scDemultiplex_init_by eq "cutoff"){
       $scDemultiplex_cutoff_startval = getValue($def, "scDemultiplex_cutoff_startval", 0);
-      $hto_task = $hto_task . "_cutoff";
     }
     $thread = 5;
   } elsif ( getValue($def, "split_hto_samples_by_cutoff", 0) ) {
@@ -2017,10 +2016,11 @@ sub add_hto {
       task_name => getValue($def, "task_name"),
       email => getValue($def, "email"),
       method => $method,
-      init_by_HTODemux => $scDemultiplex_init_by_HTODemux,
+      init_by => $scDemultiplex_init_by,
       cutoff_startval => $scDemultiplex_cutoff_startval,
       hto_ignore_exists => getValue($def, "hto_ignore_exists", 0),
       cutoff_file => getValue($def, "cutoff_file", ""),
+      scDemultiplex_iteration => getValue($def, "scDemultiplex_iteration", 10),
       umap_min_dist => getValue($def, "hto_umap_min_dist", 0.3),
       umap_num_neighbors => getValue($def, "hto_umap_num_neighbors", 30),
     },
@@ -2150,7 +2150,7 @@ sub add_souporcell_integration {
   $config->{$hto_integration_task} = {
     class                     => "CQS::UniqueR",
     target_dir                => "${target_dir}/${hto_integration_task}",
-    rtemplate                 => "../scRNA/hto_souporcell_integration.r",
+    rtemplate                 => "../scRNA/scRNA_func.r;../scRNA/hto_souporcell_integration.r",
     rReportTemplate           => "../scRNA/hto_souporcell_integration.rmd;reportFunctions.R",
     run_rmd_independent => 1,
     rmd_ext => ".souporcell.html",
@@ -2159,6 +2159,7 @@ sub add_souporcell_integration {
     parameterSampleFile2_ref  => $hto_ref,
     parameterSampleFile3_ref  => [ $hto_task, ".umap.rds" ],
     parameterSampleFile4      => $def->{souporcell_ignore_cluster},
+    parameterSampleFile5      => $def->{HTO_samples},
     output_perSample_file     => "parameterSampleFile1",
     output_perSample_file_byName => 1,
     output_perSample_file_ext => ".HTO.png;.HTO.csv;.meta.rds",
@@ -2457,7 +2458,7 @@ sub add_remove_doublets {
     pbs => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "23",
-      "mem"       => "80gb"
+      "mem"       => getValue($def, "remove_doublets_mem", "20gb")
     },
   };
 
