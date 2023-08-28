@@ -16,7 +16,7 @@ genes=args[5:length(args)]
 #genes=c("KDR")
 
 datasets=c("hsapiens_gene_ensembl")
-names(datasets)=c("hg19")
+names(datasets)=c(datasetName)
 
 symbolColumns=c("hgnc_symbol")
 names(symbolColumns)=names(datasets)
@@ -42,6 +42,9 @@ if(datasetName %in% names(datasets)){
     allgenepos$chr = paste0("chr", allgenepos$chr)
   }
   
+  ll = unlist(lapply(allgenepos$chr, nchar))
+  allgenepos = allgenepos[ll < 6,]
+
   if(isGFF){
     allgenepos$unknown1="GENE"
     allgenepos$unknown2='.'
