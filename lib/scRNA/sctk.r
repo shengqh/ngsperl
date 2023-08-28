@@ -50,6 +50,7 @@ for (sample_name in names(sample_map)){
 
     cat("  runCellQC\n")
     #sce = runCellQC(sce, algorithms= c("QCMetrics", "scrublet", "doubletFinder", "scDblFinder", "cxds", "bcds", "cxds_bcds_hybrid", "decontX"))
+    #There is error to run scrublet, so ignore it.
     sce = runCellQC(sce, algorithms= c("QCMetrics", "doubletFinder", "scDblFinder", "cxds", "bcds", "cxds_bcds_hybrid", "decontX"))
 
     saveRDS(sce, sctk_rds)
@@ -57,8 +58,9 @@ for (sample_name in names(sample_map)){
 
   saveRDS(colData(sce), paste0(sample_name, ".meta.rds"))
 
-  cat("  reportCellQC\n")
-  reportCellQC(inSCE = sce, output_file = paste0(sample_name, "_reportCellQC"))
+  #cat("  reportCellQC\n")
+  #there is a lot of error to run reportCellQC, so ignore it.
+  #reportCellQC(inSCE = sce, output_file = paste0(sample_name, "_reportCellQC"))
 
   #cat("  exportSCE\n")
   #exportSCE(inSCE = sce, samplename = sample_name, type = "Cells", format = c("Seurat"))
