@@ -377,8 +377,41 @@ sub getRNASeqConfig {
     push @$summary, "$dexseq_count_table";
   }
 
+  if(defined $def->{annotation_genes_bed}){
+    my $genes_file = $def->{annotation_genes_bed};
+
+    my $gene_map = {};
+    open(FH, '<', $genes_file) or die $!;
+    while(<FH>){
+      chomp;
+      my @parts = split(/\t/);
+      $gene_map->{$parts[4]} = 1;
+    }
+    close(FH);
+
+    $config->{annotation_genes} = $gene_map;
+    $config->{annotation_genes_ref} = {$taskName => [$genes_file]};
+
+    my $geneLocus = "annotation_genes_ref";
+
+    if($def->{perform_bamsnap}){
+      my $bamsnap_task = "annotation_genes_bamsnap";
+      addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, $geneLocus, $source_ref);
+    }
+
+    if($def->{bamsnap_coverage}){
+      my $coverage_task = "annotation_genes_coverage";
+      addGeneCoverage($config, $def, $summary, $target_dir, $coverage_task, "annotation_genes", $source_ref, $geneLocus);
+    }
+
+    my $sizeFactorTask = "size_factor";
+    addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $source_ref);
+    addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
+  }
+
   if(defined $def->{annotation_genes}){
     my $genes_str = $def->{annotation_genes};
+    $genes_str =~ s/\s+/,/g;
     my @genes = split /[;, ]+/, $genes_str;
     my %gene_map = map { $_ => 1 } @genes;
     $config->{annotation_genes} = \%gene_map;
@@ -817,7 +850,7 @@ export NUMEXPR_MAX_THREADS=12
       qc3_perl       => $def->{qc3_perl},
       source_ref     => $source_ref,
       pbs            => {
-        "nodes"     => "1:ppn=1",
+        "nodes"     => "1:ppn=8",
         "walltime"  => "23",
         "mem"       => "40gb"
       },
