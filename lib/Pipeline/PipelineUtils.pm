@@ -175,14 +175,19 @@ sub getNextIndex {
 }
 
 sub get_next_index {
-  my ($def, $key) = @_;
+  my ($def, $key, $format_index) = @_;
   if (not defined $def->{$key}){
     $def->{$key} = 1;
   }else{
     $def->{$key} = $def->{$key} + 1;
   }
+
+  if(not defined $format_index){
+    $format_index = 0;
+  }
+
   #print("current_index = " . $def->{$key} . "\n");
-  my $res = sprintf("_%02d", $def->{$key});
+  my $res = $format_index ? sprintf("_%02d", $def->{$key}) : $def->{$key};
   return($res);
 }
 
@@ -2076,6 +2081,8 @@ sub addGeneLocus {
   my $geneLocus = undef;
   if ( defined $def->{annotation_genes} ) {
     $geneLocus = "annotation_genes_locus";
+    my $genesStr = getValue( $def, "annotation_genes" );
+    $genesStr =~ s/\s+/,/g;
     $config->{$geneLocus} = {
       class      => "CQS::UniqueR",
       perform    => 1,
@@ -2085,7 +2092,7 @@ sub addGeneLocus {
         host=>getValue( $def, "biomart_host" ),
         dataset=>getValue( $def, "biomart_dataset" ),
         symbolKey=>getValue( $def, "biomart_symbolKey" ),
-        genesStr=>getValue( $def, "annotation_genes" ),
+        genesStr=> $genesStr,
         add_chr => getValue($def, "annotation_genes_add_chr", 0)
       },
       rCode      =>"",
