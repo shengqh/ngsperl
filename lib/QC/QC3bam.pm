@@ -28,6 +28,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread ) = $self->init_parameter( $config, $section );
 
+  my $r_script = dirname(__FILE__) . "/QC3bam.r";
+
   my $target_region_bed = get_param_file( $config->{$section}{target_region_bed}, "target_region_bed", 0 );
   if ( defined $target_region_bed ) {
     $option = $option . " -r $target_region_bed";
@@ -60,10 +62,14 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $final_file = "bamReport.html";
+  my $final_file = "bamResult/bamSummary.txt";
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
-  print $pbs "perl $qc3_perl $option -t $thread -m b -i $mapfile -o $result_dir";
+  print $pbs "
+perl $qc3_perl $option -t $thread -m b -i $mapfile -o $result_dir
+
+R --vanilla -f $r_script --args $result_dir $task_name
+";
   $self->close_pbs( $pbs, $pbs_file );
 }
 
@@ -74,7 +80,8 @@ sub result {
 
   my $result       = {};
   my @result_files = ();
-  push( @result_files, $result_dir . "/bamReport.html" );
+  push( @result_files, $result_dir . "/bamResult/bamSummary.txt" );
+  push( @result_files, $result_dir . "/bamFigure/${task_name}.readsByCategory.png" );
   $result->{$task_name} = filter_array( \@result_files, $pattern );
 
   return $result;
