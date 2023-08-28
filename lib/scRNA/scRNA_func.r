@@ -912,18 +912,23 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
 do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
   library("readxl")
   library("tidyr")
-  
-  genes <- data.frame(read_xlsx(bubblemap_file, sheet = 1))
-  if(colnames(genes)[1] %in% c('Count', 'Index')){
-    genes <- genes[,c(2:ncol(genes))]
-  }
 
-  while(all(is.na(genes[,1]))){
-    genes <- genes[,c(2:ncol(genes))]
-  }
+  if(grepl(".txt$", bubblemap_file)){
+    genes <- read.table(bubblemap_file, header=T, sep="\t", stringsAsFactors = F)
+    genes <- genes[,c(2,1)]
+  }else{
+    genes <- data.frame(read_xlsx(bubblemap_file, sheet = 1))
+    if(colnames(genes)[1] %in% c('Count', 'Index')){
+      genes <- genes[,c(2:ncol(genes))]
+    }
 
-  if(colnames(genes)[2] == 'Marker.Gene'){
-    genes <- genes[,c(2:ncol(genes))]
+    while(all(is.na(genes[,1]))){
+      genes <- genes[,c(2:ncol(genes))]
+    }
+
+    if(colnames(genes)[2] == 'Marker.Gene'){
+      genes <- genes[,c(2:ncol(genes))]
+    }
   }
 
   colnames(genes)[1:2] = c("gene", "cell_type")  
@@ -984,6 +989,7 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
 
 read_bubble_genes<-function(bubblemap_files, allgenes=c(), species=NULL){
   result = NULL
+  bubblemap_file=bubblemap_files[1]
   for(bubblemap_file in bubblemap_files){
     genes = do_read_bubble_genes(bubblemap_file, allgenes, species)
     if(is.null(result)){
@@ -2194,9 +2200,32 @@ fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns
   return(target_meta)
 }
 
-check_md5<-function(filepath, expect_md5){
-  cat("checking md5 of", filepath, "\n")
-  library(tools)
-  md5=md5sum(filepath)
-  stopifnot(md5 == expect_md5)
+# The default FeaturePlot function in Seurat doesn't handle the order correctly. We need to fix it.
+my_feature_plot<-function(obj, gene, high_color="red", umap1 = "UMAP_1", umap2 = "UMAP_2", split.by=NULL, point.size=0.2, order=TRUE){
+  if(!is.null(split.by)){
+    gdata<-FetchData(obj, c(umap1, umap2, gene, split.by))
+  }else{
+    gdata<-FetchData(obj, c(umap1, umap2, gene))
+  }
+
+  if(order){
+    gdata<-gdata[order(gdata[,3]),]
+  }
+
+  if(max(gdata[,3]) == 0){
+    high_color = "lightgray"
+  }
+
+  g<-ggplot(gdata, aes(!!sym(umap1), !!sym(umap2), color=!!sym(gene))) + 
+    geom_point(size=point.size) + 
+    scale_color_gradient(low="lightgray", high=high_color) + 
+    theme_bw3() +
+    theme(aspect.ratio=1)
+
+  if(!is.null(split.by)){
+    g<-g + facet_grid(as.formula(paste0("~ ", split.by))) +
+      theme(strip.background = element_blank())
+  }
+
+  g
 }
