@@ -36,7 +36,7 @@ display_webgestalt=function(files) {
         #fdata<-read.table(txtFile, sep="\t", header=T, stringsAsFactors = F)
         fdata<-read.table(comp_files[i,1], sep="\t", header=T, stringsAsFactors = F)
         fdata<-fdata[c(1:min(nrow(fdata))),]
-        fdata$geneSet<-paste0("[", fdata$geneSet, "](", fdata$link, ")")
+        fdata$geneSet<-paste0("[", fdata$geneSet, "](", fdata$link, "){target='_blank'}")
         fdata<-fdata[,c(1,2,4,5,6,7,8,9)]
         print(kable(fdata, caption=tabRef(ename, ename)) %>%
         kable_styling() %>%
