@@ -300,7 +300,9 @@ preprocess<-function( SampleInfo,
   }
   
   if(!is.null(Ensemblfile)){
-    counts<-convertEnsembltoGeneSymbol(counts,Ensemblfile)
+    if(Ensemblfile != ""){
+      counts<-convertEnsembltoGeneSymbol(counts,Ensemblfile)
+    }
   }
   
   hto_file=hto_map[[sampleid]]
@@ -333,6 +335,7 @@ preprocess<-function( SampleInfo,
   #counts<-counts[,sample(ncol(counts), 2000)]
 
   obj <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, project=sampleid)
+  obj$orig.ident=sampleid
   obj$sample=sampleid
   if(has_hto){
     obj$orig.ident=hto[colnames(obj), "sample"]
