@@ -56,22 +56,24 @@ sub getConfig {
   $config->{count_files} = $def->{count_files};
   $config->{vdj_files} = $def->{vdj_files};
 
+  my $count_task_name;
+
   if(defined $def->{count_files}){
     if(getValue($def, "cellranger_multi_mode", 0)){
       my $multi_jobmode = getValue($def, "multi_jobmode", "local");
-      my $multi_task_name = "multi_${multi_jobmode}";
+      $count_task_name = "multi_${multi_jobmode}";
       addCellRangerMulti($config, 
         $def, 
         $summary, 
         $target_dir, 
-        $multi_task_name, 
+        $count_task_name, 
         getValue($def, "count_fastq_folder"),
         "count_files", 
         getValue($def, "csv_config"),
         $multi_jobmode);
     }else{
       my $count_jobmode = getValue($def, "count_jobmode", "local");
-      my $count_task_name = (defined $def->{count_chemistry}) ? "count_chemistry_$count_jobmode" : "count_$count_jobmode";
+      $count_task_name = (defined $def->{count_chemistry}) ? "count_chemistry_$count_jobmode" : "count_$count_jobmode";
       addCellRangerCount($config, 
         $def, 
         $summary, 
@@ -100,6 +102,23 @@ sub getConfig {
       $def->{vdj_chain});
   }
 
+  my $cellranger_summary_task = "${count_task_name}_summary";
+  $config->{$cellranger_summary_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $cellranger_summary_task,
+    rtemplate                => "../scRNA/cellranger_summary.r",
+    parameterSampleFile1_ref       => [$count_task_name, "metrics_summary.csv"],
+    output_file_ext      => ".summary.csv",
+    output_other_ext  => ".summary.csv",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "12",
+      "mem"       => "10gb" 
+    },
+  };
+  push( @$summary, $cellranger_summary_task );
 
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
