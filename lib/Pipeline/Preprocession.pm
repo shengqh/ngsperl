@@ -505,6 +505,10 @@ sub getPreprocessionConfig {
   }
 
   if ( $def->{merge_fastq} ) {
+    if ( $def->{perform_fastqc} ) {
+      addFastQC( $config, $def, $individual, $summary, "fastqc_raw_before_merge", $source_ref, $preprocessing_dir );
+    }
+
     my $class = getValue($def, "is_fastq_gzipped", 0) ? "Format::MergeFastqGzipped" : "Format::MergeFastq";
     $config->{merge_fastq} = {
       class       => $class,
