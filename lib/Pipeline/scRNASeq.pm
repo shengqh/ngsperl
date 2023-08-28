@@ -539,7 +539,7 @@ sub getScRNASeqConfig {
       if(getValue($def, "perform_dynamic_cluster")){
         my $raw_dynamicKey = $seurat_task . "_dr" . getValue($def, "dynamic_by_one_resolution");
 
-        my $dynamicKey = $raw_dynamicKey;
+        my $dynamicKey = $raw_dynamicKey . "_";
 
         $def->{$dynamicKey} = 0;
 
@@ -562,7 +562,7 @@ sub getScRNASeqConfig {
           my $individual_scDynamic_task = $raw_dynamicKey . "_individual";
           addDynamicCluster($config, $def, $summary, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1);
 
-          my $clustree_task = $dynamicKey . "_clustree";
+          my $clustree_task = $individual_scDynamic_task . "_clustree";
           add_clustree_rmd($config, $def, $summary, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task);
         }
 
