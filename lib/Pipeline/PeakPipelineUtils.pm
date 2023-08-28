@@ -82,15 +82,20 @@ sub init_treatments_design_table {
 
   checkFileGroupPairNames($def, ["treatments", "controls"]);
 
+  my $design_table_condition_pattern = $def->{design_table_condition_pattern};
   if(getValue($def, "design_table_auto", 0)){
     my $task_name = getValue($def, "task_name");
     my $treatments = getValue($def, "treatments");
     my $design_table = {};
 
+    my $rep_index = {};
+
     for my $sample (sort keys %$treatments){
+      my $condition = (defined $design_table_condition_pattern) ? capture_regex_groups($sample, $design_table_condition_pattern) : $sample;
+      
       $design_table->{$sample} = {
-        Condition => $sample,
-        Replicate => "1"
+        Condition => $condition,
+        Replicate => get_next_index($rep_index, $condition, 0)
       };
     }
 
