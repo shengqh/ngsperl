@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='GPA'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
+parSampleFile3='fileList3.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/shengq2/20230115_combined_scRNA_hg38/hto_samples_preparation/result')
+setwd('/data/h_gelbard_lab/projects/20230711_gpa_scRNA_hg38/hto_samples_preparation/result')
 
 ### Parameter setting end ###
 
@@ -73,6 +73,7 @@ for(cname in names(files)){
   if(params$hto_filter_by_exp){
     hto.exp <- CreateSeuratObject(counts = exp, min.features = params$nFeature_cutoff_min)
     cells.valid<-colnames(hto.exp)
+    cells.valid = intersect(cells.valid, colnames(htos))
     htos<-htos[,cells.valid]
   }else{
     htos<-htos[,colSums(htos) >= params$hto_min_count,drop=F]
