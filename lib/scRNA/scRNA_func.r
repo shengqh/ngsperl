@@ -914,7 +914,7 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
   library("tidyr")
 
   if(grepl(".txt$", bubblemap_file)){
-    genes <- read.table(bubblemap_file, header=T, sep="\t", stringsAsFactors = F)
+    genes <- read.table(bubblemap_file, header=F, sep="\t", stringsAsFactors = F)
     genes <- genes[,c(2,1)]
   }else{
     genes <- data.frame(read_xlsx(bubblemap_file, sheet = 1))
