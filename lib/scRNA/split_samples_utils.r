@@ -394,7 +394,7 @@ do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by="demuxmix", cu
     output_post_classification(obj, paste0(output_prefix, ".", init_by))
 
     tic(paste0("refining ", fname, " ...\n"))
-    obj<-demulti_refine(obj, p.cut, init_column=init_column, mc.cores=nrow(obj), iterations = 3)
+    obj<-demulti_refine(obj, paste0(output_prefix, ".", init_by), init_column=init_column, mc.cores=nrow(obj), iterations = 3)
     toc2=toc()
 
     obj$HTO_classification<-obj$scDemultiplex
