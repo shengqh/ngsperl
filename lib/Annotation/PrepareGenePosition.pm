@@ -19,6 +19,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_pg";
+  $self->{_docker_prefix} = "genepos_";
   bless $self, $class;
   return $self;
 }
