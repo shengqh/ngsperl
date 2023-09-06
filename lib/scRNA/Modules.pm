@@ -148,6 +148,7 @@ sub add_seurat_rawdata {
       species               => getValue( $def, "species" ),
       pool_sample           => getValue( $def, "pool_sample" ),
       hto_sample_file       => $hto_sample_file,
+      hto_ignore_samples => $def->{HTO_ignore_samples},
       ensembl_gene_map_file => $def->{ensembl_gene_map_file},
       keep_seurat_object => getValue( $def, "keep_seurat_object", 0 ),
       seurat_sample_column => $def->{"seurat_sample_column"},

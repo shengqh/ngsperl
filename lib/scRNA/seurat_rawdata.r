@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='GPA'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/home/shengq2/program/collaborations/celestine_wanjalla/20230115_combined_scRNA_hg38/20230410_filter_config.csv'
+parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230410_combined_scRNA_hg38/seurat_rawdata/result')
+setwd('/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/decontX_nd_seurat_rawdata.test/result')
 
 ### Parameter setting end ###
 
@@ -54,6 +54,11 @@ hto_sample_file<-myoptions$hto_sample_file
 has_hto = (hto_sample_file != "")
 
 if (has_hto) {
+  if ("hto_ignore_samples" %in% names(myoptions)){
+    hto_ignore_samples = myoptions$hto_ignore_samples
+  }else{
+    hto_ignore_samples = ""
+  }
   hto_samples = read.table(hto_sample_file, sep="\t", header=T, stringsAsFactors=FALSE)
   hto_md5 = list()
   hto_md5[["hto_samples"]] = digest(hto_sample_file, file=TRUE)
@@ -332,6 +337,11 @@ for(sample_name in sample_names){
     for (tagname in unique(cell_data$HTO)){
       tagcells = cell_data[cell_data$HTO == tagname,]
       sample = tagcells$Sample[1]
+      if(sample %in% hto_ignore_samples){
+        cat("skipping HTO sample", sample, "in file", sample_name, "\n")
+        next
+      }
+
       sample_obj = subset(validobj, cells=tagcells$cell)
       sample_obj$orig.ident = sample
       sample_obj$sample = sample
