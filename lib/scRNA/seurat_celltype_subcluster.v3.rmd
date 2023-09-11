@@ -123,7 +123,7 @@ figureRmd<-function(cts, files){
   return(result)
 }
 cat(figureRmd(cts, files), file=resFile)
-
+```
 
 ```{r, echo=FALSE, eval=file.exists(pre_file)}
 cat("\n\n# Pre renaming cell type, before sub-clustering\n\n")

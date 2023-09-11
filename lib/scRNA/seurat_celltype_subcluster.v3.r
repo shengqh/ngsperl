@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='GPA'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile6='fileList6.txt'
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge/result/combined.final.rds'
-parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/combined.scDynamic.meta.rds'
-parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/essential_genes/result/combined.txt'
+parFile1='/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/decontX_nd_seurat_sct2_merge/result/GPA.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/decontX_nd_seurat_sct2_merge_dr0.5_1_call/result/GPA.scDynamic.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/essential_genes/result/GPA.txt'
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_02_subcluster_rh/result')
+setwd('/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/test/result')
 
 ### Parameter setting end ###
 
@@ -72,6 +72,11 @@ essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
 
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
+if(has_bubblemap){
+  cat("Using bubblemap file ", bubblemap_file, "\n")
+}else{
+  cat("No bubblemap file\n")
+}
 
 pca_dims<-1:npcs
 
@@ -194,15 +199,15 @@ meta<-obj@meta.data
 bHasSignacX<-FALSE
 if(exists("parSampleFile4")){
   meta = fill_meta_info_list(parSampleFile4, meta, "signacx_CellStates", "SignacX")
-  ct_map=c('T.CD4.memory'='T.CD4', 
-    'T.CD4.naive'='T.CD4', 
-    'T.CD8.cm'='T.CD8',
-    'T.CD8.em'='T.CD8',
-    'T.CD8.naive'='T.CD8')
-  meta$SignacX<-as.character(meta$SignacX)
-  for(ct_name in names(ct_map)){
-    meta$SignacX[meta$SignacX==ct_name]=ct_map[ct_name]
-  }
+  # ct_map=c('T.CD4.memory'='T.CD4', 
+  #   'T.CD4.naive'='T.CD4', 
+  #   'T.CD8.cm'='T.CD8',
+  #   'T.CD8.em'='T.CD8',
+  #   'T.CD8.naive'='T.CD8')
+  # meta$SignacX<-as.character(meta$SignacX)
+  # for(ct_name in names(ct_map)){
+  #   meta$SignacX[meta$SignacX==ct_name]=ct_map[ct_name]
+  # }
   bHasSignacX<-TRUE
 }
 
@@ -220,19 +225,19 @@ if(has_bubblemap){
   allgenes<-rownames(obj)
   genes_df <- read_bubble_genes(bubblemap_file, allgenes, species = myoptions$species)
   essential_genes<-unique(c(essential_genes, genes_df$gene))
-}
 
-if(file.exists('fileList6.txt')){
-  bubble_file_map = read_file_map('fileList6.txt')
-  for(bffile in bubble_file_map){
-    if(!file.exists(bffile)){
-      stop(paste0("Cannot find bubble file ", bffile))
+  if(file.exists('fileList6.txt')){
+    bubble_file_map = read_file_map('fileList6.txt')
+    for(bffile in bubble_file_map){
+      if(!file.exists(bffile)){
+        stop(paste0("Cannot find bubble file ", bffile))
+      }
+      genes_df <- read_bubble_genes(bffile, allgenes, species = myoptions$species)
+      essential_genes<-unique(c(essential_genes, genes_df$gene))
     }
-    genes_df <- read_bubble_genes(bffile, allgenes, species = myoptions$species)
-    essential_genes<-unique(c(essential_genes, genes_df$gene))
+  }else{
+    bubble_file_map = c()
   }
-}else{
-  bubble_file_map = c()
 }
 
 resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.5, by = 0.1))
@@ -281,7 +286,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[10]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -346,6 +351,29 @@ for(pct in previous_celltypes){
 
     cur_df = data.frame("file"=signacx_file, "type"="SignacX", "resolution"="", "celltype"=pct)
     filelist<-rbind(filelist, cur_df)
+
+    if(has_bubblemap){
+      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", bubblemap_file)
+
+      dot_file = paste0(curprefix, ".dot.SignacX.png")
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), res=300)
+      print(g)
+      dev.off()
+
+      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "dot_SignacX", "", pct))
+    }
+
+    if(pct %in% names(bubble_file_map)){
+      cur_bubblemap_file = bubble_file_map[[pct]]
+      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", cur_bubblemap_file)
+
+      dot_file = paste0(curprefix, ".dot.SignacX.subcelltypes.png")
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), res=300)
+      print(g)
+      dev.off()
+
+      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "dot_SignacX_subcelltype", "", pct))
+    }
   }
 
   bHasCurrentSingleR<-FALSE
@@ -370,6 +398,29 @@ for(pct in previous_celltypes){
 
     cur_df = data.frame("file"=signacr_file, "type"="SingleR", "resolution"="", "celltype"=pct)
     filelist<-rbind(filelist, cur_df)
+
+    if(has_bubblemap){
+      g<-get_sub_bubble_plot(obj, "SingleR", sxobj, "SingleR", bubblemap_file)
+
+      dot_file = paste0(curprefix, ".dot.SingleR.png")
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SingleR"), res=300)
+      print(g)
+      dev.off()
+
+      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "dot_SingleR", "", pct))
+    }
+
+    if(pct %in% names(bubble_file_map)){
+      cur_bubblemap_file = bubble_file_map[[pct]]
+      g<-get_sub_bubble_plot(obj, "SingleR", sxobj, "SingleR", cur_bubblemap_file)
+
+      dot_file = paste0(curprefix, ".dot.SingleR.subcelltypes.png")
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SingleR"), res=300)
+      print(g)
+      dev.off()
+
+      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "dot_SingleR_subcelltype", "", pct))
+    }
 
     bHasCurrentSingleR = any(sxnames != "unclassified")
   }
