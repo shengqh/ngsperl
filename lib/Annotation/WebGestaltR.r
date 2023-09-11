@@ -139,3 +139,4 @@ if(length(genes) < 10){
 }
 
 webGestaltR_version<-paste0('WebGestaltR,v', packageVersion('WebGestaltR'))
+writeLines(webGestaltR_version, paste0(sampleName, ".version"))
