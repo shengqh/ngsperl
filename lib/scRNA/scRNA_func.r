@@ -1161,18 +1161,28 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   return(g)
 }
 
-get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file){
+get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, add_num_cell=FALSE){
   old_meta<-obj@meta.data
   
   obj$fake_layer=paste0("fake_", unlist(obj@meta.data[,obj_res]))
-  obj@meta.data[colnames(subobj), "fake_layer"] = as.character(subobj@meta.data[,subobj_res])
-  
+
+  sr = as.character(subobj@meta.data[,subobj_res])
+
+  if(add_num_cell){
+    num_tbl = table(sr)
+    num_tbl = num_tbl[order(num_tbl, decreasing = T)]
+    sub_levels = paste0(names(num_tbl), " (", num_tbl, ")")
+    obj@meta.data[colnames(subobj), "fake_layer"] = paste0(sr, " (", num_tbl[sr], ")")
+  }else{
+    obj@meta.data[colnames(subobj), "fake_layer"] = sr
+    sub_levels = levels(subobj@meta.data[, subobj_res])
+  }
+
   g<-get_bubble_plot(obj, group.by="fake_layer", bubblemap_file = bubblemap_file)
 
   obj@meta.data=old_meta
   
   g$data<-g$data[!grepl("^fake_", g$data$id),]
-  sub_levels = levels(subobj@meta.data[, subobj_res])
   if(all(!is.null(sub_levels))){
     g$data$id<-factor(g$data$id, levels=sub_levels)
   }

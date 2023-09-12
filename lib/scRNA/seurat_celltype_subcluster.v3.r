@@ -286,7 +286,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[10]
+pct<-previous_celltypes[8]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -332,7 +332,7 @@ for(pct in previous_celltypes){
     sx<-table(subobj$SignacX)
     sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
     sxnames<-names(sx)
-
+    
     sxobj<-subset(subobj, SignacX %in% sxnames)
     sxobj$SignacX<-as.character(sxobj$SignacX)
 
@@ -353,27 +353,29 @@ for(pct in previous_celltypes){
     filelist<-rbind(filelist, cur_df)
 
     if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", bubblemap_file)
+      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", bubblemap_file, add_num_cell=TRUE)
 
       dot_file = paste0(curprefix, ".dot.SignacX.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), res=300)
       print(g)
       dev.off()
 
-      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "dot_SignacX", "", pct))
+      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SignacX celltype", "", pct))
     }
 
     if(pct %in% names(bubble_file_map)){
       cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", cur_bubblemap_file)
+      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", cur_bubblemap_file, add_num_cell=TRUE)
 
       dot_file = paste0(curprefix, ".dot.SignacX.subcelltypes.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), res=300)
       print(g)
       dev.off()
 
-      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "dot_SignacX_subcelltype", "", pct))
+      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SignacX sub celltype", "", pct))
     }
+
+    rm(sxobj)
   }
 
   bHasCurrentSingleR<-FALSE
@@ -400,29 +402,31 @@ for(pct in previous_celltypes){
     filelist<-rbind(filelist, cur_df)
 
     if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "SingleR", sxobj, "SingleR", bubblemap_file)
+      g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", bubblemap_file, add_num_cell=TRUE)
 
       dot_file = paste0(curprefix, ".dot.SingleR.png")
-      png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SingleR"), res=300)
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), res=300)
       print(g)
       dev.off()
 
-      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "dot_SingleR", "", pct))
+      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SingleR celltype", "", pct))
     }
 
     if(pct %in% names(bubble_file_map)){
       cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "SingleR", sxobj, "SingleR", cur_bubblemap_file)
+      g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", cur_bubblemap_file, add_num_cell=TRUE)
 
       dot_file = paste0(curprefix, ".dot.SingleR.subcelltypes.png")
-      png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SingleR"), res=300)
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), res=300)
       print(g)
       dev.off()
 
-      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "dot_SingleR_subcelltype", "", pct))
+      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SingleR sub celltype", "", pct))
     }
 
     bHasCurrentSingleR = any(sxnames != "unclassified")
+
+    rm(srobj)
   }
   
   cat(key, "Find marker genes\n")
@@ -559,7 +563,7 @@ for(pct in previous_celltypes){
     cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
     if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file)
+      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file, add_num_cell=TRUE)
 
       dot_file = paste0(cluster_prefix, ".dot.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
@@ -571,7 +575,7 @@ for(pct in previous_celltypes){
 
     if(pct %in% names(bubble_file_map)){
       cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_file)
+      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_file, add_num_cell=TRUE)
 
       dot_file = paste0(cluster_prefix, ".dot_celltype_specific.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
