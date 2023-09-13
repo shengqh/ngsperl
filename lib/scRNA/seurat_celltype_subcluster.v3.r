@@ -1,17 +1,16 @@
 rm(list=ls()) 
-outFile='GPA'
+outFile='P9674'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parSampleFile6='fileList6.txt'
-parFile1='/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/decontX_nd_seurat_sct2_merge/result/GPA.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/decontX_nd_seurat_sct2_merge_dr0.5_1_call/result/GPA.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/essential_genes/result/GPA.txt'
+parFile1='/nobackup/h_cqs/charles_flynn_projects/20230328_9674_dog_3_scRNA_celltype/seurat_merge/result/P9674.final.rds'
+parFile2='/nobackup/h_cqs/charles_flynn_projects/20230328_9674_dog_3_scRNA_celltype/seurat_merge_dr0.5_1_call/result/P9674.scDynamic.meta.rds'
+parFile3='/nobackup/h_cqs/charles_flynn_projects/20230328_9674_dog_3_scRNA_celltype/essential_genes/result/P9674.txt'
 
 
-setwd('/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/test/result')
+setwd('/nobackup/h_cqs/charles_flynn_projects/20230328_9674_dog_3_scRNA_celltype/seurat_merge_dr0.5_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -286,7 +285,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[8]
+pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -327,10 +326,11 @@ for(pct in previous_celltypes){
   reductions_rds = paste0(curprefix, ".reductions.rds")
   saveRDS(subobj@reductions, reductions_rds)
 
+  min_percentage = 0.05
   bHasCurrentSignacX<-FALSE
   if(bHasSignacX){
     sx<-table(subobj$SignacX)
-    sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
+    sx<-sx[sx > max(5, ncol(subobj) * min_percentage)]
     sxnames<-names(sx)
     
     sxobj<-subset(subobj, SignacX %in% sxnames)
@@ -381,7 +381,7 @@ for(pct in previous_celltypes){
   bHasCurrentSingleR<-FALSE
   if(bHasSingleR){
     sx<-table(subobj$SingleR)
-    sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
+    sx<-sx[sx > max(5, ncol(subobj) * min_percentage)]
     sxnames<-names(sx)
 
     srobj<-subset(subobj, SingleR %in% sxnames)
@@ -515,21 +515,14 @@ for(pct in previous_celltypes){
       srobj$SingleR<-as.character(srobj$SingleR)
     }
 
-    # bar file
     bar_file=paste0(cluster_prefix, ".bar.png")
-    gb<-get_groups_dot(subobj, "display_layer", "orig.ident")
-    height = 1100
-    if(bHasCurrentSignacX){
-      gb<-gb+get_groups_dot(sxobj, "display_layer", "SignacX") + plot_layout(ncol=1)
-      height = height + 1100
-    }
-    if(bHasCurrentSingleR){
-      gb<-gb+get_groups_dot(srobj, "display_layer", "SingleR") + plot_layout(ncol=1)
-      height = height + 1100
-    }
-    png(bar_file, width=3000, height=height, res=300)
-    print(gb)
-    dev.off()
+    g<-get_barplot(
+      ct_meta=subobj@meta.data, 
+      bar_file=bar_file,
+      cluster_name="display_layer", 
+      validation_columns=c("orig.ident", "SignacX", "SingleR"),
+      calc_height_per_cluster=250, 
+      calc_width_per_cell=50)
 
     # umap file
     g0<-MyDimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))

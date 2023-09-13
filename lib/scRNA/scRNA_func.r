@@ -2239,3 +2239,48 @@ my_feature_plot<-function(obj, gene, high_color="red", umap1 = "UMAP_1", umap2 =
 
   g
 }
+
+get_barplot<-function(
+  ct_meta, 
+  bar_file=NULL, 
+  cluster_name="display_layer", 
+  validation_columns=c("orig.ident","SignacX","SingleR"), 
+  calc_height_per_cluster=200, 
+  calc_width_per_cell=50){
+
+  valid_columns = intersect(validation_columns, colnames(ct_meta))
+  if(length(valid_columns) == 0){
+    stop(paste0("No column found in meta: ", paste0(validation_columns, collapse=", ")))
+  }
+  
+  alltbl=NULL
+  col_name="SignacX"
+  for(col_name in valid_columns){
+    tbl = data.frame(table(ct_meta[,cluster_name], ct_meta[,col_name]))
+    v1 = as.numeric(as.character(tbl$Var1))
+    if(all(is.na(v1))){
+      v1 = as.character(tbl$Var1)
+    }
+    tbl$Var1 = v1
+    tbl$Category=col_name
+
+    alltbl<-rbind(alltbl, tbl)
+  }
+
+  g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + 
+    geom_bar(width=0.5, stat = "identity") + 
+    facet_grid(Var1~Category, scales = "free", space='free_x') + 
+    theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend() +
+    theme(strip.text.y = element_text(angle = 0))
+
+  if(!is.null(bar_file)){
+    height = length(unique(alltbl$Var1)) * calc_height_per_cluster + 500
+    width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + 400
+
+    png(bar_file, width=width, height=height, res=300)
+    print(g)
+    ignored = dev.off()
+  }
+  
+  return(g)
+}
