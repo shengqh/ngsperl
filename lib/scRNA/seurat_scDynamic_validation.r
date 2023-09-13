@@ -92,28 +92,14 @@ draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, v
     pct = celltype_to_filename(ct)
     ct_meta = meta[meta[,celltype_column] == ct,]
 
-    alltbl=NULL
-
-    col_name="SignacX"
-    for(col_name in validation_columns){
-      tbl = data.frame(table(ct_meta[,celltype_cluster_column], ct_meta[,col_name]))
-      v1 = as.numeric(as.character(tbl$Var1))
-      if(all(is.na(v1))){
-        v1 = as.character(tbl$Var1)
-      }
-      tbl$Var1 = v1
-      tbl$Category=col_name
-
-      alltbl<-rbind(alltbl, tbl)
-    }
-
-    g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + geom_bar(width=0.5, stat = "identity") + facet_grid(Var1~Category, scales = "free", space='free_x') + theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend()
-
-    height = max(500, length(unique(alltbl$Var1)) * 200) + 500
-    width = max(1000, length(unique(alltbl$Var2)) * 50) + 400
-    png(paste0(outFile, ".", pct, ".png"), width=width, height=height, res=300)
-    print(g)
-    dev.off()
+    bar_file=paste0(outFile, ".", pct, ".png")
+    g<-get_barplot(
+      ct_meta=ct_meta, 
+      bar_file=bar_file,
+      cluster_name=celltype_cluster_column, 
+      validation_columns=validation_columns,
+      calc_height_per_cluster=200, 
+      calc_width_per_cell=50)
 
     if(has_decontX){
       g1<-MyFeaturePlot(obj, features = "decontX") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
