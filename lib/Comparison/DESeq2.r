@@ -121,7 +121,7 @@ if(!exists("showVolcanoLegend")){
 }
 
 if(!exists("cooksCutoff")){
-  cooksCutoff<-"DEAFULT"
+  cooksCutoff<-"DEFAULT"
 }
 
 cat("cooksCutoff=",cooksCutoff,"\n")
