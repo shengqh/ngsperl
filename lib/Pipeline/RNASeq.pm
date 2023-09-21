@@ -104,6 +104,8 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_text_size",                    10 );
   initDefaultValue( $def, "DE_min_median_read",              5 );
   initDefaultValue( $def, "DE_cooksCutoff",                  "DEFAULT" );
+  initDefaultValue( $def, "DE_independentFiltering",         "TRUE" );
+  
   initDefaultValue( $def, "perform_DE_proteincoding_gene",   1 );
   initDefaultValue( $def, "perform_proteincoding_gene",      getValue( $def, "perform_DE_proteincoding_gene" ) );
 

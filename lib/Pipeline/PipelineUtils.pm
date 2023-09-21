@@ -545,6 +545,7 @@ sub addDEseq2 {
     cluster                      => $def->{cluster},
     export_significant_gene_name => $def->{DE_export_significant_gene_name},
     cooksCutoff                  => $def->{DE_cooksCutoff},
+    independentFiltering => $def->{DE_independentFiltering},
     covariance_name_index        => getValue($def, "covariance_name_index", 0),
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,

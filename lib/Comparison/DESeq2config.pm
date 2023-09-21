@@ -68,6 +68,7 @@ sub perform {
   my $transformTable            = get_option( $config, $section, "transform_table",              0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
   my $cooksCutoff               = get_option( $config, $section, "cooksCutoff",                  'DEFAULT' );
+  my $independentFiltering      = get_option( $config, $section, "independentFiltering", 'TRUE' );
   
   my $rCode = get_option( $config, $section, "rCode", "" );
 
@@ -143,6 +144,8 @@ textSize<-$textSize
 transformTable<-$transformTable
 exportSignificantGeneName<-$exportSignificantGeneName
 thread<-$thread
+
+independentFiltering<-$independentFiltering
 
 $rCode
 ";
