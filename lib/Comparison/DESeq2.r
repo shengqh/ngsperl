@@ -20,7 +20,6 @@ exportSignificantGeneName<-1
 thread<-8
 
 outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-TRUE;top25cvInHCA<-FALSE;
-cooksCutoff<-0.99
 #predefined_condition_end
 
 options(bitmapType='cairo')
@@ -122,8 +121,10 @@ if(!exists("showVolcanoLegend")){
 }
 
 if(!exists("cooksCutoff")){
-  cooksCutoff<-FALSE
+  cooksCutoff<-"DEAFULT"
 }
+
+cat("cooksCutoff=",cooksCutoff,"\n")
 
 library("DESeq2")
 library("heatmap3")
@@ -842,10 +843,18 @@ for(countfile_index in c(1:length(countfiles))){
       }
     }
     
-    if (!is.null(contrast)) {
-      res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha, parallel=parallel, BPPARAM=bpparam,contrast=contrast) 
-    } else {
-      res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha, parallel=parallel, BPPARAM=bpparam)
+    if(cooksCutoff == "ON" || cooksCutoff == "DEFAULT"){
+      if (!is.null(contrast)) {
+        res<-results(dds, alpha=alpha, parallel=parallel, BPPARAM=bpparam,contrast=contrast) 
+      } else {
+        res<-results(dds, alpha=alpha, parallel=parallel, BPPARAM=bpparam)
+      }
+    }else{
+      if (!is.null(contrast)) {
+        res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha, parallel=parallel, BPPARAM=bpparam,contrast=contrast) 
+      } else {
+        res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha, parallel=parallel, BPPARAM=bpparam)
+      }
     }
 
     res$FoldChange<-2^res$log2FoldChange
