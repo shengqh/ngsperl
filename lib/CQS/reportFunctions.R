@@ -194,7 +194,7 @@ find_module_folder=function(files,pattern) {
 }
 
 print_table<-function(tbl, round_value=3, byDT=FALSE, row.names=TRUE){
-  tbl <- tbl |> dplyr::mutate(across(where(is.numeric), round, round_value))
+  tbl <- tbl %>% dplyr::mutate(across(where(is.numeric), round, round_value))
   if(byDT){
     DT::datatable(tbl, rownames = row.names, extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv")))
   }else{
