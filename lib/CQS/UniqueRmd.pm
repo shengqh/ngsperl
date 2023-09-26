@@ -37,6 +37,8 @@ sub perform {
   my $final_log = $self->get_log_filename( $log_dir, $task_name );
   my $final_log_desp = $cluster->get_log_description($final_log);
 
+  $self->{_suffix} = get_option( $config, $section, "suffix", $self->{_suffix} );
+
   my $output_file_ext = get_output_ext( $config, $section, ".html" );
 
   my $rfilename = ${task_name}. $self->{_suffix} . ".Rmd";
