@@ -5,6 +5,7 @@ use strict;
 use warnings;
 require Exporter;
 use File::Basename;
+use File::Slurp;
 use CQS::ConfigUtils;
 use Pipeline::PipelineUtils;
 
@@ -126,7 +127,7 @@ sub get_marker_gene_dict {
 sub add_seurat_rawdata {
   my ($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, $doublets_ref, $doublet_column, $qc_task, $decontX_ref) = @_;
 
-  my $cur_decontX_ref = getValue($def, "remove_decontX", 0) ? $decontX_ref : undef;
+  my $cur_decontX_ref = getValue($def, "remove_decontX") ? $decontX_ref : undef;
 
   $config->{$seurat_rawdata} = {
     class                    => "CQS::UniqueR",
@@ -815,6 +816,15 @@ sub add_decontX {
   my $target_folder = $target_dir . "/" . $decontX_task;
   my $class =  $by_individual_sample ? "CQS::IndividualR" : "CQS::UniqueR";
   my $init_command = "";
+
+  my $remove_decontX = getValue($def, "remove_decontX");
+  my $remove_decontX_by_contamination = getValue($def, "remove_decontX_by_contamination");
+
+  my $output_file_ext = ".decontX.meta.rds;.decontX.counts.rds;.decontX.png";
+  if($remove_decontX && $remove_decontX_by_contamination > 0){
+    $output_file_ext = $output_file_ext . ";.decontX.after.png;.decontX.filtered.csv";
+  }
+
   $config->{$decontX_task} = {
     class                => $class,
     perform              => 1,
@@ -825,9 +835,10 @@ sub add_decontX {
     parameterSampleFile2_ref   => $raw_files_ref,
     parameterSampleFile3 => merge_hash_left_precedent($cur_options,  {
       species => getValue( $def, "species" ),
-      remove_decontX => getValue($def, "remove_decontX", 0),
+      remove_decontX => $remove_decontX,
+      remove_decontX_by_contamination => $remove_decontX_by_contamination,
     }),
-    output_file_ext => ".decontX.meta.rds;.decontX.counts.rds",
+    output_file_ext => $output_file_ext,
     #no_docker => 1,
     sh_direct       => 0,
     pbs             => {
@@ -838,6 +849,33 @@ sub add_decontX {
   };
 
   push( @$tasks, $decontX_task );
+
+  if($remove_decontX && ($remove_decontX_by_contamination > 0)){
+    my $decontX_summary_task = $decontX_task . "_summary";
+    $config->{$decontX_summary_task} = {
+      class => "CQS::UniqueRmd",
+      target_dir           => $target_dir . "/" . $decontX_summary_task,
+      report_rmd_file => "../scRNA/decontX_summary.rmd",
+      additional_rmd_files => "../scRNA/scRNA_func.r;reportFunctions.R",
+      option => "",
+      parameterSampleFile1 => {
+        outFile => getValue($def, "task_name"),
+        remove_decontX_by_contamination => $remove_decontX_by_contamination,
+      },
+      parameterSampleFile2_ref => $decontX_task,
+      suffix => ".decontX",
+      output_file_ext => ".decontX.html",
+      can_result_be_empty_file => 0,
+      sh_direct   => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+
+    push( @$tasks, $decontX_summary_task );
+  }
 }
 
 sub add_celltype_validation {
@@ -999,13 +1037,49 @@ fi
   push(@$tasks, $task_name);
 }
 
+sub writeCellRangerMultiConig {
+  my ($def, $files_name,  $target_dir, $config_template) = @_;
+  my $files = $def->{$files_name};
+
+  my @lines = read_file($config_template, chomp => 1);
+
+  my $result = {};
+
+  for my $fname (sort keys %$files){
+    my $file_def = $files->{$fname};
+    my $fastqs = getValue($file_def, "fastqs");
+
+    my $csv_file = "${target_dir}/${fname}.config.csv";
+    open(my $csv_fh, ">$csv_file") or die "Cannot create $csv_file";
+    for my $line (@lines){
+      print $csv_fh $line . "\n";
+      if ($line =~ /fastq_id/){
+        for my $ftype (sort keys %$file_def){
+          if ($ftype eq "fastqs"){
+            next;
+          }
+          print $csv_fh  $file_def->{$ftype} . ",${fastqs},${ftype}\n";
+        }
+        last;
+      }
+    }
+    close($csv_fh);
+
+    $result->{$fname} = $csv_file;
+  }
+
+  return($result);
+}
+
 sub addCellRangerMulti {
-    my ( $config, $def, $tasks, $target_dir, $task_name, $count_source, $csv_config, $jobmode ) = @_;
+    my ( $config, $def, $tasks, $target_dir, $task_name, $files_name, $config_template, $jobmode ) = @_;
       
     my $job_arg = "";
     if((defined $jobmode) and ($jobmode ne "")){
       $job_arg = "--jobmode=$jobmode";
     }
+
+    my $csv_files = writeCellRangerMultiConig($def, $files_name, $target_dir, $config_template);
 
     my $sh_direct = $job_arg =~ /slurm/;
     $config->{$task_name} = {
@@ -1014,18 +1088,21 @@ sub addCellRangerMulti {
       docker_prefix => "cellranger_",
       program => "cellranger",
       check_program => 0,
-      option => " multi --disable-ui --id=__NAME__ --csv=$csv_config $job_arg
-      if [[ -s __NAME__/outs ]]; then
-        rm -rf __NAME__/SC_MULTI_CS
-        mkdir __NAME__/log
-        mv __NAME__/_* __NAME__/log   
-        mv __NAME__/outs/* __NAME__
-        rm -rf __NAME__/outs
-      fi
-      #__OUTPUT__
-      ",
+      option => " multi --disable-ui --id=__NAME__ --csv=__FILE__ $job_arg
+
+if [[ -s __NAME__/outs ]]; then
+  rm -rf __NAME__/SC_MULTI_CS
+  mkdir __NAME__/log
+  mv __NAME__/_* __NAME__/log   
+  mv __NAME__/outs/* __NAME__
+  rm -rf __NAME__/outs
+fi
+
+#__OUTPUT__
+
+",
       source_arg => "",
-      source_ref => $count_source,
+      source => $csv_files,
       output_arg => "",
       output_file_prefix => "/per_sample_outs/count___NAME__/count/sample_filtered_feature_bc_matrix.h5",
       output_file_ext => "/per_sample_outs/count___NAME__/count/sample_filtered_feature_bc_matrix.h5,/per_sample_outs/count___NAME__/metrics_summary.csv,/multi/count/raw_feature_bc_matrix.h5",
