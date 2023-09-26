@@ -844,14 +844,15 @@ for(countfile_index in c(1:length(countfiles))){
     }
     
     cat("Using independentFiltering =", independentFiltering, "\n")
-    cat("Using cooksCutoff =", cooksCutoff, "\n")
     if(cooksCutoff == "TRUE" || cooksCutoff == "DEFAULT"){
+      cat("Using default cooksCutoff\n")
       if (!is.null(contrast)) {
         res<-results(dds, alpha=alpha, parallel=parallel, BPPARAM=bpparam, independentFiltering=independentFiltering, contrast=contrast) 
       } else {
         res<-results(dds, alpha=alpha, parallel=parallel, BPPARAM=bpparam, independentFiltering=independentFiltering)
       }
     }else{
+      cat("Using cooksCutoff =", cooksCutoff, "\n")
       if (!is.null(contrast)) {
         res<-results(dds, cooksCutoff=cooksCutoff, alpha=alpha, parallel=parallel, BPPARAM=bpparam, independentFiltering=independentFiltering, contrast=contrast) 
       } else {
