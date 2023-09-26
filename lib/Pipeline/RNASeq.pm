@@ -103,7 +103,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_perform_wilcox",               0 );
   initDefaultValue( $def, "DE_text_size",                    10 );
   initDefaultValue( $def, "DE_min_median_read",              5 );
-  initDefaultValue( $def, "DE_cooksCutoff",                  "DEFAULT" );
+  initDefaultValue( $def, "DE_cooksCutoff",                  "TRUE" );
   initDefaultValue( $def, "DE_independentFiltering",         "TRUE" );
   
   initDefaultValue( $def, "perform_DE_proteincoding_gene",   1 );
