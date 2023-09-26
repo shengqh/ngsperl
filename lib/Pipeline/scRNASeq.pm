@@ -184,6 +184,7 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_decontX", 0);
   initDefaultValue( $def, "remove_decontX", 0);
+  initDefaultValue( $def, "remove_decontX_by_contamination", 0);
 
   return $def;
 }
