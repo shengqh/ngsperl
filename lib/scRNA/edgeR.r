@@ -19,6 +19,8 @@ library(ggpubr)
 library(Seurat)
 library(testit)
 
+MIN_NUM_CELL=10
+
 sumcount<-function(ct_count, names, sample_df){
   result<-lapply(names, function(x){
     res<-ct_count[,sample_df$Cell[sample_df$Sample ==x],drop=F]
@@ -206,7 +208,21 @@ for (comp in comparisonNames){
       
       control_cells<-rownames(clusterCt)[clusterCt$sample %in% control_names]  
       sample_cells<-rownames(clusterCt)[clusterCt$sample %in% sample_names]  
-      
+
+      if(length(control_cells) < MIN_NUM_CELL){
+        error_msg = paste0("There were only ", length(control_cells), " found in control group, less than required ", MIN_NUM_CELL, "!")
+        designFailed[nrow(designFailed) + 1,] <- c(comp, as.character(ct), error_msg)
+        cat(error_msg, "\n", file=stderr())
+        next
+      }
+
+      if(length(sample_cells) < MIN_NUM_CELL){
+        error_msg = paste0("There were only ", length(sample_cells), " found in sample group, less than required ", MIN_NUM_CELL, "!")
+        designFailed[nrow(designFailed) + 1,] <- c(comp, as.character(ct), error_msg)
+        cat(error_msg, "\n", file=stderr())
+        next
+      }
+
       all_cells<-c(control_cells, sample_cells)
       
       de_obj<-subset(obj, cells=all_cells)
