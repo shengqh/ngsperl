@@ -1398,8 +1398,8 @@ sub addEdgeRTask {
       "mem"       => getValue($def, "seurat_mem") 
     },
   };
-  if (-e $cluster_task) {
-    $config->{$vistaskname}{parameterFile1} = $cluster_task;
+  if (-f $cluster_task) {
+    $config->{$vistaskname}{parameterFile1_ref} = $cluster_task;
   }else{
     $config->{$vistaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
     $config->{$vistaskname}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
