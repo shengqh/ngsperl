@@ -61,7 +61,7 @@ sub getConfig {
     target_dir => "${target_dir}/${pipseeker}",
     option => "
 
-$pipseeker_docker_command count --input-path __FILE__ --id __NAME__ --output-root ${target_dir}/${pipseeker}/result/__NAME__ --star-index-path $pipseeker_star_index --star-threads 8
+$pipseeker_docker_command full --fastq __FILE__ --id __NAME__ --output-path ${target_dir}/${pipseeker}/result/__NAME__ --star-index-path $pipseeker_star_index --star-threads 8
 
 #__OUTPUT__
 ",
