@@ -49,6 +49,9 @@ sub getConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  push(@$individual, @$summary);
+  $summary = $individual;
+
   my $target_dir = $def->{target_dir};
 
   my $pipseeker_docker_command = getValue($def, "pipseeker_docker_command");
@@ -88,7 +91,7 @@ $pipseeker_docker_command full --fastq __FILE__ --id __NAME__ --output-path ${ta
     },
   };
 
-  push @$individual, ($pipseeker);
+  push @$summary, ($pipseeker);
 
   my $pipseeker_qc = "qc";
 
@@ -97,6 +100,23 @@ $pipseeker_docker_command full --fastq __FILE__ --id __NAME__ --output-path ${ta
     #add_individual_qc($config, $def, $summary, $target_dir, $pipseeker_qc, undef, [$pipseeker, $qc_pattern], undef, undef, undef);
     my ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $task_name, "", undef, [$pipseeker, $qc_pattern], undef, undef);
   }
+
+  $config->{sequencetask} = {
+    class      => getSequenceTaskClassname($cluster),
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    option     => "",
+    source     => {
+      step1 => $summary,
+    },
+    sh_direct => 0,
+    cluster   => $cluster,
+    pbs       => {
+      "nodes"     => "1:ppn=" . getValue($def, "max_thread", 8),
+      "walltime"  => getValue($def, "sequencetask_run_time", 48), 
+      "mem"       => "40gb"
+    },
+  };
 
   return ($config);
 }
