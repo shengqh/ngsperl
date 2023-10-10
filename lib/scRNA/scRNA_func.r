@@ -659,10 +659,10 @@ do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FAL
   }
 }
 
-do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch_file, pca_dims, essential_genes=NULL, mc.cores=1){
+do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch_file, pca_dims, essential_genes=NULL, mc.cores=1,use_sctransform_v2=TRUE){
   if(by_sctransform){
     #now perform sctranform
-    obj<-do_sctransform(obj, vars.to.regress=vars.to.regress,mc.cores=mc.cores)
+    obj<-do_sctransform(obj, vars.to.regress=vars.to.regress,mc.cores=mc.cores,use_sctransform_v2=use_sctransform_v2)
     assay="SCT"
   }else{
     assay="RNA"
