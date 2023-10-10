@@ -738,6 +738,7 @@ sub addEncodeATACseq {
     output_file_ext => getValue($def, "croo_output_file_ext", "__NAME__/qc/qc.html,__NAME__/qc/qc.json"),
     output_to_same_folder => 1,
     can_result_be_empty_file => 0,
+    docker_prefix => "croo_",
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=1",
@@ -747,33 +748,36 @@ sub addEncodeATACseq {
   };
   push @$tasks, $croo_task;
 
-  my $qc_task = $croo_task . "_qc";
-  $config->{$qc_task} = {
-    class => "CQS::UniqueR",
-    target_dir => "${target_dir}/${task_folder}_croo_qc",
-    perform => 1,
-    rtemplate => "../Encode/ATACseqQC.r",
-    rReportTemplate => "../Encode/ATACseqQC.rmd,reportFunctions.R",
-    rmd_ext => ".qc.html",
-    run_rmd_independent => 1,
-    parameterSampleFile1 => {
-      task_name => $def->{task_name},
-      input_file => $pipeline->{input_file},
-      wdl_file => $pipeline->{wdl_file},
-      is_paired_end => $is_paired_end,
-      encode_option => $encode_option
-    },
-    parameterSampleFile2_ref => [$croo_task, ".json"],
-    output_file_ext => ".qc.html",
-    output_other_ext => "",
-    sh_direct=> 1,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "12",
-      "mem"       => "10g" 
-    },
-  };
-  push @$tasks, $qc_task;
+  if($def->{perform_croo_qc}){
+    my $qc_task = $croo_task . "_qc";
+    $config->{$qc_task} = {
+      class => "CQS::UniqueR",
+      target_dir => "${target_dir}/${task_folder}_croo_qc",
+      perform => 1,
+      rtemplate => "../Encode/ATACseqQC.r",
+      rReportTemplate => "../Encode/ATACseqQC.rmd,reportFunctions.R",
+      rmd_ext => ".qc.html",
+      run_rmd_independent => 1,
+      parameterSampleFile1 => {
+        task_name => $def->{task_name},
+        input_file => $pipeline->{input_file},
+        wdl_file => $pipeline->{wdl_file},
+        is_paired_end => $is_paired_end,
+        encode_option => $encode_option
+      },
+      parameterSampleFile2_ref => [$croo_task, ".json"],
+      output_file_ext => ".qc.html",
+      output_other_ext => "",
+      sh_direct=> 1,
+      docker_prefix => "report_",
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "12",
+        "mem"       => "10g" 
+      },
+    };
+    push @$tasks, $qc_task;
+  }
 
   return ($task);
 }
