@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P9061'
+outFile='PEO4'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/scratch/vickers_lab/projects/20230118_scRNA_9061_mouse_scDblFinder/seurat_rawdata/result/P9061.rawobj.rds'
-parFile2='/scratch/vickers_lab/projects/20230118_scRNA_9061_mouse_scDblFinder/essential_genes/result/P9061.txt'
+parFile1='/nobackup/h_vangard_1/shengq2/guoyan/20231004_pipseq_10x_comparison/20231005_scRNA/seurat_rawdata/result/PEO4.rawobj.rds'
+parFile2='/nobackup/h_vangard_1/shengq2/guoyan/20231004_pipseq_10x_comparison/20231005_scRNA/essential_genes/result/PEO4.txt'
 parFile3=''
 
 
-setwd('/scratch/vickers_lab/projects/20230118_scRNA_9061_mouse_scDblFinder/seurat_sct_harmony/result')
+setwd('/nobackup/h_vangard_1/shengq2/guoyan/20231004_pipseq_10x_comparison/20231005_scRNA/seurat_sct2_harmony/result')
 
 ### Parameter setting end ###
 
@@ -47,6 +47,8 @@ finalList<-finalList[names(finalList) != "rawobj"]
 essential_genes=read.table(parFile2, sep="\t" ,header=F)$V1
 
 by_sctransform<-is_one(myoptions$by_sctransform)
+use_sctransform_v2<-is_one(myoptions$use_sctransform_v2)
+
 regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 
 if(regress_by_percent_mt){
@@ -55,7 +57,16 @@ if(regress_by_percent_mt){
   vars.to.regress=NULL
 }
 
-obj<-do_harmony(obj, by_sctransform, vars.to.regress, has_batch_file, parSampleFile2, pca_dims, essential_genes=essential_genes, mc.cores=8)
+obj<-do_harmony(
+  obj = obj, 
+  by_sctransform = by_sctransform, 
+  vars.to. = vars.to.regress, 
+  has_batch_file = has_batch_file, 
+  batch_file = parSampleFile2, 
+  pca_dims = pca_dims,
+  essential_genes=essential_genes, 
+  mc.cores=8, 
+  use_sctransform_v2=use_sctransform_v2)
 
 reduction="harmony"
 
