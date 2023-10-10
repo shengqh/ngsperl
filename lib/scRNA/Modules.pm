@@ -275,6 +275,7 @@ sub add_seurat {
       is_preprocessed => $is_preprocessed,
       thread => $thread,
     },
+    parameterSampleFile2 =>  $def->{"batch_for_integration_groups"},
     output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
     sh_direct            => 1,
     pbs                  => {
@@ -283,13 +284,6 @@ sub add_seurat {
       "mem"       => getValue($def, "seurat_mem"),
     },
   };
-  if ($def->{batch_for_integration}){
-    $config->{$seurat_task}{parameterSampleFile2} = getValue($def, "batch_for_integration_groups");
-  }
-
-  if ($def->{batch_for_integration}){
-    $config->{$seurat_task . "_report"}{parameterSampleFile2} = getValue($def, "batch_for_integration_groups");
-  }
 
   push( @$summary, $seurat_task );
   return($seurat_task, $reduction);
