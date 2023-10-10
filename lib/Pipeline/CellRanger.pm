@@ -119,6 +119,12 @@ sub getConfig {
   };
   push( @$summary, $cellranger_summary_task );
 
+  if(getValue($def, "perform_individual_qc", 1)){
+    my $qc_pattern = "filtered_feature_bc_matrix.h5";
+    #add_individual_qc($config, $def, $summary, $target_dir, $pipseeker_qc, undef, [$pipseeker, $qc_pattern], undef, undef, undef);
+    my ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $task_name, "", undef, [$count_task_name, $qc_pattern], undef, undef);
+  }
+
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,
