@@ -50,7 +50,9 @@ sub initializeDefaultOptions {
     $def->{"treatments"} = $groups;
   }
 
-  initDefaultValue( $def, "perform_report", 1 );
+  initDefaultValue( $def, "perform_croo_qc", 0 );
+
+  initDefaultValue( $def, "perform_report", 0 );
   initDefaultValue( $def, "encode_option", "" );
   #$def->{encode_option} = "-b slurm"; #or empty to use local
 
