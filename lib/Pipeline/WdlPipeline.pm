@@ -601,10 +601,14 @@ sub addEncodeATACseq {
   #my $adapter = getValue($def, "perform_cutadapt", 0) ? getValue($def, "adapter", "") : "";
   #print("adapter = " . $adapter . "\n");
   my $is_paired_end = is_paired_end($def);
-  my $encode_option = getValue($def, "encode_option", "-b local");
-  if ($encode_option eq ""){
-    $encode_option = "-b local";
+  my $encode_option = getValue($def, "encode_option", "");
+  if ($encode_option =~ "\\s-b\\s"){
+    print("encode_option=" . $encode_option . "\n")
+  }else{
+    my $caper_backend = getValue($def, "caper_backend", "local");
+    $encode_option = $encode_option . " -b " . $caper_backend;
   }
+
   my $folder_suffix = $encode_option =~ /slurm/ ? "_slurm" : "_local";
   my $sh_direct = $encode_option =~ /slurm/ ? 1 : 0;
 
@@ -751,13 +755,11 @@ sub addEncodeATACseq {
   if($def->{perform_croo_qc}){
     my $qc_task = $croo_task . "_qc";
     $config->{$qc_task} = {
-      class => "CQS::UniqueR",
+      class => "CQS::UniqueRmd",
       target_dir => "${target_dir}/${task_folder}_croo_qc",
-      perform => 1,
-      rtemplate => "../Encode/ATACseqQC.r",
-      rReportTemplate => "../Encode/ATACseqQC.rmd,reportFunctions.R",
-      rmd_ext => ".qc.html",
-      run_rmd_independent => 1,
+      report_rmd_file => "../Encode/ATACseqQC.rmd",
+      additional_rmd_files => "../CQS/reportFunctions.R",
+      option => "",
       parameterSampleFile1 => {
         task_name => $def->{task_name},
         input_file => $pipeline->{input_file},
@@ -766,10 +768,12 @@ sub addEncodeATACseq {
         encode_option => $encode_option
       },
       parameterSampleFile2_ref => [$croo_task, ".json"],
-      output_file_ext => ".qc.html",
-      output_other_ext => "",
-      sh_direct=> 1,
-      docker_prefix => "report_",
+      suffix => "",
+      output_file_ext => ".html",
+      can_result_be_empty_file => 0,
+      sh_direct   => 1,
+      no_docker => 1,
+      #docker_prefix => "report_",
       pbs => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "12",

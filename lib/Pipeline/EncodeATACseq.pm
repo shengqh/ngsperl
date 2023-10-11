@@ -54,6 +54,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_report", 0 );
   initDefaultValue( $def, "encode_option", "" );
+  initDefaultValue( $def, "caper_backend", "local" );
   #$def->{encode_option} = "-b slurm"; #or empty to use local
 
   return $def;

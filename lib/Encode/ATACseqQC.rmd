@@ -4,13 +4,21 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 2
+    code_folding: hide    
 ---
 
 ```{r setup, include=FALSE}
 library(knitr)
 library(dplyr)
 library(kableExtra)
-knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+knitr::opts_chunk$set(echo=FALSE, 
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
 ```
 
 ```{css, echo=FALSE}
@@ -19,37 +27,89 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r data, echo = FALSE}
+```{r data}
 source("reportFunctions.R")
 
-options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
+library("data.table")
+library("rjson")
+library("dplyr")
 
-outFile=myoptions$task_name
+options(future.globals.maxSize= 10779361280)
 
-json_files = fread(parSampleFile2, data.table=F, header=F)
-sample_names = json_files$V2
+option_tbl=fread("fileList1.txt", data.table=F, header=F)
+myoptions = split(option_tbl$V1, option_tbl$V2)
 
-resFile<-"qc.Rmd"
-figureRmd<-function(outFile, sample_names, json_files){
-  result<-""
+outFile = myoptions$task_name
 
-  ct=sample_names[1]
-  for(ct in sample_names){
-    result<-paste0(result, paste0("\n\n# ", ct, "\n\n"))
+json_files = fread("fileList2.txt", data.table=F, header=F)
+json_map = unlist(split(json_files$V1, json_files$V2))
 
-    #find q1_file from ATACseqQC.r
-    qc1_file=""
-
-    result<-paste0(result, paste0("\n\n## QC1\n\n"))
-    result<-paste0(result, getFigure(qc1_file))
+add_df<-function(result, cur_df, sample_name){
+  for(rep in names(cur_df)){
+    rep_df = t(data.frame(cur_df[[rep]])) %>% data.frame()
+    colnames(rep_df) = paste0(sample_name, "_", rep)
+    if(is.null(result)){
+      result = rep_df
+    }else{
+      result = cbind(result, rep_df)
+    }
   }
   return(result)
 }
-cat(figureRmd(outFile, sample_names, json_files), file=resFile)
 
+general_tbl = NULL
+all_tbls = list()
+
+sample_names = json_files$V2
+sample_name = sample_names[1]
+for(sample_name in sample_names){
+  json_file=json_map[sample_name]
+  df <- fromJSON(file=json_file)
+
+  general_tbl = data.frame(df$general)  %>%
+    dplyr::select(pipeline_ver, pipeline_type, genome, aligner, peak_caller)  %>%
+    t() %>% data.frame() %>%
+    dplyr::rename(value=1)
+
+  write.csv(general_tbl, file=paste0(outFile, "_general.csv"), quote=F, row.names=T)
+
+  for(gname in names(df)){
+    if(gname == "general"){
+      next
+    }
+
+    if(gname == "peak_enrich"){
+      gdf = df[[gname]][[1]]
+    }else{
+      gdf = df[[gname]]
+    }
+    
+    if(is.null(all_tbls[[gname]])){
+      all_tbls[[gname]] = list()
+    }
+
+    for(sname in names(gdf)){
+      all_tbls[[gname]][[sname]] = add_df(all_tbls[[gname]][[sname]], gdf[[sname]], sample_name)
+    }
+  }
+}
 ```
 
-```{r, child=resFile} 
+# QC Report
+
+<br>
+
+```{r}
+print_table(general_tbl) 
 ```
 
+```{r}
+for(cname in names(all_tbls)){
+  cat("\n\n# ", cname, "\n\n<br>\n\n")
+  cur_tbls = all_tbls[[cname]]
+  for(gname in names(cur_tbls)){
+    cat("\n\n## ", gname, "\n\n")
+    print_table(cur_tbls[[gname]])
+  }
+}
+```
