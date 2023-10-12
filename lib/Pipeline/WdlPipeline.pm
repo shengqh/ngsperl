@@ -772,8 +772,8 @@ sub addEncodeATACseq {
       output_file_ext => ".html",
       can_result_be_empty_file => 0,
       sh_direct   => 1,
-      no_docker => 1,
-      #docker_prefix => "report_",
+      #no_docker => 1,
+      docker_prefix => "report_",
       pbs => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "12",
