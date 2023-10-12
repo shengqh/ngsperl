@@ -19,7 +19,6 @@ output:
 
 ```{r setup, include=FALSE}
 library(kableExtra)
-library(tidyverse)
 library(formatR)
 
 source("reportFunctions.R")
