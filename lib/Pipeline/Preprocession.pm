@@ -192,16 +192,17 @@ sub initCutadaptOption {
   }
   my $cutadapt_option = getValue( $config, "cutadapt_option", getValue( $def, "cutadapt_option", "" ) );
   if(! getValue($def, "use_cutadapt_option_only", 0)){
-    if ( ( $cutadapt_option !~ /-a/ ) && ( $cutadapt_option !~ /-g/ ) ) {
+    if ( ( $cutadapt_option !~ /^-a\s/ ) && ( $cutadapt_option !~ /\s-a\s/ ) &&
+      ( $cutadapt_option !~ /-g\s/ ) ) {
       defined $config->{"adapter_5"} or defined $config->{"adapter_3"} or getValue( $config, "adapter" );
     }
 
-    if ( $cutadapt_option !~ /\-m/ ) {
+    if ( ($cutadapt_option !~ /^-m\s/) && ($cutadapt_option !~ /\s-m\s/) ) {
       my $min_read_length = getValue( $config, "min_read_length" );
       $cutadapt_option = $cutadapt_option . " -m " . $min_read_length;
     }
 
-    if ( $cutadapt_option !~ /\-n/ ) {
+    if (( $cutadapt_option !~ /^-n\s/ ) && ($cutadapt_option !~ /\s-n\s/ ) ) {
       my $max_adapter_count = getValue( $config, "max_adapter_count", 1 );
       $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
     }
