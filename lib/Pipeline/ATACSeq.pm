@@ -37,11 +37,13 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "minimum_maq",         30 );
   initDefaultValue( $def, "minimum_insert_size", 30 );
   initDefaultValue( $def, "maximum_insert_size", 1000 );
-  initDefaultValue( $def, "perform_cutadapt",    0 );
+
+  initDefaultValue( $def, "perform_cutadapt", 0 );
   if ( getValue( $def, "perform_cutadapt" ) ) {
-    initDefaultValue( $def, "adapter",         "CTGTCTCTTATACACATCT" );
-    initDefaultValue( $def, "min_read_length", 36 );
-    initDefaultValue( $def, "cutadapt_option", "-q 30" );
+    initDefaultValue( $def, "adapter", "CTGTCTCTTATA" );
+    initDefaultValue( $def, "min_read_length", 30 );
+    initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
+    initDefaultValue( $def, "trim_polyA", 0 );
   }
 
   initDefaultValue( $def, "perform_rose",          0 );

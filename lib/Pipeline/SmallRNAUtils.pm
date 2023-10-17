@@ -131,9 +131,10 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "use_first_read_after_trim", 1 );
   
   if ( $def->{perform_cutadapt} ) {
-    initDefaultValue( $def, "adapter",         "TGGAATTCTCGGGTGCCAAGG" );
+    initDefaultValue( $def, "adapter", "TGGAATTCTCGG" );
+    initDefaultValue( $def, "max_adapter_count", 3); #Remove up to COUNT adapters from each read.
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
-    initDefaultValue( $def, "trim_poly_atgc",  1 );
+    initDefaultValue( $def, "trim_polyA",  1 );
     initDefaultValue( $def, "trim_base_quality_after_adapter_trim",  0 );
   }
 
