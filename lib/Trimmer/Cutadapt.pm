@@ -127,6 +127,14 @@ sub perform {
     $option = $option . " --trim-n";
   }
 
+  my $trim_polyA = get_option( $config, $section, "trim_polyA", 0 );
+  print("trim_polyA=" . $trim_polyA.", option=" . $option . "\n");
+  if($trim_polyA){
+    if ( index( $option, "--poly-a" ) == -1 ) {
+      $option = $option . " --poly-a";
+    }
+  }
+
   my $adapter_option = $option;
   if ( $adapter_option !~ /-a/ ) {
     if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
@@ -159,28 +167,6 @@ sub perform {
       }
       else {
         $adapter_option = $adapter_option . " -g " .  join(' -g ', @adapters);
-      }
-    }
-  }
-
-  my $trim_poly_atgc = get_option( $config, $section, "trim_poly_atgc", 1 );
-  print("trim_poly_atgc=" . $trim_poly_atgc.", adapter_option=" . $adapter_option . "\n");
-  if ($trim_poly_atgc) {
-    if ( $adapter_option =~ /-a/ ) {
-      $adapter_option = $adapter_option . " -a \"A{50}\" -a \"T{50}\" -a \"G{50}\" -a \"C{50}\"";
-    }
-
-    if ( $adapter_option =~ /-g/ ) {
-      $adapter_option = $adapter_option . " -g \"A{50}\" -g \"T{50}\" -g \"G{50}\" -g \"C{50}\"";
-    }
-
-    if ($ispairend) {
-      if ( $adapter_option =~ /-A/ ) {
-        $adapter_option = $adapter_option . " -A \"A{50}\" -A \"T{50}\" -A \"G{50}\" -A \"C{50}\"";
-      }
-
-      if ( $adapter_option =~ /-G/ ) {
-        $adapter_option = $adapter_option . " -G \"A{50}\" -G \"T{50}\" -G \"G{50}\" -G \"C{50}\"";
       }
     }
   }
