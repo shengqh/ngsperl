@@ -66,7 +66,7 @@ sub initializeRNASeqDefaultOptions {
     #initDefaultValue( $def, "adapter", "CTGTCTCTTATA" );
     initDefaultValue( $def, "min_read_length", 30 );
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
-    initDefaultValue( $def, "trim_polyA", 0 );
+    initDefaultValue( $def, "trim_polyA", 1 );
     initDefaultValue( $def, "trim_base_quality_after_adapter_trim",  0 );
   }
 
