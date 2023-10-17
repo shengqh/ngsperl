@@ -136,7 +136,7 @@ sub perform {
   }
 
   my $adapter_option = $option;
-  if ( $adapter_option !~ /\s-a\s/ ) {
+  if ( ($adapter_option !~ /\s-a\s/) && ($adapter_option !~ /^-a\s/) ) {
     if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
       my @adapters = split(',', $curSection->{adapter});
       #print(@adapters);
@@ -159,7 +159,7 @@ sub perform {
     }
   }
 
-  if ( $adapter_option !~ /\s-g\s/ ) {
+  if ( ($adapter_option !~ /\s-g\s/) && ($adapter_option !~ /^-g\s/) ) {
     if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
       my @adapters = split /,/, $curSection->{adapter_5};
       if ($ispairend) {
