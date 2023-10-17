@@ -18,7 +18,6 @@ library(XML)
 library(rlist)
 library(stringr)
 library(kableExtra)
-library(tidyverse)
 options(bitmapType='cairo')
 
 source('reportFunctions.R')

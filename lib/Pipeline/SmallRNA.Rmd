@@ -15,7 +15,6 @@ output:
 
 ```{r setup, include=FALSE}
 library(kableExtra)
-library(tidyverse)
 
 source("Functions.R")
 source("Pipeline.R")
@@ -371,6 +370,7 @@ versions<-versions[!duplicated(versions$Software),]
 # Description
 ```{r echo=FALSE}
 vmap<-split(versions$Version, versions$Software)
+vmap<-lapply(vmap, function(x) paste0(x, collapse=", "))
 
 normalize_by_read<-option_map['normalize_by']
 if(normalize_by_read == "FeatureReads"){
