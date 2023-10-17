@@ -86,7 +86,7 @@ sub addCutadapt {
       fastq_remove_random              => $def->{"fastq_remove_random"},
       fastq_remove_random_5            => $def->{"fastq_remove_random_5"},
       fastq_remove_random_3            => $def->{"fastq_remove_random_3"},
-      trim_poly_atgc                   => $def->{trim_poly_atgc},
+      trim_polyA                   => $def->{trim_polyA},
       trim_base_quality_after_adapter_trim => $def->{trim_base_quality_after_adapter_trim},
       hard_trim                        => $def->{"hard_trim"},
       extension                        => "_clipped.fastq",
@@ -202,7 +202,7 @@ sub initCutadaptOption {
     }
 
     if ( $cutadapt_option !~ /\-n/ ) {
-      my $max_adapter_count = getValue( $config, "max_adapter_count", 3 );
+      my $max_adapter_count = getValue( $config, "max_adapter_count", 1 );
       $cutadapt_option = $cutadapt_option . " -n " . $max_adapter_count;
     }
 
