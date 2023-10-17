@@ -2861,7 +2861,7 @@ sub addSequenceTask {
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      step_1 => $tasks,
+      step_1 => $tasks
     },
     sh_direct => 0,
     pbs       => {
@@ -2872,7 +2872,7 @@ sub addSequenceTask {
   };
 
   if(defined $summary_tasks){
-    $config->{sequencetask}{step_2} = $summary_tasks;
+    $config->{sequencetask}{source}{step_2} = $summary_tasks;
   }
 }
 
