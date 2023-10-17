@@ -36,7 +36,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "perform_cutadapt", 0 );
   if ( getValue( $def, "perform_cutadapt" ) ) {
-    initDefaultValue( $def, "adapter", "CTGTCTCTTATA" );
+    #initDefaultValue( $def, "adapter", "CTGTCTCTTATA" );
     initDefaultValue( $def, "min_read_length", 30 );
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
     initDefaultValue( $def, "trim_polyA", 0 );
