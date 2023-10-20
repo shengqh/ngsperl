@@ -602,11 +602,12 @@ sub addEncodeATACseq {
   #print("adapter = " . $adapter . "\n");
   my $is_paired_end = is_paired_end($def);
   my $encode_option = getValue($def, "encode_option", "");
-  if ($encode_option =~ "\\s-b\\s"){
+  if ($encode_option =~ "\\s-b\\s" || $encode_option =~ "^-b\\s"){
     print("encode_option=" . $encode_option . "\n")
   }else{
     my $caper_backend = getValue($def, "caper_backend", "local");
     $encode_option = $encode_option . " -b " . $caper_backend;
+    print("encode_option=" . $encode_option . "\n")
   }
 
   my $folder_suffix = $encode_option =~ /slurm/ ? "_slurm" : "_local";
