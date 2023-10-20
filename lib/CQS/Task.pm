@@ -551,7 +551,11 @@ sub open_pbs {
   }
 
   if(!defined $sh_command){
-    $sh_command = "bash";
+    if(defined $self->{_docker_shell}){
+      $sh_command = $self->{_docker_shell};
+    }else{
+      $sh_command = "bash";
+    }
   }
 
   my $module_name = $self->{_name};
