@@ -19,6 +19,8 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_abismal";
+  $self->{_docker_prefix} = "dnmtools_";
+  $self->{_docker_shell} = "sh";
   bless $self, $class;
   return $self;
 }
@@ -78,35 +80,37 @@ sub perform {
     my $rmlist = "";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
 
-#			print $pbs "
-#if [ ! -s $result_file ]; then
-#  echo zcat=`date`
-#";
-	if ($sample_files[0]=~/\.gz$/) { #.gz fle, need to zcat
-		my @sample_files_unzip=();
 		foreach my $sampleFile (@sample_files) {
-			my $sampleFileUnzip = basename(change_extension( $sampleFile, "" ));
-			push @sample_files_unzip,$sampleFileUnzip;
 			print $pbs "
-  if [ ! -s $sampleFileUnzip ]; then
-      echo zcat=`date`
-      zcat $sampleFile > $sampleFileUnzip
-  fi
+if [ ! -s $sampleFile ]; then
+  echo missing input file $sampleFile!
+  exit 1;
+fi
 ";
-			$rmlist=$rmlist. " $sampleFileUnzip"
-		}
-#					print $pbs "
-#fi
-#";
-		$sample_files_str = ( scalar(@sample_files_unzip) == 2 ) ? " " . $sample_files_unzip[0] . " " . $sample_files_unzip[1]: " " . $sample_files_unzip[0];
-	} else { #NOT .gz fle
-	  $sample_files_str = ( scalar(@sample_files) == 2 ) ? " " . $sample_files[0] . " " . $sample_files[1]: " " . $sample_files[0];
-	}
+    }
+
+    if ($sample_files[0]=~/\.gz$/) { #.gz fle, need to zcat
+      my @sample_files_unzip=();
+      foreach my $sampleFile (@sample_files) {
+        my $sampleFileUnzip = basename(change_extension( $sampleFile, "" ));
+        push @sample_files_unzip,$sampleFileUnzip;
+        print $pbs "
+if [ ! -s $sampleFileUnzip ]; then
+  echo zcat=`date`
+  zcat $sampleFile > $sampleFileUnzip
+fi
+";
+        $rmlist=$rmlist. " $sampleFileUnzip"
+      }
+      $sample_files_str = ( scalar(@sample_files_unzip) == 2 ) ? " " . $sample_files_unzip[0] . " " . $sample_files_unzip[1]: " " . $sample_files_unzip[0];
+    } else { #NOT .gz fle
+      $sample_files_str = ( scalar(@sample_files) == 2 ) ? " " . $sample_files[0] . " " . $sample_files[1]: " " . $sample_files[0];
+    }
 	
     print $pbs "
 if [[ ! -s $result_file_raw && ! -s $result_file_bam ]]; then
   echo abismal=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools abismal -t $thread -i $abismal_index $sample_files_str -s $map_stat -o $result_file_raw
+  dnmtools abismal -t $thread -i $abismal_index $sample_files_str -s $map_stat -o $result_file_raw
   samtools sort -@ $thread -O BAM -o $result_file_bam $result_file_raw
 fi
 ";
@@ -120,7 +124,7 @@ fi
     }
 
     print $pbs "
-if [[ ( -s $result_file_bam ) && ( ! -s $result_file_addqual_bam) ]]; then
+if [[ -s $result_file_bam  && ! -s $result_file_addqual_bam ]]; then
   echo add_qual =`date`
   samtools view -h -O SAM $result_file_bam | perl $addqual_perlFile - $result_file_addqual
   samtools view -b -o $result_file_addqual_bam $result_file_addqual

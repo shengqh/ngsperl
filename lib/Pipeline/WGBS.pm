@@ -96,6 +96,7 @@ sub getConfig {
     addqual_perlFile => $addqual_perlFile,
     abismal_index => $abismal_index,
     source_ref => "trimgalore",
+    docker_prefix => "dnmtools_",
     pbs        => {
       "nodes"     => "1:ppn=4",
       "walltime"  => "128",
@@ -113,6 +114,7 @@ sub getConfig {
     chr_dir       => $chr_dir,
     chr_size_file => $chr_size_file,
     source_ref    => "abismal",
+    docker_prefix => "dnmtools_",
     pbs           => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "72",
@@ -130,6 +132,7 @@ sub getConfig {
     annovar_db => $annovar_db,
     buildver   => $annovar_buildver,
     perform_splicing => 0,
+    docker_prefix => "annovar_",
     isBed      => 1,
     source_ref => [ "DNMTools", ".hmr\$|.amr\$|.pmr\$|.pmd\$" ],
     pbs        => {
@@ -146,7 +149,7 @@ sub getConfig {
     perform                  => 1,
     target_dir               => "${targetDir}/methylkitprep",
     option                   => "",
-    docker_command           => "singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
+    docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/prepare_CpG_input.R",
     output_file_ext          => ".CpG.txt",
     source_ref => [ "DNMTools", ".meth\$" ],
@@ -166,7 +169,7 @@ sub getConfig {
     perform                  => 1,
     target_dir               => "${targetDir}/methylkitcorr",
     #option                   => " --args ${task_name} hg19 group 4 ",
-    docker_command           => "singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
+    docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/methylkit_corr.R",
     output_file_ext          => "_methyl_CpG_bvalue_corr_MDS_plot.png;_methyl_CpG_bvalue_corr_MDS_plot.pdf;.filtered.cpg.meth.rds",
     parameterSampleFile2 => {
@@ -190,7 +193,7 @@ sub getConfig {
   $config->{$methylkitdiff_task} = {
     class                    => "Methylation::MethylKitDiff",
     target_dir               => "${targetDir}/methylkitdiff",
-    docker_command           => "singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
+    docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/methylkit_diff.R",
     #option                   => " --args ${task_name} 25 0.01 16 ",
     source_ref => "pairs",
@@ -246,6 +249,7 @@ sub getConfig {
     option     => $annovar_param,
     annovar_db => $annovar_db,
     buildver   => $annovar_buildver,
+    docker_prefix => "annovar_",
     perform_splicing => 0,
     remove_empty_source => 1,
     isBed      => 1,

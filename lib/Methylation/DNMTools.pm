@@ -19,6 +19,8 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_dnmtools";
+  $self->{_docker_prefix} = "dnmtools_";
+  $self->{_docker_shell} = "sh";
   bless $self, $class;
   return $self;
 }
@@ -68,17 +70,13 @@ sub perform {
 echo DNMTools=`date`
 
 if [ ! -s ${sample_name}.formatted.sam ]; then
-   echo dnmtools format=`date`
-   singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools format -f abismal -o ${sample_name}.formatted.sam $sampleFile
+  echo dnmtools format=`date`
+  dnmtools format -f abismal -o ${sample_name}.formatted.sam $sampleFile
 fi
 
-#if [[ -s ${sample_name}.formatted.sam ]]; then
-#  rm $sampleFile
-#fi
-
 if [ ! -s ${sample_name}.sam ]; then
-   echo dnmtools uniq=`date`
-   singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools uniq -D -S ${sample_name}.sam.dupstats ${sample_name}.formatted.sam ${sample_name}.sam
+  echo dnmtools uniq=`date`
+  dnmtools uniq -D -S ${sample_name}.sam.dupstats ${sample_name}.formatted.sam ${sample_name}.sam
 fi
 
 if [[ -s ${sample_name}.sam ]]; then
@@ -87,39 +85,39 @@ fi
 
 if [ ! -s ${sample_name}.bsrate ]; then
   echo dnmtools bsrate=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools bsrate -c $chrDir ${sample_name}.sam -o ${sample_name}.bsrate
+  dnmtools bsrate -c $chrDir ${sample_name}.sam -o ${sample_name}.bsrate
 fi
 
 
 if [ ! -s ${sample_name}.all.meth ]; then
   echo dnmtools counts=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools counts -c $chrDir -o ${sample_name}.all.meth ${sample_name}.sam
+  dnmtools counts -c $chrDir -o ${sample_name}.all.meth ${sample_name}.sam
 fi
 
 if [ ! -s ${sample_name}.levels ]; then
   echo dnmtools levels=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools levels -o ${sample_name}.levels ${sample_name}.all.meth
+  dnmtools levels -o ${sample_name}.levels ${sample_name}.all.meth
 fi
 
 if [ ! -s ${sample_name}.meth ]; then
   echo dnmtools sym=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools sym -m -o ${sample_name}.meth ${sample_name}.all.meth
+  dnmtools sym -m -o ${sample_name}.meth ${sample_name}.all.meth
 fi
 
 
 if [ ! -s ${sample_name}.hmr ]; then
   echo dnmtools hmr=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools hmr -o ${sample_name}.hmr -p ${sample_name}.hmrparams ${sample_name}.meth
+  dnmtools hmr -o ${sample_name}.hmr -p ${sample_name}.hmrparams ${sample_name}.meth
 fi
 
 if [ ! -s ${sample_name}.pmr ]; then
   echo dnmtools pmr=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools hmr -partial -o ${sample_name}.pmr -p ${sample_name}.pmrparams ${sample_name}.meth
+  dnmtools hmr -partial -o ${sample_name}.pmr -p ${sample_name}.pmrparams ${sample_name}.meth
 fi
 
 if [ ! -s ${sample_name}.pmd ]; then
   echo dnmtools pmd=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools pmd -o ${sample_name}.pmd -p ${sample_name}.pmdparams ${sample_name}.meth
+  dnmtools pmd -o ${sample_name}.pmd -p ${sample_name}.pmdparams ${sample_name}.meth
 fi
 
 
@@ -131,7 +129,7 @@ do
     p1='/\\b';p2='\\b/p'
     pat=\"\$p1\$chr\$p2\"
     sed -n \$pat ${sample_name}.sam > ${sample_name}.\${chr}.sam
-    singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools states -c $chrDir -o ${sample_name}.\${chr}.epiread ${sample_name}.\${chr}.sam
+    dnmtools states -c $chrDir -o ${sample_name}.\${chr}.epiread ${sample_name}.\${chr}.sam
     rm ${sample_name}.\${chr}.sam
   fi
 done
@@ -144,13 +142,12 @@ fi
 
 if [ ! -s ${sample_name}.allelic ]; then
   echo dnmtools allelic=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools allelic -c $chrDir -o ${sample_name}.allelic ${sample_name}.epiread
+  dnmtools allelic -c $chrDir -o ${sample_name}.allelic ${sample_name}.epiread
 fi
 if [ ! -s ${sample_name}.amr ]; then
   echo dnmtools amrfinder=`date`
-  singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/dnmtools.1.0.sif dnmtools amrfinder -c $chrDir -o ${sample_name}.amr ${sample_name}.epiread
+  dnmtools amrfinder -c $chrDir -o ${sample_name}.amr ${sample_name}.epiread
 fi
-
 
 if [[ -s ${sample_name}.meth ]]; then
   samtools view -h -b -o ${sample_name}.bam ${sample_name}.sam
@@ -182,9 +179,9 @@ if [ ! -s ${sample_name}.allelic.bw ]; then
 fi
 
 if [ ! -s ${sample_name}.hmr.bb ]; then
-cut -f 1-3 ${sample_name}.hmr > ${sample_name}.hmr.tmp
-bedToBigBed ${sample_name}.hmr.tmp $chrSizeFile ${sample_name}.hmr.bb
-rm  ${sample_name}.hmr.tmp
+  cut -f 1-3 ${sample_name}.hmr > ${sample_name}.hmr.tmp
+  bedToBigBed ${sample_name}.hmr.tmp $chrSizeFile ${sample_name}.hmr.bb
+  rm  ${sample_name}.hmr.tmp
 fi
 
 if [ ! -s ${sample_name}.pmr.bb ]; then
@@ -199,7 +196,7 @@ if [ ! -s ${sample_name}.pmd.bb ]; then
   rm  ${sample_name}.pmd.tmp
 fi
 
-
+dnmtools | grep Version | cut -d ' ' -f 2 | awk '{print \"dnmtools,v\"\$1}' > ${sample_name}.dnmtools.version
 ";
 
     if ($rmlist ne "") {
@@ -242,6 +239,7 @@ sub result {
     push( @result_files, $meth_pmr_file );
     push( @result_files, $meth_pmd_file );
     push( @result_files, $meth_amr_file );
+    push( @result_files, "${result_dir}/${sample_name}.dnmtools.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
