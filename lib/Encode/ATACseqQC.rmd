@@ -5,6 +5,7 @@ output:
   rmdformats::readthedown:
     toc_depth: 2
     code_folding: hide    
+    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -33,6 +34,9 @@ source("reportFunctions.R")
 library("data.table")
 library("rjson")
 library("dplyr")
+library(htmltools)
+library(rvest)
+
 
 options(future.globals.maxSize= 10779361280)
 
@@ -95,9 +99,11 @@ for(sample_name in sample_names){
 }
 ```
 
-# QC Report
+# Overall QC Report
 
 <br>
+
+## general
 
 ```{r}
 print_table(general_tbl) 
@@ -105,11 +111,33 @@ print_table(general_tbl)
 
 ```{r}
 for(cname in names(all_tbls)){
-  cat("\n\n# ", cname, "\n\n<br>\n\n")
+  cat("\n\n## ", cname, "\n\n<br>\n\n")
   cur_tbls = all_tbls[[cname]]
   for(gname in names(cur_tbls)){
-    cat("\n\n## ", gname, "\n\n")
+    cat("\n\n### ", gname, "\n\n")
     print_table(cur_tbls[[gname]])
   }
 }
+```
+
+```{r}
+result = "# Individual Samples \n\n"
+
+sample_names = json_files$V2
+sample_name = sample_names[1]
+for(sample_name in sample_names){
+  json_file=json_map[sample_name]
+  html_file = gsub(".json", ".html", json_file)
+
+  result = paste0(result, "## ", sample_name, "\n\n")
+  result = paste0(result, "````{=html}\n")
+  result = paste0(result, "```{r, echo=FALSE, results='asis'}\n")
+  result = paste0(result, "xfun::file_string('", html_file, "')\n\n")
+  result = paste0(result, "```\n")
+  result = paste0(result, "````\n\n")
+}
+writeLines(result, "details.rmd")
+```
+
+```{r child="details.rmd"}
 ```
