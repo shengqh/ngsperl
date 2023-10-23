@@ -472,6 +472,7 @@ sub getPreprocessionConfig {
 
   if ( $def->{sra_to_fastq} ) {
     my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FastqDump";
+    my $docker_prefix = getValue($def, "sra_to_fastq_wget", 0)? undef :"sratools_";
     #my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FasterqDump";
     $config->{sra2fastq} = {
       class      => $class,
@@ -485,7 +486,7 @@ sub getPreprocessionConfig {
       cluster    => $def->{cluster},
       not_clean  => getValue( $def, "sra_not_clean", 1 ),
       is_restricted_data => getValue($def, "is_restricted_data"),
-      docker_prefix => "sratools_",
+      docker_prefix => $docker_prefix,
       no_docker => $def->{"no_docker"},
       pbs        => {
         "nodes"     => "1:ppn=1",
