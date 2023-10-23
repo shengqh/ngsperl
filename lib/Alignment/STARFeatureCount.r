@@ -48,7 +48,7 @@ if (parSampleFile1 != '') {
   png(file=paste0(outputPrefix, ".csv.png"), height=1500, width=width, res=300)
   g=ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) +
     geom_bar(stat="identity", width=0.5) +
-    theme_classic() +
+    theme_classic() + xlab("") +
     theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
           axis.text.y = element_text(size=11, face="bold"))
   print(g)
