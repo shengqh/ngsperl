@@ -747,7 +747,7 @@ sub addEncodeATACseq {
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
+      "walltime"  => "6",
       "mem"       => "10gb"
     },
   };
