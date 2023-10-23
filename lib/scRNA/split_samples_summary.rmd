@@ -38,6 +38,9 @@ outFile=myoptions$task_name
 
 files_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 samples<-files_table$V2
+samples<-samples[order(samples)]
+
+has_cutoff<-any(grepl("cutoff", files_table$V1))
 ```
 
 ```{r echo=FALSE}
@@ -57,10 +60,12 @@ figureRmd<-function(samples, hto_samples){
     result<-paste0(result, paste0("\n\n## Hashtag/Cell table\n\n"))
     result<-paste0(result, getTable(paste0(sample, ".HTO.tag_cell.csv")))
 
-    result<-paste0(result, paste0("\n\n## Hashtag Cutoff\n\n"))
-    for(tag in tags){
-      result<-paste0(result, paste0("\n\n### ", tag, "\n\n"))
-      result<-paste0(result, getFigure(paste0(sample, ".HTO.", tag, ".cutoff.png")))
+    if(has_cutoff){
+      result<-paste0(result, paste0("\n\n## Hashtag Cutoff\n\n"))
+      for(tag in tags){
+        result<-paste0(result, paste0("\n\n### ", tag, "\n\n"))
+        result<-paste0(result, getFigure(paste0(sample, ".HTO.", tag, ".cutoff.png")))
+      }
     }
 
     result<-paste0(result, paste0("\n\n## Hashtag Abundance Distribution\n\n"))
@@ -76,6 +81,9 @@ figureRmd<-function(samples, hto_samples){
 
     result<-paste0(result, paste0("\n\n## Hashtag UMAP\n\n"))
     result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.tag.png")))
+
+    result<-paste0(result, paste0("\n\n## Hashtag Assignment UMAP\n\n"))
+    result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.assigned.png")))
   }
   return(result)
 }
