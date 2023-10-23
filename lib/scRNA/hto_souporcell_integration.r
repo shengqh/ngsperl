@@ -25,13 +25,14 @@ souporcell_tb<-read.table(parSampleFile1, sep="\t", row.names=2)
 cutoff_tb<-read.table(parSampleFile2, sep="\t", row.names=2)
 umap_rds_tb<-read.table(parSampleFile3, sep="\t", row.names=2)
 
+ignore_map=list()
 if(exists("parSampleFile4")){
   if(file.exists(parSampleFile4)){
-    ignores<-read.table(parSampleFile4, sep="\t")
-    ignore_map<-split(ignores$V1, ignores$V2)
+    if(file.size(parSampleFile4) > 0){
+      ignores<-read.table(parSampleFile4, sep="\t")
+      ignore_map<-split(ignores$V1, ignores$V2)
+    }
   }
-}else{
-  ignore_map=list()
 }
 
 souporcell_samples = read.table(parSampleFile5, sep="\t")
