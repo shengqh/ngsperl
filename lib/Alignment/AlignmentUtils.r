@@ -107,14 +107,20 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
 
   draw_figure<-function(final, filename){
     height=max(1000, 60 * length(unique(final$Sample)))
-    png(file=filename, height=height, width=3000, res=300)
-    g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
-      geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
-      scale_color_manual(values=colors) +
-      theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
-            axis.title = element_blank())
-    print(g)
-    dev.off()
+
+    if(any(final$NoRead)){
+      g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
+        geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
+        scale_color_manual(values=colors) +
+        theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
+              axis.title = element_blank())
+    }else{
+      g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
+        geom_point(aes(size=Reads)) + theme_classic() + 
+        theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
+              axis.title = element_blank())
+    }
+    ggsave(filename, g, width=3000, height=height, units="px", dpi=300, bg="white")
   }
 
   if(!is.na(rg_name_regex)){
