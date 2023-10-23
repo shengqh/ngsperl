@@ -63,6 +63,16 @@ arrIN=(\${IN//,/ })
 r1=\${arrIN[0]}
 r2=\${arrIN[1]}
 
+if [[ ! -s \$r1 ]]; then
+  echo file not exists: \$r1
+  exit 1
+fi
+
+if [[ ! -s \$r2 ]]; then
+  echo file not exists: \$r2
+  exit 1
+fi
+
 rm -f __NAME___R1_001.fastq.gz __NAME___R2_001.fastq.gz
 
 ln -s \$r1 __NAME___R1_001.fastq.gz
