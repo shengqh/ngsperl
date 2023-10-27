@@ -2274,7 +2274,7 @@ get_barplot<-function(
     theme(strip.text.y = element_text(angle = 0))
 
   if(!is.null(bar_file)){
-    height = length(unique(alltbl$Var1)) * calc_height_per_cluster + 500
+    height = max(1000, length(unique(alltbl$Var1)) * calc_height_per_cluster + 500)
     width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + 400
 
     png(bar_file, width=width, height=height, res=300)
