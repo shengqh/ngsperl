@@ -1,3 +1,17 @@
+rm(list=ls()) 
+outFile='P10473'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1='/data/cqs/shengq2/program/cqsperl/examples/20231006_10473_WGBS.meta.tsv'
+parFile2=''
+parFile3=''
+
+
+setwd('/nobackup/h_cqs/shengq2/temp/20231024_10473_WGBS/MethylKitCorr/result')
+
+### Parameter setting end ###
+
 require(GenomicRanges)
 require(tidyverse)
 require(methylKit)
@@ -12,19 +26,16 @@ var = params$var
 mincov = as.numeric(params$mincov)
 
 #prepare to find all specific format files
-input_path <- paste("..", "..", "methylkitprep", "result", sep="/")
-cpg.pat <- ".CpG.txt$"
+cpg.all <-read.table(parSampleFile1, sep="\t", header=F)
+cpg.infile = cpg.all$V1
+file.id = cpg.all$V2
 
-cpg.all <- list.files(path = input_path, pattern = cpg.pat, all.files = FALSE, recursive = FALSE, ignore.case = FALSE, include.dirs = FALSE)
-cpg.infile <- as.list(paste(input_path, cpg.all, sep = "/"))
-file.id <- gsub("(.*)\\.CpG\\.txt$", "\\1", cpg.all)
-
-meta <- read.table(paste0("../../", project, "_meta.tsv"), sep = "\t", header = T)
+meta <- read.table(parFile1, sep = "\t", header = T)
 meta <- meta[order(row.names(meta)),]
 #treatment <- as.numeric(factor(meta[,var])) - 1
 treatment <- rep(0, nrow(meta))
 
-cpg.obj <- methRead(cpg.infile,
+cpg.obj <- methRead(location = as.list(cpg.infile),
                     sample.id = as.list(file.id),
                     assembly = assembly,
                     treatment = treatment,
@@ -81,6 +92,6 @@ CairoPDF(file = paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.pdf"), width =
 dms_plot
 dev.off()
 
-CairoPNG(file=paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.png"), height=1500, width=1500, res=300)
+ggsave(paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.png"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
 print(dms_plot)
 dev.off()
