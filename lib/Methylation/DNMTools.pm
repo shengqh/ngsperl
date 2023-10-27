@@ -31,11 +31,12 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = $self->init_parameter( $config, $section );
 
   my $selfname = $self->{_name};
+  my $dnmtools_command = get_option($config, $section, "dnmtools_command", "dnmtools");
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
-  my $chrDir=$config->{$section}{chr_dir};
+  my $chrDir=$config->{$section}{chr_fasta};
   if ( !defined $chrDir ) {
-    die "define ${section}::chr_dir first";
+    die "define ${section}::chr_fasta first";
   }
   my $chrSizeFile=$config->{$section}{chr_size_file};
   if ( !defined $chrSizeFile ) {
@@ -71,53 +72,54 @@ echo DNMTools=`date`
 
 if [ ! -s ${sample_name}.formatted.sam ]; then
   echo dnmtools format=`date`
-  dnmtools format -f abismal -o ${sample_name}.formatted.sam $sampleFile
+  $dnmtools_command format -f abismal -o ${sample_name}.formatted.tmp.bam $sampleFile 
+  samtools sort -@ $thread -o ${sample_name}.formatted.sam ${sample_name}.formatted.tmp.bam
+  rm -rf ${sample_name}.formatted.tmp.bam
 fi
 
 if [ ! -s ${sample_name}.sam ]; then
   echo dnmtools uniq=`date`
-  dnmtools uniq -D -S ${sample_name}.sam.dupstats ${sample_name}.formatted.sam ${sample_name}.sam
-fi
+  $dnmtools_command uniq -D -S ${sample_name}.sam.dupstats ${sample_name}.formatted.sam ${sample_name}.sam
 
-if [[ -s ${sample_name}.sam ]]; then
-  rm ${sample_name}.formatted.sam
+  if [[ -s ${sample_name}.sam ]]; then
+    rm -rf ${sample_name}.formatted.sam
+  fi
 fi
 
 if [ ! -s ${sample_name}.bsrate ]; then
   echo dnmtools bsrate=`date`
-  dnmtools bsrate -c $chrDir ${sample_name}.sam -o ${sample_name}.bsrate
+  $dnmtools_command bsrate -c $chrDir ${sample_name}.sam -o ${sample_name}.bsrate
 fi
 
 
 if [ ! -s ${sample_name}.all.meth ]; then
   echo dnmtools counts=`date`
-  dnmtools counts -c $chrDir -o ${sample_name}.all.meth ${sample_name}.sam
+  $dnmtools_command counts -c $chrDir -o ${sample_name}.all.meth ${sample_name}.sam
 fi
 
 if [ ! -s ${sample_name}.levels ]; then
   echo dnmtools levels=`date`
-  dnmtools levels -o ${sample_name}.levels ${sample_name}.all.meth
+  $dnmtools_command levels -o ${sample_name}.levels ${sample_name}.all.meth
 fi
 
 if [ ! -s ${sample_name}.meth ]; then
   echo dnmtools sym=`date`
-  dnmtools sym -m -o ${sample_name}.meth ${sample_name}.all.meth
+  $dnmtools_command sym -m -o ${sample_name}.meth ${sample_name}.all.meth
 fi
-
 
 if [ ! -s ${sample_name}.hmr ]; then
   echo dnmtools hmr=`date`
-  dnmtools hmr -o ${sample_name}.hmr -p ${sample_name}.hmrparams ${sample_name}.meth
+  $dnmtools_command hmr -o ${sample_name}.hmr -p ${sample_name}.hmrparams ${sample_name}.meth
 fi
 
 if [ ! -s ${sample_name}.pmr ]; then
   echo dnmtools pmr=`date`
-  dnmtools hmr -partial -o ${sample_name}.pmr -p ${sample_name}.pmrparams ${sample_name}.meth
+  $dnmtools_command hmr -partial -o ${sample_name}.pmr -p ${sample_name}.pmrparams ${sample_name}.meth
 fi
 
 if [ ! -s ${sample_name}.pmd ]; then
   echo dnmtools pmd=`date`
-  dnmtools pmd -o ${sample_name}.pmd -p ${sample_name}.pmdparams ${sample_name}.meth
+  $dnmtools_command pmd -o ${sample_name}.pmd -p ${sample_name}.pmdparams ${sample_name}.meth
 fi
 
 
@@ -129,7 +131,7 @@ do
     p1='/\\b';p2='\\b/p'
     pat=\"\$p1\$chr\$p2\"
     sed -n \$pat ${sample_name}.sam > ${sample_name}.\${chr}.sam
-    dnmtools states -c $chrDir -o ${sample_name}.\${chr}.epiread ${sample_name}.\${chr}.sam
+    $dnmtools_command states -c $chrDir -o ${sample_name}.\${chr}.epiread ${sample_name}.\${chr}.sam
     rm ${sample_name}.\${chr}.sam
   fi
 done
@@ -142,11 +144,11 @@ fi
 
 if [ ! -s ${sample_name}.allelic ]; then
   echo dnmtools allelic=`date`
-  dnmtools allelic -c $chrDir -o ${sample_name}.allelic ${sample_name}.epiread
+  $dnmtools_command allelic -c $chrDir -o ${sample_name}.allelic ${sample_name}.epiread
 fi
 if [ ! -s ${sample_name}.amr ]; then
   echo dnmtools amrfinder=`date`
-  dnmtools amrfinder -c $chrDir -o ${sample_name}.amr ${sample_name}.epiread
+  $dnmtools_command amrfinder -c $chrDir -o ${sample_name}.amr ${sample_name}.epiread
 fi
 
 if [[ -s ${sample_name}.meth ]]; then
@@ -196,7 +198,7 @@ if [ ! -s ${sample_name}.pmd.bb ]; then
   rm  ${sample_name}.pmd.tmp
 fi
 
-dnmtools | grep Version | cut -d ' ' -f 2 | awk '{print \"dnmtools,v\"\$1}' > ${sample_name}.dnmtools.version
+$dnmtools_command | grep Version | cut -d ' ' -f 2 | awk '{print \"dnmtools,v\"\$1}' > ${sample_name}.dnmtools.version
 ";
 
     if ($rmlist ne "") {
