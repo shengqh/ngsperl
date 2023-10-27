@@ -263,6 +263,9 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
 save_gsea_rmd<-function(files, resFile, rmd_prefix=""){
   source("reportFunctions.R")
   figureRmd<-function(files){
+    if(nrow(files) == 0){
+      return("# No geneset with FDR < 0.05 detected")
+    }
     result<-""
     comparisons = unique(files$comparison)
     comparison<-comparisons[1]
