@@ -32,16 +32,19 @@ sub perform {
 
   my $selfname = $self->{_name};
 
+  my $dnmtools_command = get_option($config, $section, "dnmtools_command", "dnmtools");
+  my $preseq_command = get_option($config, $section, "preseq_command", "preseq");
+
   my $abismal_index = $config->{$section}{abismal_index};
 
   my $addqual_perlFile = $config->{$section}{addqual_perlFile};
 
   my $thread = $config->{$section}{thread};
   my $picard = $config->{$section}{picard};
-  my $chrDir=$config->{$section}{chr_dir};
+  my $chrDir=$config->{$section}{chr_fasta};
   my $interval_list=$config->{$section}{interval_list};
   if ( !defined $chrDir ) {
-    die "define ${section}::chr_dir first";
+    die "define ${section}::chr_fasta first";
   }
   if ( !defined $abismal_index ) {
     die "define ${section}::abismal_index first";
@@ -57,9 +60,9 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files[0] . " -2 " . $sample_files[1]: "-1 " . $sample_files[0];
 
-    my $result_file_raw          = $sample_name . ".raw.sam";
-    my $result_file              = $sample_name . ".sorted.sam";
+    my $result_file_raw          = $sample_name . ".raw.bam";
     my $result_file_bam          = $sample_name . ".sorted.bam";
+    my $result_file_bai          = $sample_name . ".sorted.bam.bai";
     my $result_file_addqual     = $sample_name . ".sorted.addqual.sam";
     my $result_file_addqual_bam     = $sample_name . ".sorted.addqual.bam";
     my $result_file_addqual_bai     = $sample_name . ".sorted.addqual.bam.bai";
@@ -78,7 +81,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $rmlist = "";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $result_file_raw );
 
 		foreach my $sampleFile (@sample_files) {
 			print $pbs "
@@ -110,85 +113,54 @@ fi
     print $pbs "
 if [[ ! -s $result_file_raw && ! -s $result_file_bam ]]; then
   echo abismal=`date`
-  dnmtools abismal -t $thread -i $abismal_index $sample_files_str -s $map_stat -o $result_file_raw
+  $dnmtools_command abismal -t $thread -i $abismal_index $sample_files_str -s $map_stat | samtools view -o $result_file_raw
   samtools sort -@ $thread -O BAM -o $result_file_bam $result_file_raw
+  samtools index $result_file_bam
 fi
-";
-    $rmlist=$rmlist ." $result_file_raw";
-    if ($rmlist ne "") {
-      print $pbs "
-if [[ -s $result_file_bam ]]; then
-  rm $rmlist
-fi
-";
-    }
 
-    print $pbs "
-if [[ -s $result_file_bam  && ! -s $result_file_addqual_bam ]]; then
-  echo add_qual =`date`
+if [[ -s $result_file_bai  && ! -s $result_file_addqual_bam ]]; then
+  echo add_qual=`date`
   samtools view -h -O SAM $result_file_bam | perl $addqual_perlFile - $result_file_addqual
   samtools view -b -o $result_file_addqual_bam $result_file_addqual
   samtools index $result_file_addqual_bam $result_file_addqual_bai
 fi
-";
-    $rmlist=" $result_file_addqual";
 
-    if ($rmlist ne "") {
-    	    print $pbs "
-if [[ -s $result_file_addqual_bam ]]; then
-  rm $rmlist 
+if [[ -s $result_file_addqual_bai ]]; then
+  rm $result_file_addqual 
+
+  if [[ ! -s ${sample_name}.c_curve ]]; then
+    echo preseq c_curve=`date`
+    $preseq_command c_curve -B $result_file_addqual_bam > ${sample_name}.c_curve
+  fi
+
+  if [[ ! -s ${sample_name}.lc_extrap ]]; then
+    echo preseq lc_extrap=`date`
+    $preseq_command lc_extrap -B -D $result_file_addqual_bam > ${sample_name}.lc_extrap
+  fi
+
+  if [[ ! -s $hs_metrics ]]; then
+    echo picard CollectHsMetrics=`date`
+    java -jar $picard CollectHsMetrics \\
+      I=$result_file_addqual_bam \\
+      O=$hs_metrics \\
+      R=$chrDir \\
+      BAIT_INTERVALS=$interval_list \\
+      TARGET_INTERVALS=$interval_list
+  fi
+
+  if [[ ! -s $rrbs_metrics ]]; then
+    echo picard CollectRrbsMetrics=`date`
+    java -jar $picard CollectRrbsMetrics \\
+      I=$result_file_addqual_bam \\
+      M=$sample_name \\
+      R=$chrDir
+  fi
+
+  if [[ ( -s $hs_metrics ) && ( -s $rrbs_metrics ) ]]; then
+    rm $result_file_addqual_bam $result_file_addqual_bai
+  fi
 fi
 ";
-    }
-
-#preseq
-    print $pbs "
-if [ ! -s ${sample_name}.c_curve ]; then
-  echo preseq c_curve=`date`
-  preseq c_curve -B $result_file_addqual_bam > ${sample_name}.c_curve
-fi
-
-if [ ! -s ${sample_name}.lc_extrap ]; then
-  echo preseq lc_extrap=`date`
-  preseq lc_extrap -B -D $result_file_addqual_bam > ${sample_name}.lc_extrap
-fi
-
-";
-
-    print $pbs "
-if [[ ( -s $result_file_addqual_bam ) && ( ! -s $hs_metrics ) ]]; then
-  echo picard CollectHsMetrics =`date`
-  java -jar $picard CollectHsMetrics \\
-    I=$result_file_addqual_bam \\
-    O=$hs_metrics \\
-    R=$chrDir \\
-    BAIT_INTERVALS=$interval_list \\
-    TARGET_INTERVALS=$interval_list
-fi
-";
-
-    print $pbs "
-if [[ ( -s $result_file_addqual_bam ) && ( ! -s $rrbs_metrics ) ]]; then
-  echo picard CollectRrbsMetrics =`date`
-  java -jar $picard CollectRrbsMetrics \\
-    I=$result_file_addqual_bam \\
-    M=$sample_name \\
-    R=$chrDir
-fi
-";
-
-    print $pbs "
-if [[ ( -s $hs_metrics ) && ( -s $rrbs_metrics ) ]]; then
-  rm $result_file_addqual_bam $result_file_addqual_bai
-fi
-    ";
-
-    print $pbs "
-if [[ ( -s $hs_metrics ) && ( -s $rrbs_metrics ) ]]; then
-  echo samtools final result =`date`
-  samtools view -h -O SAM -o $result_file $result_file_bam
-fi
-    ";
 
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -210,9 +182,9 @@ sub result {
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $sam_file     = "${result_dir}/${sample_name}.sorted.sam";
     my @result_files = ();
-    push( @result_files, $sam_file );
+    push( @result_files, "${result_dir}/${sample_name}.sorted.bam" );
+    push( @result_files, "${result_dir}/${sample_name}.raw.bam" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
