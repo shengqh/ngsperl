@@ -26,13 +26,13 @@ source("reportFunctions.R")
 files<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 samples<-files$V2
 
-printTable<-function(filepath){
-  tbl<-read.csv(filepath, check.names=F, row.names=1)
+printTable<-function(filepath, row.names=1){
+  tbl<-read.csv(filepath, check.names=F, row.names=row.names)
   print(kable_styling(kable(tbl)))
 }
 
-getTable<-function(filepath){
-  return(paste0("```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "')\n```\n\n"))
+getTable<-function(filepath, row.names=1){
+  return(paste0("```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "', ", row.names, ")\n```\n\n"))
 }
 
 getFigure<-function(filepath){
@@ -52,6 +52,10 @@ figureRmd<-function(samples){
 
     result<-paste0(result, paste0("\n\n## Overlap table\n\n"))
     result<-paste0(result, getTable(soupor_file))
+
+    result<-paste0(result, paste0("\n\n## Final match table\n\n"))
+    soupor_final_file<-paste0(sample, ".HTO_soupor.final.csv")
+    result<-paste0(result, getTable(soupor_final_file, "NULL"))
 
     soupor_clusters = colnames(soupor)[!(colnames(soupor) %in% c("unassigned", "doublet"))]
     for(sc in soupor_clusters){

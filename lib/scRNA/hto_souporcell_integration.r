@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='GPA'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -10,7 +10,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/hto_samples_scDemultiplex_cutoff_souporcell_integration/result')
+setwd('/data/wanjalla_lab/projects/20231020_combined_scRNA_hg38_CITEseq/hto_samples_scDemultiplex_demuxmix_souporcell_integration/result')
 
 ### Parameter setting end ###
 
@@ -82,6 +82,7 @@ for (sample_name in rownames(souporcell_tb)){
   
   write.csv(tb, paste0(sample_name, ".HTO_soupor.singlet.csv"))
   
+  #for each souporcell cluster, find the one HTO with highest percent cells
   cmap<-unlist(apply(tb,2,get_max_row))
   names(cmap) = colnames(tb)
 
@@ -90,6 +91,20 @@ for (sample_name in rownames(souporcell_tb)){
     cur_map = split(cur_souporcell$V2, cur_souporcell$V4)
     cmap[names(cur_map)] = unlist(cur_map)
   }
+
+  rev_map = split(names(cmap), cmap)
+  rev_map = rev_map[lapply(rev_map, length) >1]
+  if(length(rev_map) > 0){
+    #if there are one HTO matched with multiple soupercell clusters, use the one with the more cells
+    ntb = tb[names(rev_map),unique(unlist(rev_map)),drop=FALSE]
+    ntb_map = unlist(apply(ntb,1,get_max_row))
+    cmap = cmap[!cmap %in% names(ntb_map)]
+    cmap[ntb_map] = names(ntb_map)
+  }
+
+  match_tbl = data.frame("Souporcell" = names(cmap), "HTO"=cmap)
+  match_tbl = match_tbl[order(match_tbl$Souporcell),,drop=FALSE]
+  write.csv(match_tbl, paste0(sample_name, ".HTO_soupor.final.csv"), row.names=F)
   
   final<-unlist(apply(s, 1, function(x){
     #print(x['HTO.global'])
