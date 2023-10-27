@@ -147,3 +147,9 @@ include_graphics(paste0(detailFile, ".seurat_cell_type.celltype_sample.png"))
 ```{r, echo=FALSE}
 include_graphics(paste0(detailFile, ".seurat_cell_type.cell.png"))
 ```
+
+### Cell subtype top 10 heatmap
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".seurat_cell_type.top10.heatmap.png"))
+```
