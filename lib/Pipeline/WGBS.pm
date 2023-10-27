@@ -55,7 +55,7 @@ sub getConfig {
 
   my $thread = getValue($def, "thread", 4);
   my $abismal_index = getValue($def, "abismal_index");
-  my $chr_dir = getValue($def, "chr_dir");
+  my $chr_fasta = getValue($def, "chr_fasta");
   my $chr_size_file = getValue($def, "chr_size_file");
   my $annovar_buildver = getValue($def, "annovar_buildver");
   my $annovar_db = getValue($def, "annovar_db");
@@ -81,49 +81,54 @@ sub getConfig {
       "mem"       => "10gb"
     },
   };
-  push(@$tasks, "trimgalore");
+  push(@$tasks, $trimgalore_task);
+
+  my $new_dnmtools = getValue($def, "new_dnmtools", 0);
 
   my $abismal_task = "abismal";
   $config->{$abismal_task} = {
-    class      => "Alignment::abismal",
+    class      => $new_dnmtools ? "Alignment::abismal_v141": "Alignment::abismal",
     perform    => 1,
     option     => "",
     thread     => $thread,
     target_dir => "${targetDir}/abismal",
-    chr_dir    => $chr_dir,
+    chr_fasta    => $chr_fasta,
     picard     => $picard,
     interval_list => $interval_list,
     addqual_perlFile => $addqual_perlFile,
     abismal_index => $abismal_index,
     source_ref => "trimgalore",
+    dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
+    preseq_command => getValue($def, "preseq_command", "preseq"),
     docker_prefix => "dnmtools_",
     pbs        => {
-      "nodes"     => "1:ppn=4",
+      "nodes"     => "1:ppn=8",
       "walltime"  => "128",
       "mem"       => "80gb"
     },
   };
-  push(@$tasks, "abismal");
+  push(@$tasks, $abismal_task);
 
   my $dnmtools_task = "DNMTools";
   $config->{$dnmtools_task} = {
-    class         => "Methylation::DNMTools",
+    class      => $new_dnmtools ? "Methylation::DNMTools_v141": "Methylation::DNMTools",
     perform       => 1,
     target_dir    => "${targetDir}/dnmtools",
     option        => "",
-    chr_dir       => $chr_dir,
+    chr_fasta       => $chr_fasta,
     chr_size_file => $chr_size_file,
-    source_ref    => "abismal",
+    source_ref    => $new_dnmtools ? ["abismal", ".raw.bam"] : ["abismal", ".sorted.bam"],
+    dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
     docker_prefix => "dnmtools_",
     pbs           => {
-      "nodes"     => "1:ppn=1",
+      "nodes"     => "1:ppn=8",
       "walltime"  => "72",
       "mem"       => "80gb"
     },
   };
-  push(@$tasks, "DNMTools");
+  push(@$tasks, $dnmtools_task);
 
-  my $dnmtoolsannovar_task = "annovar";
+  my $dnmtoolsannovar_task = "dnmtoolsAnnovar";
   $config->{$dnmtoolsannovar_task} = {
     class      => "Annotation::Annovar",
     perform    => 1,
@@ -134,26 +139,25 @@ sub getConfig {
     perform_splicing => 0,
     docker_prefix => "annovar_",
     isBed      => 1,
-    source_ref => [ "DNMTools", ".hmr\$|.amr\$|.pmr\$|.pmd\$" ],
+    source_ref => [ "DNMTools", $new_dnmtools ? ".hmr\$|.amr\$|.pmd\$" : ".hmr\$|.amr\$|.pmr\$|.pmd\$" ],
     pbs        => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "40gb"
     },
   };
-  push(@$tasks, "annovar");
+  push(@$tasks, $dnmtoolsannovar_task);
 
   my $methylkitprep_task = "MethylKitPreparation";
   $config->{$methylkitprep_task} = {
-    class                    => "CQS::UniqueR",
+    class                    => "CQS::IndividualR",
     perform                  => 1,
-    target_dir               => "${targetDir}/methylkitprep",
+    target_dir               => "${targetDir}/MethylKitPreparation",
     option                   => "",
     docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/prepare_CpG_input.R",
+    parameterSampleFile1_ref   => [ "DNMTools", ".all.meth\$" ],
     output_file_ext          => ".CpG.txt",
-    source_ref => [ "DNMTools", ".meth\$" ],
-    #parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",
@@ -161,25 +165,25 @@ sub getConfig {
       "mem"       => "10gb"
     },
   };
-  push(@$tasks, "MethylKitPreparation");
+  push(@$tasks, $methylkitprep_task);
 
   my $methylkitcorr_task = "MethylKitCorr";
   $config->{$methylkitcorr_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => "${targetDir}/methylkitcorr",
+    target_dir               => "${targetDir}/MethylKitCorr",
     #option                   => " --args ${task_name} hg19 group 4 ",
     docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/methylkit_corr.R",
     output_file_ext          => "_methyl_CpG_bvalue_corr_MDS_plot.png;_methyl_CpG_bvalue_corr_MDS_plot.pdf;.filtered.cpg.meth.rds",
+    parameterSampleFile1_ref => $methylkitprep_task,
     parameterSampleFile2 => {
       task_name => $task_name,
-      org       => "hg19",
+      org       => getValue($def, "genome"),
       var       => "group",
       mincov     => 4
     },
-    #parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
-    source_ref => [ "MethylKitPreparation", ".CpG.txt\$" ],
+    parameterFile1 => getValue($def, "meta_file"),
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",
@@ -187,12 +191,12 @@ sub getConfig {
       "mem"       => "80gb"
     },
   };
-  push(@$tasks, "MethylKitCorr");
+  push(@$tasks, $methylkitcorr_task);
 
   my $methylkitdiff_task = "MethylKitDiff";
   $config->{$methylkitdiff_task} = {
     class                    => "Methylation::MethylKitDiff",
-    target_dir               => "${targetDir}/methylkitdiff",
+    target_dir               => "${targetDir}/MethylKitDiff",
     docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/methylkit_diff.R",
     #option                   => " --args ${task_name} 25 0.01 16 ",
@@ -213,7 +217,7 @@ sub getConfig {
       "mem"       => "80gb"
     },
   };
-  push(@$tasks, "MethylKitDiff");
+  push(@$tasks, $methylkitdiff_task);
 
 
 #  my $dnmtoolsdiff_task = "DNMToolsDiff";
@@ -260,9 +264,10 @@ sub getConfig {
       "mem"       => "40gb"
     },
   };
-  push(@$tasks, "MethylKitDiffAnnovar");
+  push(@$tasks, $methylkitdiffannovar_task);
 
-  $config->{MethylKitDiffAnnovarGenes} = {
+  my $MethylKitDiffAnnovarGenes_task = "MethylKitDiffAnnovarGenes";
+  $config->{$MethylKitDiffAnnovarGenes_task} = {
     class              => "CQS::ProgramWrapperOneToOne",
     perform            => 1,
     target_dir         => "$targetDir/MethylKitDiffAnnovarGenes",
@@ -280,9 +285,9 @@ sub getConfig {
       "mem"       => "10gb"
     },
   };
-  push(@$tasks, "MethylKitDiffAnnovarGenes");
+  push(@$tasks, $MethylKitDiffAnnovarGenes_task);
 
-  my $webgestalt_task = addWebgestalt($config, $def, $tasks, $targetDir, "MethylKitDiffAnnovarGenes",  [ "MethylKitDiffAnnovarGenes", ".genename.txt\$" ]);
+  my $webgestalt_task = addWebgestalt($config, $def, $tasks, $targetDir, $MethylKitDiffAnnovarGenes_task,  [ $MethylKitDiffAnnovarGenes_task, ".genename.txt\$" ]);
 
 #  my $homer_task = "HOMER_DMR";
 #  $config->{$homer_task} = {
@@ -408,7 +413,7 @@ sub performWGBS {
 sub performWGBSTask {
   my ( $def, $task ) = @_;
 
-  my $config = performScRNASeq($def, 0);
+  my $config = performWGBS($def, 0);
 
   performTask( $config, $task );
 
