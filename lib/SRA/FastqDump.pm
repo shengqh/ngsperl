@@ -25,6 +25,8 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_fd";
+  $self->{_docker_prefix} = "sratools_";
+  $self->{_docker_shell} = "sh";
   bless $self, $class;
   return $self;
 }
