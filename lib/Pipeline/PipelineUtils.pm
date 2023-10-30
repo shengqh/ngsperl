@@ -105,6 +105,7 @@ our %EXPORT_TAGS = (
     has_comparison
     add_featurecount
     add_md5
+    add_bamplot
     )
   ]
 );
@@ -3642,4 +3643,57 @@ mv tmp.md5 __OUTPUT__
   return($config);
 }
 
+sub add_bamplot {
+  my ($config, $def, $tasks, $target_dir, $bam_ref) = @_;
+  my $gff_key = "";
+  my $gff_value = "";
+
+  if ( not defined $def->{bamplot_gff} ) {
+    $config->{gene_pos} = {
+      class        => "Annotation::PrepareGenePosition",
+      perform      => 1,
+      target_dir   => $target_dir . "/" . getNextFolderIndex($def) . "gene_pos",
+      option       => "",
+      dataset_name => getValue($def, "dataset_name"),
+      gene_names   => getValue($def, "gene_names"),
+      add_chr      => getValue($def, "add_chr"),
+      output_gff   => 1,
+      pbs          => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+    $gff_key = "gff_file_ref";
+    $gff_value = "gene_pos";
+    push( @$tasks, "gene_pos" );
+  }else{
+    $gff_key = "gff_file";
+    $gff_value = getValue($def, "bamplot_gff");
+  }
+
+  $config->{bamplot} = {
+    class              => "Visualization::Bamplot",
+    perform            => 1,
+    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
+    option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
+    source_ref         => $bam_ref,
+    $gff_key       => $gff_value,
+    is_rainbow_color   => 0,
+    is_single_pdf      => 0,
+    is_draw_individual => 0,
+    groups             => $def->{"plotgroups"},
+    colors             => $def->{"colormaps"},
+    docker_prefix => "bamplot_",
+    sh_direct          => 1,
+    pbs                => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, "bamplot" );
+};
+
 1;
+
