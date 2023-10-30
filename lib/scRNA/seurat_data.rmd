@@ -32,6 +32,14 @@ is_preprocessed=is_one(myoptions$is_preprocessed)
 
 ```
 
+# parameters
+
+```{r, results="asis", echo=FALSE}
+opt_tbl=options_table[c("V2","V1")]
+colnames(opt_tbl)=c("parameter", "value")
+print_table(opt_tbl, row.names=F)
+```
+
 # elbowplot
 
 ```{r, results="asis", echo=FALSE}
