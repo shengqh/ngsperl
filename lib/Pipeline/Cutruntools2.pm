@@ -48,9 +48,12 @@ sub getConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  my $tasks = [@$individual, @$summary];
+
   my $target_dir = $def->{target_dir};
 
   my $config_json = getValue($def, "cutruntools2-bulk-config", dirname(__FILE__) . "/../Chipseq/cutruntools2-bulk-config.json");
+  my $adaptor_type = getValue($def, "cutruntools2_adaptor_type");
 
   my $cutruntools2 = "cutruntools2";
   $config->{$cutruntools2} = {
@@ -81,7 +84,7 @@ ln -s \$r2 __NAME___R2_001.fastq.gz
 cur_dir=`pwd`
 #echo cur_dir = \$cur_dir
 
-cat $config_json | sed \"s#INPUT_FASTQ_DIRECTORY#\${cur_dir}#g\" | sed \"s#INPUT_WORKDIR#\${cur_dir}#g\" > __NAME__.config.json
+cat $config_json | sed \"s#INPUT_FASTQ_DIRECTORY#\${cur_dir}#g\" | sed \"s#INPUT_WORKDIR#\${cur_dir}#g\" | sed \"s#Truseq#${adaptor_type}#g\" > __NAME__.config.json
 
 bash /opt/CUT-RUNTools-2.0/run_bulkModule.sh __NAME__.config.json __NAME__
 
@@ -96,16 +99,38 @@ rm -f __NAME___R1_001.fastq.gz __NAME___R2_001.fastq.gz
     source_ref            => $untrimed_ref,
     output_to_same_folder => 1,
     output_arg            => "-o",
-    output_file_ext    => "__NAME__/peakcalling/seacr/__NAME__.spikein_normalized.bw",
+    output_file_ext    => "__NAME__/peakcalling/seacr/__NAME__.spikein_normalized.bw,__NAME__/aligned/dup.marked.120bp/__NAME__.bam",
     use_tmp_folder        => 0,
     sh_direct             => 0,
+    docker_prefix => "cutruntools2_",
     pbs                   => {
       "nodes"     => "1:ppn=8",
       "walltime"  => "24",
       "mem"       => "40gb"
     },
   };
-  #push @$individual, ($cutruntools2);
+  push @$tasks, ($cutruntools2);
+
+  if ( $def->{perform_bamplot} ) {
+    add_bamplot($config, $def, $tasks, $target_dir, [$cutruntools2, ".bam"]);
+  }
+
+  $config->{sequencetask} = {
+    class      => getSequenceTaskClassname($cluster),
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    option     => "",
+    source     => {
+      tasks => $tasks,
+    },
+    sh_direct => 0,
+    cluster   => $cluster,
+    pbs       => {
+      "nodes"     => "1:ppn=" . $def->{max_thread},
+      "walltime"  => $def->{sequencetask_run_time},
+      "mem"       => "40gb"
+    },
+  };
 
   return ($config);
 }
