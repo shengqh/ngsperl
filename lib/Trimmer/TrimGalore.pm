@@ -110,8 +110,9 @@ sub perform {
 
 	my $ispairend = get_is_paired_end_option( $config, $section, 0 );
 
-	my ( $extension, $fastqextension ) =
-	  $self->get_extension( $config, $section );
+	my ( $extension, $fastqextension ) = $self->get_extension( $config, $section );
+  my $do_fastqc = get_option($config, $section, "do_fastqc", 0);
+  my $fastqc_option = $do_fastqc ? "--fastqc --fastqc_args \"--outdir .\"" : "";
 
 	my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -139,15 +140,14 @@ sub perform {
 			$result_dir, $final_files[0] );
 
 		if ($ispairend) {
-			die "should be pair-end data but not!"
-			  if ( scalar(@sample_files) != 2 );
+			die "should be pair-end data but not!" if ( scalar(@sample_files) != 2 );
 
 			#pair-end data
 			my $read1file = $sample_files[0];
 			my $read2file = $sample_files[1];
 
 			print $pbs "
-trim_galore $option --fastqc --fastqc_args \"--outdir .\" --paired --retain_unpaired --output_dir . $read1file $read2file
+trim_galore $option $fastqc_option --paired --retain_unpaired --output_dir . $read1file $read2file
 ";
 		}
 		else {    #single end
@@ -157,7 +157,7 @@ trim_galore $option --fastqc --fastqc_args \"--outdir .\" --paired --retain_unpa
 
 			if ( scalar(@sample_files) == 1 ) {
 				print $pbs "
-trim_galore $option --fastqc --fastqc_args \"--outdir .\" --retain_unpaired --output_dir . $sample_files[0]
+trim_galore $option $fastqc_option --retain_unpaired --output_dir . $sample_files[0]
 ";
 			}
 			else {
