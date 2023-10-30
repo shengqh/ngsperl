@@ -116,7 +116,9 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "details_rmd",         "" );
 
   initDefaultValue( $def, "by_integration",        0 );
-  initDefaultValue( $def, "by_sctransform",        0 );
+  initDefaultValue( $def, "by_sctransform",        1 );
+  initDefaultValue( $def, "use_sctransform_v2", 1 );
+  
 
   my $pca_dims = $def->{by_sctransform}?30:20;
   #my $pca_dims = 50;
