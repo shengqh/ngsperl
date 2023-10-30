@@ -216,7 +216,7 @@ sub add_seurat {
   my $nsamples = scalar(@sample_names);
   my $by_integration = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
   my $by_sctransform = getValue( $def, "by_sctransform" );
-  my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 0);
+  my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 1);
   my $sct_str = $by_sctransform ? ($use_sctransform_v2 ? "_sct2": "_sct"):"";
   my $thread = getValue( $def, "sctransform_thread", 1 );
   my $rmd_ext = $by_sctransform ? ($use_sctransform_v2 ? ".sct2": ".sct"):"";
@@ -1098,8 +1098,8 @@ fi
       source_arg => "",
       source => $csv_files,
       output_arg => "",
-      output_file_prefix => "/per_sample_outs/count___NAME__/count/sample_filtered_feature_bc_matrix.h5",
-      output_file_ext => "/per_sample_outs/count___NAME__/count/sample_filtered_feature_bc_matrix.h5,/per_sample_outs/count___NAME__/metrics_summary.csv,/multi/count/raw_feature_bc_matrix.h5",
+      output_file_prefix => "__NAME__/per_sample_outs/__NAME__/count/sample_filtered_feature_bc_matrix.h5",
+      output_file_ext => "__NAME__/per_sample_outs/__NAME__/count/sample_filtered_feature_bc_matrix.h5,__NAME__/per_sample_outs/__NAME__/metrics_summary.csv,__NAME__/per_sample_outs/__NAME__/web_summary.html,__NAME__/multi/count/raw_feature_bc_matrix.h5",
       output_to_same_folder => 1,
       samplename_in_result => 1,
       can_result_be_empty_file => 0,

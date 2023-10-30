@@ -1,0 +1,56 @@
+---
+title: "Cellranger summary report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+library("knitr")
+library("dplyr")
+library("kableExtra")
+source("reportFunctions.R")
+
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=12, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, include=FALSE}
+library(R.utils)
+
+summary_files = read.table("fileList1.txt", sep="\t")
+html_files = read.table("fileList2.txt", sep="\t")
+html_map = unlist(split(html_files$V1, html_files$V2))
+
+getFigure<-function(filepath){
+  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
+}
+
+result = "# Individual Samples \n\n"
+
+get_absolute_path<-function(filepath){
+  result = gsub("/panfs/accrepfs.vampire", "", getAbsolutePath(filepath))
+  result = gsub("/gpfs51", "", result)
+  result = gsub("/gpfs52", "", result)
+  return(result)
+}
+
+sample_names = names(html_map)
+sample_name = sample_names[1]
+for(sample_name in sample_names){
+  html_file=get_absolute_path(html_map[sample_name])
+  wd=get_absolute_path(getwd())
+  rel_file=getRelativePath(html_file, wd)
+  result = paste0(result, '<a href="', rel_file, '" target="_blank">', sample_name, "</a>\n\n")
+}
+writeLines(result, "details.rmd")
+```
+
+```{r child="details.rmd"}
+```
