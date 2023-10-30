@@ -103,13 +103,15 @@ sub getConfig {
 
   my $cellranger_summary_task = "${count_task_name}_summary";
   $config->{$cellranger_summary_task} = {
-    class                    => "CQS::UniqueR",
+    class                    => "CQS::UniqueRmd",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $cellranger_summary_task,
-    rtemplate                => "../scRNA/cellranger_summary.r",
+    report_rmd_file => "../scRNA/cellranger_summary.rmd",
+    additional_rmd_files => "../CQS/reportFunctions.R",
     parameterSampleFile1_ref       => [$count_task_name, "metrics_summary.csv"],
-    output_file_ext      => ".summary.csv",
-    output_other_ext  => ".summary.csv",
+    parameterSampleFile2_ref       => [$count_task_name, "web_summary.html"],
+    output_file_ext      => ".cellranger.html",
+    output_other_ext  => ".cellranger.html",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
