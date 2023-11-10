@@ -7,8 +7,8 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-parFile4='/home/shengq2/program/RaviMartyLarsonCoefs/20230526_mona_rnaseq/20230526_meta.tsv'
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
+parFile4='/home/shengq2/program/RaviMartyLarsonCoefs/20230526_mona_rnaseq/20230804_meta.tsv'
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-TRUE;
 
 setwd('/nobackup/shah_lab/shengq2/20230526_mona_VR2527_rnaseq_hg38/genetable/result')
 
@@ -25,6 +25,10 @@ library(RColorBrewer)
 library(colorRamps)
 library(genefilter)
 library(limma)
+library(dplyr)
+library(ggplot2)
+library(tibble)
+library(cowplot)
 
 is_one<-function(value, defaultValue=FALSE){
   if(is.null(value)){
@@ -203,6 +207,37 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
     pca<-prcomp(t(rldmatrix))
+
+
+    pca_res = t(summary(pca)$importance)[c(1:10),] %>% 
+      as.data.frame() %>% 
+      tibble::rownames_to_column("PC") %>% 
+      dplyr::rename("Proportion" = "Proportion of Variance", "Cumulative" = "Cumulative Proportion")
+
+    pca_res$PC <- factor(pca_res$PC, levels = pca_res$PC)
+
+    g1<-ggplot(pca_res, aes(x=PC, y=Proportion)) +
+      geom_bar(stat="identity", fill="steelblue") +
+      geom_text(aes(label=Proportion), vjust=-0.3, size=3.5) +
+      scale_y_continuous(labels = scales::percent) +
+      labs(x = "Principal Components", y = "Proportion of Variance", title = "Proportion of Variance Explained by Each PC") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+    g2<-ggplot(pca_res, aes(x=PC, y=Cumulative)) + 
+      geom_bar(stat="identity", fill="steelblue") +
+      geom_text(aes(label=Cumulative), vjust=-0.3, size=3.5) +
+      scale_y_continuous(labels = scales::percent) +
+      labs(x = "Principal Components", y = "Cumulative Proportion of Variance", title = "Cumulative Proportion of Variance Explained by PCs") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  
+
+    g<-ggdraw() +
+      draw_plot(g1, x = 0, y = .5, width = 1, height = .5) +
+      draw_plot(g2, x = 0, y = 0, width = 1, height = .5)
+
+    ggsave(paste0(filename, ".bar.png"), g, width = 8, height = 8, dpi = 300, units = "in", bg="white")
+
     supca<-summary(pca)$importance
     pcadata<-data.frame(pca$x)
     if (scalePCs) {
