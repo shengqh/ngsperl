@@ -42,6 +42,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
 
   add_individual_qc_tasks
 
+  add_individual_dynamic_qc
+
   add_gliph2
 
   add_group_umap
@@ -1294,7 +1296,7 @@ sub addEdgeRTask {
     "reduction" => $reduction,
   };
 
-  my $edgeRtaskname  = defined $celltype_task ? $celltype_task . "_edgeR" : "seurat_edgeR";
+  my $edgeRtaskname  = defined $celltype_task ? $celltype_task . "_edgeR" : $cluster_task . "_edgeR";
   my $groups         = undef;
   my $pairs          = undef;
   my $curClusterName = undef;
@@ -1328,8 +1330,6 @@ sub addEdgeRTask {
       $edgeRtaskname = $edgeRtaskname . "_byCell";
     }
     else {
-      $rCodeDic->{"filter_minTPM"}=getValue( $def, "DE_by_sample_filter_minTPM" );
-      $rCodeDic->{"filter_samplePercentage"}=getValue( $def, "DE_by_sample_filter_cellPercentage" );
       $rCodeDic->{"filter_min_cell_per_sample"}=getValue( $def, "DE_by_sample_min_cell_per_sample" );
       $edgeRtaskname = $edgeRtaskname . "_bySample";
       $edgeRscript = "../scRNA/edgeR_pseudo.r";
@@ -1367,7 +1367,9 @@ sub addEdgeRTask {
     $config->{$edgeRtaskname}{parameterFile1} = $cluster_task;
   }else{
     $config->{$edgeRtaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
-    $config->{$edgeRtaskname}{parameterFile2_ref} = [ $celltype_task, $celltype_cluster_file ];
+    if(defined $celltype_task){
+      $config->{$edgeRtaskname}{parameterFile2_ref} = [ $celltype_task, $celltype_cluster_file ];
+    }
   }
   push( @$summary, $edgeRtaskname );
 
@@ -1396,7 +1398,9 @@ sub addEdgeRTask {
     $config->{$vistaskname}{parameterFile1_ref} = $cluster_task;
   }else{
     $config->{$vistaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
-    $config->{$vistaskname}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
+    if(defined $celltype_task){
+      $config->{$vistaskname}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
+    }
   }
 
   push( @$summary, $vistaskname );
@@ -1580,7 +1584,7 @@ sub addComparison {
 }
 
 sub addDynamicCluster {
-  my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample) = @_;
+  my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column) = @_;
 
   my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".iter_png.csv,.scDynamic.meta.rds";
   my $rmd_ext = $by_individual_sample ? ".dynamic_call_individual.html":".dynamic_call.html";
@@ -1619,6 +1623,7 @@ sub addDynamicCluster {
       layer                 => getValue( $def, "dynamic_layer", "Layer4"),
       reduction             => $reduction,
       by_individual_sample  => $by_individual_sample,
+      by_column => $by_column,
     },
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
@@ -2454,6 +2459,101 @@ sub add_individual_qc {
   }
   
   push( @$summary, $individual_qc_task );
+}
+
+sub add_individual_dynamic_qc {
+  my ($config, $def, $summary, $target_dir, $individual_dynamic_qc_task, $qc_filter_config_file, $qc_files_ref, $essential_gene_task) = @_;
+
+  if(!defined $qc_filter_config_file){
+    $qc_filter_config_file = "";
+  }
+  
+  if(!defined $qc_files_ref){
+    if(defined $def->{qc_files}){
+      $qc_files_ref = "qc_files";
+      $config->{qc_files} = $def->{qc_files};
+    }else{
+      $qc_files_ref = "files";
+    }
+  }
+
+  my $class = "CQS::IndividualR";
+  my $output_object = 1;
+  my $rtemplate = "../scRNA/individual_dynamic_qc.r";
+
+  $config->{$individual_dynamic_qc_task} = {
+    class => $class,
+    target_dir => "${target_dir}/${individual_dynamic_qc_task}",
+    rtemplate => $rtemplate,
+    rReportTemplate => "../scRNA/individual_dynamic_qc.Rmd;reportFunctions.R;../scRNA/markerCode_filter.R;../scRNA/scRNA_func.r",
+    run_rmd_independent => 1,
+    rmd_ext => ".individual_dynamic_qc.html",
+    option => "",
+    parameterSampleFile1_ref => $qc_files_ref,
+    parameterSampleFile2 => {
+      email => $def->{email},
+      task_name             => getValue( $def, "task_name" ),
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      species               => getValue( $def, "species" ),
+      db_markers_file       => getValue( $def, "markers_file" ),
+      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+      annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+      remove_subtype => getValue( $def, "remove_subtype", ""),
+      HLA_panglao5_file => getValue( $def, "HLA_panglao5_file", "" ),
+      tcell_markers_file => getValue( $def, "tcell_markers_file", ""),
+      bubblemap_file => $def->{bubblemap_file},
+      bubblemap_width => $def->{bubblemap_width},
+      bubblemap_height => $def->{bubblemap_height},
+      bubblemap_use_order => getValue($def, "bubblemap_use_order", 0),
+      summary_layer_file => $def->{summary_layer_file},
+      best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
+      dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", 0.2 ),
+      redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
+      layer                 => getValue( $def, "dynamic_layer", "Layer4"),
+
+      Mtpattern             => getValue( $def, "Mtpattern" ),
+      rRNApattern           => getValue( $def, "rRNApattern" ),
+      Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+      Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+      mt_cutoff             => getValue( $def, "mt_cutoff" ),
+    },
+    parameterSampleFile4 => getValue($def, "dynamic_combine_cell_types", {}),
+    parameterFile1 => $qc_filter_config_file,
+    parameterFile3_ref => $essential_gene_task,
+    output_file_ext => ".obj.rds",
+    samplename_in_result => 1,
+    can_result_be_empty_file => 0,
+    remove_empty_parameter => 1,
+    sh_direct => 0,
+    pbs => {
+      "nodes" => "1:ppn=1",
+      "walltime" => "10",
+      "mem" => getValue($def, "qc_mem", "80gb"),
+    },
+  };
+
+  if($qc_filter_config_file ne ""){
+    if( ! -e $qc_filter_config_file){
+      open(my $qc, '>', $qc_filter_config_file) or die $!;
+      print $qc "sample,nFeature_cutoff_min,nFeature_cutoff_max,nCount_cutoff,mt_cutoff,cluster_remove\n";
+      my $files = $def->{files};
+      for my $fname (sort keys %$files){
+        print $qc "$fname," . 
+                  getValue( $def, "nFeature_cutoff_min" ) . "," . 
+                  getValue( $def, "nFeature_cutoff_max" ) . "," . 
+                  getValue( $def, "nCount_cutoff" ) . "," .
+                  getValue( $def, "mt_cutoff" ) . ",\n";
+      }
+      close($qc);
+    }
+  }
+  
+  push( @$summary, $individual_dynamic_qc_task );
 }
 
 sub add_sctk {
