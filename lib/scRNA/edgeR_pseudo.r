@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P8256'
+outFile='AS_multiome'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_03_choose/result/P8256.final.rds'
-parFile2='/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_03_choose/result/P8256.meta.rds'
+parFile1='/nobackup/shah_lab/shengq2/20230726_Vandy_AS_from_Michelle/AS_Tiger/rds_objects/subclusters_for_DE/subcluster_endothelial.rds'
+parFile2=''
 parFile3=''
 
 
-setwd('/scratch/cqs/shengq2/ravi_shah_projects/20230319_validate_code/seurat_merge_dr0.5_03_choose_edgeR_inCluster_bySample/result')
+setwd('/nobackup/shah_lab/shengq2/20231110_AS_multiome_Michelle_subcluster/endothelial_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -23,8 +23,6 @@ library(data.table)
 options_table<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 bBetweenCluster<-is_one(myoptions$bBetweenCluster)
-filter_cellPercentage<-as.numeric(myoptions$filter_cellPercentage)
-filter_minTPM<-as.numeric(myoptions$filter_minTPM)
 pvalue<-as.numeric(myoptions$pvalue)
 foldChange<-as.numeric(myoptions$foldChange)
 useRawPvalue<-is_one(myoptions$useRawPvalue)
@@ -33,11 +31,15 @@ min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
 
 if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
+  obj@meta.data[,cluster_name]<-gsub("^\\s+", "", obj@meta.data[,cluster_name])
+  if(!is.null(myoptions$sample_column)){
+    obj$orig.ident = obj@meta.data[,myoptions$sample_column]
+  }
 }
 
 if(1){
   meta<-obj@meta.data
-  mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
+  mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
   colnames(mt)<-c("cell_type", "sample", "num_cell")
   write.csv(mt, paste0(outFile, ".num_cell.csv"), row.names=F)
 
