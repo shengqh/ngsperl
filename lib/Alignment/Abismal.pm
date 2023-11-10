@@ -56,11 +56,14 @@ sub perform {
     my @sample_files = @{ $raw_files{$sample_name} };
     my $sample_files_str = ( scalar(@sample_files) == 2 ) ? "-1 " . $sample_files[0] . " -2 " . $sample_files[1]: "-1 " . $sample_files[0];
 
-    my $raw_bam          = $sample_name . ".raw.bam";
-    my $sorted_bam          = $sample_name . ".sorted.bam";
+    my $raw_bam = $sample_name . ".raw.bam";
+    my $sorted_bam = $sample_name . ".sorted.bam";
     my $result_file_addqual     = $sample_name . ".sorted.addqual.sam";
     my $result_file_addqual_bam     = $sample_name . ".sorted.addqual.bam";
     my $result_file_addqual_bai     = $sample_name . ".sorted.addqual.bam.bai";
+
+    my $uniq_bam = $sample_name . ".uniq.bam";
+
     my $map_stat                 = $sample_name . ".mapstats";
 
     my $hs_metrics               = $sample_name . "_hs_metrics.txt";
@@ -76,7 +79,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $rmlist = "";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $raw_bam );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $uniq_bam );
 
 		foreach my $sampleFile (@sample_files) {
 			print $pbs "
@@ -90,9 +93,23 @@ fi
     $sample_files_str = ( scalar(@sample_files) == 2 ) ? " " . $sample_files[0] . " " . $sample_files[1]: " " . $sample_files[0];
 	
     print $pbs "
-if [[ ! -s $raw_bam ]]; then
-  echo abismal=`date`
-  $dnmtools_command abismal -B -t $thread -i $abismal_index -s $map_stat $sample_files_str -o $raw_bam
+if [[ ! -s ${sample_name}.uniq.bam ]]; then
+  if [[ ! -s $raw_bam ]]; then
+    echo abismal=`date`
+    $dnmtools_command abismal -B -t $thread -i $abismal_index -s $map_stat $sample_files_str -o $raw_bam
+  fi
+
+  if [ ! -s ${sample_name}.formatted.bam ]; then
+    echo dnmtools format=`date`
+    $dnmtools_command format -t $thread -B -f abismal -stdout $raw_bam | samtools sort -@ thread -o ${sample_name}.formatted.sorted.bam
+  fi
+
+  echo dnmtools uniq=`date`
+  $dnmtools_command uniq -t $thread -B -S ${sample_name}.uniq.bam.dupstats ${sample_name}.formatted.sorted.bam ${sample_name}.uniq.bam
+
+  if [[ -s ${sample_name}.uniq.bam ]]; then
+    rm ${sample_name}.formatted.sorted.bam
+  fi
 fi
 
 if [[ -s $raw_bam && ! -s ${sample_name}.rrbs_summary_metrics ]]; then
@@ -133,10 +150,12 @@ if [[ -s $raw_bam && ! -s ${sample_name}.rrbs_summary_metrics ]]; then
         I=$result_file_addqual_bam \\
         M=$sample_name \\
         R=$chr_fasta
+
+      gzip ${sample_name}.rrbs_detail_metrics
     fi
 
     if [[ -s ${sample_name}.rrbs_summary_metrics ]]; then
-      rm -f $result_file_addqual_bam $result_file_addqual_bai
+      rm -f $result_file_addqual_bam $result_file_addqual_bai $raw_bam
     fi
   fi
 fi";
@@ -162,7 +181,8 @@ sub result {
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
-    push( @result_files, "${result_dir}/${sample_name}.raw.bam" );
+    push( @result_files, "${result_dir}/${sample_name}.uniq.bam" );
+    push( @result_files, "${result_dir}/${sample_name}.uniq.bam.dupstats" );
     push( @result_files, "${result_dir}/${sample_name}.mapstats" );
     push( @result_files, "${result_dir}/${sample_name}_hs_metrics.txt" );
     push( @result_files, "${result_dir}/${sample_name}.rrbs_summary_metrics" );

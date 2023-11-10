@@ -5,12 +5,12 @@ parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/h_cqs/shengq2/temp/20231027_10473_WGBS_real/MethylKitCorr/result/P10473.filtered.cpg.meth.rds'
+parFile1='/nobackup/h_cqs/shengq2/temp/20231030_10473_WGBS_real/MethylKitCorr/result/P10473.filtered.cpg.meth.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/shengq2/temp/20231027_10473_WGBS_real/MethylKitDiff/result/B_vs_A')
+setwd('/nobackup/h_cqs/shengq2/temp/20231030_10473_WGBS_real/MethylKitDiff/result/B_vs_A')
 
 ### Parameter setting end ###
 
@@ -57,18 +57,19 @@ sub_diff <- calculateDiffMeth(sub_obj,
                               adjust = "BH",
                               test = "fast.fisher",
                               mc.cores = ncore)
-saveRDS(sub_diff, file = paste0(comps, "_test.rds"))
+saveRDS(sub_diff, file = paste0(comparison, "_test.rds"))
 
 diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
 diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", grp1), paste0("hypo_in_", grp2))
-saveRDS(diff_res, file = paste0(comps, "_methyldiff.rds"))
+saveRDS(diff_res, file = paste0(comparison, "_methyldiff.rds"))
 
 diff_res_grp2 <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hypo")
 diff_res_grp2$direction <- paste0("hypo_in_", grp2)
 diff_res_grp2 <- diff_res_grp2[order(diff_res_grp2$meth.diff),]
-write.table(diff_res_grp2, file = paste0(comps, "_", grp2, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+write.table(diff_res_grp2, file = paste0(comparison, "_", grp2, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
 
 diff_res_grp1 <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hyper")
 diff_res_grp1$direction <- paste0("hypo_in_", grp1)
 diff_res_grp1 <- diff_res_grp1[order(diff_res_grp1$meth.diff),]
-write.table(diff_res_grp1, file = paste0(comps, "_", grp1, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+write.table(diff_res_grp1, file = paste0(comparison, "_", grp1, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+

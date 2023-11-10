@@ -117,7 +117,7 @@ sub getConfig {
     option        => "",
     chr_fasta       => $chr_fasta,
     chr_size_file => $chr_size_file,
-    source_ref    => ["abismal", ".raw.bam"],
+    source_ref    => ["abismal", ".uniq.bam"],
     dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
     docker_prefix => "dnmtools_",
     pbs           => {

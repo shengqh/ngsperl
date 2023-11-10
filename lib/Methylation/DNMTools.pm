@@ -70,30 +70,16 @@ sub perform {
     print $pbs "
 echo DNMTools=`date`
 
-if [ ! -s ${sample_name}.uniq.bam ]; then
-  if [ ! -s ${sample_name}.formatted.bam ]; then
-    echo dnmtools format=`date`
-    $dnmtools_command format -t $thread -B -f abismal -stdout $sampleFile | samtools sort -@ thread -o ${sample_name}.formatted.sorted.bam
-  fi
-
-  echo dnmtools uniq=`date`
-  $dnmtools_command uniq -t $thread -B -S ${sample_name}.uniq.bam.dupstats ${sample_name}.formatted.sorted.bam ${sample_name}.uniq.bam
-
-  if [[ -s ${sample_name}.uniq.bam ]]; then
-    rm ${sample_name}.formatted.sorted.bam
-  fi
-fi
-
 if [ ! -s ${sample_name}.bsrate ]; then
   echo dnmtools bsrate=`date`
-  $dnmtools_command bsrate -t $thread -c $chr_fasta -o ${sample_name}.bsrate ${sample_name}.uniq.bam 
+  $dnmtools_command bsrate -t $thread -c $chr_fasta -o ${sample_name}.bsrate $sampleFile
 fi
 
 if [ ! -s ${sample_name}.cpg.meth ]; then
   if [ ! -s ${sample_name}.all.meth ]; then 
     #output cpg only
     echo dnmtools counts=`date`
-    $dnmtools_command counts -t $thread -c $chr_fasta -o ${sample_name}.all.meth ${sample_name}.uniq.bam
+    $dnmtools_command counts -t $thread -c $chr_fasta -o ${sample_name}.all.meth $sampleFile
   fi
 
   if [ ! -s ${sample_name}.levels ]; then
@@ -109,42 +95,11 @@ if [ ! -s ${sample_name}.cpg.meth ]; then
   fi
 fi
 
-if [ ! -s ${sample_name}.hmr ]; then
-  echo dnmtools hmr=`date`
-  $dnmtools_command hmr -o ${sample_name}.hmr -p ${sample_name}.hmrparams ${sample_name}.cpg.meth
-fi
-
-# No pmr in dnmtools 1.4.1
-# if [ ! -s ${sample_name}.pmr ]; then
-#   echo dnmtools pmr=`date`
-#   $dnmtools_command hmr -partial -o ${sample_name}.pmr -p ${sample_name}.pmrparams ${sample_name}.cpg.meth
-# fi
-
-if [ ! -s ${sample_name}.pmd ]; then
-  echo dnmtools pmd=`date`
-  $dnmtools_command pmd -o ${sample_name}.pmd -p ${sample_name}.pmdparams ${sample_name}.cpg.meth
-fi
-
-if [ ! -s ${sample_name}.epiread ]; then
-  echo dnmtools states=`date`
-  $dnmtools_command states -t $thread -c $chr_fasta -o ${sample_name}.epiread ${sample_name}.uniq.bam
-fi
-
-if [ ! -s ${sample_name}.allelic ]; then
-  echo dnmtools allelic=`date`
-  $dnmtools_command allelic -c $chr_fasta -o ${sample_name}.allelic ${sample_name}.epiread
-fi
-
-if [ ! -s ${sample_name}.amr ]; then
-  echo dnmtools amrfinder=`date`
-  $dnmtools_command amrfinder -c $chr_fasta -o ${sample_name}.amr ${sample_name}.epiread
-fi
-
-if [ ! -s ${sample_name}.read.bw ]; then
+if [ ! -s ${sample_name}.cpg.read.bw ]; then
   echo DNMTools To Tracks=`date`
-  awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$6}' < ${sample_name}.cpg.meth > ${sample_name}.read.bw.tmp 
-  wigToBigWig ${sample_name}.read.bw.tmp $chrSizeFile ${sample_name}.read.bw
-  rm ${sample_name}.read.bw.tmp
+  awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$6}' < ${sample_name}.cpg.meth > ${sample_name}.cpg.read.bw.tmp 
+  wigToBigWig ${sample_name}.cpg.read.bw.tmp $chrSizeFile ${sample_name}.cpg.read.bw
+  rm ${sample_name}.cpg.read.bw.tmp
 fi
 
 if [ ! -s ${sample_name}.cpg.meth.bw ]; then
@@ -153,29 +108,58 @@ if [ ! -s ${sample_name}.cpg.meth.bw ]; then
   rm ${sample_name}.cpg.meth.bw.tmp 
 fi
 
-if [ ! -s ${sample_name}.allelic.bw ]; then
-  awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$5}' < ${sample_name}.allelic > ${sample_name}.alle.bw.tmp 
-  wigToBigWig ${sample_name}.alle.bw.tmp $chrSizeFile ${sample_name}.allelic.bw
-  rm ${sample_name}.alle.bw.tmp 
-fi
-
-if [ ! -s ${sample_name}.hmr.bb ]; then
-  cut -f 1-3 ${sample_name}.hmr > ${sample_name}.hmr.tmp
-  bedToBigBed ${sample_name}.hmr.tmp $chrSizeFile ${sample_name}.hmr.bb
-  rm  ${sample_name}.hmr.tmp
-fi
-
-# if [ ! -s ${sample_name}.pmr.bb ]; then
-#   cut -f 1-3 ${sample_name}.pmr > ${sample_name}.pmr.tmp
-#   bedToBigBed ${sample_name}.pmr.tmp $chrSizeFile ${sample_name}.pmr.bb
-#   rm  ${sample_name}.pmr.tmp
+# No pmr in dnmtools 1.4.1
+# if [ ! -s ${sample_name}.cpg.pmr ]; then
+#   echo dnmtools pmr=`date`
+#   $dnmtools_command pmr -partial -o ${sample_name}.cpg.pmr -p ${sample_name}.cpg.pmrparams ${sample_name}.cpg.meth
+# fi
+#
+# if [ ! -s ${sample_name}.cpg.pmr.bb ]; then
+#   cut -f 1-3 ${sample_name}.cpg.pmr > ${sample_name}.cpg.pmr.tmp
+#   bedToBigBed ${sample_name}.cpg.pmr.tmp $chrSizeFile ${sample_name}.cpg.pmr.bb
+#   rm  ${sample_name}.cpg.pmr.tmp
 # fi
 
-if [ ! -s ${sample_name}.pmd.bb ]; then
-  cut -f 1-3 ${sample_name}.pmd > ${sample_name}.pmd.tmp
-  bedToBigBed ${sample_name}.pmd.tmp $chrSizeFile ${sample_name}.pmd.bb
-  rm  ${sample_name}.pmd.tmp
+if [ ! -s ${sample_name}.cpg.hmr ]; then
+  echo dnmtools hmr=`date`
+  $dnmtools_command hmr -o ${sample_name}.cpg.hmr -p ${sample_name}.cpg.hmrparams ${sample_name}.cpg.meth
 fi
+
+if [ ! -s ${sample_name}.cpg.hmr.bb ]; then
+  cut -f 1-3 ${sample_name}.cpg.hmr > ${sample_name}.cpg.hmr.tmp
+  bedToBigBed ${sample_name}.cpg.hmr.tmp $chrSizeFile ${sample_name}.cpg.hmr.bb
+  rm  ${sample_name}.cpg.hmr.tmp
+fi
+
+if [ ! -s ${sample_name}.cpg.pmd ]; then
+  echo dnmtools pmd=`date`
+  $dnmtools_command pmd -o ${sample_name}.cpg.pmd -p ${sample_name}.cpg.pmdparams ${sample_name}.cpg.meth
+fi
+
+if [ ! -s ${sample_name}.cpg.pmd.bb ]; then
+  cut -f 1-3 ${sample_name}.cpg.pmd > ${sample_name}.cpg.pmd.tmp
+  bedToBigBed ${sample_name}.cpg.pmd.tmp $chrSizeFile ${sample_name}.cpg.pmd.bb
+  rm  ${sample_name}.cpg.pmd.tmp
+fi
+
+if [ ! -s ${sample_name}.epiread ]; then
+  echo dnmtools states=`date`
+  $dnmtools_command states -t $thread -c $chr_fasta -o ${sample_name}.epiread $sampleFile
+fi
+
+if [ ! -s ${sample_name}.allelic.bw ]; then
+  echo dnmtools allelic=`date`
+  $dnmtools_command allelic -c $chr_fasta ${sample_name}.epiread | awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$5}' > ${sample_name}.alle.bw.tmp 
+  wigToBigWig ${sample_name}.alle.bw.tmp $chrSizeFile ${sample_name}.allelic.bw
+  rm ${sample_name}.alle.bw.tmp
+fi
+
+if [ ! -s ${sample_name}.amr ]; then
+  echo dnmtools amrfinder=`date`
+  $dnmtools_command amrfinder -c $chr_fasta -o ${sample_name}.amr ${sample_name}.epiread
+fi
+
+rm ${sample_name}.epiread
 
 $dnmtools_command | grep Version | cut -d ' ' -f 2 | awk '{print \"dnmtools,v\"\$1}' > ${sample_name}.dnmtools.version
 ";
@@ -203,15 +187,14 @@ sub result {
     push( @result_files, "${result_dir}/${sample_name}.levels" );
     #push( @result_files, "${result_dir}/${sample_name}.all.meth" );
     push( @result_files, "${result_dir}/${sample_name}.cpg.meth" );
-    push( @result_files, "${result_dir}/${sample_name}.hmr" );
+    push( @result_files, "${result_dir}/${sample_name}.cpg.hmr" );
     #no pmr in dnmtools 1.4.1+
-    #push( @result_files, "${result_dir}/${sample_name}.pmr" );
-    push( @result_files, "${result_dir}/${sample_name}.pmd" );
+    #push( @result_files, "${result_dir}/${sample_name}.cpg.pmr" );
+    push( @result_files, "${result_dir}/${sample_name}.cpg.pmd" );
     push( @result_files, "${result_dir}/${sample_name}.amr" );
     
     
     push( @result_files, "${result_dir}/${sample_name}.bsrate" );
-    push( @result_files, "${result_dir}/${sample_name}.uniq.bam.dupstats" );
     
     push( @result_files, "${result_dir}/${sample_name}.dnmtools.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );

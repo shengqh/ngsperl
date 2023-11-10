@@ -281,7 +281,7 @@ include_graphics(cov_png)
 
 ```{r dup_summary}
 pat <- ".bam.dupstats$"
-files <- read.table('fileList6.txt', sep="\t")
+files <- read.table('fileList5.txt', sep="\t")
 files = files[grepl(pat, files$V1),]
 stopifnot(nrow(files) > 0)
 DT <- list()
