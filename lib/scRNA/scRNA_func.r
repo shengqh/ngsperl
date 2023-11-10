@@ -1482,7 +1482,7 @@ get_top10_markers<-function(markers){
 }
 
 factorize_layer<-function(obj, layer){
-  ldata<-unlist(obj[[layer]])
+  ldata<-as.character(unlist(obj[[layer]]))
   lt=table(ldata)
   lt<-lt[order(lt, decreasing=T)]
   levels=names(lt)
@@ -1620,7 +1620,13 @@ sumcount<-function(ct_count, groupings){
 
 get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1){
   clusterDf<-obj@meta.data
-  cts = as.character(unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name]))
+  if("seurat_clusters" %in% colnames(clusterDf)){
+    cts = as.character(unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name]))
+  }else{
+    tbl = table(clusterDf[,cluster_name])
+    tbl = tbl[order(tbl, decreasing = T)]
+    cts = names(tbl)
+  }
   prefixList<-celltype_to_filename(cts)
 
   res_files=c()
@@ -2283,4 +2289,477 @@ get_barplot<-function(
   }
   
   return(g)
+}
+
+h5ad_to_h5seurat <- function(h5ad_file){
+  library(Seurat)
+  library(SeuratData)
+  library(SeuratDisk)
+  library(hdf5r)
+
+  Convert(h5ad_file, dest = "h5seurat")
+  h5seurat_file <- gsub(".h5ad$", ".h5seurat", h5ad_file)
+
+  #https://github.com/mojaveazure/seurat-disk/issues/109
+  f <- H5File$new(h5seurat_file, "r+")
+  groups <- f$ls(recursive = TRUE)
+
+  for (name in groups$name[grepl("categories", groups$name)]) {
+    names <- strsplit(name, "/")[[1]]
+    names <- c(names[1:length(names) - 1], "levels")
+    new_name <- paste(names, collapse = "/")
+    f[[new_name]] <- f[[name]]
+  }
+
+  for (name in groups$name[grepl("codes", groups$name)]) {
+    names <- strsplit(name, "/")[[1]]
+    names <- c(names[1:length(names) - 1], "values")
+    new_name <- paste(names, collapse = "/")
+    f[[new_name]] <- f[[name]]
+    grp <- f[[new_name]]
+    grp$write(args = list(1:grp$dims), value = grp$read() + 1)
+  }
+
+  f$close_all()
+}
+
+read_object_from_rawfile<-function(sample_name, file_path, species, ensembl_map=NULL){
+  cat("reading", sample_name, ":", file_path, "\n")
+  lst = read_scrna_data(file_path, keep_seurat=TRUE)
+
+  counts = lst$counts  
+  adt.counts = lst$adt.counts
+
+  if(is_seurat_object(counts)){
+    sobj<-counts
+    rm(counts)
+
+    sobj$orig.ident = sample_name
+  }else{
+    rs<-rowSums(counts)
+    counts<-counts[rs>0,]
+
+    if(!is.null(ensembl_map)){
+      gtf_counts<-counts[!(rownames(counts) %in% names(ensembl_map)),]
+      ensembl_counts<-counts[(rownames(counts) %in% names(ensembl_map)),]
+      gene_names<-unlist(ensembl_map[rownames(ensembl_counts)])
+      gene_counts<-DelayedArray::rowsum(ensembl_counts, gene_names)
+      counts<-rbind(gtf_counts, gene_counts)
+    }
+
+    if (species=="Mm") {
+      rownames(counts)<-toMouseGeneSymbol(rownames(counts))
+    }
+    if (species=="Hs") {
+      rownames(counts)<-toupper(rownames(counts))
+    }
+    sobj = CreateSeuratObject(counts = counts, project = sample_name)
+    sobj$orig.ident <- sample_name
+    rm(counts)
+  }
+  return(sobj)
+}
+
+
+iterate_celltype<-function(obj, 
+                           previous_celltypes, 
+                           previous_layer, 
+                           iter_name, 
+                           cur_layermap, 
+                           npcs, 
+                           resolution, 
+                           random.seed, 
+                           by_sctransform, 
+                           by_harmony, 
+                           curprefix, 
+                           iter, 
+                           vars.to.regress,
+                           bubblemap_file, 
+                           essential_genes){
+  meta = obj@meta.data
+  
+  assay=ifelse(by_sctransform, "SCT", "RNA")
+
+  files = get_empty_files()
+  
+  all_cur_cts<-NULL
+  pct<-previous_celltypes[length(previous_celltypes)]
+  
+  #previous_celltypes<-c("Platelets")
+  for(pct in previous_celltypes){
+    pct_str = celltype_to_filename(pct)
+
+    key = paste0("iter", iter, ": ", pct, ":")
+    cells<-rownames(meta)[meta[,previous_layer] == pct]
+    if(length(cells) == 0){#no cell left for this cell type
+      next
+    }
+    
+    subobj<-subset(obj, cells=cells)
+
+    subobj[["oumap"]] = subobj[["umap"]]
+    
+    stopifnot(all(subobj[[previous_layer]] == pct))
+    
+    pca_npcs<-min(round(length(cells)/2), 50)
+    cur_npcs=min(pca_npcs, npcs)
+    cur_pca_dims=1:cur_npcs
+
+    k_n_neighbors<-min(cur_npcs, 20)
+    u_n_neighbors<-min(cur_npcs, 30)
+
+    DefaultAssay(subobj)<-assay
+
+    curreduction=ifelse(by_harmony, "harmony", "pca")
+
+    if(pct != "Unassigned") {
+      subobj = sub_cluster(subobj = subobj, 
+                            assay =  assay, 
+                            by_sctransform = by_sctransform, 
+                            by_harmony = by_harmony, 
+                            redo_harmony = redo_harmony,
+                            curreduction = curreduction, 
+                            k_n_neighbors = k_n_neighbors,
+                            u_n_neighbors = u_n_neighbors,
+                            random.seed = random.seed,
+                            resolutions = resolution,
+                            cur_npcs = cur_npcs, 
+                            cur_pca_dims = cur_pca_dims,
+                            vars.to.regress = vars.to.regress,
+                            essential_genes = essential_genes
+                            )
+    }else{
+      cat(key, "FindNeighbors\n")
+      subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
+
+      cat(key, "FindClusters\n")
+      subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolution, verbose=FALSE)
+    }
+    
+    cat(key, "Cell type annotation\n")
+    cur_cts<-subobj[[previous_layer]]
+
+    cluster<-"seurat_clusters"
+    data_norm=get_seurat_average_expression(subobj, cluster)
+    
+    predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
+    
+    cta_rds_file=paste0(curprefix, ".", pct_str, ".cta.rds")
+    saveRDS(predict_celltype, cta_rds_file)
+    files<-rbind(files, c(previous_layer, iter_name, pct, "cta_rds", cta_rds_file))
+
+    if(length(predict_celltype$max_cta) > 1){
+      cta_png_file=paste0(curprefix, ".", pct_str, ".cta.png")
+      Plot_predictcelltype_ggplot2( predict_celltype, 
+                            filename=cta_png_file)
+      files<-rbind(files, c(previous_layer, iter_name, pct, "cta_png", cta_png_file))
+    }
+
+    new_cluster_ids<-names(predict_celltype$max_cta)
+    
+    cur_cts<-cbind_celltype(subobj, data_norm, cluster, new_cluster_ids, cur_layermap, cur_cts)
+    stopifnot(all(colnames(subobj) == rownames(cur_cts)))
+    subobj = AddMetaData(subobj, cur_cts$seurat_clusters, "seurat_clusters")
+    subobj = AddMetaData(subobj, cur_cts$cell_type, "cell_type")
+    subobj = AddMetaData(subobj, cur_cts$seurat_cell_type, "seurat_cell_type")
+    subobj = AddMetaData(subobj, cur_cts$raw_cell_type, "raw_cell_type")
+    subobj = AddMetaData(subobj, cur_cts$raw_seurat_cell_type, "raw_seurat_cell_type")
+    
+    #using RNA assay for visualization
+    DefaultAssay(subobj)<-assay
+
+    if(pct == "Unassigned"){
+      g0<-MyDimPlot(obj, label=F, group.by=previous_layer) + ggtitle(pct)
+    }else{
+      g0<-MyDimPlot(obj, label=F, cells.highlight =cells) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
+    }
+    g1<-get_dim_plot_labelby(subobj, reduction="oumap", label.by="cell_type") + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle("New cell type in old UMAP")
+    g2<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="raw_seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat raw cell type in old UMAP")
+    g3<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat cell type in old UMAP")
+    g<-g0+g1+g2+g3+plot_layout(nrow=2)
+    umap_celltype_file = paste0(curprefix, ".", pct_str, ".old_umap.png")
+    png(umap_celltype_file, width=4600, height=4000, res=300)
+    print(g)
+    dev.off()
+
+    files<-rbind(files, c(previous_layer, iter_name, pct, "old_umap", umap_celltype_file))
+
+    if(pct != "Unassigned"){
+      g1<-get_dim_plot(subobj, group.by="seurat_clusters", label.by="raw_seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Raw cell type in new UMAP")
+      g2<-get_dim_plot(subobj, group.by="seurat_clusters", label.by="seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat cell type in new UMAP")
+
+      g<-g1+g2+plot_layout(nrow=1)
+      umap_cluster_file = paste0(curprefix, ".", pct_str, ".new_umap.png")
+      png(umap_cluster_file, width=4600, height=2000, res=300)
+      print(g)
+      dev.off()
+      files<-rbind(files, c(previous_layer, iter_name, pct, "new_umap", umap_cluster_file))
+    }
+
+    if(pct == "Unassigned"){
+      g<-get_bubble_plot(obj = subobj, 
+        bubblemap_file = bubblemap_file, 
+        group.by = "raw_seurat_cell_type")
+    }else{
+      g<-get_sub_bubble_plot(obj, previous_layer, subobj, "raw_seurat_cell_type", bubblemap_file)
+    }
+    dot_file = paste0(curprefix, ".", pct_str, ".dot.png")
+    png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, cluster), res=300)
+    print(g)
+    dev.off()
+    files<-rbind(files, c(previous_layer, iter_name, pct, "dot", dot_file))
+
+    all_cur_cts<-rbind(all_cur_cts, cur_cts)
+    
+    # if(previous_layer == "layer0"){
+    #   obj[['umap']] = subobj[['umap']]
+    # }
+    rm(subobj)
+  }
+  colnames(files)<-colnames(get_empty_files())
+  return(list("all_cur_cts"=all_cur_cts, "files"=files))
+}
+
+layer_cluster_celltype<-function(obj, 
+                                 previous_layer, 
+                                 cur_layer, 
+                                 cur_layermap, 
+                                 npcs, 
+                                 resolution, 
+                                 random.seed, 
+                                 by_sctransform, 
+                                 by_harmony, 
+                                 prefix, 
+                                 vars.to.regress,
+                                 bubblemap_file,
+                                 essential_genes){
+  meta<-obj@meta.data
+  
+  previous_celltypes<-unique(meta[[previous_layer]])
+
+  files = get_empty_files()
+
+  if(length(previous_celltypes) > 0){
+    cat("cluster and annotate cell types:", paste0(previous_celltypes, ", "))
+    iter = 1
+    while(TRUE){
+      cat("Iteration ", iter, "\n")
+      
+      iter_name=paste0("iter", iter)
+
+      previous_celltypes<-previous_celltypes[order(previous_celltypes)]
+      
+      curprefix = paste0(prefix, ".iter", iter)
+
+      iter_meta_file = paste0(curprefix, ".csv")
+      iter_meta_rds = paste0(curprefix, ".rds")
+
+      cat("  Call iterate_celltype ...\n")
+      lst<-iterate_celltype(obj, 
+                            previous_celltypes, 
+                            previous_layer, 
+                            iter_name, 
+                            cur_layermap, 
+                            npcs, 
+                            resolution, 
+                            random.seed, 
+                            by_sctransform, 
+                            by_harmony, 
+                            curprefix, 
+                            iter, 
+                            vars.to.regress,
+                            bubblemap_file, 
+                            essential_genes)
+
+      all_cur_cts<-lst$all_cur_cts
+      cur_files<-lst$files
+
+      files<-rbind(files, cur_files)
+      
+      stopifnot(all(rownames(all_cur_cts) %in% colnames(obj)))
+      
+      iter_clusters = paste0(iter_name, "_clusters")
+      iter_raw = paste0(iter_name, "_raw")
+
+      obj[[iter_name]] = obj[[previous_layer]]
+      obj[[iter_clusters]] = obj[[paste0(previous_layer, "_clusters")]]
+      obj[[iter_raw]] = obj[[paste0(previous_layer, "_raw")]]
+
+      obj@meta.data[rownames(all_cur_cts), iter_name]=unlist(all_cur_cts[, "cell_type"])
+      obj@meta.data[rownames(all_cur_cts), iter_clusters]=unlist(as.character(all_cur_cts[, "seurat_clusters"]))
+      obj@meta.data[rownames(all_cur_cts), iter_raw]=unlist(all_cur_cts[, "raw_cell_type"])
+      
+      pre_disagree<-all_cur_cts[all_cur_cts[, previous_layer] != all_cur_cts[,'cell_type'],,drop=F]
+      if(nrow(pre_disagree) > 0){
+        cat("Found unmatched cell type\n")
+        print(table(pre_disagree[,previous_layer], pre_disagree$cell_type))
+        write.csv(obj@meta.data, iter_meta_file)
+        saveRDS(obj@meta.data, iter_meta_rds)
+        previous_celltypes = unique(c(unlist(pre_disagree[,previous_layer]), unlist(pre_disagree$cell_type)))
+        previous_celltypes<-previous_celltypes[previous_celltypes %in% unlist(unique(obj[[iter_name]]))]
+        previous_layer = iter_name
+        iter = iter + 1
+        next
+      }else{
+        obj[[cur_layer]] = obj[[iter_name]]
+        obj[[paste0(cur_layer, "_clusters")]] = obj[[iter_clusters]]
+        obj[[paste0(cur_layer, "_raw")]] = obj[[iter_raw]]
+        write.csv(obj@meta.data, iter_meta_file)
+        saveRDS(obj@meta.data, iter_meta_rds)
+        break
+      }
+    }
+  }
+  
+  #using RNA assay for visualization
+  DefaultAssay(obj)<-"RNA"
+
+  g<-get_dim_plot_labelby(obj, label.by = cur_layer, label=T)
+
+  png(paste0(prefix, ".", cur_layer, ".umap.png"), width=3300, height=3000, res=300)
+  print(g)
+  dev.off()
+
+  if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
+    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay="RNA")
+    png(paste0(prefix, ".", cur_layer, ".dot.png"), width=get_dot_width(g2), height=get_dot_height(obj, cur_layer), res=300)
+    print(g2)
+    dev.off()
+  }
+
+  write.csv(obj@meta.data, file=paste0(prefix, ".", cur_layer, ".meta.csv"))
+  saveRDS(obj@meta.data, file=paste0(prefix, ".", cur_layer, ".meta.rds"))
+
+  write.csv(all_cur_cts, file=paste0(prefix, ".", cur_layer, ".details.csv"))
+  
+  return(list(obj=obj, files=files))
+}
+
+
+do_analysis<-function(tmp_folder,
+                      cur_folder,
+                      obj, 
+                      layer2map, 
+                      npcs, 
+                      resolution, 
+                      random.seed, 
+                      by_sctransform, 
+                      by_harmony, 
+                      prefix, 
+                      vars.to.regress, 
+                      bubblemap_file, 
+                      essential_genes,
+                      by_individual_sample ) {
+  setwd(tmp_folder)
+  reslist1<-layer_cluster_celltype(obj = obj,
+                              previous_layer = "layer0", 
+                              cur_layer = "layer4", 
+                              cur_layermap = layer2map, 
+                              npcs = npcs, 
+                              resolution = resolution, 
+                              random.seed = random.seed, 
+                              by_sctransform = by_sctransform, 
+                              by_harmony = by_harmony, 
+                              prefix = prefix, 
+                              vars.to.regress = vars.to.regress,
+                              bubblemap_file = bubblemap_file,
+                              essential_genes = essential_genes)
+  obj=reslist1$obj
+  files=reslist1$files
+  rm(reslist1)
+
+  setwd(cur_folder)
+
+  write.csv(files, paste0(prefix, ".iter_png.csv"))
+
+  celltypes<-unique(obj$layer4)
+  celltypes<-celltypes[order(celltypes)]
+  ctdf<-data.frame("celltype"=celltypes, "resolution"=0.01)
+  write.table(ctdf, paste0(prefix, ".scDynamic.celltype_res.txt"), row.names=F, sep="\t", quote=F)
+
+  obj<-factorize_layer(obj, "layer4")
+  Idents(obj)<-"layer4"
+
+  saveRDS(obj@meta.data, paste0(prefix, ".scDynamic.meta.rds"))
+  write.csv(obj@meta.data, paste0(prefix, ".scDynamic.meta.csv"))
+
+  save_umap(paste0(prefix, ".scDynamic.umap"), obj)
+
+  if(length(unique(obj$layer4)) > 1){
+    #find markers for all cell types
+    all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+    all_top10<-get_top10_markers(all_markers)
+    all_top10<-unique(all_top10$gene)
+
+    obj<-myScaleData(obj, all_top10, "RNA")
+    g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = all_top10, group.by = "layer4", angle = 90) + NoLegend()
+
+    width<-get_heatmap_width(length(unique(Idents(obj))))
+    height<-get_heatmap_height(length(all_top10))
+    png(paste0(prefix, ".layer4.heatmap.png"), width=width, height=height, res=300)
+    print(g)
+    dev.off()
+  }
+  
+  output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="orig.ident", name="sample")
+
+  if(!by_individual_sample){
+    #output individual sample dot plot, with global scaled average gene expression.
+    obj$sample_layer4<-paste0(obj$orig.ident, ":", obj$layer4)
+    g<-get_bubble_plot( obj = obj, 
+                    cur_res = NA, 
+                    cur_celltype = "sample_layer4", 
+                    bubblemap_file = bubblemap_file, 
+                    assay = "RNA", 
+                    orderby_cluster = F)
+    gdata<-g$data
+    gdata$id<-gsub(".+: ","",gdata$id)
+    gdata$sample<-gsub(":.+","",gdata$id)
+    gdata$id<-gsub(".+:","",gdata$id)
+
+    for(sample in unique(gdata$sample)){
+      sdata<-gdata[gdata$sample == sample,]
+      g$data=sdata
+      dot_file = paste0(prefix, ".layer4.", sample, ".dot.png")
+      png(dot_file, width=get_dot_width(g), height=get_dot_height(obj, "layer4"), res=300)
+      print(g)
+      dev.off()
+    }
+
+    has_batch<-FALSE
+    if("batch" %in% colnames(obj@meta.data)){
+      if("sample" %in% colnames(obj@meta.data)){
+        has_batch=any(obj$batch != obj$sample)
+      }else{
+        has_batch=any(obj$batch != obj$orig.ident)
+      }
+    }
+    if(has_batch){
+      output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="batch", name="batch")
+    }
+  }
+
+  obj$seurat_layer4=paste0(obj$layer4_clusters, ": ", obj$layer4_raw)
+
+  cur_celltype="layer4"
+  for(pct in unique(unlist(obj[[cur_celltype]]))){
+    cells=colnames(obj)[obj[[cur_celltype]] == pct]
+    subobj=subset(obj, cells=cells)
+    subobj$seurat_layer4=paste0(subobj$layer4_clusters, ": ", subobj$layer4_raw)
+    g<-get_dim_plot(subobj, group.by="layer4_clusters", label.by="seurat_layer4", reduction="umap", legend.title="")
+
+    png(paste0(prefix, ".", cur_celltype, ".", celltype_to_filename(pct), ".umap.png"), width=2400, height=2000, res=300)
+    print(g)
+    dev.off()
+  }
+
+  if(by_individual_sample){
+    tb=data.frame("cell"=colnames(obj), "cell_type"=obj$layer4, category=prefix)
+    output_file=paste0(prefix,".dynamic.html")
+    rmdfile = "seurat_scDynamic_one_layer_one_resolution.rmd"
+    rmarkdown::render(rmdfile, output_file=output_file)
+    return(list(html=output_file, ct_count=tb))
+  }else{
+    return(obj)
+  }
 }
