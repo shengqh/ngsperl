@@ -150,8 +150,6 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_by_cell_filter_minTPM",         1 );
   initDefaultValue( $def, "DE_by_cell_filter_cellPercentage", 0.25 );
 
-  initDefaultValue( $def, "DE_by_sample_filter_minTPM",         1 );
-  initDefaultValue( $def, "DE_by_sample_filter_cellPercentage", 0.5 );
   initDefaultValue( $def, "DE_by_sample_min_cell_per_sample", 5 );
   
   initDefaultValue( $def, "perform_webgestalt", 0 );
@@ -218,6 +216,8 @@ sub getScRNASeqConfig {
   my $count_table_ref = "files";
 
   $config->{bam_files} = $def->{bam_files};
+
+  my $essential_gene_task = add_essential_gene($config, $def, $summary, $target_dir);
 
   my $perform_comparison = getValue( $def, "perform_comparison", 0 );
   if(getValue( $def, "perform_edgeR" )){
@@ -308,6 +308,24 @@ sub getScRNASeqConfig {
       ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
     }
 
+    if( $def->{"perform_individual_dynamic_qc"} ){
+      my $sct_str = get_sct_str($def);
+      my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
+      add_individual_dynamic_qc($config, $def, $summary, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
+
+      if($def->{perform_decontX}){
+        $decontX_task = "${raw_individual_dynamic_qc_task}_decontX";
+        add_decontX($config, $def, $summary, $target_dir, $decontX_task, [$raw_individual_dynamic_qc_task, ".rds"], "raw_files", {}, 1);
+        $decontX_ref = [$decontX_task, ".meta.rds"];
+      }
+
+      if($def->{"perform_DoubletFinder"}){
+        my $df_task = "${raw_individual_dynamic_qc_task}_DoubletFinder";
+        addDoubletFinder_individual($config, $def, $summary, $target_dir, $df_task, [$raw_individual_dynamic_qc_task, ".rds"]);
+        $doublet_finder_ref = [$df_task, ".meta.rds"];
+      }
+    }
+
     if ($perform_decontX && $remove_decontX){
       $files_def = [$decontX_task, ".counts.rds"];
       $prefix = "decontX_";
@@ -318,11 +336,11 @@ sub getScRNASeqConfig {
         $sctk_ref = [$sctk_task, ".meta.rds"];
       }
 
-      if(getValue($def, "perform_doublet_finder", 0)){
-        my $df_task = "${prefix}doublet_finder";
-        addDoubletFinder_individual($config, $def, $summary, $target_dir, $df_task, $files_def);
-        $doublet_finder_ref = [$df_task, ".meta.rds"];
-      }
+      # if(getValue($def, "perform_doublet_finder", 0)){
+      #   my $df_task = "${prefix}doublet_finder";
+      #   addDoubletFinder_individual($config, $def, $summary, $target_dir, $df_task, $files_def);
+      #   $doublet_finder_ref = [$df_task, ".meta.rds"];
+      # }
 
       if ( $perform_individual_qc ){
         ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref);
@@ -474,8 +492,6 @@ sub getScRNASeqConfig {
     if ( getValue( $def, "perform_scRNABatchQC" ) ) {
       add_scRNABatchQC($config, $def, $summary, $target_dir);
     }
-
-    my $essential_gene_task = add_essential_gene($config, $def, $summary, $target_dir);
 
     my $seurat_rawdata;
     my $is_preprocessed;
