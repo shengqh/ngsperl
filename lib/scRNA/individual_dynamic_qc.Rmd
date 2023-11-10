@@ -1,0 +1,269 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=FALSE,  
+  include=TRUE, 
+  message=FALSE, 
+  warning=FALSE, 
+  results='asis', 
+  fig.width=7, 
+  fig.height=7,
+  tidy=TRUE, 
+  tidy.opts=list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r include=FALSE}
+#load the library and set the parameters and load our own function
+library(Seurat)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(pheatmap)
+library(RCurl)
+library(kableExtra)
+source("scRNA_func.r")
+source("reportFunctions.R")
+```
+
+
+```{r, echo=FALSE}
+raw_files=read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+file_path=raw_files$V1[1]
+sample_name=raw_files$V2[1]
+outFile=sample_name
+```
+
+---
+title: "`r sample_name`: QC and Cell Type Annotation Report"
+---
+
+# Parameters
+
+```{r, echo=FALSE}
+option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F)
+myoptions<-split(option_table$V1, option_table$V2)
+colnames(option_table)<-c("Value", "Parameter")
+print_table(option_table[,c("Parameter", "Value")], row.names=F)
+```
+
+---
+author: "`r myoptions$email`"
+---
+
+# QC
+
+```{r, echo=FALSE}
+lst<-readRDS(paste0(sample_name, ".obj.rds"))
+obj=lst$obj
+```
+
+## The scatter plot of nGene,nUMI and mtRNA
+
+```{r, echo=FALSE}
+include_graphics(paste0(sample_name, ".qc.1.png"))
+```
+
+## The density plot between mtRNA and nUMI
+
+```{r, echo=FALSE}
+include_graphics(paste0(sample_name, ".qc.2.png"))
+```
+
+## The density plot between mtRNA and nGene
+
+```{r, echo=FALSE}
+include_graphics(paste0(sample_name, ".qc.3.png"))
+```
+
+## Violin plot of mtRNA, nGene, nUMI
+
+```{r, echo=FALSE}
+include_graphics(paste0(sample_name, ".qc.4.png"))
+```
+
+## Filtered cells
+
+```{r, echo=FALSE}
+filtered_cells<-read.csv(paste0(sample_name, ".filtered.cell.csv"), header=T, stringsAsFactors = F)
+print_table(filtered_cells, row.names=F)
+```
+
+# Dynamic cell type annotation
+
+```{r data, echo = FALSE}
+files<-read.csv(paste0(sample_name, ".iter_png.csv"), row.names=1)
+
+last_iter=files$cur_layer[nrow(files)]
+
+getFigure<-function(filepath, in_details=TRUE){
+  fname = ifelse(in_details, paste0("details/", basename(filepath)), basename(filepath))
+  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", fname, "')\n```\n\n"))
+}
+
+resFile<-"cluster.Rmd"
+figureRmd<-function(files, outFile){
+  result<-""
+  previous_layers<-unique(files$previous_layer)
+
+  pre_layer=previous_layers[2]
+  for(pre_layer in previous_layers){
+    #cat(pre_layer, "\n")
+
+    res_tbl<-files[files$previous_layer==pre_layer,]
+    to_layers<-unique(res_tbl$cur_layer)
+
+    stopifnot(length(to_layers) == 1)
+    
+    to_layer = to_layers[1]
+
+    result<-paste0(result, paste0("\n\n## ", to_layer, "\n\n"))
+
+    pcts=unique(res_tbl$pct)
+
+    pct=pcts[1]
+    for(pct in pcts) {
+      #cat(pct, "\n")
+      result<-paste0(result, paste0("\n\n### ", pct, "\n\n"))
+      pct_tbl = res_tbl[res_tbl$pct==pct,]
+
+      result<-paste0(result, "#### Bubble plot\n\n")
+      dot=pct_tbl$fname[pct_tbl$type=="dot"]
+      result<-paste0(result, getFigure(dot))
+
+      result<-paste0(result, "#### UMAP\n\n")
+      umap=pct_tbl$fname[pct_tbl$type=="old_umap"]
+      result<-paste0(result, getFigure(umap))
+
+      if("new_umap" %in% pct_tbl$type){
+        umap=pct_tbl$fname[pct_tbl$type=="new_umap"]
+        result<-paste0(result, getFigure(umap))
+      }
+
+      if("cta_png" %in% pct_tbl$type){
+        result<-paste0(result, "#### Cell type annotation score\n\n")
+        cta_png=pct_tbl$fname[pct_tbl$type=="cta_png"]
+        result<-paste0(result, getFigure(cta_png))
+      }
+    }
+
+    result<-paste0(result, getFigure(paste0(outFile, ".", to_layer, ".final.png")))
+  }
+  return(result)
+}
+cat(figureRmd(files, outFile), file=resFile)
+
+```
+
+```{r, child=resFile} 
+```
+
+# Final cell type annotation
+
+## Overview
+
+### Cell type
+
+```{r, echo=FALSE}
+scts<-read.csv(paste0(outFile, ".layer4.sample_celltype.csv"), check.names=F, row.names=1)
+print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type"))))
+```
+
+### UMAP
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".layer4.umap.png"))
+```
+
+### User defined markers
+
+#### Cell type
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".layer4.dot.png"))
+```
+
+### Highly expressed database markers
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".layer4.ct_markers.bubbleplot.png"))
+```
+
+### Highlighted cell type cells
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".layer4.cell.png"))
+```
+
+### Heatmap
+
+```{r, echo=FALSE}
+include_graphics(paste0(outFile, ".layer4.heatmap.png"))
+```
+
+```{r, include=FALSE, echo = FALSE}
+pctRmd<-function(outFile, cell_identity, pcts, files){
+  cta_map=list()
+  previous_layers<-unique(files$previous_layer)
+  for(pre_layer in previous_layers){
+    #cat(pre_layer, "\n")
+
+    res_tbl<-files[files$previous_layer==pre_layer,]
+    layer_pcts=unique(res_tbl$pct)
+
+    pct=layer_pcts[1]
+    for(pct in layer_pcts) {
+      pct_tbl = res_tbl[res_tbl$pct==pct,]
+      if("cta_png" %in% pct_tbl$type){
+        cta_png=pct_tbl$fname[pct_tbl$type=="cta_png"]
+        cta_map[[pct]] = paste0("details/", cta_png)
+      }
+    }
+  }
+
+  result=""
+  in_details=FALSE
+  result<-paste0(result, paste0("\n\n## Cell type clusters with resolution ", myoptions$dynamic_by_one_resolution, "\n\n"))
+  for(pct in pcts){
+    pct_name=celltype_to_filename(pct)
+    result<-paste0(result, paste0("\n\n### ", pct, "\n\n"))
+
+    result<-paste0(result, paste0("\n\n#### UMAP\n\n"))
+    result<-paste0(result, getFigure(paste0(outFile, ".", cell_identity, ".", pct_name, ".umap.png"), in_details))
+
+    result<-paste0(result, paste0("\n\n#### User defined markers\n\n"))
+    last_files<-files[files$pct==pct & files$type=="dot",]
+    dot_file<-last_files$fname[nrow(last_files)]
+    result<-paste0(result, getFigure(dot_file, TRUE))
+
+    if(pct %in% names(cta_map)){
+      cta_file = cta_map[[pct]]
+      result<-paste0(result, paste0("\n\n#### Cell type annotation score\n\n"))
+      result<-paste0(result, getFigure(cta_file, TRUE))
+    }
+  }
+  return(result)
+}
+
+pcts<-colnames(scts)
+pct_file<-"pct.Rmd"
+cat(pctRmd(outFile, "layer4", pcts, files), file=pct_file)
+```
+
+```{r, child=pct_file} 
+```
+
