@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='AS_multiome'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.final.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample/result/crs.edgeR.files.csv'
-parFile3='/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose/result/crs.meta.rds'
+parFile1='/nobackup/shah_lab/shengq2/20230726_Vandy_AS_from_Michelle/AS_Tiger/rds_objects/subclusters_for_DE/subcluster_endothelial.rds'
+parFile2='/nobackup/shah_lab/shengq2/20231110_AS_multiome_Michelle_subcluster/endothelial_edgeR_inCluster_bySample/result/AS_multiome.edgeR.files.csv'
+parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230320_7114_8822_scRNA_hg38/seurat_sct_merge_dr0.5_03_choose_edgeR_inCluster_bySample_vis/result')
+setwd('/nobackup/shah_lab/shengq2/20231110_AS_multiome_Michelle_subcluster/endothelial_edgeR_inCluster_bySample_vis/result')
 
 ### Parameter setting end ###
 
@@ -30,6 +30,7 @@ reduction=myoptions$reduction
 
 if(!exists("obj")){
   obj<-read_object(parFile1, parFile3, cluster_name)
+  obj@meta.data[,cluster_name]=gsub("^\\s+", "",obj@meta.data[,cluster_name])
 }
 clusterDf<-obj@meta.data
 
@@ -38,16 +39,16 @@ edgeRfolder<-dirname(parFile2)
 rownames(edgeRres)<-edgeRres$prefix
 
 if(!bBetweenCluster){
-  df<-data.frame(c1=obj$seurat_clusters, c2=obj[[cluster_name]])
+  df<-data.frame(c1=obj$seurat_clusters, c2=as.character(unlist(obj@meta.data[, cluster_name])))
   df<-unique(df)
   df<-df[order(df$c1),]
-  obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,cluster_name]))
+  obj@meta.data[, cluster_name]<-factor(as.character(unlist(obj@meta.data[, cluster_name])), levels=unique(df$c2))
 }
 
 all_sigout<-NULL
 
 result<-NULL
-prefix<-rownames(edgeRres)[4]
+prefix<-rownames(edgeRres)[2]
 for (prefix in rownames(edgeRres)){
   cat("Processing ", prefix, "\n")
   comparison<-edgeRres[prefix, "comparison"]
@@ -94,17 +95,19 @@ for (prefix in rownames(edgeRres)){
         gmap<-unlist(split(design_data$Group, design_data$Sample))
         gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
 
-        cell_obj$Group=gmap[cell_obj$orig.ident]
-        cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=names(groupColors))
+        cell_obj@meta.data$Group=gmap[cell_obj$orig.ident]
+        cell_obj@meta.data$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=names(groupColors))
       
         cpmFile=paste0(edgeRfolder, "/", edgeRres[prefix, "cpmFile"])
-        cpmvalues<-read.csv(cpmFile)
-        melt_cpm<-melt(cpmvalues, id.vars = 'X')
-        colnames(melt_cpm)<-c("Gene", "Sample", "CPM")
-        melt_cpm$Group<-factor(gdismap[as.character(melt_cpm$Sample)], levels=names(groupColors))
+        log_cpm<-read.csv(cpmFile, row.names=1)
       }
       
-      cell_obj = ScaleData(cell_obj, features=siggenes$gene, assay="RNA", vars.to.regress="percent.mt")
+      if("percent.mt" %in% colnames(cell_obj)){
+        vars.to.regress="percent.mt"
+      }else{
+        vars.to.regress=NULL
+      }
+      cell_obj = ScaleData(cell_obj, features=siggenes$gene, assay="RNA", vars.to.regress=vars.to.regress)
       g<-MyDoHeatMap(cell_obj, assay="RNA", features=siggenes$gene, group.by="DisplayGroup")
       png(paste0(prefix, ".sig_gene.heatmap.png"), 
           width=4000, 
@@ -169,8 +172,8 @@ if(!bBetweenCluster){
     compRes = result[result$comparison == comp,]
     rateMap=unlist(split(compRes$sigRate, compRes$cluster))
     
-    obj$sigRate=rateMap[as.character(unlist(obj[[cluster_name]]))]
-    obj$sigRate[is.na(obj$sigRate)]<-0
+    obj@meta.data$sigRate=unlist(rateMap[as.character(unlist(obj[[cluster_name]]))])
+    obj@meta.data$sigRate[is.na(obj$sigRate)]<-0
     
     pdf(paste0(outFile, ".", comp, ".sigGenePerc.pdf"), width=14, height=7)
     p1<-get_dim_plot_labelby(obj, label.by = cluster_name) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
