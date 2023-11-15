@@ -55,6 +55,12 @@ sub perform {
       my $log_desc      = $cluster->get_log_description($log);
       my $pbs           = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_1_file );
 
+    print $sh "
+if [[ ! -s $result_dir/$final_1_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+
       my $file_count = scalar(@sample_files);
       die "file count $file_count is not even for sample $sample_name @sample_files " if $file_count % 2 != 0;
 
@@ -125,6 +131,12 @@ gzip $final_2_fastq
       my $final_file  = $sample_name . ".fastq.gz";
       my $log_desc    = $cluster->get_log_description($log);
       my $pbs         = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
+    print $sh "
+if [[ ! -s $result_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
       if ( scalar(@sample_files) == 1 ) {
         print $pbs "ln -s $sample_files[0] $final_file \n";
