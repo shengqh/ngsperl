@@ -52,6 +52,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "emailType",                 "FAIL" );
   initDefaultValue( $def, "extractSingleEndFastqFromPairend", 0 );
   initDefaultValue( $def, "sra_to_fastq_sh_direct", 0 );
+  initDefaultValue( $def, "perform_umitools", 0 );
   
   # initDefaultValue( $def, "rmdformats_theme", "rmdformats::readthedown");
   # initDefaultValue( $def, "toc_depth", "3");
@@ -527,7 +528,7 @@ sub getPreprocessionConfig {
       cluster     => $def->{cluster},
       pbs         => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => getValue($def, "merge_fastq_time", 4),
+        "walltime"  => getValue($def, "merge_fastq_time", 24),
         "mem"       => "10gb"
       }
     };
@@ -661,6 +662,71 @@ sub getPreprocessionConfig {
   }
 
   my $untrimed_ref = $source_ref;
+
+  if($def->{perform_Pico_v3_SMART_UMI_extract}){
+    my $umi_task = "Pico_v3_SMART_UMI_extract";
+    my $umitools_extract_option = getValue($def, "umitools_extract_option", "--extract-method=string --bc-pattern2=NNNNNNNN");
+    $config->{$umi_task} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . $umi_task,
+      option => "-o __NAME__.umi.1.fastq.gz,__NAME__.umi.2.fastq.gz",
+      interpretor => "python",
+      check_program => 1,
+      program => "../UMI/Pico_v3_SMART_UMI_extract.py",
+      source_arg => "-i",
+      source_ref => $source_ref,
+      source_join_delimiter => ",",
+      output_arg => "-o",
+      output_file_prefix => ".umi.1.fastq.gz",
+      output_file_ext => ".umi.1.fastq.gz",
+      output_other_ext => ".umi.2.fastq.gz",
+      output_to_same_folder => 1,
+      use_tmp_folder => 0,
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "24",
+        "mem"       => "10gb"
+      }
+    };
+    $untrimed_ref = $umi_task;
+    push( @$individual, $umi_task );
+  }
+
+  if($def->{perform_umitools}){
+    my $umitools_task = "umitools_extract";
+    my $umitools_extract_option = getValue($def, "umitools_extract_option", "--extract-method=string --bc-pattern2=NNNNNNNN");
+    $config->{$umitools_task} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . $umitools_task,
+      option => "
+umi_tools extract $umitools_extract_option -I __FILE__ -S __OUTPUT__ --read2-out=__NAME__.umi.2.fastq.gz -L __NAME__.log
+
+",
+      interpretor => "",
+      check_program => 0,
+      program => "",
+      source_arg => "-I",
+      source_ref => $source_ref,
+      source_join_delimiter => " --read2-in=",
+      output_arg => "-S",
+      output_file_prefix => ".umi.1.fastq.gz",
+      output_file_ext => ".umi.1.fastq.gz",
+      output_other_ext => ".umi.2.fastq.gz",
+      output_to_same_folder => 1,
+      docker_prefix => "umitools_",
+      no_docker => 1,
+      use_tmp_folder => 0,
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      }
+    };
+    $untrimed_ref = $umitools_task;
+    push( @$individual, $umitools_task );
+  }
 
   if ($run_cutadapt_test){
     my $tasks = [];
