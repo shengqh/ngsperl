@@ -23,7 +23,7 @@ our %EXPORT_TAGS = (
       init_treatments_design_table
       add_chipqc
       addPeakPipelineReport
-      add_bamplot
+      add_bamplot_by_gff
     )
   ]
 );
@@ -249,7 +249,7 @@ sub addPeakPipelineReport {
   push( @$tasks, "report" );
 }
 
-sub add_bamplot {
+sub add_bamplot_by_gff {
   my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref) = @_;
 
   my $plotgroups = $def->{plotgroups};
