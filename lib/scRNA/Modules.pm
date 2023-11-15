@@ -156,6 +156,7 @@ sub add_seurat_rawdata {
       keep_seurat_object => getValue( $def, "keep_seurat_object", 0 ),
       seurat_sample_column => $def->{"seurat_sample_column"},
       doublet_column => $doublet_column,
+      gene_map_file => $def->{gene_map_file},
     },
     parameterSampleFile3 => $def->{"pool_sample_groups"},
     parameterSampleFile4_ref => $hto_ref,
