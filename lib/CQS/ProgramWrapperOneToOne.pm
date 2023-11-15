@@ -259,6 +259,7 @@ sub result {
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", $self->{_output_to_same_folder} );
   my $output_exts           = get_output_ext_list( $config, $section );
   my $output_by_file = get_option( $config, $section, "output_by_file", 0 );
+  my $output_by_file_remove_pattern = get_option( $config, $section, "output_by_file_remove_pattern", "" );
 
   my $result = {};
   for my $sample_name ( sort keys %$source_files ) {
@@ -272,6 +273,9 @@ sub result {
         if($output_by_file){
           for my $cur_file (@$cur_files){
             my $cur_name = basename($cur_file);
+            if($output_by_file_remove_pattern ne ""){
+              $cur_name =~ s/$output_by_file_remove_pattern//g;
+            }
             push( @result_files, "${cur_dir}/${cur_name}${output_ext}" );
           }
           next;
