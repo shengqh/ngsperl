@@ -106,6 +106,7 @@ our %EXPORT_TAGS = (
     add_featurecount
     add_md5
     add_bamplot
+    add_fastq_screen
     )
   ]
 );
@@ -3694,6 +3695,48 @@ sub add_bamplot {
   };
   push( @$tasks, "bamplot" );
 };
+
+sub add_fastq_screen {
+  my ($config, $def, $tasks, $parent_dir, $task_name, $source_ref) = @_;
+
+  my $conf = "";
+  if($def->{fastq_screen_configuration_file}){
+     $conf = "--conf " . $def->{fastq_screen_configuration_file};
+  }
+
+  $config->{$task_name} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => $parent_dir . "/" . getNextFolderIndex($def) . $task_name,
+    use_tmp_folder => 0,
+    suffix  => "_fc",
+    interpretor => "",
+    program => "",
+    check_program => 0,
+    option => "
+fastq_screen $conf --outdir . --threads 8 __FILE__
+
+#__OUTPUT__
+",
+    source_arg => "",
+    source_join_delimiter => " ",
+    source_ref => $source_ref,
+    output_arg => "",
+    output_by_file => 1,
+    output_by_file_remove_pattern => ".fastq.gz",
+    output_file_prefix => "_screen.txt",
+    output_file_ext => "_screen.txt",
+    output_to_same_folder => 1,
+    can_result_be_empty_file => 1,
+    sh_direct   => 0,
+    no_docker => 1,
+    pbs => {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => "20gb"
+    }
+  };
+  push(@$tasks, $task_name);
+}
 
 1;
 
