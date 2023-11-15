@@ -1,15 +1,14 @@
 rm(list=ls()) 
-outFile='GPA'
+outFile='multiome_monkey'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20230807_gpa_scRNA_hg38/decontX_nd_seurat_rawdata.test/result')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20231110_snRNA_snATAC_monkey_remap_gene/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -45,6 +44,17 @@ if("ensembl_gene_map_file" %in% names(myoptions)){
     gene_tb=gene_tb[!duplicated(gene_tb$ENSEMBL_GENE_ID),]
     gene_tb=gene_tb[gene_tb$ENSEMBL_GENE_ID != "",]
     ensembl_map = split(gene_tb$GENE_SYMBOL, gene_tb$ENSEMBL_GENE_ID)
+  }
+}
+
+if("gene_map_file" %in% names(myoptions)){
+  gene_map_file = myoptions$gene_map_file
+  if(gene_map_file != ""){
+    gene_tb=read.table(gene_map_file, sep="\t", header=T)
+    colnames(gene_tb)<-c("from_gene", "to_gene")
+    gene_tb=gene_tb[!duplicated(gene_tb$from_gene),]
+    gene_tb=gene_tb[gene_tb$to_gene != "",]
+    ensembl_map = split(gene_tb$to_gene, gene_tb$from_gene)
   }
 }
 
@@ -251,6 +261,7 @@ if(is_qc_data){
       counts<-counts[rs>0,]
 
       if(!is.null(ensembl_map)){
+        cat("remapping gene names ... \n")
         gtf_counts<-counts[!(rownames(counts) %in% names(ensembl_map)),]
         ensembl_counts<-counts[(rownames(counts) %in% names(ensembl_map)),]
         gene_names<-unlist(ensembl_map[rownames(ensembl_counts)])
