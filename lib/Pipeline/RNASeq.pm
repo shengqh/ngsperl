@@ -205,6 +205,11 @@ sub getRNASeqConfig {
 
   my $multiqc_depedents = $source_ref;
 
+  if($def->{perform_fastq_screen}){
+    my $fastq_screen_task = "fastq_screen";
+    add_fastq_screen($config, $def, $individual, $target_dir, $fastq_screen_task, $source_ref);
+  }
+
   my $count_table_column = 6;
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
