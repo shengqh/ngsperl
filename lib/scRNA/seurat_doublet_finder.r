@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='DM_1'
-outFile='DM_1'
+sample_name='Adipose_9240'
+outFile='Adipose_9240'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_doublet_finder/result/DM_1')
+setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/raw_dynamic_qc_sct2_DoubletFinder/result/Adipose_9240')
 
 ### Parameter setting end ###
 
@@ -38,20 +38,33 @@ if(file.exists(parFile1)){
   sample_file=file_map[[sample_name]]
 }
 
-lst=read_scrna_data(sample_file)
-counts=lst$counts
-obj = CreateSeuratObject(counts = counts, project = sample_name)
-if(by_sctransform){
-  obj=do_sctransform(obj, mc.cores=mc.cores, use_sctransform_v2=use_sctransform_v2)
-  DefaultAssay(obj) <- "SCT"
+clusters=NULL
+if(grepl(".rds$", sample_file)){
+  #sample_file is a object file, containing cell_type/cluster information
+  obj<-readRDS(sample_file)
+  if(is.list(obj)){
+    obj=obj$obj
+  }
+  if("layer4" %in% colnames(obj@meta.data)){
+    clusters = as.character(obj@meta.data$layer4)
+  }
 }else{
-  obj=do_normalization(obj)
-  DefaultAssay(obj) <- "RNA"
+  lst=read_scrna_data(sample_file)
+  counts=lst$counts
+  obj = CreateSeuratObject(counts = counts, project = sample_name)
+  if(by_sctransform){
+    obj=do_sctransform(obj, mc.cores=mc.cores, use_sctransform_v2=use_sctransform_v2)
+    DefaultAssay(obj) <- "SCT"
+  }else{
+    obj=do_normalization(obj)
+    DefaultAssay(obj) <- "RNA"
+  }
+  obj = RunPCA(obj)
 }
-obj = RunPCA(obj)
+
 #obj = RunUMAP(obj)
 
-sweep.res <- paramSweep_v3(obj, PCs = 1:npcs, sct = by_sctransform)
+sweep.res <- paramSweep_v3(obj, PCs = 1:npcs, sct = by_sctransform, num.cores=mc.cores)
 sweep.stats <- summarizeSweep(sweep.res, GT = FALSE)
 bcmvn <- find.pK(sweep.stats)
 bcmvn$pK=as.numeric(as.character(bcmvn$pK))
