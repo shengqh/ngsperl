@@ -52,8 +52,12 @@ sub getConfig {
 
   my $target_dir = $def->{target_dir};
 
-  my $config_json = getValue($def, "cutruntools2-bulk-config", dirname(__FILE__) . "/../Chipseq/cutruntools2-bulk-config.json");
+  my $bt2idx = getValue($def, "bowtie2_index");
+  my $genome_sequence = getValue($def, "fasta_file");
+
+  my $config_json = getValue($def, "cutruntools2-bulk-config");
   my $adaptor_type = getValue($def, "cutruntools2_adaptor_type");
+  my $organism_build = getValue($def, "cutruntools2_organism_build");
 
   my $cutruntools2 = "cutruntools2";
   $config->{$cutruntools2} = {
@@ -65,6 +69,9 @@ IN='__FILE__'
 arrIN=(\${IN//,/ })
 r1=\${arrIN[0]}
 r2=\${arrIN[1]}
+
+echo r1=\$r1
+echo r2=\$r2
 
 if [[ ! -s \$r1 ]]; then
   echo file not exists: \$r1
@@ -84,11 +91,17 @@ ln -s \$r2 __NAME___R2_001.fastq.gz
 cur_dir=`pwd`
 #echo cur_dir = \$cur_dir
 
-cat $config_json | sed \"s#INPUT_FASTQ_DIRECTORY#\${cur_dir}#g\" | sed \"s#INPUT_WORKDIR#\${cur_dir}#g\" | sed \"s#Truseq#${adaptor_type}#g\" > __NAME__.config.json
+cat $config_json | sed \"s#INPUT_FASTQ_DIRECTORY#\${cur_dir}#g\" \\
+  | sed \"s#INPUT_WORKDIR#\${cur_dir}#g\" \\
+  | sed \"s#Truseq#${adaptor_type}#g\" \\
+  | sed \"s#INPUT_BT2IDX#${bt2idx}#g\" \\
+  | sed \"s#INPUT_GENOME_SEQUENCE#${genome_sequence}#g\" \\
+  | sed \"s#INPUT_ORGANISM_BUILD#${organism_build}#g\" > __NAME__.config.json
 
 bash /opt/CUT-RUNTools-2.0/run_bulkModule.sh __NAME__.config.json __NAME__
 
 rm -f __NAME___R1_001.fastq.gz __NAME___R2_001.fastq.gz
+rm -rf __NAME__/trimmed __NAME__/aligned/__NAME__.bam __NAME__/aligned/dedup __NAME__/aligned/dup.marked __NAME__/aligned/dup.marked.120bp __NAME__/aligned/sorted 
 
 #__FILE__ __OUTPUT__
 ",
@@ -99,7 +112,7 @@ rm -f __NAME___R1_001.fastq.gz __NAME___R2_001.fastq.gz
     source_ref            => $untrimed_ref,
     output_to_same_folder => 1,
     output_arg            => "-o",
-    output_file_ext    => "__NAME__/peakcalling/seacr/__NAME__.spikein_normalized.bw,__NAME__/aligned/dup.marked.120bp/__NAME__.bam",
+    output_file_ext    => "__NAME__/trimmed2/__NAME___1.paired.fastq.gz,__NAME__/trimmed2/__NAME___2.paired.fastq.gz,__NAME__/aligned/dup.marked.120bp/__NAME__.bam",
     use_tmp_folder        => 0,
     sh_direct             => 0,
     docker_prefix => "cutruntools2_",
@@ -113,6 +126,11 @@ rm -f __NAME___R1_001.fastq.gz __NAME___R2_001.fastq.gz
 
   if ( $def->{perform_bamplot} ) {
     add_bamplot($config, $def, $tasks, $target_dir, [$cutruntools2, ".bam"]);
+  }
+
+  if($def->{perform_fastqc}){
+    my $fastqcTask = "${cutruntools2}_fastqc";
+    addFastQC( $config, $def, $tasks, $tasks, $fastqcTask, [$cutruntools2, ".fastq.gz"], $target_dir );
   }
 
   $config->{sequencetask} = {
