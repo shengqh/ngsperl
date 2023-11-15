@@ -1546,8 +1546,8 @@ build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_
   dummy_cluster<-c(0:(length(gt)-1))
   names(dummy_cluster)<-names(gt)
   dc<-factor(dummy_cluster[groups], levels=dummy_cluster)
-  obj[[new_cluster_name]]<-dc
-  obj[[new_cluster_name_label]]<-paste0(obj@meta.data[,new_cluster_name], ": ", groups)
+  obj@meta.data[,new_cluster_name]<-dc
+  obj@meta.data[,new_cluster_name_label]<-paste0(obj@meta.data[,new_cluster_name], ": ", groups)
   return(obj)
 }
 
@@ -1980,8 +1980,8 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
     gmap<-unlist(split(ddata$Group, ddata$Sample))
     gdismap<-unlist(split(ddata$DisplayGroup, ddata$Sample))
 
-    cell_obj$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
-    cell_obj$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
+    cell_obj@meta.data$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
+    cell_obj@meta.data$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
   }
 
   logFC<-sigout[sig_gene, "logFC"]
