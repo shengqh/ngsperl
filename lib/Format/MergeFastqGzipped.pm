@@ -43,8 +43,6 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     if ($ispaired) {
       my $final_1_file  = $sample_name . ".1.fastq.gz";
       my $final_1_file_tmp  = $sample_name . ".1.fastq.tmp.gz";
@@ -52,6 +50,12 @@ sub perform {
       my $final_2_file_tmp  = $sample_name . ".2.fastq.tmp.gz";
       my $log_desc      = $cluster->get_log_description($log);
       my $pbs           = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_1_file );
+
+    print $sh "
+if [[ ! -s $result_dir/$final_1_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
       my $file_count = scalar(@sample_files);
       die "file count $file_count is not even for sample $sample_name @sample_files " if $file_count % 2 != 0;
@@ -115,6 +119,12 @@ fi
       my $final_file  = $sample_name . ".fastq.gz";
       my $log_desc    = $cluster->get_log_description($log);
       my $pbs         = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
+
+    print $sh "
+if [[ ! -s $result_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
 
       if ( scalar(@sample_files) == 1 ) {
         print $pbs "ln -s $sample_files[0] $final_file \n";
