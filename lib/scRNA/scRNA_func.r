@@ -2009,7 +2009,7 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
     
     p1<-MyDimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
     
-    p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T)
+    p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T, raster=FALSE)
     p<-p0+p1+p2+plot_layout(design="AA
 BC")
     
@@ -2021,9 +2021,9 @@ BC")
       xlab("") + ylab("Gene Expression")
     
     if("subumap" %in% names(cell_obj@reductions)){
-      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="subumap") + xlab("UMAP_1") + ylab("UMAP_2")
+      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="subumap", raster=FALSE) + xlab("UMAP_1") + ylab("UMAP_2")
     }else{
-      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="umap")
+      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="umap", raster=FALSE)
     }
     p1$data$Group=cell_obj@meta.data[rownames(p1$data), "DisplayGroup"]
     p1<-p1+facet_grid(~Group) + theme_bw3() + ggtitle("")
