@@ -46,7 +46,7 @@ sub getConfig {
 
   my $email = $def->{email};
 
-  $def->{perform_cutadapt} = 0;
+  #$def->{perform_cutadapt} = 0;
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
   my $tasks = [@$individual, @$summary];
@@ -65,24 +65,24 @@ sub getConfig {
   my $picard = getValue($def, "picard");
   my $interval_list = getValue($def, "interval_list");
 
-  my $trimgalore_task = "trimgalore";
-  $config->{$trimgalore_task} = {
-    class => "Trimmer::TrimGalore",
-    perform => 1,
-    target_dir => "${targetDir}/" . getNextFolderIndex($def) . "trimgalore",
-    option => getValue($def, "trimgalore_option", ""),
-    source_ref => $untrimed_ref,
-    extension => "_val.fq.gz",
-    pairend => is_paired_end($def),
-    do_fastqc => getValue($def, "trimgalore_do_fastqc", 1),
-    init_command => "",
-    pbs        => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "48",
-      "mem"       => "10gb"
-    },
-  };
-  push(@$tasks, $trimgalore_task);
+  # my $trimgalore_task = "trimgalore";
+  # $config->{$trimgalore_task} = {
+  #   class => "Trimmer::TrimGalore",
+  #   perform => 1,
+  #   target_dir => "${targetDir}/" . getNextFolderIndex($def) . "trimgalore",
+  #   option => getValue($def, "trimgalore_option", ""),
+  #   source_ref => $untrimed_ref,
+  #   extension => "_val.fq.gz",
+  #   pairend => is_paired_end($def),
+  #   do_fastqc => getValue($def, "trimgalore_do_fastqc", 1),
+  #   init_command => "",
+  #   pbs        => {
+  #     "nodes"     => "1:ppn=1",
+  #     "walltime"  => "48",
+  #     "mem"       => "10gb"
+  #   },
+  # };
+  # push(@$tasks, $trimgalore_task);
   my $methylation_key = "methylation_key";
 
   my $abismal_task = "abismal";
@@ -97,7 +97,7 @@ sub getConfig {
     interval_list => $interval_list,
     addqual_perlFile => $addqual_perlFile,
     abismal_index => $abismal_index,
-    source_ref => "trimgalore",
+    source_ref => $source_ref,
     dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
     preseq_command => getValue($def, "preseq_command", "preseq"),
     docker_prefix => "dnmtools_",
