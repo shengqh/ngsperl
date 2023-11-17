@@ -52,7 +52,7 @@ sub getConfig {
 
   my $target_dir = $def->{target_dir};
 
-  my $bt2idx = getValue($def, "bowtie2_index");
+  my $bt2idx = getValue($def, "cutruntools2_bt2idx");
   my $genome_sequence = getValue($def, "fasta_file");
 
   my $config_json = getValue($def, "cutruntools2-bulk-config");
