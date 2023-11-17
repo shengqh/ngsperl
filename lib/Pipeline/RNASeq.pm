@@ -276,7 +276,6 @@ sub getRNASeqConfig {
 
           $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
           push @$summary, ("star_summary");
-          $multiqc_depedents = "star";
         }
         else {
           $configAlignment = {
@@ -301,7 +300,44 @@ sub getRNASeqConfig {
 
         $config = merge_hash_right_precedent( $config, $configAlignment );
         push @$individual, $aligner;
-        $multiqc_depedents = "hisat2";
+
+        $multiqc_depedents = $source_ref;
+        if($def->{perform_umitools}){
+          my $dedup_task = "umitools_dedup";
+
+          my $pairend_option = is_paired_end($def) ? "--paired" : "";
+          $config->{$dedup_task} = {
+            class => "CQS::ProgramWrapperOneToOne",
+            target_dir => $target_dir . "/" . getNextFolderIndex($def) . $dedup_task,
+            option => "
+umi_tools dedup $pairend_option --output-stats __NAME__ --stdin __FILE__ --stdout __NAME__.dedup.bam
+
+samtools index __NAME__.dedup.bam
+
+#__OUTPUT__
+",
+            interpretor => "",
+            check_program => 0,
+            program => "",
+            source_arg => "--stdin",
+            source_ref => $source_ref,
+            output_arg => "--stdout",
+            output_file_prefix => ".dedup.bam",
+            output_file_ext => ".dedup.bam",
+            output_to_same_folder => 1,
+            docker_prefix => "umitools_",
+            #no_docker => 1,
+            use_tmp_folder => 0,
+            sh_direct   => 0,
+            pbs => {
+              "nodes"     => "1:ppn=1",
+              "walltime"  => "10",
+              "mem"       => "10gb"
+            }
+          };
+          $source_ref = $dedup_task;
+          push( @$individual, $dedup_task );
+        }
       }
 
       if ( $def->{perform_counting} ) {
@@ -331,7 +367,7 @@ sub getRNASeqConfig {
           perform                  => 1,
           target_dir               => "${featureCountFolder}_summary",
           option                   => "",
-          rtemplate                => "../Alignment/STARFeatureCount.r",
+          rtemplate                => "../Alignment/AlignmentUtils.r,../Alignment/STARFeatureCount.r",
           output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
           parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
           sh_direct                => 1,

@@ -665,7 +665,6 @@ sub getPreprocessionConfig {
 
   if($def->{perform_Pico_v3_SMART_UMI_extract}){
     my $umi_task = "Pico_v3_SMART_UMI_extract";
-    my $umitools_extract_option = getValue($def, "umitools_extract_option", "--extract-method=string --bc-pattern2=NNNNNNNN");
     $config->{$umi_task} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . $umi_task,
@@ -696,26 +695,42 @@ sub getPreprocessionConfig {
   if($def->{perform_umitools}){
     my $umitools_task = "umitools_extract";
     my $umitools_extract_option = getValue($def, "umitools_extract_option", "--extract-method=string --bc-pattern2=NNNNNNNN");
+    my $umitools_umi_on_read2 = getValue($def, "umitools_umi_on_read2");
+    my $source_arg = "";
+    my $option = "";
+    my $source_join_delimiter = "";
+    if($umitools_umi_on_read2){
+      #switch input read1 and read2
+      $source_arg = "--read2-in";
+      $source_join_delimiter = " -I ";
+      $option = "
+umi_tools extract $umitools_extract_option --read2-in=__FILE__ --read2-out=__OUTPUT__ -S __NAME__.umi.2.fastq.gz -L __NAME__.log
+";
+    }else{
+      $source_arg = "-I";
+      $source_join_delimiter = " --read2-in=";
+      $option = "
+umi_tools extract $umitools_extract_option -I __FILE__ -S __OUTPUT__ --read2-out=__NAME__.umi.2.fastq.gz -L __NAME__.log
+";
+    }
+
     $config->{$umitools_task} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . $umitools_task,
-      option => "
-umi_tools extract $umitools_extract_option -I __FILE__ -S __OUTPUT__ --read2-out=__NAME__.umi.2.fastq.gz -L __NAME__.log
-
-",
+      option => $option,
       interpretor => "",
       check_program => 0,
       program => "",
-      source_arg => "-I",
+      source_arg => $source_arg,
       source_ref => $source_ref,
-      source_join_delimiter => " --read2-in=",
+      source_join_delimiter => $source_join_delimiter,
       output_arg => "-S",
       output_file_prefix => ".umi.1.fastq.gz",
       output_file_ext => ".umi.1.fastq.gz",
       output_other_ext => ".umi.2.fastq.gz",
       output_to_same_folder => 1,
       docker_prefix => "umitools_",
-      no_docker => 1,
+      #no_docker => 1,
       use_tmp_folder => 0,
       sh_direct   => 0,
       pbs => {
@@ -724,7 +739,7 @@ umi_tools extract $umitools_extract_option -I __FILE__ -S __OUTPUT__ --read2-out
         "mem"       => "10gb"
       }
     };
-    $untrimed_ref = $umitools_task;
+    $source_ref = $umitools_task;
     push( @$individual, $umitools_task );
   }
 
