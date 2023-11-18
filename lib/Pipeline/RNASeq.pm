@@ -260,9 +260,9 @@ sub getRNASeqConfig {
             "star_summary" => {
               class                    => "CQS::UniqueR",
               perform                  => 1,
-              target_dir               => $starFolder,
+              target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "star_summary",
               option                   => "",
-              rtemplate                => "../Alignment/STARFeatureCount.r",
+              rtemplate                => "../Alignment/AlignmentUtils.r,../Alignment/STARFeatureCount.r",
               output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
               parameterSampleFile1_ref => [ "star", "_Log.final.out" ],
               sh_direct                => 1,
@@ -304,15 +304,18 @@ sub getRNASeqConfig {
         $multiqc_depedents = $source_ref;
         if($def->{perform_umitools}){
           my $dedup_task = "umitools_dedup";
+          my $dedup_option = getValue($def, "unitools_dedup_option", "--method=unique");
 
           my $pairend_option = is_paired_end($def) ? "--paired" : "";
           $config->{$dedup_task} = {
             class => "CQS::ProgramWrapperOneToOne",
             target_dir => $target_dir . "/" . getNextFolderIndex($def) . $dedup_task,
             option => "
-umi_tools dedup $pairend_option --output-stats __NAME__ --stdin __FILE__ --stdout __NAME__.dedup.bam
+umi_tools dedup $dedup_option $pairend_option --output-stats __NAME__ --stdin __FILE__ --stdout __NAME__.dedup.bam
 
 samtools index __NAME__.dedup.bam
+
+samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
 
 #__OUTPUT__
 ",
@@ -1480,7 +1483,8 @@ fi
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping],
       "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ],
       "task_name" => $taskName,
-      "out.width" => getValue($def, "report.out.width", "80%")
+      "out.width" => getValue($def, "report.out.width", "80%"),
+      "introduction_rmd" => $def->{introduction_rmd},
     };
 
     $config->{report} = {
@@ -1496,6 +1500,7 @@ fi
       parameterSampleFile4       => $version_files,
       parameterSampleFile5       => $def->{software_version},
       parameterSampleFile6       => $def->{groups},
+      
       sh_direct                  => 1,
       pbs                        => {
         "email"     => $def->{email},

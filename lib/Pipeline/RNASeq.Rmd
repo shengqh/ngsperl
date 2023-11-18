@@ -72,8 +72,14 @@ if(rnaseqOptions["top25cv_in_hca", 1] == "FALSE"){
   hca_gene_used<-" using all genes"
 }
 
+has_introduction="introduction_rmd" %in% rnaseqOptions$V2
+introduction_rmd=rnaseqOptions["introduction_rmd", 1]
+
 deseq2_rmd="deseq2.rmd"
 gsea_rmd_file="gsea.rmd"
+```
+
+```{r, child=introduction_rmd, eval=has_introduction}
 ```
 
 <br>
@@ -185,7 +191,7 @@ print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq m
 cat("**Uniquely mapped ratio** = Uniquely mapped / Input reads\n\n**Mapped ratio** = (Uniquely mapped + Mapped to multiple loci)/ Input reads\n\n")
 ```
 
-```{r, echo=FALSE,results='asis', eval = hasSTAR, fig.align="center", fig.align="center", fig.cap=figRef("STAR_chromosome_png", "The reads mapped to each chromosome in each sample")}
+```{r, echo=FALSE,results='asis', eval = "STAR_chromosome_png" %in% names(file_map), fig.align="center", fig.align="center", fig.cap=figRef("STAR_chromosome_png", "The reads mapped to each chromosome in each sample")}
 include_graphics(file_map$STAR_chromosome_png)
 ```
 
