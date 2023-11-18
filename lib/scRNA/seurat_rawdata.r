@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='multiome_monkey'
+outFile='int_papaer_crs'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
-parFile1=''
+parSampleFile3='fileList3.txt'
+parFile1='/nobackup/h_turner_lab/yangj22/20231031_integrate_a_paper_and_20230427_7114_8822_scRNA_hg38_vst2/20231031_integrate_a_paper_and_own_data_filter_config.csv'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/maureen_gannon_projects/20231110_snRNA_snATAC_monkey_remap_gene/seurat_rawdata/result')
+setwd('/nobackup/h_turner_lab/yangj22/20231031_integrate_a_paper_and_20230427_7114_8822_scRNA_hg38_vst2/result/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -273,6 +273,18 @@ if(is_qc_data){
         rownames(counts)<-toMouseGeneSymbol(rownames(counts))
       }
       if (species=="Hs") {
+        newnames = toupper(rownames(counts))
+        if(any(duplicated(newnames))){
+          #somehow for the data downloaded from internet, they might have duplicated gene names (lower case and upper case difference),
+          #we need to remove the one with lower reads
+          library(dplyr)
+          dup_data=counts[newnames %in% newnames[duplicated(newnames)],]
+          dup_sum=apply(dup_data,1,sum)
+          dup_df=data.frame(old_gene=rownames(dup_data), sum=dup_sum, dup_name=toupper(rownames(dup_data)))
+          max_dup=dup_df %>% group_by(dup_name) %>% filter(sum == max(sum, na.rm=TRUE))
+          remove_genes=rownames(dup_data)[!(rownames(dup_data) %in% max_dup$old_gene)]
+          counts=counts[!(rownames(counts) %in% remove_genes),,drop=FALSE]
+        }
         rownames(counts)<-toupper(rownames(counts))
       }
       sobj = CreateSeuratObject(counts = counts, project = sample_name)
