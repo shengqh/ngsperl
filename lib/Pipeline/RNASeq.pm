@@ -1484,8 +1484,11 @@ fi
       "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ],
       "task_name" => $taskName,
       "out.width" => getValue($def, "report.out.width", "80%"),
-      "introduction_rmd" => $def->{introduction_rmd},
     };
+
+    if($def->{introduction_rmd}){
+      $options->{introduction_rmd} = $def->{introduction_rmd};
+    }
 
     $config->{report} = {
       class                      => "CQS::BuildReport",
