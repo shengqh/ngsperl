@@ -7,10 +7,9 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-parFile4='/home/shengq2/program/RaviMartyLarsonCoefs/20230526_mona_rnaseq/20230804_meta.tsv'
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-TRUE;
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-TRUE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-TRUE;
 
-setwd('/nobackup/shah_lab/shengq2/20230526_mona_VR2527_rnaseq_hg38/genetable/result')
+setwd('/nobackup/h_vangard_1/breast_cancer_spore/20231117_rnaseq_6151_hg38/genetable/result')
 
 ### Parameter setting end ###
 
@@ -208,8 +207,8 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
     cat("saving PCA to ", filename, "\n")
     pca<-prcomp(t(rldmatrix))
 
-
-    pca_res = t(summary(pca)$importance)[c(1:10),] %>% 
+    npc = min(10, ncol(rldmatrix))
+    pca_res = t(summary(pca)$importance)[c(1:npc),] %>% 
       as.data.frame() %>% 
       tibble::rownames_to_column("PC") %>% 
       dplyr::rename("Proportion" = "Proportion of Variance", "Cumulative" = "Cumulative Proportion")
