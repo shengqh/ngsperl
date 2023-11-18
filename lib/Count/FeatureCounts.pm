@@ -65,7 +65,10 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-    print $pbs "featureCounts $option -T $thread -a $gffFile -o $final_file $bam_file \n\n";
+    print $pbs "featureCounts $option -T $thread -a $gffFile -o $final_file $bam_file 
+
+featureCounts -v 2>\&1 | grep featureCounts | cut -d ' ' -f2 | awk '{print \"featureCounts,\"\$1}' > ${sample_name}.count.featureCounts.version
+";
 
     $self->close_pbs( $pbs, $pbs_file );
   }
@@ -93,6 +96,8 @@ sub result {
     my @result_files = ();
     push( @result_files, "${result_dir}/${sample_name}.count" );
     push( @result_files, "${result_dir}/${sample_name}.count.summary" );
+    push( @result_files, "${result_dir}/${sample_name}.count.featureCounts.version" );
+    
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;

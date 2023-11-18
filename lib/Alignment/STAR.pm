@@ -118,6 +118,8 @@ if [ -s $final ]; then
   rm -rf $rmfiles ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
 
+$star --version | awk '{print \"STAR,v\"\$1}' > ${sample_name}.star.version
+
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -160,6 +162,8 @@ sub result {
       push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
     }
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
+    push( @result_files, "$cur_dir/${sample_name}.star.version" );
+    
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
