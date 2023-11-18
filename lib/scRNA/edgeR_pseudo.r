@@ -31,6 +31,14 @@ min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
 
 if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
+  if(!cluster_name %in% colnames(obj@meta.data)){
+    if(cluster_name == "bulk"){
+      obj=AddMetaData(obj, "bulk", col.name="bulk")
+    }
+  }
+  if(!cluster_name %in% colnames(obj@meta.data)){
+    stop(paste0("cluster_name ", cluster_name, " not found in meta.data"))
+  }
   obj@meta.data[,cluster_name]<-gsub("^\\s+", "", obj@meta.data[,cluster_name])
   if(!is.null(myoptions$sample_column)){
     obj$orig.ident = obj@meta.data[,myoptions$sample_column]

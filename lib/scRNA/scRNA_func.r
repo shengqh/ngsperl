@@ -1333,7 +1333,9 @@ read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
         columns = colnames(meta.data)
       }
       for(column in columns){
-        obj=AddMetaData(obj, meta.data[,column], col.name=column)
+        if(column %in% colnames(meta.data)){
+          obj=AddMetaData(obj, meta.data[,column], col.name=column)
+        }
       }
     }
   }

@@ -89,7 +89,7 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
     result<-paste0(result, "\n# ", comp, "\n\n")
     comp_files<-subset(edgeR_files, comparison == comp)
 
-    cts = rev(comp_files$cellType)
+    cts = as.character(rev(comp_files$cellType))
     ct<-cts[1]
 
     sig_file_map=unlist(split(comp_files$sigFile, comp_files$cellType))
