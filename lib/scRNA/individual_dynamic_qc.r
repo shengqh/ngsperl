@@ -237,20 +237,21 @@ tmp_folder = paste0(cur_folder, "/details")
 if(!dir.exists(tmp_folder)){
   dir.create(tmp_folder)
 }
-obj <- do_analysis(tmp_folder = tmp_folder,
-                        cur_folder = cur_folder,
-                        obj = obj, 
-                        layer2map = layer2map, 
-                        npcs = npcs, 
-                        resolution = resolution, 
-                        random.seed = random.seed, 
-                        by_sctransform = by_sctransform, 
-                        by_harmony = by_harmony, 
-                        prefix = prefix, 
-                        vars.to.regress = vars.to.regress, 
-                        bubblemap_file = bubblemap_file, 
-                        essential_genes = essential_genes,
-                        by_individual_sample = FALSE)
+obj <- do_analysis( tmp_folder = tmp_folder,
+                    cur_folder = cur_folder,
+                    obj = obj, 
+                    layer2map = layer2map, 
+                    npcs = npcs, 
+                    resolution = resolution, 
+                    random.seed = random.seed, 
+                    by_sctransform = by_sctransform, 
+                    by_harmony = by_harmony, 
+                    prefix = prefix, 
+                    vars.to.regress = vars.to.regress, 
+                    bubblemap_file = bubblemap_file, 
+                    essential_genes = essential_genes,
+                    by_individual_sample = FALSE,
+                    species = species)
 
 saveRDS(obj, file=paste0(prefix, ".obj.rds"))
 
