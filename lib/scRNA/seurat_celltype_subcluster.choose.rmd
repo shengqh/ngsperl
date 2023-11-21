@@ -24,8 +24,13 @@ source("scRNA_func.r")
 ```{r data, include=FALSE}
 source("reportFunctions.R")
 
-options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
+option_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F) %>% 
+  relocate("V2") %>% 
+  dplyr::rename(Value=V1, Parameter=V2)
+
+myoptions<-split(option_table$Value, option_table$Parameter)
+
+print_table(option_table, row.names=F)
 
 outFile=myoptions$task_name
 detailFile=paste0("details/", outFile)

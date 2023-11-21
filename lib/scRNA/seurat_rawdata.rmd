@@ -7,8 +7,14 @@ output:
 ---
 
 ```{r, echo=FALSE}
-options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
+option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F) %>% 
+  relocate("V2") %>% 
+  dplyr::rename(Value=V1, Parameter=V2)
+
+myoptions<-split(option_table$Value, option_table$Parameter)
+
+print_table(option_table, row.names=F)
+
 author_line<-ifelse(is.null(myoptions$email), "", paste0('author: "', myoptions$email, '"'))
 ```
 

@@ -34,9 +34,13 @@ source("reportFunctions.R")
 # Files Parameters
 
 ```{r, echo=FALSE, results="asis"}
-option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F)
-myoptions<-split(option_table$V1, option_table$V2)
-print(kable(option_table))
+option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F) %>% 
+  relocate("V2") %>% 
+  dplyr::rename(Value=V1, Parameter=V2)
+
+myoptions<-split(option_table$Value, option_table$Parameter)
+
+print_table(option_table, row.names=F)
 ```
 
 # Sample summary
