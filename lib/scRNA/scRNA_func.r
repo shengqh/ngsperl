@@ -739,7 +739,37 @@ plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
           strip.text.y = element_text(angle =0))
 }
 
-preprocessing_rawobj<-function(rawobj, myoptions, prefix){
+init_cutoffs<-function(all_samples, myoptions, filter_config_file=""){
+  ##cutoff dataframe for each sample to filter empty droplets
+  if(filter_config_file != ""){
+    Cutoffs<-fread(filter_config_file, data.table=F, header=TRUE)
+    missed_samples = all_samples[!(all_samples %in% Cutoffs$sample)]
+    if(length(missed_samples) > 0){
+      missed_Cutoffs<-data.frame( sample=missed_samples,
+                                  nFeature_cutoff_min=myoptions$nFeature_cutoff_min ,
+                                  nFeature_cutoff_max=myoptions$nFeature_cutoff_max,
+                                  nCount_cutoff=myoptions$nCount_cutoff, 
+                                  mt_cutoff=myoptions$mt_cutoff, 
+                                  cluster_remove=c(""),
+                                  stringsAsFactors = F)
+      Cutoffs<-rbind(Cutoffs, missed_Cutoffs)
+    }
+    Cutoffs = Cutoffs[Cutoffs$sample %in% all_samples,,drop=FALSE]
+  }else{
+    Cutoffs<-data.frame(
+      sample=all_samples,
+      nFeature_cutoff_min=myoptions$nFeature_cutoff_min ,
+      nFeature_cutoff_max=myoptions$nFeature_cutoff_max,
+      nCount_cutoff=myoptions$nCount_cutoff, 
+      mt_cutoff=myoptions$mt_cutoff, 
+      cluster_remove=c(""),
+      stringsAsFactors = F)
+  }
+  rownames(Cutoffs)<-Cutoffs$sample
+  return(Cutoffs)
+}
+
+preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file=""){
   Mtpattern= myoptions$Mtpattern
   rRNApattern=myoptions$rRNApattern
 
@@ -750,7 +780,9 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
   nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
   mt_cutoff=as.numeric(myoptions$mt_cutoff)
-  
+
+  Cutoffs=init_cutoffs(unique(rawobj$orig.ident), myoptions, filter_config_file)
+
   rawCells<-data.frame(table(rawobj$orig.ident))
   
   if(Remove_rRNA){
@@ -764,17 +796,17 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   }
   
   plot1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + 
-    geom_hline(yintercept = mt_cutoff, color="black")  + 
-    geom_vline(xintercept = nCount_cutoff, color="black") +
+    geom_hline(data=Cutoffs, aes(yintercept=mt_cutoff, color=sample))  + 
+    geom_vline(data=Cutoffs, aes(xintercept=nCount_cutoff, color=sample)) +
     scale_y_continuous(breaks = seq(0, 100, by = 10))
-  plot2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")  + 
-    geom_hline(yintercept = c( nFeature_cutoff_min, nFeature_cutoff_max), color="black")  + 
-    geom_vline(xintercept = nCount_cutoff, color="black") 
+
+  plot2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") +
+    geom_hline(data=Cutoffs, aes(yintercept=nFeature_cutoff_min, color=sample)) + 
+    geom_hline(data=Cutoffs, aes(yintercept=nFeature_cutoff_max, color=sample)) + 
+    geom_vline(data=Cutoffs, aes(xintercept=nCount_cutoff, color=sample)) 
+
   p<-plot1+plot2
-  
-  png(paste0(prefix, ".qc.1.png"), width=3300, height=1500, res=300)
-  print(p)
-  dev.off()
+  ggsave(paste0(prefix, ".qc.1.png"), p, width=11, height=5, dpi=300, units="in", bg="white")
 
   mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
 
@@ -784,55 +816,65 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix){
   width=min(10000, ncol * 1200)
   height=min(10000, nrow * 1000)
 
+  vcutoffs = Cutoffs
+  vcutoffs$log10_nCount_cutoff = log10(vcutoffs$nCount_cutoff)
+  vcutoffs$log10_nFeature_cutoff_min = log10(vcutoffs$nFeature_cutoff_min)
+  vcutoffs$log10_nFeature_cutoff_max = log10(vcutoffs$nFeature_cutoff_max)
+  vcutoffs$Sample = vcutoffs$sample
+
   g1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
-    geom_hline(yintercept = mt_cutoff, color="red")  + 
-    geom_vline(xintercept = log10(nCount_cutoff), color="red") +
+    geom_hline(data=vcutoffs, aes(yintercept=mt_cutoff, color=Sample)) + 
+    geom_vline(data=vcutoffs, aes(xintercept=log10_nCount_cutoff, color=Sample)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
-    facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  png(paste0(prefix, ".qc.2.png"), width=width, height=height, res=300)
-  print(g1)
-  dev.off()
+    facet_wrap(~Sample, ncol=ncol, nrow=nrow) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+  
+  ggsave(paste0(prefix, ".qc.2.png"), g1, width=width, height=height, dpi=300, units="px", bg="white")
   
   g1<-ggplot(mt, aes(y=mt,x=nFeature) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
-    geom_hline(yintercept = mt_cutoff, color="red")  + 
-    geom_vline(xintercept = log10(nFeature_cutoff_min), color="red") +
-    geom_vline(xintercept = log10(nFeature_cutoff_max), color="red") +
+    geom_hline(data=vcutoffs, aes(yintercept=mt_cutoff, color=Sample)) + 
+    geom_vline(data=vcutoffs, aes(xintercept=log10_nFeature_cutoff_min, color=Sample)) +
+    geom_vline(data=vcutoffs, aes(xintercept=log10_nFeature_cutoff_max, color=Sample)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
-    facet_wrap(~Sample) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  png(paste0(prefix, ".qc.3.png"), width=width, height=height, res=300)
-  print(g1)
-  dev.off()
+    facet_wrap(~Sample, ncol=ncol, nrow=nrow) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
+
+  ggsave(paste0(prefix, ".qc.3.png"), g1, width=width, height=height, dpi=300, units="px", bg="white")
 
   finalList<-list()
   
-  #filter cells
-  finalList$filter<-list(nFeature_cutoff_min=nFeature_cutoff_min,
-                         nFeature_cutoff_max=nFeature_cutoff_max,
-                         mt_cutoff=mt_cutoff,
-                         nCount_cutoff=nCount_cutoff,
-                         Remove_rRNA=Remove_rRNA,
-                         Remove_MtRNA=Remove_MtRNA)
+  Cutoffs$Remove_rRNA<-Remove_rRNA
+  Cutoffs$Remove_MtRNA<-Remove_MtRNA
 
-  rawobj<-subset(rawobj, subset = nFeature_RNA >= nFeature_cutoff_min & nFeature_RNA <= nFeature_cutoff_max & nCount_RNA >= nCount_cutoff & percent.mt <= mt_cutoff)
+  #filter cells
+  meta=rawobj@meta.data
+  cells = c()
+  for(idx in c(1:nrow(Cutoffs))){
+    sub_meta=meta[meta$orig.ident==Cutoffs$sample[idx],]
+    filteredsub_meta<-subset(sub_meta, nFeature_RNA >= Cutoffs$nFeature_cutoff_min[idx] & 
+                                  nFeature_RNA <= Cutoffs$nFeature_cutoff_max[idx] & 
+                                  nCount_RNA >= Cutoffs$nCount_cutoff[idx] & 
+                                  percent.mt <= Cutoffs$mt_cutoff[idx])
+    cells<-c(cells, rownames(filteredsub_meta))
+  }
+  rawobj<-subset(rawobj, cells=cells)
 
   filteredCells<-data.frame(table(rawobj$orig.ident))
   qcsummary<-merge(rawCells, filteredCells, by = "Var1")
   colnames(qcsummary)<-c("Sample", "RawCell", "ValidCell")
   qcsummary$DiscardCell<-qcsummary$RawCell-qcsummary$ValidCell
   qcsummary$DiscardRate<-qcsummary$DiscardCell / qcsummary$RawCell
+  qcsummary=merge(Cutoffs, qcsummary, by.x="sample", by.y="Sample")
   write.csv(qcsummary, file=paste0(prefix, ".filtered.cell.csv"), row.names=F)
   
   g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"), group.by="orig.ident")
-  png(paste0(prefix, ".qc.4.png"), width=3600, height=1600, res=300)
-  print(g)
-  dev.off()
+  ggsave(paste0(prefix, ".qc.4.png"), g, width=12, height=5, dpi=300, units="in", bg="white")
   
+  finalList$filter<-qcsummary
   finalList$rawobj<-rawobj
   return(finalList)
 }
@@ -910,7 +952,7 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   }
 }
 
-do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
+do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
   library("readxl")
   library("tidyr")
 
@@ -988,7 +1030,7 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species=NULL){
   return(genes)
 }
 
-read_bubble_genes<-function(bubblemap_files, allgenes=c(), species=NULL){
+read_bubble_genes<-function(bubblemap_files, allgenes=c(), species="Hs"){
   result = NULL
   bubblemap_file=bubblemap_files[1]
   for(bubblemap_file in bubblemap_files){
@@ -1030,6 +1072,12 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
 
 get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE ){
   genes=unique(unlist(gene_groups))
+  if(!all(genes %in% rownames(obj))){
+    missed_genes = genes[!(genes %in% rownames(obj))]
+    missed_genes=missed_genes[c(1:min(5, length(missed_genes)))]
+    stop(paste0("some genes are not in ", assay, " assay, here is the first few:", paste0(miss_genes, collapse = ",")))
+  }
+
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
   
   gdata<-g$data
@@ -1105,7 +1153,18 @@ get_dot_height<-function(obj, group.by){
   return(get_dot_height_vec(unlist(obj[[group.by]])))
 }
 
-get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster=FALSE, split.by=NULL, rotate.title=TRUE, group.by=NULL, use_blue_yellow_red=TRUE, species=NULL){
+get_bubble_plot<-function(obj, 
+                          cur_res, 
+                          cur_celltype, 
+                          bubblemap_file, 
+                          assay="RNA", 
+                          orderby_cluster=FALSE, 
+                          split.by=NULL, 
+                          rotate.title=TRUE, 
+                          group.by=NULL, 
+                          use_blue_yellow_red=TRUE, 
+                          species="Hs"){
+                            
   old_assay = DefaultAssay(obj)
   DefaultAssay(obj) = assay
   allgenes=rownames(obj)
@@ -1162,7 +1221,7 @@ get_bubble_plot<-function(obj, cur_res, cur_celltype, bubblemap_file, assay="RNA
   return(g)
 }
 
-get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, add_num_cell=FALSE){
+get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, add_num_cell=FALSE, species=NULL){
   old_meta<-obj@meta.data
   
   obj$fake_layer=paste0("fake_", unlist(obj@meta.data[,obj_res]))
@@ -1179,7 +1238,10 @@ get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, 
     sub_levels = levels(subobj@meta.data[, subobj_res])
   }
 
-  g<-get_bubble_plot(obj, group.by="fake_layer", bubblemap_file = bubblemap_file)
+  g<-get_bubble_plot( obj, 
+                      group.by="fake_layer", 
+                      bubblemap_file = bubblemap_file, 
+                      species=species)
 
   obj@meta.data=old_meta
   
@@ -1191,8 +1253,13 @@ get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, 
   return(g)
 }
 
-draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=5500, height=3000, rotate.title=TRUE){
-  g<-get_bubble_plot(obj, cur_res, cur_celltype, bubble_map_file, rotate.title=rotate.title)
+draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=5500, height=3000, rotate.title=TRUE, species="Hs"){
+  g<-get_bubble_plot( obj, 
+                      cur_res, 
+                      cur_celltype, 
+                      bubble_map_file, 
+                      rotate.title=rotate.title, 
+                      species=species)
   png(paste0(prefix, ".bubblemap.png"), width=width, height=height, res=300)
   print(g)
   dev.off()
@@ -1865,7 +1932,8 @@ output_celltype_figures<-function(obj,
                                   dot_width=4000, 
                                   cell_identity_order=NULL,
                                   all_umap="umap",
-                                  cell_identity_umap="umap"){
+                                  cell_identity_umap="umap",
+                                  species="Hs"){
 
   nct<-length(unique(unlist(obj[[cell_identity]])))
 
@@ -1896,7 +1964,8 @@ output_celltype_figures<-function(obj,
                             cur_celltype = cell_identity, 
                             bubblemap_file = bubblemap_file, 
                             assay = "RNA", 
-                            orderby_cluster = T)
+                            orderby_cluster = T,
+                            species=species)
       }else{
         g<-get_bubble_plot( obj = obj, 
                             cur_res = NULL, 
@@ -1904,7 +1973,8 @@ output_celltype_figures<-function(obj,
                             bubblemap_file = bubblemap_file, 
                             assay = "RNA", 
                             orderby_cluster = FALSE,
-                            group.by = cell_identity)
+                            group.by = cell_identity,
+                            species=species)
       }
 
       png(paste0(prefix, ".", cell_identity, ".dot.png"), width=dot_width, height=get_dot_height(obj, cell_identity), res=300)
@@ -2377,7 +2447,8 @@ iterate_celltype<-function(obj,
                            iter, 
                            vars.to.regress,
                            bubblemap_file, 
-                           essential_genes){
+                           essential_genes,
+                           species="Hs"){
   meta = obj@meta.data
   
   assay=ifelse(by_sctransform, "SCT", "RNA")
@@ -2499,11 +2570,17 @@ iterate_celltype<-function(obj,
     }
 
     if(pct == "Unassigned"){
-      g<-get_bubble_plot(obj = subobj, 
-        bubblemap_file = bubblemap_file, 
-        group.by = "raw_seurat_cell_type")
+      g<-get_bubble_plot( obj = subobj, 
+                          bubblemap_file = bubblemap_file, 
+                          group.by = "raw_seurat_cell_type",
+                          species=species)
     }else{
-      g<-get_sub_bubble_plot(obj, previous_layer, subobj, "raw_seurat_cell_type", bubblemap_file)
+      g<-get_sub_bubble_plot( obj, 
+                              previous_layer, 
+                              subobj, 
+                              "raw_seurat_cell_type", 
+                              bubblemap_file,
+                              species=species)
     }
     dot_file = paste0(curprefix, ".", pct_str, ".dot.png")
     png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, cluster), res=300)
@@ -2534,7 +2611,8 @@ layer_cluster_celltype<-function(obj,
                                  prefix, 
                                  vars.to.regress,
                                  bubblemap_file,
-                                 essential_genes){
+                                 essential_genes,
+                                 species=species){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -2571,7 +2649,8 @@ layer_cluster_celltype<-function(obj,
                             iter, 
                             vars.to.regress,
                             bubblemap_file, 
-                            essential_genes)
+                            essential_genes,
+                            species=species)
 
       all_cur_cts<-lst$all_cur_cts
       cur_files<-lst$files
@@ -2623,7 +2702,12 @@ layer_cluster_celltype<-function(obj,
   dev.off()
 
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay="RNA")
+    g2<-get_bubble_plot(obj, 
+                        NULL, 
+                        cur_layer, 
+                        bubblemap_file, 
+                        assay="RNA",
+                        species=species)
     png(paste0(prefix, ".", cur_layer, ".dot.png"), width=get_dot_width(g2), height=get_dot_height(obj, cur_layer), res=300)
     print(g2)
     dev.off()
@@ -2651,21 +2735,23 @@ do_analysis<-function(tmp_folder,
                       vars.to.regress, 
                       bubblemap_file, 
                       essential_genes,
-                      by_individual_sample ) {
+                      by_individual_sample,
+                      species="Hs" ) {
   setwd(tmp_folder)
-  reslist1<-layer_cluster_celltype(obj = obj,
-                              previous_layer = "layer0", 
-                              cur_layer = "layer4", 
-                              cur_layermap = layer2map, 
-                              npcs = npcs, 
-                              resolution = resolution, 
-                              random.seed = random.seed, 
-                              by_sctransform = by_sctransform, 
-                              by_harmony = by_harmony, 
-                              prefix = prefix, 
-                              vars.to.regress = vars.to.regress,
-                              bubblemap_file = bubblemap_file,
-                              essential_genes = essential_genes)
+  reslist1<-layer_cluster_celltype( obj = obj,
+                                    previous_layer = "layer0", 
+                                    cur_layer = "layer4", 
+                                    cur_layermap = layer2map, 
+                                    npcs = npcs, 
+                                    resolution = resolution, 
+                                    random.seed = random.seed, 
+                                    by_sctransform = by_sctransform, 
+                                    by_harmony = by_harmony, 
+                                    prefix = prefix, 
+                                    vars.to.regress = vars.to.regress,
+                                    bubblemap_file = bubblemap_file,
+                                    essential_genes = essential_genes,
+                                    species=species)
   obj=reslist1$obj
   files=reslist1$files
   rm(reslist1)
@@ -2709,11 +2795,12 @@ do_analysis<-function(tmp_folder,
     #output individual sample dot plot, with global scaled average gene expression.
     obj$sample_layer4<-paste0(obj$orig.ident, ":", obj$layer4)
     g<-get_bubble_plot( obj = obj, 
-                    cur_res = NA, 
-                    cur_celltype = "sample_layer4", 
-                    bubblemap_file = bubblemap_file, 
-                    assay = "RNA", 
-                    orderby_cluster = F)
+                        cur_res = NA, 
+                        cur_celltype = "sample_layer4", 
+                        bubblemap_file = bubblemap_file, 
+                        assay = "RNA", 
+                        orderby_cluster = F,
+                        species=species)
     gdata<-g$data
     gdata$id<-gsub(".+: ","",gdata$id)
     gdata$sample<-gsub(":.+","",gdata$id)

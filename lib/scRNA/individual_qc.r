@@ -72,20 +72,7 @@ if(file.exists('fileList3.txt')){
   tag_tb=NULL
 }
 
-##cutoff dataframe for each sample to filter empty droplets
-if(parFile1 != ""){
-  Cutoffs<-fread(parFile1, data.table=F, header=TRUE)
-}else{
-  Cutoffs<-data.frame(
-    sample=SampleInfos$SampleId,
-    nFeature_cutoff_min=myoptions$nFeature_cutoff_min ,
-    nFeature_cutoff_max=myoptions$nFeature_cutoff_max,
-    nCount_cutoff=myoptions$nCount_cutoff, 
-    mt_cutoff=myoptions$mt_cutoff, 
-    cluster_remove=c(""),
-    stringsAsFactors = F)
-}
-rownames(Cutoffs)<-Cutoffs$sample
+Cutoffs=init_cutoffs(SampleInfos$SampleId, myoptions, parFile1)
 
 miss_samples = SampleInfos$SampleId[!(SampleInfos$SampleId %in% Cutoffs$sample)]
 if(length(miss_samples) > 0){
