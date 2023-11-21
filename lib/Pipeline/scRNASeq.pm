@@ -518,7 +518,7 @@ sub getScRNASeqConfig {
       push (@report_files, ($seurat_rawdata, "rawobj.rds"));
       push (@report_names, "raw_obj");
 
-      my ($seurat_task, $reduction) = add_seurat($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, 0, $is_preprocessed, $prefix);
+      my ($seurat_task, $reduction) = add_seurat($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, 0, $is_preprocessed, $prefix, $filter_config_file);
       my $obj_ref = [$seurat_task, ".final.rds"];
 
       push (@report_files, ($seurat_task, ".final.png", 
