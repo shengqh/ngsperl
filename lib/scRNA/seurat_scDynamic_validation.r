@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='P5798'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile6='fileList6.txt'
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge/result/combined.final.rds'
-parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/combined.scDynamic.meta.rds'
-parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call/result/combined.iter_png.csv'
+parFile1='/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/seurat_sct2_merge/result/P5798.final.rds'
+parFile2='/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/seurat_sct2_merge_dr0.1_1_call/result/P5798.scDynamic.meta.rds'
+parFile3='/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/seurat_sct2_merge_dr0.1_1_call/result/P5798.iter_png.csv'
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_01_call_validation/result')
+setwd('/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/seurat_sct2_merge_dr0.1_1_call_validation/result')
 
 ### Parameter setting end ###
 
@@ -77,11 +77,17 @@ if(exists('parSampleFile5')){
 
 saveRDS(meta, paste0(outFile, ".meta.rds"))
 
-if(has_decontX){
-  obj<-read_object(parFile1)
-  obj@meta.data = meta
-}else{
-  obj<-NA
+obj<-read_object(parFile1)
+obj@meta.data = meta
+
+get_filtered_obj<-function(obj, ct_meta, filter_column){
+  ct_tbl = table(ct_meta[,filter_column])
+  ct_tbl = ct_tbl / sum(ct_tbl)
+  ct_tbl = ct_tbl[ct_tbl > 0.01]
+  cur_meta = ct_meta[ct_meta[,filter_column] %in% names(ct_tbl),]
+  cells = rownames(cur_meta)
+  ct_obj = subset(obj, cells=cells)
+  return(ct_obj)
 }
 
 draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, validation_columns, has_decontX, obj){
@@ -93,25 +99,39 @@ draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, v
     ct_meta = meta[meta[,celltype_column] == ct,]
 
     bar_file=paste0(outFile, ".", pct, ".png")
-    g<-get_barplot(
-      ct_meta=ct_meta, 
-      bar_file=bar_file,
-      cluster_name=celltype_cluster_column, 
-      validation_columns=validation_columns,
-      calc_height_per_cluster=200, 
-      calc_width_per_cell=50)
+    g<-get_barplot( ct_meta=ct_meta, 
+                    bar_file=bar_file,
+                    cluster_name=celltype_cluster_column, 
+                    validation_columns=validation_columns,
+                    calc_height_per_cluster=200, 
+                    calc_width_per_cell=50)
 
     if(has_decontX){
-      g1<-MyFeaturePlot(obj, features = "decontX") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
-      g2<-VlnPlot(obj, features = "decontX", group.by=celltype_cluster_column) + xlab("") + theme_bw3(TRUE) + ggtitle("") + NoLegend()
-      if("DF" %in% colnames(obj@meta.data)){
-        g2$data$DF = obj@meta.data[rownames(g2$data), "DF"]
+      cells = rownames(ct_meta)
+      ct_obj = subset(obj, cells=cells)
+
+      g1<-MyFeaturePlot(ct_obj, features = "decontX") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
+      g2<-VlnPlot(ct_obj, features = "decontX", group.by=celltype_cluster_column) + xlab("") + theme_bw3(TRUE) + ggtitle("") + NoLegend()
+      if("DF" %in% colnames(ct_obj@meta.data)){
+        g2$data$DF = ct_obj@meta.data[rownames(g2$data), "DF"]
         g2<-g2 + facet_grid(DF~.)
       }
       g<-g1+g2+plot_layout(design="ABBB")
-      png(paste0(outFile, ".", pct, ".decontX.png"), width=4400, height=1600, res=300)
-      print(g)
-      dev.off()
+      ggsave(paste0(outFile, ".", pct, ".decontX.png"), g, width=4400, height=1600, units="px", dpi=300, bg="white")
+    }
+
+    if("SingleR" %in% validation_columns){
+      ct_obj = get_filtered_obj(obj, ct_meta, "SingleR")
+
+      g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="SingleR",  title="SingleR in old UMAP") + guides(fill=guide_legend(ncol =1))
+      ggsave(paste0(outFile, ".", pct, ".SingleR.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
+    }
+
+    if("SignacX" %in% validation_columns){
+      ct_obj = get_filtered_obj(obj, ct_meta, "SignacX")
+
+      g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="SignacX",  title="SignacX in old UMAP") + guides(fill=guide_legend(ncol =1))
+      ggsave(paste0(outFile, ".", pct, ".SignacX.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
     }
   }
 }

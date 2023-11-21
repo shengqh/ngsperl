@@ -3,7 +3,8 @@ title: "Dynamic cell type validation"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
-    toc_depth: 2
+    toc_depth: 3
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
@@ -23,7 +24,13 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 ```{r data, echo = FALSE}
 source("reportFunctions.R")
 
-myoptions<-read_file_map("fileList1.txt", do_unlist=F)
+option_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F) %>% 
+  relocate("V2") %>% 
+  dplyr::rename(Value=V1, Parameter=V2)
+
+myoptions<-split(option_table$Value, option_table$Parameter)
+
+print_table(option_table, row.names=F)
 
 outFile=myoptions$task_name
 celltype_column=myoptions$celltype_column
@@ -91,6 +98,20 @@ iter_figure_rmd<-function(outFile, cts, iter_png){
       cta_png = get_last_figure(ct_png, "cta_png")
 
       result<-paste0(result, paste0("\n\n## UMAP\n\n"))
+
+      singleR_file = paste0(getwd(), "/", outFile, ".", ct_name, ".SingleR.png")
+      if(file.exists(singleR_file)){
+        result<-paste0(result, paste0("\n\n### SingleR\n\n"))
+        result<-paste0(result, getFigure(singleR_file))
+      }
+
+      signacX_file = paste0(getwd(), "/", outFile, ".", ct_name, ".SignacX.png")
+      if(file.exists(signacX_file)){
+        result<-paste0(result, paste0("\n\n### SignacX\n\n"))
+        result<-paste0(result, getFigure(signacX_file))
+      }
+
+      result<-paste0(result, paste0("\n\n### Cell type annotation\n\n"))
       result<-paste0(result, getFigure(old_umap))
 
       result<-paste0(result, paste0("\n\n## SUB_UMAP\n\n"))
