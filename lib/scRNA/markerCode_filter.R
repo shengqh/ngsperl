@@ -283,6 +283,8 @@ preprocess<-function( SampleInfo,
                       output_object=0,
                       vars.to.regress=c("percent.mt")) {
 
+  by_sctransform_v2 = by_sctransform & use_sctransform_v2
+
   countfile<-SampleInfo$countfile
   sampleid=SampleInfo$SampleId
   
@@ -426,6 +428,8 @@ preprocess<-function( SampleInfo,
       ndim = 20
     }
 
+    DefaultAssay(subobj)<-assay
+
     rRNA.genes <- grep(pattern = rRNApattern,  rownames(subobj), value = TRUE)
     Mt.genes<- grep (pattern= Mtpattern,rownames(subobj), value=TRUE ) 
     
@@ -488,11 +492,11 @@ preprocess<-function( SampleInfo,
       #use the max_cta_score for each cluster
       new.cluster.ids<-rownames(predict_celltype$predict_result)
       names(new.cluster.ids) <- levels(subobj)
-      subobj$cell_type=new.cluster.ids[subobj$seurat_clusters]
+      subobj@meta.data$cell_type=new.cluster.ids[subobj$seurat_clusters]
       
       new.cluster.ids<-paste0(levels(subobj$seurat_clusters), ": ", rownames(predict_celltype$predict_result))
       names(new.cluster.ids) <- levels(subobj)
-      subobj$seurat_cell_type=factor(new.cluster.ids[subobj$seurat_clusters], levels=new.cluster.ids)
+      subobj@meta.data$seurat_cell_type=factor(new.cluster.ids[subobj$seurat_clusters], levels=new.cluster.ids)
 
       max_char = max(unlist(lapply(new.cluster.ids, nchar))) + 2
 
@@ -517,7 +521,12 @@ preprocess<-function( SampleInfo,
 
       has_multi_clusters<-length(levels(subobj$seurat_clusters))>1
       if(has_multi_clusters) {
-        subobj.markers <- FindAllMarkers(subobj, assay="RNA", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
+        cur_assay = ifelse(by_sctransform_v2, "SCT", "RNA")
+
+        if(by_sctransform_v2){
+          subobj <- PrepSCTFindMarkers(subobj)
+        }
+        subobj.markers <- FindAllMarkers(subobj, assay=cur_assay, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
         subobj@misc$markers<-subobj.markers
         
         if('avg_log2FC' %in% colnames(subobj.markers)){
@@ -537,11 +546,11 @@ preprocess<-function( SampleInfo,
           } 
         }
         
-        subobj<-myScaleData(subobj, top10gene, "RNA")
+        subobj<-myScaleData(subobj, top10gene, cur_assay)
         
         #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
         #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-        g<-MyDoHeatMap(subobj, assay="RNA", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
+        g<-MyDoHeatMap(subobj, assay=cur_assay, features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
         png(paste0(cur_sample, ".heatmap.png"), 
             width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
             height=get_heatmap_height(length(top10gene)), 
@@ -568,9 +577,9 @@ preprocess<-function( SampleInfo,
           
           #cat("\n\n### Fig.8 Cell type marker genes expression in each cluster\n\n")
           
-          subobj<-myScaleData(subobj, ugenes, "RNA")
+          subobj<-myScaleData(subobj, ugenes, cur_assay)
 
-          g<-MyDoHeatMap(subobj, assay="RNA",features=ugenes)
+          g<-MyDoHeatMap(subobj, assay=cur_assay,features=ugenes)
           png(paste0(cur_sample, ".bubble_heatmap.png"), 
             width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
             height=get_heatmap_height(length(ugenes)), 
@@ -578,7 +587,7 @@ preprocess<-function( SampleInfo,
           print(g)
           dev.off()
 
-          g<-get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay="RNA", group.by="seurat_cell_type") + theme(text = element_text(size=20))
+          g<-get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay=cur_assay, group.by="seurat_cell_type", species=species) + theme(text = element_text(size=20))
           #cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
           png(paste0(cur_sample, ".bubble.png"), 
               width=get_dot_width(g), 
