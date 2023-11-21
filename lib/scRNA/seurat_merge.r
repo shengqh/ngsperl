@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='crs'
+outFile='P5798'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_rawdata_postqc/result/crs.rawobj.rds'
-parFile2='/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/essential_genes/result/crs.txt'
-parFile3=''
+parFile1='/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/seurat_rawdata/result/P5798.rawobj.rds'
+parFile2='/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/essential_genes/result/P5798.txt'
+parFile3='/data/cqs/shengq2/program/collaborations/jonathan_brown/20231114_scRNA_5798_human_liver_redo/filter_config.csv'
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/seurat_sct2_merge/result')
+setwd('/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/seurat_sct2_merge/result')
 
 ### Parameter setting end ###
 
@@ -57,7 +57,7 @@ finalListFile<-paste0(prefix, ".final.rds")
 obj<-readRDS(parFile1)
 
 if(!is_preprocessed){
-  finalList<-preprocessing_rawobj(obj, myoptions, prefix)
+  finalList<-preprocessing_rawobj(obj, myoptions, prefix, parFile3)
   obj<-finalList$rawobj
   finalList<-finalList[names(finalList) != "rawobj"]
 
