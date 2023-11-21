@@ -210,7 +210,7 @@ sub add_seurat_merge_object {
 }
 
 sub add_seurat {
-  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets, $is_preprocessed, $prefix) = @_;
+  my ($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets, $is_preprocessed, $prefix, $qc_filter_config_file) = @_;
 
   my $seurat_task;
   my $reduction;
@@ -256,6 +256,7 @@ sub add_seurat {
     rmd_ext => $rmd_ext,
     parameterFile1_ref => [$seurat_rawdata, ".rawobj.rds"],
     parameterFile2_ref => $essential_gene_task,
+    parameterFile3 => $qc_filter_config_file,
     parameterSampleFile1     => {
       task_name             => getValue( $def, "task_name" ),
       Mtpattern             => getValue( $def, "Mtpattern" ),
