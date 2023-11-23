@@ -1072,10 +1072,11 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
 
 get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE ){
   genes=unique(unlist(gene_groups))
-  if(!all(genes %in% rownames(obj))){
-    missed_genes = genes[!(genes %in% rownames(obj))]
+  assaydata=GetAssayData(obj, assay=assay, slot="data")
+  if(!all(genes %in% rownames(assaydata))){
+    missed_genes = genes[!(genes %in% rownames(assaydata))]
     missed_genes=missed_genes[c(1:min(5, length(missed_genes)))]
-    stop(paste0("some genes are not in ", assay, " assay, here is the first few:", paste0(miss_genes, collapse = ",")))
+    stop(paste0("some genes are not in ", assay, " assay, here is the first few:", paste0(missed_genes, collapse = ",")))
   }
 
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
@@ -2355,9 +2356,7 @@ get_barplot<-function(
     height = max(1000, length(unique(alltbl$Var1)) * calc_height_per_cluster + 500)
     width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + 400
 
-    png(bar_file, width=width, height=height, res=300)
-    print(g)
-    ignored = dev.off()
+    ggsave(bar_file, g, width=width, height=height, dpi=300, units="px", bg="white")
   }
   
   return(g)
