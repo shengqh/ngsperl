@@ -1,16 +1,15 @@
 rm(list=ls()) 
-outFile='P9674'
+outFile='P8870_mm10'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/nobackup/h_cqs/charles_flynn_projects/20230328_9674_dog_3_scRNA_celltype/seurat_merge/result/P9674.final.rds'
-parFile2='/nobackup/h_cqs/charles_flynn_projects/20230328_9674_dog_3_scRNA_celltype/seurat_merge_dr0.5_1_call/result/P9674.scDynamic.meta.rds'
-parFile3='/nobackup/h_cqs/charles_flynn_projects/20230328_9674_dog_3_scRNA_celltype/essential_genes/result/P9674.txt'
+parFile1='/nobackup/brown_lab/projects/20231117_scRNA_8870_mouse_redo/seurat_sct2_merge/result/P8870_mm10.final.rds'
+parFile2='/nobackup/brown_lab/projects/20231117_scRNA_8870_mouse_redo/seurat_sct2_merge_dr0.1_1_call/result/P8870_mm10.scDynamic.meta.rds'
+parFile3='/nobackup/brown_lab/projects/20231117_scRNA_8870_mouse_redo/essential_genes/result/P8870_mm10.txt'
 
 
-setwd('/nobackup/h_cqs/charles_flynn_projects/20230328_9674_dog_3_scRNA_celltype/seurat_merge_dr0.5_2_subcluster/result')
+setwd('/nobackup/brown_lab/projects/20231117_scRNA_8870_mouse_redo/seurat_sct2_merge_dr0.1_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -239,7 +238,7 @@ if(has_bubblemap){
   }
 }
 
-resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.5, by = 0.1))
+resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.5, by = 0.05))
 
 layer4map<-split(tiers$Layer4, tiers$Celltype.name)
 
@@ -353,7 +352,7 @@ for(pct in previous_celltypes){
     filelist<-rbind(filelist, cur_df)
 
     if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", bubblemap_file, add_num_cell=TRUE)
+      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(curprefix, ".dot.SignacX.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), res=300)
@@ -365,7 +364,7 @@ for(pct in previous_celltypes){
 
     if(pct %in% names(bubble_file_map)){
       cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", cur_bubblemap_file, add_num_cell=TRUE)
+      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(curprefix, ".dot.SignacX.subcelltypes.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), res=300)
@@ -392,9 +391,7 @@ for(pct in previous_celltypes){
     g5<-get_dim_plot_labelby(srobj, reduction=subumap, label.by = "SingleR", label=T) + ggtitle(paste0(subumap, ": SingleR"))
     g<-g4+g5+plot_layout(ncol=2)
     signacr_file=paste0(curprefix, ".SingleR.umap.png")
-    png(signacr_file, width=3600, height=1500, res=300)
-    print(g)
-    dev.off()
+    ggsave(signacr_file, g, width=3600, height=1500, dpi=300, units="px", bg="white")
 
     rm(g4, g5, g)
 
@@ -402,7 +399,7 @@ for(pct in previous_celltypes){
     filelist<-rbind(filelist, cur_df)
 
     if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", bubblemap_file, add_num_cell=TRUE)
+      g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(curprefix, ".dot.SingleR.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), res=300)
@@ -414,7 +411,7 @@ for(pct in previous_celltypes){
 
     if(pct %in% names(bubble_file_map)){
       cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", cur_bubblemap_file, add_num_cell=TRUE)
+      g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(curprefix, ".dot.SingleR.subcelltypes.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), res=300)
@@ -556,7 +553,7 @@ for(pct in previous_celltypes){
     cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
     if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file, add_num_cell=TRUE)
+      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(cluster_prefix, ".dot.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
@@ -568,7 +565,7 @@ for(pct in previous_celltypes){
 
     if(pct %in% names(bubble_file_map)){
       cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_file, add_num_cell=TRUE)
+      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(cluster_prefix, ".dot_celltype_specific.png")
       png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
