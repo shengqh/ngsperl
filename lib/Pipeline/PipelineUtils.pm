@@ -107,6 +107,8 @@ our %EXPORT_TAGS = (
     add_md5
     add_bamplot
     add_fastq_screen
+    writeAnnotationLocus_bed
+    writeAnnotationLocus_gff
     )
   ]
 );
@@ -3179,7 +3181,7 @@ sub addSizeFactor {
   push( @$tasks, $sizeFactorTask );
 }
 
-sub writeAnnotationLocus {
+sub writeAnnotationLocus_bed {
   my ($locusList, $locusFile) = @_;
   open(my $fh, '>', $locusFile) or die "Could not open file '$locusFile' $!";
 
@@ -3221,11 +3223,53 @@ sub writeAnnotationLocus {
   }
 }
 
+sub writeAnnotationLocus_gff {
+  my ($locusList, $locusFile) = @_;
+  open(my $fh, '>', $locusFile) or die "Could not open file '$locusFile' $!";
+
+  my $locusName;
+  if(is_array($locusList)){
+    my $count = 0;
+    for my $locus (@$locusList){
+      $count = $count + 1;
+      $locus =~ s/,//g;
+
+      $locusName = $locus;
+      $locusName =~ s/:/_/g; 
+      $locusName =~ s/-/_/g; 
+
+      my @parts = split /:/, $locus;
+      my $chr = $parts[0];
+      my $positions = $parts[1];
+      my @pos = split /-/, $positions;
+      my $start = $pos[0];
+      my $end = $pos[1];
+      print $fh $chr . "\t" . $locusName . "\tGENE\t".  $start . "\t" . $end . "\t.\t+\t.\n";
+    }
+    close($fh);
+  }elsif(is_hash($locusList)){
+    for $locusName (sort keys %$locusList){
+      my $locus = $locusList->{$locusName};
+      my @parts = split /:/, $locus;
+      my $chr = $parts[0];
+      my $positions = $parts[1];
+      my @pos = split /-/, $positions;
+      my $start = $pos[0];
+      my $end = $pos[1];
+      print $fh $chr . "\t" . $locusName . "\tGENE\t".  $start . "\t" . $end . "\t.\t+\t.\n";
+    }
+    close($fh);
+  }else{
+    close($fh);
+    die("locus should be either array or hash");
+  }
+}
+
 sub addAnnotationLocus {
   my ($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bam_ref) = @_;
 
   my $locusFile = $target_dir . "/annotation_locus.bed";
-  writeAnnotationLocus($def->{annotation_locus}, $locusFile);
+  writeAnnotationLocus_bed($def->{annotation_locus}, $locusFile);
 
   if($def->{perform_bamsnap}){
     my $bamsnap_task = $task_name . "_bamsnap";
@@ -3650,24 +3694,31 @@ sub add_bamplot {
   my $gff_value = "";
 
   if ( not defined $def->{bamplot_gff} ) {
-    $config->{gene_pos} = {
-      class        => "Annotation::PrepareGenePosition",
-      perform      => 1,
-      target_dir   => $target_dir . "/" . getNextFolderIndex($def) . "gene_pos",
-      option       => "",
-      dataset_name => getValue($def, "dataset_name"),
-      gene_names   => getValue($def, "gene_names"),
-      add_chr      => getValue($def, "add_chr"),
-      output_gff   => 1,
-      pbs          => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
-      },
-    };
-    $gff_key = "gff_file_ref";
-    $gff_value = "gene_pos";
-    push( @$tasks, "gene_pos" );
+    if($def->{annotation_locus}){
+      $gff_key = "gff_file";
+      $gff_value = $target_dir . "/annotation_locus.gff";
+      print("writing annotation_locus to " . $gff_value . "\n");
+      writeAnnotationLocus_gff($def->{annotation_locus}, $gff_value);
+    }else{
+      $config->{gene_pos} = {
+        class        => "Annotation::PrepareGenePosition",
+        perform      => 1,
+        target_dir   => $target_dir . "/" . getNextFolderIndex($def) . "gene_pos",
+        option       => "",
+        dataset_name => getValue($def, "dataset_name"),
+        gene_names   => getValue($def, "gene_names"),
+        add_chr      => getValue($def, "add_chr"),
+        output_gff   => 1,
+        pbs          => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "2",
+          "mem"       => "10gb"
+        },
+      };
+      $gff_key = "gff_file_ref";
+      $gff_value = "gene_pos";
+      push( @$tasks, "gene_pos" );
+    }
   }else{
     $gff_key = "gff_file";
     $gff_value = getValue($def, "bamplot_gff");
@@ -3679,7 +3730,7 @@ sub add_bamplot {
     target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
     option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
     source_ref         => $bam_ref,
-    $gff_key       => $gff_value,
+    $gff_key           => $gff_value,
     is_rainbow_color   => 0,
     is_single_pdf      => 0,
     is_draw_individual => 0,
