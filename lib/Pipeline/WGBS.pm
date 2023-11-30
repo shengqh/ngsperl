@@ -156,8 +156,8 @@ sub getConfig {
     option                   => "",
     docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/prepare_CpG_input.R",
-    parameterSampleFile1_ref   => [ "DNMTools", ".cpg.meth\$" ],
-    output_file_ext          => ".CpG.txt",
+    parameterSampleFile1_ref   => [ "DNMTools", ".cpg.meth.gz\$" ],
+    output_file_ext          => ".CpG.txt.gz",
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",
