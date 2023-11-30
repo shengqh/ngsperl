@@ -472,7 +472,7 @@ sub getPreprocessionConfig {
   }
 
   if ( $def->{sra_to_fastq} ) {
-    my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FastqDump";
+    my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" : $is_pairend?"SRA::FastqDumpPaired":"SRA::FastqDump";
     my $docker_prefix = getValue($def, "sra_to_fastq_wget", 0)? undef :"sratools_";
     #my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FasterqDump";
     $config->{sra2fastq} = {
