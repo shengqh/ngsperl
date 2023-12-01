@@ -41,7 +41,8 @@ github_libs = {
   "ChIPQC": 'shengqh',
   "cutoff": 'choisy',
   "mafreport": 'slzhao',
-  "scRNABatchQC": 'liuqivandy'
+  "scRNABatchQC": 'liuqivandy',
+  "Matrix.utils": "cvarrichio"
 }
 
 final_libs = []
