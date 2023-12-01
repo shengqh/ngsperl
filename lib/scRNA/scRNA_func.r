@@ -996,7 +996,7 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
 
   #for some excel file, multiple genes are in same row but seperated by ',', 
   #use sepearte_rows to put them in different rows.
-  genes<-data.frame(separate_rows(genes, gene))
+  genes<-data.frame(separate_rows(genes, gene, sep="[, ]+"))
   genes<-genes[genes$gene != "",]
 
   if(!is.null(species)){
