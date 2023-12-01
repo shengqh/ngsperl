@@ -186,8 +186,31 @@ fi
         print $pbs "rm -rf ${sample_name}_1.fastq.gz ${sample_name}_2.fastq.gz \n";
         for my $sf (@sample_files) {
           print $pbs "
-fastq-dump $option --origfmt --helicos $sf 
-gzip ${sf}_1.fastq ${sf}_2.fastq
+
+if [[ ! -s ${sf}.sra ]]; then
+  echo prefetch $sf $prefetch_option -o ${sf}.tmp.sra
+  prefetch $sf $prefetch_option --check-rs no -o ${sf}.tmp.sra
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sf.prefetch.failed
+    rm -f ${sf}.tmp.sra
+    exit 1
+  else
+    touch $sf.prefetch.succeed
+    mv ${sf}.tmp.sra ${sf}.sra
+  fi
+fi
+
+if [[ -s ${sf}.sra ]]; then
+  echo fastq-dump $option --gzip --origfmt --helicos ${sf}.sra 
+  fastq-dump $option --gzip --origfmt --helicos ${sf}.sra 
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.fasterq.failed
+    rm -f ${sf}_1.fastq.gz ${sf}_2.fastq.gz ${sf}.fastq.gz
+    exit 1
+fi
+
 cat ${sf}_1.fastq.gz >> ${sample_name}_1.fastq.gz
 cat ${sf}_2.fastq.gz >> ${sample_name}_2.fastq.gz
 rm -rf ${sf}_1.fastq.gz ${sf}_2.fastq.gz
