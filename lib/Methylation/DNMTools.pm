@@ -134,6 +134,7 @@ fi
 if [ ! -s ${sample_name}.cpg.pmd ]; then
   echo dnmtools pmd=`date`
   $dnmtools_command pmd -o ${sample_name}.cpg.pmd -p ${sample_name}.cpg.pmdparams ${sample_name}.cpg.meth
+  gzip 
 fi
 
 if [ ! -s ${sample_name}.cpg.pmd.bb ]; then
@@ -158,6 +159,8 @@ if [ ! -s ${sample_name}.amr ]; then
   echo dnmtools amrfinder=`date`
   $dnmtools_command amrfinder -c $chr_fasta -o ${sample_name}.amr ${sample_name}.epiread
 fi
+
+gzip ${sample_name}.cpg.meth
 
 rm ${sample_name}.epiread
 
@@ -186,7 +189,7 @@ sub result {
     my @result_files = ();
     push( @result_files, "${result_dir}/${sample_name}.levels" );
     #push( @result_files, "${result_dir}/${sample_name}.all.meth" );
-    push( @result_files, "${result_dir}/${sample_name}.cpg.meth" );
+    push( @result_files, "${result_dir}/${sample_name}.cpg.meth.gz" );
     push( @result_files, "${result_dir}/${sample_name}.cpg.hmr" );
     #no pmr in dnmtools 1.4.1+
     #push( @result_files, "${result_dir}/${sample_name}.cpg.pmr" );

@@ -41,6 +41,8 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_individual_qc", 1 );
 
+  initDefaultValue( $def, "perform_cellbender", 0 );
+
   initDefaultValue( $def, "perform_preprocessing", 0 );
   initDefaultValue( $def, "perform_mapping",       0 );
   initDefaultValue( $def, "perform_counting",      0 );
@@ -279,6 +281,33 @@ sub getScRNASeqConfig {
     my $hto_sample_file = undef;
     my $hto_summary_task = undef;
     my $files_def = "files";
+
+    if(getValue($def, "perform_cellbender", 0)){
+      my $cellbender_cpu = getValue($def, "cellbender_cpu", 12);
+      my $cellbender_task = "cellbender";
+      $config->{$cellbender_task} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => "${target_dir}/$cellbender_task",
+        program => "",
+        check_program => 0,
+        option => "
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+
+#__OUTPUT__
+",
+        docker_prefix => "cellbender_",
+        parameterSampleFile1_ref => $files_def,
+        output_to_same_folder => 1,
+        output_file_ext => ".cellbender.h5",
+        pbs => {
+          "nodes"    => "1:ppn=$cellbender_cpu",
+          "walltime" => "48",
+          "mem"      => "40gb"
+        }
+      };
+      $files_def = $cellbender_task;
+      push(@$individual, $cellbender_task);
+    }
 
     my $perform_decontX = getValue($def, "perform_decontX", 0);
     my $remove_decontX = $perform_decontX && getValue($def, "remove_decontX", 0);
@@ -569,7 +598,7 @@ sub getScRNASeqConfig {
 
         if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
           my $validation_task = $scDynamic_task . "_validation";
-          add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref);
+          add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0);
         }
 
         if(defined $def->{bubble_plots}){
@@ -632,7 +661,7 @@ sub getScRNASeqConfig {
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref );
+              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 1 );
             }
 
             $celltype_task = $choose_task;
@@ -814,7 +843,7 @@ sub getScRNASeqConfig {
 
           if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
             my $validation_task = $multires_task . "_validation";
-            add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref );
+            add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0 );
           }
 
           my $cur_options = {
@@ -834,7 +863,7 @@ sub getScRNASeqConfig {
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, "seurat_cell_type", ".multires_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref );
+              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, "seurat_cell_type", ".multires_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 1 );
             }
 
             $celltype_task = $choose_task;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package SRA::FastqDump;
+package SRA::FastqDumpPaired;
 
 use strict;
 use warnings;
@@ -37,12 +37,13 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
 
   my $ispaired = get_is_paired_end_option($config, $section, 0);
+  if(!$ispaired){
+    die "SRA::FastqDumpPaired should be used for paired end only.";
+  }
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
   my $prefetch_option = get_option($config, $section, "prefetch_option", "-X 50G");
 
-  if($ispaired){
-    $option = $option . " --split-3 ";
-  }
+  $option = $option . " --split-3 ";
 
   my $raw_files = getSraFiles( $config, $section );
 
@@ -175,24 +176,47 @@ if [[ -s ${sample_file}.sra ]]; then
     touch $sample_name.fasterq.failed
     rm -f ${sample_file}_1.fastq.gz ${sample_file}_2.fastq.gz ${sample_file}.fastq.gz
   else
-";
-
-        if($ispaired){
-          print $pbs "    mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz \n";
-          print $pbs "    mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz \n";
-        }else{
-          print $pbs "    mv ${sample_file}.fastq.gz ${sample_name}.fastq.gz \n";
-        }
-        print $pbs "  fi
+    mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz
+    mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz
+  fi
 fi
 ";
       }
       else {
-        print $pbs "if [[ -s ${sample_name}.fastq ]]; then\n  rm ${sample_name}.fastq \nfi \n";
+        print $pbs "rm -rf ${sample_name}_1.fastq.gz ${sample_name}_2.fastq.gz \n";
         for my $sf (@sample_files) {
-          print $pbs "fastq-dump $option --origfmt --helicos $sf -Z >> ${sample_name}.fastq \n";
+          print $pbs "
+
+if [[ ! -s ${sf}.sra ]]; then
+  echo prefetch $sf $prefetch_option -o ${sf}.tmp.sra
+  prefetch $sf $prefetch_option --check-rs no -o ${sf}.tmp.sra
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sf.prefetch.failed
+    rm -f ${sf}.tmp.sra
+    exit 1
+  else
+    touch $sf.prefetch.succeed
+    mv ${sf}.tmp.sra ${sf}.sra
+  fi
+fi
+
+if [[ -s ${sf}.sra ]]; then
+  echo fastq-dump $option --gzip --origfmt --helicos ${sf}.sra 
+  fastq-dump $option --gzip --origfmt --helicos ${sf}.sra 
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.fasterq.failed
+    rm -f ${sf}_1.fastq.gz ${sf}_2.fastq.gz ${sf}.fastq.gz
+    exit 1
+fi
+
+cat ${sf}_1.fastq.gz >> ${sample_name}_1.fastq.gz
+cat ${sf}_2.fastq.gz >> ${sample_name}_2.fastq.gz
+rm -rf ${sf}_1.fastq.gz ${sf}_2.fastq.gz
+
+";
         }
-        print $pbs "gzip ${sample_name}.fastq \n";
       }
     }
     else {
@@ -217,21 +241,14 @@ sub result {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
-  my $ispaired = get_is_paired_end_option($config, $section, 0);
-
   my $raw_files = getSraFiles( $config, $section );
 
   my $result = {};
   for my $sample_name ( keys %$raw_files ) {
 
     my @result_files = ();
-    if ($ispaired) {
-      push( @result_files, $result_dir . "/$sample_name/" . $sample_name . "_1.fastq.gz" );
-      push( @result_files, $result_dir . "/$sample_name/" . $sample_name . "_2.fastq.gz" );
-    }
-    else {
-      push( @result_files, $result_dir . "/$sample_name/" . $sample_name . ".fastq.gz" );
-    }
+    push( @result_files, $result_dir . "/$sample_name/" . $sample_name . "_1.fastq.gz" );
+    push( @result_files, $result_dir . "/$sample_name/" . $sample_name . "_2.fastq.gz" );
 
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

@@ -1,10 +1,10 @@
 ---
-title: "Dynamic cell type validation"
+title: "Final sub clusters validation"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 3
-    number_sections: true
+    number_sections: false
 ---
 
 ```{r setup, include=FALSE}
