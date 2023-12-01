@@ -123,10 +123,8 @@ draw_dim_plot<-function(obj, previous_layer, file_path){
 
   g<-get_dim_plot_labelby(obj, label.by=previous_layer, reduction="umap", label.size = 4, legend.title="") + 
         theme(legend.text = element_text(size = 10)) + guides(fill=guide_legend(ncol=ncol))
-  png(file_path, width=width, height=2000, res=300)
-  print(g)
-  dev.off()
-  png()
+  ggsave(file_path, g, width=width, height=2000, dpi=300, units="px", bg="white")
+  rm(g)
 }
 
 meta<-obj@meta.data
@@ -285,6 +283,7 @@ allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
 pct<-previous_celltypes[1]
+cat("memory used: ", lobstr_mem_used(), "\n")
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
@@ -340,10 +339,7 @@ for(pct in previous_celltypes){
     g<-g4+g5+plot_layout(ncol=2)
 
     signacx_file=paste0(curprefix, ".SignacX.umap.png")
-    png(signacx_file, width=3600, height=1500, res=300)
-    print(g)
-    dev.off()
-
+    ggsave(signacx_file, g, width=3600, height=1500, dpi=300, units="px", bg="white")
     rm(g4, g5, g)
 
     bHasCurrentSignacX = any(sxnames != "Unclassified")
@@ -355,9 +351,8 @@ for(pct in previous_celltypes){
       g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(curprefix, ".dot.SignacX.png")
-      png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), res=300)
-      print(g)
-      dev.off()
+      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), dpi=300, units="px", bg="white")
+      rm(g)
 
       filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SignacX celltype", "", pct))
     }
@@ -367,9 +362,8 @@ for(pct in previous_celltypes){
       g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(curprefix, ".dot.SignacX.subcelltypes.png")
-      png(dot_file, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), res=300)
-      print(g)
-      dev.off()
+      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), dpi=300, units="px", bg="white")
+      rm(g)
 
       filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SignacX sub celltype", "", pct))
     }
@@ -402,9 +396,8 @@ for(pct in previous_celltypes){
       g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(curprefix, ".dot.SingleR.png")
-      png(dot_file, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), res=300)
-      print(g)
-      dev.off()
+      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), dpi=300, units="px", bg="white")
+      rm(g)
 
       filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SingleR celltype", "", pct))
     }
@@ -414,9 +407,8 @@ for(pct in previous_celltypes){
       g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(curprefix, ".dot.SingleR.subcelltypes.png")
-      png(dot_file, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), res=300)
-      print(g)
-      dev.off()
+      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), dpi=300, units="px", bg="white")
+      rm(g)
 
       filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SingleR sub celltype", "", pct))
     }
@@ -494,23 +486,23 @@ for(pct in previous_celltypes){
     meta_rds = paste0(cluster_prefix, ".meta.rds")
     saveRDS(subobj@meta.data, meta_rds)
     
-    if(bHasCurrentSignacX){
-      sx<-table(subobj$SignacX)
-      sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
-      sxnames<-names(sx)
-      sxnames<-sxnames[sxnames != "Unclassified"]
-      sxobj<-subset(subobj, SignacX %in% sxnames)
-      sxobj$SignacX<-as.character(sxobj$SignacX)
-    }
+    # if(bHasCurrentSignacX){
+    #   sx<-table(subobj$SignacX)
+    #   sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
+    #   sxnames<-names(sx)
+    #   sxnames<-sxnames[sxnames != "Unclassified"]
+    #   sxobj<-subset(subobj, SignacX %in% sxnames)
+    #   sxobj$SignacX<-as.character(sxobj$SignacX)
+    # }
 
-    if(bHasCurrentSingleR){
-      sx<-table(subobj$SingleR)
-      sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
-      sxnames<-names(sx)
-      sxnames<-sxnames[sxnames != "unclassified"]
-      srobj<-subset(subobj, SingleR %in% sxnames)
-      srobj$SingleR<-as.character(srobj$SingleR)
-    }
+    # if(bHasCurrentSingleR){
+    #   sx<-table(subobj$SingleR)
+    #   sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
+    #   sxnames<-names(sx)
+    #   sxnames<-sxnames[sxnames != "unclassified"]
+    #   srobj<-subset(subobj, SingleR %in% sxnames)
+    #   srobj$SingleR<-as.character(srobj$SingleR)
+    # }
 
     bar_file=paste0(cluster_prefix, ".bar.png")
     g<-get_barplot(
@@ -520,6 +512,7 @@ for(pct in previous_celltypes){
       validation_columns=c("orig.ident", "SignacX", "SingleR"),
       calc_height_per_cluster=250, 
       calc_width_per_cell=50)
+    rm(g)
 
     # umap file
     g0<-MyDimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
@@ -528,9 +521,8 @@ for(pct in previous_celltypes){
     g3<-MyDimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
     g<-g0+g1+g2+g3+plot_layout(ncol=2)
     umap_file = paste0(cluster_prefix, ".umap.png")
-    png(umap_file, width=3600, height=3000, res=300)
-    print(g)
-    dev.off()
+    ggsave(umap_file, g, width=3600, height=3000, dpi=300, units="px", bg="white")
+    rm(g, g0, g1, g2, g3)
 
     # marker gene heatmap
     subobj<-myScaleData(subobj, top10genes, "RNA")
@@ -543,12 +535,10 @@ for(pct in previous_celltypes){
     }
     
     heatmap_file = paste0(cluster_prefix, ".top10.heatmap.png")
-
     width<-max(3000, min(10000, length(unique(subobj$seurat_clusters)) * 150 + 1000))
     height<-max(3000, min(10000, length(top10genes) * 60 + 1000))
-    png(heatmap_file, width=width, height=height, res=300)
-    print(gh)
-    dev.off()
+    ggsave(heatmap_file, gh, width=width, height=height, dpi=300, units="px", bg="white")
+    rm(gh)
     
     cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
@@ -556,9 +546,8 @@ for(pct in previous_celltypes){
       g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(cluster_prefix, ".dot.png")
-      png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
-      print(g)
-      dev.off()
+      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
+      rm(g)
 
       cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot", cur_resolution, pct))
     }
@@ -568,9 +557,8 @@ for(pct in previous_celltypes){
       g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(cluster_prefix, ".dot_celltype_specific.png")
-      png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), res=300)
-      print(g)
-      dev.off()
+      ggsave(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
+      rm(g)
 
       cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot_celltype_specific", cur_resolution, pct))
     }
@@ -579,7 +567,11 @@ for(pct in previous_celltypes){
   }
   rm(subobj2)
   rm(subobj)
+  cat("after", pct, ", memory used:", lobstr_mem_used(), "\n")
 }
+
+rm(obj)
+cat("final memory used:", lobstr_mem_used(), "\n")
 
 setwd(cur_folder)
 
