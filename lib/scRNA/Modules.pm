@@ -891,16 +891,20 @@ sub add_celltype_validation {
     $signacX_ref, 
     $singleR_ref, 
     $sctk_ref,
-    $decontX_ref ) = @_;
+    $decontX_ref,
+    $is_choose ) = @_;
     
   my $doublet_column = getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
 
+  #print("is_choose=" . $is_choose . "\n");
+
+  my $rmd_file = $is_choose ? "../scRNA/seurat_choose_validation.rmd" : "../scRNA/seurat_scDynamic_validation.rmd";
   $config->{$task_name} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_validation.r",
-    rReportTemplate => "../scRNA/seurat_scDynamic_validation.rmd,reportFunctions.R",
+    rReportTemplate => "$rmd_file,reportFunctions.R",
     rmd_ext => $rmd_ext,
     run_rmd_independent => 1,
     parameterFile1_ref => $object_ref,
