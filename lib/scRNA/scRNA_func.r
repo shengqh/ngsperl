@@ -9,6 +9,21 @@ library(Matrix.utils)
 library(parallel)
 library(data.table)
 library(dplyr)
+library(rlang)
+
+#https://github.com/r-lib/lobstr/blob/main/R/mem.R
+lobstr_node_size <- function() {
+  bit <- 8L * .Machine$sizeof.pointer
+  if (!(bit == 32L || bit == 64L)) {
+    stop("Unknown architecture", call. = FALSE)
+  }
+
+  if (bit == 32L) 28L else 56L
+}
+
+lobstr_mem_used <- function() {
+  rlang:::new_bytes(sum(gc()[, 1] * c(lobstr_node_size(), 8)))
+}
 
 check_mc_cores<-function(mc.cores) {  
   if(.Platform$OS.type == "windows") {
