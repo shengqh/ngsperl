@@ -293,12 +293,14 @@ sub getScRNASeqConfig {
         option => "
 cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
 
+rm -f ckpt.tar.gz
+
 #__OUTPUT__
 ",
         docker_prefix => "cellbender_",
         parameterSampleFile1_ref => $files_def,
         output_to_same_folder => 1,
-        output_file_ext => ".cellbender.h5",
+        output_file_ext => ".cellbender_filtered.h5",
         pbs => {
           "nodes"    => "1:ppn=$cellbender_cpu",
           "walltime" => "48",
