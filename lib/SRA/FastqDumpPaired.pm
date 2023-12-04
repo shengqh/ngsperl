@@ -43,7 +43,7 @@ sub perform {
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
   my $prefetch_option = get_option($config, $section, "prefetch_option", "-X 50G");
 
-  $option = $option . " --split-3 ";
+  $option = $option . " --split-3 --defline-qual '+' --gzip ";
 
   my $raw_files = getSraFiles( $config, $section );
 
@@ -75,7 +75,11 @@ fi
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file, "", 0, undef, 'sh' );
 
     if ( $sample_file =~ /GSM/ ) {
-      $sample_file = GsmToSrr( $sample_file );
+      my $srr_file = GsmToSrr( $sample_file );
+      if ($srr_file eq "") {
+        die "Cannot get SRR for $sample_file";
+      }
+      $sample_file = $srr_file;
     }
     if ( $sample_file =~ /\.sra/ ) {
       if ($is_restricted_data){
@@ -83,7 +87,7 @@ fi
 ln -s $sample_file ${sample_name}.sra 
 rm -f $sample_name.failed
 
-fastq-dump $option --gzip --origfmt --helicos ${sample_name}.sra
+fastq-dump $option ${sample_name}.sra
 
 status=\$?
 if [[ \$status -ne 0 ]]; then
@@ -99,7 +103,7 @@ rm -f ${sample_name}.sra
 if [ -z \${SLURM_JOBID+x} ]; then 
   echo \"in bash mode\"; 
   ln -s $sample_file ${sample_name}.sra 
-  fastq-dump $option --gzip --origfmt --helicos ${sample_name}.sra
+  fastq-dump $option ${sample_name}.sra
   rm ${sample_name}.sra
 else 
   echo \"in cluster mode\"; 
@@ -119,7 +123,7 @@ else
   cp $sample_file ${sample_name}.sra
 
   echo performing fastq-dump on ${sample_name}.sra
-  fastq-dump --split-3 --gzip --origfmt --helicos ${sample_name}.sra
+  fastq-dump $option ${sample_name}.sra
 
   rm ${sample_name}.sra
 
@@ -169,8 +173,8 @@ if [[ ! -s ${sample_file}.sra ]]; then
 fi
 
 if [[ -s ${sample_file}.sra ]]; then
-  echo fastq-dump $option --gzip --origfmt --helicos ${sample_file}.sra 
-  fastq-dump $option --gzip --origfmt --helicos ${sample_file}.sra 
+  echo fastq-dump $option ${sample_file}.sra 
+  fastq-dump $option ${sample_file}.sra 
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch $sample_name.fasterq.failed
@@ -202,18 +206,19 @@ if [[ ! -s ${sf}.sra ]]; then
 fi
 
 if [[ -s ${sf}.sra ]]; then
-  echo fastq-dump $option --gzip --origfmt --helicos ${sf}.sra 
-  fastq-dump $option --gzip --origfmt --helicos ${sf}.sra 
+  echo fastq-dump $option ${sf}.sra 
+  fastq-dump $option ${sf}.sra 
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch $sample_name.fasterq.failed
     rm -f ${sf}_1.fastq.gz ${sf}_2.fastq.gz ${sf}.fastq.gz
     exit 1
+  fi
 fi
 
 cat ${sf}_1.fastq.gz >> ${sample_name}_1.fastq.gz
 cat ${sf}_2.fastq.gz >> ${sample_name}_2.fastq.gz
-rm -rf ${sf}_1.fastq.gz ${sf}_2.fastq.gz
+rm -rf ${sf}_1.fastq.gz ${sf}_2.fastq.gz ${sf}.sra
 
 ";
         }
