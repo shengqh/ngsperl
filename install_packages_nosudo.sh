@@ -1,9 +1,9 @@
 #!/bin/bash
 
 if [[ $HOSTNAME == 'cqs1.vampire' || $HOSTNAME == 'cqs3.vampire' ]]; then
-  export TARGET_FOLDER=/nobackup/h_vangard_1/shengq2/perl5_cqs13lib/
+  export TARGET_FOLDER=/nobackup/h_vangard_1/shengq2/perl5_cqs13lib
 elif [[ $HOSTNAME == 'cqs4.vampire' ]]; then
-  export TARGET_FOLDER=/data/cqs/softwares/perl5_lib/
+  export TARGET_FOLDER=/nobackup/h_cqs/softwares/perl5_lib
 else
   export TARGET_FOLDER="~/perl5"
 fi
