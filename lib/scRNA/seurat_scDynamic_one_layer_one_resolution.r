@@ -13,7 +13,6 @@ setwd('/scratch/jbrown_lab/projects/20230313_pipseq_9551_flynn_hg38_liver_seurat
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 library(plyr)
 library(dplyr)
 library(Seurat)
@@ -30,6 +29,7 @@ library(htmltools)
 library(patchwork)
 library(glmGamPoi)
 library('rmarkdown')
+source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
