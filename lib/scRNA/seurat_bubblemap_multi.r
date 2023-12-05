@@ -55,7 +55,15 @@ draw_figure<-function(subobj, group1, group2, bubblemap_file, png_prefix, rotate
 
   subobj$dump_cluster_c<-factor(subobj$dump_cluster_c, unique(meta$dump_cluster_c))
 
-  g=get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=rotate.title, group.by="dump_cluster_c") + scale_color_gradient2(low="blue", mid="yellow", high="red")
+  g=get_bubble_plot(subobj, 
+    NULL, 
+    NULL, 
+    bubblemap_file, 
+    assay="RNA", 
+    orderby_cluster=TRUE, 
+    rotate.title=rotate.title, 
+    group.by="dump_cluster_c",
+    species=myoptions$species) + scale_color_gradient2(low="blue", mid="yellow", high="red")
 
 
   png(paste0(png_prefix, ".png"), width=width, height=get_dot_height_num(length(unique(subobj$dump_cluster_c)), min_height, height_per_entry, height_additional_space),res=300)

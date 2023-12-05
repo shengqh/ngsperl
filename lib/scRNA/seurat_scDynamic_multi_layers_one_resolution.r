@@ -288,7 +288,8 @@ iterate_celltype<-function(obj, previous_celltypes, previous_layer, previous_lay
     dev.off()
 
     dot_width=4400
-    g<-get_bubble_plot(subobj, cur_res=cluster, "layer", bubblemap_file, assay="RNA", orderby_cluster = FALSE)
+    g<-get_bubble_plot(subobj, cur_res=cluster, "layer", bubblemap_file, assay="RNA", orderby_cluster = FALSE,
+      species=myoptions$species)
     png(paste0(curprefix, ".", pct_str, ".dot.png"), width=dot_width, height=get_dot_height(subobj, cluster), res=300)
     print(g)
     dev.off()
@@ -369,7 +370,8 @@ layer_cluster_celltype<-function(obj, previous_layer, previous_layermap, cur_lay
   dev.off()
 
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay)
+    g2<-get_bubble_plot(obj, NA, cur_layer, bubblemap_file, assay,
+      species=myoptions$species)
     g<-g+g2+plot_layout(ncol = 2, widths = c(3, 5))
     width=6400
   }else{

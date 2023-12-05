@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='T6_KS_030822_RC_E'
-outFile='T6_KS_030822_RC_E'
+sample_name='DB_1'
+outFile='DB_1'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/raw_qc_sct2_SignacX/result/T6_KS_030822_RC_E')
+setwd('/nobackup/brown_lab/projects/20231202_scRNA_5798_human_liver_redo_cellbender/raw_qc_sct2_SignacX/result/DB_1')
 
 ### Parameter setting end ###
 
@@ -70,7 +70,8 @@ has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 g1=MyDimPlot(obj, group.by = "signacx_CellStates", reduction="umap", label=T)
 
 if(has_bubblemap){
-  g2<-get_bubble_plot(obj, NA, "signacx_CellStates", bubblemap_file, assay="RNA")
+  g2<-get_bubble_plot(obj, NA, "signacx_CellStates", bubblemap_file, assay="RNA", 
+    species=myoptions$species)
   layout <- "ABB"
   g<-g1+g2+plot_layout(design=layout)
   width=6300
@@ -89,4 +90,3 @@ ct_tbl<-table(ct$SignacX,ct$Sample)
 write.csv(ct_tbl, paste0(outFile, ".SignacX_Sample.csv"))
 
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
-

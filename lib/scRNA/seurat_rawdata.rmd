@@ -6,6 +6,17 @@ output:
     number_sections: true
 ---
 
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(dplyr)
+
+source('reportFunctions.R')
+
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
 ```{r, echo=FALSE}
 option_table<-read.table("fileList2.txt", sep="\t", stringsAsFactors = F) %>% 
   relocate("V2") %>% 
@@ -23,13 +34,6 @@ title: "Seurat raw data"
 `r author_line`
 ---
 
-```{r setup, include=FALSE}
-library(knitr)
-library(dplyr)
-library(kableExtra)
-knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
-```
-
 ```{css, echo=FALSE}
 #content{
     max-width:1920px;
@@ -37,8 +41,6 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 ```
 
 ```{r data, echo = FALSE}
-source('reportFunctions.R')
-
 outFile=myoptions$task_name
 ```
 

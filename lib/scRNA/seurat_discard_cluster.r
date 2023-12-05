@@ -42,7 +42,12 @@ output_figure<-function(obj, cluster_layer, celltype_layer, cluster_celltype_lay
   g<-DimPlot(obj, group.by = cluster_layer, label=T) + ggtitle(celltype_layer)+
     scale_color_discrete(labels = ct[,cluster_celltype_layer])
   if(has_bubblemap){
-    g<-g+get_bubble_plot(obj, cluster_layer, celltype_layer, bubblemap_file, assay="RNA")
+    g<-g+get_bubble_plot(obj, 
+      cluster_layer, 
+      celltype_layer, 
+      bubblemap_file, 
+      assay="RNA",
+      species=myoptions$species)
     g<-g+plot_layout(ncol = 2, widths = c(4, 6))
     width=11000
   }else{

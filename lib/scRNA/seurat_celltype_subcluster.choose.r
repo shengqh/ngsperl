@@ -371,7 +371,15 @@ cat("output figures ...\n")
 setwd(tmp_folder)
 
 obj$display_layer<-paste0(obj$sub_clusters, ": ", unlist(obj[[cur_layer]]))
-gdot=get_bubble_plot(obj, NULL, NULL, bubblemap_file, assay="RNA", orderby_cluster=TRUE, rotate.title=TRUE, group.by=seurat_cur_layer)
+gdot=get_bubble_plot(obj, 
+  NULL, 
+  NULL, 
+  bubblemap_file, 
+  assay="RNA", 
+  orderby_cluster=TRUE, 
+  rotate.title=TRUE, 
+  group.by=seurat_cur_layer,
+  species=myoptions$species)
 galldata<-gdot$data
 
 pre_layer<-unlist(obj[[previous_layer]])
@@ -465,7 +473,13 @@ Plot_predictcelltype_ggplot2( predict_celltype,
                               is_validation=TRUE)
 
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
-  g<-get_bubble_plot(obj, "seurat_clusters", cur_layer, bubblemap_file, assay="RNA", orderby_cluster=TRUE)
+  g<-get_bubble_plot(obj, 
+    "seurat_clusters", 
+    cur_layer, 
+    bubblemap_file, 
+    assay="RNA", 
+    orderby_cluster=TRUE,
+    species=myoptions$species)
   png(paste0(prefix, ".dot.png"), width=get_dot_width(g, min_width=bubble_width), height=get_dot_height(obj, "seurat_clusters"), res=300)
   print(g)
   dev.off()

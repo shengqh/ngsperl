@@ -127,7 +127,8 @@ for(cur_celltype in multi_cts){
       g<-g+g1
     }
   }
-  g<-g+get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA")
+  g<-g+get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA",
+    species=myoptions$species)
   layout<-"
 ABC
 DEF
@@ -149,7 +150,8 @@ MMM
     }
   }
 
-  g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA")
+  g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA",
+    species=myoptions$species)
   layout<-"
 ABC
 DEF

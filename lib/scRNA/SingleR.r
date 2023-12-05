@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='C4_AL_110822_NC'
-outFile='C4_AL_110822_NC'
+sample_name='DMSO_F_1513'
+outFile='DMSO_F_1513'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/shengq2/20230406_7114_8822_scRNA_hg38/raw_qc_sct2_SingleR/result/C4_AL_110822_NC')
+setwd('/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/raw_qc_sct2_SingleR/result/DMSO_F_1513')
 
 ### Parameter setting end ###
 
@@ -84,7 +84,8 @@ has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 g1=MyDimPlot(major_obj, group.by = ct_name, reduction="umap", label=T)
 
 if(has_bubblemap){
-  g2<-get_bubble_plot(major_obj, NA, ct_name, bubblemap_file, assay="RNA")
+  g2<-get_bubble_plot(major_obj, NA, ct_name, bubblemap_file, assay="RNA", 
+    species=myoptions$species)
   layout <- "ABB"
   g<-g1+g2+plot_layout(design=layout)
   width=6300
@@ -94,10 +95,7 @@ if(has_bubblemap){
 }
 height=2000
 
-png(paste0(outFile, ".SingleR.png"), width=width, height=height, res=300)
-print(g)
-dev.off()
-
+ggsave(paste0(outFile, ".SingleR.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
 rm(major_obj)
 
 slim_labels=subset(labels, labels %in% major_cts)
@@ -112,3 +110,4 @@ dev.off()
 png(paste0(outFile, ".score.png"), width=4000, height=3000, res=300)
 plotScoreHeatmap(slim_labels)
 dev.off()
+

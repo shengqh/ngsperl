@@ -200,7 +200,8 @@ dev.off()
 if(file.exists(myoptions$bubblemap_file)){
   g<-get_bubble_plot(obj = obj, 
     bubblemap_file = myoptions$bubblemap_file, 
-    group.by = "seurat_cell_type")
+    group.by = "seurat_cell_type",
+    species=myoptions$species)
   dot_file = paste0(sample_name, ".dot.png")
   png(dot_file, width=get_dot_width(g), height=get_dot_height(obj, "seurat_cell_type"), res=300)
   print(g)

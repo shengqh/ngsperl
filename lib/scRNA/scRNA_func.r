@@ -2135,7 +2135,7 @@ B")
   return(p)
 }
 
-read_scrna_data<-function(fileName, keep_seurat=FALSE){
+read_scrna_data<-function(fileName, keep_seurat=FALSE, is_cellbender=FALSE){
   if(dir.exists(fileName)){
     feature.names <- read.delim(paste0(fileName, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
     gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
@@ -2146,7 +2146,15 @@ read_scrna_data<-function(fileName, keep_seurat=FALSE){
       }
     }
   } else if (grepl('.h5$', fileName)) {
-    counts = Read10X_h5(fileName)
+    counts = tryCatch ({
+        Read10X_h5(fileName)
+      },
+      error = function(e) {
+        message(paste("Read file as 10X_h5 failed, try as CellBender format:", fileName))
+        library(scCustomize)
+        Read_CellBender_h5_Mat(file_name=fileName)
+      }
+    )
   } else if (grepl('.gz$', fileName)) {
     counts = data.frame(read_gzip_count_file(fileName, fileTitle, species))
   } else if (grepl('.rds$', fileName)) {

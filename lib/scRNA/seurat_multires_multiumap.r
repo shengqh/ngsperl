@@ -127,7 +127,8 @@ for(cur_celltype in multi_cts){
       g<-g+g1
     }
   }
-  g<-g+get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA")
+  g<-g+get_bubble_plot(obj, cur_res=NA, cur_celltype, bubblemap_file, assay="RNA",
+    species=myoptions$species)
   layout<-"
 ABC
 DDD
@@ -148,7 +149,8 @@ DDD
     }
   }
 
-  g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA")
+  g<-g+get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA",
+    species=myoptions$species)
   layout<-"
 ABC
 DDD
@@ -172,7 +174,8 @@ DDD
   new_celltype[in_new_celltype]<-combined_ct[new_celltype[in_new_celltype]]
   obj[[new_layer]] = new_celltype
 
-  g<-get_bubble_plot(obj, cur_res=NA, new_layer, bubblemap_file, assay="RNA")
+  g<-get_bubble_plot(obj, cur_res=NA, new_layer, bubblemap_file, assay="RNA",
+    species=myoptions$species)
   png(paste0(prefix, ".", new_layer, ".png"), width=3300, height=3000, res=300)
   print(g)
   dev.off()

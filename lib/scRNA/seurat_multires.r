@@ -175,7 +175,8 @@ for(cind in c(1:nrow(res_df))){
   print(g)
   dev.off()
 
-  g<-get_bubble_plot(obj, cur_res=NA, raw_celltype, bubblemap_file, assay="RNA", orderby_cluster = TRUE)
+  g<-get_bubble_plot(obj, cur_res=NA, raw_celltype, bubblemap_file, assay="RNA", orderby_cluster = TRUE,
+    species=myoptions$species)
   png(paste0(prefix, ".", raw_celltype, ".dot.png"), width=dot_width, height=get_dot_height(obj, raw_celltype), res=300)
   print(g)
   dev.off()
@@ -197,7 +198,8 @@ for(cind in c(1:nrow(res_df))){
   print(g)
   dev.off()
 
-  g<-get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = FALSE)
+  g<-get_bubble_plot(obj, cur_res=cur_res, cur_celltype, bubblemap_file, assay="RNA", orderby_cluster = FALSE,
+    species=myoptions$species)
   png(paste0(prefix, ".", cur_celltype, ".seurat.dot.png"), width=dot_width, height=get_dot_height(obj, cur_res), res=300)
   print(g)
   dev.off()
