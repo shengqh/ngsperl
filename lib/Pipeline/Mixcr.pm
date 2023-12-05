@@ -95,7 +95,7 @@ mixcr analyze -Xmx${mixcr_mem}g \\
     source_ref => $source_ref,
     source_arg => "",
     source_join_delimiter => " ",
-    output_ext => ".clonotypes.TRA.tsv,.clonotypes.TRB.tsv,.clonotypes.TRG.tsv,.clonotypes.TRD.tsv,.clonotypes.TRAD.tsv",
+    output_ext => ".clones_TRAD.tsv",
     sh_direct  => 0,
     cluster    => $cluster,
     output_to_same_folder => 0,
