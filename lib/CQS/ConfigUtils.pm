@@ -104,6 +104,7 @@ our %EXPORT_TAGS = (
       get_groups_by_pattern
       get_covariances_by_pattern
       create_covariance_file_by_pattern
+      create_covariance_file_by_file_pattern
       write_HTO_sample_file
       get_parameter_file_option
       get_hash_level2
@@ -2206,10 +2207,9 @@ sub get_covariances_by_pattern {
   return ($cov_map, $covariances, $samplenames);
 }
 
-sub create_covariance_file_by_pattern {
-  my ($def) = @_;
 
-  my ($cov_map, $covariances, $samplenames) = get_covariances_by_pattern($def);
+sub write_covariance_file {
+  my ($def, $cov_map, $covariances, $samplenames) = @_;
 
   my $target_dir = getValue($def, "target_dir");
   my $cov_file = $target_dir . "/covariance.txt";
@@ -2227,6 +2227,61 @@ sub create_covariance_file_by_pattern {
     print $cov "\n";
   }
   close($cov);
+
+  return($cov_file);
+}
+
+sub create_covariance_file_by_pattern {
+  my ($def) = @_;
+
+  my ($cov_map, $covariances, $samplenames) = get_covariances_by_pattern($def);
+
+  my $cov_file = write_covariance_file($def, $cov_map, $covariances, $samplenames);
+
+  return($cov_file);
+}
+
+sub get_covariances_by_file_pattern {
+  my ($def) = @_;
+
+  my $files = $def->{files};
+  my $covariance_patterns = $def->{covariance_file_patterns};
+  my $covariances = [sort keys %$covariance_patterns];
+  my $samplenames = [sort keys %$files];
+  my $cov_map = {};
+  for my $covariance (@$covariances) {
+    my $cov_pattern_def = $covariance_patterns->{$covariance};
+
+    my $cov_pattern;
+    my $cov_prefix;
+    if (ref $cov_pattern_def eq 'HASH'){
+      $cov_pattern = getValue($cov_pattern_def, "pattern");
+      $cov_prefix = getValue($cov_pattern_def, "prefix", "");
+    }
+    else{
+      $cov_pattern = $cov_pattern_def;
+      $cov_prefix = "";
+    }
+
+    $cov_map->{$covariance} = {};
+    for my $samplename (@$samplenames) {
+      my $cov_value = $samplename;
+      my $file_path = $files->{$samplename}->[0];
+      if ($file_path =~ /$cov_pattern/){
+        $cov_value = $1;
+      }
+      $cov_map->{$covariance}{$samplename} = $cov_prefix . $cov_value;
+    }
+  }
+  return ($cov_map, $covariances, $samplenames);
+}
+
+sub create_covariance_file_by_file_pattern {
+  my ($def) = @_;
+
+  my ($cov_map, $covariances, $samplenames) = get_covariances_by_file_pattern($def);
+
+  my $cov_file = write_covariance_file($def, $cov_map, $covariances, $samplenames);
 
   return($cov_file);
 }
