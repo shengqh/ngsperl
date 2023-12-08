@@ -319,6 +319,10 @@ sub getPreprocessionConfig {
     $def->{covariance_file} = create_covariance_file_by_pattern($def);
   }
 
+  if(defined $def->{covariance_file_patterns}){
+    $def->{covariance_file} = create_covariance_file_by_file_pattern($def);
+  }
+
   $def = initializeDefaultOptions($def);
 
   my $preprocessing_dir = $target_dir;
