@@ -33,7 +33,7 @@ myoptions<-split(option_table$Value, option_table$Parameter)
 print_table(option_table, row.names=F)
 ```
 
-```{r}
+```{r, echo = FALSE}
 outFile=myoptions$task_name
 celltype_column=myoptions$celltype_column
 

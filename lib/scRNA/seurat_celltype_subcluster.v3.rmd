@@ -12,6 +12,7 @@ library(knitr)
 library(dplyr)
 library(reshape2)
 library(kableExtra)
+source("reportFunctions.R")
 knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
 
@@ -21,9 +22,7 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 }
 ```
 
-```{r data, include=FALSE}
-source("reportFunctions.R")
-
+```{r data}
 option_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F) %>% 
   relocate("V2") %>% 
   dplyr::rename(Value=V1, Parameter=V2)
@@ -65,7 +64,7 @@ figureRmd<-function(cts, files){
     for(idx in 1:nrow(ct_files)){
       fname = ct_files$type[idx]
       fpath = ct_files$file[idx]
-      result<-paste0(result, "### ", fname, "\n\n")
+      result<-paste0(result, "## ", fname, "\n\n")
       result<-paste0(result, getFigure(fpath))
     }
 
@@ -140,7 +139,8 @@ rename_tbl<-read.table("fileList3.txt", sep="\t", header=F)
 colnames(rename_tbl)<-c("Value", "Key", "Name")
 d_tbl=dcast(rename_tbl, Name~Key, value.var="Value", fun.aggregate=function(x){paste0(x, collapse=",")})
 d_tbl<-d_tbl[,c("from","cluster","to")]
-output_table(d_tbl, "Rename/delete sub clusters")
+cat("\n\n# Rename/delete sub clusters\n\n")
+print_table(d_tbl, row.names=F)
 ```
 
 ```{r, echo=FALSE, eval=file.exists(post_file)}
