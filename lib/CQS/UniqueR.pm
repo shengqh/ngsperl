@@ -35,6 +35,7 @@ sub getRcode {
 
 sub prepare_data {
   my ( $self, $config, $section ) = @_;
+  $config->{$section}{use_tmp_folder} = 0;
   return;
 }
 
