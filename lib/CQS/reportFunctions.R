@@ -182,6 +182,27 @@ getFigure<-function(filepath, in_details=FALSE, out_width=NULL){
   }
 }
 
+getFigure_width_height<-function(filepath, in_details=FALSE, fig.width=NULL, fig.height=NULL){
+  if(!is.null(fig.width)){
+    if(!is.null(fig.height)){
+      result = paste0("\n```{r,echo=FALSE,results='asis',fig.width=", fig.width, ",fig.height=", fig.height, "}\n")
+    }else{
+      result = paste0("\n```{r,echo=FALSE,results='asis',fig.width=", fig.width, "}\n")
+    }
+  }else{
+    if(!is.null(fig.height)){
+      result = paste0("\n```{r,echo=FALSE,results='asis',fig.height=", fig.height, "}\n")
+    }else{
+      result = paste0("\n```{r,echo=FALSE,results='asis'}\n")
+    }
+  }
+  if(in_details){
+    return(paste0(result, "check_and_include_graphics('details/", filepath, "')\n```\n\n"))
+  }else{
+    return(paste0(result, "check_and_include_graphics('", filepath, "')\n```\n\n"))
+  }
+}
+
 get_figure_description<-function(category, filepath, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists(files['", category, "',1]))}\n",
 "  check_and_include_graphics('", filepath, "')\n```\n"))
