@@ -261,7 +261,7 @@ obj$dot<-obj[[previous_layer]]
 ctnames<-unique(obj$dot)
 ctmap=c(1:length(ctnames))
 names(ctmap)<-ctnames
-obj$dot_cluster<-unlist(ctmap[obj$dot]) + 1000
+obj@meta.data$dot_cluster<-unlist(ctmap[obj$dot]) + 1000
 
 cur_folder = getwd()
 tmp_folder = paste0(cur_folder, "/details")
