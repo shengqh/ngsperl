@@ -97,6 +97,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_multiome_qc
 
   add_fragment_cells
+
+  add_cellbender
 )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -157,6 +159,7 @@ sub add_seurat_rawdata {
       seurat_sample_column => $def->{"seurat_sample_column"},
       doublet_column => $doublet_column,
       gene_map_file => $def->{gene_map_file},
+      hto_regex => $def->{hto_regex},
     },
     parameterSampleFile3 => $def->{"pool_sample_groups"},
     parameterSampleFile4_ref => $hto_ref,
@@ -1718,6 +1721,7 @@ sub addSubCluster {
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
       redo_harmony          => $subcluster_redo_harmony,
       bubblemap_file => $def->{bubblemap_file},
+      antibody_bubblemap_file => $def->{antibody_bubblemap_file},
       bubblemap_width => $def->{bubblemap_width},
       bubblemap_height => $def->{bubblemap_height},
       bubblemap_use_order   => getValue($def, "bubblemap_use_order", 0),
@@ -3135,6 +3139,35 @@ sub add_fragment_cells {
     },
   };
   push( @$tasks, $fragment_cells_task );
+}
+
+sub add_cellbender {
+  my ($config, $def, $tasks, $target_dir, $cellbender_task, $files_def ) = @_;
+
+  my $cellbender_cpu = getValue($def, "cellbender_cpu", 12);
+  $config->{$cellbender_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$cellbender_task",
+    program => "",
+    check_program => 0,
+    option => "
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+
+rm -f ckpt.tar.gz
+
+#__OUTPUT__
+",
+    docker_prefix => "cellbender_",
+    parameterSampleFile1_ref => $files_def,
+    output_to_same_folder => 1,
+    output_file_ext => ".cellbender_filtered.h5",
+    pbs => {
+      "nodes"    => "1:ppn=$cellbender_cpu",
+      "walltime" => "48",
+      "mem"      => "40gb"
+    }
+  };
+  push(@$tasks, $cellbender_task);
 }
 
 1;
