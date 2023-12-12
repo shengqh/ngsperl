@@ -84,7 +84,7 @@ is_file_empty<-function(filepath){
   }
 
   if(!file.exists(filepath)){
-    return(TRUE)
+    stop(paste0("file not exists: ", filepath))
   }
   
   if(file.info(filepath)$size == 0){
@@ -644,6 +644,7 @@ do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FAL
 
     print("  split objects ...")
     objs<-SplitObject(object = rawobj, split.by = "orig.ident")
+    rm(rawobj)
 
     print("  perform sctransform ...")
     if(mc.cores > 1){
@@ -781,34 +782,23 @@ init_cutoffs<-function(all_samples, myoptions, filter_config_file=""){
       stringsAsFactors = F)
   }
   rownames(Cutoffs)<-Cutoffs$sample
+  Cutoffs$nFeature_cutoff_min<-as.numeric(Cutoffs$nFeature_cutoff_min)
+  Cutoffs$nFeature_cutoff_max<-as.numeric(Cutoffs$nFeature_cutoff_max)
+  Cutoffs$nCount_cutoff<-as.numeric(Cutoffs$nCount_cutoff)
+  Cutoffs$mt_cutoff<-as.numeric(Cutoffs$mt_cutoff)
   return(Cutoffs)
 }
 
 preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file=""){
   Mtpattern= myoptions$Mtpattern
   rRNApattern=myoptions$rRNApattern
-
-  Remove_rRNA<-ifelse(myoptions$Remove_rRNA == "0", FALSE, TRUE)
-  Remove_MtRNA<-ifelse(myoptions$Remove_MtRNA == "0", FALSE, TRUE)
   
-  nFeature_cutoff_min=as.numeric(myoptions$nFeature_cutoff_min)
-  nFeature_cutoff_max=as.numeric(myoptions$nFeature_cutoff_max)
-  nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
-  mt_cutoff=as.numeric(myoptions$mt_cutoff)
-
-  Cutoffs=init_cutoffs(unique(rawobj$orig.ident), myoptions, filter_config_file)
+  Cutoffs=init_cutoffs(
+    all_samples=unique(rawobj$orig.ident), 
+    myoptions=myoptions, 
+    filter_config_file=filter_config_file)
 
   rawCells<-data.frame(table(rawobj$orig.ident))
-  
-  if(Remove_rRNA){
-    rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
-    rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
-  }
-
-  if(Remove_MtRNA){
-    Mt.genes<- grep (pattern= Mtpattern,rownames(rawobj), value=TRUE )
-    rawobj<-rawobj[!(rownames(rawobj) %in% Mt.genes),]
-  }
   
   plot1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + 
     geom_hline(data=Cutoffs, aes(yintercept=mt_cutoff, color=sample))  + 
@@ -861,9 +851,6 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="")
   ggsave(paste0(prefix, ".qc.3.png"), g1, width=width, height=height, dpi=300, units="px", bg="white")
 
   finalList<-list()
-  
-  Cutoffs$Remove_rRNA<-Remove_rRNA
-  Cutoffs$Remove_MtRNA<-Remove_MtRNA
 
   #filter cells
   meta=rawobj@meta.data
@@ -965,6 +952,23 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
     print(g)
     dev.off()
   }
+
+  if("ADT" %in% names(obj)){
+    adt_names=rownames(obj$ADT@counts)
+    writeLines(adt_names, paste0(outFile, ".ADT.txt"))
+    for(adt in adt_names){
+      g<-FeaturePlot(obj, features=paste0("adt_", adt), cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
+      ggsave(paste0(outFile, ".", adt, ".png"), g, width=5, height=5, dpi=300, units="in", bg="white")
+    }
+
+    common_genes=intersect(adt_names, rownames(obj@assays$RNA@counts))
+    for(adt in common_genes){
+      g1<-FeaturePlot(obj, features=paste0("adt_", adt), cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
+      g2<-FeaturePlot(obj, features=paste0("rna_", adt), cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " RNA")) + theme(aspect.ratio=1)
+      g<-g1+g2+plot_layout(ncol=2)
+      ggsave(paste0(outFile, ".", adt, ".common.png"), g, width=10, height=5, dpi=300, units="in", bg="white")
+    }
+  }
 }
 
 do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
@@ -973,7 +977,9 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
 
   if(grepl(".txt$", bubblemap_file)){
     genes <- read.table(bubblemap_file, header=F, sep="\t", stringsAsFactors = F)
-    genes <- genes[,c(2,1)]
+    if(any(grepl(",", genes$V2))){
+      genes <- genes[,c(2,1)]
+    }
   }else{
     genes <- data.frame(read_xlsx(bubblemap_file, sheet = 1))
     if(colnames(genes)[1] %in% c('Count', 'Index')){
@@ -1186,7 +1192,18 @@ get_bubble_plot<-function(obj,
   allgenes=rownames(obj)
   DefaultAssay(obj) = old_assay
   
-  genes_df <- read_bubble_genes(bubblemap_file, allgenes, species=species)
+  if(assay=="ADT"){
+    genes_df <- read_bubble_genes(bubblemap_file, allgenes, species=NULL)
+    if(nrow(genes_df) == 0){
+      stop(paste0("no proteins in ", bubblemap_file," found in data, please double check your protein names. They should match with following protein names: ", paste0(allgenes, collapse = ", ")))
+    }
+  }else{
+    genes_df <- read_bubble_genes(bubblemap_file, allgenes, species=species)
+    if(nrow(genes_df) == 0){
+      stop(paste0("no genes in ", bubblemap_file," found in data, is it posible wrong species used in function? species=", species))
+    }
+  }
+
   gene_groups=split(genes_df$gene, genes_df$cell_type)
 
   if(is.null(group.by)){
@@ -1237,7 +1254,7 @@ get_bubble_plot<-function(obj,
   return(g)
 }
 
-get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, add_num_cell=FALSE, species=NULL){
+get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, add_num_cell=FALSE, species=NULL, assay="RNA"){
   old_meta<-obj@meta.data
   
   obj$fake_layer=paste0("fake_", unlist(obj@meta.data[,obj_res]))
@@ -1255,6 +1272,7 @@ get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, 
   }
 
   g<-get_bubble_plot( obj, 
+                      assay=assay,
                       group.by="fake_layer", 
                       bubblemap_file = bubblemap_file, 
                       species=species)
@@ -1757,6 +1775,9 @@ get_valid_path<-function(oldpath){
 
 output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern) {
   writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
+  if("ADT" %in% names(rawobj)){
+    writeLines(rownames(rawobj$ADT@counts), paste0(outFile, ".antibodies.txt"))
+  }
 
   png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
   par(mar = c(4, 8, 2, 1))
@@ -1846,15 +1867,11 @@ sub_cluster<-function(subobj,
       cat(key, "use old harmony result\n")
     }else{
       cat(key, "redo harmony\n")
-      cat("RunPCA ... \n")
-      subobj <- RunPCA(object = subobj, npcs=cur_npcs, assay=assay, verbose=FALSE)
-      cat("RunHarmony ... \n")
       subobj <- RunHarmony(object = subobj,
                         assay.use = assay,
-                        reduction = "pca",
                         dims.use = cur_pca_dims,
                         group.by.vars = "batch",
-                        do_pca=FALSE)    
+                        do_pca=TRUE)    
     }
     if(!("harmony" %in% names(subobj@reductions))){
       curreduction = "pca";
@@ -1967,10 +1984,8 @@ output_celltype_figures<-function(obj,
                     reduction = all_umap, 
                     legend.title = "")
   }
-  png(paste0(prefix, ".", cell_identity, ".umap.png"), width=umap_width, height=2000, res=300)
-  print(g)
-  dev.off()
-
+  ggsave(paste0(prefix, ".", cell_identity, ".umap.png"), g, width=umap_width, height=2000, dpi=300, units="px", bg="white")
+  rm(g)
 
   if(nct > 1){
     if(group.by != "batch"){
@@ -2811,7 +2826,15 @@ do_analysis<-function(tmp_folder,
     dev.off()
   }
   
-  output_celltype_figures(obj, "layer4", prefix, bubblemap_file, cell_activity_database, combined_ct_source, group.by="orig.ident", name="sample")
+  output_celltype_figures(obj, 
+    "layer4", 
+    prefix, 
+    bubblemap_file, 
+    cell_activity_database, 
+    combined_ct_source, 
+    group.by="orig.ident", 
+    name="sample",
+    species=species)
 
   if(!by_individual_sample){
     #output individual sample dot plot, with global scaled average gene expression.
