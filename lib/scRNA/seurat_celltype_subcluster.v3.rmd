@@ -61,9 +61,10 @@ figureRmd<-function(cts, files){
     ct_tbl<-files[files$celltype==celltype,]
 
     ct_files<-ct_tbl[is.na(ct_tbl$resolution),]
-    for(idx in 1:nrow(ct_files)){
-      fname = ct_files$type[idx]
-      fpath = ct_files$file[idx]
+    cidx=1
+    for(cidx in 1:nrow(ct_files)){
+      fname = ct_files$type[cidx]
+      fpath = ct_files$file[cidx]
       result<-paste0(result, "## ", fname, "\n\n")
       result<-paste0(result, getFigure(fpath))
     }
@@ -110,6 +111,12 @@ figureRmd<-function(cts, files){
       if("dot" %in% names(res_map)){
         result<-paste0(result, "### Bubble plot\n\n")
         dot=res_map$dot
+        result<-paste0(result, getFigure(dot))
+      }
+
+      if("antibody_dot" %in% names(res_map)){
+        result<-paste0(result, "### Antibody bubble plot\n\n")
+        dot=res_map$antibody_dot
         result<-paste0(result, getFigure(dot))
       }
 

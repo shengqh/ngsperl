@@ -1,19 +1,20 @@
 rm(list=ls()) 
-outFile='P8870_mm10'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
+parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/nobackup/brown_lab/projects/20231117_scRNA_8870_mouse_redo/seurat_sct2_merge/result/P8870_mm10.final.rds'
-parFile2='/nobackup/brown_lab/projects/20231117_scRNA_8870_mouse_redo/seurat_sct2_merge_dr0.1_1_call/result/P8870_mm10.scDynamic.meta.rds'
-parFile3='/nobackup/brown_lab/projects/20231117_scRNA_8870_mouse_redo/essential_genes/result/P8870_mm10.txt'
+parSampleFile6='fileList6.txt'
+parFile1='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_sct2_merge/result/combined.final.rds'
+parFile2='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_sct2_merge_dr0.5_1_call/result/combined.scDynamic.meta.rds'
+parFile3='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/essential_genes/result/combined.txt'
 
 
-setwd('/nobackup/brown_lab/projects/20231117_scRNA_8870_mouse_redo/seurat_sct2_merge_dr0.1_2_subcluster/result')
+setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_sct2_merge_dr0.5_2_subcluster_rh/result')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -27,6 +28,8 @@ library(patchwork)
 library(data.table)
 library(testit)
 library(stringr)
+
+source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -69,7 +72,7 @@ if(regress_by_percent_mt){
 essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
 
 bubblemap_file=myoptions$bubblemap_file
-has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
+has_bubblemap <- !is_file_empty(bubblemap_file)
 if(has_bubblemap){
   cat("Using bubblemap file ", bubblemap_file, "\n")
 }else{
@@ -95,6 +98,19 @@ prefix<-outFile
 if(!exists("obj")){
   obj<-read_object(parFile1, parFile2)
   Idents(obj)<-previous_layer
+}
+
+antibody_bubblemap_file=myoptions$antibody_bubblemap_file
+has_antibody_bubblemap <- FALSE
+if("ADT" %in% names(obj)){
+  has_antibody_bubblemap <- !is_file_empty(antibody_bubblemap_file)
+  if(has_antibody_bubblemap){
+    cat("Using antibody bubblemap file ", antibody_bubblemap_file, "\n")
+  }else{
+    antibody_bubblemap_file = NULL
+    cat("No antibody bubblemap file\n")
+  }
+  writeLines(colnames(obj[["ADT"]]), paste0(outFile, ".antibody_markers.txt"))
 }
 
 if(by_harmony){
@@ -235,6 +251,7 @@ if(has_bubblemap){
     bubble_file_map = c()
   }
 }
+
 
 resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.5, by = 0.05))
 
@@ -561,6 +578,23 @@ for(pct in previous_celltypes){
       rm(g)
 
       cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot_celltype_specific", cur_resolution, pct))
+    }
+
+    if(has_antibody_bubblemap){
+      g<-get_sub_bubble_plot(obj, 
+        "dot", 
+        subobj, 
+        "seurat_celltype", 
+        antibody_bubblemap_file, 
+        assay="ADT",
+        add_num_cell=TRUE, 
+        species=NULL)
+
+      dot_file = paste0(cluster_prefix, ".antibody.dot.png")
+      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
+      rm(g)
+
+      cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "antibody_dot", cur_resolution, pct))
     }
 
     filelist<-rbind(filelist, cur_df)
