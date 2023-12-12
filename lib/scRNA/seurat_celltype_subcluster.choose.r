@@ -1,18 +1,18 @@
 rm(list=ls()) 
-outFile='mouse_8870'
+outFile='P8870_mm10'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony/result/mouse_8870.final.rds'
-parFile2='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_02_subcluster/result/mouse_8870.meta.rds'
-parFile3='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/essential_genes/result/mouse_8870.txt'
-parFile4='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_02_subcluster/result/mouse_8870.files.csv'
+parFile1='/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/seurat_sct2_merge/result/P8870_mm10.final.rds'
+parFile2='/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/seurat_sct2_merge_dr0.1_2_subcluster_rh/result/P8870_mm10.meta.rds'
+parFile3='/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/essential_genes/result/P8870_mm10.txt'
+parFile4='/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/seurat_sct2_merge_dr0.1_2_subcluster_rh/result/P8870_mm10.files.csv'
 
-setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose/result')
+
+setwd('/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/seurat_sct2_merge_dr0.1_3_choose/result')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 library(tools)
 library(dplyr)
 library(Seurat)
@@ -28,6 +28,7 @@ library(stringr)
 library(htmltools)
 library(patchwork)
 library(testit)
+source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -361,6 +362,7 @@ obj <- RunUMAP(object = obj, dims=c(1:pca_dims), verbose = FALSE)
 cat("saving final object ...\n")
 final_file = paste0(outFile, ".final.rds")
 saveRDS(obj, final_file)
+#obj=readRDS(final_file)
 
 cat("calculate md5sum ...\n")
 md5 = md5sum(final_file)
@@ -425,7 +427,8 @@ output_celltype_figures(
   dot_width = bubble_width,
   cell_identity_order=NULL,
   all_umap = "umap",
-  cell_identity_umap = "subumap")
+  cell_identity_umap = "subumap",
+  species=myoptions$species)
 
 output_celltype_figures(
   obj = obj, 
@@ -440,7 +443,8 @@ output_celltype_figures(
   dot_width = bubble_width,
   cell_identity_order="seurat_clusters",
   all_umap = "umap",
-  cell_identity_umap = "subumap")
+  cell_identity_umap = "subumap",
+  species=myoptions$species)
 
 setwd(cur_folder)
 
