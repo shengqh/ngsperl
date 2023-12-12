@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='int_papaer_crs'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_turner_lab/yangj22/20231031_integrate_a_paper_and_20230427_7114_8822_scRNA_hg38_vst2/20231031_integrate_a_paper_and_own_data_filter_config.csv'
+parSampleFile4='fileList4.txt'
+parFile1='/nobackup/h_cqs/shengq2/program/collaborations/celestine_wanjalla/20230115_combined_scRNA_hg38/20230501_filter_config.txt'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/yangj22/20231031_integrate_a_paper_and_20230427_7114_8822_scRNA_hg38_vst2/result/seurat_rawdata/result')
+setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -35,6 +36,8 @@ pool_sample<-is_one(myoptions$pool_sample)
 
 keep_seurat_object<-is_one(myoptions$keep_seurat_object)
 seurat_sample_column<-myoptions$seurat_sample_column
+
+hto_regex=myoptions$hto_regex
 
 ensembl_map=NULL
 if("ensembl_gene_map_file" %in% names(myoptions)){
@@ -230,7 +233,6 @@ if(is_qc_data){
     remove_doublets=TRUE
   }
 
-
   #read raw count dat
   file_map<-read_file_map(parSampleFile1)
   if(length(file_map) == 0){
@@ -294,8 +296,16 @@ if(is_qc_data){
 
     if (!is.null(adt.counts)){
       mat<-as.matrix(adt.counts)
-      rowsum<-apply(mat>0, 1, sum)
-      mat<-mat[rowsum > (ncol(mat) / 2),,drop=FALSE]
+      cat(paste0("  ADT names: ", paste0(rownames(mat), collapse=", "), "\n"))
+      if(!is.null(hto_regex)){
+        mat<-mat[!grepl(hto_regex, rownames(mat)),]
+        cat(paste0("  hto_regex=", hto_regex, ", after filter: ", paste0(rownames(mat), collapse=", "), "\n"))
+      }
+      #remove the .1 suffix due to conflict with rna data
+      rownames(mat)<-gsub("\\.1", "", rownames(mat))
+      cat(paste0("  final ADT names: ", paste0(rownames(mat), collapse=", "), "\n"))
+      #rowsum<-apply(mat>0, 1, sum)
+      #mat<-mat[rowsum > (ncol(mat) / 2),,drop=FALSE]
       if(nrow(mat) > 0){
         sobj[["ADT"]] <- CreateAssayObject(counts = mat)
       }
@@ -352,7 +362,7 @@ for(sample_name in sample_names){
 
   b_rename_cells = all(!startsWith(colnames(sobj), sample_name))
   if(sample_name %in% names(hto_data)) {
-    cat("processing HTO demultiplex of", sample_name, "\n")
+    cat("applying HTO demultiplex result of", sample_name, "\n")
     raw_objs[[sample_name]] = NULL
     cell_data = hto_data[[sample_name]]
     validobj = subset(sobj, cells=cell_data$cell)

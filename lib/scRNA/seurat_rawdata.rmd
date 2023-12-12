@@ -84,3 +84,14 @@ include_graphics(paste0(outFile,".qc.feature.png"))
 ```{r, results="asis", echo=FALSE}
 include_graphics(paste0(outFile,".top20.png"))
 ```
+
+```{r}
+antibody_file<-paste0(outFile,".antibodies.txt")
+if(file.exists(antibody_file)){
+  antibodies<-readLines(antibody_file)
+  antibodies<-antibodies[order(antibodies)]
+  cat("\n\n# Protein antibodies\n\n")
+  cat("\n\n", paste0(antibodies, collapse=", "), "\n\n")
+}
+```
+
