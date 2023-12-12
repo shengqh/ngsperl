@@ -12,12 +12,13 @@ setwd('/scratch/cqs/shengq2/paula_hurley_projects/20221115_scRNA_7467_benign_hg3
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 library(Seurat)
 library(ggplot2)
 library(digest)
 library(patchwork)
 library(sparseMatrixStats)
+
+source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -30,7 +31,6 @@ sample_pattern= myoptions$sample_pattern
 Mtpattern= myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
 hemoglobinPattern=myoptions$hemoglobinPattern
-
 
 #read raw count dat
 filelist1<-read.table(parSampleFile1, header=F, stringsAsFactors = F)
@@ -79,6 +79,8 @@ if(length(rawobjs) == 1){
 }
 rm(rawobjs)
 
-#rawobj<-readRDS("PH_combine.rawobj.rds")
+cat("outputing result ... \n")
+
+saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
+
 output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
