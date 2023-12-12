@@ -1,18 +1,17 @@
 rm(list=ls()) 
-outFile='P5798'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/seurat_rawdata/result/P5798.rawobj.rds'
-parFile2='/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/essential_genes/result/P5798.txt'
-parFile3='/data/cqs/shengq2/program/collaborations/jonathan_brown/20231114_scRNA_5798_human_liver_redo/filter_config.csv'
+parFile1='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_rawdata/result/combined.rawobj.rds'
+parFile2='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/essential_genes/result/combined.txt'
+parFile3='/nobackup/h_cqs/shengq2/program/collaborations/celestine_wanjalla/20230115_combined_scRNA_hg38/20230501_filter_config.txt'
 
 
-setwd('/nobackup/brown_lab/projects/20231114_scRNA_5798_human_liver_redo/seurat_sct2_merge/result')
+setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_sct2_merge/result')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -25,6 +24,7 @@ library(stringr)
 library(glmGamPoi)
 require(data.table)
 library(patchwork)
+source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -57,7 +57,12 @@ finalListFile<-paste0(prefix, ".final.rds")
 obj<-readRDS(parFile1)
 
 if(!is_preprocessed){
-  finalList<-preprocessing_rawobj(obj, myoptions, prefix, parFile3)
+  finalList<-preprocessing_rawobj(
+      rawobj=obj, 
+      myoptions=myoptions, 
+      prefix=prefix, 
+      filter_config_file=parFile3)
+
   obj<-finalList$rawobj
   finalList<-finalList[names(finalList) != "rawobj"]
 
@@ -100,10 +105,16 @@ if(by_sctransform){
   obj[["SCT"]]@misc <- NULL    
 }    
 
+if("ADT" %in% names(obj)){
+  cat("NormalizeData of ADT ... \n")
+  obj <- NormalizeData(obj, normalization.method = "CLR", margin = 2, assay = "ADT")
+}
+
 finalList$obj<-obj
 
 cat("saveRDS ... \n")
 saveRDS(finalList, file=finalListFile)
+#finalList<-readRDS(finalListFile)
 
 cat("output_integration_dimplot ... \n")
 output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)

@@ -12,7 +12,6 @@ setwd('/nobackup/h_vangard_1/shengq2/guoyan/20231004_pipseq_10x_comparison/20231
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -25,6 +24,8 @@ library(stringr)
 library(harmony)
 library(patchwork)
 require(data.table)
+
+source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -76,6 +77,10 @@ for (reduct in c("pca", "harmony")){
 
 cat("RunUMAP ... ")
 obj <- RunUMAP(object = obj, reduction=reduction, dims=pca_dims, verbose = FALSE)
+
+if("ADT" %in% names(obj)){
+  obj <- NormalizeData(obj, normalization.method = "CLR", margin = 2, assay = "ADT")
+}
 
 finalList$obj<-obj
 

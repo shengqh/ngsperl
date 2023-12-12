@@ -12,7 +12,6 @@ setwd('/nobackup/h_turner_lab/shengq2/20221206_7114_8822_scRNA_hg38/seurat_sct_i
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -25,6 +24,8 @@ library(stringr)
 library(harmony)
 library(patchwork)
 require(data.table)
+
+source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -126,6 +127,10 @@ output_ElbowPlot(obj, outFile, "pca")
 
 cat("RunUMAP ... \n")
 obj <- RunUMAP(obj, reduction = "pca", dims = 1:30)    
+
+if("ADT" %in% names(obj)){
+  obj <- NormalizeData(obj, normalization.method = "CLR", margin = 2, assay = "ADT")
+}
 
 finalList$obj<-obj
 
