@@ -63,7 +63,7 @@ if (dim(Cutoffs)[1]==1){
 
 Mtpattern=myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
-Remove_Mt_rRNA=ifelse(myoptions$Remove_MtRNA==0, FALSE, TRUE)
+Remove_Mt_rRNA=is_one(myoptions$Remove_MtRNA)
 resolution=as.numeric(myoptions$resolution)
 transpose=FALSE
 analysis_individual=TRUE
