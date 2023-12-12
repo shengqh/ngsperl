@@ -55,7 +55,6 @@ curated_markers_file=myoptions$curated_markers_file
 
 Mtpattern=myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
-Remove_Mt_rRNA=is_one(myoptions$Remove_MtRNA)
 
 ensembl_map=NULL
 if("ensembl_gene_map_file" %in% names(myoptions)){
