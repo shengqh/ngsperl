@@ -107,7 +107,7 @@ sub initializeScRNASeqDefaultOptions {
   
   initDefaultValue( $def, "Remove_rRNA",         1 );
   initDefaultValue( $def, "Remove_MtRNA",        1 );
-  initDefaultValue( $def, "regress_by_percent_mt",   getValue($def, "Remove_MtRNA") ? 0 : 1 );
+  initDefaultValue( $def, "regress_by_percent_mt", 1 );
   initDefaultValue( $def, "Remove_hemoglobin",   0 );
   
   initDefaultValue( $def, "nFeature_cutoff_min", 300 );
@@ -283,32 +283,11 @@ sub getScRNASeqConfig {
     my $files_def = "files";
 
     if(getValue($def, "perform_cellbender", 0)){
-      my $cellbender_cpu = getValue($def, "cellbender_cpu", 12);
       my $cellbender_task = "cellbender";
-      $config->{$cellbender_task} = {
-        class => "CQS::ProgramWrapperOneToOne",
-        target_dir => "${target_dir}/$cellbender_task",
-        program => "",
-        check_program => 0,
-        option => "
-cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
 
-rm -f ckpt.tar.gz
+      add_cellbender($config, $def, $individual, $target_dir, $cellbender_task, $files_def );
 
-#__OUTPUT__
-",
-        docker_prefix => "cellbender_",
-        parameterSampleFile1_ref => $files_def,
-        output_to_same_folder => 1,
-        output_file_ext => ".cellbender_filtered.h5",
-        pbs => {
-          "nodes"    => "1:ppn=$cellbender_cpu",
-          "walltime" => "48",
-          "mem"      => "40gb"
-        }
-      };
       $files_def = $cellbender_task;
-      push(@$individual, $cellbender_task);
     }
 
     my $perform_decontX = getValue($def, "perform_decontX", 0);
