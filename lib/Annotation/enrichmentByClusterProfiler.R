@@ -522,7 +522,7 @@ compareClusterVis=function(geneListInSetsResult,plotList=c("dotplot","cnetplot",
 
 do_pathway<-function( genes, 
                       universe = NULL,
-                      modules = c("Reactome","KEGG","GO.BP","GO.MF","GO.CC","WikiPathways"),
+                      modules = c("Reactome","KEGG"),
                       organism = "hsa",
                       fromType = "SYMBOL",
                       toType = "ENTREZID",
