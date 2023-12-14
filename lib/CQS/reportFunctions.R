@@ -4,17 +4,33 @@
 #report functions start
 ###################################
 
-library(knitr)
-library(reshape2)
-library(ggplot2)
-library(data.table)
-library(DT)
-library(RCurl)
-library(htmltools)
-library(kableExtra)
-library(dplyr)
+load_install<-function(library_name, library_sources=library_name){
+  if(!require(library_name, character.only = T)){
+    BiocManager::install(library_sources, ask=FALSE)
+  }
+  library(library_name, character.only = T)
+}
 
-knitr::opts_chunk$set(echo = TRUE)
+load_install("knitr")
+load_install("reshape2")
+load_install("ggplot2")
+load_install("data.table")
+load_install("DT")
+load_install("RCurl")
+load_install("htmltools")
+load_install("kableExtra")
+load_install("digest")
+load_install("ggpubr")
+load_install("patchwork")
+load_install("htmlTable")
+load_install("tools")
+load_install("ggExtra")
+load_install("gtsummary")
+load_install("flextable")
+load_install("dplyr")
+
+options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
+options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
 
 addHtmlLinkTag<-function(text,link) {
   result<-paste0("<a href='",link,"' target='_blank'>",text,"</a>")
@@ -54,8 +70,6 @@ figRef <- local({
     }
   }
 })
-options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
-
 
 tabRef <- local({
   tag <- numeric()
@@ -85,7 +99,6 @@ tabRef <- local({
     }
   }
 })
-options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
 
 is_file_exists<-function(filename){
   if(is.null(filename)){
@@ -117,7 +130,7 @@ output_table<-function(tbl, caption=NULL, description=NULL){
     htmltools::HTML()
 }
 
-printTable<-function(filepath, row.names=1, caption=NULL, description=NULL){
+print_table_from_file<-function(filepath, row.names=1, caption=NULL, description=NULL){
   if(row.names > 0){
     tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
   }else{
@@ -127,9 +140,19 @@ printTable<-function(filepath, row.names=1, caption=NULL, description=NULL){
   output_table(tbl, caption, description)
 }
 
+print_table<-function(tbl, round_value=3, byDT=FALSE, row.names=TRUE){
+  tbl <- tbl %>% dplyr::mutate(across(where(is.numeric), round, round_value))
+  if(byDT){
+    DT::datatable(tbl, rownames = row.names, extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv")))
+  }else{
+    print(kable(tbl, row.names = row.names))
+  }
+}
+
+
 get_table_description<-function(category, filepath, description){
   result = "\n```{r,echo=FALSE,results='asis'}\n"
-  result = paste0(result, "printTable('", filepath, "', ", row.names, ",'", category, "','", description, "')\n```\n\n")
+  result = paste0(result, "print_table_from_file('", filepath, "', ", row.names, ",'", category, "','", description, "')\n```\n\n")
   return(result)
 }
 
@@ -145,7 +168,6 @@ output_paged_table<-function(tbl, rownames=TRUE, escape=TRUE, digits=0, nsmall=0
                 options = list( scrollX=TRUE, 
                                 paging=TRUE))
 }
-
 
 printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
   if(row.names > 0){
@@ -166,7 +188,7 @@ getPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
 }
 
 getTable<-function(filepath, row.names=1){
-  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "', ", row.names, ")\n```\n\n"))
+  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprint_table_from_file('", filepath, "', ", row.names, ")\n```\n\n"))
 }
 
 getFigure<-function(filepath, in_details=FALSE, out_width=NULL){
@@ -214,12 +236,105 @@ find_module_folder=function(files,pattern) {
   return(interestedModuleInd)
 }
 
-print_table<-function(tbl, round_value=3, byDT=FALSE, row.names=TRUE){
-  tbl <- tbl %>% dplyr::mutate(across(where(is.numeric), round, round_value))
-  if(byDT){
-    DT::datatable(tbl, rownames = row.names, extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv")))
+get_date_str = function(){
+  format(Sys.time(), "%Y%m%d")
+}
+
+check_md5<-function(filepath, expect_md5, return_md5=FALSE){
+  if(!file.exists(filepath)){
+    stop("File not exists: ", filepath)
+  }
+  md5=tools::md5sum(filepath)
+
+  if(expect_md5 == ""){
+    if(return_md5){
+      return(md5)
+    }else{
+      cat(basename(filepath), "md5=", md5, "\n")
+    }
   }else{
-    print(kable(tbl, row.names = row.names))
+    if(md5 != expect_md5){
+      stop("md5 not match, expect ", expect_md5, " but got ", md5, " for file ", filepath)
+    }
+  }
+}
+
+theme_rotate_x_axis_label <- function() {
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+}
+
+theme_bw3 <- function (axis.x.rotate=F) { 
+  result = theme_bw() +
+    theme(
+      strip.background = element_rect(fill = NA, colour = 'black'),
+      panel.border = element_rect(fill = NA, color = "black"),			
+      axis.line = element_line(colour = "black", linewidth = 0.5),
+      plot.title = element_text(hjust = 0.5)
+    )
+  if (axis.x.rotate){
+    result = result + theme_rotate_x_axis_label()
+  }
+  
+  return(result)
+}
+
+get_hist_density<-function(data, x, title=x, bins=20){
+  ggplot(data, aes(x=!!sym(x))) + geom_histogram(aes(y = ..density..), colour = 1, fill = "white", bins=bins) + geom_density() + ggtitle(title) + theme_bw3()
+}
+
+show_descriptive_statistics<-function(data){
+  dd = data
+  dd$fakevar = 1
+  dd$fakevar <- factor(dd$fakevar, levels = c(1), labels = c("Subject"))
+  label(dd$fakevar) <- "Subject"
+
+  dd_formula = paste0(paste0(colnames(data), collapse=" + "), " ~ fakevar")
+  print_descriptive_statistics(as.formula(dd_formula), dd, test = FALSE)
+}
+
+print_descriptive_statistics<-function(formula, data, test = TRUE, overall = FALSE, continuous = 5, ...){
+  output <- summaryM(formula = formula,
+                      data = data, 
+                      test = test, 
+                      overall = overall, 
+                      continuous = continuous, ...)
+  latex_tbl = latex(output, html=TRUE, width=0.8 )
+  cat(latex_tbl)
+}
+
+factor_by_count<-function(vec){
+  tbl=table(vec)
+  tbl=tbl[tbl > 0]
+  tbl=tbl[order(tbl, decreasing=T)]
+  res=factor(vec, levels=names(tbl))
+  return(res)
+}
+
+get_log_cpm<-function(counts, prefix=NULL, filterCPM=TRUE, transform=TRUE){
+  dge <- DGEList(counts)
+  dge <- calcNormFactors(dge)
+
+  cpm <- cpm(dge, normalized.lib.sizes = TRUE, log = F)
+  if(!is.null(prefix)){
+    write.csv(cpm, paste0(prefix, ".cpm.csv"))
+  }
+
+  if(filterCPM){
+    ncpm1=rowSums(cpm >= 1)
+    keep=ncpm1 > floor(ncol(cpm)/2)
+    dge <- dge[keep, ,keep.lib.sizes=TRUE]
+  }
+
+  logcpm <- cpm(dge, normalized.lib.sizes = TRUE, log = T, prior.count = 2)
+  if(!is.null(prefix)){
+    write.csv(logcpm, paste0(prefix,".logcpm.csv"))
+  }
+
+  if(transform){
+    logcpmt <- t(logcpm)
+    return(logcpmt)
+  }else{
+    return(logcpm)
   }
 }
 
