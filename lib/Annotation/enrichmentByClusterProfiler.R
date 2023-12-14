@@ -4,6 +4,12 @@ require(ReactomePA)
 require(tidytext)
 suppressPackageStartupMessages(library(ComplexHeatmap))
 
+add_coverage<-function(dataForPlotFrame){
+  dataForPlotFrame$BgCount = as.numeric(gsub("/.+","",dataForPlotFrame$BgRatio))
+  dataForPlotFrame$Coverage = dataForPlotFrame$Count / dataForPlotFrame$BgCount * 100
+  dataForPlotFrame
+}
+
 #' example
 #' temp=c("CA1","ICAM1","IGFBP3","SERPINA5","CCL14","PAM")
 #' result=enrichmentByClusterProfiler(temp,modules=c("Reactome"))
@@ -216,33 +222,30 @@ enrichmentByClusterProfiler = function(selectedProteins,
     listEnrichments[["WikiPathways"]] = wpx
   }
 
+  for(pathway in names(listEnrichments)){
+    listEnrichments[[pathway]]@result=add_coverage(listEnrichments[[pathway]]@result)
+  }
   return(listEnrichments)
 }
 
-add_coverage<-function(dataForPlotFrame){
-  dataForPlotFrame$BgCount = as.numeric(gsub("/.+","",dataForPlotFrame$BgRatio))
-  dataForPlotFrame$Coverage = dataForPlotFrame$Count / dataForPlotFrame$BgCount * 100
-  dataForPlotFrame
-}
-
-makeBarPlotClusterProfilerEnrichment=function(dataForPlot,minCount=5,top=10,valueCut=0.05,
-                                              topBy="pvalue",fill="p.adjust",y="NegLog10pAdj",
+makeBarPlotClusterProfilerEnrichment=function(dp,minCount=5,top=10,valueCut=NULL,
+                                              topBy="pvalue",fill="p.adjust",y="Coverage",
                                               returnTable=FALSE,
                                               showProgress=TRUE) {
   if(showProgress){
-    print(paste0("Pathways were filtered based on Count>=",minCount," and ",fill,"<=",valueCut))
+    print(paste0("Pathways were filtered based on Count>=",minCount," and ",fill,"<=",ifelse(is.null(valueCut), "NULL", valueCut)))
   }
-  if (class(dataForPlot)=="list") { #list as input, make into data.frame
+  if (class(dp)=="list") { #list as input, make into data.frame
     dataForPlotFrame=NULL
-    for (i in 1:length(dataForPlot)) {
-      temp=data.frame(dataForPlot[[i]],Module=names(dataForPlot)[i])
+    for (i in 1:length(dp)) {
+      temp=data.frame(dp[[i]],Module=names(dp)[i])
       dataForPlotFrame=rbind(dataForPlotFrame,temp)
     }
   } else { #data frame, extract needed columns
-    if ("Module" %in% colnames(dataForPlot)) {
-      dataForPlotFrame=dataForPlot[,unique(c("Description","Count","CountRatio",topBy,fill,y,"Module"))]
+    if ("Module" %in% colnames(dp)) {
+      dataForPlotFrame=dp[,unique(c("Description","Count","CountRatio",topBy,fill,y,"Module"))]
     } else {
-      dataForPlotFrame=data.frame(dataForPlot[,unique(c("Description","Count","CountRatio",topBy,fill,y))],Module="1")
+      dataForPlotFrame=data.frame(dp[,unique(c("Description","Count","CountRatio",topBy,fill,y))],Module="1")
     }
   }
   #browser()
@@ -252,13 +255,20 @@ makeBarPlotClusterProfilerEnrichment=function(dataForPlot,minCount=5,top=10,valu
     return(NULL)
   }
 
-  if(y == "Coverage"){
-    dataForPlotFrame = add_coverage(dataForPlotFrame)
+  if(!is.null(valueCut)){
+    dataForPlotFrameP=dataForPlotFrame %>% group_by(Module) %>% filter(Count>=minCount & !!sym((fill))<=valueCut)
+  }else{
+    dataForPlotFrameP=dataForPlotFrame %>% group_by(Module) %>% filter(Count>=minCount)
   }
-
-  dataForPlotFrameP=dataForPlotFrame %>% group_by(Module) %>% filter(Count>=minCount & !sym((fill))<=valueCut) %>% top_n(-top,wt=get(topBy)) %>%
+  if (nrow(dataForPlotFrameP) == 0) {
+    warning(paste0("No valid pathway. Skip making figure"))
+    return(NULL)
+  }
+  
+  dataForPlotFrameP = dataForPlotFrameP %>% top_n(-top,wt=get(topBy)) %>%
     mutate(Description = reorder_within(x=Description,by=!!sym(y), within=Module)) %>%
     arrange(desc(!!sym(y)))
+
   p=dataForPlotFrameP %>%
     ggplot(aes_string(x="Description",y=y,fill=fill))+geom_bar(stat = "identity")+
         scale_x_reordered()+
@@ -551,8 +561,6 @@ do_pathway<-function( genes,
 }
 
 get_pathway_table<-function(pathway_res, csv_file=NULL,qvalueCut=0.05){
-  pathway_res = add_coverage(pathway_res)
-
   res_tbl = pathway_res[pathway_res$qvalue <qvalueCut ,c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "qvalue", "Count", "CountRatio", "Coverage")]
   if(!is.null(csv_file)){
     write.csv(res_tbl, csv_file, row.names=F)
@@ -560,30 +568,42 @@ get_pathway_table<-function(pathway_res, csv_file=NULL,qvalueCut=0.05){
   return(list(res_tbl=res_tbl, csv_file=csv_file))
 }
 
-get_pathway_figure<-function(dataForPlot, png_file, fig_width, fig_height, gname=NULL, y="Coverage", ylab="Geneset coverage (%)"){
-  if(is.null(gname)){
-    dp = dataForPlot
-  }else{
-    dp = list(dataForPlot[[gname]])
+get_pathway_figure<-function(dp, png_file, fig_width, fig_height, gname=NULL, y="Coverage", ylab="Geneset coverage (%)"){
+  if(!is.null(gname)){
+    dp = list(dp[[gname]])
     names(dp) = gname
   }
-  g = makeBarPlotClusterProfilerEnrichment(dp, top=20, y=y, showProgress=FALSE) + ylab(ylab) +
+  g = makeBarPlotClusterProfilerEnrichment(dp, top=20, valueCut=NULL, y=y, showProgress=FALSE)
+  if(is.null(g)){
+    return(NULL)
+  }
+  
+  g=g + ylab(ylab) +
     theme(text = element_text(size=8), strip.background =element_rect(fill="white"), strip.text = element_text(size=8, face="bold"))
+
   ggsave(png_file, g, width=fig_width, height=fig_height, units="in", dpi=300, bg="white")
   return(list(g=g, png_file=png_file))
 }
 
-show_pathway<-function(dataForPlot, pname, prefix="pathway",
+show_pathway<-function(dataForPlotList, pname, prefix="pathway",
                        qvalueCut=0.05,
                        pathway_width=6, pathway_height=6, y="Coverage", ylab="Geneset coverage (%)"){
   prefix_name = paste0(prefix, ".", pname)
 
   tbl=get_pathway_table(
-    pathway_res=dataForPlot[[pname]]@result,
+    pathway_res=dataForPlotList[[pname]]@result,
     qvalueCut=qvalueCut,
     csv_file=paste0(prefix_name, ".csv"))
-
-  fig=get_pathway_figure(dataForPlot, paste0(prefix_name, ".png"), pathway_width, pathway_height, pname, y=y, ylab=ylab)
-
-  return(list(res_tbl=tbl$res_tbl, png=fig$png_file, csv=tbl$csv_file))
+  
+  fig=get_pathway_figure(
+    dp=dataForPlotList[[pname]]@result, 
+    png_file=paste0(prefix_name, ".png"), 
+    fig_width=pathway_width, 
+    fig_height=pathway_height, y=y, ylab=ylab)
+  
+  if(is.null(fig)){
+    return(list(res_tbl=tbl$res_tbl, png=NULL, csv=tbl$csv_file))
+  }else{
+    return(list(res_tbl=tbl$res_tbl, png=fig$png_file, csv=tbl$csv_file))
+  }
 }
