@@ -520,11 +520,21 @@ compareClusterVis=function(geneListInSetsResult,plotList=c("dotplot","cnetplot",
 
 }
 
-do_pathway<-function(genes, universe=NULL, modules=c("Reactome","KEGG")) {
+do_pathway<-function( genes, 
+                      universe = NULL,
+                      modules = c("Reactome","KEGG","GO.BP","GO.MF","GO.CC","WikiPathways"),
+                      organism = "hsa",
+                      fromType = "SYMBOL",
+                      toType = "ENTREZID",
+                      OrgDb = "org.Hs.eg.db") {
   dataForPlot=enrichmentByClusterProfiler(
     unique(genes),
     universe=universe,  #universe=unique(ls_res$all$gene),
     modules=modules,
+    organism=organism,
+    fromType=fromType,
+    toType=toType,
+    OrgDb=OrgDb,
     minGSSize = 10,
     maxGSSize = 1000,
     pvalueCutoff = 1,
