@@ -134,7 +134,6 @@ fi
 if [ ! -s ${sample_name}.cpg.pmd ]; then
   echo dnmtools pmd=`date`
   $dnmtools_command pmd -o ${sample_name}.cpg.pmd -p ${sample_name}.cpg.pmdparams ${sample_name}.cpg.meth
-  gzip 
 fi
 
 if [ ! -s ${sample_name}.cpg.pmd.bb ]; then
@@ -160,9 +159,9 @@ if [ ! -s ${sample_name}.amr ]; then
   $dnmtools_command amrfinder -c $chr_fasta -o ${sample_name}.amr ${sample_name}.epiread
 fi
 
-gzip ${sample_name}.cpg.meth
-
 rm ${sample_name}.epiread
+
+gzip ${sample_name}.cpg.meth
 
 $dnmtools_command | grep Version | cut -d ' ' -f 2 | awk '{print \"dnmtools,v\"\$1}' > ${sample_name}.dnmtools.version
 ";

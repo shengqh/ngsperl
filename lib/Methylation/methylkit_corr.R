@@ -2,13 +2,13 @@ rm(list=ls())
 outFile='P10473'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
-parFile1='/data/cqs/shengq2/program/cqsperl/examples/20231006_10473_WGBS.meta.tsv'
+parSampleFile3='fileList3.txt'
+parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/shengq2/temp/20231024_10473_WGBS/MethylKitCorr/result')
+setwd('/nobackup/h_cqs/shengq2/temp/20231109_10473_WGBS_real/MethylKitCorr/result')
 
 ### Parameter setting end ###
 
@@ -22,7 +22,6 @@ params <- read.table(parSampleFile2, sep = "\t", header = F)
 params <- params %>% column_to_rownames("V2") %>% t() %>% data.frame()
 project <- params$task_name
 assembly = params$org
-var = params$var
 mincov = as.numeric(params$mincov)
 
 #prepare to find all specific format files
@@ -30,10 +29,13 @@ cpg.all <-read.table(parSampleFile1, sep="\t", header=F)
 cpg.infile = cpg.all$V1
 file.id = cpg.all$V2
 
-meta <- read.table(parFile1, sep = "\t", header = T)
+meta <- read.table(parSampleFile3, sep = "\t", header = F)
+colnames(meta) <- c("sample", "group")
 meta <- meta[order(row.names(meta)),]
 #treatment <- as.numeric(factor(meta[,var])) - 1
 treatment <- rep(0, nrow(meta))
+#var = params$var
+var = "group"
 
 cpg.obj <- methRead(location = as.list(cpg.infile),
                     sample.id = as.list(file.id),
@@ -88,10 +90,8 @@ dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2",
   theme_bw()
 
 
-CairoPDF(file = paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.pdf"), width = 4, height = 3, pointsize = 8, onefile = T)
-dms_plot
-dev.off()
+ggsave(paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.pdf"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
 
 ggsave(paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.png"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
-print(dms_plot)
-dev.off()
+
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')

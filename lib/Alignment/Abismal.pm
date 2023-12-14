@@ -28,7 +28,7 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $memory ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
   my $selfname = $self->{_name};
 
@@ -43,7 +43,6 @@ sub perform {
   my $addqual_perlFile = get_option_file($config, $section, "addqual_perlFile");
   my $interval_list = get_option_file($config, $section, "interval_list");
 
-  my $thread = $config->{$section}{thread};
   my $picard = $config->{$section}{picard};
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
@@ -79,7 +78,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $rmlist = "";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $uniq_bam );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, "${sample_name}.rrbs_summary_metrics" );
 
 		foreach my $sampleFile (@sample_files) {
 			print $pbs "
@@ -93,43 +92,52 @@ fi
     $sample_files_str = ( scalar(@sample_files) == 2 ) ? " " . $sample_files[0] . " " . $sample_files[1]: " " . $sample_files[0];
 	
     print $pbs "
-if [[ ! -s ${sample_name}.uniq.bam ]]; then
-  if [[ ! -s $raw_bam ]]; then
-    echo abismal=`date`
-    $dnmtools_command abismal -B -t $thread -i $abismal_index -s $map_stat $sample_files_str -o $raw_bam
-  fi
+if [[ ! -s $raw_bam ]]; then
+  echo abismal=`date`
+  $dnmtools_command abismal -B -v -t $thread -i $abismal_index -s $map_stat $sample_files_str -o $raw_bam
+fi
 
-  if [ ! -s ${sample_name}.formatted.bam ]; then
+if [[ -s $raw_bam && ! -s ${sample_name}.uniq.bam.dupstats ]]; then
+  if [[ ! -s ${sample_name}.formatted.sorted.bam ]]; then
+    #dnmtools format requires unsorted bam file
+    #-F: This option forces the format command to process paired-end reads even if it is unable to detect mates. 
     echo dnmtools format=`date`
-    $dnmtools_command format -t $thread -B -f abismal -stdout $raw_bam | samtools sort -@ thread -o ${sample_name}.formatted.sorted.bam
+    $dnmtools_command format -t $thread -B -F -v -f abismal -stdout $raw_bam | samtools sort -@ $thread -o ${sample_name}.formatted.sorted.bam
   fi
 
   echo dnmtools uniq=`date`
-  $dnmtools_command uniq -t $thread -B -S ${sample_name}.uniq.bam.dupstats ${sample_name}.formatted.sorted.bam ${sample_name}.uniq.bam
+  $dnmtools_command uniq -t $thread -B -v -S ${sample_name}.uniq.bam.dupstats ${sample_name}.formatted.sorted.bam ${sample_name}.uniq.bam
+  samtools index -@ $thread ${sample_name}.uniq.bam
 
-  if [[ -s ${sample_name}.uniq.bam ]]; then
+  if [[ -s ${sample_name}.uniq.bam.dupstats ]]; then
     rm ${sample_name}.formatted.sorted.bam
   fi
 fi
 
 if [[ -s $raw_bam && ! -s ${sample_name}.rrbs_summary_metrics ]]; then
-  echo sort=`date`
-  samtools sort -@ $thread -O BAM -o $sorted_bam $raw_bam
+  if [[ ! -s $result_file_addqual_bai ]]; then
+    if [[ ! -s $sorted_bam ]]; then
+      echo sort=`date`
+      samtools sort -@ $thread -O BAM -o $sorted_bam $raw_bam
+    fi
 
-  echo add_qual =`date`
-  samtools view -h -O SAM $sorted_bam | perl $addqual_perlFile - $result_file_addqual
-  samtools view -b -o $result_file_addqual_bam $result_file_addqual
-  samtools index $result_file_addqual_bam $result_file_addqual_bai
+    echo add_qual =`date`
+    samtools view -h -O SAM $sorted_bam | perl $addqual_perlFile - $result_file_addqual
+    samtools view -b -o $result_file_addqual_bam $result_file_addqual
+    samtools index $result_file_addqual_bam $result_file_addqual_bai
+
+    if [[ -s $result_file_addqual_bai ]]; then
+      rm -f $sorted_bam $result_file_addqual
+    fi
+  fi
 
   if [[ -s $result_file_addqual_bai ]]; then
-    rm $sorted_bam $result_file_addqual
-
-    if [ ! -s ${sample_name}.c_curve ]; then
+   if [[ ! -s ${sample_name}.c_curve ]]; then
       echo preseq c_curve=`date`
       $preseq_command c_curve -B $result_file_addqual_bam > ${sample_name}.c_curve
     fi
 
-    if [ ! -s ${sample_name}.lc_extrap ]; then
+    if [[ ! -s ${sample_name}.lc_extrap ]]; then
       echo preseq lc_extrap=`date`
       $preseq_command lc_extrap -B -D $result_file_addqual_bam > ${sample_name}.lc_extrap
     fi
@@ -155,10 +163,16 @@ if [[ -s $raw_bam && ! -s ${sample_name}.rrbs_summary_metrics ]]; then
     fi
 
     if [[ -s ${sample_name}.rrbs_summary_metrics ]]; then
-      rm -f $result_file_addqual_bam $result_file_addqual_bai $raw_bam
+      rm -f $result_file_addqual_bam $result_file_addqual_bai
     fi
   fi
-fi";
+fi
+
+if [[ -s ${sample_name}.rrbs_summary_metrics && -s ${sample_name}.uniq.bam.dupstats ]]; then
+  rm -f $raw_bam
+fi
+
+";
 
     $self->close_pbs( $pbs, $pbs_file );
   }

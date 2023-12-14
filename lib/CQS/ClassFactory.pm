@@ -3,6 +3,7 @@ package CQS::ClassFactory;
 
 use strict;
 use warnings;
+use Data::Dumper;
 
 require Exporter;
 
@@ -79,7 +80,9 @@ sub getResult {
 
 sub performConfig {
   my ( $config, $pattern, $force ) = @_;
-  foreach my $section ( keys %{$config} ) {
+
+  my @sections = sort keys %$config;
+  foreach my $section ( sort keys %$config ) {
     my $cursection = $config->{$section};
     if (ref $cursection ne ref {}){
       next;
@@ -110,7 +113,7 @@ sub performConfig {
     }
   }
 
-  foreach my $section ( keys %{$config} ) {
+  foreach my $section ( sort keys %$config ) {
     my $cursection = $config->{$section};
     if (ref $cursection ne ref {}){
       next;

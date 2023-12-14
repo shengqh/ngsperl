@@ -555,7 +555,7 @@ get_pathway_table<-function(pathway_res, csv_file=NULL,qvalueCut=0.05){
 
   res_tbl = pathway_res[pathway_res$qvalue <qvalueCut ,c("ID", "Description", "GeneRatio", "BgRatio", "pvalue", "qvalue", "Count", "CountRatio", "Coverage")]
   if(!is.null(csv_file)){
-    write.csv(res_tbl, csv_file)
+    write.csv(res_tbl, csv_file, row.names=F)
   }
   return(list(res_tbl=res_tbl, csv_file=csv_file))
 }

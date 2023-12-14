@@ -103,7 +103,7 @@ sub getConfig {
     docker_prefix => "dnmtools_",
     pbs        => {
       "nodes"     => "1:ppn=8",
-      "walltime"  => "128",
+      "walltime"  => getValue($def, "abismal_walltime", "128"),
       "mem"       => "80gb"
     },
   };
@@ -183,7 +183,8 @@ sub getConfig {
       var       => "group",
       mincov     => 4
     },
-    parameterFile1 => getValue($def, "meta_file"),
+    parameterSampleFile3_ref => "groups",
+    #parameterFile1 => getValue($def, "meta_file"),
     sh_direct                => 1,
     pbs                      => {
       "nodes"     => "1:ppn=1",
