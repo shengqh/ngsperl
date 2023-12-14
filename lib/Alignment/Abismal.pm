@@ -40,7 +40,7 @@ sub perform {
 
   my $abismal_index = get_option($config, $section, "abismal_index");
   my $chr_fasta = get_option_file($config, $section, "chr_fasta");
-  my $addqual_perlFile = get_option_file($config, $section, "addqual_perlFile");
+  my $addqual_pythonFile = get_option_file($config, $section, "addqual_pythonFile");
   my $interval_list = get_option_file($config, $section, "interval_list");
 
   my $picard = $config->{$section}{picard};
@@ -122,13 +122,8 @@ if [[ -s $raw_bam && ! -s ${sample_name}.rrbs_summary_metrics ]]; then
     fi
 
     echo add_qual =`date`
-    samtools view -h -O SAM $sorted_bam | perl $addqual_perlFile - $result_file_addqual
-    samtools view -b -o $result_file_addqual_bam $result_file_addqual
+    python3 $addqual_pythonFile $sorted_bam $result_file_addqual_bam
     samtools index $result_file_addqual_bam $result_file_addqual_bai
-
-    if [[ -s $result_file_addqual_bai ]]; then
-      rm -f $sorted_bam $result_file_addqual
-    fi
   fi
 
   if [[ -s $result_file_addqual_bai ]]; then

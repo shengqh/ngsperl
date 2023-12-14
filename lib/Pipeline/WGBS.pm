@@ -61,7 +61,7 @@ sub getConfig {
   my $annovar_db = getValue($def, "annovar_db");
   my $annovar_param = getValue($def, "annovar_param");
   my $HOMER_perlFile = getValue($def, "HOMER_perlFile");
-  my $addqual_perlFile = dirname(__FILE__) . "/../Methylation/add_qual.pl";
+  my $addqual_pythonFile = dirname(__FILE__) . "/../Methylation/add_qual.py";
   my $picard = getValue($def, "picard");
   my $interval_list = getValue($def, "interval_list");
 
@@ -95,7 +95,7 @@ sub getConfig {
     chr_fasta    => $chr_fasta,
     picard     => $picard,
     interval_list => $interval_list,
-    addqual_perlFile => $addqual_perlFile,
+    addqual_pythonFile => $addqual_pythonFile,
     abismal_index => $abismal_index,
     source_ref => $source_ref,
     dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
