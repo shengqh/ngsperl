@@ -602,7 +602,7 @@ getLayoutWidth<-function(visLayout, minWidth=2000, cellWidth=800){
 }
     
 #changed from function in http://mathematicalcoffee.blogspot.com/2014/06/ggpie-pie-graphs-in-ggplot2.html
-ggpie <- function (dat, fill="Category", y="Reads",facet="Sample", 
+myggpie <- function (dat, fill="Category", y="Reads",facet="Sample", 
     maxCategory=NA,main=NA, percent=T,textSize=15,colorNames="Set1",
     transformTable=TRUE,reOrder=FALSE,visLayoutFileList="",visLayoutAlphabet=FALSE,facetColCount=0) {
   if (transformTable) {
@@ -715,7 +715,7 @@ ggpieToFile<-function(dat,fileName,fill="Category", maxCategory=5,textSize=9,tra
   height<-min(10000, max(1000, rowLength * (perHeight + 50)))
   
   png(fileName,width=width,height=height,res=300)
-  p<-ggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,visLayoutFileList=visLayoutFileList,visLayoutAlphabet=visLayoutAlphabet,facetColCount=facetColCount,...)
+  p<-myggpie(dat,fill=fill, maxCategory=maxCategory,textSize=textSize,transformTable=transformTable,visLayoutFileList=visLayoutFileList,visLayoutAlphabet=visLayoutAlphabet,facetColCount=facetColCount,...)
   print(p)
   dev.off()
   invisible(p)
