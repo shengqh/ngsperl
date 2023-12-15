@@ -92,33 +92,65 @@ fi
     $sample_files_str = ( scalar(@sample_files) == 2 ) ? " " . $sample_files[0] . " " . $sample_files[1]: " " . $sample_files[0];
 	
     print $pbs "
-if [[ ! -s $raw_bam ]]; then
-  echo abismal=`date`
-  $dnmtools_command abismal -B -v -t $thread -i $abismal_index -s $map_stat $sample_files_str -o $raw_bam
-fi
-
-if [[ -s $raw_bam && ! -s ${sample_name}.uniq.bam.dupstats ]]; then
-  if [[ ! -s ${sample_name}.formatted.sorted.bam ]]; then
-    #dnmtools format requires unsorted bam file
-    #-F: This option forces the format command to process paired-end reads even if it is unable to detect mates. 
-    echo dnmtools format=`date`
-    $dnmtools_command format -t $thread -B -F -v -f abismal -stdout $raw_bam | samtools sort -@ $thread -o ${sample_name}.formatted.sorted.bam
+if [[ ! -s ${sample_name}.uniq.bam.dupstats ]]; then
+  if [[ ! -s $raw_bam ]]; then
+    echo abismal=`date`
+    $dnmtools_command abismal -B -v -t $thread -i $abismal_index -s $map_stat $sample_files_str -o $raw_bam
+    status=\$?
+    if [[ \$status -eq 0 ]]; then
+      touch ${sample_name}.abismal.succeed
+    else
+      touch ${sample_name}.abismal.failed
+      rm -f $raw_bam
+      exit \$status
+    fi
   fi
 
-  echo dnmtools uniq=`date`
-  $dnmtools_command uniq -t $thread -B -v -S ${sample_name}.uniq.bam.dupstats ${sample_name}.formatted.sorted.bam ${sample_name}.uniq.bam
-  samtools index -@ $thread ${sample_name}.uniq.bam
+  if [[ -s $raw_bam && ! -s ${sample_name}.uniq.bam.dupstats ]]; then
+    if [[ ! -s ${sample_name}.formatted.sorted.bam ]]; then
+      #dnmtools format requires unsorted bam file
+      #-F: This option forces the format command to process paired-end reads even if it is unable to detect mates. 
+      echo dnmtools format=`date`
+      $dnmtools_command format -t $thread -B -F -v -f abismal -stdout $raw_bam | samtools sort -@ $thread -o ${sample_name}.formatted.sorted.bam
+      status=\$?
+      if [[ \$status -eq 0 ]]; then
+        touch ${sample_name}.format.succeed
+      else
+        touch ${sample_name}.format.failed
+        rm -f ${sample_name}.formatted.sorted.bam
+        exit \$status
+      fi
+    fi
 
-  if [[ -s ${sample_name}.uniq.bam.dupstats ]]; then
-    rm ${sample_name}.formatted.sorted.bam
+    echo dnmtools uniq=`date`
+    $dnmtools_command uniq -t $thread -B -v -S ${sample_name}.uniq.bam.dupstats ${sample_name}.formatted.sorted.bam ${sample_name}.uniq.bam
+    status=\$?
+    if [[ \$status -eq 0 ]]; then
+      rm -f ${sample_name}.formatted.sorted.bam
+      touch ${sample_name}.uniq.succeed
+    else
+      touch ${sample_name}.uniq.failed
+      rm -f ${sample_name}.uniq.bam
+      exit \$status
+    fi
+
+    samtools index -@ $thread ${sample_name}.uniq.bam
   fi
 fi
 
-if [[ -s $raw_bam && ! -s ${sample_name}.rrbs_summary_metrics ]]; then
+if [[ ! -s ${sample_name}.rrbs_summary_metrics ]]; then
   if [[ ! -s $result_file_addqual_bai ]]; then
     if [[ ! -s $sorted_bam ]]; then
       echo sort=`date`
       samtools sort -@ $thread -O BAM -o $sorted_bam $raw_bam
+      status=\$?
+      if [[ \$status -eq 0 ]]; then
+        touch ${sample_name}.sort.succeed
+      else
+        touch ${sample_name}.sort.failed
+        rm -f $sorted_bam
+        exit \$status
+      fi
     fi
 
     echo add_qual =`date`
@@ -127,7 +159,9 @@ if [[ -s $raw_bam && ! -s ${sample_name}.rrbs_summary_metrics ]]; then
   fi
 
   if [[ -s $result_file_addqual_bai ]]; then
-   if [[ ! -s ${sample_name}.c_curve ]]; then
+    rm -f $sorted_bam $raw_bam
+
+    if [[ ! -s ${sample_name}.c_curve ]]; then
       echo preseq c_curve=`date`
       $preseq_command c_curve -B $result_file_addqual_bam > ${sample_name}.c_curve
     fi
@@ -161,10 +195,6 @@ if [[ -s $raw_bam && ! -s ${sample_name}.rrbs_summary_metrics ]]; then
       rm -f $result_file_addqual_bam $result_file_addqual_bai
     fi
   fi
-fi
-
-if [[ -s ${sample_name}.rrbs_summary_metrics && -s ${sample_name}.uniq.bam.dupstats ]]; then
-  rm -f $raw_bam
 fi
 
 ";
