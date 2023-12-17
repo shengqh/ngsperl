@@ -215,7 +215,7 @@ col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
 
 if (horizontalHeatmap) { #make horizontal heatmap and NOT show trees
   p=Heatmap(tdf,
-            name="z score of Log2(TPM+1)",
+            name="z score of\nLog2(TPM+1)",
             col = col_fun,
             column_names_rot = 45,
             cluster_rows=TRUE,
@@ -226,7 +226,7 @@ if (horizontalHeatmap) { #make horizontal heatmap and NOT show trees
             show_column_names=FALSE)
 } else {
   p=Heatmap(tdf,
-            name="z score of Log2(TPM+1)",
+            name="z score of\nLog2(TPM+1)",
             col = col_fun,
             cluster_rows=TRUE,
             cluster_columns =TRUE,
