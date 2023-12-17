@@ -1,0 +1,81 @@
+```{r}
+load_install<-function(library_name, library_sources=library_name){
+  if(!require(library_name, character.only = T)){
+    BiocManager::install(library_sources, ask=FALSE)
+  }
+  library(library_name, character.only = T)
+}
+
+load_install("ComplexHeatmap")
+load_install("clusterProfiler")
+load_install("readr")
+load_install("gplots")
+load_install("viridis")
+
+source("/nobackup/h_cqs/shengq2/program/ngsperl/lib/Annotation/gene_exp_functions.R")
+```
+
+```{r}
+#make sure all required variables are defined
+stopifnot(exists("prefix"))
+
+#target_genes is a list of genes that will be the testing set that we will look at where the background_genes is the full list of genes that were tested to get the target genes.
+stopifnot(exists("target_genes"))
+stopifnot(exists("background_genes"))
+
+#gene_exp_file should be the database to compare to (rows = genes, columns = celltypes/tissues/samples) WILL NOT BE USED IF ALL gene_exp OPTIONS ARE 'F'
+#gene_exp_file = "/nobackup/h_cqs/references/tissue_specific/20230627_tabula_logNorm_averageExpression_matrix_by_tissueOnly.txt.gz"
+stopifnot(exists("gene_exp_file"))
+if(!file.exists(gene_exp_file)) stop(paste0("gene_exp_file does not exist: ", gene_exp_file))
+
+#those variables will be used in ID conversion by clusterProfiler::bitr if fromType != gene_exp_toType
+stopifnot(exists("fromType"))
+stopifnot(exists("gene_exp_toType"))
+stopifnot(exists("OrgDb"))
+load_install(OrgDb)
+```
+
+```{r}
+geneExprTab<-read.delim(gene_exp_file, sep = "\t", header = T, as.is = T, stringsAsFactors = F, row.names = 1)
+the_sums<-apply(geneExprTab, 1 ,sum)
+geneExprTabR<-geneExprTab[which(the_sums>0),]
+
+if(fromType != gene_exp_toType){
+  eg = clusterProfiler::bitr(
+    target_genes,
+    fromType = fromType,
+    toType = gene_exp_toType,
+    OrgDb = OrgDb
+  )
+  colnames(eg)<-c("FROM","TO")
+}else{
+  eg=data.frame(FROM=target_genes, TO=target_genes)
+}
+```
+
+```{r echo = F}
+cat("\n\n## Heatmap of targeted genes in Tabula gene expression data\n\n")
+heatmap_width=12
+heatmap_height=8
+```
+
+```{r echo = T, fig.height=heatmap_width, fig.width=heatmap_height}
+cat("\nHeatmap of gene expression of all of the significant proteins/genes in target set. Plotted Z-score is calculated for each gene (row) in the heatmap.\n")
+
+tdf<-geneExprTabR[which(row.names(geneExprTabR) %in% eg$TO),]
+tdf=calc_z_scores(tdf)
+
+col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
+p=Heatmap(tdf,
+          name="z score of logNorm\ngene expression",
+          col = col_fun,
+          cluster_rows=TRUE,
+          cluster_columns=TRUE,
+          show_row_names=FALSE)
+
+heatmap_png=paste0(prefix, "_geneExpression_heatmap.png")
+png(heatmap_png, width = heatmap_width, height = heatmap_height, units = "in", res = 300)
+plot(p)
+ignored=dev.off()
+include_graphics(heatmap_png)
+```
