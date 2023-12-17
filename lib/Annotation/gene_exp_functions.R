@@ -1,4 +1,15 @@
 #### Functions for my section ####
+#exp is the expression matrix with gene names as rownames and sample names as colnames
+calc_z_scores<-function(exp){
+  require(matrixStats)
+  require(SparseArray)
+
+  # Calculate Z-scores for each gene (row-wise)
+  t_heatmap=as.matrix(t(exp))
+  z_scores <- data.frame(t(scale(t_heatmap, center = colMeans(t_heatmap), scale = colSds(t_heatmap))), check.names=FALSE)
+  return(z_scores)
+}
+
 calc_z<-function(x, u, s){
   z = (x-u)/s
   return(z)
@@ -57,26 +68,20 @@ top_5perc_genes<-function(red_tabula){
   return(top5perc)
 }
 
-counts_and_ratio_top5perc<-function(top5perc, red_proteins, pval, log_for_filt, target_column, GeneID1, GeneID2){
-  cou_rat_tab<-as.data.frame(matrix(nrow = length(top5perc), ncol = 6))
-  names(cou_rat_tab)<-c("Tabula_group","Count_sig_proteins_in_top5perc","Num_of_top5perc_genes","Ratio_sigProteins_in_NumTop5PercGenes", "Proteins_geneID1","Proteins_geneID2")
+counts_and_ratio_top5perc<-function(top5perc, sig_proteins){
+  cou_rat_tab<-as.data.frame(matrix(nrow = length(top5perc), ncol = 4))
+  names(cou_rat_tab)<-c("Tabula_group","Count_sig_proteins_in_top5perc","Num_of_top5perc_genes","Ratio_sigProteins_in_NumTop5PercGenes")
   cou_rat_tab$Tabula_group<-names(top5perc)
   
-  sig_proteins<-red_proteins[which(red_proteins[,target_column]),]
-  
+  i=1
   for(i in 1:nrow(cou_rat_tab)){
-    if(table(sig_proteins$ensemblID%in%unlist(top5perc[[i]]))['FALSE']!=nrow(sig_proteins)){
-      cou_rat_tab$Count_sig_proteins_in_top5perc[i]<-table(unlist(top5perc[[i]])%in%sig_proteins[,GeneID2])['TRUE']
-      cou_rat_tab$Proteins_geneID1[i]<-paste(sig_proteins[which(sig_proteins$ensemblID %in% unlist(top5perc[[i]])), GeneID1], sep = ",", collapse = ",")
-      cou_rat_tab$Proteins_geneID2[i]<-paste(sig_proteins[which(sig_proteins$ensemblID %in% unlist(top5perc[[i]])), GeneID2], sep = ",", collapse = ",")
-    }else{
-      cou_rat_tab$Count_sig_proteins_in_top5perc[i]<-0
-    }
-    
-    cou_rat_tab$Num_of_top5perc_genes[i]<-length(unlist(top5perc[[i]]))
-    
-    cou_rat_tab$Ratio_sigProteins_in_NumTop5PercGenes[i]<-(cou_rat_tab$Count_sig_proteins_in_top5perc[i]/cou_rat_tab$Num_of_top5perc_genes[i])
+    cur_top5 = unlist(top5perc[[i]])
+    cou_rat_tab$Num_of_top5perc_genes[i]<-length(cur_top5)
+
+    in_proteins = intersect(sig_proteins, cur_top5)
+    cou_rat_tab$Count_sig_proteins_in_top5perc[i]<-length(in_proteins)
   }
+  cou_rat_tab$Ratio_sigProteins_in_NumTop5PercGenes<-(cou_rat_tab$Count_sig_proteins_in_top5perc/cou_rat_tab$Num_of_top5perc_genes)
   
   return(cou_rat_tab)
 }
