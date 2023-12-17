@@ -568,10 +568,10 @@ get_pathway_table<-function(pathway_res, csv_file=NULL,qvalueCut=0.05){
   return(list(res_tbl=res_tbl, csv_file=csv_file))
 }
 
-get_pathway_figure<-function(dp, png_file, fig_width, fig_height, gname=NULL, y="Coverage", ylab="Geneset coverage (%)"){
-  if(!is.null(gname)){
-    dp = list(dp[[gname]])
-    names(dp) = gname
+get_pathway_figure<-function(dp, png_file, fig_width, fig_height, pname=NULL, y="Coverage", ylab="Geneset coverage (%)"){
+  if(!is.null(pname)){
+    dp = list(dp[[pname]])
+    names(dp) = pname
   }
   g = makeBarPlotClusterProfilerEnrichment(dp, top=20, valueCut=NULL, y=y, showProgress=FALSE)
   if(is.null(g)){
@@ -585,10 +585,17 @@ get_pathway_figure<-function(dp, png_file, fig_width, fig_height, gname=NULL, y=
   return(list(g=g, png_file=png_file))
 }
 
-show_pathway<-function(dataForPlotList, pname, prefix="pathway",
-                       qvalueCut=0.05,
-                       pathway_width=6, pathway_height=6, y="Coverage", ylab="Geneset coverage (%)"){
+show_pathway<-function( dataForPlotList, 
+                        pname, 
+                        prefix="pathway",
+                        qvalueCut=0.05,
+                        pathway_width=6, 
+                        pathway_height=6, 
+                        y="Coverage", 
+                        ylab="Geneset coverage (%)"){
   prefix_name = paste0(prefix, ".", pname)
+
+  dp=dataForPlotList[[pname]]@result
 
   tbl=get_pathway_table(
     pathway_res=dataForPlotList[[pname]]@result,
@@ -596,10 +603,13 @@ show_pathway<-function(dataForPlotList, pname, prefix="pathway",
     csv_file=paste0(prefix_name, ".csv"))
   
   fig=get_pathway_figure(
-    dp=dataForPlotList[[pname]]@result, 
+    dp=dataForPlotList, 
     png_file=paste0(prefix_name, ".png"), 
     fig_width=pathway_width, 
-    fig_height=pathway_height, y=y, ylab=ylab)
+    fig_height=pathway_height, 
+    pname=pname,
+    y=y, 
+    ylab=ylab)
   
   if(is.null(fig)){
     return(list(res_tbl=tbl$res_tbl, png=NULL, csv=tbl$csv_file))
