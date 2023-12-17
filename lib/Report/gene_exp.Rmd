@@ -12,7 +12,10 @@ load_install("readr")
 load_install("gplots")
 load_install("viridis")
 
-source("/nobackup/h_cqs/shengq2/program/ngsperl/lib/Annotation/gene_exp_functions.R")
+if(!exists("lib_folder")){
+  lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
+}
+source(paste0(lib_folder, "/Report/gene_exp_functions.R"))
 ```
 
 ```{r}
