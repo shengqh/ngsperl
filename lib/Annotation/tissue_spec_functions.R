@@ -1,5 +1,13 @@
 library(tibble)
 
+add_secreted<-function(df){
+  selectedProteinsCategory=rep("Intracellular", nrow(df))
+  selectedProteinsCategory[grep("membrane proteins", df[["Protein.class"]])] = "Membrane"
+  selectedProteinsCategory[grep("secreted proteins", df[["Protein.class"]])] = "Secreted"
+  df$Secreted.Category = selectedProteinsCategory
+  return(df)
+}
+
 findProteinInDatabase = function(proteinDatabaseAll, selectedProteins,selectedProteinsLabels=NULL) {
   proteinDatabaseAllOtherNamesList = strsplit(proteinDatabaseAll$`Gene synonym`, ",\ ")
   
@@ -96,6 +104,7 @@ findProteinInDatabase_fast = function(proteinDatabaseAll, selectedProteins, sele
   }
 
   colnames(final_df) = make.names(colnames(final_df))
+  final_df = add_secreted(final_df)
 
   return(list(final_df, selectedProteinsNotInGeneColumn))
 }
