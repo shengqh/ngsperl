@@ -1,0 +1,305 @@
+
+# Filter criteria
+
+- Metabolite.name != 'Unknown' to remove unknown features
+- Metabolite.name doesn't contain 'w/o' to remove features without ms2
+- Ontology != 'Others' and metabolite.name doesn't contain 'RIKEN' to remove other unidentified features
+- Metabolite.name doesn't contain '(d7)' or '(d9)' to remove internal standards
+- Mean(QC) > 0, RSD(QC) < 25%, Mean(Blank)/Mean(QC) < 0.1 to remove low quality features
+
+# Preprocessing positive data
+
+Read positive area data from `r pos_file`.
+
+```{r}
+lst<-read_lipid_tsv_and_filter(filename=pos_file, filePrefix=paste0(result_prefix, ".pos"))
+
+pos_df=lst$res
+pos_all_meta=lst$all_meta
+pos_sample_meta=lst$sample_meta
+pos_filter_tb=lst$filter_tb
+```
+
+## Pos all meta data
+
+```{r}
+print_table(pos_all_meta, row.names=FALSE, byDT=TRUE)
+```
+
+## Pos sample meta data
+
+```{r}
+print_table(pos_sample_meta, row.names=FALSE, byDT=TRUE)
+```
+
+## Pos filter table
+
+```{r}
+print_table(pos_filter_tb, row.names=FALSE)
+```
+
+## Pos data
+
+```{r}
+print_table(head(pos_df), row.names=FALSE)
+```
+
+# Preprocessing negative data
+
+Read negative area data from `r neg_file`.
+
+```{r}
+lst<-read_lipid_tsv_and_filter(filename=neg_file, filePrefix=paste0(result_prefix, ".neg"))
+
+neg_df=lst$res
+neg_all_meta=lst$all_meta
+neg_sample_meta=lst$sample_meta
+neg_filter_tb=lst$filter_tb
+```
+
+## Neg all meta data
+
+```{r}
+print_table(neg_all_meta, row.names=FALSE, byDT=TRUE)
+```
+
+## Neg sample meta data
+
+```{r}
+print_table(neg_sample_meta, row.names=FALSE, byDT=TRUE)
+```
+
+## Neg filter table
+
+```{r}
+print_table(neg_filter_tb, row.names=FALSE)
+```
+
+## Neg data
+
+```{r}
+print_table(head(neg_df), row.names=FALSE)
+```
+
+# Combine positive and negative data
+
+```{r}
+stopifnot(all(colnames(pos_df)==colnames(neg_df)))
+```
+
+Sample names in pos and neg files are identical.
+
+```{r}
+combined=rbind(pos_df, neg_df)
+ontology<-combined[,c(1,2)]
+ontology<-ontology[!duplicated(ontology$Metabolite.name), ]
+no_ontology= combined %>% select(-Ontology)
+f<-aggregate(. ~ Metabolite.name, no_ontology, sum)
+colnames(f)<-colnames(no_ontology)
+final=merge(ontology, f, by="Metabolite.name")
+combined_file=paste0(result_prefix, ".combined.csv")
+write.csv(final, combined_file, row.names=FALSE)
+print_table(final, row.names=FALSE, byDT=TRUE)
+```
+
+There are total `r nrow(final)` metabolites. Data was saved to `r combined_file`.
+
+# Add annotation
+
+```{r}
+anno=fread(anno_file, data.table=FALSE)
+print_table(anno, byDT=TRUE, row.names=FALSE)
+```
+
+```{r}
+venn.width=4
+venn.height=4
+```
+
+The Ontology in data file corresponds to Abbreviation in MSDial annotation table.
+
+```{r}
+x<-list("MSDial"=c(unique(anno$Abbreviation)), "Data"=unique(final$Ontology))
+g<-ggvenn(
+  x, 
+  fill_color = c("#0073C2FF", "#EFC000FF"),
+  stroke_size = 0.5, set_name_size = 4
+  )
+venn_file = paste0(result_prefix, ".MSDial_data.venn.png")
+ggsave(venn_file, g, width=venn.width, height=venn.height, units="in", dpi=300, bg="white")
+knitr::include_graphics(venn_file)
+```
+
+```{r}
+missed=final[!(final$Ontology %in% anno$Abbreviation),]
+cat("\n\nThere", ifelse(nrow(missed)==0, "is", "are"), nrow(missed), "molecule(s) not found in MSDial annotation file.\n\n")
+```
+
+```{r, eval=nrow(missed)>0}
+print_table(missed, row.names=FALSE)
+```
+
+# Final annotated tables
+
+```{r}
+anno_slim=anno[,c(1:4)]
+anno_slim=anno_slim[!duplicated(anno_slim$Abbreviation),]
+
+final_anno=dplyr::left_join(final, anno_slim, join_by(Ontology==Abbreviation)) %>%
+  dplyr::rename(Abbreviation=Ontology) %>%
+  select(c("Metabolite.name", "Abbreviation", "Lipid_subclass","Main_class","Categories"), everything()) %>%
+  rename("Lipid_subclass_abbreviation"="Abbreviation")
+final_anno$Main_class[is.na(final_anno$Main_class)] = "Others"
+final_anno$Categories[is.na(final_anno$Categories)] = "Others"
+rownames(final_anno)<-final_anno$Metabolite.name
+samples=colnames(final_anno)[6:ncol(final_anno)]
+
+get_box<-function(bdf, samples){
+  bdf=data.frame(bdf)
+  bdf$feature<-rownames(bdf)
+  mbdf<-melt(bdf,id.vars="feature")
+  mbdf<-mbdf[order(mbdf$feature),]
+  
+  nf=min(10, length(unique(bdf$feature)))
+  
+  plot_df=mbdf[c(1:(nf * length(samples))),]
+  g<-ggplot(plot_df, aes(y=feature, x=value)) + geom_boxplot() + theme_bw()
+  return(g)
+}
+
+log_scale<-function(df, samples, data_prefix, box_width, box_height){
+  raw_csv=paste0(data_prefix, ".raw.csv")
+  write.csv(df, raw_csv)
+  g0<-get_box(df, samples) + xlab("Concentration") + ggtitle("pre-log-scaling")
+  
+  ldf<-log10(df+1)
+  sldf<-data.frame(t(scale(t(ldf), center=TRUE, scale=TRUE)))
+  log_scaled_csv=paste0(data_prefix, ".log_scaled.csv")
+  write.csv(sldf, log_scaled_csv)
+  g1<-get_box(sldf, samples) + xlab("Concentration") + ggtitle("post-log-scaling")
+  
+  g<-g0+g1+plot_layout(ncol=2)
+  
+  log_scaled_png=paste0(data_prefix, ".log_scaled.png")
+  ggsave(log_scaled_png, width=box_width, height=box_height, dpi=300, units="in", bg="white")
+  return(list(raw_csv=raw_csv, log_scaled=sldf, log_scaled_csv=log_scaled_csv, log_scaled_png=log_scaled_png))
+}
+
+box_width=10
+box_height=4
+```
+
+```{r}
+full_file=paste0(annotated_prefix, ".full.raw.csv")
+write.csv(final_anno, full_file, row.names=F)
+print_table(final_anno, byDT=TRUE, row.names=F)
+```
+
+Raw concentration file was saved to `r full_file`.
+
+## Species
+
+```{r}
+df=final_anno[,samples]
+lst=log_scale(df, samples, paste0(annotated_prefix, ".species"), box_width, box_height)
+```
+
+Raw concentration file was saved to `r lst$raw_csv`.
+
+### Log scaled concentration table
+
+```{r}
+print_table(lst$log_scaled, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed and scaled concentration file was saved to `r lst$log_scaled_csv`.
+
+### Box plot of pre/post log scaled concentration data
+
+```{r fig.width=box_width, fig.height=box_height}
+include_graphics(lst$log_scaled_png)
+```
+
+## Sub class
+
+```{r}
+final_sub_class=final_anno[,c(2,6:ncol(final_anno)),drop=FALSE]
+
+final_sub_class=aggregate(. ~ Lipid_subclass_abbreviation, final_sub_class, sum)
+colnames(final_sub_class)<-c("Lipid_subclass", samples)
+final_sub_class <- final_sub_class %>% tibble::column_to_rownames("Lipid_subclass")
+
+lst=log_scale(final_sub_class, samples, paste0(annotated_prefix, ".sub_class"), box_width, box_height)
+```
+
+Raw concentration file was saved to `r lst$raw_csv`.
+
+### Log scaled concentration table
+
+```{r}
+print_table(lst$log_scaled, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed and scaled concentration file was saved to `r lst$log_scaled_csv`.
+
+### Box plot of pre/post log scaled concentration data
+
+```{r fig.width=box_width, fig.height=box_height}
+include_graphics(lst$log_scaled_png)
+```
+
+## Main class
+
+```{r fig.width=box_width, fig.height=box_height}
+final_main_class=final_anno[,c(4,6:ncol(final_anno)),drop=FALSE]
+final_main_class=aggregate(. ~ Main_class, final_main_class, sum)
+colnames(final_main_class)<-c("Main_class", samples)
+final_main_class <- final_main_class %>% tibble::column_to_rownames("Main_class")
+
+lst=log_scale(final_main_class, samples, paste0(annotated_prefix, ".main_class"), box_width, box_height)
+```
+
+Raw concentration file was saved to `r lst$raw_csv`.
+
+### Log scaled concentration table
+
+```{r}
+print_table(lst$log_scaled, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed and scaled concentration file was saved to `r lst$log_scaled_csv`.
+
+### Box plot of pre/post log scaled concentration data
+
+```{r fig.width=box_width, fig.height=box_height}
+include_graphics(lst$log_scaled_png)
+```
+
+## Category
+
+```{r fig.width=box_width, fig.height=box_height}
+final_category=final_anno[,c(5,6:ncol(final_anno)),drop=FALSE]
+
+
+final_category=aggregate(. ~ Categories, final_category, sum)
+colnames(final_category)=c("Categories", samples)
+final_category <- final_category %>% tibble::column_to_rownames("Categories")
+
+lst=log_scale(final_category, samples, paste0(annotated_prefix, ".category"), box_width, box_height)
+```
+
+Raw concentration file was saved to `r lst$raw_csv`.
+
+### Log scaled concentration table
+
+```{r}
+print_table(lst$log_scaled, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed and scaled concentration file was saved to `r lst$log_scaled_csv`.
+
+### Box plot of pre/post log scaled concentration data
+
+```{r fig.width=box_width, fig.height=box_height}
+include_graphics(lst$log_scaled_png)
+```
