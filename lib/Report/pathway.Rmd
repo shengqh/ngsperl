@@ -32,6 +32,8 @@ stopifnot(exists("OrgDb"))
 stopifnot(exists("pathway_analysis_sets"))
 stopifnot(exists("fromType"))
 stopifnot(exists("pathway_toType"))
+
+has_background_genes = !all(is.null(background_genes))
 ```
 
 ```{r, error=FALSE, warning=FALSE}
@@ -51,7 +53,7 @@ res<-do_pathway(genes=target_genes,
                 toType=pathway_toType,
                 OrgDb=OrgDb)
 saveRDS(res, paste0(prefix,"_pathway.rds"))     
-           
+
 dataForPlotList=res$dataForPlot
 
 rmd=""

@@ -11,10 +11,14 @@ load_install("clusterProfiler")
 load_install("readr")
 load_install("gplots")
 load_install("viridis")
+load_install("circlize")
+load_install("ggplot2")
+load_install("ggpubr")
 
 if(!exists("lib_folder")){
   lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
 }
+source(paste0(lib_folder, "/CQS/reportFunctions.R"))
 source(paste0(lib_folder, "/Report/gene_exp_functions.R"))
 ```
 
@@ -36,35 +40,83 @@ stopifnot(exists("fromType"))
 stopifnot(exists("gene_exp_toType"))
 stopifnot(exists("OrgDb"))
 load_install(OrgDb)
+
+stopifnot(exists("perform_gene_exp_5perc"))
+
+has_background_genes = !all(is.null(background_genes))
+
+if(!exists("draw_gene_exp_heatmap_5perc_global")){
+  draw_gene_exp_heatmap_5perc_global=FALSE
+}
+
+draw_gene_exp_heatmap_5perc_global = perform_gene_exp_5perc & draw_gene_exp_heatmap_5perc_global & has_background_genes
 ```
+
+## Gene expression in tissue specific data
+
+Read gene expression data from `r gene_exp_file` and filter out genes that are not expressed in any of the samples.
 
 ```{r}
 geneExprTab<-read.delim(gene_exp_file, sep = "\t", header = T, as.is = T, stringsAsFactors = F, row.names = 1)
 the_sums<-apply(geneExprTab, 1 ,sum)
 geneExprTabR<-geneExprTab[which(the_sums>0),]
 
-if(fromType != gene_exp_toType){
-  eg = clusterProfiler::bitr(
-    target_genes,
-    fromType = fromType,
-    toType = gene_exp_toType,
-    OrgDb = OrgDb
-  )
-  colnames(eg)<-c("FROM","TO")
+if(has_background_genes){
+  stopifnot(all(target_genes %in% background_genes))
+
+  if(fromType != gene_exp_toType){
+    bg = clusterProfiler::bitr(
+      background_genes,
+      fromType = fromType,
+      toType = gene_exp_toType,
+      OrgDb = OrgDb
+    )
+    colnames(bg)<-c("FROM","TO")
+    bg<-bg[bg$TO %in% row.names(geneExprTabR),]
+    bg<-bg[!duplicated(bg$FROM),]
+  }else{
+    cur_background_genes<-background_genes[which(background_genes %in% row.names(geneExprTabR))]
+    bg=data.frame(FROM=cur_background_genes, TO=cur_background_genes)
+  }
+}
+
+if(has_background_genes){
+  eg=bg[match(target_genes, bg$FROM),] %>% dplyr::filter(!is.na(TO))
 }else{
-  eg=data.frame(FROM=target_genes, TO=target_genes)
+  if(fromType != gene_exp_toType){
+    eg = clusterProfiler::bitr(
+      target_genes,
+      fromType = fromType,
+      toType = gene_exp_toType,
+      OrgDb = OrgDb
+    )
+    colnames(eg)<-c("FROM","TO")
+    eg<-eg[eg$TO %in% row.names(geneExprTabR),]
+    eg<-eg[!duplicated(eg$FROM),]
+  }else{
+    cur_target_genes<-cur_target_genes[which(cur_target_genes %in% row.names(geneExprTabR))]
+    eg=data.frame(FROM=cur_target_genes, TO=cur_target_genes)
+  }
 }
 ```
 
-```{r echo = F}
-cat("\n\n## Heatmap of targeted genes in Tabula gene expression data\n\n")
-heatmap_width=12
-heatmap_height=8
+There are `r nrow(eg)` target genes found in gene expression table.
+
+```{r eval=has_background_genes, echo=FALSE}
+cat("And there are", nrow(bg), "background genes found in gene expression table.\n")
 ```
 
-```{r echo = T, fig.height=heatmap_width, fig.width=heatmap_height}
-cat("\nHeatmap of gene expression of all of the significant proteins/genes in target set. Plotted Z-score is calculated for each gene (row) in the heatmap.\n")
+```{r}
+heatmap_width=14
+heatmap_height=10
+```
 
+### Heatmap of targeted genes
+
+Heatmap of gene expression of all of the significant genes in target set. 
+Plotted Z-score is calculated for each gene (row) in the heatmap.
+
+```{r echo = T, fig.height=heatmap_width, fig.width=heatmap_height}
 tdf<-geneExprTabR[which(row.names(geneExprTabR) %in% eg$TO),]
 tdf=calc_z_scores(tdf)
 
@@ -75,10 +127,157 @@ p=Heatmap(tdf,
           cluster_rows=TRUE,
           cluster_columns=TRUE,
           show_row_names=FALSE)
+rm(tdf)
 
 heatmap_png=paste0(prefix, "_geneExpression_heatmap.png")
 png(heatmap_png, width = heatmap_width, height = heatmap_height, units = "in", res = 300)
 plot(p)
 ignored=dev.off()
+rm(p)
 include_graphics(heatmap_png)
+```
+
+```{r, eval=perform_gene_exp_5perc, echo=FALSE}
+cat("\n\n### Top 5% expressed genes\n\n")
+cat("\n\nFor each tissue, genes with 0 expression were removed, the remaining genes ranked, then the top 5% of genes by rank were assigned to the tissue as a top 5% gene.Top 5% calculation was done only in the genes that are shared between Tabula and the INPUT protein dataset.\n\n")
+```
+
+```{r, eval=perform_gene_exp_5perc}
+if(has_background_genes){
+  top5perc<-top_5perc_genes(geneExprTabR[which(row.names(geneExprTabR) %in% bg$TO),])
+}else{
+  top5perc<-top_5perc_genes(geneExprTabR)
+}
+
+top5perc_genes<-unique(unlist(top5perc))
+```
+
+```{r, eval=draw_gene_exp_heatmap_5perc_global, echo=FALSE}
+cat("\n\n#### Heatmap of top 5% genes\n\n")
+cat("\nPlotted Z-score is calculated for each gene (row) in the heatmap. Row side colors are whether the gene is in the target genes (grey = not in target set, red = in target set).\n\n")
+```
+
+```{r, eval=draw_gene_exp_heatmap_5perc_global}
+tdf<-geneExprTabR[which(row.names(geneExprTabR) %in% top5perc_genes),]
+tdf=calc_z_scores(tdf)
+
+is_target=ifelse(row.names(tdf) %in% eg$TO, "Target", "Background")
+col = list(Gene = c( "Target" = "red", "Background" = "darkgrey"))
+ha = rowAnnotation(Gene= is_target,col=col)
+
+col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
+p=Heatmap(tdf,
+          name="z score of logNorm\ngene expression",
+          col = col_fun,
+          cluster_rows=TRUE,
+          cluster_columns=TRUE,
+          show_row_names=FALSE,
+          show_row_dend=FALSE,
+          right_annotation=ha)
+rm(tdf)
+
+global_perc5_heatmap_png=paste0(prefix, "_geneExpression_5perc_heatmap_global.png")
+png(global_perc5_heatmap_png, width = heatmap_width, height = heatmap_height, units = "in", res = 300)
+plot(p)
+ignored=dev.off()
+rm(p)
+include_graphics(global_perc5_heatmap_png)
+```
+
+```{r eval=perform_gene_exp_5perc, echo=FALSE}
+cat("\n\n#### Numbers in the top 5% expressed genes among the samples in the gene expression data\n\n")
+```
+
+```{r}
+ratio_width=12
+ratio_height=6
+```
+
+```{r eval=perform_gene_exp_5perc, fig.height=ratio_width, fig.width=ratio_height}
+cou_rat_tab<-counts_and_ratio_top5perc(top5perc = top5perc, sig_proteins = eg$TO)
+cou_rat_tab<-cou_rat_tab[order(cou_rat_tab$Count_sig_proteins_in_top5perc, decreasing = F),]
+cou_rat_tab$Tabula_group<-factor(cou_rat_tab$Tabula_group, levels = unique(cou_rat_tab$Tabula_group))
+  
+write.table(cou_rat_tab, paste0(prefix, "_geneExpression_5perc_counts_ratio.tsv"), sep = "\t", col.names = T, row.names = F, quote = F)
+print_table(cou_rat_tab, byDT=TRUE, row.names=FALSE)
+
+## Plot counts
+bar_plot_onlygenesExprGT0<- ggplot(cou_rat_tab, aes(x = Tabula_group, y = Count_sig_proteins_in_top5perc)) +
+                            geom_bar(stat = "identity", fill = "steelblue")+
+                            ggpubr::rotate()+
+                            theme_bw()+
+                            theme(axis.text.y=element_text(size=7))+ 
+                            ggtitle("Number of significant genes \n in top 5% expressed genes")
+
+## Plot percentages
+cou_rat_tab<-cou_rat_tab[order(cou_rat_tab$Ratio_sigProteins_in_NumTop5PercGenes, decreasing = F),]
+cou_rat_tab$Tabula_group<-factor(cou_rat_tab$Tabula_group, levels = unique(cou_rat_tab$Tabula_group))
+
+bar_plot_onlygenesExprGT0_R<- ggplot(cou_rat_tab, aes(x = Tabula_group, y = Ratio_sigProteins_in_NumTop5PercGenes))+
+                              geom_bar(stat = "identity", fill = "salmon")+
+                              ggpubr::rotate()+
+                              theme_bw()+
+                              theme(axis.text.y=element_text(size=7)) + 
+                              ggtitle("Ratio of significant genes in top 5% genes divided\n by number of top 5% genes")
+
+g<-ggarrange(bar_plot_onlygenesExprGT0, bar_plot_onlygenesExprGT0_R, nrow = 1, ncol = 2,heights = c(5,5), widths = c(6,6))
+top5perc_ratio_png=paste0(prefix, "_geneExpression_5perc_counts_ratio.png")
+ggsave(top5perc_ratio_png, g, width = ratio_width, height = ratio_height, units = "in", dpi = 300, bg="white")
+include_graphics(top5perc_ratio_png)
+cat("\nPlot on the left is the direct counts of overlap between the significant genes and the top 5% expressed genes per tissue, plot on right is the number of direct overlaps divided by the total number of top 5% expressed genes for that tabula tissue.\n")
+```
+
+### Tissue specific genes and their distribution across tissues
+
+How many genes reach a z-score of >1 for how many tissues?
+
+```{r}
+tdf<-geneExprTabR[which(row.names(geneExprTabR) %in% eg$TO),]
+tdf=calc_z_scores(tdf)
+
+genes=data.frame(GENE=eg$FROM, ensemblID=eg$TO)
+
+gene_counts_plot<-proteins_GT1_zscore_diff_tissNum(tdf, genes)
+
+gene_counts_print<-as.data.frame(table(gene_counts_plot$counts))
+gene_counts_print$genes<-NA
+for(i in 1:nrow(gene_counts_print)){
+  gene_counts_print$genes[i]<-paste(gene_counts_plot$Gene_Sym[which(gene_counts_plot$counts==gene_counts_print$Var1[i])], sep = "", collapse = ";")
+}
+names(gene_counts_print)[1]<-c("Number of Tissues with zscore>1")
+
+print_table(gene_counts_print, byDT=TRUE, row.names=FALSE)
+```
+
+What tissues have the most representation in the genes that only have high expression in one tissue (z score > 1 in only one tissue)
+
+```{r}
+heatmap_width=12
+heatmap_height=10
+```
+
+```{r, fig.height=heatmap_width, fig.width=heatmap_height}
+ones_df<-gene_counts_plot %>% dplyr::filter(counts == 1)
+ones_tdf<-tdf[which(row.names(tdf) %in% ones_df$Ensembl),]
+row.names(ones_tdf)<-genes$GENE[match(row.names(ones_tdf),genes$ensemblID)]
+
+col_fun = colorRamp2(c(min(ones_tdf), 0, max(ones_tdf)), c("blue", "white", "red"))
+p=Heatmap(ones_tdf,
+          name="z score of logNorm\ngene expression",
+          col = col_fun,
+          cluster_rows=TRUE,
+          cluster_columns=TRUE,
+          show_row_names=TRUE,
+          show_row_dend=FALSE,
+          show_column_dend=FALSE,
+          column_title = "Gene expression with z-score > 1 in only 1 tissue"
+)
+rm(ones_df, ones_tdf)
+
+zscore_one_png<-paste0(prefix, "_geneExpression_zscore_one_heatmap.png")
+png(zscore_one_png, width = heatmap_width, height = heatmap_height, units = "in", res = 300)
+plot(p)
+ignored=dev.off()
+rm(p)
+include_graphics(zscore_one_png)
 ```

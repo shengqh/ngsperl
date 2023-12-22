@@ -184,7 +184,7 @@ summarizeCategoricalDataFromProteinDatabase = function( proteinDatabaseSelectedP
 
     return(list(dataForPlot, dataForAnalysis))
   } else {
-    return(list(dataForPlot))
+    return(list(dataSelectedSub))
   }
 }
 

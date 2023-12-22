@@ -12,9 +12,10 @@ load_install("TissueEnrich")
 load_install("readr")
 load_install("tidyr")
 
-if(!exists("lib_folder")){
-  lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
-}
+stopifnot(exists("lib_folder"))
+# if(!exists("lib_folder")){
+#   lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
+# }
 source(paste0(lib_folder, "/Report/gene_exp_functions.R"))
 source(paste0(lib_folder, "/Report/tissue_spec_functions.R"))
 source(paste0(lib_folder, "/CQS/countTableVisFunctions.R"))
@@ -32,6 +33,8 @@ stopifnot(exists("background_genes"))
 #Options 
 stopifnot(exists("database_gene"))
 stopifnot(exists("colNameGenes"))
+
+has_background_genes = !all(is.null(background_genes))
 
 if (!exists("selectedProteinsLabels")) {
   selectedProteinsLabels = NULL
@@ -70,7 +73,7 @@ load_protein_atlas_file<-function(proteinAtlasDatabaseFile, target_genes, backgr
   cat("\n\nThere are ", length(notFoundGenes), " target genes not found in the database. See <mark>[", notFoundGenes_file, "](", notFoundGenes_file, "){target='_blank'}</mark> for details.\n\n")
   rm(temp)
 
-  if (!is.null(background_genes)) {
+  if (!all(is.null(background_genes))) {
     #print("Mapping universe proteins to database:")
     temp = findProteinInDatabase_fast(proteinDatabaseAll, background_genes)
     proteinDatabaseUniverse = temp[[1]]
