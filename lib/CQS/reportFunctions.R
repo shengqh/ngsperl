@@ -25,7 +25,7 @@ load_install("patchwork")
 load_install("htmlTable")
 load_install("tools")
 load_install("ggExtra")
-load_install("gtsummary")
+#load_install("gtsummary")
 load_install("flextable")
 load_install("dplyr")
 
