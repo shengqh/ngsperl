@@ -12,10 +12,10 @@ load_install("TissueEnrich")
 load_install("readr")
 load_install("tidyr")
 
-stopifnot(exists("lib_folder"))
-# if(!exists("lib_folder")){
-#   lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
-# }
+#stopifnot(exists("lib_folder")) #for debug, we need to set lib_folder in the main script
+if(!exists("lib_folder")){
+  lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
+}
 source(paste0(lib_folder, "/Report/gene_exp_functions.R"))
 source(paste0(lib_folder, "/Report/tissue_spec_functions.R"))
 source(paste0(lib_folder, "/CQS/countTableVisFunctions.R"))
