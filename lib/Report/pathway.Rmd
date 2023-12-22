@@ -50,6 +50,8 @@ res<-do_pathway(genes=target_genes,
                 fromType=fromType,
                 toType=pathway_toType,
                 OrgDb=OrgDb)
+saveRDS(res, paste0(prefix,"_pathway.rds"))     
+           
 dataForPlotList=res$dataForPlot
 
 rmd=""
