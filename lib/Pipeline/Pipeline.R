@@ -234,12 +234,10 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
         top_enriched$NAME<-factor(top_enriched$NAME, levels=top_enriched$NAME)
         g<-ggplot(top_enriched, aes(NES, NAME)) + geom_point(aes(size=Core, color=FDR.q.val)) + geom_vline(xintercept=0) + theme_bw() + ylab("") + xlab("Normalized enrichment score")
 
-        height=max(1000, 3000/40*nrow(top_enriched))
+        height=max(1200, 3000/40*nrow(top_enriched))
         ncharmax=max(nchar(as.character(top_enriched$NAME)))
         width=max(3000, ncharmax * 40 + 1000)
-        png(enriched_png, width=width, height=height, res=300)
-        print(g)
-        dev.off()
+        ggsave(enriched_png, g, width=width, height=height, dpi=300, units="px", bg="white")
 
         if(print_rmd){
           cat(paste0("\n\n<img src='", enriched_png, "'>\n\n"))
