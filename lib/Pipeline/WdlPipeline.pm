@@ -651,7 +651,7 @@ sub addEncodeATACseq {
     pbs=> {
       "nodes"     => "1:ppn=$encode_cpu",
       "walltime"  => getValue($def, "encode_atac_walltime", "48"),
-      "mem"       => getValue($def, "encode_atac_men", "80gb"),
+      "mem"       => getValue($def, "encode_atac_mem", "80gb"),
     },
   };
 
