@@ -735,7 +735,11 @@ sub addEncodeATACseq {
     target_dir => "${target_dir}/${task_folder}_croo",
     interpretor => "python3",
     program => "../Chipseq/croo.py",
-    option => "-n __NAME__ --croo " . getValue($def, "croo", "croo") . " --out_def_json " . getValue($def, "croo_out_def_json"),
+    option => "-n __NAME__ --croo " . getValue($def, "croo", "croo") . " --out_def_json " . getValue($def, "croo_out_def_json") . " -i __FILE__ -o __OUTPUT__
+
+#remove the bam before filtering, keep .srt.nodup.no_chrM_MT.bam only.
+rm -rf __NAME__/align/*/*.srt.bam.*
+",
     source_arg => "-i",
     source_ref => [$task],
     output_arg => "-o",
