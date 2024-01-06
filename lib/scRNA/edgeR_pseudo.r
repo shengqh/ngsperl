@@ -235,7 +235,7 @@ for(idx in c(1:nrow(designMatrix))){
   write.table(sig_genes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
   
   gseaFile<-paste0(prefix, "_GSEA.rnk")
-  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * out$table$F)
+  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
   write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
 
   if(nrow(sig_genes) > 0){
