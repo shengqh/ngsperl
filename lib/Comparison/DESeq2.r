@@ -274,6 +274,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
         heatmap3(rldselect, 
                  col = hmcols, 
                  ColSideColors = gsColors, 
+                 ColSideLabs = "Group",
                  margins=margins, 
                  scale="r", 
                  labRow=labRow,
@@ -281,11 +282,12 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                  main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
                  cexCol=cexCol, 
                  useRaster=FALSE,
-                 legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+                 legendfun=function() showLegend(legend=gnames, col=c("red","blue"),cex=1.0,x="center"))
       }else{
         heatmap3(rldselect, 
                  col = hmcols, 
                  ColSideColors = gsColors, 
+                 ColSideLabs = "Group",
                  margins=margins, 
                  scale="r", 
                  distfun=dist, 
@@ -294,7 +296,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                  main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
                  cexCol=cexCol, 
                  useRaster=FALSE,
-                 legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
+                 legendfun=function() showLegend(legend=gnames, col=c("red","blue"),cex=1.0,x="center"))
       }
       dev.off()
     }
@@ -750,7 +752,7 @@ for(countfile_index in c(1:length(countfiles))){
     width=max(4000, ncol(rldmatrix) * 40 + 1000)
     height=max(3000, ncol(rldmatrix) * 40)
     png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=width, height=height, res=300)
-    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count") + guides(color = FALSE)
+    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count") + theme_bw3() + guides(color = FALSE)
     print(g)
     dev.off()
     
@@ -1052,13 +1054,18 @@ for(countfile_index in c(1:length(countfiles))){
             subtitle = NULL) + ylab(yname)
       }else{
         yname=bquote(-log10(p~value))
+        if(useRawPvalue == 1){
+          pCutoffCol="pvalue"
+        }else{
+          pCutoffCol="padj"
+        }
         p<-EnhancedVolcano(diffResult,
             lab = diffResult$Feature_gene_name,
             x = 'log2FoldChange',
             y = 'pvalue',
             title = comparisonTitle,
             pCutoff = pvalue,
-            pCutoffCol = "padj",
+            pCutoffCol = pCutoffCol,
             FCcutoff = log2(foldChange),
             pointSize = 3.0,
             labSize = 6.0,
