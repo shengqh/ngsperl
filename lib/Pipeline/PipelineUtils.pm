@@ -505,6 +505,20 @@ sub getOutputFormat {
   return ($result);
 }
 
+sub has_contrast {
+  my $def = shift;
+  my $pairs = $def->{pairs};
+  for my $cname (keys %$pairs){
+    my $cdef = $pairs->{$cname};
+    for my $cname (keys %$cdef){
+      if($cname eq "contrast"){
+        return(1);
+      }
+    }
+  }
+  return(0);
+}
+
 sub addDEseq2 {
   my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey, $feature_name_regex, $n_first ) = @_;
 
@@ -572,7 +586,9 @@ sub addDEseq2 {
     my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
     $config->{$taskName}{source_ref} = "pairs";
     $config->{$taskName}{groups_ref} = $groupNames;
-    if(defined $def->{covariance_file}){
+    if(has_contrast($def)){
+      $config->{$taskName}{class} = "Comparison::DESeq2contrast";
+    }elsif(defined $def->{covariance_file}){
       $config->{$taskName}{class} = "Comparison::DESeq2covariance";
       $config->{$taskName}{covariance_file} = $def->{covariance_file};
     }else{
