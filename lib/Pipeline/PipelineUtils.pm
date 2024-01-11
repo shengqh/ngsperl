@@ -510,9 +510,11 @@ sub has_contrast {
   my $pairs = $def->{pairs};
   for my $cname (keys %$pairs){
     my $cdef = $pairs->{$cname};
-    for my $cname (keys %$cdef){
-      if($cname eq "contrast"){
-        return(1);
+    if(ref($cdef) eq "HASH"){
+      for my $cname (keys %$cdef){
+        if($cname eq "contrast"){
+          return(1);
+        }
       }
     }
   }
