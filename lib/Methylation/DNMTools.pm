@@ -72,40 +72,101 @@ echo DNMTools=`date`
 
 if [ ! -s ${sample_name}.bsrate ]; then
   echo dnmtools bsrate=`date`
+  rm -f ${sample_name}.bsrate.failed ${sample_name}.bsrate
+
   $dnmtools_command bsrate -t $thread -c $chr_fasta -o ${sample_name}.bsrate $sampleFile
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.bsrate.failed
+    rm ${sample_name}.bsrate
+  fi
 fi
 
 if [ ! -s ${sample_name}.cpg.meth ]; then
   if [ ! -s ${sample_name}.all.meth ]; then 
     #output cpg only
     echo dnmtools counts=`date`
+    rm -f ${sample_name}.all.meth.failed ${sample_name}.all.meth
+
     $dnmtools_command counts -t $thread -c $chr_fasta -o ${sample_name}.all.meth $sampleFile
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch $sample_name.all.meth.failed
+      rm ${sample_name}.all.meth
+    fi
   fi
 
-  if [ ! -s ${sample_name}.levels ]; then
+  if [[ -s ${sample_name}.all.meth && ! -s ${sample_name}.levels ]]; then
     echo dnmtools levels=`date`
+    rm -f ${sample_name}.levels.failed ${sample_name}.levels
+
     $dnmtools_command levels -o ${sample_name}.levels ${sample_name}.all.meth
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch $sample_name.levels.failed
+      rm ${sample_name}.levels
+    fi
   fi
 
   echo dnmtools sym=`date`
+  rm -f ${sample_name}.cpg.meth.failed ${sample_name}.cpg.meth
+
   $dnmtools_command sym -o ${sample_name}.cpg.meth ${sample_name}.all.meth
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.cpg.meth.failed
+    rm ${sample_name}.cpg.meth
+  fi
 
   if [[ -s ${sample_name}.cpg.meth ]]; then
     rm ${sample_name}.all.meth
   fi
 fi
 
-if [ ! -s ${sample_name}.cpg.read.bw ]; then
-  echo DNMTools To Tracks=`date`
+if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.read.bw ]]; then
+  echo cpg.read.bw=`date`
+  rm -f ${sample_name}.cpg.read.bw.tmp.failed ${sample_name}.cpg.read.bw.failed
+
   awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$6}' < ${sample_name}.cpg.meth > ${sample_name}.cpg.read.bw.tmp 
-  wigToBigWig ${sample_name}.cpg.read.bw.tmp $chrSizeFile ${sample_name}.cpg.read.bw
-  rm ${sample_name}.cpg.read.bw.tmp
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch ${sample_name}.cpg.read.bw.tmp.failed
+    rm ${sample_name}.cpg.read.bw.tmp
+  fi
+
+  if [[ -s ${sample_name}.cpg.read.bw.tmp ]]; then
+    wigToBigWig ${sample_name}.cpg.read.bw.tmp $chrSizeFile ${sample_name}.cpg.read.bw
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch ${sample_name}.cpg.read.bw.failed
+      rm ${sample_name}.cpg.read.bw
+    fi
+  fi
+
+  rm -f ${sample_name}.cpg.read.bw.tmp
 fi
 
-if [ ! -s ${sample_name}.cpg.meth.bw ]; then
+if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.meth.bw ]]; then
+  echo cpg.meth.bw=`date`
+  rm -f ${sample_name}.cpg.meth.bw.tmp.failed ${sample_name}.cpg.meth.bw.failed
+  
   awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$5}' < ${sample_name}.cpg.meth > ${sample_name}.cpg.meth.bw.tmp 
-  wigToBigWig ${sample_name}.cpg.meth.bw.tmp $chrSizeFile ${sample_name}.cpg.meth.bw
-  rm ${sample_name}.cpg.meth.bw.tmp 
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch ${sample_name}.cpg.meth.bw.tmp.failed
+    rm ${sample_name}.cpg.meth.bw.tmp
+  fi
+
+  if [[ -s ${sample_name}.cpg.meth.bw.tmp ]]; then
+    wigToBigWig ${sample_name}.cpg.meth.bw.tmp $chrSizeFile ${sample_name}.cpg.meth.bw
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch ${sample_name}.cpg.meth.bw.failed
+      rm ${sample_name}.cpg.meth.bw
+    fi
+  fi
+
+  rm -f ${sample_name}.cpg.meth.bw.tmp 
 fi
 
 # No pmr in dnmtools 1.4.1
@@ -120,48 +181,122 @@ fi
 #   rm  ${sample_name}.cpg.pmr.tmp
 # fi
 
-if [ ! -s ${sample_name}.cpg.hmr ]; then
+if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.hmr ]]; then
   echo dnmtools hmr=`date`
+  rm -f ${sample_name}.cpg.hmr.failed
+  
   $dnmtools_command hmr -o ${sample_name}.cpg.hmr -p ${sample_name}.cpg.hmrparams ${sample_name}.cpg.meth
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.cpg.hmr.failed
+    rm ${sample_name}.cpg.hmr
+  fi
 fi
 
-if [ ! -s ${sample_name}.cpg.hmr.bb ]; then
+if [[ -s ${sample_name}.cpg.hmr && ! -s ${sample_name}.cpg.hmr.bb ]]; then
+  echo pg.hmr.bb=`date`
+  rm -f ${sample_name}.cpg.hmr.tmp.failed ${sample_name}.cpg.hmr.bb.failed
+  
   cut -f 1-3 ${sample_name}.cpg.hmr > ${sample_name}.cpg.hmr.tmp
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch ${sample_name}.cpg.hmr.tmp.failed
+    rm ${sample_name}.cpg.hmr.tmp
+  fi
+
   bedToBigBed ${sample_name}.cpg.hmr.tmp $chrSizeFile ${sample_name}.cpg.hmr.bb
-  rm  ${sample_name}.cpg.hmr.tmp
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch ${sample_name}.cpg.hmr.bb.failed
+    rm ${sample_name}.cpg.hmr.bb
+  fi
+
+  rm -f ${sample_name}.cpg.hmr.tmp
 fi
 
-if [ ! -s ${sample_name}.cpg.pmd ]; then
+if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.pmd ]]; then
   echo dnmtools pmd=`date`
+  rm -f ${sample_name}.cpg.pmd.failed
+
   $dnmtools_command pmd -o ${sample_name}.cpg.pmd -p ${sample_name}.cpg.pmdparams ${sample_name}.cpg.meth
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.cpg.pmd.failed
+    rm ${sample_name}.cpg.pmd
+  fi
 fi
 
-if [ ! -s ${sample_name}.cpg.pmd.bb ]; then
+if [[ -s ${sample_name}.cpg.pmd  && ! -s ${sample_name}.cpg.pmd.bb ]]; then
+  echo cpg.pmd.bb=`date`
+  rm -f ${sample_name}.cpg.pmd.tmp.failed ${sample_name}.cpg.pmd.bb.failed
+
   cut -f 1-3 ${sample_name}.cpg.pmd > ${sample_name}.cpg.pmd.tmp
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch ${sample_name}.cpg.pmd.tmp.failed
+    rm ${sample_name}.cpg.pmd.tmp
+  fi
+
   bedToBigBed ${sample_name}.cpg.pmd.tmp $chrSizeFile ${sample_name}.cpg.pmd.bb
-  rm  ${sample_name}.cpg.pmd.tmp
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch ${sample_name}.cpg.pmd.bb.failed
+    rm ${sample_name}.cpg.pmd.bb
+  fi
+
+  rm -f ${sample_name}.cpg.pmd.tmp
 fi
 
 if [ ! -s ${sample_name}.epiread ]; then
   echo dnmtools states=`date`
+  rm -f ${sample_name}.epiread.failed
+  
   $dnmtools_command states -t $thread -c $chr_fasta -o ${sample_name}.epiread $sampleFile
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.epiread.failed
+    rm ${sample_name}.epiread
+  fi
 fi
 
-if [ ! -s ${sample_name}.allelic.bw ]; then
+if [[ -s ${sample_name}.epiread && ! -s ${sample_name}.allelic.bw ]]; then
   echo dnmtools allelic=`date`
+  rm -f ${sample_name}.allelic.bw.failed ${sample_name}.allelic.bw.tmp.failed
+
   $dnmtools_command allelic -c $chr_fasta ${sample_name}.epiread | awk '{OFS=\"\\t\"; print \$1,\$2,\$2+1,\$5}' > ${sample_name}.alle.bw.tmp 
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch ${sample_name}.allelic.bw.tmp.failed
+    rm ${sample_name}.alle.bw.tmp
+  fi
+
   wigToBigWig ${sample_name}.alle.bw.tmp $chrSizeFile ${sample_name}.allelic.bw
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch ${sample_name}.allelic.bw.failed
+    rm ${sample_name}.allelic.bw
+  fi
+
   rm ${sample_name}.alle.bw.tmp
 fi
 
-if [ ! -s ${sample_name}.amr ]; then
+if [[ -s ${sample_name}.epiread && ! -s ${sample_name}.amr ]]; then
   echo dnmtools amrfinder=`date`
+  rm -f ${sample_name}.amr.failed
+
   $dnmtools_command amrfinder -c $chr_fasta -o ${sample_name}.amr ${sample_name}.epiread
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.amr.failed
+    rm ${sample_name}.amr
+  fi
 fi
 
-rm ${sample_name}.epiread
+rm -f ${sample_name}.epiread
 
-gzip ${sample_name}.cpg.meth
+if [[ -s ${sample_name}.cpg.meth ]]; then
+  gzip ${sample_name}.cpg.meth
+fi
 
 $dnmtools_command | grep Version | cut -d ' ' -f 2 | awk '{print \"dnmtools,v\"\$1}' > ${sample_name}.dnmtools.version
 ";
