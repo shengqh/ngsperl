@@ -20,3 +20,6 @@ lib/SmallRNA/__pycache__
 lib/CPD/DemultiplexUtils.pyc
 lib/CPD/__pycache__
 *.pyc
+.Rproj.user
+*.Rproj
+.Rhistory

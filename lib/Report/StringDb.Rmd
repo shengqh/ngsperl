@@ -1,0 +1,193 @@
+```{r,eval=FALSE}
+species = 9606
+confidence = 700
+hubGeneMin=5
+STRINGdb_directory="d:\\temp\\"
+#STRINGdb_directory=""
+exportToCytoscape=TRUE
+
+#proteins=c("CDK2","CDK4","CDK6","CDKN1A","CDKN1B","CDKN2A","CDKN2B","CDKN2C","CDKN2D","CCND1","CCND2","CCND3","CCNE1","CCNE2","CCNA2","CCNB1","CCNB2","CCNB3","CDK1","CDK7","CDK8","CDK9","CDK10","CDK11A","CDK11B")
+
+if (is.data.frame(proteins)) {
+  proteinsTable=proteins
+  proteinsColumn=colnames(proteins)[1]
+} else {
+  proteinsTable=data.frame(proteins=proteins)
+  proteinsColumn="proteins"
+}
+```
+
+```{r}
+if (exists("reportParametersList") && "stringdb_parameter_list" %in% names(reportParametersList)) {
+  for (varName in names(reportParametersList$stringdb_parameter_list)) {
+    assign(varName,reportParametersList$stringdb_parameter_list[[varName]])
+  }
+  
+  background_genes=reportParametersList$background_genes
+  proteins=reportParametersList$target_genes
+  prefix=reportParametersList$prefix
+}
+
+if (is.data.frame(proteins)) {
+  proteinsTable=proteins
+  proteinsColumn=colnames(proteins)[1]
+} else {
+  proteinsTable=data.frame(proteins=proteins)
+  proteinsColumn="proteins"
+}
+```
+
+
+
+```{r,message=FALSE}
+library(STRINGdb)
+library(graph)
+
+if (exportToCytoscape) {
+  library(RCy3)
+  cytoscapeOn=try(cytoscapePing())
+  if (class(cytoscapeOn)=="try-error") {
+    warning("Can't find Cytoscape.  Please start Cytoscape if want to export data to Cytoscape.")
+    exportToCytoscape=FALSE
+  }
+}
+
+```
+
+
+## Mapping to STRINGdb
+```{r}
+string_db <- STRINGdb$new(species=species,score_threshold=confidence,input_directory=STRINGdb_directory)
+# string_db <- STRINGdb$new( version="11.5", species=9606,
+#                              score_threshold=200, network_type="full", input_directory="")
+
+proteins_mapped<-string_db$map(proteinsTable, proteinsColumn, removeUnmappedRows = T)
+proteins_hits=unique(proteins_mapped$STRING_id)
+#proteins_hits <- string_db$mp( proteins )
+
+if (length(proteins_hits)>2000) {
+  proteins_hits=proteins_hits[1:2000]
+  proteins_mapped=proteins_mapped[which(proteins_mapped$STRING_id %in% proteins_hits),]
+}
+
+#string_db$plot_network( proteins_hits )
+
+string_db_mapped=string_db$get_subnetwork(proteins_hits)
+proteins_interactions<-string_db$get_interactions(proteins_hits)
+
+```
+
+
+```{r filter to high confidence, echo = T}
+proteins_interactions_HC = proteins_interactions[which(proteins_interactions$combined_score>confidence),]
+
+#get rid of duplicate rows
+proteins_interactions_HC = proteins_interactions_HC[which(!duplicated(paste0(proteins_interactions_HC$from,proteins_interactions_HC$to, proteins_interactions_HC$combined_score))),]
+
+#add in the original protein identifiers
+proteins_interactions_HC$from_original_ident = proteins_mapped$proteins[match(proteins_interactions_HC$from, proteins_mapped$STRING_id)]
+proteins_interactions_HC$to_original_ident = proteins_mapped$proteins[match(proteins_interactions_HC$to, proteins_mapped$STRING_id)]
+
+
+DT::datatable(proteins_interactions_HC)
+```
+
+
+
+## Plot using STRINGdb
+```{r initial_plot, echo = T}
+string_db$plot_network( proteins_hits )
+```
+
+
+# Getting counts of high confidence interactions
+```{r counts_HC, echo = T}
+#proteins_interactions_HC
+
+inter_counts = as.data.frame(matrix(nrow = length(unique(c(proteins_interactions_HC$from,proteins_interactions_HC$to))), ncol = 3))
+names(inter_counts) = c("String_id", "Original_ident","Number of interactions within protein list")
+
+inter_counts$String_id = unique(c(proteins_interactions_HC$from,proteins_interactions_HC$to))
+inter_counts$Original_ident = unique(c(proteins_interactions_HC$from_original_ident,proteins_interactions_HC$to_original_ident))
+
+for(i in 1:nrow(inter_counts)){
+  the_records = proteins_interactions_HC[which(proteins_interactions_HC$from==inter_counts$String_id[i] | proteins_interactions_HC$to==inter_counts$String_id[i]),]
+  inter_counts$`Number of interactions within protein list`[i] = nrow(the_records)
+}
+
+inter_counts=inter_counts[order(inter_counts$`Number of interactions within protein list`, decreasing = T),]
+DT::datatable(inter_counts)
+
+```
+
+```{r hubgenes, echo = T}
+hubs = inter_counts$String_id[which(inter_counts$`Number of interactions within protein list`>=hubGeneMin)]
+hubs_OI = inter_counts$Original_ident[which(inter_counts$`Number of interactions within protein list`>=hubGeneMin)]
+
+Hub_genes = proteins_interactions_HC[which(proteins_interactions_HC$from%in%hubs | proteins_interactions_HC$to%in%hubs),]
+
+```
+
+```{r graphNEL, echo = T}
+to_graph = as.data.frame(matrix(ncol = 3, nrow = length(unique(c(Hub_genes$from, Hub_genes$to)))))
+names(to_graph) = c("gene","linked_to","strength")
+
+to_remove = c()
+to_graph$gene = unique(c(Hub_genes$from_original_ident, Hub_genes$to_original_ident))
+for(i in 1:nrow(to_graph)){
+  the_genes = Hub_genes[which(Hub_genes$from_original_ident==to_graph$gene[i]),]
+  the_links = the_genes$to_original_ident
+  the_strengths = the_genes$combined_score
+  
+  the_genes = Hub_genes[which(Hub_genes$to_original_ident==to_graph$gene[i]),]
+  the_links = c(the_links, the_genes$from_original_ident)
+  the_strengths = c(the_strengths, the_genes$combined_score)
+  
+  to_graph$linked_to[i] = list(the_links) 
+  to_graph$strength[i] = list(the_strengths) 
+  
+  rm(the_links)
+  rm(the_strengths)
+}
+
+
+the_nodes = to_graph$gene
+
+the_edges = vector("list", length = length(the_nodes))
+names(the_edges) = the_nodes
+for(i in 1:length(the_edges)){
+  the_edges[[i]] = as.vector(list(edges = unlist(to_graph$linked_to[i]),
+                   weights = unlist(to_graph$strength[i])))
+}
+
+to_print_graphNEL = graphNEL(
+  nodes = unlist(the_nodes),
+  edgeL = the_edges
+)
+
+save(to_print_graphNEL,file = paste0(prefix,"_hub_genes.graphNEL.rds"))
+save(to_graph,file = paste0(prefix,"_hub_genes.rds"))
+```
+
+```{r,eval=exportToCytoscape}
+createNetworkFromGraph(to_print_graphNEL, title='simple network')
+
+df <- data.frame (
+  Connection=inter_counts$"Number of interactions within protein list",
+  row.names = inter_counts$Original_ident,
+  stringsAsFactors = FALSE)       # important when loading strings!
+loadTableData (df)
+
+column <- 'Connection'
+# colors <-  c ('#FFFFFF', '#DD8855')
+# setNodeColorMapping (column, NULL, colors)
+setNodeColorMapping(column, colors=paletteColorBrewerOranges)
+
+saveSession(paste0('.cys')) #.cys
+full.path=paste(paste0(prefix,'_CytoscapeNetworkImage'),sep='/')
+exportImage(full.path, 'PNG', zoom=200) #.png scaled by 200%
+exportImage(full.path, 'PDF') #.pdf
+
+```
+
+

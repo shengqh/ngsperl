@@ -19,6 +19,21 @@ source(paste0(lib_folder, "/Report/enrichmentByClusterProfiler.R"))
 ```
 
 ```{r}
+#varaables defined from list
+if (exists("reportParametersList") && "pathway_parameter_list" %in% names(reportParametersList)) {
+  for (varName in names(reportParametersList$pathway_parameter_list)) {
+    assign(varName,reportParametersList$pathway_parameter_list[[varName]])
+  }
+  
+  background_genes=reportParametersList$background_genes
+  target_genes=reportParametersList$target_genes
+  prefix=reportParametersList$prefix
+}
+```
+
+
+
+```{r}
 #make sure all required variables are defined
 stopifnot(exists("prefix"))
 
