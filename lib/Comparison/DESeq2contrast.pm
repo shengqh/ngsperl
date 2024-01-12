@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Comparison::DESeq2;
+package Comparison::DESeq2contrast;
 
 use strict;
 use warnings;
@@ -89,7 +89,7 @@ sub perform {
   my $groups = get_raw_files( $config, $section, "groups" );
 
   my $countfile = parse_param_file( $config, $section, "countfile", 1 );
-  my $rtemplate = dirname(__FILE__) . "/DESeq2.r";
+  my $rtemplate = dirname(__FILE__) . "/DESeq2contrast.r";
   if ( !-e $rtemplate ) {
     die "File not found : " . $rtemplate;
   }
@@ -143,8 +143,7 @@ sub perform {
   my $designfilename = "${task_name}.define";
   my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
-  #print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\n";
-  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tpairOnlyCovariant\n";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tpairOnlyCovariant\tcontrast\n";
 
   for my $comparisonIndex ( 0 .. $#comparison_names ) {
     my $comparison_name = $comparison_names[$comparisonIndex];
@@ -155,62 +154,50 @@ sub perform {
     my $pairOnlyCovariant="";
 
     my $gNames = $comparisons->{$comparison_name};
-    my @group_names;
-
-    if ( ref $gNames eq ref {} ) {
-      @group_names = @{ $gNames->{groups} };
-      for my $key ( sort keys %$gNames ) {
-        next if ( $key eq "groups" );
-        $covariances->{$key} = $gNames->{$key};
-      }
-
-      if (defined $gNames->{"pairOnlyCovariant"}) {
-        $pairOnlyCovariant = $gNames->{pairOnlyCovariant};
-      }
+    if ( !( ref $gNames eq ref {} ) ) {
+      die "Definition of " . $comparison_name . " should be hash table to include groups and contrast!";
     }
-    else {
-      @group_names = @{$gNames};
+
+    my @group_names = @{ $gNames->{groups} };
+    my $contrast = $gNames->{contrast};
+    if ( !defined $contrast ) {
+      die "Definition of " . $comparison_name . " should have contrast defined!";
+    }
+
+    for my $key ( sort keys %$gNames ) {
+      next if ( $key eq "groups" );
+      next if ( $key eq "contrast" );
+      next if ( $key eq "pairOnlyCovariant" );
+      $covariances->{$key} = $gNames->{$key};
+    }
+
+    if (defined $gNames->{"pairOnlyCovariant"}) {
+      $pairOnlyCovariant = $gNames->{pairOnlyCovariant};
     }
     my @covariances_keys = sort keys %$covariances;
 
     #print( Dumper(@group_names) );
 
-    if ( scalar(@group_names) != 2 ) {
-      die "Comparison of $comparison_name should contains and only contains two groups!";
+    my $total_sample_count = 0;
+    for my $gname (@group_names){
+      if(!defined($groups->{$gname})){
+        die "Cannot find group $gname in groups definition!";
+      }
+
+      my @samples = sort @{ $groups->{$gname} };
+      $total_sample_count = $total_sample_count + scalar(@samples);
     }
-
-    my $g1 = $group_names[0];
-    my $g2 = $group_names[1];
-    die "cannot find group $g1 " if !defined( $groups->{$g1} );
-    die "cannot find group $g2 " if !defined( $groups->{$g2} );
-    my @s1 = @{ $groups->{$g1} };
-    my @s2 = @{ $groups->{$g2} };
-
-    my $total_sample_count = scalar(@s1) + scalar(@s2);
 
     for my $key ( keys %$covariances ) {
       my $values = $covariances->{$key};
 
-      if ( $values eq "paired" ) {
-        if ( scalar(@s1) != scalar(@s2) ) {
-          die "Covariance paired requires equal number of samples in each group for comparison " . $comparison_name . ".";
-        }
-        $values = [];
-        for my $i ( 0 .. $#s1 ) {
-          push( @$values, $key . $i );
-        }
-        for my $i ( 0 .. $#s1 ) {
-          push( @$values, $key . $i );
-        }
-        $covariances->{$key} = $values;
-      }
-      elsif ( !( ref $values eq ref [] ) ) {
+      if ( !( ref $values eq ref [] ) ) {
         die "Covariances of " . $key . " should be array reference!";
       }
       elsif ( scalar(@$values) != $total_sample_count ) {
         die "Number of covariance value of " . $key . " shoud be $total_sample_count !";
       }
-    }
+    }    
 
     my $filename = "${comparison_name}.design";
 
@@ -222,25 +209,22 @@ sub perform {
     else {
       print $cd "Sample\tCondition\n";
     }
-    for my $i ( 0 .. $#s1 ) {
-      my $sname = $s1[$i];
-      print $cd "${sname}\t${g1}";
-      if ( scalar(@covariances_keys) > 0 ) {
-        for my $key (@covariances_keys) {
-          print $cd "\t" . $covariances->{$key}[$i];
-        }
+    for my $gname (@group_names){
+      if(!defined($groups->{$gname})){
+        die "Cannot find group $gname in groups definition!";
       }
-      print $cd "\n";
-    }
-    for my $i ( 0 .. $#s2 ) {
-      my $sname = $s2[$i];
-      print $cd "${sname}\t${g2}";
-      if ( scalar(@covariances_keys) > 0 ) {
-        for my $key (@covariances_keys) {
-          print $cd "\t" . $covariances->{$key}[ $i + scalar(@s1) ];
+      my @samples = @{ $groups->{$gname} };
+
+      for my $i ( 0 .. $#samples ) {
+        my $sname = $samples[$i];
+        print $cd "${sname}\t${gname}";
+        if ( scalar(@covariances_keys) > 0 ) {
+          for my $key (@covariances_keys) {
+            print $cd "\t" . $covariances->{$key}[$i];
+          }
         }
+        print $cd "\n";
       }
-      print $cd "\n";
     }
     close $cd;
 
@@ -252,7 +236,13 @@ sub perform {
     if ( ref $curcountfile eq ref [] ) {
       $curcountfile = $curcountfile->[0];
     }
-    print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$pairOnlyCovariant\n";
+    my $gcontrol = $group_names[ 0 ];
+    #print($gcontrol, "\n");
+    my @gsamples = @group_names[ 1 .. $#group_names ];
+    #print(@gsamples, "\n");
+    my $gsamples_str = join(",", @gsamples);
+
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$gcontrol\t$gsamples_str\t$comparisonTitle\t$pairOnlyCovariant\t$contrast\n";
   }
   close($df);
 

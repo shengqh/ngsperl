@@ -207,7 +207,8 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
     cat("saving PCA to ", filename, "\n")
     pca<-prcomp(t(rldmatrix))
 
-    npc = min(10, ncol(rldmatrix))
+    #npc should be less or equals to number of features, and maximum 10
+    npc = min(10, nrow(rldmatrix))
     pca_res = t(summary(pca)$importance)[c(1:npc),] %>% 
       as.data.frame() %>% 
       tibble::rownames_to_column("PC") %>% 
@@ -650,15 +651,17 @@ for (i in 1:nrow(countTableFileAll)) {
     for(cur_name in names(countList)){
       cur_counts = countList[[cur_name]]
       
-      #pca plot
-      print(paste0("Drawing PCA for ", title, " samples using ", cur_name, " genes."))
-      gene_suffix = ifelse(cur_name == "all", "", ".top25vars")
-      
-      drawPCA(paste0(outputFilePrefix, curSuffix, gene_suffix, ".PCA"), cur_counts, showLabelInPCA, groups, colors, outputFormat, width=1600, height=1500)
-
-      width=min(8000, max(1500, 50 * ncol(cur_counts)))
       if (ncol(cur_counts)>1 & nrow(cur_counts)>1) {
-        print(paste0("Drawing heatmap for ", title, " samples using ", cur_name, " genes."))
+        #pca plot
+        print(paste0("Drawing PCA for ", title, " samples using ", nrow(cur_counts), " ", cur_name, " genes."))
+        gene_suffix = ifelse(cur_name == "all", "", ".top25vars")
+        
+        drawPCA(paste0(outputFilePrefix, curSuffix, gene_suffix, ".PCA"), cur_counts, showLabelInPCA, groups, colors, outputFormat, width=1600, height=1500)
+
+        width=min(8000, max(1500, 50 * ncol(cur_counts)))
+
+        #heatmap plot
+        print(paste0("Drawing heatmap for ", title, " samples using ", nrow(cur_counts), " ", cur_name, " genes."))
         if (hasMultipleGroup) {
           legendfun<-function() showLegend(legend=unique(groups),col=unique(conditionColors[,1]))
         }else{
@@ -686,7 +689,7 @@ for (i in 1:nrow(countTableFileAll)) {
       }
     }
     
-    if (ncol(countNumVsd)>1 & nrow(countNumVsd)>1) {
+    if (ncol(countNumVsd)>2 & nrow(countNumVsd)>2) {
       print("Doing correlation analysis of samples ...")
       #correlation distribution
       countNumCor<-corTableWithoutZero(countNumVsd,method="spearman")

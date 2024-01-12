@@ -173,19 +173,23 @@ log_scale<-function(df, samples, data_prefix, box_width, box_height){
   g0<-get_box(df, samples) + xlab("Concentration") + ggtitle("pre-log-scaling")
   
   ldf<-log10(df+1)
+  log_csv=paste0(data_prefix, ".log.csv")
+  write.csv(ldf, log_csv)
+  g1<-get_box(ldf, samples) + xlab("Concentration") + ggtitle("post-log")
+
   sldf<-data.frame(t(scale(t(ldf), center=TRUE, scale=TRUE)))
   log_scaled_csv=paste0(data_prefix, ".log_scaled.csv")
   write.csv(sldf, log_scaled_csv)
-  g1<-get_box(sldf, samples) + xlab("Concentration") + ggtitle("post-log-scaling")
+  g2<-get_box(sldf, samples) + xlab("Concentration") + ggtitle("post-log-scaling")
   
-  g<-g0+g1+plot_layout(ncol=2)
+  g<-g0+g1+g2+plot_layout(ncol=3)
   
   log_scaled_png=paste0(data_prefix, ".log_scaled.png")
   ggsave(log_scaled_png, width=box_width, height=box_height, dpi=300, units="in", bg="white")
-  return(list(raw_csv=raw_csv, log_scaled=sldf, log_scaled_csv=log_scaled_csv, log_scaled_png=log_scaled_png))
+  return(list(raw_csv=raw_csv, log=ldf, log_csv=log_csv, log_scaled=sldf, log_scaled_csv=log_scaled_csv, log_scaled_png=log_scaled_png))
 }
 
-box_width=10
+box_width=13
 box_height=4
 ```
 
@@ -205,6 +209,14 @@ lst=log_scale(df, samples, paste0(annotated_prefix, ".species"), box_width, box_
 ```
 
 Raw concentration file was saved to `r lst$raw_csv`.
+
+### Log concentration table
+
+```{r}
+print_table(lst$log, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed file was saved to `r lst$log_csv`.
 
 ### Log scaled concentration table
 
@@ -234,6 +246,14 @@ lst=log_scale(final_sub_class, samples, paste0(annotated_prefix, ".sub_class"), 
 
 Raw concentration file was saved to `r lst$raw_csv`.
 
+### Log concentration table
+
+```{r}
+print_table(lst$log, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed file was saved to `r lst$log_csv`.
+
 ### Log scaled concentration table
 
 ```{r}
@@ -260,6 +280,14 @@ lst=log_scale(final_main_class, samples, paste0(annotated_prefix, ".main_class")
 ```
 
 Raw concentration file was saved to `r lst$raw_csv`.
+
+### Log concentration table
+
+```{r}
+print_table(lst$log, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed file was saved to `r lst$log_csv`.
 
 ### Log scaled concentration table
 
@@ -289,6 +317,14 @@ lst=log_scale(final_category, samples, paste0(annotated_prefix, ".category"), bo
 ```
 
 Raw concentration file was saved to `r lst$raw_csv`.
+
+### Log concentration table
+
+```{r}
+print_table(lst$log, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed file was saved to `r lst$log_csv`.
 
 ### Log scaled concentration table
 

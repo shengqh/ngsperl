@@ -481,6 +481,9 @@ basicPie<-function(x,maxCategory=10,main="",addPercent=F) {
 }
 
 makeColors<-function(n,colorNames="Set1") {
+  if(n == 2){
+    return(c("red", "blue"))
+  }
 	maxN<-brewer.pal.info[colorNames,"maxcolors"]
 	if (n<=maxN) {
 		colors<-brewer.pal(n, colorNames)

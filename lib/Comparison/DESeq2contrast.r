@@ -1,25 +1,31 @@
 
-rootdir<-"/data/h_gelbard_lab/projects/20230606_9686_AG_RNAseq_iSGS_estrogen/deseq2_proteincoding_genetable/result"
-inputfile<-"RNAseq_human.define" 
+rootdir<-"/nobackup/h_cqs/shengq2/temp/deseq2_miRNA_TotalReads/result"
+inputfile<-"mouse10875.define" 
 
 pvalue<-0.05
-useRawPvalue<-0
-foldChange<-2
+useRawPvalue<-1
+foldChange<-1.5
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
 showLabelInPCA<-1
 showDEGeneCluster<-0
 addCountOne<-0
-usePearsonInHCA<-1
+usePearsonInHCA<-0
 top25only<-0
 performWilcox<-0
-textSize<-10
+textSize<-11
 transformTable<-0
-exportSignificantGeneName<-1
+exportSignificantGeneName<-0
 thread<-8
 
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-TRUE;top25cvInHCA<-FALSE;
+independentFiltering<-TRUE
+
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-FALSE;showLabelInPCA<-TRUE;top25cvInHCA<-FALSE;
+cooksCutoff<-FALSE
+
+libraryFile<-"/nobackup/h_vangard_1/chenh19/alissa_weaver/smallRNA_mouse_10875/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/mouse10875.Category.Table.csv"
+libraryKey<-"TotalReads"
 #predefined_condition_end
 
 options(bitmapType='cairo')
@@ -143,7 +149,7 @@ library("stringr")
 library("data.table")
 
 setwd(rootdir)  
-comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
+comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F, quote='"')
 
 ##Solving node stack overflow problem start###
 #when there are too many genes, drawing dendrogram may failed due to node stack overflow,
@@ -248,7 +254,7 @@ drawPlot<-function(filePrefix, outputFormat, pdfWidth, pdfHeight, otherWidth, ot
   }
 }
 
-drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
+drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat, groupColors){
   genecount<-nrow(rldselect)
   showRowDendro = genecount <= 50
   if(genecount > 2){
@@ -256,8 +262,10 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     if(ispaired){
       htColors<-rainbow(length(unique(designData$Paired)))
       gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
+      groupColors=htColors
+      names(groupColors)=gnames
     }else{
-      gsColors = conditionColors;
+      gsColors = conditionColors
     }
     if (genecount<=30) {
       labRow=row.names(rldselect)
@@ -282,7 +290,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                  main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
                  cexCol=cexCol, 
                  useRaster=FALSE,
-                 legendfun=function() showLegend(legend=gnames, col=c("red","blue"),cex=1.0,x="center"))
+                 legendfun=function() showLegend(legend=gnames, col=groupColors,cex=1.0,x="center"))
       }else{
         heatmap3(rldselect, 
                  col = hmcols, 
@@ -296,14 +304,14 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                  main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
                  cexCol=cexCol, 
                  useRaster=FALSE,
-                 legendfun=function() showLegend(legend=gnames, col=c("red","blue"),cex=1.0,x="center"))
+                 legendfun=function() showLegend(legend=gnames, col=groupColors,cex=1.0,x="center"))
       }
       dev.off()
     }
   }
 }
 
-drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat,scalePCs=TRUE){
+drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat, scalePCs=TRUE, groupColors=c("red", "blue")){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     pca<-prcomp(t(rldmatrix))
@@ -329,7 +337,7 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
       geom_hline(aes(yintercept=0), size=.2) + 
       geom_vline(aes(xintercept=0), size=.2) + 
       xlab(pcalabs[1]) + ylab(pcalabs[2]) +
-      scale_color_manual(values=c("red", "blue")) +
+      scale_color_manual(values=groupColors) +
       theme_bw3() + theme(legend.position="top")
     
     filePrefix<-paste0(prefix, "_DESeq2-vsd-pca")
@@ -507,7 +515,8 @@ for(countfile_index in c(1:length(countfiles))){
       if (is.na(contrast) || (contrast=="")) {
         contrast=NULL
       } else {
-        contrast=list(strsplit(contrast,";")[[1]])
+        contrast=eval(parse(text=contrast))
+        #contrast=list(strsplit(contrast,";")[[1]])
       }
     } else {
       contrast=NULL
@@ -526,10 +535,21 @@ for(countfile_index in c(1:length(countfiles))){
     cat(comparisonName, " ", comparisonTitle, "\n")
     designFile=comparisons$ConditionFile[comparison_index]
     #comment here as has many group names
-    gnames=unlist(comparisons[comparison_index, c("ReferenceGroupName", "SampleGroupName")])
-    #gnames=as.character(unique(designData$Condition))
+    #gnames=unlist(comparisons[comparison_index, c("ReferenceGroupName", "SampleGroupName")])
     
     designData<-read.table(designFile, sep="\t", header=T)
+
+    gnames=as.character(unique(designData$Condition))
+    if(length(gnames) == 2){
+      groupColors=c("red","blue")
+    }else{
+      groupColors=rainbow(length(gnames))
+    }
+    names(groupColors)=gnames
+    conditionColors=groupColors[designData$Condition]
+    names(conditionColors)=designData$Sample
+
+    #the first group in design file would be reference group
     designData$Condition<-factor(designData$Condition, levels=gnames)
 
     if(!is.null(pairOnlyCovariant)){
@@ -615,11 +635,16 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(detectedInBothGroup){
       conds<-unique(designData$Condition)
-      data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]],drop=FALSE]
-      data2<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[2]],drop=FALSE]
-      med1<-apply(data1, 1, median) > zeroCount
-      med2<-apply(data2, 1, median) > zeroCount
-      med<-med1 & med2
+      med=NA
+      for(cond in conds){
+        cond_data<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==cond],drop=FALSE]
+        cond_med<-apply(cond_data, 1, median) > zeroCount
+        if(is.na(all(med))){
+          med = cond_med
+        }else{
+          med = med & cond_med
+        }
+      }
       
       comparisonData<-comparisonData[med,]
     }
@@ -660,16 +685,22 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(minMedianInGroup > 0){
       conds<-unique(designData$Condition)
-      data1<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[1]],drop=FALSE]
-      data2<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==conds[2]],drop=FALSE]
-      med1<-apply(data1, 1, median) >= minMedianInGroup
-      med2<-apply(data2, 1, median) >= minMedianInGroup
-      med<-med1 | med2
+
+      med=NA
+      for(cond in conds){
+        cond_data<-comparisonData[, colnames(comparisonData) %in% designData$Sample[designData$Condition==cond],drop=FALSE]
+        cond_med<-apply(cond_data, 1, median) >= minMedianInGroup
+        if(is.na(all(med))){
+          med = cond_med
+        }else{
+          med = med | cond_med
+        }
+      }
       
       geneNumBeforeFilter=nrow(comparisonData)
       comparisonData<-comparisonData[med,]
       
-      cat(nrow(comparisonData), " genes with minimum median count in group larger or equals than ", minMedianInGroup, ". ",geneNumBeforeFilter-nrow(comparisonData)," genes removed\n")
+      cat(nrow(comparisonData), "genes with minimum median count in group larger or equals than", minMedianInGroup, ".", geneNumBeforeFilter-nrow(comparisonData),"genes removed\n")
     }
     
     if (nrow(comparisonData)<=1) {
@@ -715,9 +746,9 @@ for(countfile_index in c(1:length(countfiles))){
     if(ispaired){
       colnames(comparisonData)<-unlist(lapply(c(1:ncol(comparisonData)), function(i){paste0(designData$Paired[i], "_", colnames(comparisonData)[i])}))
     }
-    rownames(designData)<-colnames(comparisonData)
-    conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
-    
+    rownames(designData)<-designData$Sample
+    designData<-designData[colnames(comparisonData),]
+
     write.csv(comparisonData, file=paste0(prefix, ".csv"))
     
     #some basic graph
@@ -744,17 +775,21 @@ for(countfile_index in c(1:length(countfiles))){
 
     rsdata<-melt(rldmatrix)
     colnames(rsdata)<-c("Gene", "Sample", "log2Count")
-    png(filename=paste0(prefix, "_DESeq2-log2-density.png"), width=4000, height=3000, res=300)
-    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + xlab("DESeq2 log2 transformed count") + guides(color = FALSE)
-    print(g)
-    dev.off()
+    g<-ggplot(rsdata) + 
+      geom_density(aes(x=log2Count, colour=Sample)) + 
+      xlab("DESeq2 log2 transformed count") + 
+      guides(color = FALSE)
+    ggsave(g, file=paste0(prefix, "_DESeq2-log2-density.png"), width=4000, height=3000, dpi=300, units="px", bg="white")
     
     width=max(4000, ncol(rldmatrix) * 40 + 1000)
     height=max(3000, ncol(rldmatrix) * 40)
-    png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=width, height=height, res=300)
-    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count") + theme_bw3() + guides(color = FALSE)
-    print(g)
-    dev.off()
+    g<-ggplot(rsdata) + 
+      geom_density(aes(x=log2Count, colour=Sample)) + 
+      facet_wrap(~Sample, scales = "free") + 
+      xlab("DESeq2 log2 transformed count") + 
+      theme_bw3() +
+      guides(color = FALSE)
+    ggsave(g, file=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=width, height=height, dpi=300, units="px", bg="white")
     
     fitType<-"parametric"
     if(nrow(comparisonData) < 5){
@@ -790,7 +825,15 @@ for(countfile_index in c(1:length(countfiles))){
       }else if(all(is.na(assay(vsd)))){
         fitType<-"mean"
       } else{
-        conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
+        gnames=as.character(unique(designData$Condition))
+        if(length(gnames) == 2){
+          groupColors=c("red","blue")
+        }else{
+          groupColors=rainbow(length(gnames))
+        }
+        names(groupColors)=gnames
+        conditionColors=groupColors[designData$Condition]
+        names(conditionColors)=designData$Sample
         break
       }
     }
@@ -802,15 +845,15 @@ for(countfile_index in c(1:length(countfiles))){
       rldmatrix=as.matrix(assayvsd)
       
       #draw pca graph
-      drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, designData$Condition, outputFormat)
+      drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, designData$Condition, outputFormat, groupColors=groupColors)
       
       if(exists("top25cvInHCA") && top25cvInHCA){
         rv<-rowVars(rldmatrix)
         countHT<-rldmatrix[rv>=quantile(rv)[4],]
-        drawHCA(paste0(prefix,"_geneTop25variance"), countHT, ispaired, designData, conditionColors, gnames, outputFormat)
+        drawHCA(paste0(prefix,"_geneTop25variance"), countHT, ispaired, designData, conditionColors, gnames, outputFormat, groupColors=groupColors)
       }else{
         #draw heatmap
-        drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames, outputFormat)
+        drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames, outputFormat, groupColors=groupColors)
       }
     }
     
@@ -864,7 +907,8 @@ for(countfile_index in c(1:length(countfiles))){
 
     res$FoldChange<-2^res$log2FoldChange
 
-    baseMeanPerLvl <- sapply( levels(dds$Condition), function(lvl) rowMeans( counts(dds,normalized=TRUE)[,dds$Condition == lvl,drop=FALSE] ) )
+    norm_counts=counts(dds,normalized=TRUE)
+    baseMeanPerLvl <- sapply( levels(dds$Condition), function(lvl) rowMeans( norm_counts[,dds$Condition == lvl,drop=FALSE] ) )
     colnames(baseMeanPerLvl)<-paste0("baseMean_", colnames(baseMeanPerLvl))
     res<-cbind(res, baseMeanPerLvl)
 
@@ -941,11 +985,11 @@ for(countfile_index in c(1:length(countfiles))){
       nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
       DEmatrix<-rldmatrix[siggenes,,drop=F]
       
-      drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors, outputFormat)
-      drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputFormat)
+      drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, designData$Condition, outputFormat, conditionColors=conditionColors)
+      drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputFormat, groupColors=groupColors)
       
-      drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors, outputFormat)
-      drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputFormat)
+      drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, designData$Condition, outputFormat, conditionColors=conditionColors)
+      drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputFormat, groupColors=groupColors)
     }
     
     #Top 25 Significant genes barplot
