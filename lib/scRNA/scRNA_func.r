@@ -2897,3 +2897,11 @@ do_analysis<-function(tmp_folder,
     return(obj)
   }
 }
+
+factor_by_count<-function(vec){
+  tbl=table(vec)
+  tbl=tbl[tbl > 0]
+  tbl=tbl[order(tbl, decreasing=T)]
+  res=factor(vec, levels=names(tbl))
+  return(res)
+}
