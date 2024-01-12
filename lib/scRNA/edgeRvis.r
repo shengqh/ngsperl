@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AS_multiome'
+outFile='RENAL_AUTOPHAGY'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/shah_lab/shengq2/20230726_Vandy_AS_from_Michelle/AS_Tiger/rds_objects/subclusters_for_DE/subcluster_endothelial.rds'
-parFile2='/nobackup/shah_lab/shengq2/20231110_AS_multiome_Michelle_subcluster/endothelial_edgeR_inCluster_bySample/result/AS_multiome.edgeR.files.csv'
+parFile1='/nobackup/shah_lab/shengq2/20240102_Das_RENAL_AUTOPHAGY/cellxgene/20240112_cellxgene_meta.no_renal_papilla.rds'
+parFile2='/nobackup/shah_lab/shengq2/20240102_Das_RENAL_AUTOPHAGY/DE_fold1.2_bulk/files_edgeR_inCluster_bySample/result/RENAL_AUTOPHAGY.edgeR.files.csv'
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20231110_AS_multiome_Michelle_subcluster/endothelial_edgeR_inCluster_bySample_vis/result')
+setwd('/nobackup/shah_lab/shengq2/20240102_Das_RENAL_AUTOPHAGY/DE_fold1.2_bulk/files_edgeR_inCluster_bySample_vis/result')
 
 ### Parameter setting end ###
 
@@ -27,10 +27,18 @@ bBetweenCluster<-is_one(myoptions$bBetweenCluster)
 cluster_name=myoptions$cluster_name
 DE_by_cell=is_one(myoptions$DE_by_cell)
 reduction=myoptions$reduction
+sample_column=myoptions$sample_column
 
 if(!exists("obj")){
   obj<-read_object(parFile1, parFile3, cluster_name)
-  obj@meta.data[,cluster_name]=gsub("^\\s+", "",obj@meta.data[,cluster_name])
+  if(cluster_name == "bulk"){
+    obj@meta.data$bulk = "bulk"
+  }else{
+    obj@meta.data[,cluster_name]=gsub("^\\s+", "",obj@meta.data[,cluster_name])
+  }
+  if(sample_column != "orig.ident"){
+    obj@meta.data$orig.ident = obj@meta.data[,sample_column]
+  }
 }
 clusterDf<-obj@meta.data
 
@@ -39,10 +47,20 @@ edgeRfolder<-dirname(parFile2)
 rownames(edgeRres)<-edgeRres$prefix
 
 if(!bBetweenCluster){
-  df<-data.frame(c1=obj$seurat_clusters, c2=as.character(unlist(obj@meta.data[, cluster_name])))
-  df<-unique(df)
-  df<-df[order(df$c1),]
-  obj@meta.data[, cluster_name]<-factor(as.character(unlist(obj@meta.data[, cluster_name])), levels=unique(df$c2))
+  if(all(is.null(levels(obj@meta.data[, cluster_name])))){
+    if("seurat_clusters" %in% colnames(obj@meta.data)){
+      if(length(unique(obj$seurat_clusters)) == length(unique(obj@meta.data[, cluster_name]))){
+        df<-data.frame(c1=obj$seurat_clusters, c2=as.character(unlist(obj@meta.data[, cluster_name])))
+        df<-unique(df)
+        df<-df[order(df$c1),]
+        obj@meta.data[, cluster_name]<-factor(as.character(unlist(obj@meta.data[, cluster_name])), levels=unique(df$c2))
+      }else{
+        obj@meta.data[, cluster_name]<-factor_by_count(obj@meta.data[, cluster_name])
+      }
+    }else{
+      obj@meta.data[, cluster_name]<-factor_by_count(obj@meta.data[, cluster_name])
+    }
+  }
 }
 
 all_sigout<-NULL

@@ -1391,6 +1391,7 @@ sub addEdgeRTask {
     parameterFile2_ref => [$edgeRtaskname],
     output_file_ext    => ".vis.files.csv",
     parameterSampleFile1 => {
+      "sample_column" => getValue($def, "sample_column", "orig.ident"),
       "cluster_name" => $curClusterName,
       "bBetweenCluster" => $bBetweenCluster,
       "DE_by_cell" => $DE_by_cell,
