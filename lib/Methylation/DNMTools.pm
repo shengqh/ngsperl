@@ -70,42 +70,36 @@ sub perform {
     print $pbs "
 echo DNMTools=`date`
 
-if [ ! -s ${sample_name}.bsrate ]; then
-  echo dnmtools bsrate=`date`
-  rm -f ${sample_name}.bsrate.failed ${sample_name}.bsrate
+echo dnmtools bsrate=`date`
+rm -f ${sample_name}.bsrate.failed ${sample_name}.bsrate
 
-  $dnmtools_command bsrate -t $thread -c $chr_fasta -o ${sample_name}.bsrate $sampleFile
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch $sample_name.bsrate.failed
-    rm ${sample_name}.bsrate
-  fi
+$dnmtools_command bsrate -t $thread -c $chr_fasta -o ${sample_name}.bsrate $sampleFile
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.bsrate.failed
+  rm ${sample_name}.bsrate
 fi
 
-if [ ! -s ${sample_name}.cpg.meth ]; then
-  if [ ! -s ${sample_name}.all.meth ]; then 
-    #output cpg only
-    echo dnmtools counts=`date`
-    rm -f ${sample_name}.all.meth.failed ${sample_name}.all.meth
+#output cpg only
+echo dnmtools counts=`date`
+rm -f ${sample_name}.all.meth.failed ${sample_name}.all.meth
 
-    $dnmtools_command counts -t $thread -c $chr_fasta -o ${sample_name}.all.meth $sampleFile
-    status=\$?
-    if [[ \$status -ne 0 ]]; then
-      touch $sample_name.all.meth.failed
-      rm ${sample_name}.all.meth
-    fi
-  fi
+$dnmtools_command counts -t $thread -c $chr_fasta -o ${sample_name}.all.meth $sampleFile
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.all.meth.failed
+  rm ${sample_name}.all.meth
+fi
 
-  if [[ -s ${sample_name}.all.meth && ! -s ${sample_name}.levels ]]; then
-    echo dnmtools levels=`date`
-    rm -f ${sample_name}.levels.failed ${sample_name}.levels
+if [[ -s ${sample_name}.all.meth ]]; then
+  echo dnmtools levels=`date`
+  rm -f ${sample_name}.levels.failed ${sample_name}.levels
 
-    $dnmtools_command levels -o ${sample_name}.levels ${sample_name}.all.meth
-    status=\$?
-    if [[ \$status -ne 0 ]]; then
-      touch $sample_name.levels.failed
-      rm ${sample_name}.levels
-    fi
+  $dnmtools_command levels -o ${sample_name}.levels ${sample_name}.all.meth
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.levels.failed
+    rm ${sample_name}.levels
   fi
 
   echo dnmtools sym=`date`
@@ -116,14 +110,12 @@ if [ ! -s ${sample_name}.cpg.meth ]; then
   if [[ \$status -ne 0 ]]; then
     touch $sample_name.cpg.meth.failed
     rm ${sample_name}.cpg.meth
-  fi
-
-  if [[ -s ${sample_name}.cpg.meth ]]; then
+  else
     rm ${sample_name}.all.meth
   fi
 fi
 
-if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.read.bw ]]; then
+if [[ -s ${sample_name}.cpg.meth ]]; then
   echo cpg.read.bw=`date`
   rm -f ${sample_name}.cpg.read.bw.tmp.failed ${sample_name}.cpg.read.bw.failed
 
@@ -131,10 +123,7 @@ if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.read.bw ]]; then
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch ${sample_name}.cpg.read.bw.tmp.failed
-    rm ${sample_name}.cpg.read.bw.tmp
-  fi
-
-  if [[ -s ${sample_name}.cpg.read.bw.tmp ]]; then
+  else
     wigToBigWig ${sample_name}.cpg.read.bw.tmp $chrSizeFile ${sample_name}.cpg.read.bw
     status=\$?
     if [[ \$status -ne 0 ]]; then
@@ -142,11 +131,10 @@ if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.read.bw ]]; then
       rm ${sample_name}.cpg.read.bw
     fi
   fi
-
   rm -f ${sample_name}.cpg.read.bw.tmp
 fi
 
-if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.meth.bw ]]; then
+if [[ -s ${sample_name}.cpg.meth ]]; then
   echo cpg.meth.bw=`date`
   rm -f ${sample_name}.cpg.meth.bw.tmp.failed ${sample_name}.cpg.meth.bw.failed
   
@@ -154,10 +142,7 @@ if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.meth.bw ]]; then
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch ${sample_name}.cpg.meth.bw.tmp.failed
-    rm ${sample_name}.cpg.meth.bw.tmp
-  fi
-
-  if [[ -s ${sample_name}.cpg.meth.bw.tmp ]]; then
+  else
     wigToBigWig ${sample_name}.cpg.meth.bw.tmp $chrSizeFile ${sample_name}.cpg.meth.bw
     status=\$?
     if [[ \$status -ne 0 ]]; then
@@ -181,40 +166,38 @@ fi
 #   rm  ${sample_name}.cpg.pmr.tmp
 # fi
 
-if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.hmr ]]; then
+if [[ -s ${sample_name}.cpg.meth ]]; then
   echo dnmtools hmr=`date`
-  rm -f ${sample_name}.cpg.hmr.failed
+  rm -f ${sample_name}.cpg.hmr.failed ${sample_name}.cpg.hmr
   
   $dnmtools_command hmr -o ${sample_name}.cpg.hmr -p ${sample_name}.cpg.hmrparams ${sample_name}.cpg.meth
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch $sample_name.cpg.hmr.failed
     rm ${sample_name}.cpg.hmr
+  else
+    echo pg.hmr.bb=`date`
+    rm -f ${sample_name}.cpg.hmr.tmp.failed ${sample_name}.cpg.hmr.bb.failed
+    
+    cut -f 1-3 ${sample_name}.cpg.hmr > ${sample_name}.cpg.hmr.tmp
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch ${sample_name}.cpg.hmr.tmp.failed
+    else
+      bedToBigBed ${sample_name}.cpg.hmr.tmp $chrSizeFile ${sample_name}.cpg.hmr.bb
+      status=\$?
+      if [[ \$status -ne 0 ]]; then
+        touch ${sample_name}.cpg.hmr.bb.failed
+        rm ${sample_name}.cpg.hmr.bb
+      fi
+    fi
+
+    rm -f ${sample_name}.cpg.hmr.tmp
   fi
 fi
 
-if [[ -s ${sample_name}.cpg.hmr && ! -s ${sample_name}.cpg.hmr.bb ]]; then
-  echo pg.hmr.bb=`date`
-  rm -f ${sample_name}.cpg.hmr.tmp.failed ${sample_name}.cpg.hmr.bb.failed
-  
-  cut -f 1-3 ${sample_name}.cpg.hmr > ${sample_name}.cpg.hmr.tmp
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch ${sample_name}.cpg.hmr.tmp.failed
-    rm ${sample_name}.cpg.hmr.tmp
-  fi
 
-  bedToBigBed ${sample_name}.cpg.hmr.tmp $chrSizeFile ${sample_name}.cpg.hmr.bb
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch ${sample_name}.cpg.hmr.bb.failed
-    rm ${sample_name}.cpg.hmr.bb
-  fi
-
-  rm -f ${sample_name}.cpg.hmr.tmp
-fi
-
-if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.pmd ]]; then
+if [[ -s ${sample_name}.cpg.meth ]]; then
   echo dnmtools pmd=`date`
   rm -f ${sample_name}.cpg.pmd.failed
 
@@ -223,43 +206,38 @@ if [[ -s ${sample_name}.cpg.meth && ! -s ${sample_name}.cpg.pmd ]]; then
   if [[ \$status -ne 0 ]]; then
     touch $sample_name.cpg.pmd.failed
     rm ${sample_name}.cpg.pmd
+  else
+    echo cpg.pmd.bb=`date`
+    rm -f ${sample_name}.cpg.pmd.tmp.failed ${sample_name}.cpg.pmd.bb.failed
+
+    cut -f 1-3 ${sample_name}.cpg.pmd > ${sample_name}.cpg.pmd.tmp
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch ${sample_name}.cpg.pmd.tmp.failed
+    else
+      bedToBigBed ${sample_name}.cpg.pmd.tmp $chrSizeFile ${sample_name}.cpg.pmd.bb
+      status=\$?
+      if [[ \$status -ne 0 ]]; then
+        touch ${sample_name}.cpg.pmd.bb.failed
+        rm ${sample_name}.cpg.pmd.bb
+      fi
+    fi
+
+    rm -f ${sample_name}.cpg.pmd.tmp
   fi
 fi
 
-if [[ -s ${sample_name}.cpg.pmd  && ! -s ${sample_name}.cpg.pmd.bb ]]; then
-  echo cpg.pmd.bb=`date`
-  rm -f ${sample_name}.cpg.pmd.tmp.failed ${sample_name}.cpg.pmd.bb.failed
+echo dnmtools states=`date`
+rm -f ${sample_name}.epiread.failed
 
-  cut -f 1-3 ${sample_name}.cpg.pmd > ${sample_name}.cpg.pmd.tmp
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch ${sample_name}.cpg.pmd.tmp.failed
-    rm ${sample_name}.cpg.pmd.tmp
-  fi
-
-  bedToBigBed ${sample_name}.cpg.pmd.tmp $chrSizeFile ${sample_name}.cpg.pmd.bb
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch ${sample_name}.cpg.pmd.bb.failed
-    rm ${sample_name}.cpg.pmd.bb
-  fi
-
-  rm -f ${sample_name}.cpg.pmd.tmp
+$dnmtools_command states -t $thread -c $chr_fasta -o ${sample_name}.epiread $sampleFile
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $sample_name.epiread.failed
+  rm ${sample_name}.epiread
 fi
 
-if [ ! -s ${sample_name}.epiread ]; then
-  echo dnmtools states=`date`
-  rm -f ${sample_name}.epiread.failed
-  
-  $dnmtools_command states -t $thread -c $chr_fasta -o ${sample_name}.epiread $sampleFile
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch $sample_name.epiread.failed
-    rm ${sample_name}.epiread
-  fi
-fi
-
-if [[ -s ${sample_name}.epiread && ! -s ${sample_name}.allelic.bw ]]; then
+if [[ -s ${sample_name}.epiread ]]; then
   echo dnmtools allelic=`date`
   rm -f ${sample_name}.allelic.bw.failed ${sample_name}.allelic.bw.tmp.failed
 
@@ -268,19 +246,19 @@ if [[ -s ${sample_name}.epiread && ! -s ${sample_name}.allelic.bw ]]; then
   if [[ \$status -ne 0 ]]; then
     touch ${sample_name}.allelic.bw.tmp.failed
     rm ${sample_name}.alle.bw.tmp
+  else
+    echo wigToBigWig alle.bw=`date`
+    wigToBigWig ${sample_name}.alle.bw.tmp $chrSizeFile ${sample_name}.allelic.bw
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      touch ${sample_name}.allelic.bw.failed
+      rm ${sample_name}.allelic.bw
+    fi
   fi
-
-  wigToBigWig ${sample_name}.alle.bw.tmp $chrSizeFile ${sample_name}.allelic.bw
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch ${sample_name}.allelic.bw.failed
-    rm ${sample_name}.allelic.bw
-  fi
-
-  rm ${sample_name}.alle.bw.tmp
+  rm -f ${sample_name}.alle.bw.tmp
 fi
 
-if [[ -s ${sample_name}.epiread && ! -s ${sample_name}.amr ]]; then
+if [[ -s ${sample_name}.epiread ]]; then
   echo dnmtools amrfinder=`date`
   rm -f ${sample_name}.amr.failed
 
@@ -295,6 +273,7 @@ fi
 rm -f ${sample_name}.epiread
 
 if [[ -s ${sample_name}.cpg.meth ]]; then
+  rm -f ${sample_name}.cpg.meth.gz
   gzip ${sample_name}.cpg.meth
 fi
 
