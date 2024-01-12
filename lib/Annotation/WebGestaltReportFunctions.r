@@ -1,21 +1,17 @@
 
 readFilesAndFormat=function(compDeseq2File) {
-  if (grepl(".csv$",basename(compDeseq2File))) { #csv file
-    readFun<-function(...) read.csv(...)
-  } else {
-    readFun<-function(...) read.table(...,sep="\t")
-  }
-  deseq2<-try(readFun(compDeseq2File, header=T, row.names=1, stringsAsFactors = F),silent=TRUE)
-  if (class(deseq2)=="try-error") {
-    deseq2<-try(readFun(compDeseq2File, header=T, stringsAsFactors = F))
-  }
+  library(data.table)
+  library(dplyr)
+  library(tibble)
+  deseq2<-data.frame(fread(compDeseq2File, header=T), row.names=1)
   
-  if (all(c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") %in% colnames(deseq2))) { #DESeq2 result format
-    deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
-  }else if(all(c("logFC", "logCPM", "F", "PValue", "FDR") %in% colnames(deseq2))) {
-    deseq2$GENE<-rownames(deseq2)
-    deseq2$FoldChange=2**deseq2$logFC
-    deseq2=deseq2[c("GENE", "logFC", "logCPM", "F", "PValue", "FDR", "FoldChange")]
+  deseq2_columns = c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange")
+  if (all(deseq2_columns %in% colnames(deseq2))) { #DESeq2 result format
+    deseq2<-deseq2[,deseq2_columns ]
+  }else if(all(c("logFC", "logCPM", "PValue", "FDR") %in% colnames(deseq2))) { #edgeR result format
+    deseq2 = deseq2 %>% tibble::rownames_to_column(var="GENE") %>%
+              dplyr::mutate(FoldChange = 2**logFC) %>%
+              dplyr::select(GENE, everything())              
   }
   return(deseq2)
 }
@@ -28,10 +24,11 @@ getDiffCol=function(deseq2) {
   } else if ("meth.diff" %in% colnames(deseq2)) {
     result[["colName"]]="meth.diff"
     result[["centerValue"]]=0
+  } else {
+    stop("Can't find diff column")
   }
   return(result)
 }
-
 
 getGeneCol=function(deseq2) { #try to find gene column
   result=list()
@@ -42,7 +39,7 @@ getGeneCol=function(deseq2) { #try to find gene column
     result[["colName"]]="Feature_gene_name"
   } else if ("Hugo_Symbol" %in% colnames(deseq2)) { #maf file
     result[["colName"]]="Hugo_Symbol"
-  } else { #otehr formats
+  } else { #other formats
     geneInd=grep("Gene|gene|GENE",colnames(deseq2))
     if (length(geneInd)>0) { #first column name with "gene"
       result[["colName"]]=geneInd[1]
