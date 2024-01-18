@@ -7,6 +7,7 @@ import logging
 import argparse
 import string
 import subprocess
+import gzip
 from LocusItem import LocusItem, readBedFile
 from FileListUtils import readUniqueHashMap
 
@@ -75,8 +76,8 @@ def main():
     for sampleFile in sampleFiles:
       flist.write(sampleFile + "\n")
 
-  bedResultFile = output_folder + "/" + locusName + ".depth.txt"
-  with open(bedResultFile, "wt") as fout:
+  bedResultFile = output_folder + "/" + locusName + ".depth.txt.gz"
+  with gzip.open(bedResultFile, "wt") as fout:
     fout.write("File\tPosition\tPositionCount\tMaxCount\tPercentage\n")
     posData = []
 
