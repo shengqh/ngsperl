@@ -76,8 +76,9 @@ colnames(cpg_bvalue_mds) <- c("Dim.1", "Dim.2")
 cpg_bvalue_mds[,var] <- meta[,var]
 
 # Plot MDS
+label=ifelse(ncol(cpg_bvalue_df) > 20, NULL, colnames(cpg_bvalue_df))
 dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2",
-                      label = colnames(cpg_bvalue_df),
+                      label = label,
                       xlab = "MDS 1",
                       ylab = "MDS 2",
                       color = var,
