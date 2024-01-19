@@ -112,7 +112,7 @@ rm -rf __NAME__/trimmed __NAME__/aligned/__NAME__.bam __NAME__/aligned/dedup __N
     source_ref            => $untrimed_ref,
     output_to_same_folder => 1,
     output_arg            => "-o",
-    output_file_ext    => "__NAME__/trimmed2/__NAME___1.paired.fastq.gz,__NAME__/trimmed2/__NAME___2.paired.fastq.gz,__NAME__/aligned/dup.marked.120bp/__NAME__.bam",
+    output_file_ext    => "__NAME__/trimmed2/__NAME___1.paired.fastq.gz,__NAME__/trimmed2/__NAME___2.paired.fastq.gz,__NAME__/aligned/dedup.120bp/__NAME__.bam",
     use_tmp_folder        => 0,
     sh_direct             => 0,
     docker_prefix => "cutruntools2_",
