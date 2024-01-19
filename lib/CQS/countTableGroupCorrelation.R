@@ -206,10 +206,10 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
   if(genecount > 2){
     cat("saving PCA to ", filename, "\n")
     pca<-prcomp(t(rldmatrix))
+    supca<-summary(pca)$importance
 
-    #npc should be less or equals to number of features, and maximum 10
-    npc = min(10, nrow(rldmatrix))
-    pca_res = t(summary(pca)$importance)[c(1:npc),] %>% 
+    npc = min(10, ncol(supca))
+    pca_res = t(supca)[c(1:npc),] %>% 
       as.data.frame() %>% 
       tibble::rownames_to_column("PC") %>% 
       dplyr::rename("Proportion" = "Proportion of Variance", "Cumulative" = "Cumulative Proportion")
@@ -238,7 +238,6 @@ drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outp
 
     ggsave(paste0(filename, ".bar.png"), g, width = 8, height = 8, dpi = 300, units = "in", bg="white")
 
-    supca<-summary(pca)$importance
     pcadata<-data.frame(pca$x)
     if (scalePCs) {
       pcadata=as.data.frame(scale(pcadata))
