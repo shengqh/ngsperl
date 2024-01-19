@@ -101,8 +101,9 @@ for (step in unique(ResultOut$StepName)) {
   }
   tableForPlot$TaskName<-factor(tableForPlot$TaskName,levels=rev(unique(tableForPlot$TaskName)))
   tableForPlot$Result<-factor(tableForPlot$Result,levels=c("PASS","WARN","FAIL"))
-  width=max(3000, 80 * length(unique(tableForPlot$SampleName)))
-  height=max(2000, 100 * length(unique(tableForPlot$TaskName)))
+  width=max(3000, 100 * length(unique(tableForPlot$SampleName)))
+  height=max(2000, 50 * length(unique(tableForPlot$TaskName)))
+
   png(file=paste0(fileListName,"_",step,".png"), height=height, width=width, res=300)
   g<-ggplot(tableForPlot, aes(SampleName, TaskName))+
       geom_tile(data=tableForPlot, aes(fill=Result), color="white") +
