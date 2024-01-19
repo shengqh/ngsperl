@@ -210,14 +210,14 @@ for (comp in comparisonNames){
       sample_cells<-rownames(clusterCt)[clusterCt$sample %in% sample_names]  
 
       if(length(control_cells) < MIN_NUM_CELL){
-        error_msg = paste0("There were only ", length(control_cells), " found in control group, less than required ", MIN_NUM_CELL, "!")
+        error_msg = paste0("There were only ", length(control_cells), " cells found in control group, less than required ", MIN_NUM_CELL, "!")
         designFailed[nrow(designFailed) + 1,] <- c(comp, as.character(ct), error_msg)
         cat(error_msg, "\n", file=stderr())
         next
       }
 
       if(length(sample_cells) < MIN_NUM_CELL){
-        error_msg = paste0("There were only ", length(sample_cells), " found in sample group, less than required ", MIN_NUM_CELL, "!")
+        error_msg = paste0("There were only ", length(sample_cells), " cells found in sample group, less than required ", MIN_NUM_CELL, "!")
         designFailed[nrow(designFailed) + 1,] <- c(comp, as.character(ct), error_msg)
         cat(error_msg, "\n", file=stderr())
         next
