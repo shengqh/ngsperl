@@ -63,6 +63,7 @@ our %EXPORT_TAGS = (
       get_pair_groups_names
       get_group_sample_map
       get_group_samplefile_map
+      do_get_group_samplefile_map
       get_group_samplefile_map_key
       get_grouped_raw_files
       save_parameter_sample_file
@@ -1204,11 +1205,8 @@ sub get_group_samplefile_map {
   return get_group_samplefile_map_key( $config, $section, $sample_pattern, "groups" );
 }
 
-sub get_group_samplefile_map_key {
-  my ( $config, $section, $sample_pattern, $group_key ) = @_;
-
-  my $raw_files = get_raw_files( $config, $section, "source", $sample_pattern );
-  my $groups    = get_raw_files( $config, $section, $group_key );
+sub do_get_group_samplefile_map {
+  my ($groups, $raw_files) = @_;
   my %group_sample_map = ();
   for my $group_name ( sort keys %{$groups} ) {
     my $gfiles        = [];
@@ -1227,7 +1225,7 @@ sub get_group_samplefile_map_key {
     foreach my $sample_name (@samples) {
       if ( not defined $raw_files->{$sample_name} ) {
         print Dumper(longmess());
-        die "Cannot find $sample_name of group $group_name in raw_files of section $section, check your sample names";
+        die "Cannot find $sample_name of group $group_name, check your sample names";
       }
       my @bam_files = @{ $raw_files->{$sample_name} };
       foreach my $bam_file (@bam_files) {
@@ -1236,6 +1234,15 @@ sub get_group_samplefile_map_key {
     }
   }
   return \%group_sample_map;
+}
+
+sub get_group_samplefile_map_key {
+  my ( $config, $section, $sample_pattern, $group_key ) = @_;
+
+  my $raw_files = get_raw_files( $config, $section, "source", $sample_pattern );
+  my $groups    = get_raw_files( $config, $section, $group_key );
+
+  return(do_get_group_samplefile_map($groups, $raw_files));
 }
 
 sub get_pair_group_sample_map {
