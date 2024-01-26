@@ -181,6 +181,7 @@ sub getConfig {
       task_name => $task_name,
       org       => getValue($def, "genome"),
       var       => "group",
+      control_group => $def->{control_group},
       mincov     => 4
     },
     parameterSampleFile3_ref => "groups",
