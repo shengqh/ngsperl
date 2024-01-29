@@ -5,11 +5,11 @@ parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2=''
-parFile3=''
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-TRUE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-TRUE;
+parFile2='/nobackup/vickers_lab/projects/20240126_smallRNA_nextflex_comparison_hg38_byTiger/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/nextflex.Category.Table.csv'
+parFile3='/nobackup/vickers_lab/projects/20240126_smallRNA_nextflex_comparison_hg38_byTiger/preprocessing/fastqc_post_trim_summary/result/nextflex.countInFastQcVis.Result.Reads.csv'
+useLeastGroups<-FALSE;showLabelInPCA<-FALSE;totalCountKey='Reads for Mapping';minMedian=0;minMedianInGroup=1;textSize=9;groupTextSize=10;
 
-setwd('/nobackup/h_vangard_1/breast_cancer_spore/20231117_rnaseq_6151_hg38/genetable/result')
+setwd('/nobackup/vickers_lab/projects/20240126_smallRNA_nextflex_comparison_hg38_byTiger/data_visualization/count_table_correlation_TotalReads/result')
 
 ### Parameter setting end ###
 
@@ -783,6 +783,10 @@ for (i in 1:nrow(countTableFileAll)) {
         #correlation distribution
         countNumCor<-corTableWithoutZero(countNumVsdGroup,method="spearman")
         write.csv(countNumCor, file=paste0(outputFilePrefix,curSuffix,".Group.Correlation.csv"), row.names=T)
+        if (any(is.na(countNumCor)) | length(unique(as.vector(countNumCor)))<=1) {
+          print(paste0("NA in group correlation matrix or not enought unique values. Can't draw group correlation figure"))
+          next
+        }
 
         countNumCorTest<-corTestTableWithoutZero(countNumVsdGroup,method="spearman")
         write.csv(countNumCorTest, file=paste0(outputFilePrefix,curSuffix,".Group.Correlation.Test.csv"), row.names=T)
