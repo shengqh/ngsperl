@@ -99,6 +99,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_fragment_cells
 
   add_cellbender
+
+  add_cellbender_with_expected_cells  
 )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -3160,6 +3162,49 @@ rm -f ckpt.tar.gz
 ",
     docker_prefix => "cellbender_",
     parameterSampleFile1_ref => $files_def,
+    output_to_same_folder => 1,
+    output_file_ext => ".cellbender_filtered.h5",
+    pbs => {
+      "nodes"    => "1:ppn=$cellbender_cpu",
+      "walltime" => "48",
+      "mem"      => "40gb"
+    }
+  };
+  push(@$tasks, $cellbender_task);
+}
+
+
+sub add_cellbender_with_expected_cells {
+  my ($config, $def, $tasks, $target_dir, $cellbender_task, $files_def ) = @_;
+
+  my $cellbender_cpu = getValue($def, "cellbender_cpu", 12);
+  $config->{$cellbender_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$cellbender_task",
+    program => "",
+    check_program => 0,
+    option => "
+LOWCOUNTHR=5
+NEXP=`cut -d ',' -f4  __FILE2__ | tail -n1`
+TOTAL=''
+if ((\$NEXP > 20000)) 
+then
+  NTOT=\$((NEXP+10000))
+  echo \"Modifying presets: expecting more than 20k cells (\$NEXP), total number of droplets is \$NTOT..\"
+  TOTAL=\"--total-droplets-included \$NTOT\"
+else 
+  echo \"Standard presets: expected number of cells is \$NEXP..\"
+fi
+
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells \$NEXP \$TOTAL --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+
+rm -f ckpt.tar.gz
+
+#__OUTPUT__
+",
+    docker_prefix => "cellbender_",
+    parameterSampleFile1_ref => $files_def,
+    parameterSampleFile2 => getValue($def, "summary_files"),
     output_to_same_folder => 1,
     output_file_ext => ".cellbender_filtered.h5",
     pbs => {
