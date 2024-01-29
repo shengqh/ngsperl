@@ -41,7 +41,13 @@ if(!exists('obj')){
   }
   obj@meta.data[,cluster_name]<-gsub("^\\s+", "", obj@meta.data[,cluster_name])
   if(!is.null(myoptions$sample_column)){
-    obj$orig.ident = obj@meta.data[,myoptions$sample_column]
+    if(myoptions$sample_column != ""){
+      if(!myoptions$sample_column %in% colnames(obj@meta.data)){
+        stop(paste0("sample_column ", myoptions$sample_column, " not found in meta.data"))
+      }
+      
+      obj$orig.ident = obj@meta.data[,myoptions$sample_column]
+    }
   }
 }
 
