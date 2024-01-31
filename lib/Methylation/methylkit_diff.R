@@ -1,16 +1,16 @@
 rm(list=ls()) 
-sample_name='B_vs_A'
-outFile='B_vs_A'
+sample_name='CLTI_vs_Control'
+outFile='CLTI_vs_Control'
 parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/h_cqs/shengq2/temp/20231030_10473_WGBS_real/MethylKitCorr/result/P10473.filtered.cpg.meth.rds'
+parFile1='/nobackup/brown_lab/projects/20231214_10473_Methylation_hg38/MethylKitCorr/result/P10473.filtered.cpg.meth.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/shengq2/temp/20231030_10473_WGBS_real/MethylKitDiff/result/B_vs_A')
+setwd('/nobackup/brown_lab/projects/20231214_10473_Methylation_hg38/MethylKitDiff/result/CLTI_vs_Control')
 
 ### Parameter setting end ###
 
@@ -31,45 +31,45 @@ ncore <- as.numeric(params$ncore)
 #read comparison
 comparisons <- read.table(parSampleFile3, sep = "\t", header = F)
 comparison <- comparisons[comparisons$V2 == sample_name, ]
-grp1 <- comparison[1, "V1"]
-grp2 <- comparison[2, "V1"]
+control_group_name <- comparison[1, "V1"]
+treatment_group_name <- comparison[2, "V1"]
 
 #read group
 groups <- read.table(parSampleFile4, sep = "\t", header = F)
-stopifnot(all(c(grp1, grp2) %in% groups$V2))
+stopifnot(all(c(control_group_name, treatment_group_name) %in% groups$V2))
 
-groups <- groups[groups$V2 %in% c(grp1, grp2), ]
-samples1 <- groups[groups$V2 == grp1, "V1"]
-samples2 <- groups[groups$V2 == grp2, "V1"]
-samples <- c(samples1, samples2)
+groups <- groups[groups$V2 %in% c(control_group_name, treatment_group_name), ]
+control_names <- groups[groups$V2 == control_group_name, "V1"]
+treatment_names <- groups[groups$V2 == treatment_group_name, "V1"]
+samples <- c(control_names, treatment_names)
+treatment <- rep(c(0, 1), c(length(control_names), length(treatment_names)))
 
 #read meth files
 cpg.all <- readRDS(file = parFile1)
 
-treatment <- as.numeric(factor(groups[,"V2"]), levels = c(grp1, grp2)) - 1
-
 sub_obj <- reorganize(cpg.all,
                       sample.ids = samples,
                       treatment = treatment)
+rm(cpg.all)
 
 sub_diff <- calculateDiffMeth(sub_obj,
                               overdispersion="MN",
                               adjust = "BH",
                               test = "fast.fisher",
                               mc.cores = ncore)
-saveRDS(sub_diff, file = paste0(comparison, "_test.rds"))
+saveRDS(sub_diff, file = paste0(sample_name, "_test.rds"))
+rm(sub_obj)
 
 diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
 diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", grp1), paste0("hypo_in_", grp2))
-saveRDS(diff_res, file = paste0(comparison, "_methyldiff.rds"))
+saveRDS(diff_res, file = paste0(sample_name, "_methyldiff.rds"))
 
 diff_res_grp2 <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hypo")
 diff_res_grp2$direction <- paste0("hypo_in_", grp2)
 diff_res_grp2 <- diff_res_grp2[order(diff_res_grp2$meth.diff),]
-write.table(diff_res_grp2, file = paste0(comparison, "_", grp2, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+write.table(diff_res_grp2, file = paste0(sample_name, "_", grp2, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
 
 diff_res_grp1 <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hyper")
 diff_res_grp1$direction <- paste0("hypo_in_", grp1)
 diff_res_grp1 <- diff_res_grp1[order(diff_res_grp1$meth.diff),]
-write.table(diff_res_grp1, file = paste0(comparison, "_", grp1, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
-
+write.table(diff_res_grp1, file = paste0(sample_name, "_", grp1, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
