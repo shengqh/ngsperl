@@ -254,7 +254,10 @@ sub getScRNASeqConfig {
 
   my $bam_ref = undef;
   my $hla_merge = undef;
-  my $filter_config_file = getValue($def, "filter_config_file", $target_dir . "/filter_config.csv");
+  my $filter_config_file = getValue($def, "filter_config_file", "");
+  if($filter_config_file eq ""){
+    $filter_config_file = undef;
+  }
   my $sctk_ref = undef;
   my $signacX_ref = undef;
   my $singleR_ref = undef;
