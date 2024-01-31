@@ -3162,7 +3162,7 @@ rm -f ckpt.tar.gz
 ",
     docker_prefix => "cellbender_",
     parameterSampleFile1_ref => $files_def,
-    output_to_same_folder => 1,
+    output_to_same_folder => 0,
     output_file_ext => ".cellbender_filtered.h5",
     pbs => {
       "nodes"    => "1:ppn=$cellbender_cpu",
