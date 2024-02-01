@@ -67,6 +67,7 @@ sub get_remove_option {
   for my $key (@keys) {
     if ( defined $curSection->{$key} ) {
       $result = $curSection->{$key};
+      last;
     }
   }
   return $result;
@@ -96,19 +97,19 @@ sub get_cutadapt_option {
 
     if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
       if ($ispairend) {
-        $adapter_option = " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
+        $adapter_option = $adapter_option . " -a " . $curSection->{adapter} . " -A " . $curSection->{adapter};
       }
       else {
-        $adapter_option = " -a " . $curSection->{adapter};
+        $adapter_option = $adapter_option . " -a " . $curSection->{adapter};
       }
     }
 
     if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
       if ($ispairend) {
-        $adapter_option = " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
+        $adapter_option = $adapter_option . " -a " . $curSection->{adapter_3} . " -A " . $curSection->{adapter_3};
       }
       else {
-        $adapter_option = " -a " . $curSection->{adapter_3};
+        $adapter_option = $adapter_option . " -a " . $curSection->{adapter_3};
       }
     }
 
@@ -150,13 +151,25 @@ sub perform {
     for my $key ( sort keys %$cutConfig ) {
       my $sampleConfig = $cutConfig->{$key};
       my $samples      = $cutConfig->{$key}{samples};
+      if(!defined $samples){
+        if(defined $cutConfig->{$key}{samples_pattern}){
+          my $samples_pattern = $cutConfig->{$key}{samples_pattern};
+          $samples = [];
+          for my $sample ( keys %raw_files ) {
+            if($sample =~ /$samples_pattern/){
+              push @$samples, $sample;
+            }
+          }
+        }else{
+          die("No samples or samples_pattern defined in $key of cutadapt config")
+        }
+      }
 
-      if ((not defined $samples) or ($samples eq "default")) {
-        my $sConfig = merge_hash_left_precedent( $sampleConfig, $curSection );
+      my $sConfig = merge_hash_left_precedent( $sampleConfig, $curSection );
+      if ($samples eq "default") {
         $sampleConfigMap->{$default_key} = $sConfig;
       }else{
         for my $sample (@$samples) {
-          my $sConfig = merge_hash_left_precedent( $sampleConfig, $curSection );
           $sampleConfigMap->{$sample} = $sConfig;
         }
       }
@@ -176,6 +189,8 @@ sub perform {
 
     my $sampleConfig = $sampleConfigMap->{$sample_name};
     my ( $ispairend, $adapter_option, $random_bases_option ) = get_cutadapt_option($sampleConfig);
+
+    my @rmlist = ();
 
     my $optionOnlyLimited   = '';
     my $optionRemoveLimited = $adapter_option;
@@ -241,7 +256,9 @@ cp $old_file $new_file
         my $temp2_file = $read2name . ".cutAdapter.fastq";
         print $pbs "
 cutadapt $adapter_option -o $temp1_file -p $temp2_file $read1file $read2file
+
 cutadapt $random_bases_option -o $read1name -p $read2name $temp1_file $temp2_file
+
 rm $temp1_file $temp2_file
 ";
       }
@@ -266,7 +283,9 @@ cutadapt $option $adapter_option -o $read1name -p $read2name $read1file $read2fi
         if ( scalar(@sample_files) == 1 ) {
           print $pbs "
 cutadapt $optionRemoveLimited -o $temp_file $sample_files[0]
+
 cutadapt $optionOnlyLimited $limit_file_options $random_bases_option -o $final_file $temp_file
+
 rm $temp_file
 ";
         }
@@ -279,13 +298,16 @@ fi
           for my $sample_file (@sample_files) {
             print $pbs "
 cutadapt $optionRemoveLimited -o temp.fastq $sample_file
+
 cat temp.fastq >> $temp_file
+
 rm temp.fastq
 ";
           }
 
           print $pbs "
 cutadapt $optionOnlyLimited $limit_file_options $random_bases_option -o $final_file $temp_file 
+
 rm $temp_file
 ";
         }
@@ -307,13 +329,16 @@ fi
             for my $sample_file (@sample_files) {
               print $pbs "
 cutadapt $optionRemoveLimited -o temp.fastq $sample_file
+
 cat temp.fastq >> $temp_file
+
 rm temp.fastq
 ";
             }
 
             print $pbs "
 cutadapt $optionOnlyLimited $limit_file_options -o $final_file $temp_file
+
 rm $temp_file
 ";
           }
@@ -321,13 +346,16 @@ rm $temp_file
             for my $sample_file (@sample_files) {
               print $pbs "
 cutadapt $adapter_option -o temp.fastq $sample_file
+
 cat temp.fastq >> $temp_file
+
 rm temp.fastq
 ";
             }
           }
           print $pbs "
 gzip $temp_file
+
 mv ${temp_file}.gz $final_file
 ";
         }
