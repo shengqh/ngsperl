@@ -57,19 +57,31 @@ sub_diff <- calculateDiffMeth(sub_obj,
                               adjust = "BH",
                               test = "fast.fisher",
                               mc.cores = ncore)
-saveRDS(sub_diff, file = paste0(sample_name, "_test.rds"))
+test_rds=paste0(sample_name, "_test.rds")
+saveRDS(sub_diff, file = test_rds)
 rm(sub_obj)
+if(0){
+  sub_diff <- readRDS(test_rds)
+}
 
 diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
-diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", grp1), paste0("hypo_in_", grp2))
-saveRDS(diff_res, file = paste0(sample_name, "_methyldiff.rds"))
+diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", control_group_name), paste0("hypo_in_", treatment_group_name))
+methyldiff_rds=paste0(sample_name, "_methyldiff.rds")
+saveRDS(diff_res, file = methyldiff_rds)
+if(0){
+  diff_res <- readRDS(methyldiff_rds)
+}
 
-diff_res_grp2 <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hypo")
-diff_res_grp2$direction <- paste0("hypo_in_", grp2)
-diff_res_grp2 <- diff_res_grp2[order(diff_res_grp2$meth.diff),]
-write.table(diff_res_grp2, file = paste0(sample_name, "_", grp2, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+diff_res_treatment_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hypo")
+if(nrow(diff_res_treatment_high) > 0){
+  diff_res_treatment_high$direction <- paste0("hypo_in_", treatment_group_name)
+  diff_res_treatment_high <- diff_res_treatment_high[order(diff_res_treatment_high$meth.diff),]
+}
+write.table(diff_res_treatment_high, file = paste0(sample_name, "_", treatment_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
 
-diff_res_grp1 <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hyper")
-diff_res_grp1$direction <- paste0("hypo_in_", grp1)
-diff_res_grp1 <- diff_res_grp1[order(diff_res_grp1$meth.diff),]
-write.table(diff_res_grp1, file = paste0(sample_name, "_", grp1, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+diff_res_control_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hyper")
+if(nrow(diff_res_control_high) > 0){
+  diff_res_control_high$direction <- paste0("hypo_in_", control_group_name)
+  diff_res_control_high <- diff_res_control_high[order(diff_res_control_high$meth.diff),]
+}
+write.table(diff_res_control_high, file = paste0(sample_name, "_", control_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
