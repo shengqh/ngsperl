@@ -16,6 +16,8 @@ require(tidyverse)
 require(methylKit)
 require(ggpubr)
 require(Cairo)
+library(dplyr)
+library(limma)
 
 params <- read.table(parSampleFile2, sep = "\t", header = F)
 params <- params %>% column_to_rownames("V2") %>% t() %>% data.frame()
@@ -36,19 +38,24 @@ cpg.all <-read.table(parSampleFile1, sep="\t", header=F)
 cpg.infile = cpg.all$V1
 file.id = cpg.all$V2
 
-meta <- read.table(parSampleFile3, sep = "\t", header = F)
+meta <- read.table(parSampleFile3, sep = "\t", header=F)
 colnames(meta) <- c("sample", "group")
+meta<-meta[!duplicated(meta$sample),]
+rownames(meta)<-meta$sample
+meta<-meta[file.id,]
 var = "group"
 
+groups=unique(meta$group)
 if(!is.na(control_group)){
-  stopifnot(any(meta$group == control_group))
-  treatment<-ifelse(meta$group == control_group, 0, 1)
-}else{
-  treatment<-NA
+  stopifnot(control_group %in% groups)
+  groups=c(control_group, groups[groups != control_group])
 }
+gindex=c(1:length(groups)) - 1
+names(gindex)=groups
+treatment<-unlist(gindex[meta$group])
 
 rds_file=paste0(project, ".filtered.cpg.meth.rds")
-#if(!file.exists(rds_file)){
+if(!file.exists(rds_file)){
   cpg.obj <- methRead(location = as.list(cpg.infile),
                       sample.id = as.list(file.id),
                       assembly = assembly,
@@ -67,28 +74,83 @@ rds_file=paste0(project, ".filtered.cpg.meth.rds")
   filtered.cpg.meth <- methylKit::unite(filtered.obj, destrand=FALSE)
   rm(filtered.obj)
 
+  #names(filtered.cpg.meth@treatment)
   saveRDS(filtered.cpg.meth, rds_file)
-#}else{
-#  filtered.cpg.meth<-readRDS(rds_file)
-#}
-
-cpg_bvalue_df <- data.frame(filtered.cpg.meth) %>%
-  mutate(id = paste(chr, start, end, sep = "_"))
-
-sample.ids=filtered.cpg.meth@sample.ids
-for(i in 1:length(sample.ids)){
-  id <- sample.ids[i]
-  ncs <- paste0("numCs", i)
-  cov <- paste0("coverage", i)
-  cpg_bvalue_df[, id] <- cpg_bvalue_df[, ncs] / cpg_bvalue_df[, cov]
+}else{
+ filtered.cpg.meth<-readRDS(rds_file)
 }
-cpg_bvalue_df <- cpg_bvalue_df[,c("id", file.id)] %>%
-  column_to_rownames("id")
-saveRDS(cpg_bvalue_df, paste0(project, ".cpg_bvalue_df.rds"))
 
+get_beta_value<-function(filtered.cpg.meth){
+  mat = getData(filtered.cpg.meth)  
+  cpg_bvalue_df = mat[, filtered.cpg.meth@numCs.index]/ (mat[,filtered.cpg.meth@numCs.index] + mat[,filtered.cpg.meth@numTs.index] )
+  colnames(cpg_bvalue_df)=filtered.cpg.meth@sample.ids
+
+  mat <- mat %>% mutate(id = paste(chr, start, end, sep = "_"))
+  rownames(cpg_bvalue_df) <- mat$id
+
+  return(cpg_bvalue_df)
+}
+
+cat("get_beta_value\n")
+cpg_bvalue_df<-get_beta_value(filtered.cpg.meth)
+#saveRDS(cpg_bvalue_df, paste0(project, ".cpg_bvalue_df.rds"))
+
+hist_pdf=paste0(project, "_methyl_CpG_bvalue_hist.pdf")
+if(!file.exists(hist_pdf)){
+  cat("draw beta value histgram figure\n")
+  pdf(hist_pdf, width=4, height=4, bg="white", onefile=TRUE)
+  samples=colnames(cpg_bvalue_df)
+  sample=samples[1]
+  for(sample in samples){
+    svalues=cpg_bvalue_df[,sample,drop=FALSE]
+    g<-ggplot(svalues, aes(x = !!sym(sample))) +
+      geom_histogram(bins = 100) +
+      theme_bw()
+    print(g)
+  }
+  dev.off()
+}
+
+cat("PCASamples\n")
+png(paste0(project, "_methyl_CpG_pca.png"), width=8, height=8, bg="white", res=300, units="in")
+PCASamples(filtered.cpg.meth)
+dev.off()
+
+#https://f1000research.com/articles/6-2055/v2
+get_mds_value<-function(filtered.cpg.meth){
+  mat = getData(filtered.cpg.meth)  
+  cpg_mds_df = log2(mat[, filtered.cpg.meth@numCs.index] + 2) - log2(mat[,filtered.cpg.meth@numTs.index] + 2)
+  colnames(cpg_mds_df)=filtered.cpg.meth@sample.ids
+
+  id = paste0(mat$chr, "_", mat$start, "_", mat$end)
+  rownames(cpg_mds_df) <- mat$id
+
+  return(cpg_mds_df)
+}
+
+cat("get_mds_value\n")
+cpg_mds_df<-get_mds_value(filtered.cpg.meth)
+stopifnot(colnames(cpg_mds_df) == meta$sample)
+
+o <- order(rowVars(as.matrix(cpg_mds_df)), decreasing = TRUE)[seq_len(10000)]
+o_cpg_mds_df=cpg_mds_df[o,]
+
+cat("plotMDS\n")
+png(paste0(project, "_methyl_CpG_MDS_by_plotMDS.png"), width=8, height=8, bg="white", res=300, units="in")
+plotMDS(o_cpg_mds_df, top=10000, col=filtered.cpg.meth@treatment+1)
+dev.off()
+
+#https://www.rdocumentation.org/packages/minfi/versions/1.18.4/topics/mdsPlot
+stopifnot(colnames(cpg_bvalue_df) == meta$sample)
+png(paste0(project, "_methyl_CpG_MDS_by_mdsPlot.png"), width=8, height=8, bg="white", res=300, units="in")
+mdsPlot(as.matrix(cpg_bvalue_df), numPositions=10000, sampGroups=meta$group)
+dev.off()
+
+cat("cor of cpg_bvalue_df\n")
 cpg_bvalue_cor <- cor(cpg_bvalue_df, method = "pearson")
 saveRDS(cpg_bvalue_cor, paste0(project, ".cpg_bvalue_cor.rds"))
 
+cat("cpg_bvalue_mds\n")
 cpg_bvalue_mds <- (1 - cpg_bvalue_cor) %>%
   cmdscale() %>%
   data.frame()
@@ -102,6 +164,7 @@ stopifnot(rownames(cpg_bvalue_mds) == meta$sample)
 cpg_bvalue_mds[,var] <- meta[,var]
 saveRDS(cpg_bvalue_mds, paste0(project, ".cpg_bvalue_mds.rds"))
 
+cat("plot bvalue MDS\n")
 # Plot MDS
 if(nrow(cpg_bvalue_mds) > 20){
   cpg_label=NULL
