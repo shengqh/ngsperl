@@ -2545,11 +2545,9 @@ fi
         'sh_direct'                => 1,
         'perform'                  => 1,
         'pbs'                      => {
-          "email"     => $def->{email},
-          "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
-          "walltime"  => "2",
-          "mem"       => "10gb"
+          "walltime"  => "24",
+          "mem"       => "40gb"
         },
       };
       push @$summary_ref, "short_reads_source";
