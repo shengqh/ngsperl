@@ -58,6 +58,25 @@ sub getConfig {
   my $config_json = getValue($def, "cutruntools2-bulk-config");
   my $adaptor_type = getValue($def, "cutruntools2_adaptor_type");
   my $organism_build = getValue($def, "cutruntools2_organism_build");
+  my $fastq_sequence_length = getValue($def, "cutruntools2_fastq_sequence_length");
+  
+  my $spike_in_bt2idx = getValue($def, "cutruntools2_spike_in_bt2idx", "");
+  my $spike_in_sequence = getValue($def, "cutruntools2_spike_in_sequence", "");
+  my $spike_in = getValue($def, "cutruntools2_spike_in", "FALSE");
+  my $spike_in_norm = getValue($def, "cutruntools2_spike_in_norm", "FALSE");
+
+  my $dup_peak_calling = getValue($def, "cutruntools2_dup_peak_calling", "TRUE");
+  my $peak_caller = getValue($def, "cutruntools2_peak_caller", "SEACR");
+
+  my $rm_bam_folder;
+  my $final_bam_file;
+  if($dup_peak_calling eq "TRUE"){
+    $rm_bam_folder = "__NAME__/aligned/dedup.120bp/";
+    $final_bam_file = "__NAME__/aligned/dup.marked.120bp/__NAME__.bam";
+  }else{
+    $rm_bam_folder = "__NAME__/aligned/dup.marked.120bp/";
+    $final_bam_file = "__NAME__/aligned/dedup.120bp/__NAME__.bam";
+  }
 
   my $cutruntools2 = "cutruntools2";
   $config->{$cutruntools2} = {
@@ -91,17 +110,25 @@ ln -s \$r2 __NAME___R2_001.fastq.gz
 cur_dir=`pwd`
 #echo cur_dir = \$cur_dir
 
-cat $config_json | sed \"s#INPUT_FASTQ_DIRECTORY#\${cur_dir}#g\" \\
-  | sed \"s#INPUT_WORKDIR#\${cur_dir}#g\" \\
-  | sed \"s#Truseq#${adaptor_type}#g\" \\
+cat $config_json | sed \"s#INPUT_fastq_directory#\${cur_dir}#g\" \\
+  | sed \"s#INPUT_workdir#\${cur_dir}#g\" \\
+  | sed \"s#INPUT_adaptor_type#${adaptor_type}#g\" \\
+  | sed \"s#INPUT_fastq_sequence_length#${fastq_sequence_length}#g\" \\
   | sed \"s#INPUT_BT2IDX#${bt2idx}#g\" \\
   | sed \"s#INPUT_GENOME_SEQUENCE#${genome_sequence}#g\" \\
-  | sed \"s#INPUT_ORGANISM_BUILD#${organism_build}#g\" > __NAME__.config.json
+  | sed \"s#INPUT_ORGANISM_BUILD#${organism_build}#g\" \\
+  | sed \"s#INPUT_dup_peak_calling#${dup_peak_calling}#g\" \\
+  | sed \"s#INPUT_peak_caller#${peak_caller}#g\" \\
+  | sed \"s#INPUT_spike_in_bt2idx#${spike_in_bt2idx}#g\" \\
+  | sed \"s#INPUT_spike_in_sequence#${spike_in_sequence}#g\" \\
+  | sed \"s#INPUT_spike_in#${spike_in}#g\" \\
+  | sed \"s#INPUT_spike_in_norm#${spike_in_norm}#g\" \\
+  > __NAME__.config.json
 
 bash /opt/CUT-RUNTools-2.0/run_bulkModule.sh __NAME__.config.json __NAME__
 
 rm -f __NAME___R1_001.fastq.gz __NAME___R2_001.fastq.gz
-rm -rf __NAME__/trimmed __NAME__/aligned/__NAME__.bam __NAME__/aligned/dedup __NAME__/aligned/dup.marked __NAME__/aligned/dup.marked.120bp __NAME__/aligned/sorted 
+rm -rf __NAME__/trimmed __NAME__/aligned/__NAME__.bam __NAME__/aligned/dedup __NAME__/aligned/dup.marked __NAME__/aligned/sorted $rm_bam_folder
 
 #__FILE__ __OUTPUT__
 ",
@@ -112,7 +139,7 @@ rm -rf __NAME__/trimmed __NAME__/aligned/__NAME__.bam __NAME__/aligned/dedup __N
     source_ref            => $untrimed_ref,
     output_to_same_folder => 1,
     output_arg            => "-o",
-    output_file_ext    => "__NAME__/trimmed2/__NAME___1.paired.fastq.gz,__NAME__/trimmed2/__NAME___2.paired.fastq.gz,__NAME__/aligned/dedup.120bp/__NAME__.bam",
+    output_file_ext    => "__NAME__/trimmed2/__NAME___1.paired.fastq.gz,__NAME__/trimmed2/__NAME___2.paired.fastq.gz,$final_bam_file",
     use_tmp_folder        => 0,
     sh_direct             => 0,
     docker_prefix => "cutruntools2_",
