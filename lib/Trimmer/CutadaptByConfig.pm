@@ -133,7 +133,12 @@ sub get_cutadapt_option {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = $self->init_parameter( $config, $section );
+
+  my $thread_option = "";
+  if ($thread > 1) {
+    $thread_option = "-j $thread";
+  }
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $curSection = get_config_section( $config, $section );
@@ -187,8 +192,10 @@ sub perform {
 
   for my $sample_name ( sort keys %raw_files ) {
 
-    my $sampleConfig = $sampleConfigMap->{$sample_name};
-    my ( $ispairend, $adapter_option, $random_bases_option ) = get_cutadapt_option($sampleConfig);
+    my $sample_section = $sampleConfigMap->{$sample_name};
+    my ( $ispairend, $adapter_option, $random_bases_option ) = get_cutadapt_option($sample_section);
+
+    my $hard_trim = getValue( $sample_section, "hard_trim", 0 );
 
     my @rmlist = ();
 
@@ -240,6 +247,17 @@ cp $old_file $new_file
         push(@sample_files, $new_file);
         push(@rmlist, $new_file);
       }
+    }
+
+    if ($hard_trim > 0){
+      for my $sample_file (@sample_files) {
+        my $temp_file = basename($sample_file) . ".hardtrim.fastq";
+        print $pbs "
+cutadapt $thread_option -l $hard_trim -o $temp_file $sample_file
+";
+        push @rmlist, $temp_file;
+      }
+      @sample_files = @rmlist;
     }
 
     if ($ispairend) {
@@ -361,6 +379,11 @@ mv ${temp_file}.gz $final_file
         }
       }
     }
+    $self->clean_temp_files($pbs, \@rmlist);
+
+    print $pbs "
+cutadapt --version 2>&1 | awk '{print \"Cutadapt,v\"\$1}' > ${sample_name}.version
+";
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -408,6 +431,7 @@ sub result {
         push( @result_files, $result_dir . "/" . $finalLongFile );
       }
     }
+    push( @result_files, $result_dir . "/${sample_name}.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
   return $result;
