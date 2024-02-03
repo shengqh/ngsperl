@@ -81,41 +81,22 @@ sub perform {
     $thread_option = "-j $thread";
   }
 
+  my $use_option_only = get_option( $config, $section, "use_option_only", 0 );
+
   my $ispairend = get_is_paired_end_option( $config, $section );
 
   my $hard_trim = get_option( $config, $section, "hard_trim", 0 );
 
   my $remove_bases_option = "";
-  my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
-  if ( $random_bases_remove_after_trim > 0 ) {
-    $remove_bases_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
-    if($ispairend){
-      $remove_bases_option = $remove_bases_option . " -U $random_bases_remove_after_trim -U -$random_bases_remove_after_trim";
-    }
-  }
-  else {
-    my $random_bases_remove_after_trim_5 = get_option( $config, $section, "random_bases_remove_after_trim_5", 0 );
-    if ( $random_bases_remove_after_trim_5 > 0 ) {
-      $remove_bases_option = "-u $random_bases_remove_after_trim_5";
-    }
-    my $random_bases_remove_after_trim_3 = get_option( $config, $section, "random_bases_remove_after_trim_3", 0 );
-    if ( $random_bases_remove_after_trim_3 > 0 ) {
-      $remove_bases_option = $remove_bases_option . " -u -$random_bases_remove_after_trim_3";
-    }
-  }
-
-  my $trim_base_quality_after_adapter_trim = get_option( $config, $section, "trim_base_quality_after_adapter_trim", 0 );
-  if($trim_base_quality_after_adapter_trim > 0 && $remove_bases_option eq ""){
-    $remove_bases_option = "-q " . $trim_base_quality_after_adapter_trim;
-  }
-
   my $limit_options   = '';
+
   my $shortLimited        = $option =~ /(-m\s+\d+\s*)/;
   if ($shortLimited) {
     $shortLimited      = $1;
     $limit_options = $limit_options . " " . $shortLimited;
     $option =~ s/$shortLimited//;
   }
+
   my $longLimited = $option =~ /(-M\s+\d+\s*)/;
   if ($longLimited) {
     $longLimited       = $1;
@@ -123,50 +104,77 @@ sub perform {
     $option =~ s/$longLimited//;
   }
 
-  if ( index( $option, "--trim-n" ) == -1 ) {
-    $option = $option . " --trim-n";
-  }
-
-  my $trim_polyA = get_option( $config, $section, "trim_polyA", 0 );
-  print("trim_polyA=" . $trim_polyA.", option=" . $option . "\n");
-  if($trim_polyA){
-    if ( index( $option, "--poly-a" ) == -1 ) {
-      $option = $option . " --poly-a";
-    }
-  }
-
   my $adapter_option = $option;
-  if ( ($adapter_option !~ /\s-a\s/) && ($adapter_option !~ /^-a\s/) ) {
-    if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
-      my @adapters = split(',', $curSection->{adapter});
-      #print(@adapters);
-      if ($ispairend) {
-        $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
+
+  if(!$use_option_only){
+    my $random_bases_remove_after_trim = get_option( $config, $section, "random_bases_remove_after_trim", 0 );
+    if ( $random_bases_remove_after_trim > 0 ) {
+      $remove_bases_option = "-u $random_bases_remove_after_trim -u -$random_bases_remove_after_trim";
+      if($ispairend){
+        $remove_bases_option = $remove_bases_option . " -U $random_bases_remove_after_trim -U -$random_bases_remove_after_trim";
       }
-      else {
-        $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters);
+    }
+    else {
+      my $random_bases_remove_after_trim_5 = get_option( $config, $section, "random_bases_remove_after_trim_5", 0 );
+      if ( $random_bases_remove_after_trim_5 > 0 ) {
+        $remove_bases_option = "-u $random_bases_remove_after_trim_5";
+      }
+      my $random_bases_remove_after_trim_3 = get_option( $config, $section, "random_bases_remove_after_trim_3", 0 );
+      if ( $random_bases_remove_after_trim_3 > 0 ) {
+        $remove_bases_option = $remove_bases_option . " -u -$random_bases_remove_after_trim_3";
       }
     }
 
-    if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
-      my @adapters = split /,/, $curSection->{adapter_3};
-      if ($ispairend) {
-        $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
-      }
-      else {
-        $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters);
+    my $trim_base_quality_after_adapter_trim = get_option( $config, $section, "trim_base_quality_after_adapter_trim", 0 );
+    if($trim_base_quality_after_adapter_trim > 0 && $remove_bases_option eq ""){
+      $remove_bases_option = "-q " . $trim_base_quality_after_adapter_trim;
+    }
+
+    if ( index( $option, "--trim-n" ) == -1 ) {
+      $option = $option . " --trim-n";
+    }
+
+    my $trim_polyA = get_option( $config, $section, "trim_polyA", 0 );
+    print("trim_polyA=" . $trim_polyA.", option=" . $option . "\n");
+    if($trim_polyA){
+      if ( index( $option, "--poly-a" ) == -1 ) {
+        $option = $option . " --poly-a";
       }
     }
-  }
 
-  if ( ($adapter_option !~ /\s-g\s/) && ($adapter_option !~ /^-g\s/) ) {
-    if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
-      my @adapters = split /,/, $curSection->{adapter_5};
-      if ($ispairend) {
-        $adapter_option = $adapter_option . " -g " . join(' -g ', @adapters) . " -G " . join(' -G ', @adapters);
+    $adapter_option = $option;
+    if ( ($adapter_option !~ /\s-a\s/) && ($adapter_option !~ /^-a\s/) ) {
+      if ( defined $curSection->{adapter} && length( $curSection->{adapter} ) > 0 ) {
+        my @adapters = split(',', $curSection->{adapter});
+        #print(@adapters);
+        if ($ispairend) {
+          $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
+        }
+        else {
+          $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters);
+        }
       }
-      else {
-        $adapter_option = $adapter_option . " -g " .  join(' -g ', @adapters);
+
+      if ( defined $curSection->{adapter_3} && length( $curSection->{adapter_3} ) > 0 ) {
+        my @adapters = split /,/, $curSection->{adapter_3};
+        if ($ispairend) {
+          $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters) . " -A " . join(' -A ', @adapters);
+        }
+        else {
+          $adapter_option = $adapter_option . " -a " . join(' -a ', @adapters);
+        }
+      }
+    }
+
+    if ( ($adapter_option !~ /\s-g\s/) && ($adapter_option !~ /^-g\s/) ) {
+      if ( defined $curSection->{adapter_5} && length( $curSection->{adapter_5} ) > 0 ) {
+        my @adapters = split /,/, $curSection->{adapter_5};
+        if ($ispairend) {
+          $adapter_option = $adapter_option . " -g " . join(' -g ', @adapters) . " -G " . join(' -G ', @adapters);
+        }
+        else {
+          $adapter_option = $adapter_option . " -g " .  join(' -g ', @adapters);
+        }
       }
     }
   }
