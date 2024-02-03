@@ -35,6 +35,7 @@ sub perform {
   my $chromosome_grep_pattern = get_option( $config, $section, "chromosome_grep_pattern", "" );
   my $outputToSameFolder      = get_option( $config, $section, "output_to_same_folder",   1 );
   my $export_unmapped_reads      = get_option( $config, $section, "export_unmapped_reads",   0 );
+  my $sam_bam_option = get_option($config, $section, "sam_bam_option", "-Shu -F 256");
 
   my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
   my $picard_jar      = "";
@@ -109,7 +110,7 @@ if [ -s $log_file ]; then
   isSucceed=\$(cat $log_file | grep -c \"overall alignment rate\")
   if [ \$isSucceed ]; then
     echo alignment succeed, sorting sam to bam ...
-    samtools view -Shu -F 256 $sam_file | samtools sort -o $bam_file -T $sample_name - 
+    samtools view $sam_bam_option $sam_file | samtools sort -o $bam_file -T $sample_name - 
     if [[ -s $bam_file ]]; then
       echo index bam ...
       samtools index $bam_file 
