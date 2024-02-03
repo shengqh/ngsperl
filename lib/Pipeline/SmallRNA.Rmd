@@ -382,15 +382,23 @@ if(normalize_by_read == "FeatureReads"){
 }else{
   normalize_by_read = "total reads"
 }
+
+get_version<-function(name){
+  if(name %in% names(vmap)){
+    return(vmap[[name]])
+  }else{
+    return("")
+  }
+}
 ```
 
 TIGER (“Tools for Integrative Genome analysis of Extracellular sRNAs”), an in-house small RNA sequencing analysis pipeline, was used to quantify small RNAs[1]. 
-Briefly, Cutadapt (`r vmap['Cutadapt']`)[2] was used to trim 3’ adapters for raw reads. 
+Briefly, Cutadapt (`r get_version('Cutadapt')`)[2] was used to trim 3’ adapters for raw reads. 
 All reads with less than 16 nucleotides were designated as “too short” and discarded. 
-Quality control on both raw reads and adaptor-trimmed reads was performed using FastQC (`r vmap['FastQC']`)(www.bioinformatics.babraham.ac.uk/projects/fastqc). 
-The adaptor-trimmed reads were mapped to the `r vmap['host']` genome, addition to rRNA and tRNA reference sequences, 
-by Bowtie1 (`r vmap['bowtie']`)[3] allowing only one mismatch. 
-`r if(hasHostDEseq2){paste0("Significantly differential expressed features with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[4] using ", normalize_by_read, " as normalization factor.")}` 
+Quality control on both raw reads and adaptor-trimmed reads was performed using FastQC (`r get_version('FastQC')`)(www.bioinformatics.babraham.ac.uk/projects/fastqc). 
+The adaptor-trimmed reads were mapped to the `r get_version('host')` genome, addition to rRNA and tRNA reference sequences, 
+by Bowtie1 (`r get_version('bowtie')`)[3] allowing only one mismatch. 
+`r if(hasHostDEseq2){paste0("Significantly differential expressed features with ", deseq2criteria, " were detected by DESeq2 (", get_version('DESeq2'), ")[4] using ", normalize_by_read, " as normalization factor.")}` 
 `r if(hasNonhostGenome){"The reads with less than 20 nucleotides which were neither annotated as small RNA nor perfectly mapped to human genome were discarded. 
 Remaining unmapped reads were then mapped in parallel to exogenous structural RNA databases and curated 
 microbial genome databases allowing no mismatches. Reads that failed to align to any strategy were categorized 
