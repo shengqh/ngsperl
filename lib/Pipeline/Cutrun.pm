@@ -1,6 +1,9 @@
 #!/usr/bin/perl
 package Pipeline::Cutrun;
 
+#this is a wrapper for cutruntools2, except for peak calling, which supports using igg or input as control.
+#https://github.com/fl-yu/CUT-RUNTools-2.0/blob/cf72ca5d0801ccab46ca7cfdb6810628797f4c9b/src/bulk/bulk-pipeline.sh
+
 use strict;
 use warnings;
 use CQS::StringUtils;
@@ -39,7 +42,8 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "macs2_broad_option", "-f BAMPE --broad --broad-cutoff 0.1 -B --SPMR --keep-dup all");
   initDefaultValue( $def, "macs2_narrow_option", "-f BAMPE -q 0.01 -B --SPMR --keep-dup all");
-  initDefaultValue( $def, "seacr_option", "-f BAMPE -q 0.01 -B --SPMR --keep-dup all");
+
+  initDefaultValue( $def, "annotate_nearest_gene", 1 );
 
   if(defined $def->{treatments}){
     $def->{treatments_auto} = 0;
@@ -240,7 +244,7 @@ bowtie2 --version | grep bowtie2 | grep version | cut -d ' ' -f3 | awk '{print \
     class                 => "Chipseq::MACS2Callpeak",
     perform               => 1,
     target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$macs2_narrow_task",
-    option     => "-g $macs2_genome -f BAMPE --outdir . -q 0.01 -B --SPMR --keep-dup all",
+    option     => "-g $macs2_genome --outdir . ". getValue($def, "macs2_narrow_option"),
     source_ref => $bam_ref,
     groups     => $def->{"treatments"},
     controls   => $def->{"controls"},
@@ -259,7 +263,7 @@ bowtie2 --version | grep bowtie2 | grep version | cut -d ' ' -f3 | awk '{print \
     class                 => "Chipseq::MACS2Callpeak",
     perform               => 1,
     target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$macs2_broad_task",
-    option     => "-g $macs2_genome -f BAMPE --outdir . --broad --broad-cutoff 0.1 -B --SPMR --keep-dup all",
+    option     => "-g $macs2_genome --outdir . ". getValue($def, "macs2_broad_option"),
     source_ref => $bam_ref,
     groups     => $def->{"treatments"},
     controls   => $def->{"controls"},
@@ -330,7 +334,13 @@ python $extratoolsbin/get_summits_seacr.py __NAME___treat.stringent.bed | sort-b
   };
   push @$summary_ref, ( $seacr_task );
 
+  if($def->{annotate_nearest_gene}){
+    my $gene_bed = getValue($def, "gene_bed");
+    add_nearest_gene($config, $def, $summary_ref, $target_dir, $seacr_task, "_treat.stringent.sort.bed", $gene_bed);
+  }
+
   my $peak_file_ref = [ $seacr_task, "_treat.stringent.sort.bed" ];
+
   my $summit_ref = [ $seacr_task, "_treat.stringent.sort.summits.bed" ];
   my $suffix="_treat.stringent.sort.bed";
   my $summit_suffix="_treat.stringent.sort.summits.bed";
@@ -383,7 +393,6 @@ echo motif=`date`
 cat __FILE__ | grep -v -e \"chrM\" | sort-bed - | bedops -n 1 - $blacklist > $blacklist_filtered_dir/$peak
 cat __FILE2__ | grep -v -e \"chrM\" | sort-bed - | bedops -n 1 - $blacklist > $blacklist_filtered_dir/$summit
 
-
 echo \"[info] Get randomized [$num_peaks] peaks from the top [$total_peaks] peaks...\"
 echo \"[info] Filtering the blacklist regions for the selected peak files\"
 
@@ -399,6 +408,9 @@ echo \"[info] Start MEME analysis for de novo motif finding ...\"
 echo \"[info] Up to $num_motifs will be output ...\"
 meme-chip -oc . -dreme-m $num_motifs -meme-nmotifs $num_motifs $mpaddedfa_dir/$summitfa
 
+echo \"[info] Saving the De Novo motifs ...\"
+python $extratoolsbin/read.meme.py .
+
 rm -rf $tmp_dir
 
 echo \"[info] De Novo motifs can be found: `pwd` ...\"
@@ -407,8 +419,9 @@ echo \"[info] De Novo motifs can be found: `pwd` ...\"
     source_ref =>  $peak_file_ref,
     parameterSampleFile2_ref => $summit_ref,
     output_to_same_folder => 0,
-    output_file_ext => "_treat.stringent.sort.bed,_treat.stringent.sort.summits.bed",
-    sh_direct             => 0,
+    samplename_in_result => 0,
+    output_file_ext => "motifs,meme-chip.html",
+    sh_direct => 0,
     no_output => 1,
     docker_prefix => "cutruntools2_",
     pbs                   => {
@@ -418,6 +431,82 @@ echo \"[info] De Novo motifs can be found: `pwd` ...\"
     },
   };
   push @$summary_ref, ( $motif_task );
+
+
+  my $fa_dir="$tmp_dir/blacklist_filtered.fa";
+  my $fimo_task = "seacr_motif_fimo";
+  $config->{ $fimo_task } = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$fimo_task",
+    interpretor => "",
+    program => "",
+    check_program => 0,
+    option => "
+rm -f *.failed *.succeed
+
+p=$motif_scanning_pval
+echo \"[info] The signficance cutoff of Fimo scaning is \${p}...\"
+
+mbase='__NAME__'
+motif_dir='__FILE2__' # a directory containing a list of *.meme files
+outbam='__FILE3__'
+
+echo \"[info] Motif files can be found: \$motif_dir\"
+if [ ! -d $blacklist_filtered_dir ]; then
+  mkdir -p $blacklist_filtered_dir
+fi
+
+if [ ! -d $fa_dir ]; then
+  mkdir -p $fa_dir
+fi
+
+echo \"[info] Filtering the blacklist regions for the selected peak files\"
+cat '__FILE__' | grep -v -e \"chrM\" | sort-bed - | bedops -n 1 - '$blacklist' > '$blacklist_filtered_dir/$peak'
+
+echo \"[info] Getting Fasta sequences\"
+bedtools getfasta -fi $genome_sequence -bed $blacklist_filtered_dir/$peak -fo $fa_dir/\${mbase}.fa
+python $extratoolsbin/fix_sequence.py $fa_dir/\${mbase}.fa
+
+echo \"[info] Scaning the De Novo motifs for each peak\"
+for m in `ls -1 \$motif_dir`; do
+  motif=`basename \$m .meme`
+  fimo_d=fimo2.\$motif
+  if [ ! -d \$fimo_d ]; then
+    mkdir \$fimo_d
+  fi
+  fimo --thresh \$p --parse-genomic-coord -oc \$fimo_d \$motif_dir/\${motif}.meme $fa_dir/\${mbase}.fa
+  gff2bed < \$fimo_d/fimo.gff | awk 'BEGIN {IFS=\"\\t\"; OFS=\"\\t\";} {print \$1,\$2,\$3,\$4,\$5,\$6}' > \$fimo_d/fimo.bed
+
+  if [[ -s \$fimo_d/fimo.bed ]]; then
+    tmp=`echo \$motif | cut -d '.' -f2 | wc -c`
+    mlen=\$(( tmp - 1 ))
+    make_cut_matrix -v -b '(25-150 1)' -d -o 0 -r 100 -p 1 -f 3 -F 4 -F 8 -q 0 \$outbam \$fimo_d/fimo.bed > \$fimo_d/fimo.cuts.freq.txt
+    Rscript $extratoolsbin/run_centipede_parker.R \$fimo_d/fimo.cuts.freq.txt \$fimo_d/fimo.bed \$fimo_d/fimo.pdf \$mlen
+  else
+    touch \$fimo_d/fimo.bed.is_empty
+    echo \$fimo_d/fimo.bed is empty, ignored
+  fi
+done
+
+echo \"[info] Output can be found: `pwd`\"
+",
+    source_ref =>  $peak_file_ref,
+    parameterSampleFile2_ref => [ $motif_task, "motifs"],
+    parameterSampleFile3 => $treatment_samples,
+    output_to_same_folder => 0,
+    samplename_in_result => 0,
+    output_file_ext => "fimo.html",
+    sh_direct => 0,
+    no_output => 1,
+    docker_prefix => "cutruntools2_",
+    pbs                   => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => getValue($def, "motif_walltime", "24"),
+      "mem"      => getValue($def, "motif_mem", "40gb")
+    },
+  };
+  push @$summary_ref, ( $fimo_task );
 
   $config->{"sequencetask"} = {
     class      => getSequenceTaskClassname($cluster),
