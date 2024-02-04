@@ -24,6 +24,7 @@ our %EXPORT_TAGS = (
       add_chipqc
       addPeakPipelineReport
       add_bamplot_by_gff
+      add_nearest_gene
     )
   ]
 );
@@ -312,4 +313,27 @@ sub add_bamplot_by_gff {
     },
   };
   push @$tasks, ("bamplot");
+}
+
+sub add_nearest_gene {
+  my ($config, $def, $summary, $target_dir, $callName, $callFilePattern, $gene_bed) = @_;
+  my $geneName = $callName . "_gene";
+  $config->{$geneName} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${target_dir}/${callName}",
+    rtemplate                => "../Annotation/findNearestGene.r",
+    output_file              => "",
+    output_file_ext          => ".files.csv",
+    parameterSampleFile1_ref => [ $callName, $callFilePattern ],
+    parameterFile1           => $gene_bed,
+    rCode                    => '',
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "1",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, ($geneName);
 }
