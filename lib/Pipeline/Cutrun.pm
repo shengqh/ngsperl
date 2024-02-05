@@ -142,6 +142,16 @@ echo v0.36 > __NAME__.trimmomatic.version
   my $bowtie2_index = getValue( $def, "bowtie2_index" );
   my $awk1 = "$extratoolsbin/filter_below.awk";
 
+  my $remove_chromosome = getValue( $def, "remove_chromosome", "chrM" );
+  if ( $remove_chromosome !~ /^\s*$/ ) {
+    $remove_chromosome = "| grep -v '^$remove_chromosome'";
+  }
+
+  my $keep_chromosome = getValue( $def, "keep_chromosome", "chr" );
+  if ( $keep_chromosome !~ /^\s*$/ ) {
+    $keep_chromosome = "| grep '^$keep_chromosome'";
+  }
+
   my $bowtie2_task = "bowtie2";
   $config->{ $bowtie2_task } = {
     class                 => "CQS::ProgramWrapperOneToOne",
@@ -207,11 +217,27 @@ fi
 echo index=`date`
 samtools index __NAME__.120bp.bam
 
+echo clean_chromosome=`date`
+samtools idxstats __NAME__.120bp.bam | cut -f 1 $remove_chromosome $keep_chromosome | xargs samtools view -b -o __NAME__.120bp.clean.bam __NAME__.120bp.bam
+
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.clean.succeed
+  rm __NAME__.120bp.bam __NAME__.120bp.bam.bai
+else
+  echo \$status > __NAME__.clean.failed
+  rm -f __NAME__.120bp.clean.bam
+  exit \$status
+fi
+
+echo index=`date`
+samtools index __NAME__.120bp.clean.bam
+
 echo idxstats=`date`
-samtools idxstats __NAME__.120bp.bam > __NAME__.120bp.bam.chromosome.count
+samtools idxstats __NAME__.120bp.clean.bam $remove_chromosome $keep_chromosome > __NAME__.120bp.clean.bam.chromosome.count
 
 echo flagstat=`date`
-samtools flagstat __NAME__.120bp.bam > __NAME__.120bp.bam.stat 
+samtools flagstat __NAME__.120bp.clean.bam > __NAME__.120bp.clean.bam.stat 
 
 bowtie2 --version | grep bowtie2 | grep version | cut -d ' ' -f3 | awk '{print \"bowtie2,v\"\$1}' > __NAME__.bam.version
 
@@ -220,7 +246,7 @@ bowtie2 --version | grep bowtie2 | grep version | cut -d ' ' -f3 | awk '{print \
     source_join_delimiter => " -2 ",
     output_to_same_folder => 0,
     no_output => 1,
-    output_file_ext => ".120bp.bam,.120bp.bam.chromosome.count,.120bp.bam.stat,.log,.bam.version",
+    output_file_ext => ".120bp.clean.bam,.120bp.clean.bam.chromosome.count,.120bp.clean.bam.stat,.log,.bam.version",
     sh_direct             => 0,
     docker_prefix => "cutruntools2_",
     pbs                   => {
@@ -277,15 +303,114 @@ bowtie2 --version | grep bowtie2 | grep version | cut -d ' ' -f3 | awk '{print \
   };
   push @$summary_ref, ( $macs2_broad_task );
 
-  my $seacr_task = "seacr";
-  $config->{ $seacr_task } = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$seacr_task",
-    interpretor => "",
-    program => "",
-    check_program => 0,
-    option => "
+  my $has_control = defined $def->{controls};
+  my $seacr_task;
+
+  if($has_control){
+    my $genomecov_task = "genomecov";
+    my $genome_sizes = getValue($def, "genome_sizes");
+    $config->{ $genomecov_task } = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$genomecov_task",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      option     => "
+bedtools bamtobed -bedpe -i __FILE__ > __NAME__.bed
+
+awk '\$1==\$4 && \$6-\$2 < 1000 {print \$0}' __NAME__.bed > __NAME__.clean.bed
+rm __NAME__.bed
+
+cut -f 1,2,6 __NAME__.clean.bed | sort -k1,1 -k2,2n -k3,3n > __NAME__.fragments.bed
+rm __NAME__.clean.bed
+
+bedtools genomecov -bg -i __NAME__.fragments.bed -g $genome_sizes > __NAME__.fragments.bedgraph
+rm __NAME__.fragments.bed
+
+",
+      source_ref => $bam_ref,
+      sh_direct  => 0,
+      no_output => 1,
+      output_file_ext => ".fragments.bedgraph",
+      docker_prefix => "cutruntools2_",
+      pbs        => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "10gb"
+      },
+    };
+    push @$summary_ref, ( $genomecov_task );
+
+    $config->{genomecov_treatments} = {
+      class => "CQS::GroupPickTask",
+      source_ref => $genomecov_task,
+      groups => getValue($def, "treatments"),
+    };
+
+    $config->{genomecov_controls} = {
+      class => "CQS::GroupPickTask",
+      source_ref => $genomecov_task,
+      groups => getValue($def, "controls"),
+    };
+
+    my $genomecov_seacr_task = "${genomecov_task}_seacr";
+    my $seacr_path = getValue($def, "seacr_path");
+    $config->{$genomecov_seacr_task} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => "${target_dir}/$genomecov_seacr_task",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      docker_prefix => "cutruntools2_",
+      option => "
+echo seacr_relaxed=`date` 
+bash $seacr_path __FILE__ __FILE2__ norm relaxed __NAME__
+
+echo sort-bed_relaxed=`date` 
+sort-bed __NAME__.relaxed.bed > __NAME__.relaxed.sort.bed
+rm __NAME__.relaxed.bed
+
+echo get_summits_seacr_relaxed=`date` 
+python $extratoolsbin/get_summits_seacr.py __NAME__.relaxed.sort.bed | sort-bed - > __NAME__.relaxed.sort.summits.bed
+
+echo seacr_stringent=`date` 
+bash $seacr_path __FILE__ __FILE2__ norm stringent __NAME__
+
+echo sort-bed_stringent=`date` 
+sort-bed __NAME__.stringent.bed > __NAME__.stringent.sort.bed
+rm __NAME__.stringent.bed
+
+echo get_summits_seacr_stringent=`date` 
+python $extratoolsbin/get_summits_seacr.py __NAME__.stringent.sort.bed | sort-bed - > __NAME__.stringent.sort.summits.bed
+
+",
+      source_ref => "genomecov_treatments",
+      parameterSampleFile2_ref => "genomecov_controls",
+      output_file_ext => ".relaxed.sort.bed,.relaxed.sort.summits.bed,,.stringent.sort.bed,.stringent.sort.summits.bed",
+      output_to_same_folder => 0,
+      can_result_be_empty_file => 0,
+      no_output => 1,
+      sh_direct => 0,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    },
+    push @$summary_ref, ($genomecov_seacr_task);
+
+    $seacr_task = $genomecov_seacr_task;
+  }else{
+    my $macs2_narrow_seacr = "macs2_narrow_seacr";
+    $config->{ $macs2_narrow_seacr } = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$macs2_narrow_seacr",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      option => "
 rm -f *.failed *.succeed
 
 echo change.bdg=`date` 
@@ -321,30 +446,35 @@ python $extratoolsbin/get_summits_seacr.py __NAME___treat.stringent.bed | sort-b
 
 #__OUTPUT__
 ",
-    source_ref =>  [$macs2_narrow_task, "_treat_pileup.bdg\$"],
-    output_to_same_folder => 0,
-    output_file_ext => "_treat.stringent.sort.bed,_treat.stringent.sort.summits.bed",
-    sh_direct             => 0,
-    docker_prefix => "cutruntools2_",
-    pbs                   => {
-      "nodes"    => "1:ppn=1",
-      "walltime" => getValue($def, "seacr_walltime", "24"),
-      "mem"      => getValue($def, "seacr_mem", "40gb")
-    },
-  };
-  push @$summary_ref, ( $seacr_task );
+      source_ref =>  [$macs2_narrow_task, "_treat_pileup.bdg\$"],
+      output_to_same_folder => 0,
+      output_file_ext => "_treat.stringent.sort.bed,_treat.stringent.sort.summits.bed",
+      sh_direct             => 0,
+      docker_prefix => "cutruntools2_",
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => getValue($def, "seacr_walltime", "24"),
+        "mem"      => getValue($def, "seacr_mem", "40gb")
+      },
+    };
+    push @$summary_ref, ( $macs2_narrow_seacr );
+
+    $seacr_task = $macs2_narrow_seacr;
+  }
 
   if($def->{annotate_nearest_gene}){
     my $gene_bed = getValue($def, "gene_bed");
-    add_nearest_gene($config, $def, $summary_ref, $target_dir, $seacr_task, "_treat.stringent.sort.bed", $gene_bed);
+    add_nearest_gene($config, $def, $summary_ref, $target_dir, $seacr_task, ".sort.bed", $gene_bed);
   }
 
-  my $peak_file_ref = [ $seacr_task, "_treat.stringent.sort.bed" ];
+  my $motif_peak_type = getValue($def, "motif_peak_type", "stringent");
 
-  my $summit_ref = [ $seacr_task, "_treat.stringent.sort.summits.bed" ];
-  my $suffix="_treat.stringent.sort.bed";
-  my $summit_suffix="_treat.stringent.sort.summits.bed";
-  my $summit_padded_suffix="_treat.stringent.sort.summits_padded.fa";
+  my $peak_file_ref = [ $seacr_task, ".$motif_peak_type.sort.bed" ];
+
+  my $summit_ref = [ $seacr_task, ".$motif_peak_type.sort.summits.bed" ];
+  my $suffix=".$motif_peak_type.sort.bed";
+  my $summit_suffix=".$motif_peak_type.sort.summits.bed";
+  my $summit_padded_suffix=".$motif_peak_type.sort.summits_padded.fa";
 
   my $blacklist;
   if($macs2_genome eq "hs"){
@@ -372,7 +502,7 @@ python $extratoolsbin/get_summits_seacr.py __NAME___treat.stringent.bed | sort-b
   my $peak="__NAME__.peak.bed";
   my $summit="__NAME__.summit.bed";
 
-  my $motif_task = "seacr_motif";
+  my $motif_task = "${seacr_task}_motif_$motif_peak_type";
   $config->{ $motif_task } = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
@@ -432,9 +562,8 @@ echo \"[info] De Novo motifs can be found: `pwd` ...\"
   };
   push @$summary_ref, ( $motif_task );
 
-
   my $fa_dir="$tmp_dir/blacklist_filtered.fa";
-  my $fimo_task = "seacr_motif_fimo";
+  my $fimo_task = "${motif_task}_fimo";
   $config->{ $fimo_task } = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
