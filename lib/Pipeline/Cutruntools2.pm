@@ -114,15 +114,15 @@ cat $config_json | sed \"s#INPUT_fastq_directory#\${cur_dir}#g\" \\
   | sed \"s#INPUT_workdir#\${cur_dir}#g\" \\
   | sed \"s#INPUT_adaptor_type#${adaptor_type}#g\" \\
   | sed \"s#INPUT_fastq_sequence_length#${fastq_sequence_length}#g\" \\
-  | sed \"s#INPUT_BT2IDX#${bt2idx}#g\" \\
-  | sed \"s#INPUT_GENOME_SEQUENCE#${genome_sequence}#g\" \\
-  | sed \"s#INPUT_ORGANISM_BUILD#${organism_build}#g\" \\
+  | sed \"s#INPUT_bt2idx#${bt2idx}#g\" \\
+  | sed \"s#INPUT_genome_sequence#${genome_sequence}#g\" \\
+  | sed \"s#INPUT_organism_build#${organism_build}#g\" \\
   | sed \"s#INPUT_dup_peak_calling#${dup_peak_calling}#g\" \\
   | sed \"s#INPUT_peak_caller#${peak_caller}#g\" \\
   | sed \"s#INPUT_spike_in_bt2idx#${spike_in_bt2idx}#g\" \\
   | sed \"s#INPUT_spike_in_sequence#${spike_in_sequence}#g\" \\
-  | sed \"s#INPUT_spike_in#${spike_in}#g\" \\
   | sed \"s#INPUT_spike_in_norm#${spike_in_norm}#g\" \\
+  | sed \"s#INPUT_spike_in#${spike_in}#g\" \\
   > __NAME__.config.json
 
 bash /opt/CUT-RUNTools-2.0/run_bulkModule.sh __NAME__.config.json __NAME__
