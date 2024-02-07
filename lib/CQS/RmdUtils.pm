@@ -20,7 +20,10 @@ our $VERSION = '0.01';
 sub build_rmd_file {
   my ($config, $section, $result_dir, $result_file) = @_;
 
-  my $rtemplate = dirname(__FILE__) . "/" . $config->{$section}{report_rmd_file};
+  my $rtemplate = $config->{$section}{report_rmd_file};
+  if ( ! -e $rtemplate ) {
+    $rtemplate = dirname(__FILE__) . "/" . $rtemplate;
+  }
   my $rfile     = $result_dir . "/" . $result_file;
 
   if ( defined $config->{$section}{additional_rmd_files} ) {
