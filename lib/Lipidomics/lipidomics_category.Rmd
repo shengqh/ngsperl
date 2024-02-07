@@ -1,0 +1,26 @@
+
+Raw concentration file was saved to `r lst$raw_csv`.
+
+### Log concentration table
+
+```{r}
+print_table(lst$log, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed file was saved to `r lst$log_csv`.
+
+### Log scaled concentration table
+
+```{r}
+print_table(lst$log_scaled, byDT=TRUE, row.names=T)
+```
+
+Log10 transformed and scaled concentration file was saved to `r lst$log_scaled_csv`.
+
+### Box plot of pre/post log scaled concentration data
+
+```{r fig.width=box_width, fig.height=box_height}
+include_graphics(lst$log_scaled_png)
+```
+
+

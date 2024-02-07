@@ -1,0 +1,89 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(Hmisc)
+require(arsenal)
+library(tibble)
+library(tools)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(ggpubr)
+library(ComplexHeatmap)
+library(reshape2)
+library(readxl)
+library(openxlsx)
+library(ggvenn)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+```
+
+```{r}
+source('reportFunctions.R')
+source('lipidomics_func.R')
+source('countTableVisFunctions.R')
+
+myoptions=read_file_map("fileList1.preprocess.txt", do_unlist=FALSE)
+email=myoptions$email
+task_name=myoptions$task_name
+anno_file=myoptions$nomenclature_file
+```
+
+---
+`r paste0("title: Lipidomics Data Preprocessing of Project ", gsub(":", "_", task_name))`
+`r paste0("author: ", email)`
+---
+
+```{r}
+data_files=read_file_map("fileList2.preprocess.txt", do_unlist=FALSE)
+pos_file=data_files$POS
+neg_file=data_files$NEG
+
+result_prefix=task_name
+annotated_prefix=paste0(result_prefix, '.annotated')
+```
+
+# MD5 of files
+
+```{r}
+md5_tbl=rbind(
+  data.frame("file"=anno_file, "md5"=""),
+  c(pos_file,""),
+  c(neg_file,"")
+)
+
+for(i in 1:nrow(md5_tbl)){
+  md5_tbl$md5[i] = check_md5(md5_tbl$file[i], expect_md5="", return_md5=TRUE)
+}
+
+print_table(md5_tbl, row.names=F)
+```
+
+```{r child="lipidomics_preprocessing.Rmd"}
+```
+
+# Save the session information
+
+```{r}
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
+```

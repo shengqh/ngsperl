@@ -1,6 +1,15 @@
 library(data.table)
 library(dplyr)
 
+make_valid_name<-function(old_name){
+  new_name <- gsub(" ", "_", old_name)
+  new_name <- gsub("-", "_", new_name)
+  new_name <- gsub("\\+", "_", new_name)
+  is_number <- grepl("^[0-9]", new_name)
+  new_name[is_number] <- paste0("X", new_name[is_number])
+  return(new_name)
+}
+
 read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_groups=c("Solvent", "Blank"), not_sample_groups=c("AIS", "dBlank")){
   modePrefix=".*[POS|NEG]_"
 
@@ -25,6 +34,9 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
 
   all_not_sample_groups=c(qc_group, blank_groups, not_sample_groups)
   sample_meta=meta[!(meta[, "Class"] %in% all_not_sample_groups) & meta[, "File type"] == "Sample",]
+
+  sample_meta$Class_Sample <- make_valid_name(paste0(sample_meta$Class, "_", sample_meta$Sample))
+  
   write.csv(sample_meta, paste0(filePrefix, ".sample_meta.csv"), row.names=FALSE)
 
   df<-fread(filename, skip=4, data.table=FALSE)
