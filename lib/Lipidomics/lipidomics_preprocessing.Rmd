@@ -189,7 +189,7 @@ log_scale<-function(df, samples, data_prefix, box_width, box_height){
   
   log_scaled_png=paste0(data_prefix, ".log_scaled.png")
   ggsave(log_scaled_png, width=box_width, height=box_height, dpi=300, units="in", bg="white")
-  return(list(raw_csv=raw_csv, log=ldf, log_csv=getAbsolutePath(log_csv), log_scaled=sldf, log_scaled_csv=getAbsolutePath(log_scaled_csv), log_scaled_png=log_scaled_png))
+  return(list(raw_csv=getAbsolutePath(raw_csv), log=ldf, log_csv=getAbsolutePath(log_csv), log_scaled=sldf, log_scaled_csv=getAbsolutePath(log_scaled_csv), log_scaled_png=log_scaled_png))
 }
 
 box_width=13
@@ -210,7 +210,7 @@ Raw concentration file was saved to `r full_file`.
 df=final_anno[,samples]
 lst=log_scale(df, samples, paste0(annotated_prefix, ".species"), box_width, box_height)
 
-final_files=data.frame("File"=lst$log_csv, "Name"="Species")
+final_files=data.frame("RawFile"=lst$raw_csv, "LogFile"=lst$log_csv, "Name"="Species")
 ```
 
 ```{r child="lipidomics_category.Rmd"}
@@ -226,7 +226,7 @@ colnames(final_sub_class)<-c("Lipid_subclass", samples)
 final_sub_class <- final_sub_class %>% tibble::column_to_rownames("Lipid_subclass")
 
 lst=log_scale(final_sub_class, samples, paste0(annotated_prefix, ".sub_class"), box_width, box_height)
-final_files=rbind(final_files, data.frame("File"=lst$log_csv, "Name"="Sub_class"))
+final_files=rbind(final_files, data.frame("RawFile"=lst$raw_csv, "LogFile"=lst$log_csv, "Name"="Sub_class"))
 ```
 
 ```{r child="lipidomics_category.Rmd"}
@@ -241,7 +241,7 @@ colnames(final_main_class)<-c("Main_class", samples)
 final_main_class <- final_main_class %>% tibble::column_to_rownames("Main_class")
 
 lst=log_scale(final_main_class, samples, paste0(annotated_prefix, ".main_class"), box_width, box_height)
-final_files=rbind(final_files, data.frame("File"=lst$log_csv, "Name"="Main_class"))
+final_files=rbind(final_files, data.frame("RawFile"=lst$raw_csv, "LogFile"=lst$log_csv, "Name"="Main_class"))
 ```
 
 ```{r child="lipidomics_category.Rmd"}
@@ -257,12 +257,12 @@ colnames(final_category)=c("Categories", samples)
 final_category <- final_category %>% tibble::column_to_rownames("Categories")
 
 lst=log_scale(final_category, samples, paste0(annotated_prefix, ".category"), box_width, box_height)
-final_files=rbind(final_files, data.frame("File"=lst$log_csv, "Name"="Category"))
+final_files=rbind(final_files, data.frame("RawFile"=lst$raw_csv, "LogFile"=lst$log_csv, "Name"="Category"))
 ```
 
 ```{r child="lipidomics_category.Rmd"}
 ```
 
 ```{r}
-write.table(final_files, paste0(task_name, ".files.txt"), quote=FALSE, row.names=FALSE, col.names=FALSE, sep="\t")
+write.table(final_files, paste0(task_name, ".files.txt"), quote=FALSE, row.names=FALSE, col.names=TRUE, sep="\t")
 ```

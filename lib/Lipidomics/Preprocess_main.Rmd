@@ -45,13 +45,16 @@ source('countTableVisFunctions.R')
 
 myoptions=read_file_map("fileList1.preprocess.txt", do_unlist=FALSE)
 email=myoptions$email
+affiliation=myoptions$affiliation
 task_name=myoptions$task_name
 anno_file=myoptions$nomenclature_file
 ```
 
 ---
-`r paste0("title: Lipidomics Data Preprocessing of Project ", gsub(":", "_", task_name))`
-`r paste0("author: ", email)`
+title: Lipidomics Data Preprocessing of Project `r gsub(":", " ", task_name)`
+author:
+- name: `r email`
+  affiliation: `r affiliation`
 ---
 
 ```{r}
