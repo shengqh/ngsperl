@@ -96,14 +96,13 @@ if(is.na(width)){
 #establish the plot height from the first entry
 plotFile = as.character(summaryTable$PLOT_TABLE[1])
 plotTable = read.delim(plotFile)
-if(plotStyle == 'MULTIPLE'){
-  plotHeight = (nrow(plotTable)+1)
+if(is.na(height)){
+  plotHeight=6
 }else{
-  if(is.na(height)){
-    plotHeight=6
-  }else{
-    plotHeight=height
-  }
+  plotHeight=height
+}
+if(plotStyle == 'MULTIPLE'){
+  plotHeight = max(plotHeight, (nrow(plotTable)+1))
 }
 
 #now open up the pdf if this is a multipage pdf

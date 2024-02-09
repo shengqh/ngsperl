@@ -255,7 +255,7 @@ sub add_bamplot_by_gff {
 
   my $plotgroups = $def->{plotgroups};
   if ( !defined $plotgroups ) {
-    my $files         = $def->{files};
+    my $files         = getValue($config, "files");
     my @sortedSamples = sort keys %$files;
     $plotgroups = { getValue( $def, "task_name" ) => \@sortedSamples };
   }
@@ -301,7 +301,6 @@ sub add_bamplot_by_gff {
     is_rainbow_color   => 0,
     is_draw_individual => 0,
     is_single_pdf      => 1,
-    is_multi_page => getValue($def, "bamplot_multi_page", 1),
     draw_by_r => getValue($def, "bamplot_draw_by_r", 1),
     draw_by_r_width => getValue($def, "bamplot_draw_by_r_width", 10),
     draw_by_r_height => getValue($def, "bamplot_draw_by_r_height", 10),

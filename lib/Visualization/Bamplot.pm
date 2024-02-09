@@ -108,9 +108,7 @@ fi
         my $final_file = "${bamName}.pdf";
         print $pbs "
 if [ ! -s $final_file ]; then
-  if [ ! -s $curgff ]; then
-    cp $gff_file $curgff
-  fi
+  cp -f $gff_file $curgff
   bamPlot_turbo $option -b \"$bamFile\" -n \"$bamName\" -i $curgff $colorStr -o .
 fi
 ";
@@ -126,9 +124,7 @@ fi
       my $final_file  = "${name}.pdf";
       print $pbs "
 if [ ! -s $final_file ]; then
-  if [ ! -s $curgff ]; then
-    cp $gff_file $curgff
-  fi
+  cp -f $gff_file $curgff
   bamPlot_turbo $option -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -i $curgff $colorStr -o .
 fi
 ";
