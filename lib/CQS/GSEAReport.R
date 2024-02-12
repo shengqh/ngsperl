@@ -43,6 +43,7 @@ if(nrow(files) == 1 & files$V2[1] == outFile){
   rownames(files)<-files$V2
 }
 
+files$GseaCategory = basename(files$GseaCategory)
 vfiles = display_gsea(files, "", print_rmd = FALSE)
 write.csv(vfiles, paste0("gsea_files.csv"))
 

@@ -103,7 +103,8 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
   }))
   
   dt<-data.frame(Folder=newResultDirSubs)
-  dt$GseaCategory<-gsub(paste0(gesaResultDir,"/"), "", dt$Folder)
+  #dt$GseaCategory<-gsub(paste0(gesaResultDir,"/"), "", dt$Folder)
+  dt$GseaCategory<-basename(dt$Folder)
   write.csv(dt, file=paste0(gsea_name,".gsea.csv"), row.names=F)
   
   if (makeReport) {
