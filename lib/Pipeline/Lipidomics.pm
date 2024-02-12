@@ -33,6 +33,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "emailType", "FAIL" );
   initDefaultValue( $def, "cluster",   "slurm" );
 
+  initDefaultValue( $def, "combine_by", 'HIGHEST' ); #HIGHEST, SUM, BOTH
+
   initDefaultValue( $def, "max_thread",                '8' );
   initDefaultValue( $def, "sequencetask_run_time",     '12' );
 
@@ -62,7 +64,8 @@ sub getLipidomicsConfig {
       task_name => $task_name,
       email => $email,
       affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
-      nomenclature_file => getValue($def, "nomenclature_file")
+      nomenclature_file => getValue($def, "nomenclature_file"),
+      combine_by => getValue($def, "combine_by"),
     },
     parameterSampleFile2_ref => "files",
     suffix => ".preprocess",

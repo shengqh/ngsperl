@@ -113,7 +113,6 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
 
   filter_tb[5,]=c('remove d7/d9', nrow(res)) 
 
-
   res=res[res$mean_QC > 0,]
   filter_tb[6,]=c("mean(QC) > 0", nrow(res))  
 
@@ -122,9 +121,16 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
 
   res=res[res$blank_QC_ratio < 0.1,]
   filter_tb[8,]=c("mean(Blank)/mean(QC) < 0.1", nrow(res))  
-
   write.csv(filter_tb, paste0(filePrefix, ".filter.csv"), row.names=FALSE)
 
+  dupnames=res$Metabolite.name[duplicated(res$Metabolite.name)]
+  dup_tb=res[res$Metabolite.name %in% dupnames,]
+  write.csv(dup_tb, paste0(filePrefix, ".dup.csv"), row.names=FALSE)
+
+  dup_df=df[df$Metabolite.name %in% dupnames,]
+  write.csv(dup_df, paste0(filePrefix, ".dup_all.csv"), row.names=FALSE)
+
   res = res %>% dplyr::select(-c(mean_QC, mean_Blank, stdev_QC, RSD_QC, blank_QC_ratio))
+
   return(list(res=res, all_meta=meta, sample_meta=sample_meta, filter_tb=filter_tb))
 }

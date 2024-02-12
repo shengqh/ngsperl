@@ -93,7 +93,7 @@ Read data files, rename Sample with Class_Sample.
 read_files<-function(files, file_column){
   files_list <- list()
   for (i in 1:nrow(files)){
-    df <- data.frame(fread(files[i,file_column]), row.names=1)
+    df <- read.csv(files[i,file_column], row.names=1)
     stopifnot(all(colnames(df) == meta$Sample))
     colnames(df) <- meta$Class_Sample
     files_list[[i]]=df
@@ -107,20 +107,20 @@ log_files_list <- read_files(files, "LogFile")
 ```
 
 ```{r}
-remove_samples<-function(files_list, meta, pattern){
-  files_list <- lapply(files_list, function(x){
+remove_samples<-function(files_list, pattern){
+  result <- lapply(files_list, function(x){
     y <- x[, -grep(pattern, colnames(x))]
     return(y)
   })
-  return(file_list)
+  return(result)
 }
 
 if(myoptions$remove_sample_pattern != ""){
   cat("\n# Remove samples\n\n")
   cat(myoptions$remove_sample_description, "\n\n")
 
-  raw_files_list_sel <- remove_samples(raw_files_list)
-  log_files_list_sel <- remove_samples(log_files_list)
+  raw_files_list_sel <- remove_samples(files_list=raw_files_list, pattern=myoptions$remove_sample_pattern)
+  log_files_list_sel <- remove_samples(files_list=log_files_list, pattern=myoptions$remove_sample_pattern)
 
   meta_sel <- meta[-grep(myoptions$remove_sample_pattern, meta$Class_Sample),]
   datatable(meta_sel, rownames = F)
@@ -130,14 +130,15 @@ if(myoptions$remove_sample_pattern != ""){
 
   meta_sel=meta
 }
-rm(files_list, meta)
+rm(raw_files_list, log_files_list, meta)
 ```
 
 ```{r}
-melt_samples<-function(files_list_melt){
-  files_list_melt <- lapply(files_list_melt, function(x){
-    x$Feature=rownames(x)
-    a <- reshape2::melt(x, id.vars = "Feature")
+melt_samples<-function(files_list){
+  files_list_melt <- lapply(files_list, function(x){
+    x$Feature<-rownames(x)
+    #somehow melt is not compatible with data.table, so use read.csv to read data in previous trunk.
+    a <- reshape2::melt(x, id.vars="Feature")
     b <- cbind(a, Group = unname(unlist(sample_group_map[as.character(a$variable)])))
     return(b)
   })
@@ -213,24 +214,22 @@ draw_pca <- function(data, groups, category, prefix){
 }
 
 result = paste0(result, "\n# PCA\n\n")
-for (i in 1:length(log_files_list)){
-  category = names(log_files_list)[i]
+for (i in 1:length(log_files_list_sel)){
+  category = names(log_files_list_sel)[i]
   result = paste0(result, "\n\n## ", category, "\n")
-  png_file = draw_pca(data=log_files_list[[i]], groups=meta_sel$Class, category=category, prefix=paste0(task_name, ".", category))
+  png_file = draw_pca(data=log_files_list_sel[[i]], groups=meta_sel$Class, category=category, prefix=paste0(task_name, ".", category))
   result = paste0(result, getFigure_width_height(png_file, fig.width=pca_width, fig.height=pca_height))
 }
 ```
 
 ```{r}
 heatmap_width=7
-heatmap_height=7
+heatmap_heights=c(5, 4.5, 4, 3)
 
-draw_pheatmap <- function(data, groups, annotation_colors, category, prefix){
-  data_df <- data
+draw_pheatmap <- function(data_df, groups, annotation_colors, category, prefix, heatmap_width, heatmap_height){
   show_rownames = ifelse(nrow(data_df) <= 30, TRUE, FALSE)
-  cellheight = ifelse(nrow(data_df) <= 30, 8, NA)
+  cellheight = ifelse(nrow(data_df) <= 30, 8, 2)
   png_file = paste0(prefix, ".heatmap.png")
-  png(png_file, width = heatmap_width, height = heatmap_height, units = "in", res = 300, bg = "white")
   pheatmap( data_df, 
             main = category,
             scale = "row", 
@@ -242,8 +241,12 @@ draw_pheatmap <- function(data, groups, annotation_colors, category, prefix){
             border_color = NA,  
             fontsize = 7, 
             cellheight = cellheight, 
-            cluster_cols = T)
-  ignored = dev.off()
+            cluster_cols = T,
+            filename=png_file,
+            width=heatmap_width,
+            height=heatmap_height)
+  #g <- p1[[4]]
+  #ggsave(png_file, g, width = heatmap_width, height = heatmap_height, dpi = 300, units = "in", bg="white")
   return(png_file)
 }
 
@@ -256,10 +259,25 @@ names(groups_colors) <- group_names
 annotation_colors = list(groups = groups_colors)
 
 result = paste0(result, "\n# Heatmap\n\n")
-for (i in 1:length(log_files_list)){
-  category = names(log_files_list)[i]
+for (i in 1:length(log_files_list_sel)){
+  category = names(log_files_list_sel)[i]
   result = paste0(result, "\n\n## ", category, "\n")
-  png_file = draw_pheatmap(data = log_files_list[[i]], groups = groups, annotation_colors = annotation_colors, category=category, prefix=paste0(task_name, ".", category))
+
+  data_df = log_files_list_sel[[i]]
+  heatmap_height = heatmap_heights[i]
+
+  png_file = draw_pheatmap(data_df = data_df, 
+    groups = groups, 
+    annotation_colors = annotation_colors, 
+    category=category, 
+    prefix=paste0(task_name, ".", category),
+    heatmap_width=heatmap_width,
+    heatmap_height=heatmap_height)
+
+  if(category == "Species"){
+    result = paste0(result, "\n\nSpecies heatmap file=", png_file, "\n\n")
+  }
+
   result = paste0(result, getFigure_width_height(png_file, fig.width=heatmap_width, fig.height=heatmap_height))
 }
 ```
@@ -311,11 +329,12 @@ draw_stacked_per <- function(data, category, prefix){
 }
 
 result = paste0(result, "\n# Stacked barplot\n\n")
+i=1
 for (i in 1:length(raw_files_list_melt)){
   category = names(raw_files_list_melt)[i]
   result = paste0(result, "\n\n## ", category, "\n")
 
-  top_f_genes = select_top_n(data=raw_files_list[[i]], n=5, max_n=10)
+  top_f_genes = select_top_n(data=raw_files_list_sel[[i]], n=5, max_n=10)
 
   data=raw_files_list_melt[[i]]
   top_data=data[data$Feature %in% top_f_genes,]

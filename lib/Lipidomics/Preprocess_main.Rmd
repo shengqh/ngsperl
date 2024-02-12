@@ -36,6 +36,9 @@ knitr::opts_chunk$set(
   message=FALSE, 
   results="asis"
 )
+if(0){
+  setwd('/nobackup/vickers_lab/test/20240207_lipidomics_20231207/preprocess/result')
+}
 ```
 
 ```{r}
@@ -48,6 +51,11 @@ email=myoptions$email
 affiliation=myoptions$affiliation
 task_name=myoptions$task_name
 anno_file=myoptions$nomenclature_file
+combine_by=myoptions$combine_by
+
+if(!combine_by %in% c("SUM", "HIGHEST")){
+  stop(paste0("Unknown combine_by value, ", combine_by, ". It should be HIGHEST or SUM."))
+}
 ```
 
 ---

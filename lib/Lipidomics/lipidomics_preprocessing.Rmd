@@ -92,20 +92,65 @@ stopifnot(all(colnames(pos_df)==colnames(neg_df)))
 
 Sample names in pos and neg files are identical.
 
+We will combine positive and negative data by `r combine_by`.
+
+- HIGHEST: use the highest value of same molecule from the two modes.
+- SUM: sum the values of same molecule from the two modes.
+
 ```{r}
-combined=rbind(pos_df, neg_df)
-ontology<-combined[,c(1,2)]
-ontology<-ontology[!duplicated(ontology$Metabolite.name), ]
-no_ontology= combined %>% select(-Ontology)
-f<-aggregate(. ~ Metabolite.name, no_ontology, sum)
-colnames(f)<-colnames(no_ontology)
-final=merge(ontology, f, by="Metabolite.name")
+pos_df$Mode="POS"
+neg_df$Mode="NEG"
+combined=rbind(pos_df, neg_df) %>% relocate(Mode, .after=Ontology)
+
+get_highest_value<-function(combined){
+  dupnames=combined$Metabolite.name[duplicated(combined$Metabolite.name)]
+  final=combined[!combined$Metabolite.name %in% dupnames,]
+
+  #find the entry with highest value in most samples
+  dupname=dupnames[1]
+  for(dupname in dupnames){
+    cur_dup=combined[combined$Metabolite.name==dupname,] %>% select(-Metabolite.name, -Ontology, -Mode)
+    cur_rank = apply(cur_dup, 2, function(y) rank(-y))
+    sum_rank=rowSums(cur_rank)
+    min_rank=which(sum_rank==min(sum_rank))
+    min_dup=cur_dup[min_rank,]
+    final=rbind(final, combined[rownames(min_dup),])
+  }  
+  return(final)
+}
+
+get_sum_value<-function(combined){
+  dupnames=combined$Metabolite.name[duplicated(combined$Metabolite.name)]
+  final=combined[!combined$Metabolite.name %in% dupnames,]
+
+  dupname=dupnames[1]
+  for(dupname in dupnames){
+    cur_dup=combined[combined$Metabolite.name==dupname,]
+    # It is possible that all the duplicates are from same mode.
+    # We need to check the mode instead of just assign "BOTH"
+    if(length(unique(cur_dup$Mode))==2){ 
+      cur_dup$Mode="BOTH"
+    }
+
+    cur_res=aggregate(. ~ Metabolite.name + Ontology + Mode, cur_dup, sum)
+    final=rbind(final, cur_res[,colnames(final)])
+  }  
+  return(final)
+}
+
+if(combine_by == "SUM"){
+  final=get_sum_value(combined)
+}else if(combine_by == "HIGHEST"){
+  final=get_highest_value(combined)
+}
+
 combined_file=paste0(result_prefix, ".combined.csv")
 write.csv(final, combined_file, row.names=FALSE)
 print_table(final, row.names=FALSE, byDT=TRUE)
 ```
 
-There are total `r nrow(final)` metabolites. Data was saved to `r combined_file`.
+After combining POS and NEG data, removing duplicate molecules, there are total `r nrow(final)` metabolites. 
+Data was saved to <mark>`r combined_file`</mark>.
 
 # Add annotation
 
@@ -150,12 +195,12 @@ anno_slim=anno_slim[!duplicated(anno_slim$Abbreviation),]
 
 final_anno=dplyr::left_join(final, anno_slim, join_by(Ontology==Abbreviation)) %>%
   dplyr::rename(Abbreviation=Ontology) %>%
-  select(c("Metabolite.name", "Abbreviation", "Lipid_subclass","Main_class","Categories"), everything()) %>%
+  select(c("Metabolite.name", "Mode", "Abbreviation", "Lipid_subclass","Main_class","Categories"), everything()) %>%
   rename("Lipid_subclass_abbreviation"="Abbreviation")
 final_anno$Main_class[is.na(final_anno$Main_class)] = "Others"
 final_anno$Categories[is.na(final_anno$Categories)] = "Others"
 rownames(final_anno)<-final_anno$Metabolite.name
-samples=colnames(final_anno)[6:ncol(final_anno)]
+samples=colnames(final_anno)[7:ncol(final_anno)]
 
 get_box<-function(bdf, samples){
   bdf=data.frame(bdf)
@@ -219,7 +264,7 @@ final_files=data.frame("RawFile"=lst$raw_csv, "LogFile"=lst$log_csv, "Name"="Spe
 ## Sub class
 
 ```{r}
-final_sub_class=final_anno[,c(2,6:ncol(final_anno)),drop=FALSE]
+final_sub_class=final_anno[,c("Lipid_subclass_abbreviation",samples),drop=FALSE]
 
 final_sub_class=aggregate(. ~ Lipid_subclass_abbreviation, final_sub_class, sum)
 colnames(final_sub_class)<-c("Lipid_subclass", samples)
@@ -235,7 +280,7 @@ final_files=rbind(final_files, data.frame("RawFile"=lst$raw_csv, "LogFile"=lst$l
 ## Main class
 
 ```{r fig.width=box_width, fig.height=box_height}
-final_main_class=final_anno[,c(4,6:ncol(final_anno)),drop=FALSE]
+final_main_class=final_anno[,c("Main_class",samples),drop=FALSE]
 final_main_class=aggregate(. ~ Main_class, final_main_class, sum)
 colnames(final_main_class)<-c("Main_class", samples)
 final_main_class <- final_main_class %>% tibble::column_to_rownames("Main_class")
@@ -250,7 +295,7 @@ final_files=rbind(final_files, data.frame("RawFile"=lst$raw_csv, "LogFile"=lst$l
 ## Category
 
 ```{r fig.width=box_width, fig.height=box_height}
-final_category=final_anno[,c(5,6:ncol(final_anno)),drop=FALSE]
+final_category=final_anno[,c("Categories",samples),drop=FALSE]
 
 final_category=aggregate(. ~ Categories, final_category, sum)
 colnames(final_category)=c("Categories", samples)
