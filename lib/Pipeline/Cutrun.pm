@@ -6,6 +6,7 @@ package Pipeline::Cutrun;
 
 use strict;
 use warnings;
+use File::Basename;
 use CQS::StringUtils;
 use CQS::FileUtils;
 use CQS::SystemUtils;
@@ -450,6 +451,124 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
       $seacr_task = $genomecov_seacr_task;
       $peak_calling_task = $seacr_task;
     }
+  }
+
+  if ( getValue( $def, "perform_homer_find_peaks" ) ) {
+    my $homer_makeTagDirectory = "homer_01_makeTagDirectory";
+    my $homer_makeTagDirectory_option = getValue($def, "homer_makeTagDirectory_option", "");
+    $config->{ $homer_makeTagDirectory } = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$homer_makeTagDirectory",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      option     => "
+makeTagDirectory __NAME__ $homer_makeTagDirectory_option __FILE__
+",
+      source_ref => $bam_ref,
+      sh_direct  => 0,
+      no_output => 1,
+      output_file_ext => "__NAME__",
+      pbs        => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "10gb"
+      },
+    };
+    push @$summary_ref, ( $homer_makeTagDirectory );
+
+    $config->{tag_treatments} = {
+      class => "CQS::GroupPickTask",
+      source_ref => $homer_makeTagDirectory,
+      groups => getValue($def, "treatments"),
+    };
+
+    my $control_def = undef;
+    my $control_option = "";
+    if(defined $def->{controls}){
+      $config->{tag_controls} = {
+        class => "CQS::GroupPickTask",
+        source_ref => $homer_makeTagDirectory,
+        groups => getValue($def, "controls"),
+      };
+      $control_option = "-i __FILE2__";
+      $control_def = "tag_controls";
+    }
+
+    my $homer_findPeaks = "homer_02_findPeaks";
+    my $homer_findPeaks_option = getValue($def, "homer_findPeaks_option", "-style factor -center -size 200 -tbp 0");
+    $config->{$homer_findPeaks} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => "${target_dir}/$homer_findPeaks",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      option => "
+findPeaks __FILE__ $homer_findPeaks_option $control_option -o __NAME__.peaks.txt
+",
+      source_ref => "tag_treatments",
+      parameterSampleFile2_ref => $control_def,
+      output_file_ext => ".peaks.txt",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 0,
+      no_output => 1,
+      sh_direct => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    },
+    push @$summary_ref, ($homer_findPeaks);
+
+    my $homer_genome = getValue($def, "homer_genome");
+    my $rename_py = dirname(__FILE__) . "/../Homer/rename_path.py";
+    my $homer_mergePeaks = "homer_03_mergePeaks";
+    my $homer_mergePeaks_option = getValue($def, "homer_mergePeaks_option", "-d given");
+    $config->{$homer_mergePeaks} = {
+      class => "CQS::ProgramWrapper",
+      target_dir => "${target_dir}/$homer_mergePeaks",
+      interpretor => "",
+      program => "",
+      check_program => 0,
+      option => "
+echo mergePeaks=`date`
+mergePeaks $homer_mergePeaks_option \\
+  __FILE__ \\
+  -matrix __NAME__ -venn __NAME__.venn.txt > __NAME__.all_dGiven.peaks.txt
+
+echo rename_names=`date`
+python $rename_py __NAME__.all_dGiven.peaks.txt __NAME__.venn.txt __NAME__.count.matrix.txt __NAME__.logPvalue.matrix.txt __NAME__.logRatio.matrix.txt
+
+awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}' __NAME__.all_dGiven.peaks.txt > __NAME__.all_dGiven.peaks.bed
+
+echo annotatePeaks_raw=`date`
+annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -raw -dfile __NAME___fileList2.list > __NAME__.all_dGiven.peaks.raw.txt
+
+echo annotatePeaks_rpkm=`date`
+annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -fpkm -dfile __NAME___fileList2.list > __NAME__.all_dGiven.peaks.fpkm.txt
+",
+      source_ref => $homer_findPeaks,
+      source_join_delimiter => " \\\n  ",
+      source_type => "array",
+      parameterSampleFile2_ref => $homer_makeTagDirectory,
+      output_arg => "",
+      output_file_ext => ".all_dGiven.peaks.txt,.all_dGiven.peaks.bed,.all_dGiven.peaks.fpkm.txt",
+      output_to_same_folder => 1,
+      can_result_be_empty_file => 0,
+      no_output => 1,
+      sh_direct => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    },
+    push @$summary_ref, ($homer_mergePeaks);
+
+    my $homer_motif = "homer_04_motif";
+    addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $homer_mergePeaks, ".bed", $homer_motif );
   }
 
   if ( getValue( $def, "perform_homer" ) ) {

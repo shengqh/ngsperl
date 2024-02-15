@@ -37,7 +37,7 @@ sub replace_tag {
   my $input;
   ($cur_option, $input) = process_parameter_sample_file($config, $section, $result_dir, $task_name, $task_suffix, $cur_option, $source_key, 1);
 
-  my $output_arg            = get_option( $config, $section, "output_arg" );
+  my $output_arg            = get_option( $config, $section, "output_arg", "" );
   my $no_output            = get_option( $config, $section, "no_output", 0 );
 
   my $output_option = "$output_arg $final_prefix";
@@ -117,7 +117,9 @@ sub perform {
     my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
     if ( $listfile ne "" ) {
       $listfile = basename($listfile);
-      $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
+      if ( $option =~ /$listfile/ ) {
+        $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
+      }
     }
   }
 

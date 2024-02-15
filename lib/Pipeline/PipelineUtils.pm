@@ -843,8 +843,10 @@ sub addDiffbind {
 }
 
 sub addHomerAnnotation {
-  my ( $config, $def, $summary, $target_dir, $callName, $callFilePattern ) = @_;
-  my $homerName = $callName . "_homer_annotation";
+  my ( $config, $def, $summary, $target_dir, $callName, $callFilePattern, $homerName ) = @_;
+  if(!defined $homerName){
+    $homerName = $callName . "_homer_annotation";
+  }
   $config->{$homerName} = {
     class        => "Homer::Annotation",
     option       => getValue( $def, "homer_option" ),
