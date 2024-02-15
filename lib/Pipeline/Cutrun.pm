@@ -571,13 +571,15 @@ annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -fpkm -dfile __NAME
     addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $homer_mergePeaks, ".bed", $homer_motif );
   }
 
-  if ( getValue( $def, "perform_homer" ) ) {
-    my $homer = addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $peak_calling_task, ".bed" );
-  }
+  if(defined $peak_calling_task){
+    if ( getValue( $def, "perform_homer" ) ) {
+      my $homer = addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $peak_calling_task, ".bed" );
+    }
 
-  if($def->{annotate_nearest_gene}){
-    my $gene_bed = getValue($def, "gene_bed");
-    add_nearest_gene($config, $def, $summary_ref, $target_dir, $peak_calling_task, ".bed", $gene_bed);
+    if($def->{annotate_nearest_gene}){
+      my $gene_bed = getValue($def, "gene_bed");
+      add_nearest_gene($config, $def, $summary_ref, $target_dir, $peak_calling_task, ".bed", $gene_bed);
+    }
   }
 
   $config->{"sequencetask"} = {
