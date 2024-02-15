@@ -314,6 +314,8 @@ sub addMutect2Wdl {
   }else{
     $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads_ref"} = [$mutect2_normal_files, ".bam\$"];
     $config->{$mutect2_call}{"input_parameters"}{"Mutect2.normal_reads_index_ref"} = [$mutect2_normal_files, ".bai\$"];
+    #for sequence task dependency
+    $config->{$mutect2_call}{"normal_reads_ref"} = [$mutect2_normal_files, ".bam\$"];
   }
 
   if($is_pon){
@@ -410,7 +412,7 @@ sub addSomaticCNV {
         "mem"       => "70gb"
       },
     };
-    #push @$summary, $somaticCNV_pon;
+    push @$summary, $somaticCNV_pon;
 
 #    $pon=[$somaticCNV_pon, ".pon.hdf5\$"];
      $pon = {
@@ -474,6 +476,7 @@ sub addSomaticCNV {
   if (defined($def->{"CNVSomaticPairWorkflow.common_sites"}) and $def->{"CNVSomaticPairWorkflow.common_sites"} ne "") {
     $config->{$somaticCNV_call}->{input_parameters}->{"CNVSomaticPairWorkflow.common_sites"}=$def->{"CNVSomaticPairWorkflow.common_sites"};
   }
+  push(@$summary, $somaticCNV_call);
 
 #summary CNV results
   my $somaticCNV_call_summary = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_summary";
@@ -498,7 +501,7 @@ sub addSomaticCNV {
       },
     };
 
-  #push @$summary, $somaticCNV_call;
+  push(@$summary, $somaticCNV_call_summary);
   return ($somaticCNV_call);
 }
 
