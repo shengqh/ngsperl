@@ -79,7 +79,7 @@ sub getConfig {
       $summary, 
       $target_dir, 
       $count_task_name, 
-      getValue($def, "count_fastq_folder"),
+      getValue($def, "count_fastq_folder", ""),
       "count_files", 
       getValue($def, "count_reference"),
       $count_jobmode,

@@ -954,13 +954,24 @@ sub addCellRangerCount {
 
   my $sh_direct = $job_arg =~ /slurm/;
 
+  my $count_fastq_folders = getValue($def, "count_fastq_folders", {});
+  my $names = $config->{$count_source};
+  for my $name (sort keys %$names){
+    if(not defined $count_fastq_folders->{$name}){
+      if($fastq_folder eq ""){
+        die "Cannot find fastq folder for $name, you need to define count_fastq_folder in the configuration file.";
+      }
+      $count_fastq_folders->{$name} = $fastq_folder;
+    }
+  }
+
   $config->{$task_name} = {
     class => "CQS::ProgramWrapperOneToOne",
     target_dir => "${target_dir}/$task_name",
     docker_prefix => "cellranger_",
     program => "cellranger",
     check_program => 0,
-    option => " count --disable-ui --id=__NAME__ --transcriptome=$count_reference --fastqs=$fastq_folder --sample=__FILE__ $job_arg $chemistry_arg
+    option => " count --disable-ui --id=__NAME__ --transcriptome=$count_reference --fastqs=__FILE2__ --sample=__FILE__ $job_arg $chemistry_arg
 
 if [[ -s __NAME__/outs ]]; then
   rm -rf __NAME__/SC_RNA_COUNTER_CS
@@ -974,9 +985,10 @@ fi
 ",
     source_arg => "",
     source_ref => $count_source,
+    parameterSampleFile2 => $count_fastq_folders,
     output_arg => "",
     output_file_prefix => "/filtered_feature_bc_matrix.h5",
-    output_file_ext => "/filtered_feature_bc_matrix.h5,/metrics_summary.csv",
+    output_file_ext => "/filtered_feature_bc_matrix.h5,/metrics_summary.csv,/web_summary.html",
     output_to_same_folder => 1,
     can_result_be_empty_file => 0,
     sh_direct   => $sh_direct,
