@@ -27,19 +27,29 @@ sub result {
   my $groups = get_raw_files($config, $section, "groups");
   my $pick_index = get_option( $config, $section, "sample_index_in_group", 0);
   my $can_be_empty = get_option( $config, $section, "can_be_empty", 0);
+  my $return_all = get_option( $config, $section, "return_all", 0);
 
   my $result = {};
 
   for my $group_name (keys %$groups) {
     my $samples = $groups->{$group_name};
-    my $sample_name = is_array($samples) ? $samples->[$pick_index] : $samples;
-    if(not defined $sample_name) {
-      if($can_be_empty){
-        $result->{$group_name} = [];
+    if($return_all && is_array($samples)){
+      my $result_files = [];
+      for my $sample_name (@$samples){
+        my $sample_files = $raw_files->{$sample_name};
+        push(@$result_files, @$sample_files);
       }
-    }else{
-      my $result_files = $raw_files->{$sample_name};
       $result->{$group_name} = filter_array( $result_files, $pattern );
+    }else{
+      my $sample_name = is_array($samples) ? $samples->[$pick_index] : $samples;
+      if(not defined $sample_name) {
+        if($can_be_empty){
+          $result->{$group_name} = [];
+        }
+      }else{
+        my $result_files = $raw_files->{$sample_name};
+        $result->{$group_name} = filter_array( $result_files, $pattern );
+      }
     }
   }
 
