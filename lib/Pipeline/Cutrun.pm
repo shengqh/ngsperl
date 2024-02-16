@@ -523,11 +523,70 @@ findPeaks __FILE__ $homer_findPeaks_option $control_option -o __NAME__.peaks.txt
     push @$summary_ref, ($homer_findPeaks);
 
     my $homer_genome = getValue($def, "homer_genome");
-    my $rename_py = dirname(__FILE__) . "/../Homer/rename_path.py";
+    my $rename_1_py = dirname(__FILE__) . "/../Homer/rename_find_peaks_path.py";
+    my $rename_2_py = dirname(__FILE__) . "/../Homer/rename_annotate_peaks_path.py";
     my $homer_mergePeaks = "homer_03_mergePeaks";
     my $homer_mergePeaks_option = getValue($def, "homer_mergePeaks_option", "-d given");
+
+    my $homer_mergePeaks_groups;
+    if($def->{homer_mergePeaks_groups_pattern}){
+      my $gpattern = $def->{homer_mergePeaks_groups_pattern};
+      $homer_mergePeaks_groups = {};
+      my $treatments = $def->{treatments};
+      for my $samplename (keys %$treatments){
+        my $groupname = $samplename;
+        if($samplename =~ /$gpattern/){
+          $groupname = $1;
+          if(defined $2){
+            $groupname = $groupname . $2;
+          }
+          if(defined $3){
+            $groupname = $groupname . $3;
+          }
+          #print($groupname . " : " . $samplename . "\n");
+          if (not defined $homer_mergePeaks_groups->{$groupname}){
+            $homer_mergePeaks_groups->{$groupname} = [$samplename];
+          }
+          else{
+            my $samples = $homer_mergePeaks_groups->{$groupname};
+            push (@$samples, $samplename);
+          }
+        }
+      }
+    }elsif($def->{homer_mergePeaks_groups}){
+      $homer_mergePeaks_groups = $def->{homer_mergePeaks_groups};
+    }else{
+      $homer_mergePeaks_groups = {};
+      my $treatments = $def->{treatments};
+      $homer_mergePeaks_groups->{$def->{task_name}} = [sort keys %$treatments];
+    }
+    $config->{homer_merge_groups} = {
+      class => "CQS::GroupPickTask",
+      source_ref => $homer_findPeaks,
+      groups => $homer_mergePeaks_groups,
+      return_all => 1,
+    };
+
+    my $homer_merge_peaks_tag_groups = {};
+    my $treatments = $def->{treatments};
+    for my $group_name (keys %$homer_mergePeaks_groups){
+      my $treatment_names = $homer_mergePeaks_groups->{$group_name};
+      my $sample_names = [];
+      for my $treatment_name (@$treatment_names){
+        my $sample_name = $treatments->{$treatment_name}->[0];
+        push @$sample_names, $sample_name;
+      }
+      $homer_merge_peaks_tag_groups->{$group_name} = $sample_names;
+    }
+    $config->{homer_merge_tag_groups} = {
+      class => "CQS::GroupPickTask",
+      source_ref => $homer_makeTagDirectory,
+      groups => $homer_merge_peaks_tag_groups,
+      return_all => 1,
+    };
+
     $config->{$homer_mergePeaks} = {
-      class => "CQS::ProgramWrapper",
+      class => "CQS::ProgramWrapperOneToOne",
       target_dir => "${target_dir}/$homer_mergePeaks",
       interpretor => "",
       program => "",
@@ -539,20 +598,27 @@ mergePeaks $homer_mergePeaks_option \\
   -matrix __NAME__ -venn __NAME__.venn.txt > __NAME__.all_dGiven.peaks.txt
 
 echo rename_names=`date`
-python $rename_py __NAME__.all_dGiven.peaks.txt __NAME__.venn.txt __NAME__.count.matrix.txt __NAME__.logPvalue.matrix.txt __NAME__.logRatio.matrix.txt
+python $rename_1_py __NAME__.all_dGiven.peaks.txt __NAME__.venn.txt __NAME__.count.matrix.txt __NAME__.logPvalue.matrix.txt __NAME__.logRatio.matrix.txt
 
 awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}' __NAME__.all_dGiven.peaks.txt > __NAME__.all_dGiven.peaks.bed
 
 echo annotatePeaks_raw=`date`
-annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -raw -dfile __NAME___fileList2.list > __NAME__.all_dGiven.peaks.raw.txt
+annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -raw -d \\
+  __FILE2__ > __NAME__.all_dGiven.peaks.raw.txt
 
 echo annotatePeaks_rpkm=`date`
-annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -fpkm -dfile __NAME___fileList2.list > __NAME__.all_dGiven.peaks.fpkm.txt
+annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -fpkm -d \\
+  __FILE2__ > __NAME__.all_dGiven.peaks.fpkm.txt
+
+python $rename_2_py __NAME__.all_dGiven.peaks.raw.txt __NAME__.all_dGiven.peaks.fpkm.txt
+
 ",
-      source_ref => $homer_findPeaks,
+      source_ref => "homer_merge_groups",
       source_join_delimiter => " \\\n  ",
       source_type => "array",
-      parameterSampleFile2_ref => $homer_makeTagDirectory,
+      parameterSampleFile2_ref => "homer_merge_tag_groups",
+      parameterSampleFile2_join_delimiter => " \\\n  ",
+      parameterSampleFile2_type => "array",
       output_arg => "",
       output_file_ext => ".all_dGiven.peaks.txt,.all_dGiven.peaks.bed,.all_dGiven.peaks.fpkm.txt",
       output_to_same_folder => 1,
