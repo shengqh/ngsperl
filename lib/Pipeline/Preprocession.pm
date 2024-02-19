@@ -23,6 +23,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addFastqLen
   addExtractSingleEndFastqFromPairend
   add_fastq_join
+  performPreprocessing
   )
   ] );
 
@@ -947,5 +948,44 @@ sub add_fastq_join {
     addFastQC( $config, $def, $individual, $summary, $fastqc_task, $fastq_join_task, $preprocessing_dir );
   }
 }
+
+sub performPreprocessing {
+  my ( $def, $perform ) = @_;
+  if ( !defined $perform ) {
+    $perform = 1;
+  }
+
+  my $taskName = $def->{task_name};
+  my $email = $def->{email};
+  my $target_dir = create_directory_or_die( $def->{target_dir} );
+
+  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+  my $tasks = [@$individual, @$summary];
+
+  $config->{sequencetask} = {
+    class      => getSequenceTaskClassname($cluster),
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    option     => "",
+    source     => {
+      step1 => $tasks,
+    },
+    sh_direct => 0,
+    cluster   => $cluster,
+    pbs       => {
+      "nodes"     => "1:ppn=" . getValue($def, "max_thread", 8),
+      "walltime"  => getValue($def, "sequencetask_run_time", 48), 
+      "mem"       => "40gb"
+    },
+  };
+  if ($perform) {
+    saveConfig( $def, $config );
+
+    performConfig($config);
+  }
+
+  return $config;
+}
+
 
 1;
