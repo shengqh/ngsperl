@@ -134,6 +134,17 @@ def validate2(logger, input1str, input2str, output):
 
 def validate1(logger, input, output): 
   parts = input.split(',')
+  error_file = output + ".error"
+  if os.path.exists(error_file):
+    os.remove(error_file)
+
+  if (len(parts) % 2) != 0:
+      with open(error_file, "wt") as fout:
+        error_msg = f"input should be paired, now input={input}"
+        logger.error(error_msg)
+        fout.write("ERROR: %s\n" % error_msg)
+      return(1)
+  
   input1 = []
   input2 = []
   idx = 0
