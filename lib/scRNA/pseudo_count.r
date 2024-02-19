@@ -64,7 +64,7 @@ for (idx in c(1:length(cts))){
   res_files<-c(res_files, file_path_as_absolute(p_file))
 }    
 
-res_df<-data.frame("cluster"=cts, "prefix"=prefixList, "pusedo_file"=p_file)
+res_df<-data.frame("cluster"=cts, "prefix"=prefixList, "pusedo_file"=res_files)
 write.csv(res_df, paste0(outFile, ".pusedo_count.list.csv"), row.names=F)
 
 
