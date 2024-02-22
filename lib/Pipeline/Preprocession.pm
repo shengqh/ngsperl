@@ -428,7 +428,6 @@ sub getPreprocessionConfig {
         rtemplate                => "countTableVisFunctions.R,../QC/validateMD5.r",
         output_file              => ".csv",
         output_file_ext          => ".csv",
-        output_other_ext         => ".png",
         parameterFile1_ref => "md5_merge",
         parameterSampleFile1_ref => $source_ref,
         parameterSampleFile2     => {
@@ -440,7 +439,9 @@ sub getPreprocessionConfig {
           "walltime"  => "1",
           "mem"       => "10gb"
         },
-      }      
+      };
+
+      push @$summary, ("md5_validation");
     }
   }
 
