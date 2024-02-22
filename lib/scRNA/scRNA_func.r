@@ -2150,7 +2150,7 @@ B")
   return(p)
 }
 
-read_scrna_data<-function(fileName, keep_seurat=FALSE, is_cellbender=FALSE){
+read_scrna_data<-function(fileName, keep_seurat=FALSE){
   if(dir.exists(fileName)){
     feature.names <- read.delim(paste0(fileName, "/features.tsv.gz"), header = FALSE, stringsAsFactors = FALSE)
     gene.column=ifelse(ncol(feature.names) > 1, 2, 1)
