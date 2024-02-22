@@ -219,7 +219,11 @@ sub getScRNASeqConfig {
 
   $config->{bam_files} = $def->{bam_files};
 
-  my $essential_gene_task = add_essential_gene($config, $def, $summary, $target_dir);
+  my $essential_gene_task;
+  
+  if(getValue($def, "perform_essential_gene", 1)){
+    $essential_gene_task = add_essential_gene($config, $def, $summary, $target_dir);
+  } 
 
   my $perform_comparison = getValue( $def, "perform_comparison", 0 );
   if(getValue( $def, "perform_edgeR" )){
