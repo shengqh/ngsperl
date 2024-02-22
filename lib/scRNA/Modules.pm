@@ -1953,7 +1953,7 @@ sub add_hto_samples_preparation {
   $config->{$preparation_task} = {
     class => "CQS::UniqueR",
     target_dir => "${target_dir}/$preparation_task",
-    rtemplate => "../scRNA/split_samples_utils.r,../scRNA/split_samples_preparation.r",
+    rtemplate => "../scRNA/split_samples_utils.r,../scRNA/scRNA_func.r,../scRNA/split_samples_preparation.r",
     rReportTemplate => "../scRNA/split_samples_preparation.rmd;reportFunctions.R",
     run_rmd_independent => 1,
     rmd_ext => ".hto_preparation.html",
@@ -1968,6 +1968,8 @@ sub add_hto_samples_preparation {
       hto_filter_by_exp => getValue($def, "hto_filter_by_exp", 1),
       hto_min_count => getValue($def, "hto_min_count", 2),
     },
+    #for cellbender result, we need filtered data to extract HTO data from raw data.
+    parameterSampleFile3 => $def->{filtered_files},
     #don't use raw object. It would make the normalized count shifted to right.
     #parameterSampleFile3_ref => $hto_raw_file_ref,
     output_perSample_file => "parameterSampleFile1",
