@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='GPA'
+outFile='GPA_NML'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -8,11 +8,12 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20230711_gpa_scRNA_hg38/hto_samples_preparation/result')
+setwd('/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/hto_samples_preparation/result')
 
 ### Parameter setting end ###
 
 source("split_samples_utils.r")
+source('scRNA_func.r')
 library('Seurat')
 library('R.utils')
 library('reshape2')
@@ -28,10 +29,10 @@ params$hto_min_count=as.numeric(params$hto_min_count)
 files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
 
-has_raw_files = parSampleFile3 != ""
-if(has_raw_files){
+has_filtered_files = parSampleFile3 != ""
+if(has_filtered_files){
   files_lines=read.table(parSampleFile3, sep="\t")
-  raw_files=split(files_lines$V1, files_lines$V2)
+  filtered_files=split(files_lines$V1, files_lines$V2)
 }
 cutoff_tbl<-NULL
 
@@ -42,13 +43,13 @@ for(cname in names(files)){
   htos=res_lst$htos
   exp=res_lst$exp
   rm(res_lst)
-  write.csv(htos, paste0(cname, ".alltags_raw.csv"), row.names=T)
 
-  if(has_raw_files){
-    raw_lst = read_hto_file(cname, raw_files[[cname]])
-    htos=raw_lst$htos
-    rm(raw_lst)
+  if(has_filtered_files){
+    exp = read_scrna_data(filtered_files[[cname]])$counts
+    stopifnot(all(colnames(exp) %in% colnames(htos)))
+    htos=htos[,colnames(exp)]
   }
+  write.csv(htos, paste0(cname, ".alltags_raw.csv"), row.names=T)
 
   if (!is.na(params$hto_regex) & params$hto_regex != "" ) {
     htos<-htos[grepl(params$hto_regex, rownames(htos)),]
@@ -70,14 +71,15 @@ for(cname in names(files)){
 
   output_tag_dist(obj, paste0(cname, ".alltags_raw.png"))
 
-  if(params$hto_filter_by_exp){
-    hto.exp <- CreateSeuratObject(counts = exp, min.features = params$nFeature_cutoff_min)
-    cells.valid<-colnames(hto.exp)
-    cells.valid = intersect(cells.valid, colnames(htos))
-    htos<-htos[,cells.valid]
-  }else{
+  # don't filter by expression since the criteria might change in expression analysis
+  # if(params$hto_filter_by_exp){
+  #   hto.exp <- CreateSeuratObject(counts = exp, min.features = params$nFeature_cutoff_min)
+  #   cells.valid<-colnames(hto.exp)
+  #   cells.valid = intersect(cells.valid, colnames(htos))
+  #   htos<-htos[,cells.valid]
+  # }else{
     htos<-htos[,colSums(htos) >= params$hto_min_count,drop=F]
-  }
+  # }
   
   write.csv(htos, paste0(cname, ".alltags.csv"), row.names=T)
 
@@ -102,14 +104,14 @@ for(cname in names(files)){
 
   n_col=ceiling(sqrt(length(tagnames)))
   n_row=ceiling(length(tagnames) / n_col)
-  if(has_raw_files){
+  if(has_filtered_files){
     identName='filtered'
   }else{
     identName='orig.ident'
   }
 
   width=min(20000, n_col * 3000 + 200)
-  height=min(20000, n_row * 1500 * ifelse(has_raw_files, 2, 1))
+  height=min(20000, n_row * 1500 * ifelse(has_filtered_files, 2, 1))
   png(paste0(cname, ".tag.dist.png"), width=width, height=height, res=300)
   rplot(object=obj, assay="HTO", features = tagnames, identName=identName, n_row=n_row)
   dev.off()
