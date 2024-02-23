@@ -44,6 +44,11 @@ sub perform {
 
   my $mapFile = get_param_file( $config->{$section}{name_map_file}, "name_map_file", 0 );
 
+  my $cpm_r = dirname(__FILE__) . "/../Count/count2cpm.r";
+  if ( !-e $cpm_r ) {
+    die "File not found : " . $cpm_r;
+  }
+
   my $mapoption = "";
   if ( defined $mapFile ) {
     $mapoption = "-m $mapFile";
@@ -77,12 +82,21 @@ sub perform {
 
   my $final_file = $result_file;  
   if ($output_proteincoding_gene) {
-    $final_file = $self->get_file( $result_dir, $task_name, ".proteincoding.count", 0 );
+    $final_file = $self->get_file( ".", $task_name, ".proteincoding.count", 0 );
   }
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
 
-  print $pbs "cqstools data_table $option -o $result_file -l $filelist $mapoption \n";
+  print $pbs "
+cqstools data_table $option -o $result_file -l $filelist $mapoption 
+
+R --vanilla -f $cpm_r --args $result_file $result_file
+";
+  if ($output_proteincoding_gene) {
+  print $pbs "
+R --vanilla -f $cpm_r --args $final_file $final_file
+";
+  }
 
   $self->close_pbs( $pbs, $pbs_file );
 }
@@ -111,8 +125,10 @@ sub result {
       push( @result_files, $self->get_file( $result_dir, $task_name, ".fpkm.proteincoding.tsv", 0 ) );
     }
   }
+  push( @result_files, $self->get_file( $result_dir, $task_name, ".cpm.csv", 0 ) );
   if ($output_proteincoding_gene) {
-        push( @result_files, $self->get_file( $result_dir, $task_name, ".proteincoding.count", 0 ) );
+    push( @result_files, $self->get_file( $result_dir, $task_name, ".proteincoding.count", 0 ) );
+    push( @result_files, $self->get_file( $result_dir, $task_name, ".proteincoding.cpm.csv", 0 ) );
   }
   
   $result->{$task_name} = filter_array( \@result_files, $pattern );
