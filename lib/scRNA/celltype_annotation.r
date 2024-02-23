@@ -45,20 +45,15 @@ if(!file.exists(parFile1)){
 }
 data.norm=read.csv(parFile1, row.names=1,check.names = F)
 
-cell_activity_database<-read_cell_markers_file(markerfile, species, remove_subtype_of, HLA_panglao5_file)
-if("curated_markers_file" %in% names(myoptions)){
-  curated_markerfile<-myoptions$curated_markers_file
-  if (curated_markerfile != "") {
-    curated_markers_df<-read.table(curated_markerfile, sep="\t", header=F, stringsAsFactors=F)
-    curated_markers_celltype<-split(curated_markers_df$V2, curated_markers_df$V1)
-    cellType=cell_activity_database$cellType
-    for(cmct in names(curated_markers_celltype)){
-      cellType[[cmct]]=curated_markers_celltype[[cmct]]
-    }
-    weight=calc_weight(cellType)
-    cell_activity_database=list(cellType=cellType, weight=weight)
-  }
-}
+ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
+                             species = species,
+                             curated_markers_file = myoptions$curated_markers_file,
+                             HLA_panglao5_file = myoptions$HLA_panglao5_file,
+                             layer="Layer4",
+                             remove_subtype_str = remove_subtype_of,
+                             combined_celltype_file = NULL)
+
+cell_activity_database<-ctdef$cell_activity_database
 
 predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
 
