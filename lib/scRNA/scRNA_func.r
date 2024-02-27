@@ -1779,13 +1779,18 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
     writeLines(rownames(rawobj$ADT@counts), paste0(outFile, ".antibodies.txt"))
   }
 
-  png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
-  par(mar = c(4, 8, 2, 1))
   C <- rawobj@assays$RNA@counts
+  if(ncol(C) > 100000){
+    cat("Too many cells, sample 100000 cells for top20 genes visualization\n")
+    C <- C[,sample(1:ncol(C), 100000)]
+  }
   C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
   mc<-rowMedians(C)
   most_expressed <- order(mc, decreasing = T)[20:1]
   tm<-as.matrix(Matrix::t(C[most_expressed,]))
+
+  png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
+  par(mar = c(4, 8, 2, 1))
   boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
           col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
   dev.off()
