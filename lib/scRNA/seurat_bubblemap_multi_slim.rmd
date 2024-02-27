@@ -1,0 +1,53 @@
+---
+title: "Marker gene report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+source("scRNA_func.r")
+source("reportFunctions.R")
+
+options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+
+outfile<-myoptions$task_name
+
+bubble_files<-read.csv(paste0(outfile, ".bubblemap.csv"), row.names=1)
+
+resFile<-"sub.Rmd"
+result=""
+for(bn in rownames(bubble_files)) {
+  ct_png = bubble_files[bn, "ct_png"]
+  ct_cluster_png = bubble_files[bn, "ct_cluster_png"]
+
+  result<-paste0(result, paste0("\n\n# ", bn, "\n\n"))
+
+  result<-paste0(result, paste0("\n\n## cell type\n\n"))
+  result<-paste0(result, getFigure(ct_png))
+
+  result<-paste0(result, paste0("\n\n## Seurat cell type\n\n"))
+  result<-paste0(result, getFigure(ct_cluster_png))
+}
+writeLines(result, resFile)
+```
+
+```{r, child=resFile} 
+```
+
