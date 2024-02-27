@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='AG_integrated'
+outFile='H202SC23126877_mm10'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20220907_8566_project/seurat_sct_harmony_multires_03_choose_edgeR_inCluster_byCell_GSEA_Hs_report/result')
+setwd('/nobackup/brown_lab/projects/20240221_novogene_H202SC23126877_Mouse_EukmRNAseq/deseq2_proteincoding_genetable_GSEA_Hs_report2/result')
 
 ### Parameter setting end ###
 
@@ -33,6 +33,7 @@ if(nrow(files) == 1 & files$V2[1] == outFile){
   if(all(grepl("^_", files$compName))){
     files$compName<-gsub("_GSEA.rnk.*", "", basename(dirname(files$Folder)))
   }
+  files$GseaCategory = basename(files$GseaCategory)
 }else if ("task_name" %in% files$V2) {
   params_map<-split(files$V1, files$V2)
   task_name<-params_map$task_name
@@ -43,7 +44,6 @@ if(nrow(files) == 1 & files$V2[1] == outFile){
   rownames(files)<-files$V2
 }
 
-files$GseaCategory = basename(files$GseaCategory)
 vfiles = display_gsea(files, "", print_rmd = FALSE)
 write.csv(vfiles, paste0("gsea_files.csv"))
 
