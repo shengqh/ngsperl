@@ -93,6 +93,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_clustree_rmd
 
   add_bubble_plots
+  add_bubble_files
 
   add_multiome_qc
 
@@ -1744,6 +1745,7 @@ sub addSubCluster {
       celltype_layer        => "layer4",
       output_layer          => "cell_type",
       best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
+      resolutions => getValue( $def, "subcluster_resolutions", "" ),
     }),
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $rename_map,
@@ -2958,6 +2960,37 @@ sub add_clustree_rmd {
     },
   };
   push( @$summary, $clustree_task );
+}
+
+sub add_bubble_files {
+  my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name, $rmd_ext) = @_;
+  my $p2key = defined($meta_ref) ? ((-e $meta_ref) ? "parameterFile2" : "parameterFile2_ref") : "parameterFile2";
+  $config->{$bubble_task} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $bubble_task,
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/seurat_bubblemap_multi_slim.r",
+    rReportTemplate           => "../scRNA/seurat_bubblemap_multi_slim.rmd;reportFunctions.R",
+    rmd_ext => $rmd_ext,
+    run_rmd_independent => 1,
+    parameterFile1_ref   => [ $choose_task, ".final.rds" ],
+    $p2key  => $meta_ref,
+    parameterSampleFile1 => $def->{bubble_files},
+    parameterSampleFile2 => {
+      task_name => getValue($def, "task_name"),
+      cluster_name => $cluster_name,
+      celltype_name => $celltype_name 
+    },
+    output_file_ext      => ".cell_type.txt",
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "6",
+      "mem"       => "40gb"
+    },
+  };
+
+  push( @$summary, $bubble_task );
 }
 
 sub add_bubble_plots {

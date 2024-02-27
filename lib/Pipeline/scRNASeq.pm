@@ -105,8 +105,8 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "rRNApattern",         "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]" );
   initDefaultValue( $def, "hemoglobinPattern",   "^HB[^(P)]|^Hb[^(p)]" );
   
-  initDefaultValue( $def, "Remove_rRNA",         1 );
-  initDefaultValue( $def, "Remove_MtRNA",        1 );
+  initDefaultValue( $def, "Remove_rRNA",         0 );
+  initDefaultValue( $def, "Remove_MtRNA",        0 );
   initDefaultValue( $def, "regress_by_percent_mt", 1 );
   initDefaultValue( $def, "Remove_hemoglobin",   0 );
   
@@ -589,9 +589,13 @@ sub getScRNASeqConfig {
           add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0);
         }
 
+        if(defined $def->{bubble_files}){
+          add_bubble_files($config, $def, $summary, $target_dir, $scDynamic_task . "_bubble_files", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_bubbles.html" );
+        }
+
         if(defined $def->{bubble_plots}){
-          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters", ".dynamic_iter1_dot.html" );
-          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_final", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_dot.html" );
+          #add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters", ".dynamic_iter1_dot.html" );
+          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_dot.html" );
         }
 
         if(getValue($def, "perform_individual_dynamic_cluster", 0)){
@@ -653,6 +657,10 @@ sub getScRNASeqConfig {
             }
 
             $celltype_task = $choose_task;
+
+            if(defined $def->{bubble_files}){
+              add_bubble_files($config, $def, $summary, $target_dir, $choose_task . "_bubble_files", $choose_task, undef, undef, undef, ".dynamic_choose_bubbles.html" );
+            }
 
             if(defined $def->{bubble_plots}){
               my $bubble_task = $choose_task . "_bubblemap";
