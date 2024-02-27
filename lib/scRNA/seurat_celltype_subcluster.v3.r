@@ -252,8 +252,14 @@ if(has_bubblemap){
   }
 }
 
-
-resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.5, by = 0.05))
+default_resolutions=c(seq(from = 0.01, to = 0.09, by = 0.01), seq(from = 0.1, to = 0.5, by = 0.05))
+if(is.null(myoptions$resolutions)){
+  resolutions=default_resolutions
+}else if (myoptions$resolutions == "") {
+  resolutions=default_resolutions
+}else{
+  resolutions=as.numeric(unlist(strsplit(myoptions$resolutions, ",")))
+}
 
 layer4map<-split(tiers$Layer4, tiers$Celltype.name)
 
