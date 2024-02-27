@@ -331,10 +331,12 @@ preprocess<-function( SampleInfo,
     counts<-counts[, colnames(counts) %in% rownames(hto)]
   }
 
-  cat("\n\n#", sampleid, "\n\n")
+  cat("\n\n#", sampleid, ":" , ncol(counts), "cells\n\n")
   #cat("\n\n## Quality Check\n\n")
   
   #counts<-counts[,sample(ncol(counts), 2000)]
+
+  n_raw_cells = ncol(counts)
 
   obj <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, project=sampleid)
   obj$orig.ident=sampleid
@@ -363,7 +365,7 @@ preprocess<-function( SampleInfo,
     subobj=subset(obj, orig.ident==cur_sample)
 
     filters<-as.list(Cutoff)
-    filters$raw_num_cell=ncol(obj)
+    filters$raw_num_cell=n_raw_cells
   
     #cat("\n\n### Violin plot of nGene,nUMI and mtRNA distribution\n\n")
     g1<-VlnPlot(subobj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3) & xlab("")
