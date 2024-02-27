@@ -26,6 +26,7 @@ def gtf_to_items(gtf, logger):
   items = []
   with open(gtf, "rt") as fin:
     count = 0
+    lastitem = None
     for line in fin:
       if (line.startswith('#')):
         continue
@@ -48,12 +49,13 @@ def gtf_to_items(gtf, logger):
         transcript_id = parts[8].split('transcript_id "', 1)[1].split('"', 1)[0]
         strand = parts[6]
         curitem = Item(gene_chrom, gene_start, gene_end, "exon", transcript_id, strand)
-        if lastitem.category == 'exon' and lastitem.name == curitem.name:
-          if curitem.strand == '+':
-            iitem = Item(curitem.chrom, lastitem.end, curitem.start, "intron", curitem.name, curitem.strand)
-          else:
-            iitem = Item(curitem.chrom, curitem.end, lastitem.start, "intron", curitem.name, curitem.strand)
-          items.append(iitem)
+        if not lastitem is None:
+          if lastitem.category == 'exon' and lastitem.name == curitem.name:
+            if curitem.strand == '+':
+              iitem = Item(curitem.chrom, lastitem.end, curitem.start, "intron", curitem.name, curitem.strand)
+            else:
+              iitem = Item(curitem.chrom, curitem.end, lastitem.start, "intron", curitem.name, curitem.strand)
+            items.append(iitem)
           #print(f"{iitem}")
         items.append(curitem)
         lastitem = curitem
