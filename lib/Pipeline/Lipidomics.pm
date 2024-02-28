@@ -38,12 +38,20 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "max_thread",                '8' );
   initDefaultValue( $def, "sequencetask_run_time",     '12' );
 
+  initDefaultValue( $def, "checkFileGroupPairNames", 0 );
+
+  initDefaultValue( $def, "DE_pvalue", 0.05 );
+  #initDefaultValue( $def, "DE_use_raw_pvalue", 0 );
+  initDefaultValue( $def, "DE_fold_change", 1.5 );
+
   return $def;
 }
 
 sub getLipidomicsConfig {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
+
+  $def = initializeDefaultOptions($def);
 
   $def->{perform_preprocessing} = 0;
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
@@ -94,7 +102,7 @@ sub getLipidomicsConfig {
         affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
         remove_sample_pattern => $def->{remove_sample_pattern},
         remove_sample_description => $def->{remove_sample_description},
-    },
+      },
       parameterSampleFile2_ref => ["preprocess", ".files.txt"],
       parameterSampleFile3_ref => ["preprocess", ".pos.sample_meta.csv"],
       suffix => ".qc",
@@ -110,7 +118,38 @@ sub getLipidomicsConfig {
     push(@$tasks, $qc_task);
 
     if($def->{perform_DE_analysis}){
-
+      my $limma_task = "limma";
+      $config->{$limma_task} = {
+        class => "CQS::UniqueRmd",
+        target_dir => $target_dir . "/$limma_task",
+        report_rmd_file => "../Lipidomics/limma.Rmd",
+        additional_rmd_files => "../CQS/countTableVisFunctions.R;../CQS/reportFunctions.R;../Lipidomics/lipidomics_func.R",
+        option => "",
+        parameterSampleFile1 => {
+          task_name => $task_name,
+          email => $email,
+          affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
+          remove_sample_pattern => $def->{remove_DE_sample_pattern},
+          remove_sample_description => $def->{remove_DE_sample_description},
+        },
+        parameterSampleFile2_ref => ["preprocess", ".files.txt"],
+        parameterSampleFile3_ref => ["preprocess", ".pos.sample_meta.csv"],
+        parameterSampleFile4 => getValue($def, "pairs"),
+        parameterSampleFile5 => {
+          fold_change => getValue($def, "DE_fold_change"),
+          fdr => getValue($def, "DE_pvalue"),
+        },
+        suffix => ".limma",
+        output_file_ext => ".limma.html,.files.txt",
+        can_result_be_empty_file => 0,
+        sh_direct   => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "24",
+          "mem"       => "20gb"
+        },
+      };
+      push(@$tasks, $qc_task);
     }
   }
 

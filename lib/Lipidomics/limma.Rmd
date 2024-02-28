@@ -1,0 +1,460 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 4
+    code_folding: hide
+    number_sections: yes
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo = F, message=FALSE}
+knitr::opts_chunk$set(
+  echo=T,  
+  message=FALSE, 
+  warning=FALSE, 
+  results = 'asis', 
+  fig.width=7, 
+  fig.height = 7
+)
+```
+
+```{r}
+library(ggsci)
+library(ggplot2)
+library(pheatmap)
+library(limma)
+library(DT)
+library(reshape2)
+library(data.table)
+library(htmltools)
+library(randomcoloR)
+
+source('reportFunctions.R')
+source('lipidomics_func.R')
+source('countTableVisFunctions.R')
+
+myoptions=read_file_map("fileList1.limma.txt", do_unlist=FALSE)
+email=myoptions$email
+task_name=myoptions$task_name
+affiliation=myoptions$affiliation
+
+if(!"remove_sample_pattern" %in% names(myoptions)){
+  myoptions$remove_sample_pattern <- ""
+}
+if(!"remove_sample_description" %in% names(myoptions)){
+  myoptions$remove_sample_description <- ""
+}
+```
+
+---
+title: Differential analysis with Limma of Lipidomics Project `r gsub(":", " ", task_name)`
+author:
+- name: `r email`
+  affiliation: `r affiliation`
+---
+
+# Input files
+
+## Metadata 
+
+```{r}
+meta_file <- fread("fileList3.limma.txt", header=F, data.table = F)$V1[1]
+```
+
+Read `r meta_file` file
+
+```{r}
+meta <- fread(meta_file, data.table = F)
+sample_group_map=unlist(split(meta$Class, meta$Class_Sample))
+datatable(meta, rownames = F)
+```
+
+## Data files
+
+```{r}
+list_file <- fread("fileList2.limma.txt", header=F, data.table = F)$V1[1]
+```
+
+Read `r list_file` file
+
+```{r}
+files <- fread(list_file, header = T, data.table = F)
+datatable(files, rownames = F)
+```
+
+Read data files, rename Sample with Class_Sample.
+
+```{r}
+read_files<-function(files, file_column){
+  files_list <- list()
+  for (i in 1:nrow(files)){
+    df <- read.csv(files[i,file_column], row.names=1)
+    stopifnot(all(colnames(df) == meta$Sample))
+    colnames(df) <- meta$Class_Sample
+    files_list[[i]]=df
+  }
+  names(files_list) <- files$Name
+  return(files_list)
+}
+
+raw_files_list <- read_files(files, "RawFile")
+log_files_list <- read_files(files, "LogFile")
+```
+
+```{r}
+remove_samples<-function(files_list, pattern){
+  result <- lapply(files_list, function(x){
+    y <- x[, -grep(pattern, colnames(x))]
+    return(y)
+  })
+  return(result)
+}
+
+if(myoptions$remove_sample_pattern != ""){
+  cat("\n# Remove samples\n\n")
+  cat(myoptions$remove_sample_description, "\n\n")
+
+  raw_files_list_sel <- remove_samples(files_list=raw_files_list, pattern=myoptions$remove_sample_pattern)
+  log_files_list_sel <- remove_samples(files_list=log_files_list, pattern=myoptions$remove_sample_pattern)
+
+  meta_sel <- meta[-grep(myoptions$remove_sample_pattern, meta$Class_Sample),]
+  datatable(meta_sel, rownames = F)
+}else{
+  raw_files_list_sel <- raw_files_list
+  log_files_list_sel <- log_files_list
+
+  meta_sel=meta
+}
+rm(raw_files_list, log_files_list, meta)
+```
+
+# Comparisons
+
+```{r}
+comparison_file <- fread("fileList4.limma.txt", header=F, data.table = F)
+comp_table <- data.frame(Comparison = unique(comparison_file$V2), Reference="", Sample="")
+
+idx=1
+for(idx in 1:nrow(comp_table)){
+  cur_comp=comp_table$Comparison[idx]
+  cur_tbl=comparison_file[comparison_file$V2==cur_comp,]
+  comp_table[idx, "Reference"] <- cur_tbl[1,1]
+  comp_table[idx, "Sample"] <- cur_tbl[2,1]
+}
+
+comp_table$Contract = paste(comp_table$Sample, "-", comp_table$Reference)
+
+print_table(comp_table, row.names=FALSE)
+```
+
+```{r}
+DEcriteria <- read_file_map("fileList5.limma.txt", do_unlist=FALSE)
+foldchange <- as.numeric(DEcriteria$fold_change)
+fdr <- as.numeric(DEcriteria$fdr)
+```
+
+# Differential expression analysis
+Fold change > `r foldchange` and FDR < `r fdr ` are considered significant   
+
+```{r}
+#limma contrasts
+design <- model.matrix(~0 + factor(meta_sel$Class, levels = unique(meta_sel$Class)))
+rownames(design) <- meta_sel$Sample
+colnames(design) <- unique(meta_sel$Class)
+
+contrasts_tomake=comp_table$Contract
+contrast.matrix <- eval(as.call(c(as.symbol("makeContrasts"),as.list(contrasts_tomake),levels=list(design))))
+```
+
+```{r}
+#limma
+de_list_bay <- list()
+for (i in 1:length(log_files_list_sel)){
+  fit <- lmFit(log_files_list_sel[[i]], design)
+  fitC <- contrasts.fit(fit, contrast.matrix)
+  de_list_bay[[i]] <- eBayes(fitC)
+}
+```
+
+```{r, results='asis'}
+# All results
+de_list_toptable <- list()
+for (i in 1:length(de_list_bay)){
+    de_list_toptable[[i]] <- list()
+    for (j in 1:length(contrasts_tomake)){
+        de_list_toptable[[i]][[j]] <- topTable(de_list_bay[[i]], coef = contrasts_tomake[j], adjust = "fdr", sort.by = "t", number=nrow(log_files_list_sel[[i]]))
+    }
+    names(de_list_toptable[[i]]) <- contrasts_tomake
+}
+names(de_list_toptable) <- names(log_files_list_sel)
+
+#Significant results
+de_list_toptable_sig <- list()
+for (i in 1:length(de_list_bay)){
+    de_list_toptable_sig[[i]] <- list()
+    for (j in 1:length(contrasts_tomake)){
+        de_list_toptable_sig[[i]][[j]] <- topTable(de_list_bay[[i]], coef = contrasts_tomake[j], adjust = "fdr", sort.by = "t", number=nrow(log_files_list_sel[[i]]), p.value = fdr, fc = foldchange)
+    }
+    names(de_list_toptable_sig[[i]]) <- contrasts_tomake
+}
+names(de_list_toptable_sig) <- names(log_files_list_sel)
+```
+
+```{r}
+#plotting functions
+## Heatmap
+heatmap_width=7
+heatmap_heights=NA
+
+draw_pheatmap <- function(data_df, groups, annotation_colors, category, comparison, prefix, heatmap_width, heatmap_height){
+  show_rownames = ifelse(nrow(data_df) <= 30, TRUE, FALSE)
+  cellheight = ifelse(nrow(data_df) <= 30, 8, 2)
+  png_file = paste0(prefix, ".heatmap.png")
+  pheatmap( data_df, 
+            main = category,
+            scale = "row", 
+            show_rownames = show_rownames, 
+            annotation_col = groups, 
+            annotation_colors = annotation_colors, 
+            annotation_legend = F, 
+            annotation_names_col = F, 
+            border_color = NA,  
+            fontsize = 7, 
+            cellheight = cellheight, 
+            cluster_cols = T,
+            filename=paste0(prefix, ".heatmap.png"),
+            width=heatmap_width,
+            height=heatmap_height)
+  #g <- p1[[4]]
+  #ggsave(png_file, g, width = heatmap_width, height = heatmap_height, dpi = 300, units = "in", bg="white")
+  return(png_file)
+}
+
+
+## PCA
+pca_width=5
+pca_height=4
+
+draw_pca <- function(data, groups, category, comparison, prefix, colors, pca_width, pca_height){
+  data_t <- t(data)
+  pca <- prcomp(data_t)
+  pcadata<-data.frame(pca$x)
+  sum_pca <- summary(pca)$importance
+  pcadata$groups <- groups
+  
+  p <- ggplot(pcadata, aes(x=PC1, y=PC2, color=groups)) + #, label = rownames(pcadata))) 
+    geom_point(size = 4) + 
+    theme_classic() +
+    labs(x=paste0("PCA1 (", round(sum_pca[2,1] * 100, digits = 1), "%)"),
+         y=paste0("PCA2 (", round(sum_pca[2,2] * 100, digits = 1), "%)"),
+         title=category) +
+    theme(axis.text = element_text(size = 16), 
+          axis.title = element_text(size=18, face = "bold"), 
+          legend.text=element_text(size=16), 
+          legend.title= element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          aspect.ratio=1)
+  
+  if(length(unique(groups)) < 10){
+    p <- p + #scale_color_brewer(palette = "Set1")
+    scale_colour_manual(values = c(colors))
+  }
+
+  png_file = paste0(prefix, ".pca.png")
+  ggsave(png_file, plot = p, width = pca_width, height = pca_height, dpi = 300, units = "in", bg="white")
+  return(png_file)
+}
+
+# Volcano plot
+volcano_width=5
+volcano_height=4
+
+#for volcano plot
+reverselog_trans <- function(base = exp(1)) {
+  trans <- function(x) -log(x, base)
+  inv <- function(x) base^(-x)
+  trans_new(paste0("reverselog-", format(base)), trans, inv, 
+            log_breaks(base = base), 
+            domain = c(1e-100, Inf))
+}
+
+draw_volcano <- function(data, category, comparison, prefix, volcano_width, volcano_height){
+  changeColours<-c(grey="grey",blue="blue",red="red")
+  diffResult<-as.data.frame(data)
+  #diffResult$log10BaseMean<-log10(diffResult$baseMean)
+  diffResult$colour<-"grey"
+  if (useRawPvalue==1) {
+    diffResult<-subset(diffResult, !is.na(P.Value))
+    diffResult$colour[which(diffResult$P.Value<=pvalue & diffResult$logFC>=log2(foldchange))]<-"red"
+    diffResult$colour[which(diffResult$P.Value<=pvalue & diffResult$logFC<=-log2(foldchange))]<-"blue"
+  } else {
+    diffResult<-subset(diffResult, !is.na(adj.P.Val))
+    diffResult$colour[which(diffResult$adj.P.Val<=pvalue & diffResult$logFC>=log2(foldchange))]<-"red"
+    diffResult$colour[which(diffResult$adj.P.Val<=pvalue & diffResult$logFC<=-log2(foldchange))]<-"blue"
+  }
+
+  yname=bquote(-log10(p~value))
+  xname=bquote(log[2]~Fold~Change)
+
+  
+  p<-ggplot(diffResult,aes(x=logFC,y=adj.P.Val))+
+    scale_y_continuous(trans=reverselog_trans(10),name=yname) +
+    geom_point(aes(colour=colour))+
+    scale_color_manual(values=changeColours,guide = FALSE)+
+    scale_x_continuous(name=xname)+
+    geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+    geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+    #guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+    theme_bw()+
+    scale_size(range = c(3, 7))+
+    theme(axis.text = element_text(colour = "black",size=20),
+          axis.title = element_text(size=20),
+          legend.text= element_text(size=20),
+          legend.title= element_text(size=20))
+            
+  png_file = paste0(prefix, ".volcano.png")
+  ggsave(png_file, plot = p, width = volcano_width, height = volcano_height, dpi = 300, units = "in", bg="white")
+  return(png_file)
+}
+```
+
+```{r, results='asis'}
+
+#loop printing tables
+#for (i in 1:length(de_list_toptable_sig)){
+#  for(j in 1:length(de_list_toptable_sig[[i]])){
+#  #Save results
+#  write.csv(de_list_toptable[[i]][[j]], paste(task_name, names(de_list_toptable)[[i]], names(de_list_toptable[[i]])[[j]], "DE.csv", sep = "_"))
+#    if(nrow(de_list_toptable_sig[[i]][[j]]) == 0){next}
+#        write.csv(de_list_toptable_sig[[i]][[j]], paste(task_name, names(de_list_toptable_sig)[[i]], names(de_list_toptable_sig[[i]])[[j]], "DE_sig.csv", sep = "_"))
+#        cat("\n") 
+#        cat("## ", names(de_list_toptable_sig)[i], "\n")
+#        cat("### ", names(de_list_toptable_sig[[i]])[j], "\n")
+#        print(tagList(datatable(de_list_toptable_sig[[i]][[j]])))
+#        cat("\n")
+#  }
+#}
+
+
+```
+
+```{r, results='asis', fig.height = 5, fig.width = 5}
+#loop printing tables, pca, heatmap, volcano plot
+groups <- data.frame(row.names = meta_sel$Class_Sample, groups = meta_sel$Class)
+group_names = unique(meta_sel$Class)
+groups_colors <- distinctColorPalette(length(group_names))
+names(groups_colors) <- group_names
+
+annotation_colors = list(groups = groups_colors)
+
+pvalue<-fdr
+useRawPvalue<-0
+
+de_tbl = data.frame("Category"=character(), 
+                    "Comparison"=character(), 
+                    "Total_Feature"=numeric(), 
+                    "DE_feature"=numeric(), stringsAsFactors=FALSE)
+result = ""
+i=1
+de_idx = 0
+for (i in 1:length(de_list_toptable_sig)){
+  category = names(de_list_toptable_sig)[i]
+  category_df_list = de_list_toptable[[i]]
+  category_sig_df_list = de_list_toptable_sig[[i]]
+  category_log_df = log_files_list_sel[[i]]
+
+  result = paste0(result, "\n## ", category, "\n\n")
+
+  j=1
+  for(j in 1:length(category_sig_df_list)){
+    de_idx = de_idx + 1
+
+    contrast_name = names(category_sig_df_list)[[j]]
+    cur_comp_tbl=comp_table[comp_table$Contract==contrast_name,]
+    cur_comp=cur_comp_tbl[1,1]
+    cur_comp_df = category_df_list[[j]]
+    cur_comp_sig_df = category_sig_df_list[[j]]
+
+    cur_prefix =  paste(task_name, category, cur_comp, sep = ".")
+    #Save results
+    write.csv(cur_comp_df, paste0(cur_prefix, ".DE.csv"))
+  
+    result = paste0(result, "\n### ", contrast_name, "\n\n") 
+
+    cur_samples = meta_sel$Class_Sample[meta_sel$Class %in% c(cur_comp_tbl[1,"Sample"], cur_comp_tbl[1,"Reference"])]
+    cur_groups = groups[cur_samples,,drop=FALSE]
+
+    data_df = category_log_df[,cur_samples]
+      
+    heatmap_height = heatmap_heights[i]
+    png_file = draw_pheatmap( data_df = data_df, 
+                              groups = cur_groups, 
+                              annotation_colors = annotation_colors, 
+                              category=category, 
+                              comparison=contrast_name,
+                              prefix=cur_prefix,
+                              heatmap_width=heatmap_width,
+                              heatmap_height=heatmap_height)
+
+    result = paste0(result, "\n#### Heatmap\n\n")
+    if(is.na(heatmap_height)){
+      result = paste0(result, getFigure_width_height(png_file, fig.width=heatmap_width, fig.height=NULL))
+    }else{
+      result = paste0(result, getFigure_width_height(png_file, fig.width=heatmap_width, fig.height=heatmap_height))
+    }
+
+    pca_groups = cur_groups$groups
+    png_file = draw_pca(data=data_df, 
+                        groups=pca_groups, 
+                        category=category, 
+                        prefix=cur_prefix, 
+                        colors = groups_colors[match(unique(pca_groups), names(groups_colors))],
+                        pca_width=pca_width, 
+                        pca_height=pca_height)
+    result = paste0(result, "\n#### PCA\n\n")
+    result = paste0(result, getFigure_width_height(png_file, fig.width=pca_width, fig.height=pca_height))
+
+    de_tbl[de_idx,] = c(category, contrast_name, nrow(cur_comp_df), nrow(cur_comp_sig_df))
+
+    #Tables
+    if(nrow(cur_comp_sig_df) == 0){
+      result = paste0(result, "\nNo significant lipids found.\n\n")
+      next
+    }
+
+    sig_csv = paste0(cur_prefix, ".DE.sig.csv")
+    write.csv(cur_comp_sig_df, sig_csv)
+      
+    result = paste0(result, "\n#### DE features\n\n")
+    result = paste0(result, getPagedTable(sig_csv))
+
+    #Volcano plot
+    png_file = draw_volcano(data=cur_comp_df, 
+                            category=category, 
+                            prefix=cur_prefix, 
+                            volcano_width=volcano_width, 
+                            volcano_height=volcano_height)
+    result = paste0(result, "\n#### Volcano\n\n")
+    result = paste0(result, getFigure_width_height(png_file, fig.width=volcano_width, fig.height=volcano_height))
+  }
+}
+de_rmd_file = paste0(task_name, ".de.rmd")
+writeLines(result, de_rmd_file)
+
+de_file = paste0(task_name, ".de_summary.csv")
+write.csv(de_tbl, de_file)
+```
+```{r, child=de_rmd_file}
+```
+
+# DE analysis summary
+
+```{r}
+print_table(de_tbl, row.names=FALSE)
+```

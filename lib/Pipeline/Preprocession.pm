@@ -248,7 +248,9 @@ sub getPreprocessionConfig {
     }
 
     if(!defined $def->{HTO_samples}){
-      checkFileGroupPairNames($def, ["groups"], ["pairs"], $all_sample_names, getValue($def, "remove_missing_samples_in_group", 0));
+      if(getValue($def, "checkFileGroupPairNames", 1)){
+        checkFileGroupPairNames($def, ["groups"], ["pairs"], $all_sample_names, getValue($def, "remove_missing_samples_in_group", 0));
+      }
     }
   }
 

@@ -328,6 +328,8 @@ draw_stacked_per <- function(data, category, prefix){
   return(png_file)
 }
 
+datafiles=data.frame(category=names(raw_files_list_melt), file="")
+
 result = paste0(result, "\n# Stacked barplot\n\n")
 i=1
 for (i in 1:length(raw_files_list_melt)){
@@ -352,7 +354,9 @@ for (i in 1:length(raw_files_list_melt)){
     cur_data=top_data
     cur_data$Feature=factor(cur_data$Feature, levels=top_f_genes)
   }
-  write.csv(cur_data, paste0(task_name, ".", category, ".csv"), row.names=FALSE)
+  category_csv = paste0(task_name, ".", category, ".csv")
+  write.csv(cur_data, category_csv, row.names=FALSE)
+  datafiles$file[i]=normalizePath(category_csv)
 
   png_file = draw_stacked(cur_data, category=category, prefix=paste0(task_name, ".", category))
   result = paste0(result, getFigure_width_height(png_file, fig.width=stacked_width, fig.height=stacked_height))
@@ -360,6 +364,7 @@ for (i in 1:length(raw_files_list_melt)){
   png_file = draw_stacked_per(cur_data, category=category, prefix=paste0(task_name, ".", category))
   result = paste0(result, getFigure_width_height(png_file, fig.width=stacked_width, fig.height=stacked_height))
 }
+write.table(datafiles, paste0(task_name, ".files.txt"), row.names=FALSE, sep="\t", quote=FALSE)
 ```
 
 ```{r}
