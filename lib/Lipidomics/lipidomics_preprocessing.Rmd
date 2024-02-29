@@ -103,13 +103,13 @@ neg_df$Mode="NEG"
 combined=rbind(pos_df, neg_df) %>% relocate(Mode, .after=Ontology)
 
 get_highest_value<-function(combined){
-  dupnames=combined$Metabolite.name[duplicated(combined$Metabolite.name)]
+  dupnames=unique(combined$Metabolite.name[duplicated(combined$Metabolite.name)])
   final=combined[!combined$Metabolite.name %in% dupnames,]
 
   #find the entry with highest value in most samples
   dupname=dupnames[1]
   for(dupname in dupnames){
-    cur_dup=combined[combined$Metabolite.name==dupname,] %>% select(-Metabolite.name, -Ontology, -Mode)
+    cur_dup=combined %>% dplyr::filter(Metabolite.name==dupname) %>% dplyr::select(!c(Metabolite.name, Ontology, Mode))
     cur_rank = apply(cur_dup, 2, function(y) rank(-y))
     sum_rank=rowSums(cur_rank)
     min_rank=which(sum_rank==min(sum_rank))
@@ -120,7 +120,7 @@ get_highest_value<-function(combined){
 }
 
 get_sum_value<-function(combined){
-  dupnames=combined$Metabolite.name[duplicated(combined$Metabolite.name)]
+  dupnames=unique(combined$Metabolite.name[duplicated(combined$Metabolite.name)])
   final=combined[!combined$Metabolite.name %in% dupnames,]
 
   dupname=dupnames[1]
@@ -143,6 +143,11 @@ if(combine_by == "SUM"){
 }else if(combine_by == "HIGHEST"){
   final=get_highest_value(combined)
 }
+
+stopifnot(duplicated(final$Metabolite.name) %>% sum == 0)
+```
+
+```{r}
 
 combined_file=paste0(result_prefix, ".combined.csv")
 write.csv(final, combined_file, row.names=FALSE)
