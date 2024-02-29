@@ -175,14 +175,20 @@ sub getConfig {
     #option                   => " --args ${task_name} hg19 group 4 ",
     docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/methylkit_corr.R",
-    output_file_ext          => "_methyl_CpG_bvalue_corr_MDS_plot.png;_methyl_CpG_bvalue_corr_MDS_plot.pdf;.filtered.cpg.meth.rds",
+    rReportTemplate          => "../Methylation/methylkit_corr.Rmd;../CQS/reportFunctions.R;../CQS/countTableVisFunctions.R",
+    run_rmd_independent => 1,
+    rmd_ext => ".methylation.corr.html",
+    output_file_ext          => ".methylation.corr.html;.filtered.cpg.meth.rds",
     parameterSampleFile1_ref => $methylkitprep_task,
     parameterSampleFile2 => {
       task_name => $task_name,
+      email => getValue($def, "email"),
+      affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
       org       => getValue($def, "genome"),
       var       => "group",
       control_group => $def->{control_group},
-      mincov     => 4
+      mincov     => 4,
+      corr_dim1_cutoff => $def->{corr_dim1_cutoff}
     },
     parameterSampleFile3_ref => "groups",
     #parameterFile1 => getValue($def, "meta_file"),

@@ -18,6 +18,8 @@ require(ggpubr)
 require(Cairo)
 library(dplyr)
 library(limma)
+library(minfi)
+library(matrixStats)
 
 params <- read.table(parSampleFile2, sep = "\t", header = F)
 params <- params %>% column_to_rownames("V2") %>% t() %>% data.frame()
@@ -95,7 +97,7 @@ cat("get_beta_value\n")
 cpg_bvalue_df<-get_beta_value(filtered.cpg.meth)
 #saveRDS(cpg_bvalue_df, paste0(project, ".cpg_bvalue_df.rds"))
 
-hist_pdf=paste0(project, "_methyl_CpG_bvalue_hist.pdf")
+hist_pdf=paste0(project, ".CpG.bvalue_hist.pdf")
 if(!file.exists(hist_pdf)){
   cat("draw beta value histgram figure\n")
   pdf(hist_pdf, width=4, height=4, bg="white", onefile=TRUE)
@@ -112,66 +114,74 @@ if(!file.exists(hist_pdf)){
 }
 
 cat("PCASamples\n")
-png(paste0(project, "_methyl_CpG_pca.png"), width=8, height=8, bg="white", res=300, units="in")
+png(paste0(project, ".CpG.pca.png"), width=8, height=8, bg="white", res=300, units="in")
 PCASamples(filtered.cpg.meth)
 dev.off()
 
-#https://f1000research.com/articles/6-2055/v2
-get_mds_value<-function(filtered.cpg.meth){
-  mat = getData(filtered.cpg.meth)  
-  cpg_mds_df = log2(mat[, filtered.cpg.meth@numCs.index] + 2) - log2(mat[,filtered.cpg.meth@numTs.index] + 2)
-  colnames(cpg_mds_df)=filtered.cpg.meth@sample.ids
+# #https://f1000research.com/articles/6-2055/v2
+# get_mds_value<-function(filtered.cpg.meth){
+#   mat = getData(filtered.cpg.meth)  
+#   cpg_mds_df = log2(mat[, filtered.cpg.meth@numCs.index] + 2) - log2(mat[,filtered.cpg.meth@numTs.index] + 2)
+#   colnames(cpg_mds_df)=filtered.cpg.meth@sample.ids
 
-  id = paste0(mat$chr, "_", mat$start, "_", mat$end)
-  rownames(cpg_mds_df) <- mat$id
+#   id = paste0(mat$chr, "_", mat$start, "_", mat$end)
+#   rownames(cpg_mds_df) <- mat$id
 
-  return(cpg_mds_df)
-}
+#   return(cpg_mds_df)
+# }
 
-cat("get_mds_value\n")
-cpg_mds_df<-get_mds_value(filtered.cpg.meth)
-stopifnot(colnames(cpg_mds_df) == meta$sample)
+# cat("get_mds_value\n")
+# cpg_mds_df<-get_mds_value(filtered.cpg.meth)
+# stopifnot(colnames(cpg_mds_df) == meta$sample)
 
-o <- order(rowVars(as.matrix(cpg_mds_df)), decreasing = TRUE)[seq_len(10000)]
-o_cpg_mds_df=cpg_mds_df[o,]
+# o <- order(rowVars(as.matrix(cpg_mds_df)), decreasing = TRUE)[seq_len(10000)]
+# o_cpg_mds_df=cpg_mds_df[o,]
 
-cat("plotMDS\n")
-png(paste0(project, "_methyl_CpG_MDS_by_plotMDS.png"), width=8, height=8, bg="white", res=300, units="in")
-plotMDS(o_cpg_mds_df, top=10000, col=filtered.cpg.meth@treatment+1)
-dev.off()
+# cat("plotMDS\n")
+# png(paste0(project, "_methyl_CpG_MDS_by_plotMDS.png"), width=8, height=8, bg="white", res=300, units="in")
+# plotMDS(o_cpg_mds_df, top=10000, col=filtered.cpg.meth@treatment+1)
+# dev.off()
 
 #https://www.rdocumentation.org/packages/minfi/versions/1.18.4/topics/mdsPlot
 stopifnot(colnames(cpg_bvalue_df) == meta$sample)
-png(paste0(project, "_methyl_CpG_MDS_by_mdsPlot.png"), width=8, height=8, bg="white", res=300, units="in")
+png(paste0(project, ".CpG.bvalue_top10000.mdsPlot.png"), width=6, height=6, bg="white", res=300, units="in")
 mdsPlot(as.matrix(cpg_bvalue_df), numPositions=10000, sampGroups=meta$group)
 dev.off()
 
-cat("cor of cpg_bvalue_df\n")
-cpg_bvalue_cor <- cor(cpg_bvalue_df, method = "pearson")
-saveRDS(cpg_bvalue_cor, paste0(project, ".cpg_bvalue_cor.rds"))
+#get top 10000 most variable positions
+cat("get top 10000 most variable positions\n")
+bvalues_vars = matrixStats::rowVars(as.matrix(cpg_bvalue_df))
+o <- order(bvalues_vars, decreasing = TRUE)[seq_len(10000)]
+top10000_cpg_bvalue_df=cpg_bvalue_df[o,]
 
-cat("cpg_bvalue_mds\n")
-cpg_bvalue_mds <- (1 - cpg_bvalue_cor) %>%
+cat("cor of top10000_cpg_bvalue_df\n")
+top10000_cpg_bvalue_cor <- cor(top10000_cpg_bvalue_df, method = "pearson")
+saveRDS(top10000_cpg_bvalue_cor, paste0(project, ".CpG.bvalue_top10000.corr.rds"))
+
+cat("cmdscale\n")
+top10000_cpg_bvalue_corr_mds <- (1 - top10000_cpg_bvalue_cor) %>%
   cmdscale() %>%
   data.frame()
-colnames(cpg_bvalue_mds) <- c("Dim.1", "Dim.2")
+colnames(top10000_cpg_bvalue_corr_mds) <- c("Dim.1", "Dim.2")
 
-stopifnot(rownames(cpg_bvalue_mds) == colnames(cpg_bvalue_df))
+stopifnot(rownames(top10000_cpg_bvalue_corr_mds) == colnames(cpg_bvalue_df))
 
-cpg_bvalue_mds<-cpg_bvalue_mds[meta$sample,]
-stopifnot(rownames(cpg_bvalue_mds) == meta$sample)
+top10000_cpg_bvalue_corr_mds<-top10000_cpg_bvalue_corr_mds[meta$sample,]
+stopifnot(rownames(top10000_cpg_bvalue_corr_mds) == meta$sample)
 
-cpg_bvalue_mds[,var] <- meta[,var]
-saveRDS(cpg_bvalue_mds, paste0(project, ".cpg_bvalue_mds.rds"))
+top10000_cpg_bvalue_corr_mds[,var] <- meta[,var]
+saveRDS(top10000_cpg_bvalue_corr_mds, paste0(project, ".CpG.bvalue_top10000.corr.MDS.rds"))
 
 cat("plot bvalue MDS\n")
 # Plot MDS
-if(nrow(cpg_bvalue_mds) > 20){
+if(nrow(top10000_cpg_bvalue_corr_mds) > 20){
   cpg_label=NULL
 }else{
-  cpg_label=rownames(cpg_bvalue_mds)
+  cpg_label=rownames(top10000_cpg_bvalue_corr_mds)
 }
-dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2",
+dms_plot <- ggscatter(top10000_cpg_bvalue_corr_mds, 
+                      x = "Dim.1", 
+                      y = "Dim.2",
                       label = cpg_label,
                       xlab = "MDS 1",
                       ylab = "MDS 2",
@@ -183,6 +193,6 @@ dms_plot <- ggscatter(cpg_bvalue_mds, x = "Dim.1", y = "Dim.2",
                       ellipse.type = "norm",
                       repel = TRUE) + theme_bw()
 
-ggsave(paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.png"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
-ggsave(paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.pdf"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
+ggsave(paste0(project, ".CpG.bvalue_top10000.corr.MDS.png"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
+#ggsave(paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.top10000.pdf"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
 
