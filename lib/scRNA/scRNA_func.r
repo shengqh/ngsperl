@@ -2574,11 +2574,11 @@ iterate_celltype<-function(obj,
     
     cur_cts<-cbind_celltype(subobj, data_norm, cluster, new_cluster_ids, cur_layermap, cur_cts)
     stopifnot(all(colnames(subobj) == rownames(cur_cts)))
-    subobj = AddMetaData(subobj, cur_cts$seurat_clusters, "seurat_clusters")
-    subobj = AddMetaData(subobj, cur_cts$cell_type, "cell_type")
-    subobj = AddMetaData(subobj, cur_cts$seurat_cell_type, "seurat_cell_type")
-    subobj = AddMetaData(subobj, cur_cts$raw_cell_type, "raw_cell_type")
-    subobj = AddMetaData(subobj, cur_cts$raw_seurat_cell_type, "raw_seurat_cell_type")
+    subobj = AddMetaData(subobj, factor_by_count(cur_cts$seurat_clusters), "seurat_clusters")
+    subobj = AddMetaData(subobj, factor_by_count(cur_cts$cell_type), "cell_type")
+    subobj = AddMetaData(subobj, factor_by_count(cur_cts$seurat_cell_type), "seurat_cell_type")
+    subobj = AddMetaData(subobj, factor_by_count(cur_cts$raw_cell_type), "raw_cell_type")
+    subobj = AddMetaData(subobj, factor_by_count(cur_cts$raw_seurat_cell_type), "raw_seurat_cell_type")
     
     #using RNA assay for visualization
     DefaultAssay(subobj)<-assay
@@ -2593,10 +2593,8 @@ iterate_celltype<-function(obj,
     g3<-get_dim_plot(subobj, reduction="oumap", group.by="seurat_clusters", label.by="seurat_cell_type", random_colors = FALSE) + guides(fill=guide_legend(ncol =1)) + ggtitle("Seurat cell type in old UMAP")
     g<-g0+g1+g2+g3+plot_layout(nrow=2)
     umap_celltype_file = paste0(curprefix, ".", pct_str, ".old_umap.png")
-    png(umap_celltype_file, width=4600, height=4000, res=300)
-    print(g)
-    dev.off()
-
+    cur_width=4000 + ceiling(length(unique(subobj$seurat_clusters)) / 20) * 1600
+    ggsave(umap_celltype_file, g, width=cur_width, height=4000, units="px", dpi=300, bg="white")
     files<-rbind(files, c(previous_layer, iter_name, pct, "old_umap", umap_celltype_file))
 
     if(pct != "Unassigned"){
@@ -2605,9 +2603,7 @@ iterate_celltype<-function(obj,
 
       g<-g1+g2+plot_layout(nrow=1)
       umap_cluster_file = paste0(curprefix, ".", pct_str, ".new_umap.png")
-      png(umap_cluster_file, width=4600, height=2000, res=300)
-      print(g)
-      dev.off()
+      ggsave(umap_cluster_file, g, width=cur_width, height=2000, units="px", dpi=300, bg="white")
       files<-rbind(files, c(previous_layer, iter_name, pct, "new_umap", umap_cluster_file))
     }
 
@@ -2625,9 +2621,8 @@ iterate_celltype<-function(obj,
                               species=species)
     }
     dot_file = paste0(curprefix, ".", pct_str, ".dot.png")
-    png(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, cluster), res=300)
-    print(g)
-    dev.off()
+    ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(subobj, cluster), units="px", dpi=300, bg="white")
+
     files<-rbind(files, c(previous_layer, iter_name, pct, "dot", dot_file))
 
     all_cur_cts<-rbind(all_cur_cts, cur_cts)
@@ -2677,6 +2672,7 @@ layer_cluster_celltype<-function(obj,
       iter_meta_rds = paste0(curprefix, ".rds")
 
       cat("  Call iterate_celltype ...\n")
+      
       lst<-iterate_celltype(obj, 
                             previous_celltypes, 
                             previous_layer, 
@@ -2738,10 +2734,7 @@ layer_cluster_celltype<-function(obj,
   DefaultAssay(obj)<-"RNA"
 
   g<-get_dim_plot_labelby(obj, label.by = cur_layer, label=T)
-
-  png(paste0(prefix, ".", cur_layer, ".umap.png"), width=3300, height=3000, res=300)
-  print(g)
-  dev.off()
+  ggsave(paste0(prefix, ".", cur_layer, ".umap.png"), g, width=3300, height=3000, units="px", dpi=300, bg="white")
 
   if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
     g2<-get_bubble_plot(obj, 
@@ -2750,9 +2743,7 @@ layer_cluster_celltype<-function(obj,
                         bubblemap_file, 
                         assay="RNA",
                         species=species)
-    png(paste0(prefix, ".", cur_layer, ".dot.png"), width=get_dot_width(g2), height=get_dot_height(obj, cur_layer), res=300)
-    print(g2)
-    dev.off()
+    ggsave(paste0(prefix, ".", cur_layer, ".dot.png"), g2, width=get_dot_width(g2), height=get_dot_height(obj, cur_layer), units="px", dpi=300, bg="white")
   }
 
   write.csv(obj@meta.data, file=paste0(prefix, ".", cur_layer, ".meta.csv"))
