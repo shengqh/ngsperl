@@ -26,6 +26,8 @@ params <- params %>% column_to_rownames("V2") %>% t() %>% data.frame()
 project <- params$task_name
 assembly = params$org
 mincov = as.numeric(params$mincov)
+mds_legendPos = params$mds_legendPos
+
 if("control_group" %in% names(params)){
   control_group=params$control_group
   if(control_group == ""){
@@ -144,8 +146,8 @@ if(!file.exists(hist_pdf)){
 
 #https://www.rdocumentation.org/packages/minfi/versions/1.18.4/topics/mdsPlot
 stopifnot(colnames(cpg_bvalue_df) == meta$sample)
-png(paste0(project, ".CpG.bvalue_top10000.mdsPlot.png"), width=5, height=5, bg="white", res=300, units="in")
-mdsPlot(as.matrix(cpg_bvalue_df), numPositions=10000, sampGroups=meta$group)
+png(paste0(project, ".CpG.bvalue_top10000.mdsPlot.png"), width=6, height=5, bg="white", res=300, units="in")
+mdsPlot(as.matrix(cpg_bvalue_df), numPositions=10000, sampGroups=meta$group, legendPos=mds_legendPos)
 dev.off()
 
 #get top 10000 most variable positions

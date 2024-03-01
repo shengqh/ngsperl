@@ -188,7 +188,8 @@ sub getConfig {
       var       => "group",
       control_group => $def->{control_group},
       mincov     => 4,
-      corr_dim1_cutoff => $def->{corr_dim1_cutoff}
+      corr_dim1_cutoff => $def->{corr_dim1_cutoff},
+      mds_legendPos => getValue($def, "mds_legendPos", "bottomleft"),
     },
     parameterSampleFile3_ref => "groups",
     #parameterFile1 => getValue($def, "meta_file"),
