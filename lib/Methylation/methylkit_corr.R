@@ -82,6 +82,11 @@ if(!file.exists(rds_file)){
  filtered.cpg.meth<-readRDS(rds_file)
 }
 
+cat("PCASamples\n")
+png(paste0(project, ".CpG.pca.png"), width=8, height=8, bg="white", res=300, units="in")
+PCASamples(filtered.cpg.meth)
+dev.off()
+
 get_beta_value<-function(filtered.cpg.meth){
   mat = getData(filtered.cpg.meth)  
   cpg_bvalue_df = mat[, filtered.cpg.meth@numCs.index]/ (mat[,filtered.cpg.meth@numCs.index] + mat[,filtered.cpg.meth@numTs.index] )
@@ -113,11 +118,6 @@ if(!file.exists(hist_pdf)){
   dev.off()
 }
 
-cat("PCASamples\n")
-png(paste0(project, ".CpG.pca.png"), width=8, height=8, bg="white", res=300, units="in")
-PCASamples(filtered.cpg.meth)
-dev.off()
-
 # #https://f1000research.com/articles/6-2055/v2
 # get_mds_value<-function(filtered.cpg.meth){
 #   mat = getData(filtered.cpg.meth)  
@@ -144,7 +144,7 @@ dev.off()
 
 #https://www.rdocumentation.org/packages/minfi/versions/1.18.4/topics/mdsPlot
 stopifnot(colnames(cpg_bvalue_df) == meta$sample)
-png(paste0(project, ".CpG.bvalue_top10000.mdsPlot.png"), width=6, height=6, bg="white", res=300, units="in")
+png(paste0(project, ".CpG.bvalue_top10000.mdsPlot.png"), width=5, height=5, bg="white", res=300, units="in")
 mdsPlot(as.matrix(cpg_bvalue_df), numPositions=10000, sampGroups=meta$group)
 dev.off()
 
@@ -191,8 +191,8 @@ dms_plot <- ggscatter(top10000_cpg_bvalue_corr_mds,
                       size = 1,
                       ellipse = F,
                       ellipse.type = "norm",
-                      repel = TRUE) + theme_bw()
+                      repel = TRUE) + theme_bw() + theme(aspect.ratio=1)
 
-ggsave(paste0(project, ".CpG.bvalue_top10000.corr.MDS.png"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
+ggsave(paste0(project, ".CpG.bvalue_top10000.corr.MDS.png"), dms_plot, width=5, height=4, units="in", dpi=300, bg="white")
 #ggsave(paste0(project, "_methyl_CpG_bvalue_corr_MDS_plot.top10000.pdf"), dms_plot, width=4, height=3, units="in", dpi=300, bg="white")
 

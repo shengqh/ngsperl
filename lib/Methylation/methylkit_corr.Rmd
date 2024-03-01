@@ -77,12 +77,12 @@ include_graphics(paste0(task_name, ".CpG.pca.png"))
 
 # MDS by bvalue of top 10000 most variable CpGs
 
-```{r}
+```{r, fig.width=5}
 include_graphics(paste0(task_name, ".CpG.bvalue_top10000.mdsPlot.png"))
 ```
 
 # MDS by bvalue correlation of top 10000 most variable CpGs
 
-```{r}
+```{r, fig.width=5}
 include_graphics(paste0(task_name, ".CpG.bvalue_top10000.corr.MDS.png"))
 ```
