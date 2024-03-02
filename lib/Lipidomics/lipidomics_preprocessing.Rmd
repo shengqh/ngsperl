@@ -142,8 +142,9 @@ if(combine_by == "SUM"){
   final=get_sum_value(combined)
 }else if(combine_by == "HIGHEST"){
   final=get_highest_value(combined)
+}else{
+  stop("Unknown combine_by: ", combine_by, ". It should be either SUM or HIGHEST.")
 }
-
 stopifnot(duplicated(final$Metabolite.name) %>% sum == 0)
 ```
 
