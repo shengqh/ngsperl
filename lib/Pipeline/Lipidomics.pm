@@ -149,7 +149,7 @@ sub getLipidomicsConfig {
           "mem"       => "20gb"
         },
       };
-      push(@$tasks, $qc_task);
+      push(@$tasks, $limma_task);
     }
   }
 
