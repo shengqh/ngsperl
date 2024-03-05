@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='AS_multiome'
+outFile='SADIE_adipose'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/shah_lab/shengq2/20230726_Vandy_AS_from_Michelle/AS_Tiger/rds_objects/subclusters_for_DE/subcluster_endothelial.rds'
+parFile1='/data/shah_lab/shengq2/20240226_mono_scRNA_SADIE/adipose.DE.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20231110_AS_multiome_Michelle_subcluster/endothelial_edgeR_inCluster_bySample/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240304_DE_fold1.5/files_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -49,6 +49,10 @@ if(!exists('obj')){
       obj$orig.ident = obj@meta.data[,myoptions$sample_column]
     }
   }
+}
+
+if(myoptions$reduction != "umap"){
+  obj[["umap"]] = obj[[myoptions$reduction]]
 }
 
 if(1){
@@ -99,9 +103,16 @@ if(1){
     }
     
     if("covariances" %in% names(comp_options)){
-      covariances_tbl<-data.frame(fread(myoptions$covariance_file, stringsAsFactors = F, header=T), row.names=1)
-      assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
-      covariances=comp_options$covariances
+      if(file.exists(myoptions$covariance_file)){
+        covariances_tbl<-data.frame(fread(myoptions$covariance_file, stringsAsFactors = F, header=T), row.names=1)
+        assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
+        covariances=comp_options$covariances
+      }else{
+        assert(all(comp_options$covariances %in% colnames(obj@meta.data)))
+        covariances_tbl<-unique(obj@meta.data[,c("orig.ident", comp_options$covariances)])
+        rownames(covariances_tbl)<-covariances_tbl$orig.ident
+        covariances=comp_options$covariances
+      }
     }else{
       covariances=NULL
     }
