@@ -1743,6 +1743,7 @@ get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1){
     
     clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
     de_obj<-subset(obj, cells=rownames(clusterCt))
+    cat("  extracted", ncol(de_obj), "cells and", nrow(de_obj), "genes\n")
 
     dtb<-table(de_obj$orig.ident)
 
@@ -1753,7 +1754,15 @@ get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1){
       de_obj<-subset(de_obj, orig.ident %in% names(dtb))
     }
 
-    ct_count<-de_obj@assays$RNA@counts
+    # if("counts" %in% slotNames(de_obj@assays$RNA)){
+    #   ct_count<-de_obj@assays$RNA@counts
+    # }else{
+    #   ct_count<-de_obj@assays$RNA@layers$counts
+    #   rownames(ct_count)<-rownames(de_obj)
+    #   colnames(ct_count)<-colnames(de_obj)
+    # }
+
+    ct_count<-GetAssayData(object = de_obj, assay = "RNA", slot = "counts")
     groupings<-unlist(de_obj$orig.ident)
     p_count<-sumcount(ct_count, groupings)
 
@@ -2094,6 +2103,10 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
 
   logFC<-sigout[sig_gene, "logFC"]
   FDR<-sigout[sig_gene,"FDR"]
+
+  cell_obj=ScaleData(cell_obj, features=sig_gene, assay="RNA")
+
+  stopifnot(sig_gene %in% rownames(cell_obj))
 
   geneexp=FetchData(cell_obj,vars=c(sig_gene))
   colnames(geneexp)<-"Gene"
