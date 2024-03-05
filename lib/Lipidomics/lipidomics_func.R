@@ -27,7 +27,8 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
   
   meta=header[!is.na(header$Class) & !(header$Class %in% c("", "Class")),]
   colnames(meta)[5]="Sample"
-  meta$Sample=gsub(modePrefix, "", meta$Sample)
+  meta$Sample=make.names(gsub(modePrefix, "", meta$Sample))
+  meta$Class=make.names(meta$Class)
   meta <- meta %>% dplyr::select("Sample", everything())
 
   write.csv(meta, paste0(filePrefix, ".meta.csv"), row.names=FALSE)
