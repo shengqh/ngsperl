@@ -391,7 +391,12 @@ for (i in 1:length(de_list_toptable_sig)){
     cur_groups = groups[cur_samples,,drop=FALSE]
 
     data_df = category_log_df[,cur_samples]
-      
+    
+    rs = rowSums(data_df)
+    if(any(rs == 0)) {
+      data_df = data_df[rs != 0,,drop=FALSE]
+    }
+
     heatmap_height = heatmap_heights[i]
     png_file = draw_pheatmap( data_df = data_df, 
                               groups = cur_groups, 
