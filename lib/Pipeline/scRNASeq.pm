@@ -93,6 +93,9 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_clonotype_analysis", 0 );
 
+  initDefaultValue( $def, "perform_SingleR", 0);
+  initDefaultValue( $def, "perform_SignacX", 0);
+  initDefaultValue( $def, "perform_Azimuth", 0);
 
   initDefaultValue( $def, "perform_enclone_only",      0 );
 

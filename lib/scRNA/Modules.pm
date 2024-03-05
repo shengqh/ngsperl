@@ -8,6 +8,7 @@ use File::Basename;
 use File::Slurp;
 use CQS::ConfigUtils;
 use Pipeline::PipelineUtils;
+use Data::Dumper;
 
 our @ISA = qw(Exporter);
 
@@ -62,6 +63,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addCHETAH
 
   add_singleR_cell
+  add_azimuth
+
   add_singleR
 
   add_signacx_only
@@ -785,7 +788,7 @@ sub add_singleR_cell {
   $config->{$singleR_task} = {
     class                => $class,
     perform              => 1,
-    target_dir           => $target_dir . "/" . $singleR_task,
+    target_dir           => $target_folder,
     init_command => "",
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SingleR.r",
     parameterSampleFile1_ref   => $obj_ref,
@@ -809,6 +812,43 @@ sub add_singleR_cell {
   push( @$tasks, $singleR_task );
 }
 
+sub add_azimuth {
+  my ( $config, $def, $tasks, $target_dir, $azimuth_task, $obj_ref, $cur_options, $by_individual_sample ) = @_;
+
+  if(!defined $by_individual_sample){
+    $by_individual_sample = 0;
+  }
+
+  my $target_folder = $target_dir . "/" . $azimuth_task;
+  my $class =  $by_individual_sample ? "CQS::IndividualR" : "CQS::UniqueR";
+  $config->{$azimuth_task} = {
+    class                => $class,
+    perform              => 1,
+    target_dir           => $target_folder,
+    init_command => "",
+    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/azimuth.r",
+    parameterSampleFile1_ref   => $obj_ref,
+    parameterSampleFile2 => merge_hash_left_precedent($cur_options,  {
+      species             => getValue( $def, "species" ),
+      pca_dims            => getValue( $def, "pca_dims" ),
+      Azimuth_ref => getValue($def, "Azimuth_ref"),
+      bubblemap_file        => $def->{bubblemap_file},
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+    }),
+    output_file_ext => ".azimuth.png;.azimuth.rds;.meta.rds",
+    post_command => "rm -rf .cache",
+    no_docker => 1,
+    sh_direct       => 0,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => getValue($def, "Azimuth_walltime", "10"),
+      "mem"       => getValue($def, "Azimuth_mem", $by_individual_sample ? "40g" : getValue($def, "seurat_mem")),
+    },
+  };
+
+  #print(Dumper($config));
+  push( @$tasks, $azimuth_task );
+}
 
 sub add_decontX {
   my ( $config, $def, $tasks, $target_dir, $decontX_task, $files_ref, $raw_files_ref, $cur_options, $by_individual_sample ) = @_;
@@ -1379,6 +1419,7 @@ sub addEdgeRTask {
     parameterSampleFile2 => $pairs,
     parameterSampleFile3 => $rCodeDic,
     output_file_ext      => ".edgeR.files.csv",
+    no_docker            => getValue($def, "no_docker", 0),
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
@@ -3052,6 +3093,18 @@ sub add_individual_qc_tasks{
     $singleR_ref = [ $singleR_task, ".meta.rds" ];
   }
 
+  my $azimuth_ref = undef;
+  if (getValue( $def, "perform_Azimuth", 0 ) ) {
+    my $azimuth_task = $raw_individual_qc_task . "_Azimuth";
+    my $cur_options = {
+      task_name => $def->{task_name},
+      reduction => $reduction, 
+    };
+    add_azimuth( $config, $def, $summary, $target_dir, $azimuth_task, $raw_individual_qc_task, $cur_options, 1);
+    $azimuth_ref = [ $azimuth_task, ".meta.rds" ];
+    #print($config->{$azimuth_task});
+  }
+
   my $qc_report_task = $raw_individual_qc_task . "_report";
   $config->{$qc_report_task} = {
     class => "CQS::UniqueR",
@@ -3076,6 +3129,7 @@ sub add_individual_qc_tasks{
     parameterSampleFile5_ref => $singleR_ref,
     parameterSampleFile6_ref => $decontX_ref,
     parameterSampleFile7_ref => $doublet_finder_ref,
+    parameterSampleFile8_ref => $azimuth_ref,
     output_file_ext => ".${prefix}qc.html",
     sh_direct       => 1,
     pbs             => {
