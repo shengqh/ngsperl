@@ -43,6 +43,10 @@ myoptions=read_file_map("fileList1.limma.txt", do_unlist=FALSE)
 email=myoptions$email
 task_name=myoptions$task_name
 affiliation=myoptions$affiliation
+heatmap_width=as.numeric(myoptions$heatmap_width)
+
+foldchange <- as.numeric(myoptions$fold_change)
+fdr <- as.numeric(myoptions$fdr)
 
 if(!"remove_sample_pattern" %in% names(myoptions)){
   myoptions$remove_sample_pattern <- ""
@@ -134,6 +138,11 @@ if(myoptions$remove_sample_pattern != ""){
 rm(raw_files_list, log_files_list, meta)
 ```
 
+```{r}
+png_list_file <- fread("fileList5.limma.txt", header=F, data.table = F)$V1[1]
+png_files <- data.frame(fread(png_list_file, header = T), row.names=1)
+```
+
 # Comparisons
 
 ```{r}
@@ -151,12 +160,6 @@ for(idx in 1:nrow(comp_table)){
 comp_table$Contract = paste(comp_table$Sample, "-", comp_table$Reference)
 
 print_table(comp_table, row.names=FALSE)
-```
-
-```{r}
-DEcriteria <- read_file_map("fileList5.limma.txt", do_unlist=FALSE)
-foldchange <- as.numeric(DEcriteria$fold_change)
-fdr <- as.numeric(DEcriteria$fdr)
 ```
 
 # Differential expression analysis
@@ -209,71 +212,15 @@ names(de_list_toptable_sig) <- names(log_files_list_sel)
 ```{r}
 #plotting functions
 ## Heatmap
-heatmap_width=7
 heatmap_heights=NA
 
-draw_pheatmap <- function(data_df, groups, annotation_colors, category, comparison, prefix, heatmap_width, heatmap_height){
-  show_rownames = ifelse(nrow(data_df) <= 30, TRUE, FALSE)
-  cellheight = ifelse(nrow(data_df) <= 30, 8, 2)
-  png_file = paste0(prefix, ".heatmap.png")
-  pheatmap( data_df, 
-            main = category,
-            scale = "row", 
-            show_rownames = show_rownames, 
-            annotation_col = groups, 
-            annotation_colors = annotation_colors, 
-            annotation_legend = F, 
-            annotation_names_col = F, 
-            border_color = NA,  
-            fontsize = 7, 
-            cellheight = cellheight, 
-            cluster_cols = T,
-            filename=paste0(prefix, ".heatmap.png"),
-            width=heatmap_width,
-            height=heatmap_height)
-  #g <- p1[[4]]
-  #ggsave(png_file, g, width = heatmap_width, height = heatmap_height, dpi = 300, units = "in", bg="white")
-  return(png_file)
-}
-
-
 ## PCA
-pca_width=5
-pca_height=4
-
-draw_pca <- function(data, groups, category, comparison, prefix, colors, pca_width, pca_height){
-  data_t <- t(data)
-  pca <- prcomp(data_t)
-  pcadata<-data.frame(pca$x)
-  sum_pca <- summary(pca)$importance
-  pcadata$groups <- groups
-  
-  p <- ggplot(pcadata, aes(x=PC1, y=PC2, color=groups)) + #, label = rownames(pcadata))) 
-    geom_point(size = 4) + 
-    theme_classic() +
-    labs(x=paste0("PCA1 (", round(sum_pca[2,1] * 100, digits = 1), "%)"),
-         y=paste0("PCA2 (", round(sum_pca[2,2] * 100, digits = 1), "%)"),
-         title=category) +
-    theme(axis.text = element_text(size = 16), 
-          axis.title = element_text(size=18, face = "bold"), 
-          legend.text=element_text(size=16), 
-          legend.title= element_blank(),
-          plot.title = element_text(hjust = 0.5),
-          aspect.ratio=1)
-  
-  if(length(unique(groups)) < 10){
-    p <- p + #scale_color_brewer(palette = "Set1")
-    scale_colour_manual(values = c(colors))
-  }
-
-  png_file = paste0(prefix, ".pca.png")
-  ggsave(png_file, plot = p, width = pca_width, height = pca_height, dpi = 300, units = "in", bg="white")
-  return(png_file)
-}
+pca_width=6
+pca_height=5
 
 # Volcano plot
-volcano_width=5
-volcano_height=4
+volcano_width=7
+volcano_height=6
 
 #for volcano plot
 reverselog_trans <- function(base = exp(1)) {
@@ -284,44 +231,29 @@ reverselog_trans <- function(base = exp(1)) {
             domain = c(1e-100, Inf))
 }
 
-draw_volcano <- function(data, category, comparison, prefix, volcano_width, volcano_height){
-  changeColours<-c(grey="grey",blue="blue",red="red")
+library(EnhancedVolcano)
+
+draw_volcano <- function(data, category, comparison, prefix, volcano_width, volcano_height, fdr, foldchange){
   diffResult<-as.data.frame(data)
-  #diffResult$log10BaseMean<-log10(diffResult$baseMean)
-  diffResult$colour<-"grey"
-  if (useRawPvalue==1) {
-    diffResult<-subset(diffResult, !is.na(P.Value))
-    diffResult$colour[which(diffResult$P.Value<=pvalue & diffResult$logFC>=log2(foldchange))]<-"red"
-    diffResult$colour[which(diffResult$P.Value<=pvalue & diffResult$logFC<=-log2(foldchange))]<-"blue"
-  } else {
-    diffResult<-subset(diffResult, !is.na(adj.P.Val))
-    diffResult$colour[which(diffResult$adj.P.Val<=pvalue & diffResult$logFC>=log2(foldchange))]<-"red"
-    diffResult$colour[which(diffResult$adj.P.Val<=pvalue & diffResult$logFC<=-log2(foldchange))]<-"blue"
-  }
-
   yname=bquote(-log10(p~value))
-  xname=bquote(log[2]~Fold~Change)
+  p<-EnhancedVolcano(diffResult,
+      lab = rownames(diffResult),
+      x = 'logFC',
+      y = 'P.Value',
+      title = comparison,
+      pCutoff = fdr,
+      pCutoffCol = "adj.P.Val",
+      FCcutoff = log2(foldchange),
+      pointSize = 3.0,
+      labSize = 3.0,
+      colAlpha = 1,
+      subtitle = NULL) + ylab(yname)
 
-  
-  p<-ggplot(diffResult,aes(x=logFC,y=adj.P.Val))+
-    scale_y_continuous(trans=reverselog_trans(10),name=yname) +
-    geom_point(aes(colour=colour))+
-    scale_color_manual(values=changeColours,guide = FALSE)+
-    scale_x_continuous(name=xname)+
-    geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
-    geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-    #guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
-    theme_bw()+
-    scale_size(range = c(3, 7))+
-    theme(axis.text = element_text(colour = "black",size=20),
-          axis.title = element_text(size=20),
-          legend.text= element_text(size=20),
-          legend.title= element_text(size=20))
-            
   png_file = paste0(prefix, ".volcano.png")
   ggsave(png_file, plot = p, width = volcano_width, height = volcano_height, dpi = 300, units = "in", bg="white")
   return(png_file)
 }
+
 ```
 
 ```{r, results='asis'}
@@ -346,15 +278,16 @@ draw_volcano <- function(data, category, comparison, prefix, volcano_width, volc
 
 ```{r, results='asis', fig.height = 5, fig.width = 5}
 #loop printing tables, pca, heatmap, volcano plot
-groups <- data.frame(row.names = meta_sel$Class_Sample, groups = meta_sel$Class)
-group_names = unique(meta_sel$Class)
-groups_colors <- distinctColorPalette(length(group_names))
-names(groups_colors) <- group_names
-
-annotation_colors = list(groups = groups_colors)
+groups <- data.frame(row.names = meta_sel$Class_Sample, Group = meta_sel$Class)
 
 pvalue<-fdr
 useRawPvalue<-0
+
+cur_folder = getwd()
+limma_folder = paste0(cur_folder, "/limma_result/")
+if(!dir.exists(limma_folder)){
+  dir.create(limma_folder)
+}
 
 de_tbl = data.frame("Category"=character(), 
                     "Comparison"=character(), 
@@ -371,17 +304,27 @@ for (i in 1:length(de_list_toptable_sig)){
 
   result = paste0(result, "\n## ", category, "\n\n")
 
+  result = paste0(result, "\n### Global PCA\n\n")
+  pca_png = png_files[category, "pca_file"]
+  result = paste0(result, getFigure(pca_png))
+
   j=1
   for(j in 1:length(category_sig_df_list)){
     de_idx = de_idx + 1
 
     contrast_name = names(category_sig_df_list)[[j]]
     cur_comp_tbl=comp_table[comp_table$Contract==contrast_name,]
-    cur_comp=cur_comp_tbl[1,1]
+    cur_comp=cur_comp_tbl[1,"Comparison"]
+    cur_reference_group=cur_comp_tbl[1,"Reference"]
+    cur_sample_group=cur_comp_tbl[1,"Sample"]
     cur_comp_df = category_df_list[[j]]
     cur_comp_sig_df = category_sig_df_list[[j]]
 
-    cur_prefix =  paste(task_name, category, cur_comp, sep = ".")
+    groups_colors = c("red", "blue")
+    names(groups_colors) = c(cur_sample_group, cur_reference_group)
+    annotation_colors = list(Group=groups_colors)
+
+    cur_prefix = paste0(limma_folder, paste(task_name, category, cur_comp, sep = "."))
     #Save results
     write.csv(cur_comp_df, paste0(cur_prefix, ".DE.csv"))
   
@@ -391,21 +334,26 @@ for (i in 1:length(de_list_toptable_sig)){
     cur_groups = groups[cur_samples,,drop=FALSE]
 
     data_df = category_log_df[,cur_samples]
-    
-    rs = rowSums(data_df)
-    if(any(rs == 0)) {
-      data_df = data_df[rs != 0,,drop=FALSE]
-    }
+    if(min(rowSums(data_df)) == 0) {
+      data_df = data_df[-which(rowSums(data_df) == 0),]}
+
+    show_rownames=nrow(data_df) <= 30
+    if(show_rownames){
+      cur_heatmap_width = heatmap_width + 2
+    }else{
+      cur_heatmap_width = heatmap_width
+    } 
 
     heatmap_height = heatmap_heights[i]
     png_file = draw_pheatmap( data_df = data_df, 
                               groups = cur_groups, 
                               annotation_colors = annotation_colors, 
-                              category=category, 
-                              comparison=contrast_name,
-                              prefix=cur_prefix,
-                              heatmap_width=heatmap_width,
-                              heatmap_height=heatmap_height)
+                              title=category, 
+                              file_prefix=cur_prefix,
+                              heatmap_width=cur_heatmap_width,
+                              heatmap_height=heatmap_height,
+                              annotation_legend=TRUE,
+                              show_rownames=show_rownames)
 
     result = paste0(result, "\n#### Heatmap\n\n")
     if(is.na(heatmap_height)){
@@ -414,14 +362,15 @@ for (i in 1:length(de_list_toptable_sig)){
       result = paste0(result, getFigure_width_height(png_file, fig.width=heatmap_width, fig.height=heatmap_height))
     }
 
-    pca_groups = cur_groups$groups
+    pca_groups = cur_groups$Group
     png_file = draw_pca(data=data_df, 
                         groups=pca_groups, 
-                        category=category, 
-                        prefix=cur_prefix, 
-                        colors = groups_colors[match(unique(pca_groups), names(groups_colors))],
+                        title=category, 
+                        file_prefix=cur_prefix, 
                         pca_width=pca_width, 
-                        pca_height=pca_height)
+                        pca_height=pca_height,
+                        colors = groups_colors[match(unique(pca_groups), names(groups_colors))]
+                        )
     result = paste0(result, "\n#### PCA\n\n")
     result = paste0(result, getFigure_width_height(png_file, fig.width=pca_width, fig.height=pca_height))
 
@@ -442,9 +391,12 @@ for (i in 1:length(de_list_toptable_sig)){
     #Volcano plot
     png_file = draw_volcano(data=cur_comp_df, 
                             category=category, 
+                            comparison=contrast_name,
                             prefix=cur_prefix, 
                             volcano_width=volcano_width, 
-                            volcano_height=volcano_height)
+                            volcano_height=volcano_height,
+                            fdr=fdr,
+                            foldchange=foldchange)
     result = paste0(result, "\n#### Volcano\n\n")
     result = paste0(result, getFigure_width_height(png_file, fig.width=volcano_width, fig.height=volcano_height))
   }

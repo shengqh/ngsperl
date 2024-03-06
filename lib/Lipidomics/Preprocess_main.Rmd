@@ -70,7 +70,13 @@ data_files=read_file_map("fileList2.preprocess.txt", do_unlist=FALSE)
 pos_file=data_files$POS
 neg_file=data_files$NEG
 
-result_prefix=task_name
+cur_folder = getwd()
+preprocess_folder = paste0(cur_folder, "/preprocess_result/")
+if(!dir.exists(preprocess_folder)){
+  dir.create(preprocess_folder)
+}
+
+result_prefix=paste0(preprocess_folder, task_name)
 annotated_prefix=paste0(result_prefix, '.annotated')
 ```
 

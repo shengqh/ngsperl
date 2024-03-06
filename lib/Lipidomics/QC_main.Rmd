@@ -49,6 +49,15 @@ if(!"remove_sample_pattern" %in% names(myoptions)){
 if(!"remove_sample_description" %in% names(myoptions)){
   myoptions$remove_sample_description <- ""
 }
+heatmap_width=as.numeric(myoptions$heatmap_width)
+
+cur_folder = getwd()
+qc_folder = paste0(cur_folder, "/qc_result/")
+if(!dir.exists(qc_folder)){
+  dir.create(qc_folder)
+}
+
+result_prefix=paste0(qc_folder, task_name)
 ```
 
 ---
@@ -170,93 +179,48 @@ draw_boxplot <- function(data, category, prefix){
   return(png_file)
 }
 
+png_files=data.frame(category=names(log_files_list_sel), box_file="", pca_file="", heatmap_file="", stacked_file="")
+
 result = "\n# Boxplots\n\n"
 for (i in 1:length(log_files_list_melt)){
   category = names(log_files_list_melt)[i]
   result = paste0(result, "\n\n## ", category, "\n")
-  png_file = draw_boxplot(log_files_list_melt[[i]], category, prefix=paste0(task_name, ".", category))
+  png_file = draw_boxplot(log_files_list_melt[[i]], category, prefix=paste0(result_prefix, ".", category))
   result = paste0(result, getFigure_width_height(png_file, fig.width=box_width, fig.height=box_height))
+  png_files$box_file[i]=normalizePath(png_file)
 }
-
 ```
 
 ```{r}
 pca_width=6
 pca_height=5
 
-draw_pca <- function(data, groups, category, prefix){
-  data_t <- t(data)
-  pca <- prcomp(data_t)
-  pcadata<-data.frame(pca$x)
-  sum_pca <- summary(pca)$importance
-  pcadata$groups <- groups
-  
-  p <- ggplot(pcadata, aes(x=PC1, y=PC2, color=groups)) + #, label = rownames(pcadata))) 
-    geom_point(size = 4) + 
-    theme_classic() +
-    labs(x=paste0("PCA1 (", round(sum_pca[2,1] * 100, digits = 1), "%)"),
-         y=paste0("PCA2 (", round(sum_pca[2,2] * 100, digits = 1), "%)"),
-         title=category) +
-    theme(axis.text = element_text(size = 16), 
-          axis.title = element_text(size=18, face = "bold"), 
-          legend.text=element_text(size=16), 
-          legend.title= element_blank(),
-          plot.title = element_text(hjust = 0.5),
-          aspect.ratio=1)
-  
-  if(length(unique(groups)) < 10){
-    p <- p + scale_color_brewer(palette = "Set1")
-  }
-
-  png_file = paste0(prefix, ".pca.png")
-  ggsave(png_file, plot = p, width = pca_width, height = pca_height, dpi = 300, units = "in", bg="white")
-  return(png_file)
-}
-
 result = paste0(result, "\n# PCA\n\n")
 for (i in 1:length(log_files_list_sel)){
   category = names(log_files_list_sel)[i]
   result = paste0(result, "\n\n## ", category, "\n")
-  png_file = draw_pca(data=log_files_list_sel[[i]], groups=meta_sel$Class, category=category, prefix=paste0(task_name, ".", category))
+  data_df = log_files_list_sel[[i]]
+  png_file = draw_pca(data=data_df, 
+                      groups=meta_sel$Class, 
+                      title=category, 
+                      file_prefix=paste0(result_prefix, ".", category), 
+                      pca_width=pca_width, 
+                      pca_height=pca_height)
   result = paste0(result, getFigure_width_height(png_file, fig.width=pca_width, fig.height=pca_height))
+  png_files$pca_file[i]=normalizePath(png_file)
 }
 ```
 
 ```{r}
-heatmap_width=7
-heatmap_heights=c(5, 4.5, 4, 3)
+heatmap_heights=NA
 
-draw_pheatmap <- function(data_df, groups, annotation_colors, category, prefix, heatmap_width, heatmap_height){
-  show_rownames = ifelse(nrow(data_df) <= 30, TRUE, FALSE)
-  cellheight = ifelse(nrow(data_df) <= 30, 8, 2)
-  png_file = paste0(prefix, ".heatmap.png")
-  pheatmap( data_df, 
-            main = category,
-            scale = "row", 
-            show_rownames = show_rownames, 
-            annotation_col = groups, 
-            annotation_colors = annotation_colors, 
-            annotation_legend = F, 
-            annotation_names_col = F, 
-            border_color = NA,  
-            fontsize = 7, 
-            cellheight = cellheight, 
-            cluster_cols = T,
-            filename=png_file,
-            width=heatmap_width,
-            height=heatmap_height)
-  #g <- p1[[4]]
-  #ggsave(png_file, g, width = heatmap_width, height = heatmap_height, dpi = 300, units = "in", bg="white")
-  return(png_file)
-}
-
-groups <- data.frame(row.names = meta_sel$Class_Sample, groups = meta_sel$Class)
+groups <- data.frame(row.names = meta_sel$Class_Sample, Group = meta_sel$Class)
 
 group_names = unique(meta_sel$Class)
 groups_colors <- distinctColorPalette(length(group_names))
 names(groups_colors) <- group_names
 
-annotation_colors = list(groups = groups_colors)
+annotation_colors = list(Group = groups_colors)
 
 result = paste0(result, "\n# Heatmap\n\n")
 for (i in 1:length(log_files_list_sel)){
@@ -264,27 +228,39 @@ for (i in 1:length(log_files_list_sel)){
   result = paste0(result, "\n\n## ", category, "\n")
 
   data_df = log_files_list_sel[[i]]
+  show_rownames=nrow(data_df) <= 30
+  if(show_rownames){
+    cur_heatmap_width = heatmap_width + 2
+  }else{
+    cur_heatmap_width = heatmap_width
+  } 
   heatmap_height = heatmap_heights[i]
 
-  png_file = draw_pheatmap(data_df = data_df, 
-    groups = groups, 
-    annotation_colors = annotation_colors, 
-    category=category, 
-    prefix=paste0(task_name, ".", category),
-    heatmap_width=heatmap_width,
-    heatmap_height=heatmap_height)
+  png_file = draw_pheatmap( data_df = data_df, 
+                            groups = groups, 
+                            annotation_colors = annotation_colors, 
+                            title=category, 
+                            file_prefix=paste0(result_prefix, ".", category),
+                            heatmap_width=cur_heatmap_width,
+                            heatmap_height=heatmap_height,
+                            annotation_legend=TRUE,
+                            show_rownames=show_rownames)
 
-  if(category == "Species"){
-    result = paste0(result, "\n\nSpecies heatmap file=", png_file, "\n\n")
+  # if(category == "Species"){
+  #   result = paste0(result, "\n\nSpecies heatmap file=", png_file, "\n\n")
+  # }
+  if(is.na(heatmap_height)){
+    result = paste0(result, getFigure_width_height(png_file, fig.width=cur_heatmap_width, fig.height=NULL))
+  }else{
+    result = paste0(result, getFigure_width_height(png_file, fig.width=cur_heatmap_width, fig.height=heatmap_height))
   }
-
-  result = paste0(result, getFigure_width_height(png_file, fig.width=heatmap_width, fig.height=heatmap_height))
+  png_files$heatmap_file[i]=normalizePath(png_file)
 }
 ```
 
 ```{r}
 stacked_width=7
-stacked_height=4
+stacked_height=5
 
 select_top_n <- function(data, n, max_n){
   if(nrow(data) <= max_n){
@@ -310,7 +286,8 @@ draw_stacked <- function(data, category, prefix){
     theme_classic() +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
           plot.title = element_text(hjust = 0.5)) +
-    labs(x = "", y = "Concentration", title=category)
+    labs(x = "", y = "Concentration", title=category) +
+    theme(legend.text=element_text(size=8), legend.title=element_text(size=8))
   png_file = paste0(prefix, ".bar_count.png")
   ggsave(png_file, plot = p, width = stacked_width, height = stacked_height, dpi = 300, units = "in", bg="white")
   return(png_file)
@@ -322,7 +299,8 @@ draw_stacked_per <- function(data, category, prefix){
     theme_classic() +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
           plot.title = element_text(hjust = 0.5)) +
-    labs(x = "", y = "Percentage", title=category)
+    labs(x = "", y = "Percentage", title=category) +
+    theme(legend.text=element_text(size=8), legend.title=element_text(size=8))
   png_file = paste0(prefix, ".bar_perc.png")
   ggsave(png_file, plot = p, width = stacked_width, height = stacked_height, dpi = 300, units = "in", bg="white")
   return(png_file)
@@ -354,17 +332,19 @@ for (i in 1:length(raw_files_list_melt)){
     cur_data=top_data
     cur_data$Feature=factor(cur_data$Feature, levels=top_f_genes)
   }
-  category_csv = paste0(task_name, ".", category, ".csv")
+  category_csv = paste0(result_prefix, ".", category, ".csv")
   write.csv(cur_data, category_csv, row.names=FALSE)
   datafiles$file[i]=normalizePath(category_csv)
 
-  png_file = draw_stacked(cur_data, category=category, prefix=paste0(task_name, ".", category))
+  png_file = draw_stacked(cur_data, category=category, prefix=paste0(result_prefix, ".", category))
   result = paste0(result, getFigure_width_height(png_file, fig.width=stacked_width, fig.height=stacked_height))
+  png_files$stacked_file[i]=normalizePath(png_file)
 
-  png_file = draw_stacked_per(cur_data, category=category, prefix=paste0(task_name, ".", category))
+  png_file = draw_stacked_per(cur_data, category=category, prefix=paste0(result_prefix, ".", category))
   result = paste0(result, getFigure_width_height(png_file, fig.width=stacked_width, fig.height=stacked_height))
 }
 write.table(datafiles, paste0(task_name, ".files.txt"), row.names=FALSE, sep="\t", quote=FALSE)
+write.table(png_files, paste0(task_name, ".png_files.txt"), row.names=FALSE, sep="\t", quote=FALSE)
 ```
 
 ```{r}

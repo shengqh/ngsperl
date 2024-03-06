@@ -135,3 +135,57 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
 
   return(list(res=res, all_meta=meta, sample_meta=sample_meta, filter_tb=filter_tb))
 }
+
+draw_pheatmap <- function(data_df, groups, annotation_colors, title, file_prefix, heatmap_width, heatmap_height, annotation_legend=FALSE, show_rownames=nrow(data_df) <= 30){
+  cellheight = ifelse(show_rownames, 12, NA)
+  max_height=ifelse(show_rownames, 7, 6)
+  heatmap_height = ifelse(is.na(heatmap_height), max(4, min(max_height, nrow(data_df) * 0.2 + 3)), heatmap_height)
+  png_file = paste0(file_prefix, ".heatmap.png")
+  pheatmap( data_df, 
+            main = title,
+            scale = "row", 
+            show_rownames = show_rownames, 
+            annotation_col = groups, 
+            annotation_colors = annotation_colors, 
+            annotation_legend = annotation_legend, 
+            annotation_names_col = F, 
+            border_color = NA,  
+            fontsize = 10, 
+            cellheight = cellheight, 
+            cluster_cols = T,
+            filename=png_file,
+            width=heatmap_width,
+            height=heatmap_height)
+  return(png_file)
+}
+
+draw_pca <- function(data, groups, title, file_prefix, pca_width, pca_height, colors=NULL){
+  data_t <- t(data)
+  pca <- prcomp(data_t)
+  pcadata<-data.frame(pca$x)
+  pcadata=as.data.frame(scale(pcadata))
+  sum_pca <- summary(pca)$importance
+  pcadata$groups <- groups
+  
+  p <- ggplot(pcadata, aes(x=PC1, y=PC2, color=groups)) + #, label = rownames(pcadata))) 
+    geom_point(size = 4) + 
+    theme_bw() +
+    labs(x=paste0("PCA1 (", round(sum_pca[2,1] * 100, digits = 1), "%)"),
+         y=paste0("PCA2 (", round(sum_pca[2,2] * 100, digits = 1), "%)"),
+         title=title) +
+    theme(axis.text = element_text(size = 16), 
+          axis.title = element_text(size=18, face = "bold"), 
+          legend.text=element_text(size=12), 
+          legend.title= element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          aspect.ratio=1)
+  
+  if(length(unique(groups)) < 10 & !is.null(colors)){
+    p <- p + #scale_color_brewer(palette = "Set1")
+    scale_colour_manual(values = c(colors))
+  }
+
+  png_file = paste0(file_prefix, ".pca.png")
+  ggsave(png_file, plot = p, width = pca_width, height = pca_height, dpi = 300, units = "in", bg="white")
+  return(png_file)
+}
