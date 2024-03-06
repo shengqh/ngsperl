@@ -81,14 +81,24 @@ sub result {
 #        print "SampleName: $sample_name\n";
         if ( is_hash( $temp{$sample_name} ) ) {
           foreach my $output_file_ext_one (@$output_file_exts) {
-            push( @result_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
+            if($output_file_ext_one =~ /__NAME__/){
+              $output_file_ext_one =~ s/__NAME__/$sample_name/g;
+              push( @result_files, "${result_dir}/${output_file_ext_one}" );
+            }else{
+              push( @result_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
+            }
           }
         }
         else {
           foreach my $subSampleFile ( @{ $temp{$sample_name} } ) {
             my $subSampleName = $output_to_result_directory ? $result_dir . "/" . basename($subSampleFile) : $subSampleFile;
             foreach my $output_file_ext_one (@$output_file_exts) {
-              push( @result_files, "${subSampleName}${output_file_ext_one}" );
+              if($output_file_ext_one =~ /__NAME__/){
+                $output_file_ext_one =~ s/__NAME__/$sample_name/g;
+                push( @result_files, "${result_dir}/${output_file_ext_one}" );
+              }else{
+                push( @result_files, "${subSampleName}${output_file_ext_one}" );
+              }
             }
           }
         }
@@ -108,7 +118,13 @@ sub result {
     my @result_files = ();
     foreach my $output_file_ext_one (@$output_file_exts) {
       if (($output_file ne "") or ($output_file_ext_one ne "")) {
-        push( @result_files, "${result_dir}/${output_taskname}${output_file}${output_file_ext_one}" );
+        my $filename = "${output_file}${output_file_ext_one}";
+        if($filename =~ /__NAME__/){
+          $filename =~ s/__NAME__/$output_taskname/g;
+          push( @result_files, "${result_dir}/${filename}" );
+        }else{
+          push( @result_files, "${result_dir}/${output_taskname}${filename}" );
+        }
       }
     }
     
@@ -133,7 +149,12 @@ sub result {
         my @result_perSample_files = ();
         if ( is_hash( $temp{$sample_name}) or $output_perSample_file_byName ) {
           foreach my $output_file_ext_one (@output_perSample_file_exts) {
-            push( @result_perSample_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
+            if($output_file_ext_one =~ /__NAME__/){
+              $output_file_ext_one =~ s/__NAME__/$output_taskname/g;
+              push( @result_perSample_files, "${result_dir}/${output_file_ext_one}" );
+            }else{
+              push( @result_perSample_files, "${result_dir}/${sample_name}${output_file_ext_one}" );
+            }
           }
         }
         else {
@@ -146,9 +167,13 @@ sub result {
               }
             }
             #print($subSampleName . "\n");
-            my $final_SampleName = $subSampleFolder . "/" . $subSampleName;
             foreach my $output_file_ext_one (@output_perSample_file_exts) {
-              push( @result_perSample_files, "${final_SampleName}${output_file_ext_one}" );
+              if($output_file_ext_one =~ /__NAME__/){
+                $output_file_ext_one =~ s/__NAME__/$subSampleName/g;
+                push( @result_perSample_files, "${subSampleFolder}/${output_file_ext_one}" );
+              }else{
+                push( @result_perSample_files, "${subSampleFolder}/${subSampleName}${output_file_ext_one}" );
+              }
             }
           }
         }
