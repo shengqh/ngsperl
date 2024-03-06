@@ -109,11 +109,17 @@ get_highest_value<-function(combined){
   #find the entry with highest value in most samples
   dupname=dupnames[1]
   for(dupname in dupnames){
+    #extract lipids with identical name
     cur_dup=combined %>% dplyr::filter(Metabolite.name==dupname) %>% dplyr::select(!c(Metabolite.name, Ontology, Mode))
+    #calculate the rank of each lipid in each sample
     cur_rank = apply(cur_dup, 2, function(y) rank(-y))
+    #sum the rank of each lipid in each sample
     sum_rank=rowSums(cur_rank)
+    #find the entry with the lowest rank sum
     min_rank=which(sum_rank==min(sum_rank))
+    #extract the entry with the lowest rank sum
     min_dup=cur_dup[min_rank,]
+    #add the entry to the final table
     final=rbind(final, combined[rownames(min_dup),])
   }  
   return(final)
