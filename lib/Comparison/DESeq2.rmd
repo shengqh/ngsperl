@@ -4,7 +4,7 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 3
-    number_sections: false
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
@@ -60,50 +60,45 @@ print(kable_styling(kable(sig_summary)))
 ```
 
 ```{r, echo=FALSE}
-resFile<-"comp.Rmd"
-figureRmd<-function(define_data){
-  result<-""
+result<-""
 
-  design_file_map <- unlist(split(define_data$ConditionFile, define_data$ComparisonName))
-  comparisons<-names(design_file_map)
+design_file_map <- unlist(split(define_data$ConditionFile, define_data$ComparisonName))
+comparisons<-names(design_file_map)
 
-  comp=comparisons[1]
-  for(comp in comparisons){
-    result<-paste0(result, "\n# ", comp, "\n\n")
-    design_file = design_file_map[comp]
-    design_data = read.table(design_file, sep="\t", header=T)
+comp=comparisons[1]
+for(comp in comparisons){
+  result<-paste0(result, "\n# ", comp, "\n\n")
+  design_file = design_file_map[comp]
 
-    result<-paste0(result, "\n## Comparison design\n\n")
-    result<-paste0(result, kable(design_data))
+  result<-paste0(result, "\n## Comparison design\n\n")
+  result<-paste0(result, getTable(design_file, row.names=0))
 
-    sig_csv = find_file("*_sig.csv", FALSE, paste0(comp, "_min"))
-    sig_res = read.csv(sig_csv, row.names=1)
-    sig_res = head(sig_res, min(10, nrow(sig_res)))
-    result<-paste0(result, paste0("\n## Top ", nrow(sig_res), " significantly differential expressed genes\n\n"))
-    result<-paste0(result, kable(sig_res))
+  sig_csv = find_file("*_sig.csv", FALSE, paste0(comp, "_min"))
+  result<-paste0(result, paste0("\n## Differential expressed genes\n\n"))
 
-    volcanoEnhanced_png = find_file("_DESeq2_volcanoEnhanced.png", FALSE, paste0(comp, "_min"))
-    if(!is.null(volcanoEnhanced_png)){
-      result<-paste0(result, "\n## Volcano plot\n\n")
-      result<-paste0(result, getFigure(volcanoEnhanced_png))
-    }
+  result<-paste0(result, getPagedTable(sig_csv, 1))
 
-    heatmap_png = find_file("*_geneAll_DESeq2-vsd-heatmap.png", FALSE, paste0(comp, "_min"))
-    if(!is.null(heatmap_png)){
-      result<-paste0(result, "\n## Heatmap plot\n\n")
-      result<-paste0(result, getFigure(heatmap_png))
-    }
-
-    pca_png = find_file("*_geneAll_DESeq2-vsd-pca.png", FALSE, paste0(comp, "_min"))
-    if(!is.null(pca_png)){
-      result<-paste0(result, "\n## PCA plot\n\n")
-      result<-paste0(result, getFigure(pca_png))
-    }
+  volcanoEnhanced_png = find_file("_DESeq2_volcanoEnhanced.png", FALSE, paste0(comp, "_min"))
+  if(!is.null(volcanoEnhanced_png)){
+    result<-paste0(result, "\n## Volcano plot\n\n")
+    result<-paste0(result, getFigure(volcanoEnhanced_png))
   }
 
-  return(result)
+  heatmap_png = find_file("*_geneAll_DESeq2-vsd-heatmap.png", FALSE, paste0(comp, "_min"))
+  if(!is.null(heatmap_png)){
+    result<-paste0(result, "\n## Heatmap plot\n\n")
+    result<-paste0(result, getFigure(heatmap_png))
+  }
+
+  pca_png = find_file("*_geneAll_DESeq2-vsd-pca.png", FALSE, paste0(comp, "_min"))
+  if(!is.null(pca_png)){
+    result<-paste0(result, "\n## PCA plot\n\n")
+    result<-paste0(result, getFigure(pca_png))
+  }
 }
-cat(figureRmd(define_data), file=resFile)
+
+resFile<-"comp.Rmd"
+writeLines(result, resFile)
 ```
 
 ```{r, child=resFile} 
