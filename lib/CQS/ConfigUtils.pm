@@ -67,7 +67,8 @@ our %EXPORT_TAGS = (
       get_group_samplefile_map_key
       get_grouped_raw_files
       save_parameter_sample_file
-      saveConfig writeFileList
+      saveConfig 
+      writeFileList
       initDefaultValue
       get_pure_pairs
       writeParameterSampleFile
@@ -1467,6 +1468,8 @@ sub writeParameterSampleFile {
       @outputNames = @$parameterSampleFileNames;
     }
 
+    my $delimiter = get_option( $config, $section, $key . "_delimiter", "\t" );
+    my $name_first = get_option( $config, $section, $key . "_name_first", 0 );
     $result = "fileList${index}${task_suffix}.txt";
     open( my $list, ">$resultDir/$result" ) or die "Cannot create $result";
     my $nameIndex = -1;
@@ -1479,7 +1482,11 @@ sub writeParameterSampleFile {
 
       my $subSampleFiles = $temp->{$sample_name};
       if(not defined $subSampleFiles) {
-        print $list "\t$sample_name\n";
+        if($name_first){
+          print $list "$sample_name${delimiter}\n";
+        }else{
+          print $list "${delimiter}$sample_name\n";
+        }
         next;
       }
 
@@ -1488,10 +1495,18 @@ sub writeParameterSampleFile {
         foreach my $groupName ( sort keys %$subSampleFiles ) {
           my $groupSampleNames = $subSampleFiles->{$groupName};
           if (is_string($groupSampleNames)){
-            print $list "$groupSampleNames\t${groupName}\t${sample_name}\n";
+            if($name_first){
+              print $list "${sample_name}${delimiter}$groupSampleNames${delimiter}${groupName}\n";
+            }else{
+              print $list "$groupSampleNames${delimiter}${groupName}${delimiter}${sample_name}\n";
+            }
           }else{
             for my $groupSampleName (@$groupSampleNames) {
-              print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+              if($name_first){
+                print $list "${sample_name}${delimiter}${groupSampleName}${delimiter}${groupName}\n";
+              }else{
+                print $list "${groupSampleName}${delimiter}${groupName}${delimiter}${sample_name}\n";
+              }
             }
           }
         }
@@ -1503,14 +1518,18 @@ sub writeParameterSampleFile {
             $nameIndex     = $nameIndex + 1;
             $curSampleName = $outputNames[$nameIndex];
           }
-          print $list $subSampleFile . "\t$curSampleName\n";
+          if($name_first){
+            print $list $subSampleFile . "$curSampleName${delimiter}\n";
+          }else{
+            print $list $subSampleFile . "${delimiter}$curSampleName\n";
+          }
         }
       }
       else {
         if(!defined $subSampleFiles) {
-          print $list "\t$sample_name\n";
+          print $list "${delimiter}$sample_name\n";
         }else{
-          print $list $subSampleFiles . "\t$sample_name\n";
+          print $list $subSampleFiles . "${delimiter}$sample_name\n";
         }
       }
     }
