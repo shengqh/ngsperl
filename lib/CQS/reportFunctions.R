@@ -162,11 +162,10 @@ output_paged_table<-function(tbl, rownames=TRUE, escape=TRUE, digits=0, nsmall=0
   }
 
   DT::datatable(tbl, 
-                extensions = c('FixedColumns','FixedHeader'),
-                rownames = rownames,
-                escape = escape,
-                options = list( scrollX=TRUE, 
-                                paging=TRUE))
+                rownames = rownames, 
+                extensions = "Buttons", 
+                options = list( dom = "Bfrtip", 
+                                buttons = c("excel", "csv")))
 }
 
 printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
