@@ -4,7 +4,7 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 3
-    number_sections: false
+    number_sections: true
 ---
 
 ```{css, echo=FALSE}
@@ -23,6 +23,18 @@ library(dplyr)
 library(kableExtra)
 knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
 ```
+
+```{r}
+options_table<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+```
+
+---
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
 ```{r,echo=FALSE,warning=FALSE,message=FALSE}
 library(ggplot2)
 library(RColorBrewer)
