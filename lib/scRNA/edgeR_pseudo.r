@@ -55,6 +55,13 @@ if(myoptions$reduction != "umap"){
   obj[["umap"]] = obj[[myoptions$reduction]]
 }
 
+detail_folder = paste0(outFile, ".edgeR_by_sample.detail/")
+if(!dir.exists(detail_folder)){
+  dir.create(detail_folder)
+}
+
+detail_prefix = paste0(detail_folder, outFile)
+
 if(1){
   meta<-obj@meta.data
   mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
@@ -63,7 +70,8 @@ if(1){
 
   sample_count_df<-get_seurat_sum_count(obj = obj, 
                                         cluster_name = cluster_name, 
-                                        min_cell_per_sample = min_cell_per_sample)
+                                        min_cell_per_sample = min_cell_per_sample,
+                                        target_folder = detail_folder)
 
   cts<-sample_count_df$cluster
   cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
@@ -120,7 +128,7 @@ if(1){
     idx<-1
     for (idx in c(1:length(cts))){
       ct<-cts[idx]
-      prefix<-paste0(cts_name_map[ct], ".", comp)
+      prefix<-paste0(detail_folder, cts_name_map[ct], ".", comp)
       cts_file<-cts_file_map[ct]
       
       counts<-read.csv(cts_file, row.names = 1)
