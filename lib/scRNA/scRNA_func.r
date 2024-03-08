@@ -1721,7 +1721,7 @@ sumcount<-function(ct_count, groupings){
   return(rescount)
 }
 
-get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1){
+get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1, target_folder="./"){
   clusterDf<-obj@meta.data
   if("seurat_clusters" %in% colnames(clusterDf)){
     cts = as.character(unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name]))
@@ -1766,7 +1766,7 @@ get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1){
     groupings<-unlist(de_obj$orig.ident)
     p_count<-sumcount(ct_count, groupings)
 
-    p_file=paste0(prefix, ".pseudo_count.csv")
+    p_file=paste0(target_folder, prefix, ".pseudo_count.csv")
     
     write.csv(p_count, p_file)
     
