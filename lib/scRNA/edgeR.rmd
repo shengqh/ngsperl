@@ -4,7 +4,7 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 3
-    number_sections: false
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
@@ -69,8 +69,13 @@ if(file.exists(num_cell_file)){
 }else{
   num_cell<-NA
 }
-
 ```
+
+---
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
 
 ```{r, echo=FALSE}
 print(kable_styling(kable(group_def, caption = "Group definition")))
