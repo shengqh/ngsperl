@@ -1348,6 +1348,8 @@ sub addEdgeRTask {
   }
 
   my $rCodeDic = {
+    "email" => getValue($def, "email"),
+    "affiliation" => $def->{"affiliation"},
     "task_name" => getValue( $def, "task_name" ),
     "pvalue" => getValue( $def, "DE_pvalue" ),
     "useRawPvalue" => getValue( $def, "DE_use_raw_pvalue" ),
@@ -1512,6 +1514,9 @@ sub addEdgeRTask {
       rtemplate          => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltR_all.r",
       parameterFile1_ref => [$edgeRtaskname],
       parameterSampleFile1 => {
+        "email" => getValue($def, "email"),
+        "affiliation" => $def->{"affiliation"},
+        "task_name" => getValue( $def, "task_name" ),
         organism         => getValue( $def, "webgestalt_organism" ),
         interestGeneType => $def->{interestGeneType},
         referenceSet     => $def->{referenceSet},
@@ -1537,6 +1542,11 @@ sub addEdgeRTask {
       output_to_result_directory => 1,
       parameterFile1_ref   => [ $webgestaltTaskName ],
       parameterFile2_ref   => [ $edgeRtaskname ],
+      parameterSampleFile1 => {
+        "email" => getValue($def, "email"),
+        "affiliation" => $def->{"affiliation"},
+        "task_name" => getValue( $def, "task_name" ),
+      },
       output_file_ext    => ".link.files.csv",
       sh_direct                  => 1,
       rCode                      => "",
@@ -1574,7 +1584,9 @@ sub addEdgeRTask {
       output_file_ext            => ".gsea.files.csv",
       parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
       parameterSampleFile1         => {
-        task_name => getValue($def, "task_name"),
+        "email" => getValue($def, "email"),
+        "affiliation" => $def->{"affiliation"},
+        "task_name" => getValue( $def, "task_name" ),
         rmdformats => "readthedown",
       },
       sh_direct                  => 1,
@@ -1599,7 +1611,9 @@ sub addEdgeRTask {
       parameterSampleFile1_ref   => [$gseaTaskName],
       parameterSampleFile1_names => ["gsea"],
       parameterSampleFile2 => {
-        task_name => getValue($def, "task_name")
+        "email" => getValue($def, "email"),
+        "affiliation" => $def->{"affiliation"},
+        "task_name" => getValue( $def, "task_name" ),
       },
       remove_empty_parameter => 1,
       output_ext => "gsea_files.csv",
