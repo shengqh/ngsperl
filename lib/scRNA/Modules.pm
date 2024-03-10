@@ -1574,58 +1574,115 @@ sub addEdgeRTask {
     my $gseaTaskName = $edgeRtaskname . "_GSEA_" . ($use_mouse_gsea_db ? "Mm" : "Hs");
 
     #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
-    $config->{$gseaTaskName} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
-      docker_prefix              => "gsea_",
-      rtemplate                  => "GSEAPerform.R",
-      output_to_result_directory => 1,
-      output_file_ext            => ".gsea.files.csv",
-      parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
-      parameterSampleFile1         => {
-        "email" => getValue($def, "email"),
-        "affiliation" => $def->{"affiliation"},
-        "task_name" => getValue( $def, "task_name" ),
-        rmdformats => "readthedown",
-      },
-      sh_direct                  => 1,
-      rCode                      => "$gsea_chip_str gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
-      pbs                        => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
-        "mem"       => "10gb"
-      },
-    };
-    push( @$summary, $gseaTaskName );
+    if(getValue($def, "perform_gsea_by_comparison", 1)){
+      $config->{$gseaTaskName} = {
+        class                      => "CQS::IndividualR",
+        perform                    => 1,
+        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
+        docker_prefix              => "gsea_",
+        rtemplate                  => "GSEAPerform.R",
+        output_to_result_directory => 1,
+        output_file_ext            => ".gsea.files.csv",
+        parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
+        parameterSampleFile1         => $def->{pairs},
+        parameterSampleFile2         => {
+          "email" => getValue($def, "email"),
+          "affiliation" => $def->{"affiliation"},
+          "task_name" => getValue( $def, "task_name" ),
+          rmdformats => "readthedown",
+        },
+        sh_direct                  => 0,
+        rCode                      => "$gsea_chip_str gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
+        pbs                        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $gseaTaskName );
 
-    my $gsea_report = $gseaTaskName . "_report";
-    $config->{$gsea_report} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
-      rtemplate                  => "GSEAReport.R",
-      rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;reportFunctions.R",
-      run_rmd_independent => 1,
-      rmd_ext => ".gsea.html",
-      parameterSampleFile1_ref   => [$gseaTaskName],
-      parameterSampleFile1_names => ["gsea"],
-      parameterSampleFile2 => {
-        "email" => getValue($def, "email"),
-        "affiliation" => $def->{"affiliation"},
-        "task_name" => getValue( $def, "task_name" ),
-      },
-      remove_empty_parameter => 1,
-      output_ext => "gsea_files.csv",
-      samplename_in_result => 0,
-      sh_direct                  => 1,
-      pbs                        => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
-      },
-    };
-    push( @$summary, $gsea_report );
+      my $gsea_report = $gseaTaskName . "_report";
+      $config->{$gsea_report} = {
+        class                      => "CQS::UniqueR",
+        perform                    => 1,
+        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
+        rtemplate                  => "GSEAReport.R",
+        rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;reportFunctions.R",
+        run_rmd_independent => 1,
+        rmd_ext => ".gsea.html",
+        parameterSampleFile1_ref   => [$gseaTaskName],
+        parameterSampleFile1_names => ["gsea"],
+        parameterSampleFile2 => {
+          "email" => getValue($def, "email"),
+          "affiliation" => $def->{"affiliation"},
+          "task_name" => getValue( $def, "task_name" ),
+        },
+        remove_empty_parameter => 1,
+        output_ext => "gsea_files.csv",
+        samplename_in_result => 0,
+        sh_direct                  => 1,
+        pbs                        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $gsea_report );      
+    }else{
+      $config->{$gseaTaskName} = {
+        class                      => "CQS::UniqueR",
+        perform                    => 1,
+        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
+        docker_prefix              => "gsea_",
+        rtemplate                  => "GSEAPerform.R",
+        output_to_result_directory => 1,
+        output_file_ext            => ".gsea.files.csv",
+        parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
+        parameterSampleFile2         => {
+          "email" => getValue($def, "email"),
+          "affiliation" => $def->{"affiliation"},
+          "task_name" => getValue( $def, "task_name" ),
+          rmdformats => "readthedown",
+        },
+        sh_direct                  => 1,
+        rCode                      => "$gsea_chip_str gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
+        pbs                        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $gseaTaskName );
+
+      my $gsea_report = $gseaTaskName . "_report";
+      $config->{$gsea_report} = {
+        class                      => "CQS::UniqueR",
+        perform                    => 1,
+        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
+        rtemplate                  => "GSEAReport.R",
+        rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;reportFunctions.R",
+        run_rmd_independent => 1,
+        rmd_ext => ".gsea.html",
+        parameterSampleFile1_ref   => [$gseaTaskName],
+        parameterSampleFile1_names => ["gsea"],
+        parameterSampleFile2 => {
+          "email" => getValue($def, "email"),
+          "affiliation" => $def->{"affiliation"},
+          "task_name" => getValue( $def, "task_name" ),
+        },
+        remove_empty_parameter => 1,
+        output_ext => "gsea_files.csv",
+        samplename_in_result => 0,
+        sh_direct                  => 1,
+        pbs                        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$summary, $gsea_report );
+
+    }
   }
   
   return ($edgeRtaskname);
