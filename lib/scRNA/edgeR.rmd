@@ -63,7 +63,9 @@ if(has_category){
 edgeR_files<-read.csv(paste0(outFile, ".edgeR.files.csv"))
 comparisons<-unique(edgeR_files$comparison)
 
-num_cell_file = paste0(outFile, ".num_cell.csv")
+detail_folder=paste0(outFile, ".edgeR_by_sample/")
+
+num_cell_file = paste0(detail_folder, outFile, ".num_cell.csv")
 if(file.exists(num_cell_file)){
   num_cell<-read.csv(num_cell_file)
 }else{
@@ -116,7 +118,7 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
     colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
 
     result<-paste0(result, "\n## Number of DE genes\n\n")
-    num_sig_file = paste0(comp, ".num_sig.csv")
+    num_sig_file = paste0(detail_folder, comp, ".num_sig.csv")
     write.csv(nums_df, num_sig_file)
 
     result<-paste0(result, getTable(num_sig_file))
@@ -125,6 +127,8 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
     for(ct in cts){
       result<-paste0(result, "\n## ", ct, "\n\n")
       ct_files<-subset(comp_files, cellType == ct)
+
+      ct_comp_name = paste0(celltype_to_filename(ct), ".", comp)
       
       design_file=ct_files$designFile[1]
       design_data=read.csv(design_file)
@@ -143,7 +147,13 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
       result<-paste0(result,"\n### design table\n\n")
       result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
 
-      heatmap_png<-paste0(celltype_to_filename(ct), ".", comp, ".log_cpm.heatmap.png")
+      mds_png<-paste0(detail_folder, ct_comp_name, ".mds.png")
+      if(file.exists(mds_png)){
+        result<-paste0(result,"\n### MDS\n\n")
+        result<-paste0(result, getFigure(mds_png))
+      }
+
+      heatmap_png<-paste0(detail_folder, ct_comp_name, ".log_cpm.heatmap.png")
       if(file.exists(heatmap_png)){
         result<-paste0(result,"\n### heatmap\n\n")
         result<-paste0(result, getFigure(heatmap_png))
@@ -157,7 +167,7 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
         result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
         result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
 
-        top_gene_png<-paste0(celltype_to_filename(ct), ".", comp, ".top_1_gene.png")
+        top_gene_png<-paste0(detail_folder, ct_comp_name, ".top_1_gene.png")
         if(file.exists(top_gene_png)){
           result<-paste0(result, getFigure(top_gene_png))
         }

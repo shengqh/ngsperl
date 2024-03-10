@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='SADIE_adipose'
+outFile='SADIE_pbmc'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/shah_lab/shengq2/20240226_mono_scRNA_SADIE/adipose.DE.rds'
+parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/data/pbmc.v4.DE.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240304_DE_fold1.5/files_edgeR_inCluster_bySample/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -19,6 +19,7 @@ library(ggpubr)
 library(Seurat)
 library(testit)
 library(data.table)
+library(matrixStats)
 
 options_table<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
@@ -55,7 +56,7 @@ if(myoptions$reduction != "umap"){
   obj[["umap"]] = obj[[myoptions$reduction]]
 }
 
-detail_folder = paste0(outFile, ".edgeR_by_sample.detail/")
+detail_folder = paste0(outFile, ".edgeR_by_sample/")
 if(!dir.exists(detail_folder)){
   dir.create(detail_folder)
 }
@@ -66,7 +67,7 @@ if(1){
   meta<-obj@meta.data
   mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
   colnames(mt)<-c("cell_type", "sample", "num_cell")
-  write.csv(mt, paste0(outFile, ".num_cell.csv"), row.names=F)
+  write.csv(mt, paste0(detail_prefix, ".num_cell.csv"), row.names=F)
 
   sample_count_df<-get_seurat_sum_count(obj = obj, 
                                         cluster_name = cluster_name, 
@@ -166,15 +167,15 @@ if(1){
     }
   }
 
-  saveRDS(designMatrix, paste0(outFile, ".designMatrix.rds"))
+  saveRDS(designMatrix, paste0(detail_prefix, ".designMatrix.rds"))
 }else{
-  designMatrix=readRDS(paste0(outFile, ".designMatrix.rds"))
+  designMatrix=readRDS(paste0(detail_prefix, ".designMatrix.rds"))
 }
 
 meta<-obj@meta.data
 
 result<-NULL
-idx<-18
+idx<-1
 for(idx in c(1:nrow(designMatrix))){
   prefix=designMatrix[idx, "prefix"]
   design_file=designMatrix[idx, "design"]
@@ -185,6 +186,12 @@ for(idx in c(1:nrow(designMatrix))){
   design_data<-read.csv(design_file, stringsAsFactors = F)
 
   covariances=colnames(design_data)[!(colnames(design_data) %in% c("Group", "Sample", "DisplayGroup"))]
+
+  design_groups=unique(design_data[,c("Group", "DisplayGroup")])
+  group_colors=c("blue", "red")
+  names(group_colors)<-design_groups$DisplayGroup
+  sample_colors=group_colors[design_data$DisplayGroup]
+  names(sample_colors)=design_data$Sample
 
   while(TRUE){
     if(length(covariances) > 0){
@@ -207,12 +214,23 @@ for(idx in c(1:nrow(designMatrix))){
 
     groups<-design_data$Group
     
-    dge <- DGEList(counts=counts, group=groups)
-    keep <- filterByExpr(dge, group=groups)
-    dge <- dge[keep, , keep.lib.sizes=FALSE]
+    dge_all <- DGEList(counts=counts, group=groups)
+
+    #for DE analysis, we need to filter the genes with low counts
+    keep <- filterByExpr(dge_all, group=groups)
+    dge <- dge_all[keep, , keep.lib.sizes=FALSE]
     
     cat("  calcNormFactors", "\n")
     dge<-calcNormFactors(dge,method = "TMM")
+
+    cat("  plotMDS", "\n")
+    mds <- plotMDS(dge)
+    toplot <- data.frame(Dim1 = mds$x, Dim2 = mds$y, Group = design_data$DisplayGroup)
+    g<-ggplot(toplot, aes(Dim1, Dim2, colour = Group)) + geom_point() + theme_bw3() + theme(aspect.ratio=1) +
+      xlab(paste0("Leading logFC dim 1 (", round(mds$var.explained[1] * 10000)/100, "%)")) + 
+      ylab(paste0("Leading logFC dim 2 (", round(mds$var.explained[2] * 10000)/100, "%)")) +
+      scale_color_manual(values=group_colors)
+    ggsave(paste0(prefix, ".mds.png"), g, width=4, height=3, units="in", dpi=300, bg="white")
 
     cat("  estimateDisp", "\n")
     dge<-estimateDisp(dge,design=design)
@@ -243,9 +261,27 @@ for(idx in c(1:nrow(designMatrix))){
   dge_filename <-paste0(prefix, ".csv")
   write.csv(out$table, file=dge_filename, quote=F)
 
+  cat("  cpm", "\n")
   log_cpm <- cpm(dge, log=TRUE)
   cpm_file = paste0(prefix, ".cpm.csv")
   write.csv(log_cpm, file=cpm_file, quote=F)
+
+  cat("  heatmap", "\n")
+  topVarGenes <- head(order(rowVars(log_cpm), decreasing = TRUE), min(2000, nrow(log_cpm)))
+  top_mat  <- log_cpm[ topVarGenes, ]
+  png(paste0(prefix, ".log_cpm.heatmap.png"), width=6, height=5, units="in", res=300, bg="white")
+  coolmap(top_mat, show.dendrogram="column", ColSideColors=sample_colors, margins=c(10, 5), labRow=FALSE)
+  legend(
+    x = -0.02,
+    y = 0.9, 
+    xpd = TRUE,    
+    legend = names(group_colors),
+    col = group_colors, 
+    lty= 1,             
+    lwd = 5,           
+    cex=.7
+    )
+  dev.off()
 
   if(useRawPvalue){
     sigout<-out$table[(out$table$PValue<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
@@ -259,10 +295,6 @@ for(idx in c(1:nrow(designMatrix))){
   sigGenenameFile<-paste0(prefix, ".sig_genename.txt")
   write.table(sig_genes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
   
-  gseaFile<-paste0(prefix, "_GSEA.rnk")
-  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
-  write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
-
   if(nrow(sig_genes) > 0){
     sig_gene = sig_genes$gene[1]
 
@@ -275,7 +307,25 @@ for(idx in c(1:nrow(designMatrix))){
     print(g)
     dev.off()
   }
-  
+
+  #for GSEA, we need to use more genes, so we decrease the filter criteria
+  keep <- filterByExpr(dge_all, group=groups, min.count=1, min.total.count=5)
+  dge_loose <- dge_all[keep, , keep.lib.sizes=FALSE]
+  cat("  GSEA - calcNormFactors", "\n")
+  dge_loose<-calcNormFactors(dge_loose, method="TMM")
+
+  cat("  GSEA - estimateDisp\n")
+  dge_loose<-estimateDisp(dge_loose, design=design)
+
+  cat("  GSEA - glmFit", "\n")
+  fit<-glmFit(dge_loose, design=design, robust=TRUE)
+  fitTest<-glmLRT(fit)
+  out<-topTags(fitTest, n=Inf)
+  gseaFile<-paste0(prefix, "_GSEA.rnk")
+  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
+  rankout<-rankout[order(rankout$sigfvalue, decreasing=TRUE),]
+  write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
+
   curDF<-data.frame("prefix"=prefix, "cellType"=cellType, "comparison"=comp, "betweenCluster"=0, "sampleInGroup"=0, "deFile"=dge_filename, "sigFile"=sigFile, "sigGenenameFile"=sigGenenameFile, "gseaFile"=gseaFile, "designFile"=design_file, "cpmFile"=cpm_file)
   if(is.null(result)){
     result<-curDF
