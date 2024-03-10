@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='RENAL_AUTOPHAGY'
+outFile='SADIE_pbmc'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/shah_lab/shengq2/20240102_Das_RENAL_AUTOPHAGY/cellxgene/20240112_cellxgene_meta.no_renal_papilla.rds'
-parFile2='/nobackup/shah_lab/shengq2/20240102_Das_RENAL_AUTOPHAGY/DE_fold1.2_bulk/files_edgeR_inCluster_bySample/result/RENAL_AUTOPHAGY.edgeR.files.csv'
+parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/data/pbmc.v4.DE.rds'
+parFile2='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample/result/SADIE_pbmc.edgeR.files.csv'
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240102_Das_RENAL_AUTOPHAGY/DE_fold1.2_bulk/files_edgeR_inCluster_bySample_vis/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample_vis/result')
 
 ### Parameter setting end ###
 
@@ -43,6 +43,7 @@ if(!exists("obj")){
 clusterDf<-obj@meta.data
 
 edgeRres<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
+edgeRres$prefix<-basename(edgeRres$prefix)
 edgeRfolder<-dirname(parFile2)
 rownames(edgeRres)<-edgeRres$prefix
 
