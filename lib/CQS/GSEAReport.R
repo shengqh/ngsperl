@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='H202SC23126877_mm10'
+outFile='SADIE_adipose'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20240221_novogene_H202SC23126877_Mouse_EukmRNAseq/deseq2_proteincoding_genetable_GSEA_Hs_report2/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_adipose/files_edgeR_inCluster_bySample_GSEA_Hs_test_report/result')
 
 ### Parameter setting end ###
 
@@ -40,10 +40,22 @@ if(nrow(files) == 1 & files$V2[1] == outFile){
   gsea_file<-paste0(task_name, ".gsea.files.csv")
   files<-read.csv(gsea_file)
   files$Comparisons<-gsub(".gsea$", "", basename(dirname(files$Folder)))
+}else if(all(grepl("gsea.files.csv$", files$V1))){
+  flist=files
+  files<-NULL
+  i=1
+  for(i in 1:nrow(flist)){
+    f<-read.csv(flist$V1[i])
+    f$compName=basename(f$compName)
+    f$Comparisons<-gsub("_GSEA.rnk.*", "", basename(dirname(dirname(f$Folder))))
+    files<-rbind(files, f)
+  }
 }else{
   rownames(files)<-files$V2
 }
 
-vfiles = display_gsea(files, "", print_rmd = FALSE)
-write.csv(vfiles, paste0("gsea_files.csv"))
+gsea_folder = paste0(outFile, ".gsea/")
+dir.create(gsea_folder, showWarnings = FALSE)
 
+vfiles = display_gsea(files, gsea_folder, print_rmd = FALSE)
+write.csv(vfiles, paste0("gsea_files.csv"))

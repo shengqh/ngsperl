@@ -1,17 +1,15 @@
 rm(list=ls()) 
-outFile='mouse_8870'
+outFile='SADIE_pbmc'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_bySample/result/mouse_8870.edgeR.files.csv'
+parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample/result/SADIE_pbmc.edgeR.files.csv'
 parFile2=''
 parFile3=''
 outputDirectory='.'
-gseaChip='/data/cqs/references/gsea/v2022.1.Hs/Mouse_Gene_Symbol_Remapping_Human_Orthologs_MSigDB.v2022.1.Hs.chip'; gseaDb='/data/cqs/references/gsea/v2022.1.Hs'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v2022.1.Hs.symbols.gmt', 'c2.all.v2022.1.Hs.symbols.gmt', 'c5.all.v2022.1.Hs.symbols.gmt', 'c6.all.v2022.1.Hs.symbols.gmt', 'c7.all.v2022.1.Hs.symbols.gmt'); makeReport=0;
+ gseaDb='/data/cqs/references/gsea/v2022.1.Hs'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v2022.1.Hs.symbols.gmt', 'c2.all.v2022.1.Hs.symbols.gmt', 'c5.all.v2022.1.Hs.symbols.gmt', 'c6.all.v2022.1.Hs.symbols.gmt', 'c7.all.v2022.1.Hs.symbols.gmt'); makeReport=0;
 
-overwrite=FALSE
-
-setwd('/scratch/jbrown_lab/shengq2/projects/20221117_scRNA_8870_mouse/seurat_sct_harmony_dr0.2_nrh_03_choose_edgeR_inCluster_bySample_GSEA_Hs/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample_GSEA_Hs/result')
 
 ### Parameter setting end ###
 
@@ -146,12 +144,12 @@ if(!exists('gseaChip')){
 for (i in 1:nrow(preRankedGeneFileTable)) {
   preRankedGeneFile=preRankedGeneFileTable[i,1]
   
-  compName=preRankedGeneFileTable[i,2]
-
   dt<-runGSEA(preRankedGeneFile,resultDir=resultDir,makeReport=makeReport,gseaJar=gseaJar,gseaDb=gseaDb,gseaCategories=gseaCategories,gseaChip=gseaChip)
+
+  compName=basename(preRankedGeneFileTable[i,2])
   dt$compName=compName
+
   alldt<-rbind(alldt, dt)
 }
 
 write.csv(alldt, file=paste0(outFile, ".gsea.files.csv"), row.names=F)
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
