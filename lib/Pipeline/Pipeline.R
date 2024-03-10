@@ -260,45 +260,44 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
 
 save_gsea_rmd<-function(files, resFile, rmd_prefix=""){
   source("reportFunctions.R")
-  figureRmd<-function(files){
-    if(nrow(files) == 0){
-      return("# No geneset with FDR < 0.05 detected")
-    }
-    result<-""
-    comparisons = unique(files$comparison)
-    comparison<-comparisons[1]
-    for(comparison in comparisons){
-      result<-paste0(result, paste0("\n\n", rmd_prefix, "# ", comparison, "\n\n"))
+  if(nrow(files) == 0){
+    return("# No geneset with FDR < 0.05 detected")
+  }
+  result<-""
+  comparisons = unique(files$comparison)
+  comparisons = comparisons[order(comparisons)]
+  comparison<-comparisons[1]
+  for(comparison in comparisons){
+    result<-paste0(result, paste0("\n\n", rmd_prefix, "# ", comparison, "\n\n"))
 
-      comp_files<-files[files$comparison==comparison,,drop=FALSE]
+    comp_files<-files[files$comparison==comparison,,drop=FALSE]
 
-      categories = unique(comp_files$category)
-      category=categories[1]
-      for(category in categories){
-        result<-paste0(result, paste0("\n\n", rmd_prefix, "## ", category, "\n\n"))
+    categories = unique(comp_files$category)
+    category=categories[1]
+    for(category in categories){
+      result<-paste0(result, paste0("\n\n", rmd_prefix, "## ", category, "\n\n"))
 
-        cat_files<-comp_files[comp_files$category == category,,drop=F]
-        file_map<-split(cat_files$file_path, cat_files$file_key)
+      cat_files<-comp_files[comp_files$category == category,,drop=F]
+      file_map<-split(cat_files$file_path, cat_files$file_key)
 
-        if(!is.null(file_map$pos_file)){
-          result<-paste0(result, paste0("\n\n", rmd_prefix, "### Positive-regulated\n\n"))
-          result<-paste0(result, getPagedTable(file_map$pos_file, 0, FALSE))
-        }
+      if(!is.null(file_map$pos_file)){
+        result<-paste0(result, paste0("\n\n", rmd_prefix, "### Positive-regulated\n\n"))
+        result<-paste0(result, getPagedTable(filepath=file_map$pos_file, row.names=0, escape=FALSE))
+      }
 
-        if(!is.null(file_map$neg_file)){
-          result<-paste0(result, paste0("\n\n", rmd_prefix, "### Negative-regulated\n\n"))
-          result<-paste0(result, getPagedTable(file_map$neg_file, 0, FALSE))
-        }
+      if(!is.null(file_map$neg_file)){
+        result<-paste0(result, paste0("\n\n", rmd_prefix, "### Negative-regulated\n\n"))
+        result<-paste0(result, getPagedTable(filepath=file_map$neg_file, row.names=0, escape=FALSE))
+      }
 
-        if(!is.null(file_map$enriched_png)){
-          result<-paste0(result, paste0("\n\n", rmd_prefix, "### Top enriched gene sets\n\n"))
-          result<-paste0(result, getFigure(file_map$enriched_png, out_width="100%"))
-        }
+      if(!is.null(file_map$enriched_png)){
+        result<-paste0(result, paste0("\n\n", rmd_prefix, "### Top enriched gene sets\n\n"))
+        result<-paste0(result, getFigure(file_map$enriched_png, out_width="100%"))
       }
     }
-    return(result)
   }
-  cat(figureRmd(files), file=resFile)
+
+  writeLines(result, resFile)
 }
 
 get_versions=function(){
