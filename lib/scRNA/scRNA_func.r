@@ -1627,14 +1627,16 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   return(list(obj=subobj, umap_names=umap_names))
 }
 
-get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, random_colors=TRUE, ...){
+get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, random_colors=TRUE, scolors=NULL, ...){
   labels<-obj@meta.data[,c(group.by, label.by)]
   labels<-labels[!duplicated(labels[,group.by]),]
   labels<-labels[order(labels[,group.by]),]
   cts<-as.character(labels[,label.by])
 
   ngroups<-length(unlist(unique(obj[[group.by]])))
-  scolors = get_hue_colors(ngroups, random_colors)
+  if(all(is.null(scolors))){
+    scolors = get_hue_colors(ngroups, random_colors)
+  }
 
   g<-MyDimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by, ...)+ 
     scale_color_manual(legend.title, values=scolors, labels = cts, guide = guide_legend(ncol=ncol)) + 
