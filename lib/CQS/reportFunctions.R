@@ -163,6 +163,7 @@ output_paged_table<-function(tbl, rownames=TRUE, escape=TRUE, digits=0, nsmall=0
 
   DT::datatable(tbl, 
                 rownames = rownames, 
+                escape = escape,
                 extensions = "Buttons", 
                 options = list( dom = "Bfrtip", 
                                 buttons = c("excel", "csv")))
@@ -183,7 +184,7 @@ printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0
 }
 
 getPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
-  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintPagedTable('", filepath, "', ", row.names, ",", escape, ",", digits, ",", nsmall, ")\n```\n\n"))
+  return(paste0("\n```{r,echo=FALSE,results='asis'}\nprintPagedTable(filepath='", filepath, "', row.names=", row.names, ", escape=", escape, ", digits=", digits, ", nsmall=", nsmall, ")\n```\n\n"))
 }
 
 getTable<-function(filepath, row.names=1){
