@@ -2086,7 +2086,7 @@ save_umap<-function(file_prefix, obj, umap_names=c("UMAP_1", "UMAP_2") ){
   write.csv(umap, paste0(file_prefix, ".csv"))
 }
 
-get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cell=TRUE, is_between_cluster=FALSE, log_cpm=NULL){
+get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cell=TRUE, is_between_cluster=FALSE, log_cpm=NULL, scale_data=TRUE){
   group_levels<-unique(design_data$Group)
   display_group_levels<-unique(design_data$DisplayGroup)
 
@@ -2106,7 +2106,9 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
   logFC<-sigout[sig_gene, "logFC"]
   FDR<-sigout[sig_gene,"FDR"]
 
-  cell_obj=ScaleData(cell_obj, features=sig_gene, assay="RNA")
+  if(scale_data){
+    cell_obj=ScaleData(cell_obj, features=sig_gene, assay="RNA")
+  }
 
   stopifnot(sig_gene %in% rownames(cell_obj))
 
