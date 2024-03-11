@@ -1,7 +1,8 @@
 rm(list=ls()) 
-outFile='SADIE_pbmc'
+sample_name='SD3_vs_SD2'
+outFile='SD3_vs_SD2'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample/result/SADIE_pbmc.edgeR.files.csv'
 parFile2=''
@@ -9,7 +10,7 @@ parFile3=''
 outputDirectory='.'
  gseaDb='/data/cqs/references/gsea/v2022.1.Hs'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v2022.1.Hs.symbols.gmt', 'c2.all.v2022.1.Hs.symbols.gmt', 'c5.all.v2022.1.Hs.symbols.gmt', 'c6.all.v2022.1.Hs.symbols.gmt', 'c7.all.v2022.1.Hs.symbols.gmt'); makeReport=0;
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample_GSEA_Hs/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample_GSEA_Hs/result/SD3_vs_SD2')
 
 ### Parameter setting end ###
 
@@ -29,9 +30,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
                   gseaCategories=c("h.all.v7.0.symbols.gmt"),
                   gseaReportTemplt="GSEAReport.Rmd",
                   makeReport=FALSE,
-                  gseaChip
-)
-{
+                  gseaChip) {
   fileToName=c(
     "h"="HallmarkGeneSets",
     "c1"="PositionalGeneSets",
@@ -120,6 +119,11 @@ if(file.exists(parFile1)){
   preRankedGeneFileTable<-preRankedGeneFileTable[c("V1", "V2")]
 }else{
   preRankedGeneFileTable=read.delim(parSampleFile1,header=F,as.is=T)
+}
+
+if(parSampleFile1 != '' & parSampleFile2 != ''){
+  fpattern = paste0("\\.", sample_name, "$")
+  preRankedGeneFileTable=preRankedGeneFileTable[grepl(paste0("\\.", sample_name, "$"), preRankedGeneFileTable$V2),]
 }
 
 if(!exists("makeReport")){
