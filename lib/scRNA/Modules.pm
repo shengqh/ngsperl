@@ -1441,14 +1441,21 @@ sub addEdgeRTask {
   push( @$summary, $edgeRtaskname );
 
   my $vistaskname = $edgeRtaskname . "_vis";
+  my $vis_rmd_txt = $rmd_ext;
   $config->{$vistaskname} = {
     class              => "CQS::UniqueR",
     perform            => 1,
     target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname,
     rtemplate          => "../scRNA/scRNA_func.r,../scRNA/edgeRvis.r",
+    rReportTemplate      => "../scRNA/edgeRvis.rmd;reportFunctions.R",
+    rmd_ext => ".edgeR_vis.html",
+    run_rmd_independent => 1,
     parameterFile2_ref => [$edgeRtaskname],
     output_file_ext    => ".vis.files.csv",
     parameterSampleFile1 => {
+      "email" => getValue($def, "email"),
+      "affiliation" => $def->{"affiliation"},
+      "task_name" => getValue( $def, "task_name" ),
       "sample_column" => getValue($def, "sample_column", "orig.ident"),
       "cluster_name" => $curClusterName,
       "bBetweenCluster" => $bBetweenCluster,

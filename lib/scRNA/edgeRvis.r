@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='SADIE_pbmc'
+outFile='SADIE_adipose'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/data/pbmc.v4.DE.rds'
-parFile2='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample/result/SADIE_pbmc.edgeR.files.csv'
+parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/data/adipose.v4.DE.rds'
+parFile2='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_adipose/files_edgeR_inCluster_bySample/result/SADIE_adipose.edgeR.files.csv'
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample_vis/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_adipose/files_edgeR_inCluster_bySample_vis/result')
 
 ### Parameter setting end ###
 
@@ -64,32 +64,38 @@ if(!bBetweenCluster){
   }
 }
 
+detail_folder = paste0(outFile, ".edgeR_vis/")
+if(!file.exists(detail_folder)){
+  dir.create(detail_folder)
+}
 all_sigout<-NULL
 
 result<-NULL
-prefix<-rownames(edgeRres)[2]
-for (prefix in rownames(edgeRres)){
-  cat("Processing ", prefix, "\n")
-  comparison<-edgeRres[prefix, "comparison"]
-  sigGenenameFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "sigGenenameFile"])
-  cellType<-edgeRres[prefix, "cellType"]
-  deFile=paste0(edgeRfolder, "/", edgeRres[prefix, "deFile"])
+comp<-rownames(edgeRres)[2]
+for (comp in rownames(edgeRres)){
+  cat("Processing ", comp, "\n")
+  comparison<-edgeRres[comp, "comparison"]
+  sigGenenameFile<-paste0(edgeRfolder, "/", edgeRres[comp, "sigGenenameFile"])
+  cellType<-edgeRres[comp, "cellType"]
+  deFile=paste0(edgeRfolder, "/", edgeRres[comp, "deFile"])
   totalGene=length(readLines(deFile))-1
   sigGene=length(readLines(sigGenenameFile))
   visFile=""
+
+  prefix=paste0(detail_folder, comp)
   if (sigGene > 0){
     visFile=paste0(prefix, ".sig_genename.pdf")
     #if(!file.exists(visFile)){
       siggenes<-read.table(sigGenenameFile, sep="\t", stringsAsFactors = F)
       colnames(siggenes)<-"gene"
       
-      sigoutFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "sigFile"])
+      sigoutFile<-paste0(edgeRfolder, "/", edgeRres[comp, "sigFile"])
       sigout<-read.csv(sigoutFile, header=T, stringsAsFactors = F, row.names=1)
       sigout$comparison=prefix
       
       all_sigout<-rbind(all_sigout, sigout)
 
-      designFile<-paste0(edgeRfolder, "/", edgeRres[prefix, "designFile"])
+      designFile<-paste0(edgeRfolder, "/", edgeRres[comp, "designFile"])
       design_data<-read.csv(designFile, stringsAsFactors = F, header=T)
       
       designUniq<-unique(design_data[,c("Group", "DisplayGroup")])
@@ -117,7 +123,7 @@ for (prefix in rownames(edgeRres)){
         cell_obj@meta.data$Group=gmap[cell_obj$orig.ident]
         cell_obj@meta.data$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=names(groupColors))
       
-        cpmFile=paste0(edgeRfolder, "/", edgeRres[prefix, "cpmFile"])
+        cpmFile=paste0(edgeRfolder, "/", edgeRres[comp, "cpmFile"])
         log_cpm<-read.csv(cpmFile, row.names=1)
       }
       
@@ -127,13 +133,29 @@ for (prefix in rownames(edgeRres)){
         vars.to.regress=NULL
       }
       cell_obj = ScaleData(cell_obj, features=siggenes$gene, assay="RNA", vars.to.regress=vars.to.regress)
-      g<-MyDoHeatMap(cell_obj, assay="RNA", features=siggenes$gene, group.by="DisplayGroup")
-      png(paste0(prefix, ".sig_gene.heatmap.png"), 
-          width=4000, 
-          height=get_heatmap_height(nrow(siggenes)), 
-          res=300)
-      print(g)
-      dev.off()
+
+      heatmap_height=min(8, max(4, 0.4*sigGene))
+      if(grepl("^5", packageVersion("Seurat"))){
+        g<-MyDoHeatMap( cell_obj, 
+                        assay="RNA", 
+                        features=siggenes$gene, 
+                        group.by="DisplayGroup", 
+                        group.colors=groupColors, 
+                        label=sigGene<20, 
+                        angle=0,
+                        group.bar.height=0.05,
+                        vjust=0.1) + guides(color = "none")
+      }else{
+        g<-MyDoHeatMap( cell_obj, 
+                        assay="RNA", 
+                        features=siggenes$gene, 
+                        group.by="DisplayGroup", 
+                        group.colors=groupColors, 
+                        label=sigGene<20, 
+                        angle=0,
+                        group.bar.height=0.05) + guides(color = "none")
+      }
+      ggsave(paste0(prefix, ".sig_gene.heatmap.png"), g, width=8, height=heatmap_height, dpi=300, units="in", bg="white")
 
       coords<-data.frame(Embeddings(cell_obj, reduction=reduction))
 
@@ -162,7 +184,14 @@ for (prefix in rownames(edgeRres)){
       pdf(file=visFile, onefile = T, width=width, height=10)
       siggene<-topNgenes[1]
       for (sig_gene in topNgenes){
-        p<-get_sig_gene_figure(cell_obj, sigout, design_data, sig_gene, DE_by_cell=DE_by_cell, is_between_cluster=bBetweenCluster, log_cpm=log_cpm)
+        p<-get_sig_gene_figure( cell_obj, 
+                                sigout, 
+                                design_data, 
+                                sig_gene, 
+                                DE_by_cell=DE_by_cell, 
+                                is_between_cluster=bBetweenCluster, 
+                                log_cpm=log_cpm,
+                                scale_data=FALSE)
 
         print(p)
         #break
@@ -178,8 +207,12 @@ for (prefix in rownames(edgeRres)){
   }
 }
 
-write.csv(result, file=paste0(outFile, ".vis.files.csv"), quote=F)
+result_csv=paste0(detail_folder, outFile, ".vis.files.csv")
+write.csv(result, file=result_csv, quote=F)
 
+if(0){
+  result=data.frame(fread(result_csv), row.names=1)
+}
 result$sigRate<-result$sigGene * 100.0 / result$totalGene
 
 if(!bBetweenCluster){
@@ -194,13 +227,11 @@ if(!bBetweenCluster){
     obj@meta.data$sigRate=unlist(rateMap[as.character(unlist(obj[[cluster_name]]))])
     obj@meta.data$sigRate[is.na(obj$sigRate)]<-0
     
-    pdf(paste0(outFile, ".", comp, ".sigGenePerc.pdf"), width=14, height=7)
-    p1<-get_dim_plot_labelby(obj, label.by = cluster_name) + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
-    p2<-MyFeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red")) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
+    p1<-get_dim_plot_labelby(obj, label.by = cluster_name) + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
+    p2<-MyFeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red"), raster=FALSE) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
     g<-ggarrange(p1, p2, ncol = 2, labels = c("A", "B"))
-    print(g)
-    dev.off()
+    ggsave(paste0(detail_folder, outFile, ".", comp, ".sigGenePerc.png"), g, width=14, height=7, dpi=300, units="in", bg="white")
   }
 }
 
-write.csv(all_sigout, file=paste0(outFile, ".allsigout.csv"), quote=F)
+write.csv(all_sigout, file=paste0(detail_folder, outFile, ".allsigout.csv"), quote=F)

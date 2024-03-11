@@ -1,0 +1,90 @@
+---
+title: "edgeR differential expression visualization"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(
+  echo=FALSE,  
+  message=FALSE, 
+  warning=FALSE, 
+  results = 'asis', 
+  fig.width=7, 
+  fig.height = 7,
+  tidy = TRUE, 
+  tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+library(knitr)
+
+source('scRNA_func.r')
+source('reportFunctions.R')
+
+options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+myoptions<-split(options_table$V1, options_table$V2)
+task_name<-myoptions$task_name
+
+edgeR_files=data.frame(fread(paste0(task_name, ".edgeR_vis/", task_name, ".vis.files.csv")), row.names=1)
+rownames(edgeR_files)<-basename(edgeR_files$prefix)
+comparisons<-unique(edgeR_files$comparison)
+
+detail_folder=paste0(task_name, ".edgeR_vis/")
+```
+
+---
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r, echo=FALSE}
+result<-""
+
+comp=comparisons[1]
+for(comp in comparisons){
+  result<-paste0(result, "\n# ", comp, "\n\n")
+  comp_files<-subset(edgeR_files, comparison == comp)
+
+  sigGenePerc_png = paste0(detail_folder, task_name, ".", comp, ".sigGenePerc.png")
+  if(file.exists(sigGenePerc_png)){
+    result<-paste0(result, "\n## DE gene percentage\n\n")
+    result<-paste0(result, getFigure(sigGenePerc_png))
+  }
+
+  ct_comp=rownames(comp_files)[2]
+  for(ct_comp in rownames(comp_files)){
+    result = paste0(result, "## ", ct_comp, "\n\n")
+    sigGene = comp_files[ct_comp, "sigGene"]
+    if (sigGene == 0){
+      result = paste0(result, "No significantly differential expressed genes\n\n")
+      next
+    }
+    result = paste0(result, "There are ", sigGene, " significantly differential expressed genes\n\n")
+    ct_prefix = comp_files[ct_comp, "prefix"]
+    heatmap_png<-paste0(ct_prefix, ".sig_gene.heatmap.png")
+    if(file.exists(heatmap_png)){
+      result<-paste0(result,"\n### DE gene heatmap\n\n")
+      result<-paste0(result, getFigure(heatmap_png))
+    }
+  }
+}
+resFile<-"comp.Rmd"
+writeLines(result, resFile)
+```
+
+```{r, child=resFile} 
+```
