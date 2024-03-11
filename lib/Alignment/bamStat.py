@@ -1,10 +1,6 @@
 import pysam
 import argparse
-import sys
 import logging
-import os
-import re
-from asyncore import read
 
 from enum import Enum
 
@@ -62,7 +58,7 @@ if DEBUG:
 logger = logging.getLogger('bamSummary')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-with pysam.Samfile(args.input, "rb") as sam:
+with pysam.Samfile(args.input, "rb", check_sq=False) as sam:
   chromosomes = [sam.get_reference_name(nf) for nf in range(0, sam.nreferences)]
 
   type_dic = {ReadType.UNMAPPED:0, ReadType.UNIQUELY_MAPPED:0, ReadType.MULTIPLE_MAPPED:0}
