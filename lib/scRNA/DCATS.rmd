@@ -1,0 +1,80 @@
+---
+title: "DCATS cell composition analysis report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 2
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library("knitr")
+library("dplyr")
+library("kableExtra")
+library("SingleCellExperiment")
+source("reportFunctions.R")
+
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=12, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, include=FALSE}
+options_table = read.table("fileList1.txt", sep="\t")
+myoptions = split(options_table$V1, options_table$V2)
+outFile=myoptions$task_name
+
+groups<-fread("fileList2.txt",header=F, data.table=F) %>% 
+  dplyr::rename("Sample"=V1, "Group"=V2)
+
+comparison_data<-fread("fileList3.txt", header=F, data.table=FALSE) %>% 
+  dplyr::filter(V2=="groups") %>%
+  dplyr::select(V1, V3) %>%
+  dplyr::rename("Group"=V1, "Comparison"=V3)
+
+comparisons <- unique(comparison_data$Comparison)
+```
+
+---
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r}
+result=""
+comp=comparisons[1]
+for(cur_comp in comparisons){
+  result<-paste(result, "\n\n# ", cur_comp, "\n\n")
+
+  result=paste0(result, "## Count table\n\n")
+  count_file=paste0(outFile,".",cur_comp,".cell_count.csv")
+  result=paste0(result, getPagedTable(count_file, row.names=1))
+
+  result=paste0(result, "## Percentage table\n\n")
+  perc_file=paste0(outFile,".",cur_comp,".cell_perc.csv")
+  result=paste0(result, getPagedTable(perc_file, row.names=1, digits=3))
+
+  result=paste0(result, "## Design matrix\n\n")
+  design_file=paste0(outFile,".",cur_comp,".design.csv")
+  result=paste0(result, getTable(design_file))
+
+  result=paste0(result, "## DCATS result\n\n")
+  dcats_file=paste0(outFile,".",cur_comp,".DCATS.csv")
+  result=paste0(result, getTable(dcats_file, row.names=1))
+
+  result=paste0(result, "## Boxplot\n\n")
+  perc_png=paste0(outFile,".",cur_comp,".cell_perc.png")
+  result=paste0(result, getFigure(perc_png))
+}
+comp_rmd="comp.rmd"
+writeLines(result, comp_rmd)
+```
+
+```{r, child=comp_rmd}
+```
+
