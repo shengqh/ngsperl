@@ -121,9 +121,11 @@ if(file.exists(parFile1)){
   preRankedGeneFileTable=read.delim(parSampleFile1,header=F,as.is=T)
 }
 
-if(parSampleFile1 != '' & parSampleFile2 != ''){
-  fpattern = paste0("\\.", sample_name, "$")
-  preRankedGeneFileTable=preRankedGeneFileTable[grepl(paste0("\\.", sample_name, "$"), preRankedGeneFileTable$V2),]
+if(exists("sample_name")){
+  if(parSampleFile1 != '' & parSampleFile2 != ''){
+    fpattern = paste0("\\.", sample_name, "$")
+    preRankedGeneFileTable=preRankedGeneFileTable[grepl(paste0("\\.", sample_name, "$"), preRankedGeneFileTable$V2),]
+  }
 }
 
 if(!exists("makeReport")){
