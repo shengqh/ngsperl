@@ -167,6 +167,11 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_dynamic_cluster", 1 );
   initDefaultValue( $def, "dynamic_by_one_resolution", 0.2 );
 
+  initDefaultValue( $def, "perform_sub_dynamic_cluster", 0);
+  initDefaultValue( $def, "sub_dynamic_redo_harmony", 1);
+  initDefaultValue( $def, "sub_dynamic_init_layer", "layer4");
+  initDefaultValue( $def, "sub_dynamic_final_layer", "layer5");
+
   if(getValue($def, "species") ne "Hs"){
     if(getValue($def, "perform_SignacX", 0)){
       die "perform_SignacX should be 0 since the dataset is not from human species";
@@ -583,8 +588,21 @@ sub getScRNASeqConfig {
 
         $def->{$dynamicKey} = 0;
 
-        my $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call";
-        addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, 0);
+        my $scDynamic_task;
+
+        my $by_individual_sample=0;
+        my $by_column=undef;
+        my $by_harmony;
+        
+        if(getValue($def, "dynamic_by_harmony", 0)){
+          $by_harmony = 1;
+          $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call_harmony";
+        } else {
+          $by_harmony = 0;
+          $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call";
+        }
+        addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column, $by_harmony);
+
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
         my $call_files_ref = [$scDynamic_task, ".iter_png.csv"];
 
@@ -609,6 +627,12 @@ sub getScRNASeqConfig {
           my $clustree_task = $individual_scDynamic_task . "_clustree";
           add_clustree_rmd($config, $def, $summary, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task);
         }
+
+        if(getValue($def, "perform_sub_dynamic_cluster")){
+          my $sub_scDynamic_task = $scDynamic_task . "_sub";
+          addSubDynamicCluster($config, $def, $summary, $target_dir, $sub_scDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, 0);
+        }
+
 
         # if (getValue( $def, "perform_SingleR", 0 ) ) {
         #   my $singleR_task = $scDynamic_task . "_SingleR";
