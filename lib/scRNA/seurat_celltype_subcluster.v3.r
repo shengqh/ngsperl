@@ -540,6 +540,11 @@ for(pct in previous_celltypes){
     # umap file
     g0<-MyDimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
     g1<-MyDimPlot(subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
+
+    if(length(unique(subobj$orig.ident)) > 10){
+      g1<-g1+NoLegend()
+    }
+
     g2<-MyDimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
     g3<-MyDimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
     g<-g0+g1+g2+g3+plot_layout(ncol=2)
