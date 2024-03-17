@@ -24,6 +24,10 @@ myoptions = read_file_map(parSampleFile1, do_unlist = FALSE)
 doublet_column = myoptions$doublet_column
 celltype_column = myoptions$celltype_column
 
+file_dir=paste0(outFile, ".dynamic_call_validation")
+dir.create(file_dir, showWarnings=FALSE)
+file_prefix=file.path(file_dir, outFile)
+
 meta<-readRDS(parFile2)
 
 if(celltype_column == "seurat_cell_type"){
@@ -75,7 +79,7 @@ if(exists('parSampleFile5')){
   validation_columns<-c(validation_columns, "SingleR")
 }
 
-saveRDS(meta, paste0(outFile, ".meta.rds"))
+saveRDS(meta, paste0(file_prefix, ".meta.rds"))
 
 obj<-read_object(parFile1)
 obj@meta.data = meta
@@ -90,7 +94,7 @@ get_filtered_obj<-function(obj, ct_meta, filter_column){
   return(ct_obj)
 }
 
-draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, validation_columns, has_decontX, obj){
+draw_figure<-function(file_prefix, meta, celltype_column, celltype_cluster_column, validation_columns, has_decontX, obj){
   cts = unique(meta[,celltype_column])
 
   ct = cts[1]
@@ -98,7 +102,7 @@ draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, v
     pct = celltype_to_filename(ct)
     ct_meta = meta[meta[,celltype_column] == ct,]
 
-    bar_file=paste0(outFile, ".", pct, ".png")
+    bar_file=paste0(file_prefix, ".", pct, ".png")
     g<-get_barplot( ct_meta=ct_meta, 
                     bar_file=bar_file,
                     cluster_name=celltype_cluster_column, 
@@ -117,21 +121,21 @@ draw_figure<-function(outFile, meta, celltype_column, celltype_cluster_column, v
         g2<-g2 + facet_grid(DF~.)
       }
       g<-g1+g2+plot_layout(design="ABBB")
-      ggsave(paste0(outFile, ".", pct, ".decontX.png"), g, width=4400, height=1600, units="px", dpi=300, bg="white")
+      ggsave(paste0(file_prefix, ".", pct, ".decontX.png"), g, width=4400, height=1600, units="px", dpi=300, bg="white")
     }
 
     if("SingleR" %in% validation_columns){
       ct_obj = get_filtered_obj(obj, ct_meta, "SingleR")
 
       g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="SingleR",  title="SingleR in old UMAP") + guides(fill=guide_legend(ncol =1))
-      ggsave(paste0(outFile, ".", pct, ".SingleR.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
+      ggsave(paste0(file_prefix, ".", pct, ".SingleR.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
     }
 
     if("SignacX" %in% validation_columns){
       ct_obj = get_filtered_obj(obj, ct_meta, "SignacX")
 
       g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="SignacX",  title="SignacX in old UMAP") + guides(fill=guide_legend(ncol =1))
-      ggsave(paste0(outFile, ".", pct, ".SignacX.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
+      ggsave(paste0(file_prefix, ".", pct, ".SignacX.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
     }
   }
 }
@@ -140,7 +144,7 @@ if(length(unique(meta$orig.ident)) > 1){
   validation_columns<-c("orig.ident", validation_columns)
 }
 
-draw_figure(outFile, meta, celltype_column, celltype_cluster_column, validation_columns, has_decontX, obj)
+draw_figure(file_prefix, meta, celltype_column, celltype_cluster_column, validation_columns, has_decontX, obj)
 
 writeLines(validation_columns, "validation_columns.txt")
 if(file.exists(parFile3)){

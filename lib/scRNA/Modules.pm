@@ -86,6 +86,7 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   addEdgeRTask
   addComparison
   addDynamicCluster
+  addSubDynamicCluster  
   addSubCluster
   addSubClusterChoose
   addClonotypeVis
@@ -1728,17 +1729,18 @@ sub addComparison {
 }
 
 sub addDynamicCluster {
-  my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column) = @_;
+  my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column, $by_harmony) = @_;
 
   my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".iter_png.csv,.scDynamic.meta.rds";
   my $rmd_ext = $by_individual_sample ? ".dynamic_call_individual.html":".dynamic_call.html";
-  my $rReportTemplate = $by_individual_sample ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R":"../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.R";
+  my $rReportTemplate = $by_individual_sample ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R":"../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R";
+  my $rscript = $by_harmony ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_harmony.r" : "../scRNA/seurat_scDynamic_one_layer_one_resolution.r";
 
   $config->{$scDynamic_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scDynamic_task,
-    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scDynamic_one_layer_one_resolution.r",
+    rtemplate                => "../scRNA/scRNA_func.r,$rscript",
     rReportTemplate => $rReportTemplate,
     rmd_ext => $rmd_ext,
     run_rmd_independent => 1,
@@ -1782,6 +1784,65 @@ sub addDynamicCluster {
   };
 
   push( @$summary, $scDynamic_task );
+}
+
+sub addSubDynamicCluster {
+  my ($config, $def, $summary, $target_dir, $scSubDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, $by_individual_sample, $by_column) = @_;
+
+  my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".iter_png.csv,.scDynamic.meta.rds";
+  my $rmd_ext = $by_individual_sample ? ".dynamic_call_individual.html":".dynamic_call.html";
+  my $rReportTemplate = $by_individual_sample ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R":"../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;reportFunctions.R";
+
+  $config->{$scSubDynamic_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $scSubDynamic_task,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_scSubDynamic_one_layer_one_resolution.r",
+    rReportTemplate => $rReportTemplate,
+    rmd_ext => $rmd_ext,
+    run_rmd_independent => 1,
+    parameterFile1_ref => [$seurat_task, ".rds"],
+    parameterFile2_ref => $meta_ref,
+    parameterFile3_ref => $essential_gene_task,
+    parameterSampleFile1     => {
+      task_name             => getValue( $def, "task_name" ),
+      pca_dims              => getValue( $def, "pca_dims" ),
+      by_sctransform        => getValue( $def, "by_sctransform" ),
+      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      species               => getValue( $def, "species" ),
+      db_markers_file       => getValue( $def, "markers_file" ),
+      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+      annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+      remove_subtype => getValue( $def, "remove_subtype", ""),
+      HLA_panglao5_file => getValue( $def, "HLA_panglao5_file", "" ),
+      tcell_markers_file => getValue( $def, "tcell_markers_file", ""),
+      bubblemap_file => $def->{bubblemap_file},
+      bubblemap_width => $def->{bubblemap_width},
+      bubblemap_height => $def->{bubblemap_height},
+      bubblemap_use_order => getValue($def, "bubblemap_use_order", 0),
+      summary_layer_file => $def->{summary_layer_file},
+      best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
+      dynamic_by_one_resolution => getValue( $def, "sub_dynamic_by_one_resolution", 0.2 ),
+      redo_harmony          => getValue( $def, "sub_dynamic_redo_harmony", 0),
+      init_layer                 => getValue( $def, "sub_dynamic_init_layer", "layer4"),
+      final_layer                 => getValue( $def, "sub_dynamic_final_layer", "layer5"),
+      reduction             => $reduction,
+      by_individual_sample  => $by_individual_sample,
+      by_column => $by_column,
+    },
+    parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
+    parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
+    parameterSampleFile4 => getValue($def, "dynamic_combine_cell_types", {}),
+    output_file_ext      => $output_file_ext,
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "24",
+      "mem"       => getValue($def, "seurat_mem")
+    },
+  };
+
+  push( @$summary, $scSubDynamic_task );
 }
 
 sub addSubCluster {
@@ -3084,6 +3145,9 @@ sub add_clustree_rmd {
 sub add_bubble_files {
   my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name, $rmd_ext) = @_;
   my $p2key = defined($meta_ref) ? ((-e $meta_ref) ? "parameterFile2" : "parameterFile2_ref") : "parameterFile2";
+  my $suffix = $rmd_ext;
+  $suffix =~ s/.html//g;
+
   $config->{$bubble_task} = {
     class                => "CQS::UniqueR",
     perform              => 1,
@@ -3098,9 +3162,10 @@ sub add_bubble_files {
     parameterSampleFile2 => {
       task_name => getValue($def, "task_name"),
       cluster_name => $cluster_name,
-      celltype_name => $celltype_name 
+      celltype_name => $celltype_name,
+      suffix => $suffix
     },
-    output_file_ext      => ".cell_type.txt",
+    output_file_ext      => $rmd_ext,
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
