@@ -1,20 +1,20 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='iSGS_cell_atlas'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
-parSampleFile3=''
+parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parSampleFile6='fileList6.txt'
-parFile1='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_sct2_merge/result/combined.final.rds'
-parFile2='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_sct2_merge_dr0.5_1_call/result/combined.scDynamic.meta.rds'
-parFile3='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/essential_genes/result/combined.txt'
+parFile1='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/essential_genes/result/iSGS_cell_atlas.txt'
 
 
-setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_sct2_merge_dr0.5_2_subcluster_rh/result')
+setwd('/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
 
 ### Parameter setting end ###
 
+source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -29,7 +29,6 @@ library(data.table)
 library(testit)
 library(stringr)
 
-source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -144,69 +143,6 @@ draw_dim_plot<-function(obj, previous_layer, file_path){
 }
 
 meta<-obj@meta.data
-if(!is_file_empty(parSampleFile3)){
-  draw_dim_plot(obj, previous_layer, paste0(outFile, ".pre_rename.umap.png"))
-
-  rename_map = read.table(parSampleFile3, sep="\t", header=F)
-
-  meta[,previous_layer]<-as.character(meta[,previous_layer])
-
-  keys = unique(rename_map$V3)
-  if("from" %in% rename_map$V2){
-    rname = keys[2]
-    for(rname in keys){
-      rmap = rename_map[rename_map$V3 == rname,]
-      from = rmap$V1[rmap$V2=="from"]
-      cluster = rmap$V1[rmap$V2=="cluster"]
-      to = rmap$V1[rmap$V2=="to"]
-
-      if(!(from %in% unlist(meta[,previous_layer]))){
-        stop(paste0("Cannot find ", from, " in obj cell type layer ", previous_layer))
-      }
-      submeta<-meta[meta[,previous_layer] == from,]
-
-      if(all(cluster == "-1")){
-        cells<-rownames(submeta)
-      }else{
-        if(!(all(cluster %in% unlist(submeta[,previous_cluster])))){
-          stop(paste0("Cannot find cluster ", paste0(cluster, collapse = "/"), " in cell type ", from, " of cluster ", previous_cluster))
-        }
-
-        cells<-rownames(submeta)[submeta[,previous_cluster] %in% cluster]
-      }
-      meta[cells,previous_layer]<-to
-    }
-  }else{
-    rname = keys[1]
-    for(rname in keys){
-      rmap = rename_map[rename_map$V3 == rname,]
-      cluster = rmap$V1[rmap$V2=="cluster"]
-      to = rmap$V1[rmap$V2=="to"]
-
-      if(!(cluster %in% unlist(meta[,previous_cluster]))){
-        stop(paste0("Cannot find cluster ", cluster, " in obj cell type cluster ", previous_cluster))
-      }
-
-      cells<-rownames(meta)[meta[,previous_cluster]==cluster]
-      meta[cells,previous_layer]<-to
-    }
-  }
-
-  obj@meta.data<-meta
-  if("DELETE" %in% meta[,previous_layer]){
-    cells = rownames(meta)[meta[,previous_layer] != "DELETE"]
-    obj = subset(obj, cells=cells)
-  }
-  meta=obj@meta.data
-  tb<-table(meta[,previous_layer])
-  tb<-tb[order(tb, decreasing=T)]
-  meta[,previous_layer]<-factor(meta[,previous_layer], levels=names(tb))
-  obj@meta.data = meta
-
-  draw_dim_plot(obj, previous_layer, paste0(outFile, ".post_rename.umap.png"))
-}
-
-meta<-obj@meta.data
 
 bHasSignacX<-FALSE
 if(exists("parSampleFile4")){
@@ -229,7 +165,69 @@ if(exists('parSampleFile5')){
   bHasSingleR<-TRUE
 }
 
-obj@meta.data<-meta
+if(!is_file_empty(parSampleFile3)){
+  draw_dim_plot(obj, previous_layer, paste0(outFile, ".pre_rename.umap.png"))
+
+  rename_map = read.table(parSampleFile3, sep="\t", header=F)
+
+  meta[,previous_layer]<-as.character(meta[,previous_layer])
+
+  keys = unique(rename_map$V3)
+  if("from" %in% rename_map$V2){
+    rname = keys[2]
+    for(rname in keys){
+      rmap = rename_map[rename_map$V3 == rname,]
+      from = rmap$V1[rmap$V2=="from"]
+      if(!(from %in% unlist(meta[,previous_layer]))){
+        stop(paste0("Cannot find ", from, " in obj cell type layer ", previous_layer))
+      }
+      submeta<-meta[meta[,previous_layer] == from,]
+
+      cluster = rmap$V1[rmap$V2=="cluster"]
+      to = rmap$V1[rmap$V2=="to"]
+      cluster_column = ifelse('column' %in% rmap$V2, rmap$V1[rmap$V2=="column"], previous_cluster)
+
+      if(all(cluster == "-1")){
+        cells<-rownames(submeta)
+      }else{
+        if(!(all(cluster %in% unlist(submeta[,cluster_column])))){
+          stop(paste0("Cannot find cluster ", paste0(cluster, collapse = "/"), " in cell type ", from, " of cluster ", cluster_column))
+        }
+
+        cells<-rownames(submeta)[submeta[,cluster_column] %in% cluster]
+      }
+      meta[cells,previous_layer]<-to
+    }
+  }else{
+    rname = keys[1]
+    for(rname in keys){
+      rmap = rename_map[rename_map$V3 == rname,]
+      cluster = rmap$V1[rmap$V2=="cluster"]
+      to = rmap$V1[rmap$V2=="to"]
+
+      if(!(cluster %in% unlist(meta[,previous_cluster]))){
+        stop(paste0("Cannot find cluster ", cluster, " in obj cell type cluster ", previous_cluster))
+      }
+
+      cells<-rownames(meta)[meta[,previous_cluster]==cluster]
+      meta[cells,previous_layer]<-to
+    }
+  }
+
+  obj@meta.data<-meta
+  
+  if("DELETE" %in% meta[,previous_layer]){
+    cells = rownames(meta)[meta[,previous_layer] != "DELETE"]
+    obj = subset(obj, cells=cells)
+  }
+  meta=obj@meta.data
+  tb<-table(meta[,previous_layer])
+  tb<-tb[order(tb, decreasing=T)]
+  meta[,previous_layer]<-factor(meta[,previous_layer], levels=names(tb))
+  obj@meta.data = meta
+
+  draw_dim_plot(obj, previous_layer, paste0(outFile, ".post_rename.umap.png"))
+}
 
 saveRDS(meta, paste0(outFile, ".meta.rds"))
 
