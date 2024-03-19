@@ -209,6 +209,13 @@ if(by_individual_sample){
     f1$V1[f1$V2=="task_name"] = sample
     write.table(f1, paste0(cur_folder, "/fileList1.txt"), sep="\t", row.names=F)
 
+    for(idx in c(2:9)){
+      f=paste0(root_folder, "/fileList", idx, ".txt")
+      if(file.exists(f)){
+        file.copy(f, paste0(cur_folder, "/", basename(f)), overwrite = TRUE)
+      }
+    }
+
     file.copy(paste0(root_folder, "/scRNA_func.r"), paste0(cur_folder, "/scRNA_func.r"), overwrite = TRUE)
     file.copy(paste0(root_folder, "/seurat_scDynamic_one_layer_one_resolution.rmd"), paste0(cur_folder, "/seurat_scDynamic_one_layer_one_resolution.rmd"), overwrite = TRUE)
     file.copy(paste0(root_folder, "/reportFunctions.R"), paste0(cur_folder, "/reportFunctions.R"), overwrite = TRUE)
@@ -225,6 +232,8 @@ if(by_individual_sample){
     if(0){#for test
       subobj=subset(subobj, cells=colnames(subobj)[1:2000])
     }
+
+    setwd(cur_folder)
 
     #for each sample, do its own PCA, FindClusters and UMAP first
     subobj = sub_cluster( subobj = subobj, 
