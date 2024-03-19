@@ -11,7 +11,14 @@ output:
 library(knitr)
 library(dplyr)
 library(kableExtra)
-knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
 ```
 
 ```{css, echo=FALSE}
@@ -29,9 +36,10 @@ myoptions<-split(options_table$V1, options_table$V2)
 
 outfile<-myoptions$task_name
 
-bubble_files<-read.csv(paste0(outfile, ".bubblemap.csv"), row.names=1)
+detail_prefix=file.path(paste0(myoptions$task_name, myoptions$suffix), outfile)
 
-resFile<-"sub.Rmd"
+bubble_files<-read.csv(paste0(detail_prefix, ".bubblemap.csv"), row.names=1)
+
 result=""
 for(bn in rownames(bubble_files)) {
   ct_png = bubble_files[bn, "ct_png"]
@@ -45,9 +53,9 @@ for(bn in rownames(bubble_files)) {
   result<-paste0(result, paste0("\n\n## Seurat cell type\n\n"))
   result<-paste0(result, getFigure(ct_cluster_png))
 }
+resFile<-"sub.Rmd"
 writeLines(result, resFile)
 ```
 
 ```{r, child=resFile} 
 ```
-
