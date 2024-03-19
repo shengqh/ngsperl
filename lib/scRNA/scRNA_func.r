@@ -2933,3 +2933,13 @@ factor_by_count<-function(vec){
   res=factor(vec, levels=names(tbl))
   return(res)
 }
+
+add_column_count<-function(meta, column, target_column){
+  tbl=table(meta[,column])
+  tbl=tbl[tbl > 0]
+  tbl=tbl[order(tbl, decreasing=T)]
+  new_tbl=paste0(names(tbl), " (", tbl, ")")
+  names(new_tbl)=names(tbl)
+  meta[,target_column]=factor(new_tbl[meta[,column]], levels=new_tbl)
+  return(meta)
+}
