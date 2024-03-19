@@ -732,10 +732,10 @@ sub addEncodeATACseq {
 
   push @$tasks, $task;
 
-  my $croo_task = $task . "_croo";
+  my $croo_task = "${task_folder}_croo";
   $config->{$croo_task} = {
     class => "CQS::ProgramWrapperOneToOne",
-    target_dir => "${target_dir}/${task_folder}_croo",
+    target_dir => "${target_dir}/${croo_task}",
     interpretor => "python3",
     program => "../Chipseq/croo.py",
     option => "-n __NAME__ --croo " . getValue($def, "croo", "croo") . " --out_def_json " . getValue($def, "croo_out_def_json") . " -i __FILE__ -o __OUTPUT__
@@ -747,7 +747,7 @@ rm -rf __NAME__/align/*/*.srt.bam.*
     source_ref => [$task],
     output_arg => "-o",
     output_file_prefix => "",
-    output_file_ext => getValue($def, "croo_output_file_ext", "__NAME__/qc/qc.html,__NAME__/qc/qc.json"),
+    output_file_ext => getValue($def, "croo_output_file_ext", "__NAME__/,__NAME__/qc/qc.html,__NAME__/qc/qc.json"),
     output_to_same_folder => 1,
     can_result_be_empty_file => 0,
     docker_prefix => "croo_",
@@ -764,7 +764,7 @@ rm -rf __NAME__/align/*/*.srt.bam.*
     my $qc_task = $croo_task . "_qc";
     $config->{$qc_task} = {
       class => "CQS::UniqueRmd",
-      target_dir => "${target_dir}/${task_folder}_croo_qc",
+      target_dir => "${target_dir}/${qc_task}",
       report_rmd_file => "../Encode/ATACseqQC.rmd",
       additional_rmd_files => "../CQS/reportFunctions.R",
       option => "",
@@ -791,7 +791,7 @@ rm -rf __NAME__/align/*/*.srt.bam.*
     push @$tasks, $qc_task;
   }
 
-  return ($task);
+  return ($croo_task);
 }
 
 sub addEncodeHic {
