@@ -705,7 +705,7 @@ sub getScRNASeqConfig {
                 },
                 parameterSampleFile2_ref => "groups",
                 parameterSampleFile3_ref => "pairs",
-                output_file_ext      => ".dcats.rds",
+                output_file_ext      => ".DCATS.rds",
                 no_docker => 1,
                 sh_direct            => 1,
                 pbs                  => {
