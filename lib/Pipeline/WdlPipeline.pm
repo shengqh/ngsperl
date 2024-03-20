@@ -383,8 +383,7 @@ sub addSomaticCNV {
   my $somaticCNV_pipeline = $server->{"somaticCNV"};
 
   my $pon = {};
-  #if ($somaticCNV_pipeline->{"perform_somaticCNV_pon"}){
-  if (1) {
+  if ($def->{"perform_somaticCNV_pon"}){
     my $pon_pipeline = $server->{"somaticCNV_pon"};
 
     my $somaticCNV_pon = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_pon";
@@ -414,11 +413,13 @@ sub addSomaticCNV {
     };
     push @$summary, $somaticCNV_pon;
 
-#    $pon=[$somaticCNV_pon, ".pon.hdf5\$"];
-     $pon = {
-       "CNVSomaticPairWorkflow.read_count_pon_ref" => [$somaticCNV_pon, ".pon.hdf5\$"],
-# #      "somaticCNV.pon_idx" =>[$somaticCNV_pon, ".vcf.idx\$"],
-     };
+    $pon = {
+      "CNVSomaticPairWorkflow.read_count_pon_ref" => [$somaticCNV_pon, ".pon.hdf5\$"],
+    };
+  }else{
+    $pon = {
+      "CNVSomaticPairWorkflow.read_count_pon" => getValue($def, "CNVSomaticPairWorkflow.read_count_pon"),
+    };
   }
 
   my $somaticCNV_call = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_call";
