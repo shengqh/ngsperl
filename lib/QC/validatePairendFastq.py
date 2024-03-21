@@ -30,8 +30,17 @@ def validate2(logger, input1str, input2str, output):
 
       with fin1, fin2:
         while(True):
-          line1 = fin1.readline()
-          line2 = fin2.readline()
+          try:
+            line1 = fin1.readline()
+          except Exception as e:
+            error_msg = "Unexpected error: {0} for {1}".format(e, read1)      
+            break
+
+          try:
+            line2 = fin2.readline()
+          except Exception as e:
+            error_msg = "Unexpected error: {0} for {1}".format(e, read2)      
+            break
             
           if not line1:
             if not line2:
@@ -72,9 +81,13 @@ def validate2(logger, input1str, input2str, output):
               error_msg = "query name not equals: %s , %s in %s and %s" % (qname1, qname2, read1, read2)
               break
 
-          seq1 = fin1.readline()
-          mid1 = fin1.readline()
-          score1 = fin1.readline()
+          try:
+            seq1 = fin1.readline()
+            mid1 = fin1.readline()
+            score1 = fin1.readline()
+          except Exception as e:
+            error_msg = "Unexpected error: {0} for {1}".format(e, read1)      
+            break
 
           if not seq1 or not mid1 or not score1:
             error_msg = "unexpected end for query %s in %s" % (qname1, read1)
@@ -84,9 +97,13 @@ def validate2(logger, input1str, input2str, output):
             error_msg = "sequence length not equals to score length for query %s in %s\n  seq  :%s\n  score:%s\n" % (qname1, read1, seq1, score1)
             break
 
-          seq2 = fin2.readline()
-          mid2 = fin2.readline()
-          score2 = fin2.readline()
+          try:
+            seq2 = fin2.readline()
+            mid2 = fin2.readline()
+            score2 = fin2.readline()
+          except Exception as e:
+            error_msg = "Unexpected error: {0} for {1}".format(e, read2)      
+            break
 
           if not seq2 or not mid2 or not score2:
             error_msg = "unexpected end for query %s in %s" % (qname2, read2)
