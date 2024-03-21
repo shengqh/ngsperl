@@ -80,6 +80,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "gatk4_cnv_by_scatter",     1 );
   initDefaultValue( $def, "gatk4_cnv_scatter_count",  100 );
   initDefaultValue( $def, "perform_cnv_gatk4_somatic", 0 );
+  initDefaultValue( $def, "perform_somaticCNV_pon", 1 );
 
   initDefaultValue( $def, "perform_muTect",       0 );
   initDefaultValue( $def, "perform_muTect2indel", 0 );
