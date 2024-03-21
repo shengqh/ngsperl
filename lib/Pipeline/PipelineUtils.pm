@@ -3679,7 +3679,7 @@ mv tmp.md5 __OUTPUT__
     output_arg => "",
     output_file_prefix => ".md5",
     output_file_ext => ".md5",
-    output_to_same_folder => 0,
+    output_to_same_folder => 1,
     can_result_be_empty_file => 0,
     sh_direct   => 0,
     pbs => {
