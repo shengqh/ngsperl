@@ -2943,3 +2943,59 @@ add_column_count<-function(meta, column, target_column){
   meta[,target_column]=factor(new_tbl[meta[,column]], levels=new_tbl)
   return(meta)
 }
+
+write_gsea_rnk_by_loose_criteria<-function(dge_all, groups, design, prefix){
+  #for GSEA, we need to use more genes, so we decrease the filter criteria
+  keep <- filterByExpr(dge_all, group=groups, min.count=1, min.total.count=5)
+  dge_loose <- dge_all[keep, , keep.lib.sizes=FALSE]
+  cat("  GSEA - calcNormFactors", "\n")
+  dge_loose<-calcNormFactors(dge_loose, method="TMM")
+
+  cat("  GSEA - estimateDisp\n")
+  dge_loose<-estimateDisp(dge_loose, design=design)
+
+  cat("  GSEA - glmFit", "\n")
+  fit<-glmFit(dge_loose, design=design, robust=TRUE)
+  fitTest<-glmLRT(fit)
+  out<-topTags(fitTest, n=Inf)
+  gseaFile<-paste0(prefix, "_GSEA.rnk")
+  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
+  rankout<-rankout[order(rankout$sigfvalue, decreasing=TRUE),]
+  write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
+
+  return(gseaFile)
+}
+
+save_volcano_plot<-function(edgeR_out_table, 
+                            prefix, 
+                            useRawPvalue=0, 
+                            pvalue=0.05, 
+                            foldChange=2, 
+                            comparisonTitle="",
+                            width=10,
+                            height=10,
+                            extensions=c("png", "pdf")){
+  library(EnhancedVolcano)  
+  yname=bquote(-log10(p~value))
+  if(useRawPvalue == 1){
+    pCutoffCol="PValue"
+  }else{
+    pCutoffCol="FDR"
+  }
+  p<-EnhancedVolcano(edgeR_out_table,
+      lab = rownames(edgeR_out_table),
+      x = 'logFC',
+      y = 'PValue',
+      title = comparisonTitle,
+      pCutoff = pvalue,
+      pCutoffCol = pCutoffCol,
+      FCcutoff = log2(foldChange),
+      pointSize = 3.0,
+      labSize = 6.0,
+      colAlpha = 1,
+      subtitle = NULL) + ylab(yname)
+  for(extension in extensions){
+    volcano_file=paste0(prefix, ".volcano.", extension)
+    ggsave(volcano_file, p, width=width, height=height, units="in", dpi=300, bg="white")
+  }
+}
