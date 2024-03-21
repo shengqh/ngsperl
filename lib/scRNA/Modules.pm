@@ -3401,7 +3401,7 @@ sub add_cellbender {
     program => "",
     check_program => 0,
     option => "
-cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells __FILE2__ --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
 
 rm -f ckpt.tar.gz
 
@@ -3409,6 +3409,7 @@ rm -f ckpt.tar.gz
 ",
     docker_prefix => "cellbender_",
     parameterSampleFile1_ref => $files_def,
+    parameterSampleFile2 => getValue($def, "cellbender_expect_count"),
     output_to_same_folder => 0,
     output_file_ext => ".cellbender_filtered.h5",
     pbs => {
