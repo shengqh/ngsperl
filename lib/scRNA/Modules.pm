@@ -3401,7 +3401,17 @@ sub add_cellbender {
     program => "",
     check_program => 0,
     option => "
-cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells __FILE2__ --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+expected_cells=__FILE2__
+echo expected_cells=\$expected_cells
+
+if [[ __FILE2__ < 5000 ]]; then
+  total_droplets_included=\$((__FILE2__+5000))
+else
+  total_droplets_included=\$((__FILE2__+10000))
+fi
+echo total_droplets_included=\$total_droplets_included
+
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
 
 rm -f ckpt.tar.gz
 
