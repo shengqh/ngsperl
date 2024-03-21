@@ -11,7 +11,14 @@ output:
 library(knitr)
 library(dplyr)
 library(kableExtra)
-knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
 ```
 
 ```{css, echo=FALSE}
@@ -32,6 +39,9 @@ myoptions<-split(options_table$V1, options_table$V2)
 is_between_cluster = is_one(myoptions$bBetweenCluster)
 
 outFile<-myoptions$task_name
+file_prefix=ifelse( is_one(myoptions$DE_by_cell), 
+                    paste0(outFile, ".edgeR_by_cell/", outFile, "."), 
+                    paste0(outFile, ".edgeR_by_sample/", outFile, "."))
 
 group_def<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 group_def <- group_def %>% 
@@ -63,9 +73,7 @@ if(has_category){
 edgeR_files<-read.csv(paste0(outFile, ".edgeR.files.csv"))
 comparisons<-unique(edgeR_files$comparison)
 
-detail_folder=paste0(outFile, ".edgeR_by_sample/")
-
-num_cell_file = paste0(detail_folder, outFile, ".num_cell.csv")
+num_cell_file = paste0(file_prefix, ".num_cell.csv")
 if(file.exists(num_cell_file)){
   num_cell<-read.csv(num_cell_file)
 }else{
@@ -118,7 +126,7 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
     colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
 
     result<-paste0(result, "\n## Number of DE genes\n\n")
-    num_sig_file = paste0(detail_folder, comp, ".num_sig.csv")
+    num_sig_file = paste0(file_prefix, comp, ".num_sig.csv")
     write.csv(nums_df, num_sig_file)
 
     result<-paste0(result, getTable(num_sig_file))
@@ -140,20 +148,21 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
       if(!all(is.na(num_cell))){
         ct_num_cell<-subset(num_cell, cell_type == ct)
         ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
-
-        design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+        if(all(design_data$Sample %in% names(ct_cell_map))){
+          design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+        }
       }
 
-      result<-paste0(result,"\n### design table\n\n")
+      result<-paste0(result,"\n### Design table\n\n")
       result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
 
-      mds_png<-paste0(detail_folder, ct_comp_name, ".mds.png")
+      mds_png<-paste0(file_prefix, ct_comp_name, ".mds.png")
       if(file.exists(mds_png)){
         result<-paste0(result,"\n### MDS\n\n")
         result<-paste0(result, getFigure(mds_png))
       }
 
-      heatmap_png<-paste0(detail_folder, ct_comp_name, ".log_cpm.heatmap.png")
+      heatmap_png<-paste0(file_prefix, ct_comp_name, ".log_cpm.heatmap.png")
       if(file.exists(heatmap_png)){
         result<-paste0(result,"\n### heatmap\n\n")
         result<-paste0(result, getFigure(heatmap_png))
@@ -167,9 +176,14 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
         result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
         result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
 
-        top_gene_png<-paste0(detail_folder, ct_comp_name, ".top_1_gene.png")
+        top_gene_png<-paste0(file_prefix, ct_comp_name, ".top_1_gene.png")
         if(file.exists(top_gene_png)){
           result<-paste0(result, getFigure(top_gene_png))
+        }
+
+        volcano_png<-paste0(file_prefix, ct_comp_name, ".volcano.png")
+        if(file.exists(volcano_png)){
+          result<-paste0(result, getFigure(volcano_png))
         }
       }
     }
