@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='doublets'
+outFile='scRNA_6542'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/wanjalla_lab/projects/20230220_scRNA_P8008/P8008_CW2_compressed.rds'
+parFile1='/data/h_gelbard_lab/projects/20210818_6542_scRNA/20240305_Wenda_check_cells/scRNA_6542.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230221_doublets/seurat_edgeR_betweenCluster_byCell/result')
+setwd('/data/h_gelbard_lab/projects/20210818_6542_scRNA/20240305_6542_scRNA_DE/files_edgeR_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
@@ -45,14 +45,20 @@ if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
 }
 
-meta<-obj@meta.data
-if("seurat_cell_type" %in% colnames(meta)){
-  mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
-}else{
-  mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
+detail_folder = paste0(outFile, ".edgeR_by_cell/")
+if(!dir.exists(detail_folder)){
+  dir.create(detail_folder)
 }
+detail_prefix = paste0(detail_folder, outFile)
+
+meta<-obj@meta.data
+# if("seurat_cell_type" %in% colnames(meta)){
+#   mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
+# }else{
+mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
+# }
 colnames(mt)<-c("cell_type", "sample", "num_cell")
-write.csv(mt, paste0(outFile, ".num_cell.csv"), row.names=F)
+write.csv(mt, paste0(detail_prefix, ".num_cell.csv"), row.names=F)
 
 clusterDf<-obj@meta.data
 
@@ -105,6 +111,7 @@ for (comp in comparisonNames){
 
   if(bBetweenCluster){
     prefix<-get_valid_path(comp)
+    file_prefix = paste0(detail_prefix, ".", prefix)
     
     control_cells<-rownames(meta)[meta[,cluster_name] %in% control_names]  
     if (length(control_cells) == 0){
@@ -154,7 +161,7 @@ for (comp in comparisonNames){
     de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
     designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
     
-    designfile<-paste0(prefix, ".design")
+    designfile<-paste0(file_prefix, ".design")
     write.csv(designdata, file=designfile, row.names=F, quote=F)
     
     #predefined genes
@@ -184,6 +191,7 @@ for (comp in comparisonNames){
       ct = cts[idx]
       cat("  ", as.character(ct), "\n")
       prefix = paste0(prefixList[idx], ".", comp)
+      file_prefix = paste0(detail_prefix, ".", prefix)
       
       clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
       de_obj<-subset(obj, cells=rownames(clusterCt))
@@ -237,7 +245,7 @@ for (comp in comparisonNames){
       }
       assert(all(covariances %in% colnames(designdata)))
 
-      designfile<-paste0(prefix, ".design")
+      designfile<-paste0(file_prefix, ".design")
       write.csv(designdata, file=designfile, row.names=F, quote=F)
       
       curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, sampleInGroup=FALSE, design=designfile, stringsAsFactors = F)
@@ -251,13 +259,16 @@ for (comp in comparisonNames){
 }
 
 if(nrow(designFailed) > 0){
-  write.csv(designFailed, paste0(outFile, ".design_failed.csv"), row.names=F)
+  write.csv(designFailed, paste0(file_prefix, ".design_failed.csv"), row.names=F)
 }
+
+write.csv(designMatrix, file=paste0(file_prefix, ".design_matrix.csv"), row.names=F)
 
 result<-NULL
 idx<-2
 for(idx in c(1:nrow(designMatrix))){
   prefix=designMatrix[idx, "prefix"]
+  file_prefix = paste0(detail_prefix, ".", prefix)
 
   cat(prefix, "\n")
 
@@ -275,15 +286,23 @@ for(idx in c(1:nrow(designMatrix))){
   
   de_obj<-subset(obj, cells=designdata$Cell)
   cells<-as.matrix(de_obj[["RNA"]]@counts)
-    
+
   #filter genes with zero count
   cells<-cells[rowSums(cells)>0,]
-  
-  #filter genes by tpm
-  tpm = sweep(cells, 2, colSums(cells)/1e6, "/")
-  min_sample<-filter_cellPercentage * ncol(cells)
-  keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
-  rm(tpm)
+
+  control_cells=cells[,designdata[designdata$Group=="control", "Cell"]]
+  sample_cells=cells[,designdata[designdata$Group=="sample", "Cell"]]
+
+  do_filter<-function(cur_cells, filter_cellPercentage, filter_minTPM, min_sample){
+    #filter genes by tpm
+    tpm = sweep(cur_cells, 2, colSums(cur_cells)/1e6, "/")
+    min_sample<-filter_cellPercentage * ncol(cur_cells)
+    keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
+    return(keep_rows)
+  }
+  filter_control=do_filter(control_cells, filter_cellPercentage, filter_minTPM, min_sample)
+  filter_sample=do_filter(sample_cells, filter_cellPercentage, filter_minTPM, min_sample)
+  keep_rows = filter_control | filter_sample
   
   if(genes != ""){
     gene_list=unlist(strsplit(genes, ','))
@@ -311,7 +330,7 @@ for(idx in c(1:nrow(designMatrix))){
   design <- model.matrix(as.formula(formula_str), designdata)
 
   rownames(design)<-colnames(cells)
-  write.csv(design, file=paste0(prefix, ".design_matrix.csv"), quote=F)
+  write.csv(design, file=paste0(file_prefix, ".design_matrix.csv"), quote=F)
   
   dge<-DGEList(cells, group=groups)
   cat("  calcNormFactors", "\n")
@@ -332,22 +351,30 @@ for(idx in c(1:nrow(designMatrix))){
 
   cat("  topTags", "\n")
   out<-topTags(qlf, n=Inf)
-  dge_filename <-paste0(prefix, ".csv")
+  dge_filename <-paste0(file_prefix, ".csv")
   write.csv(out$table, file=dge_filename, quote=F)
+
+  cat("  volcano plot", "\n")
+  save_volcano_plot(edgeR_out_table=out$table, 
+                                  prefix=file_prefix, 
+                                  useRawPvalue=useRawPvalue, 
+                                  pvalue=pvalue, 
+                                  foldChange=foldChange, 
+                                  comparisonTitle=paste0(cellType, " : ", comp))
 
   if(useRawPvalue){
     sigout<-out$table[(out$table$PValue<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
   }else{
     sigout<-out$table[(out$table$FDR<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
   }
-  sigFile<-paste0(prefix, ".sig.csv")
+  sigFile<-paste0(file_prefix, ".sig.csv")
   write.csv(sigout, file=sigFile, quote=F)
   
   siggenes<-data.frame(gene=rownames(sigout), stringsAsFactors = F)
-  sigGenenameFile<-paste0(prefix, ".sig_genename.txt")
+  sigGenenameFile<-paste0(file_prefix, ".sig_genename.txt")
   write.table(siggenes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
   
-  gseaFile<-paste0(prefix, "_GSEA.rnk")
+  gseaFile<-paste0(file_prefix, "_GSEA.rnk")
   rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
   write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
   
