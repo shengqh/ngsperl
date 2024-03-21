@@ -79,6 +79,8 @@ fi
 if [ -s $final_2_fastq ]; then
   rm $final_2_fastq
 fi
+
+status=0
 ";
         if ($is_collated) {
           for ( my $sample_index = 0 ; $sample_index < $file_count / 2 ; $sample_index++ ) {
@@ -88,16 +90,22 @@ fi
               $curCommand = "zcat";
             }
             print $pbs "
-echo merging $sample_files[$sample_index] ...
-$curCommand $sample_files[$sample_index] >> $final_1_fastq 
+if [[ \$status -eq 0 ]]; then
+  echo merging $sample_files[$sample_index] ...
+  $curCommand $sample_files[$sample_index] >> $final_1_fastq 
+  status=\$?
+fi
 ";
           }
           for ( my $sample_index = $file_count / 2 ; $sample_index < $file_count ; $sample_index++ ) {
             my $curSample = $sample_files[$sample_index];
             my $curCommand = ($curSample =~ /.gz$/)?"zcat":$cat_command;
             print $pbs "
-echo merging $sample_files[$sample_index] ...
-$curCommand $sample_files[$sample_index] >> $final_2_fastq
+if [[ \$status -eq 0 ]]; then
+  echo merging $sample_files[$sample_index] ...
+  $curCommand $sample_files[$sample_index] >> $final_2_fastq
+  status=\$?
+fi
 ";
           }
 
@@ -107,20 +115,32 @@ $curCommand $sample_files[$sample_index] >> $final_2_fastq
             my $curSample = $sample_files[$sample_index];
             my $curCommand = ($curSample =~ /.gz$/)?"zcat":$cat_command;
             print $pbs "
-echo merging $sample_files[$sample_index] ...
-$curCommand $sample_files[$sample_index] >> $final_1_fastq 
+if [[ \$status -eq 0 ]]; then
+  echo merging $sample_files[$sample_index] ...
+  $curCommand $sample_files[$sample_index] >> $final_1_fastq 
+  status=\$?
+fi
 
-echo merging $sample_files[$sample_index+1] ...
-$curCommand $sample_files[$sample_index+1] >> $final_2_fastq 
+if [[ \$status -eq 0 ]]; then
+  echo merging $sample_files[$sample_index+1] ...
+  $curCommand $sample_files[$sample_index+1] >> $final_2_fastq 
+  status=\$?
+fi
 ";
           }
         }
         print $pbs "
-echo gzipping $final_1_fastq ...
-gzip $final_1_fastq 
+if [[ \$status -eq 0 ]]; then
+  echo gzipping $final_1_fastq ...
+  gzip $final_1_fastq 
+  status=\$?
+fi
 
-echo gzipping $final_2_fastq ...
-gzip $final_2_fastq 
+if [[ \$status -eq 0 ]]; then
+  echo gzipping $final_2_fastq ...
+  gzip $final_2_fastq 
+  status=\$?
+fi
 ";
       }
       $self->close_pbs( $pbs, $pbs_file );
@@ -144,20 +164,30 @@ fi
         #print $pbs "cp $sample_files[0] $final_file \n";
       }
       else {
-        print $pbs "if [ -s $final_fastq ]; then
+        print $pbs "
+if [ -s $final_fastq ]; then
   rm $final_fastq
 fi
+
+status=0
 ";
         for my $sample_file (@sample_files) {
             my $curCommand = ($sample_file =~ /.gz$/)?"zcat":$cat_command;
           print $pbs "
-echo merging $sample_file ...
-$curCommand $sample_file >> $final_fastq 
+if [[ \$status -eq 0 ]]; then
+  echo merging $sample_file ...
+  $curCommand $sample_file >> $final_fastq 
+  status=\$?
+fi
 ";
         }
         print $pbs "
-echo gzipping $final_fastq ...
-gzip $final_fastq \n";
+if [[ \$status -eq 0 ]]; then
+  echo gzipping $final_fastq ...
+  gzip $final_fastq 
+  status=\$?
+fi
+";
       }
       $self->close_pbs( $pbs, $pbs_file );
     }
