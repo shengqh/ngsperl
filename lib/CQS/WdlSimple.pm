@@ -32,6 +32,8 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
+  $config->{$section}{use_tmp_folder} = 0;
+
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
   my $wdl_file = get_option_file( $config, $section, "wdl_file");
