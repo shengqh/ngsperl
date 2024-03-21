@@ -261,6 +261,13 @@ for(idx in c(1:nrow(designMatrix))){
   dge_filename <-paste0(prefix, ".csv")
   write.csv(out$table, file=dge_filename, quote=F)
 
+  save_volcano_plot(edgeR_out_table=out$table, 
+                                  prefix=prefix, 
+                                  useRawPvalue=useRawPvalue, 
+                                  pvalue=pvalue, 
+                                  foldChange=foldchange, 
+                                  comparisonTitle=paste0(cellType, " : ", comp))
+
   cat("  cpm", "\n")
   log_cpm <- cpm(dge, log=TRUE)
   cpm_file = paste0(prefix, ".cpm.csv")
@@ -308,23 +315,7 @@ for(idx in c(1:nrow(designMatrix))){
     dev.off()
   }
 
-  #for GSEA, we need to use more genes, so we decrease the filter criteria
-  keep <- filterByExpr(dge_all, group=groups, min.count=1, min.total.count=5)
-  dge_loose <- dge_all[keep, , keep.lib.sizes=FALSE]
-  cat("  GSEA - calcNormFactors", "\n")
-  dge_loose<-calcNormFactors(dge_loose, method="TMM")
-
-  cat("  GSEA - estimateDisp\n")
-  dge_loose<-estimateDisp(dge_loose, design=design)
-
-  cat("  GSEA - glmFit", "\n")
-  fit<-glmFit(dge_loose, design=design, robust=TRUE)
-  fitTest<-glmLRT(fit)
-  out<-topTags(fitTest, n=Inf)
-  gseaFile<-paste0(prefix, "_GSEA.rnk")
-  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
-  rankout<-rankout[order(rankout$sigfvalue, decreasing=TRUE),]
-  write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
+  gseaFile = write_gsea_rnk_by_loose_criteria(dge_all, groups, design, prefix)
 
   curDF<-data.frame("prefix"=prefix, "cellType"=cellType, "comparison"=comp, "betweenCluster"=0, "sampleInGroup"=0, "deFile"=dge_filename, "sigFile"=sigFile, "sigGenenameFile"=sigGenenameFile, "gseaFile"=gseaFile, "designFile"=design_file, "cpmFile"=cpm_file)
   if(is.null(result)){
