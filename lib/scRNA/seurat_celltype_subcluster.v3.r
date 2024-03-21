@@ -221,9 +221,7 @@ if(!is_file_empty(parSampleFile3)){
     obj = subset(obj, cells=cells)
   }
   meta=obj@meta.data
-  tb<-table(meta[,previous_layer])
-  tb<-tb[order(tb, decreasing=T)]
-  meta[,previous_layer]<-factor(meta[,previous_layer], levels=names(tb))
+  meta[,previous_layer]<-factor_by_count(meta[,previous_layer])
   obj@meta.data = meta
 
   draw_dim_plot(obj, previous_layer, paste0(outFile, ".post_rename.umap.png"))
@@ -268,11 +266,8 @@ clusters_prefix = paste0(assay, "_snn_res.", format(resolutions, nsmall = 2))
 clusters=paste0(assay, "_snn_res.", resolutions)
 names(clusters_prefix) = clusters
 
-celltypes<-unlist(meta[[previous_layer]])
-tblct<-table(celltypes)
-tblct<-tblct[order(tblct, decreasing = F)]
-
-previous_celltypes<-names(tblct)
+meta[[previous_layer]]<-factor_by_count(meta[[previous_layer]])
+previous_celltypes<-levels(meta[[previous_layer]])
 writeLines(previous_celltypes, paste0(outFile, ".cell_types.txt"))
 #previous_celltypes<-c("B cells")
 
@@ -439,7 +434,6 @@ for(pct in previous_celltypes){
     rm(srobj)
   }
   
-  cat(key, "Find marker genes\n")
   cluster = clusters[10]
   markers_map = list()
   for(cluster in clusters){
@@ -454,11 +448,12 @@ for(pct in previous_celltypes){
     cluster_prefix = paste0(curprefix, ".", clusters_prefix[cluster])
     cur_resolution=gsub(".+_snn_res.", "", cluster)
     
+    cat(key, "Find marker genes\n")
     markers=FindAllMarkers(subobj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
     markers=markers[markers$p_val_adj < 0.05,]
     
     if(nrow(markers) == 0){
-      cat("    only DE gene, pass\n")
+      cat("    no DE gene, pass\n")
       next
     }
     
@@ -472,6 +467,7 @@ for(pct in previous_celltypes){
     subobj2<-subset(obj, cells=cells)
     subobj2@meta.data <- subobj@meta.data
 
+    cat(key, "Cell type annotation\n")
     data.norm=get_seurat_average_expression(subobj2, cluster)
 
     predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
@@ -535,22 +531,25 @@ for(pct in previous_celltypes){
       calc_width_per_cell=50)
     rm(g)
 
-    # umap file
+    cat("draw umap file\n")
     g0<-MyDimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
     g1<-MyDimPlot(subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
-
     if(length(unique(subobj$orig.ident)) > 10){
       g1<-g1+NoLegend()
     }
 
-    g2<-MyDimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) + scale_color_discrete(labels = ct$display_layer)
-    g3<-MyDimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + scale_color_discrete(labels = ct$display_layer)
+    g2<-MyDimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) 
+    g3<-MyDimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + ggtitle(paste0("new umap: res", cur_resolution))
+    if(length(unique(subobj$seurat_clusters)) < 20){
+      g2<-g2 + scale_color_discrete(labels = ct$display_layer)
+      g3<-g3 + scale_color_discrete(labels = ct$display_layer)
+    }
     g<-g0+g1+g2+g3+plot_layout(ncol=2)
     umap_file = paste0(cluster_prefix, ".umap.png")
     ggsave(umap_file, g, width=3600, height=3000, dpi=300, units="px", bg="white")
     rm(g, g0, g1, g2, g3)
 
-    # marker gene heatmap
+    cat("draw marker gene heatmap file\n")
     subobj<-myScaleData(subobj, top10genes, "RNA")
     if(ncol(subobj) > 5000){
       subsampled <- subobj[, sample(colnames(subobj), size=5000, replace=F)]
