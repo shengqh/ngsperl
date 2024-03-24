@@ -93,7 +93,8 @@ sub getConfig {
 
     my $macs2_genome = getValue($def, "macs2_genome");
     my $wdl = $def->{"wdl"};
-    my $encode_atac_folder = dirname($wdl);
+    my $encode_atac_folder = dirname($wdl->{local}{encode_atacseq}{wdl_file});
+    print($encode_atac_folder . "\n");
 
     my $nfr_task = $croo_task . "_NFR_filter";
     $config->{$nfr_task} = {
@@ -113,7 +114,7 @@ python3 $encode_atac_folder/src/encode_task_bam2ta.py __NAME__.NFR_filtered.bam 
 echo macs2 callpeak -t __NAME__.NFR_filtered.tn5.tagAlign.gz -f BED -n __NAME__.NFR_filtered -g $macs2_genome -p 0.01 --shift -75 --extsize 150 --nomodel -B --SPMR --keep-dup all --call-summits
 macs2 callpeak -t __NAME__.NFR_filtered.tn5.tagAlign.gz -f BED -n __NAME__.NFR_filtered -g $macs2_genome -p 0.01 --shift -75 --extsize 150 --nomodel -B --SPMR --keep-dup all --call-summits
 
-ehco makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format sam
+echo makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format sam
 makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format sam
 
 #__OUTPUT__
