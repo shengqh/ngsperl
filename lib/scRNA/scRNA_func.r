@@ -441,7 +441,7 @@ get_cluster_count<-function(counts, clusters){
 }
 
 get_group_count=function(curobj, groupName="active.ident") {
-  counts=GetAssayData(curobj,assay="RNA",slot="counts")
+  counts=MyGetAssayData(curobj,assay="RNA",slot="counts")
   curgroups=curobj[[groupName]]
   clusters=curgroups[,1]
   names(clusters)=rownames(curgroups)
@@ -607,6 +607,22 @@ draw_dimplot<-function(mt, filename, split.by) {
   return(g1)
 }
 
+has_data<-function(obj, assay, slot){
+  if(Version(obj) > '5'){
+    return(slot %in% names(obj@assays[[assay]]@layers))
+  }else{
+    return(slot %in% names(obj@assays[[assay]]))
+  }
+}
+
+MyGetAssayData<-function(obj, assay, slot){
+  if(Version(obj) > '5'){
+    return(GetAssayData(obj, assay=assay, layer=slot))
+  }else{
+    return(GetAssayData(obj, assay=assay, slot=slot))
+  }
+}
+
 do_normalization<-function(obj, selection.method="vst", nfeatures=2000, vars.to.regress=NULL, scale.all=FALSE, essential_genes=NULL) {
   DefaultAssay(obj)<-"RNA"
 
@@ -619,7 +635,7 @@ do_normalization<-function(obj, selection.method="vst", nfeatures=2000, vars.to.
   cat("FindVariableFeatures done ... \n")
   
   if(scale.all){
-    features = rownames(obj@assays$RNA@data)
+    features = rownames(obj)
   }else{
     features=VariableFeatures(obj)
     if (!is.null(essential_genes)){
@@ -630,12 +646,12 @@ do_normalization<-function(obj, selection.method="vst", nfeatures=2000, vars.to.
   obj <- ScaleData(obj, vars.to.regress=vars.to.regress, features=features, verbose = FALSE)
   cat("ScaleData done ... \n")
 
-  stopifnot(dim(obj@assays$RNA@scale.data)[1] > 0)
+  stopifnot(dim(MyGetAssayData(obj, assay="RNA", slot="scale.data"))[1] > 0)
 
   return(obj)
 }
 
-do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FALSE, mc.cores=1, use_sctransform_v2=FALSE) {
+do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FALSE, mc.cores=1, use_sctransform_v2=TRUE) {
   vst.flavor = ifelse(use_sctransform_v2, "v2", "v1")
 
   print(paste0("performing SCTransform by ", vst.flavor, " ..."))
@@ -1078,7 +1094,7 @@ find_number_of_reduction<-function(obj, reduction="pca"){
 }
 
 get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
-  dd=GetAssayData(SCLC, assay=assay, slot="data")
+  dd=MyGetAssayData(SCLC, assay=assay, slot="data")
   dobj=CreateSeuratObject(counts=dd)
   dobj$seurat_clusters=SCLC[[cluster_name]]
   result<-AverageExpression(dobj, slot="counts", group.by="seurat_clusters" )[[1]]
@@ -1094,7 +1110,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
 
 get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE ){
   genes=unique(unlist(gene_groups))
-  assaydata=GetAssayData(obj, assay=assay, slot="data")
+  assaydata=MyGetAssayData(obj, assay=assay, slot="data")
   if(!all(genes %in% rownames(assaydata))){
     missed_genes = genes[!(genes %in% rownames(assaydata))]
     missed_genes=missed_genes[c(1:min(5, length(missed_genes)))]
@@ -1396,7 +1412,16 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
 }
   
 read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
-  obj=readRDS(obj_file)
+  if(file_ext(obj_file) == "rds"){
+    obj=readRDS(obj_file)
+  }else{
+    counts=read_scrna_data(obj_file)$counts
+    obj=CreateSeuratObject(counts=counts)
+    if(!is.null(sample_name)){
+      obj$orig.ident=sample_name
+    }
+  }
+
   if(is.list(obj)){
     if(!is.null(sample_name)){
       if(sample_name %in% names(obj)){
@@ -1765,7 +1790,7 @@ get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1, target_
     #   colnames(ct_count)<-colnames(de_obj)
     # }
 
-    ct_count<-GetAssayData(object = de_obj, assay = "RNA", slot = "counts")
+    ct_count<-MyGetAssayData(object = de_obj, assay = "RNA", slot = "counts")
     groupings<-unlist(de_obj$orig.ident)
     p_count<-sumcount(ct_count, groupings)
 
@@ -2199,7 +2224,7 @@ read_scrna_data<-function(fileName, keep_seurat=FALSE){
     counts = readRDS(fileName)
     if(is_seurat_object(counts)){
       if(!keep_seurat){
-        counts = GetAssayData(counts, slot = "counts")
+        counts = MyGetAssayData(counts, assay="RNA", slot = "counts")
       }
     }
   } else {
