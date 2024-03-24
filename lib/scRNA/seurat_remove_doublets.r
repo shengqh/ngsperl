@@ -40,17 +40,23 @@ cat("reading", sample_name, ":", file_path, "\n")
 lst = read_scrna_data(file_path, keep_seurat_object)
 
 counts = lst$counts  
+cat("there are", nrow(counts), "genes and", ncol(counts), "cells\n")
 
 smeta = readRDS(doublet_file)
 if(doublet_column == "DF.classifications_highest"){
   doublet_column=colnames(smeta)[ncol(smeta)]
 }
 dcells = rownames(smeta)[smeta[,doublet_column] %in% c("Doublet", "doublet")]
+cat("there are", length(dcells), " doublets\n")
 
 if(!all(dcells %in% colnames(counts))){
   stop(paste0("Not all doublets cells in file ", file_path))
 }
 
 filtered_counts<-counts[,!(colnames(counts) %in% dcells)]
+cat("there are", ncol(filtered_counts), " after removing doublets\n")
+
+df=data.frame(sample=sample_name, ncells=ncol(counts), ndoublets=length(dcells), nfiltered=ncol(filtered_counts))
+write.table(df, paste0(sample_name, ".doublet_summary.txt"), row.names=FALSE, sep="\t")
 
 saveRDS(filtered_counts, paste0(sample_name, ".nodoublets.counts.rds"))
