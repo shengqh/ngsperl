@@ -31,8 +31,6 @@ if(!exists("obj")){
   obj=read_object_from_file_list(parSampleFile1)
 }
 
-Amimuth_ref="pbmcref"
-
 obj <- RunAzimuth(query = obj, reference = Amimuth_ref)
 azimuth_cols = c()
 for(l in c("l1", "l2", "l3")){
