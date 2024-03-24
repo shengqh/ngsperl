@@ -67,9 +67,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
 
   add_singleR
 
-  add_signacx_only
-  addSignac
-
+  add_signacx
+  
   add_decontX
   
   add_celltype_validation
@@ -104,6 +103,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_fragment_cells
 
   add_cellbender
+
+  add_cellbender_v2
 
   add_cellbender_with_expected_cells  
 )] );
@@ -677,44 +678,7 @@ sub addCHETAH {
   push( @$tasks, $task_name );
 }
 
-sub addSignac {
-  my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $seurat_ref, $tcell_only, $celltype, $reduction, $celltype_layer, $is_dynamic ) = @_;
-
-  $config->{$task_name} = {
-    class                => "CQS::UniqueR",
-    perform              => 1,
-    target_dir           => $target_dir . "/" . $task_name,
-    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SignacX.r",
-    parameterFile1_ref   => $seurat_ref,
-    parameterSampleFile1 => {
-      species             => getValue( $def, "species" ),
-      prefix              => $project_name,
-      tcell_only          => $tcell_only,
-      reduction           => $reduction,
-      pca_dims            => getValue( $def, "pca_dims" ),
-      celltype_layer      => $celltype_layer,
-      bubblemap_file        => $def->{bubblemap_file},
-      by_sctransform        => getValue( $def, "by_sctransform" ),
-    },
-    output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
-    sh_direct       => 1,
-    pbs             => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => getValue($def, "seurat_walltime"),
-      "mem"       => getValue($def, "seurat_mem"),
-    },
-  };
-
-  if($is_dynamic){
-    $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".meta.rds" ];
-  }else{
-    $config->{$task_name}{parameterFile2_ref} = [ $celltype, ".cluster.csv" ];
-    $config->{$task_name}{parameterFile3_ref} = [ $celltype, ".celltype.csv" ];
-  }
-  push( @$tasks, $task_name );
-}
-
-sub add_signacx_only {
+sub add_signacx {
   my ( $config, $def, $tasks, $target_dir, $project_name, $task_name, $obj_ref, $reduction, $by_individual_sample ) = @_;
 
   if(!defined $by_individual_sample){
@@ -735,7 +699,10 @@ sub add_signacx_only {
       pca_dims            => getValue( $def, "pca_dims" ),
       bubblemap_file        => $def->{bubblemap_file},
       by_sctransform        => getValue( $def, "by_sctransform" ),
-      SignacX_reference_file => $def->{SignacX_reference_file}
+      SignacX_reference_file => $def->{"SignacX_reference_file"},
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+      by_individual_sample => $by_individual_sample,
     },
     output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
     sh_direct       => 0,
@@ -798,6 +765,8 @@ sub add_singleR_cell {
       pca_dims            => getValue( $def, "pca_dims" ),
       bubblemap_file        => $def->{bubblemap_file},
       by_sctransform        => getValue( $def, "by_sctransform" ),
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
     }),
     output_file_ext => ".SingleR.png;.SingleR.rds;.meta.rds",
     post_command => "rm -rf .cache",
@@ -835,6 +804,8 @@ sub add_azimuth {
       Azimuth_ref => getValue($def, "Azimuth_ref"),
       bubblemap_file        => $def->{bubblemap_file},
       by_sctransform        => getValue( $def, "by_sctransform" ),
+      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
     }),
     output_file_ext => ".azimuth.png;.azimuth.rds;.meta.rds",
     post_command => "rm -rf .cache",
@@ -972,7 +943,7 @@ sub add_celltype_validation {
     parameterSampleFile4_ref => $signacX_ref,
     parameterSampleFile5_ref => $singleR_ref,
     parameterSampleFile6_ref => $decontX_ref,
-    output_file_ext      => ".meta.rds",
+    output_file_ext      => $rmd_ext,
     output_other_ext  => "",
     sh_direct            => 1,
     pbs                  => {
@@ -3224,7 +3195,7 @@ sub add_individual_qc_tasks{
   my $signacX_ref = undef;
   if (getValue( $def, "perform_SignacX", 0 ) ) {
     my $signacX_task = $raw_individual_qc_task . "_SignacX";
-    add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $raw_individual_qc_task, $reduction, 1);
+    add_signacx( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $raw_individual_qc_task, $reduction, 1);
     $signacX_ref = [ $signacX_task, ".meta.rds" ];
   }
 
@@ -3389,6 +3360,89 @@ sub add_fragment_cells {
     },
   };
   push( @$tasks, $fragment_cells_task );
+}
+
+sub add_cellbender_v2 {
+  my ($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def ) = @_;
+  my $expect_cells_task = $cellbender_prefix . "_01_expect_cells";
+  $config->{$expect_cells_task} = {
+    class => "CQS::IndividualR",
+    perform => 1,
+    target_dir => "${target_dir}/$expect_cells_task",
+    rtemplate => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/cellbender_expect_cell.r",
+    parameterSampleFile1_ref => $filtered_files_def,
+    output_file_ext => ".num_cells.txt",
+    sh_direct => 1,
+    pbs => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "10gb"
+    },
+  };
+  push(@$tasks, $expect_cells_task);
+
+  my $cellbender_task = $cellbender_prefix . "_02_call";
+  my $cellbender_cpu = getValue($def, "cellbender_cpu", 12);
+  $config->{$cellbender_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "${target_dir}/$cellbender_task",
+    program => "",
+    check_program => 0,
+    option => "
+expected_cells=`cat __FILE2__`
+echo expected_cells=\$expected_cells
+
+if [[ __FILE2__ < 1000 ]]; then
+  total_droplets_included=\$((\$expected_cells+2000))
+else
+  if [[ __FILE2__ < 5000 ]]; then
+    total_droplets_included=\$((\$expected_cells+5000))
+  else
+    total_droplets_included=\$((\$expected_cells+10000))
+  fi
+fi
+echo total_droplets_included=\$total_droplets_included
+
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+
+rm -f ckpt.tar.gz
+
+#__OUTPUT__
+",
+    docker_prefix => "cellbender_",
+    parameterSampleFile1_ref => $raw_files_def,
+    parameterSampleFile2_ref => $expect_cells_task,
+    output_to_same_folder => 0,
+    output_file_ext => ".cellbender_filtered.h5",
+    pbs => {
+      "nodes"    => "1:ppn=$cellbender_cpu",
+      "walltime" => "48",
+      "mem"      => "40gb"
+    }
+  };
+  push(@$tasks, $cellbender_task);
+
+  my $cellbender_clean_task = $cellbender_prefix . "_03_clean";
+  $config->{$cellbender_clean_task} = {
+    class => "CQS::IndividualR",
+    perform => 1,
+    target_dir => "${target_dir}/$cellbender_clean_task",
+    rtemplate => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/cellbender_clean.r",
+    parameterSampleFile1_ref => $filtered_files_def,
+    output_file_ext => ".txt",
+    parameterSampleFile1_ref => [ $cellbender_task, ".cellbender_filtered.h5" ],
+    parameterSampleFile2_ref => $filtered_files_def,
+    output_to_same_folder => 0,
+    output_file_ext => ".cellbender_filtered.clean.h5",
+    pbs => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "10gb"
+    }
+  };
+  push(@$tasks, $cellbender_clean_task);
+
+  return($cellbender_clean_task);
 }
 
 sub add_cellbender {
