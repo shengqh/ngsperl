@@ -124,6 +124,17 @@ iter_figure_rmd<-function(detail_prefix, cts, iter_png){
         result<-paste0(result, getFigure(signacX_bubble_file))
       }
 
+      azimuth_file = paste0(detail_prefix, ".", ct_name, ".Azimuth.png")
+      if(file.exists(azimuth_file)){
+        result<-paste0(result, paste0("\n\n## Azimuth\n\n"))
+        result<-paste0(result, paste0("\n\n### UMAP\n\n"))
+        result<-paste0(result, getFigure(azimuth_file))
+
+        Azimuth_bubble_file = paste0(detail_prefix, ".", ct_name, ".Azimuth.bubble.png")
+        result<-paste0(result, paste0("\n\n### Curated marker genes\n\n"))
+        result<-paste0(result, getFigure(Azimuth_bubble_file))
+      }
+
       overlap_csv = paste0(detail_prefix, ".", ct_name, ".SingleR_SignacX.csv")
       if(file.exists(overlap_csv)){
         result<-paste0(result, paste0("\n\n## Overlap between SingleR and SignacX\n\n"))

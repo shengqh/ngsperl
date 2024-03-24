@@ -906,11 +906,12 @@ sub add_celltype_validation {
     $call_files_ref, 
     $celltype_column, 
     $rmd_ext,    
+    $is_choose,
     $signacX_ref, 
     $singleR_ref, 
     $sctk_ref,
     $decontX_ref,
-    $is_choose ) = @_;
+    $azimuth_ref) = @_;
     
   my $doublet_column = getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
 
@@ -943,6 +944,7 @@ sub add_celltype_validation {
     parameterSampleFile4_ref => $signacX_ref,
     parameterSampleFile5_ref => $singleR_ref,
     parameterSampleFile6_ref => $decontX_ref,
+    parameterSampleFile7_ref => $azimuth_ref,
     output_file_ext      => $rmd_ext,
     output_other_ext  => "",
     sh_direct            => 1,
@@ -3258,7 +3260,7 @@ sub add_individual_qc_tasks{
 
   push(@$summary, $qc_report_task);
 
-  return($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task);
+  return($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref);
 }
 
 sub add_multiome_qc {

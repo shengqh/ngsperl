@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='P6487'
+outFile='iSGS_cell_atlas'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parSampleFile6='fileList6.txt'
-parSampleFile7='fileList7.txt'
+parSampleFile8='fileList8.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_raw_qc_sct2_report/result')
+setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/raw_qc_sct2_report/result')
 
 ### Parameter setting end ###
 
@@ -33,6 +33,13 @@ obj_map<-read_file_map(parSampleFile2)
 sample_names=names(obj_map)
 
 validation_columns=c()
+
+
+has_sctk<-file.exists(parSampleFile3)
+if(has_sctk){
+  sctk_map<-read_file_map(parSampleFile3)
+  validation_columns<-c(validation_columns, "sctk_DF", "sctk_SDF", "sctk_scds")
+}
 
 has_signacx<-exists('parSampleFile4')
 if(has_signacx){
@@ -56,10 +63,10 @@ if(has_doublet_finder){
   doublet_finder_map<-read_file_map(parSampleFile7)
 }
 
-has_sctk<-file.exists(parSampleFile3)
-if(has_sctk){
-  sctk_map<-read_file_map(parSampleFile3)
-  validation_columns<-c(validation_columns, "sctk_DF", "sctk_SDF", "sctk_scds")
+has_azimuth<-exists('parSampleFile8')
+if(has_azimuth){
+  azimuth_map<-read_file_map(parSampleFile8)
+  validation_columns<-c(validation_columns, "Azimuth")
 }
 
 draw_figure<-function(sample_name, cur_meta, cur_validation_columns){
@@ -81,7 +88,7 @@ draw_figure<-function(sample_name, cur_meta, cur_validation_columns){
     theme(strip.text.y.right = element_text(angle = 0, hjust = 0),
           strip.text.x.top = element_text(angle = 90, hjust = 0))
 
-  height = max(500, length(unique(alltbl$Var1)) * 150) + 500
+  height = max(800, length(unique(alltbl$Var1)) * 150) + 500
   width = max(1000, length(unique(alltbl$Var2)) * 50) + 1000
 
   png(paste0(sample_name, ".validation.png"), width=width, height=height, res=300)
@@ -138,6 +145,12 @@ for(sample_name in sample_names){
     singler_file = singler_map[[sample_name]]
     singler_meta = readRDS(singler_file)
     cur_meta = fill_meta_info(sample_name, singler_meta, cur_meta, "SingleR_labels", "SingleR")
+  }
+  
+  if(has_azimuth){
+    azimuth_file = azimuth_map[[sample_name]]
+    azimuth_meta = readRDS(azimuth_file)
+    cur_meta = fill_meta_info(sample_name, azimuth_meta, cur_meta, "Azimuth_finest", "Azimuth")
   }
   
   if(has_doublet_finder){

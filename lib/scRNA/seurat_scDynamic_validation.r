@@ -5,12 +5,13 @@ parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.iter_png.csv'
+parSampleFile7='fileList7.txt'
+parFile1='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.iter_png.csv'
 
 
-setwd('/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call_validation/result')
+setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call_validation/result')
 
 ### Parameter setting end ###
 
@@ -79,6 +80,11 @@ if(exists("parSampleFile4")){
 if(exists('parSampleFile5')){
   meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
   validation_columns<-c(validation_columns, "SingleR")
+}
+
+if(exists('parSampleFile7')){
+  meta = fill_meta_info_list(parSampleFile7, meta, "Azimuth_finest", "Azimuth")
+  validation_columns<-c(validation_columns, "Azimuth")
 }
 
 saveRDS(meta, paste0(file_prefix, ".meta.rds"))
@@ -159,6 +165,21 @@ for(ct in cts){
                         bubblemap_file = bubblemap_file, 
                         species=species)
     ggsave(paste0(file_prefix, ".", pct, ".SignacX.bubble.png"), g, width=get_dot_width(g), height=get_dot_height(ct_obj, "SignacX"), units="px", dpi=300, bg="white")
+  }
+
+  if("Azimuth" %in% validation_columns){
+    ct_obj = get_filtered_obj(obj, ct_meta, "Azimuth")
+
+    g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="Azimuth",  title="Azimuth in old UMAP") + guides(fill=guide_legend(ncol =1))
+    ggsave(paste0(file_prefix, ".", pct, ".Azimuth.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
+
+    ct_obj@meta.data = add_column_count(ct_obj@meta.data, "Azimuth", "Azimuth_Cell")
+    g<-get_bubble_plot( ct_obj, 
+                        assay=cur_assay,
+                        group.by="Azimuth_Cell", 
+                        bubblemap_file = bubblemap_file, 
+                        species=species)
+    ggsave(paste0(file_prefix, ".", pct, ".Azimuth.bubble.png"), g, width=get_dot_width(g), height=get_dot_height(ct_obj, "Azimuth"), units="px", dpi=300, bg="white")
   }
 
   if(all(c("SignacX", "SingleR") %in% validation_columns)){

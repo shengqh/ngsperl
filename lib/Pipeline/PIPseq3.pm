@@ -106,7 +106,7 @@ $pipseeker_command full --chemistry $pipseeker_chemistry --fastq \${DIR}/\${FILE
   if(getValue($def, "perform_individual_qc", 0)){
     my $qc_pattern = getValue($def, "qc_pattern", "sensitivity_[12345]");
     #add_individual_qc($config, $def, $summary, $target_dir, $pipseeker_qc, undef, [$pipseeker, $qc_pattern], undef, undef, undef);
-    my ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $task_name, "", undef, [$pipseeker, $qc_pattern], undef, undef);
+    my ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $task_name, "", undef, [$pipseeker, $qc_pattern], undef, undef);
   }
 
   $config->{sequencetask} = {

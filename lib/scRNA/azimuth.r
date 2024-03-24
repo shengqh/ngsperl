@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/raw_qc_sct2_Azimuth/result/iSGS_scar_3364_1')
+setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/raw_qc_sct2_Azimuth/result/iSGS_scar_3364_1')
 
 ### Parameter setting end ###
 
@@ -32,32 +32,34 @@ if(!exists("obj")){
 }
 
 obj <- RunAzimuth(query = obj, reference = Amimuth_ref)
-azimuth_cols = c()
-for(l in c("l1", "l2", "l3")){
-  colname = paste0("predicted.celltype.", l)
-  newcolname = paste0("Azimuth_", l)
-  if(colname %in% colnames(obj@meta.data)){
-    azimuth_cols = c(azimuth_cols, newcolname)
-    obj <-AddMetaData(obj, metadata = obj@meta.data[,colname], col.name = newcolname)
-  }else{
-    colname = paste0("predicted.annotation.", l)
-    if(colname %in% colnames(obj@meta.data)){
-      azimuth_cols = c(azimuth_cols, newcolname)
-      obj <-AddMetaData(obj, metadata = obj@meta.data[,colname], col.name = newcolname)
-    }
-  }
-}
 
-saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
+anno_columns=grep('predicted.+\\d$', colnames(obj@meta.data), value=TRUE)
+azimuth_cols = c()
+idx=1
+for(idx in 1:length(anno_columns)){
+  colname = anno_columns[idx]
+  newcolname = paste0("Azimuth_l", idx)
+  azimuth_cols = c(azimuth_cols, newcolname)
+  obj <-AddMetaData(obj, metadata = obj@meta.data[,colname], col.name = newcolname)
+}
 writeLines(azimuth_cols, paste0(outFile, ".Azimuth_cols.txt"))
 
-if("Azimuth_l2" %in% azimuth_cols){
-  ct_name = "Azimuth_l2"
+if(any(grepl("predicted.+finest", colnames(obj@meta.data)))) {
+  anno_columns=grep("predicted.+finest", colnames(obj@meta.data), value=TRUE)
+  finest_column=unique(gsub('.score$','',anno_columns))[1]
 }else{
-  ct_name = "Azimuth_l1"
+  if("Azimuth_l2" %in% azimuth_cols){
+    finest_column = "Azimuth_l2"
+  }else{
+    finest_column = "Azimuth_l1"
+  }
 }
+ct_name = "Azimuth_finest"
+obj <-AddMetaData(obj, metadata=obj@meta.data[,finest_column], col.name=ct_name)
 
-df<-obj@meta.data[,c("orig.ident", azimuth_cols)] %>% rename(Sample=orig.ident)
+saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
+
+df<-obj@meta.data[,c("orig.ident", ct_name)] %>% rename(Sample=orig.ident)
 df_tbl<-table(df[,ct_name],df$Sample)
 write.csv(df_tbl, paste0(outFile, ".Azimuth_Sample.csv"))
 
@@ -84,3 +86,6 @@ height=2000
 ggsave(paste0(outFile, ".Azimuth.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
 rm(major_obj)
 
+if(dir.exists(".local")){
+  unlink(".local", recursive=TRUE)
+}

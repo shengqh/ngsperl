@@ -271,6 +271,7 @@ sub getScRNASeqConfig {
   my $sctk_ref = undef;
   my $signacX_ref = undef;
   my $singleR_ref = undef;
+  my $azimuth_ref = undef;
   my $decontX_ref = undef;
   my $doublet_finder_ref = undef;
 
@@ -344,7 +345,7 @@ sub getScRNASeqConfig {
     # }
 
     if ( $perform_individual_qc ){
-      ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+      ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
     }
 
     if( $def->{"perform_individual_dynamic_qc"} ){
@@ -352,7 +353,7 @@ sub getScRNASeqConfig {
       my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
       add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
 
-      if($def->{perform_decontX}){
+      if($def->{"perform_decontX"}){
         $decontX_task = "${raw_individual_dynamic_qc_task}_decontX";
         add_decontX($config, $def, $tasks, $target_dir, $decontX_task, [$raw_individual_dynamic_qc_task, ".rds"], "raw_files", {}, 1);
         $decontX_ref = [$decontX_task, ".meta.rds"];
@@ -382,7 +383,7 @@ sub getScRNASeqConfig {
       # }
 
       if ( $perform_individual_qc ){
-        ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref);
+        ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref);
       }
     }
 
@@ -405,7 +406,7 @@ sub getScRNASeqConfig {
         $prefix = "${prefix}nd_";
 
         if ( $perform_individual_qc ){
-          ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+          ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
         }
       }
     }
@@ -616,7 +617,7 @@ sub getScRNASeqConfig {
 
         if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
           my $validation_task = $scDynamic_task . "_validation";
-          add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0);
+          add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref);
         }
 
         if(defined $def->{bubble_files}){
@@ -689,7 +690,7 @@ sub getScRNASeqConfig {
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 1 );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref );
             }
 
             $celltype_task = $choose_task;
@@ -906,7 +907,7 @@ sub getScRNASeqConfig {
 
           if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
             my $validation_task = $multires_task . "_validation";
-            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0 );
+            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref );
           }
 
           my $cur_options = {
@@ -926,7 +927,7 @@ sub getScRNASeqConfig {
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, "seurat_cell_type", ".multires_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 1 );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, "seurat_cell_type", ".multires_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref );
             }
 
             $celltype_task = $choose_task;
