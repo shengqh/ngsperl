@@ -1,16 +1,16 @@
 rm(list=ls()) 
-outFile='iSGS_cell_atlas'
+outFile='P10940'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/essential_genes/result/iSGS_cell_atlas.txt'
+parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge/result/P10940.final.rds'
+parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_1_call/result/P10940.scDynamic.meta.rds'
+parFile3='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/essential_genes/result/P10940.txt'
 
 
-setwd('/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -94,10 +94,24 @@ cell_activity_database<-ctdef$cell_activity_database
 
 prefix<-outFile
 
-if(!exists("obj")){
-  obj<-read_object(parFile1, parFile2)
-  Idents(obj)<-previous_layer
+meta<-readRDS(parFile2)
+
+bHasSignacX<-FALSE
+if(exists("parSampleFile4")){
+  meta = fill_meta_info_list(parSampleFile4, meta, "signacx_CellStates", "SignacX")
+  bHasSignacX<-TRUE
 }
+
+bHasSingleR<-FALSE
+if(exists('parSampleFile5')){
+  meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
+  bHasSingleR<-TRUE
+}
+
+obj<-read_object(parFile1)
+stopifnot(all(colnames(obj) == rownames(meta)))
+obj@meta.data = meta
+Idents(obj)<-previous_layer
 
 antibody_bubblemap_file=myoptions$antibody_bubblemap_file
 has_antibody_bubblemap <- FALSE
@@ -142,29 +156,6 @@ draw_dim_plot<-function(obj, previous_layer, file_path){
   rm(g)
 }
 
-meta<-obj@meta.data
-
-bHasSignacX<-FALSE
-if(exists("parSampleFile4")){
-  meta = fill_meta_info_list(parSampleFile4, meta, "signacx_CellStates", "SignacX")
-  # ct_map=c('T.CD4.memory'='T.CD4', 
-  #   'T.CD4.naive'='T.CD4', 
-  #   'T.CD8.cm'='T.CD8',
-  #   'T.CD8.em'='T.CD8',
-  #   'T.CD8.naive'='T.CD8')
-  # meta$SignacX<-as.character(meta$SignacX)
-  # for(ct_name in names(ct_map)){
-  #   meta$SignacX[meta$SignacX==ct_name]=ct_map[ct_name]
-  # }
-  bHasSignacX<-TRUE
-}
-
-bHasSingleR<-FALSE
-if(exists('parSampleFile5')){
-  meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
-  bHasSingleR<-TRUE
-}
-
 if(!is_file_empty(parSampleFile3)){
   draw_dim_plot(obj, previous_layer, paste0(outFile, ".pre_rename.umap.png"))
 
@@ -174,7 +165,7 @@ if(!is_file_empty(parSampleFile3)){
 
   keys = unique(rename_map$V3)
   if("from" %in% rename_map$V2){
-    rname = keys[2]
+    rname = keys[1]
     for(rname in keys){
       rmap = rename_map[rename_map$V3 == rname,]
       from = rmap$V1[rmap$V2=="from"]
@@ -190,6 +181,7 @@ if(!is_file_empty(parSampleFile3)){
       if(all(cluster == "-1")){
         cells<-rownames(submeta)
       }else{
+        cur_custers = unique(submeta[,cluster_column])
         if(!(all(cluster %in% unlist(submeta[,cluster_column])))){
           stop(paste0("Cannot find cluster ", paste0(cluster, collapse = "/"), " in cell type ", from, " of cluster ", cluster_column))
         }
