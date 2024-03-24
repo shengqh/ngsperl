@@ -45,10 +45,13 @@ for(cname in names(files)){
   rm(res_lst)
 
   if(has_filtered_files){
-    exp = read_scrna_data(filtered_files[[cname]])$counts
+    ffiles=filtered_files[[cname]]
+    cat("  filtering by", paste0(ffiles, collapse=", "), "\n")
+    exp = read_scrna_data(ffiles)$counts
     stopifnot(all(colnames(exp) %in% colnames(htos)))
     htos=htos[,colnames(exp)]
   }
+  cat("  there are", nrow(htos), "tags and", ncol(htos), "cells\n")
   write.csv(htos, paste0(cname, ".alltags_raw.csv"), row.names=T)
 
   if (!is.na(params$hto_regex) & params$hto_regex != "" ) {
