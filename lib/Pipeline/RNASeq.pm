@@ -216,7 +216,7 @@ sub getRNASeqConfig {
     my $sf_task = addStarFeaturecount($config, $def, $individual, $summary, $target_dir, $source_ref, "" );
 
     $source_ref      = [ $sf_task, "_Aligned.sortedByCoord.out.bam\$" ];
-    $count_table_ref = [ $sf_task, "(?!chromosome).count\$" ];
+    $count_table_ref = [ $sf_task, '^(?!.*\.chromosome\.count).*\.count$' ];
 
     $multiqc_depedents = $sf_task;
   }else {
