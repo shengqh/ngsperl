@@ -24,6 +24,7 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
   missing = filelist$V1[is.na(filelist$size) | filelist$size==0]
   filelist=filelist[!(filelist$V1 %in% missing),]
 
+  final=NULL
   all_chroms = c()
   i=1
   for(i in c(1:nrow(filelist))){
@@ -35,35 +36,31 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
       next
     }
 
-    subdata = read.table(filelocation, sep="\t", header=F, stringsAsFactors = F)
-    subdata=subdata[,c(1,3)]
-    colnames(subdata)<-c("Chrom", "Reads")
+    cat("reading", filelocation, "\n")
+    subdata = fread(filelocation, data.table=FALSE)
+    if(colnames(subdata)[1] == "Geneid") { 
+      #featureCounts count file, we need to aggregate it to chromosome level
+      subdata = subdata[,c(2,7)]
+      subdata$Chr = gsub(";.+","",subdata$Chr)
+      colnames(subdata)[2]="Reads"
+      subdata = aggregate(subdata$Reads, by=list(subdata$Chr), FUN=sum)
+      colnames(subdata)=c("Chrom", "Reads")
+    }else{
+      subdata = read.table(filelocation, sep="\t", header=F, stringsAsFactors = F)
+      subdata=subdata[,c(1,3)]
+      colnames(subdata)<-c("Chrom", "Reads")
+    }
     subdata=subdata[subdata$Chrom != '*',]
+    subdata$Sample=filename
 
     chrdata=subdata[str_length(subdata$Chrom) < 6,]
     mediancount<-median(chrdata$Reads)
     sdata<-subdata[str_length(subdata$Chrom) < 6 | subdata$Reads > mediancount,]
     all_chroms<-c(all_chroms, sdata$Chrom)
+    final=rbind(final, subdata)
   }
   all_chroms<-sort(unique(all_chroms))
-
-  final=NULL
-  i=1
-  for(i in c(1:nrow(filelist))){
-    filename = filelist$V2[i]
-    filelocation =filelist$V1[i]
-
-    if(!file.exists(filelocation)){
-      next
-    }
-
-    subdata = read.table(filelocation, sep="\t", header=F, stringsAsFactors = F)
-    subdata=subdata[,c(1,3)]
-    colnames(subdata)<-c("Chrom", "Reads")
-    subdata=subdata[subdata$Chrom %in% all_chroms,]
-    subdata$Sample=filename
-    final=rbind(final, subdata )
-  }
+  final=final[final$Chrom %in% all_chroms,]
 
   if(length(missing) > 0){
     writeLines(missing, paste0(outFilePrefix, ".chromosome.missing"))
@@ -88,7 +85,7 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
   chroms<-c(chroms, all_chroms[!(all_chroms %in% chroms)])
 
   fc<-reshape2::dcast(final, "Sample ~ Chrom", value.var="Reads", fill=0)
-  final<-melt(fc, id="Sample")
+  final<-reshape2::melt(fc, id="Sample")
   colnames(final)<-c("Sample", "Chrom", "Reads")
   final$Chrom=factor(final$Chrom, levels=chroms)
 

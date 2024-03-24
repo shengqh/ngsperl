@@ -1,5 +1,19 @@
-source("AlignmentUtils.r")
+rm(list=ls()) 
+outFile='ECa3'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parSampleFile5='fileList5.txt'
+parFile1=''
+parFile2=''
+parFile3=''
 
+
+setwd('/nobackup/shah_lab/shengq2/20240317_ECa3_rnaseq_hg38/star_featurecount_summary/result')
+
+### Parameter setting end ###
+
+source("AlignmentUtils.r")
 options(bitmapType='cairo')
 
 library(reshape2)
@@ -103,4 +117,9 @@ if (parSampleFile2 != ''){
   print(g)
   
   dev.off()
+}
+
+
+if(exists('parSampleFile5')){
+  draw_chromosome_count(parSampleFile5, paste0(outFile, ".gene"))
 }
