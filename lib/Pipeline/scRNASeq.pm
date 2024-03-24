@@ -213,10 +213,7 @@ sub getScRNASeqConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
-  if($cluster eq "slurm"){
-    push(@$individual, @$summary);
-    $summary = $individual;
-  }
+  my $tasks = [@$individual, @$summary];
 
   my $clono_key = "clono_index";
 
@@ -231,7 +228,7 @@ sub getScRNASeqConfig {
   my $essential_gene_task;
   
   if(getValue($def, "perform_essential_gene", 1)){
-    $essential_gene_task = add_essential_gene($config, $def, $summary, $target_dir);
+    $essential_gene_task = add_essential_gene($config, $def, $tasks, $target_dir);
   } 
 
   my $perform_comparison = getValue( $def, "perform_comparison", 0 );
@@ -283,11 +280,11 @@ sub getScRNASeqConfig {
       my $fragment_cells_task = undef;
       if(getValue($def, "perform_fragment_cells", 1)){
         $fragment_cells_task = "fragment_cells";
-        add_fragment_cells($config, $def, $individual, $target_dir, $fragment_cells_task, "atac_files");
+        add_fragment_cells($config, $def, $tasks, $target_dir, $fragment_cells_task, "atac_files");
       }
 
       my $multiome_task = "multiome_qc";
-      add_multiome_qc($config, $def, $summary, $target_dir, $multiome_task, undef, $fragment_cells_task);
+      add_multiome_qc($config, $def, $tasks, $target_dir, $multiome_task, undef, $fragment_cells_task);
     }
 
     my @report_files = ();
@@ -296,14 +293,12 @@ sub getScRNASeqConfig {
     my $hto_ref = undef;
     my $hto_sample_file = undef;
     my $hto_summary_task = undef;
+    my $raw_files_def = "raw_files";
     my $files_def = "files";
 
     if(getValue($def, "perform_cellbender", 0)){
-      my $cellbender_task = "cellbender";
-
-      add_cellbender($config, $def, $individual, $target_dir, $cellbender_task, $files_def );
-
-      $files_def = $cellbender_task;
+      my $cellbender_prefix = "cellbender";
+      $files_def = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $files_def, $raw_files_def );
     }
 
     my $perform_decontX = getValue($def, "perform_decontX", 0);
@@ -320,34 +315,52 @@ sub getScRNASeqConfig {
     my $decontX_task = undef;
     if ($perform_decontX){
       $decontX_task = "decontX";
-      add_decontX($config, $def, $summary, $target_dir, $decontX_task, "files", "raw_files", {}, 1);
+      add_decontX($config, $def, $tasks, $target_dir, $decontX_task, "files", "raw_files", {}, 1);
       $decontX_ref = [$decontX_task, ".meta.rds"];
     }
 
     if ( $perform_sctk ){
       my $sctk_task = "sctk";
-      add_sctk($config, $def, $summary, $target_dir, $sctk_task, $files_def);
+      add_sctk($config, $def, $tasks, $target_dir, $sctk_task, $files_def);
       $sctk_ref = [$sctk_task, ".meta.rds"];
     }
 
+    # my $signacX_ref = undef;
+    # if (getValue( $def, "perform_SignacX", 0 ) ) {
+    #   my $signacX_task = "SignacX";
+    #   add_signacx( $config, $def, $tasks, $target_dir, $project_name, $signacX_task, $files_def, "pca", 1);
+    #   $signacX_ref = [ $signacX_task, ".meta.rds" ];
+    # }
+
+    # my $singleR_ref = undef;
+    # if (getValue( $def, "perform_SingleR", 0 ) ) {
+    #   my $singleR_task = "SingleR";
+    #   my $cur_options = {
+    #     task_name => $project_name,
+    #     reduction => "pca", 
+    #   };
+    #   add_singleR_cell( $config, $def, $tasks, $target_dir, $singleR_task, $files_def, $cur_options, 1 );
+    #   $singleR_ref = [ $singleR_task, ".meta.rds" ];
+    # }
+
     if ( $perform_individual_qc ){
-      ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+      ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
     }
 
     if( $def->{"perform_individual_dynamic_qc"} ){
       my $sct_str = get_sct_str($def);
       my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
-      add_individual_dynamic_qc($config, $def, $summary, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
+      add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
 
       if($def->{perform_decontX}){
         $decontX_task = "${raw_individual_dynamic_qc_task}_decontX";
-        add_decontX($config, $def, $summary, $target_dir, $decontX_task, [$raw_individual_dynamic_qc_task, ".rds"], "raw_files", {}, 1);
+        add_decontX($config, $def, $tasks, $target_dir, $decontX_task, [$raw_individual_dynamic_qc_task, ".rds"], "raw_files", {}, 1);
         $decontX_ref = [$decontX_task, ".meta.rds"];
       }
 
       if($def->{"perform_DoubletFinder"}){
         my $df_task = "${raw_individual_dynamic_qc_task}_DoubletFinder";
-        addDoubletFinder_individual($config, $def, $summary, $target_dir, $df_task, [$raw_individual_dynamic_qc_task, ".rds"]);
+        addDoubletFinder_individual($config, $def, $tasks, $target_dir, $df_task, [$raw_individual_dynamic_qc_task, ".rds"]);
         $doublet_finder_ref = [$df_task, ".meta.rds"];
       }
     }
@@ -358,18 +371,18 @@ sub getScRNASeqConfig {
 
       if ( $perform_sctk ){
         my $sctk_task = "${prefix}sctk";
-        add_sctk($config, $def, $summary, $target_dir, $sctk_task, $files_def);
+        add_sctk($config, $def, $tasks, $target_dir, $sctk_task, $files_def);
         $sctk_ref = [$sctk_task, ".meta.rds"];
       }
 
       # if(getValue($def, "perform_doublet_finder", 0)){
       #   my $df_task = "${prefix}doublet_finder";
-      #   addDoubletFinder_individual($config, $def, $summary, $target_dir, $df_task, $files_def);
+      #   addDoubletFinder_individual($config, $def, $tasks, $target_dir, $df_task, $files_def);
       #   $doublet_finder_ref = [$df_task, ".meta.rds"];
       # }
 
       if ( $perform_individual_qc ){
-        ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref);
+        ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref);
       }
     }
 
@@ -386,13 +399,13 @@ sub getScRNASeqConfig {
       }
 
       if(defined $doublets_ref){  
-        add_remove_doublets($config, $def, $summary, $target_dir, $nodoublets_task, $files_def, $doublets_ref, $doublet_column);
+        add_remove_doublets($config, $def, $tasks, $target_dir, $nodoublets_task, $files_def, $doublets_ref, $doublet_column);
         
         $files_def = [$nodoublets_task, ".counts.rds"];
         $prefix = "${prefix}nd_";
 
         if ( $perform_individual_qc ){
-          ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+          ($raw_individual_qc_task, $signacX_ref, $singleR_ref, $qc_report_task) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
         }
       }
     }
@@ -424,12 +437,12 @@ sub getScRNASeqConfig {
     }
 
     # if(getValue($def, "perform_scDblFinder", 0)){
-    #   add_scDblFinder($config, $def, $individual, $target_dir, "scDblFinder", "files" );
+    #   add_scDblFinder($config, $def, $tasks, $target_dir, "scDblFinder", "files" );
     #   #$files_def = "scDblFinder";
     # }
 
     if( $perform_split_hto_samples ) {
-      my $preparation_task = add_hto_samples_preparation($config, $def, $summary, $target_dir, $hto_file_ref, $hto_raw_file_ref);
+      my $preparation_task = add_hto_samples_preparation($config, $def, $tasks, $target_dir, $hto_file_ref, $hto_raw_file_ref);
       $hto_file_ref = [ $preparation_task, ".hto.rds"];
 
       if(defined $def->{HTO_samples}){
@@ -437,45 +450,40 @@ sub getScRNASeqConfig {
       }
 
       if(getValue($def, "split_hto_samples_by_GMM_demux", 0)){
-        my $gmm_demux_task = add_hto_gmm_demux($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
-        #my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, [$gmm_demux_task, ".HTO.csv"]);
+        my $gmm_demux_task = add_hto_gmm_demux($config, $def, $tasks, $target_dir, $hto_file_ref, $hto_sample_file);
+        #my $hto_summary_task = add_hto_summary($config, $def, $tasks, $target_dir, [$gmm_demux_task, ".HTO.csv"]);
       }
 
-      my $hto_task = add_hto($config, $def, $summary, $target_dir, $hto_file_ref, $hto_sample_file);
+      my $hto_task = add_hto($config, $def, $tasks, $target_dir, $hto_file_ref, $hto_sample_file);
       $hto_ref = [ $hto_task, ".HTO.csv" ];
 
       my $hto_bam_ref = $hto_ref;
 
-      #my $hto_summary_task = add_hto_summary($config, $def, $summary, $target_dir, $hto_ref);
+      #my $hto_summary_task = add_hto_summary($config, $def, $tasks, $target_dir, $hto_ref);
 
       #push (@report_files, ($hto_summary_task, ".HTO.summary.global.png"));
       #push (@report_names, "hto_summary_png");
 
       my $perform_souporcell = getValue($def, "perform_souporcell", 0);
       if($perform_souporcell) {
-        my $hto_souporcell_task = add_souporcell($config, $def, $summary, $target_dir, $preparation_task);
-        my $hto_integration_task = add_souporcell_integration($config, $def, $summary, $target_dir, $hto_souporcell_task, $hto_ref);
+        my $hto_souporcell_task = add_souporcell($config, $def, $tasks, $target_dir, $preparation_task);
+        my $hto_integration_task = add_souporcell_integration($config, $def, $tasks, $target_dir, $hto_souporcell_task, $hto_ref);
         $hto_ref = [ $hto_integration_task, ".meta.rds" ];
         $hto_bam_ref = [ $hto_integration_task, ".HTO.csv" ];
       }
 
       if($perform_arcasHLA || $perform_strelka2){
-        $bam_ref = add_hto_bam($config, $def, $individual, $target_dir, $hto_bam_ref);
+        $bam_ref = add_hto_bam($config, $def, $tasks, $target_dir, $hto_bam_ref);
       }
 
       if($perform_arcasHLA){
-        $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref);        
+        $hla_merge = addArcasHLA($config, $def, $tasks, $target_dir, $project_name, "", $bam_ref);        
       }
 
       if($perform_clonotype_analysis){
-        my $split_task = add_clonotype_split($config, $def, $individual, $target_dir, $hto_bam_ref, $clono_key);
+        my $split_task = add_clonotype_split($config, $def, $tasks, $target_dir, $hto_bam_ref, $clono_key);
         $clonotype_ref = [$split_task, "all_contig_annotations.json"];
       }
-
-      # if ( getValue($def, "perform_individual_qc", 1) ){
-      #   my $individual_qc_task = "hto_qc";
-      #   add_individual_qc($config, $def, $summary, $target_dir, $individual_qc_task, $filter_config_file, $perform_split_hto_samples, $hto_ref, $hto_sample_file);
-      # }
     }else{
       if($perform_arcasHLA || $perform_strelka2){
         getValue($def, "bam_files");
@@ -485,16 +493,16 @@ sub getScRNASeqConfig {
       if($perform_arcasHLA){
         if (defined $def->{singleend_bam_files}){
           $config->{singleend_bam_files} = $def->{singleend_bam_files};
-          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref, "singleend_bam_files");        
+          $hla_merge = addArcasHLA($config, $def, $tasks, $target_dir, $project_name, "", $bam_ref, "singleend_bam_files");        
         }else{
-          $hla_merge = addArcasHLA($config, $def, $individual, $target_dir, $project_name, "", $bam_ref);        
+          $hla_merge = addArcasHLA($config, $def, $tasks, $target_dir, $project_name, "", $bam_ref);        
         }
       }
     }
 
     if($perform_strelka2){
       my $strelka2_task = "strelka2";
-      add_strelka2($config, $def, $summary, $target_dir, $strelka2_task, $bam_ref);
+      add_strelka2($config, $def, $tasks, $target_dir, $strelka2_task, $bam_ref);
     }
 
     my $merge_task = undef;
@@ -507,16 +515,16 @@ sub getScRNASeqConfig {
         $clonotype_ref = ["vdj_json_files", "all_contig_annotations.json"];
       }
       
-      $merge_task = addClonotypeMerge($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_merge", $clonotype_ref);
-      $enclone_task = addEnclone($config, $def, $summary, "clonotype". get_next_index($def, $clono_key) . "_enclone", $target_dir, [$merge_task, ".json\$"] );
-      $clonotype_convert = addEncloneToClonotype($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_convert", [$enclone_task, ".pchain4.csv"], [$merge_task, ".cdr3\$"]);
-      $clonotype_db = addClonotypeDB($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_db", $clonotype_convert);
-      my $clonotype_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_consensus", [$enclone_task, ".pchain4.pcell.csv"], [$merge_task, ".cdr3\$"]);
-      my $immunarch_task = addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch", $clonotype_consensus);
+      $merge_task = addClonotypeMerge($config, $def, $tasks, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_merge", $clonotype_ref);
+      $enclone_task = addEnclone($config, $def, $tasks, "clonotype". get_next_index($def, $clono_key) . "_enclone", $target_dir, [$merge_task, ".json\$"] );
+      $clonotype_convert = addEncloneToClonotype($config, $def, $tasks, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_convert", [$enclone_task, ".pchain4.csv"], [$merge_task, ".cdr3\$"]);
+      $clonotype_db = addClonotypeDB($config, $def, $tasks, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_db", $clonotype_convert);
+      my $clonotype_consensus = addEncloneToConsensus($config, $def, $tasks, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_consensus", [$enclone_task, ".pchain4.pcell.csv"], [$merge_task, ".cdr3\$"]);
+      my $immunarch_task = addConsensusToImmunarch($config, $def, $tasks, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch", $clonotype_consensus);
     }
 
     if ( getValue( $def, "perform_scRNABatchQC" ) ) {
-      add_scRNABatchQC($config, $def, $summary, $target_dir);
+      add_scRNABatchQC($config, $def, $tasks, $target_dir);
     }
 
     my $seurat_rawdata;
@@ -528,15 +536,15 @@ sub getScRNASeqConfig {
         }
         my $sct_str = get_sct_str($def);
         $seurat_rawdata = "${prefix}seurat_rawdata_postqc${sct_str}";
-        add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task, $decontX_ref );
+        add_seurat_rawdata($config, $def, $tasks, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task, $decontX_ref );
         $is_preprocessed = 1;
       }else{
         $seurat_rawdata = "${prefix}seurat_rawdata";
 
         if (getValue($def, "merge_seurat_object", 0)){
-          add_seurat_merge_object($config, $def, $summary, $target_dir, $seurat_rawdata, $files_def, undef, undef, 0, {});
+          add_seurat_merge_object($config, $def, $tasks, $target_dir, $seurat_rawdata, $files_def, undef, undef, 0, {});
         }else{
-          add_seurat_rawdata($config, $def, $summary, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef );
+          add_seurat_rawdata($config, $def, $tasks, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef );
         }
         $is_preprocessed = 0;
       }
@@ -544,7 +552,7 @@ sub getScRNASeqConfig {
       push (@report_files, ($seurat_rawdata, "rawobj.rds"));
       push (@report_names, "raw_obj");
 
-      my ($seurat_task, $reduction) = add_seurat($config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, 0, $is_preprocessed, $prefix, $filter_config_file);
+      my ($seurat_task, $reduction) = add_seurat($config, $def, $tasks, $target_dir, $seurat_rawdata, $essential_gene_task, 0, $is_preprocessed, $prefix, $filter_config_file);
       my $obj_ref = [$seurat_task, ".final.rds"];
 
       push (@report_files, ($seurat_task, ".final.png", 
@@ -561,7 +569,7 @@ sub getScRNASeqConfig {
       if(!defined $signacX_ref) {
         if (getValue( $def, "perform_SignacX", 0 ) ) {
           my $signacX_task = $seurat_task . "_SignacX";
-          add_signacx_only( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $obj_ref, $reduction );
+          add_signacx( $config, $def, $tasks, $target_dir, $project_name, $signacX_task, $obj_ref, $reduction );
           $signacX_ref = [$signacX_task, ".meta.rds"];
         }
       }
@@ -573,7 +581,7 @@ sub getScRNASeqConfig {
             task_name => $def->{task_name},
             reduction => $reduction, 
           };
-          add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $cur_options );
+          add_singleR_cell( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $cur_options );
           $singleR_ref = [$singleR_task, ".meta.rds"];
         }
       }
@@ -601,36 +609,36 @@ sub getScRNASeqConfig {
           $by_harmony = 0;
           $scDynamic_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_call";
         }
-        addDynamicCluster($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column, $by_harmony);
+        addDynamicCluster($config, $def, $tasks, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column, $by_harmony);
 
         my $meta_ref = [$scDynamic_task, ".meta.rds"];
         my $call_files_ref = [$scDynamic_task, ".iter_png.csv"];
 
         if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
           my $validation_task = $scDynamic_task . "_validation";
-          add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0);
+          add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0);
         }
 
         if(defined $def->{bubble_files}){
-          add_bubble_files($config, $def, $summary, $target_dir, $scDynamic_task . "_bubble_files", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_bubbles.html" );
+          add_bubble_files($config, $def, $tasks, $target_dir, $scDynamic_task . "_bubble_files", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_bubbles.html" );
         }
 
         if(defined $def->{bubble_plots}){
-          #add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters", ".dynamic_iter1_dot.html" );
-          add_bubble_plots($config, $def, $summary, $target_dir, $scDynamic_task . "_bubblemap", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_dot.html" );
+          #add_bubble_plots($config, $def, $tasks, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters", ".dynamic_iter1_dot.html" );
+          add_bubble_plots($config, $def, $tasks, $target_dir, $scDynamic_task . "_bubblemap", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_dot.html" );
         }
 
         if(getValue($def, "perform_individual_dynamic_cluster", 0)){
           my $individual_scDynamic_task = $raw_dynamicKey . "_individual";
-          addDynamicCluster($config, $def, $summary, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1);
+          addDynamicCluster($config, $def, $tasks, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1);
 
           my $clustree_task = $individual_scDynamic_task . "_clustree";
-          add_clustree_rmd($config, $def, $summary, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task);
+          add_clustree_rmd($config, $def, $tasks, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task);
         }
 
         if(getValue($def, "perform_sub_dynamic_cluster")){
           my $sub_scDynamic_task = $scDynamic_task . "_sub";
-          addSubDynamicCluster($config, $def, $summary, $target_dir, $sub_scDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, 0);
+          addSubDynamicCluster($config, $def, $tasks, $target_dir, $sub_scDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, 0);
         }
 
 
@@ -642,7 +650,7 @@ sub getScRNASeqConfig {
         #     celltype_layer => "layer4",
         #     celltype_cluster => "layer4_clusters"
         #   };
-        #   add_singleR( $config, $def, $summary, $target_dir, $singleR_task, $obj_ref, $meta_ref, $cur_options );
+        #   add_singleR( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $meta_ref, $cur_options );
         # }
 
         if(getValue($def, "perform_dynamic_subcluster")){
@@ -669,19 +677,19 @@ sub getScRNASeqConfig {
             }
           }
 
-          $subcluster_task = addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, ".dynamic_subcluster.html");
+          $subcluster_task = addSubCluster($config, $def, $tasks, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, ".dynamic_subcluster.html");
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_dynamic_choose")) {
             my $choose_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_choose";
             my $table = getValue($def, "dynamic_subclusters_table");
-            addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".dynamic_choose.html");
+            addSubClusterChoose($config, $def, $tasks, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".dynamic_choose.html");
             $obj_ref = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 1 );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 1 );
             }
 
             $celltype_task = $choose_task;
@@ -718,43 +726,43 @@ sub getScRNASeqConfig {
             }
 
             if(defined $def->{bubble_files}){
-              add_bubble_files($config, $def, $summary, $target_dir, $choose_task . "_bubble_files", $choose_task, undef, undef, undef, ".dynamic_choose_bubbles.html" );
+              add_bubble_files($config, $def, $tasks, $target_dir, $choose_task . "_bubble_files", $choose_task, undef, undef, undef, ".dynamic_choose_bubbles.html" );
             }
 
             if(defined $def->{bubble_plots}){
               my $bubble_task = $choose_task . "_bubblemap";
-              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".dynamic_choose_dot.html");
+              add_bubble_plots($config, $def, $tasks, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".dynamic_choose_dot.html");
             }
 
             if(defined $clonotype_convert) {
               if( getValue($def, "perform_gliph2", 0) ) {
-                my $gliph2_task = add_gliph2($config, $def, $summary, $target_dir, $meta_ref, $clonotype_convert, $hla_merge);
+                my $gliph2_task = add_gliph2($config, $def, $tasks, $target_dir, $meta_ref, $clonotype_convert, $hla_merge);
               }
-              my $clonotype_consensus = addEncloneToConsensus($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_consensus_tcell", [$enclone_task, ".pchain4.pcell.csv"], [$merge_task, ".cdr3\$"], [ $choose_task, ".meta.csv" ]);
-              my $immunarch_task = addConsensusToImmunarch($config, $def, $summary, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch_tcell", $clonotype_consensus);
+              my $clonotype_consensus = addEncloneToConsensus($config, $def, $tasks, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_consensus_tcell", [$enclone_task, ".pchain4.pcell.csv"], [$merge_task, ".cdr3\$"], [ $choose_task, ".meta.csv" ]);
+              my $immunarch_task = addConsensusToImmunarch($config, $def, $tasks, $target_dir, "clonotype". get_next_index($def, $clono_key) . "_immunarch_tcell", $clonotype_consensus);
             }
 
-            addComparison($config, $def, $summary, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type", "subumap");
+            addComparison($config, $def, $tasks, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type", "subumap");
 
             $localization_ref = $obj_ref;
 
             if(defined $def->{groups}){
               my $group_umap_task = $choose_task . "_group_umap";
-              add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, [$choose_task, ".final.rds"]);
+              add_group_umap($config, $def, $tasks, $target_dir, $group_umap_task, [$choose_task, ".final.rds"]);
             }
 
             if(defined $clonotype_convert){
-              addClonotypeCluster($config, $def, $summary, $target_dir, $clonotype_convert . "_cluster", $clonotype_convert, $meta_ref, ".clonotype.cluster.csv,.clonotype.sub.cluster.csv");
-              addClonotypeVis($config, $def, $summary, $target_dir, $clonotype_convert . "_vis", $obj_ref, undef, $clonotype_convert);
+              addClonotypeCluster($config, $def, $tasks, $target_dir, $clonotype_convert . "_cluster", $clonotype_convert, $meta_ref, ".clonotype.cluster.csv,.clonotype.sub.cluster.csv");
+              addClonotypeVis($config, $def, $tasks, $target_dir, $clonotype_convert . "_vis", $obj_ref, undef, $clonotype_convert);
             }
 
             if(defined $clonotype_db){
-              addClonotypeCluster($config, $def, $summary, $target_dir, $clonotype_db . "_cluster", $clonotype_db, $meta_ref, ".clonotype.db.cluster.csv,.clonotype.sub.db.cluster.csv");
+              addClonotypeCluster($config, $def, $tasks, $target_dir, $clonotype_db . "_cluster", $clonotype_db, $meta_ref, ".clonotype.db.cluster.csv,.clonotype.sub.db.cluster.csv");
             }
 
             # if(defined $df_task){
             #   my $doublet_check_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_doublet_check";
-            #   add_doublet_check($config, $def, $summary, $target_dir, $doublet_check_task, $obj_ref, $df_task );
+            #   add_doublet_check($config, $def, $tasks, $target_dir, $doublet_check_task, $obj_ref, $df_task );
             # }
           }
         }
@@ -898,7 +906,7 @@ sub getScRNASeqConfig {
 
           if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
             my $validation_task = $multires_task . "_validation";
-            add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0 );
+            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 0 );
           }
 
           my $cur_options = {
@@ -908,17 +916,17 @@ sub getScRNASeqConfig {
           };
           my $rename_map = $def->{"multires_rename_map"};
 
-          addSubCluster($config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, , ".multires_subcluster.html");
+          addSubCluster($config, $def, $tasks, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, , ".multires_subcluster.html");
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_multires_choose", 0)) {
             my $choose_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_choose";
             my $table = getValue($def, "multires_subclusters_table");
-            addSubClusterChoose($config, $def, $summary, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".multires_choose.html");
+            addSubClusterChoose($config, $def, $tasks, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".multires_choose.html");
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $summary, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, "seurat_cell_type", ".multires_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 1 );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, "seurat_cell_type", ".multires_choose_validation.html", $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, 1 );
             }
 
             $celltype_task = $choose_task;
@@ -926,27 +934,27 @@ sub getScRNASeqConfig {
             my $obj_ref = [$choose_task, ".final.rds"];
             if(defined $def->{groups}){
               my $group_umap_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_group_umap";
-              add_group_umap($config, $def, $summary, $target_dir, $group_umap_task, $obj_ref);
+              add_group_umap($config, $def, $tasks, $target_dir, $group_umap_task, $obj_ref);
             }
 
-            addGeneTask( $config, $def, $summary, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type" );
+            addGeneTask( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type" );
 
             my $pseudo_count_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_pseudo_count";
-            add_pseudo_count($config, $def, $summary, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
+            add_pseudo_count($config, $def, $tasks, $target_dir, $pseudo_count_task, $obj_ref, "seurat_cell_type");
 
             if(defined $def->{bubble_plots}){
               my $bubble_task = $seurat_task . "_multires" . get_next_index($def, $multiresKey) . "_bubblemap";
-              add_bubble_plots($config, $def, $summary, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".multi_choose_dot.html");
+              add_bubble_plots($config, $def, $tasks, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".multi_choose_dot.html");
             }
 
             if ( $perform_comparison ) {
               if ( defined $def->{"DE_cluster_pairs"} ) {
-                addEdgeRTask( $config, $def, $summary, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 1, 0, $DE_by_cell );
+                addEdgeRTask( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 1, 0, $DE_by_cell );
               }
 
               for my $deByOption (@deByOptions) {
                 my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-                my $edgeRtask = addEdgeRTask( $config, $def, $summary, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 0, $DE_by_celltype, $DE_by_cell );
+                my $edgeRtask = addEdgeRTask( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 0, $DE_by_celltype, $DE_by_cell );
               }
             }
           }
@@ -1114,18 +1122,18 @@ sub getScRNASeqConfig {
         }
 
         if (getValue( $def, "perform_scMRMA", 0 ) ) {
-          addScMRMA( $config, $def, $summary, $target_dir, $project_name, $cluster_task );
+          addScMRMA( $config, $def, $tasks, $target_dir, $project_name, $cluster_task );
         }
 
         my $parameterSampleFile5_ref = undef;
         if (getValue( $def, "perform_CHETAH", 0 ) ) {
           my $CHETAH_name= $cluster_task . "_CHETAH";
-          addCHETAH( $config, $def, $summary, $target_dir, $project_name, $CHETAH_name, $cluster_task );
+          addCHETAH( $config, $def, $tasks, $target_dir, $project_name, $CHETAH_name, $cluster_task );
           push @report_files, ($CHETAH_name, ".CHETAH.png");
           push @report_names, "chetah_png";
         }
 
-        addGeneTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name );
+        addGeneTask( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name );
 
         if ( getValue( $def, "perform_rename_cluster" ) ) {
           my $rename_cluster = $celltype_task . "_rename";
@@ -1161,7 +1169,7 @@ sub getScRNASeqConfig {
           $celltype_name     = "renamed_cellactivity_clusters";
           $cluster_name      = "seurat_renamed_cellactivity_clusters";
 
-          addGeneTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name );
+          addGeneTask( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name );
         }
 
 
@@ -1235,11 +1243,11 @@ sub getScRNASeqConfig {
         }
 
         if ( $def->{perform_antibody_vis} ) {
-          addAntibody( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name );
+          addAntibody( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name );
         }
 
         if(defined $clonotype_convert){
-          addClonotypeVis($config, $def, $summary, $target_dir, $clonotype_convert . "_vis", [ $cluster_task, ".final.rds" ], [ $celltype_task, $celltype_cluster_file ], $clonotype_convert);
+          addClonotypeVis($config, $def, $tasks, $target_dir, $clonotype_convert . "_vis", [ $cluster_task, ".final.rds" ], [ $celltype_task, $celltype_cluster_file ], $clonotype_convert);
 
           if(defined $celltype_task){
             my $clonetype_cluster = $clonotype_db;
@@ -1378,12 +1386,12 @@ sub getScRNASeqConfig {
 
         if ( $perform_comparison ) {
           if ( defined $def->{"DE_cluster_pairs"} ) {
-            addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell );
+            addEdgeRTask( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell );
           }
 
           for my $deByOption (@deByOptions) {
             my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-            addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
+            addEdgeRTask( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
           }
         }
       }
@@ -1427,7 +1435,7 @@ sub getScRNASeqConfig {
   if(defined $def->{seurat_object_file}){
     if ( $def->{perform_comparison} ) {
       if ( defined $def->{"DE_cluster_pairs"} ) {
-        addEdgeRTask( $config, $def, $summary, $target_dir, $def->{seurat_object_file}, undef, undef, getValue($def, "DE_cluster_name"), undef, 1, 0, 1 );
+        addEdgeRTask( $config, $def, $tasks, $target_dir, $def->{seurat_object_file}, undef, undef, getValue($def, "DE_cluster_name"), undef, 1, 0, 1 );
       }
     }
   }
@@ -1438,7 +1446,7 @@ sub getScRNASeqConfig {
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      step1 => $individual,
+      step1 => $tasks,
     },
     sh_direct => 0,
     cluster   => $cluster,
