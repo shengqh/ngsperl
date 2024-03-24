@@ -382,6 +382,7 @@ sub addSomaticCNV {
   my $server = $wdl->{$server_key};
   my $somaticCNV_pipeline = $server->{"somaticCNV"};
 
+  my $interval;
   my $pon = {};
   if ($def->{"perform_somaticCNV_pon"}){
     my $pon_pipeline = $server->{"somaticCNV_pon"};
@@ -416,11 +417,14 @@ sub addSomaticCNV {
     $pon = {
       "CNVSomaticPairWorkflow.read_count_pon_ref" => [$somaticCNV_pon, ".pon.hdf5\$"],
     };
+    $interval = getValue($def, "covered_bed");
   }else{
     $pon = {
       "CNVSomaticPairWorkflow.read_count_pon" => getValue($def, "CNVSomaticPairWorkflow.read_count_pon"),
     };
+    $interval = getValue($def, "CNVSomaticPairWorkflow.intervals");
   }
+  #print("interval=" . $interval . "\n");
 
   my $somaticCNV_call = $somaticCNV_prefix . getNextIndex($somaticCNV_index_dic, $somaticCNV_index_key) . "_call";
   my $run_funcotator="true";
@@ -443,6 +447,7 @@ sub addSomaticCNV {
   if ($run_funcotator eq "true") {
     $somaticCNV_call_output_ext=$somaticCNV_call_output_ext."; .called.seg.funcotated.tsv";
   }
+
   $config->{$somaticCNV_call} = {     
     "class" => "CQS::Wdl",
     "target_dir" => "${target_dir}/$somaticCNV_call",
@@ -458,7 +463,7 @@ sub addSomaticCNV {
 #    output_other_ext => ".".$output_sample_ext."-filtered.vcf",
     "input_json_file" => $somaticCNV_pipeline->{"input_file"},
     "input_parameters" => {
-      "CNVSomaticPairWorkflow.intervals" => $def->{covered_bed},
+      "CNVSomaticPairWorkflow.intervals" => $interval,
       "CNVSomaticPairWorkflow.funcotator_ref_version" => $funcotator_ref_version,
       "CNVSomaticPairWorkflow.is_run_funcotator" => $run_funcotator,
       "CNVSomaticPairWorkflow.normal_bam_ref" => [$somaticCNV_normal_files, ".bam\$"],
@@ -477,6 +482,11 @@ sub addSomaticCNV {
   if (defined($def->{"CNVSomaticPairWorkflow.common_sites"}) and $def->{"CNVSomaticPairWorkflow.common_sites"} ne "") {
     $config->{$somaticCNV_call}->{input_parameters}->{"CNVSomaticPairWorkflow.common_sites"}=$def->{"CNVSomaticPairWorkflow.common_sites"};
   }
+
+  if (defined($def->{"CNVSomaticPairWorkflow.gatk4_jar_override"}) and $def->{"CNVSomaticPairWorkflow.gatk4_jar_override"} ne "") {
+    $config->{$somaticCNV_call}->{input_parameters}->{"CNVSomaticPairWorkflow.gatk4_jar_override"}=$def->{"CNVSomaticPairWorkflow.gatk4_jar_override"};
+  }
+
   push(@$summary, $somaticCNV_call);
 
 #summary CNV results
