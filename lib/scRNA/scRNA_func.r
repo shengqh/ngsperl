@@ -3037,7 +3037,7 @@ convert_seurat_v5_to_v3<-function(obj){
   return(obj)
 }
 
-get_filtered_obj<-function(obj, ct_meta, filter_column){
+get_filtered_obj<-function(subobj, ct_meta, filter_column){
   ct_tbl = table(ct_meta[,filter_column])
   ct_tbl = ct_tbl[order(ct_tbl, decreasing=T)]
   top5=names(ct_tbl)[1:min(5, length(ct_tbl))]
@@ -3048,8 +3048,10 @@ get_filtered_obj<-function(obj, ct_meta, filter_column){
 
   all_cts=unique(c(top5, topperc))
 
-  cur_meta = ct_meta[ct_meta[,filter_column] %in% all_cts,]
+  cur_meta = ct_meta[as.character(ct_meta[,filter_column]) %in% all_cts,]
   cells = rownames(cur_meta)
-  ct_obj = subset(obj, cells=cells)
+  ct_obj = subset(subobj, cells=cells)
+
+  ct_obj@meta.data[,filter_column] = factor_by_count(ct_obj[[filter_column]])
   return(ct_obj)
 }
