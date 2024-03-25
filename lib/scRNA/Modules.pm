@@ -1833,9 +1833,10 @@ sub addSubCluster {
     $essential_gene_task, 
     $cur_options, 
     $rename_map, 
+    $rmd_ext,
     $signacX_ref, 
     $singleR_ref,
-    $rmd_ext) = @_;
+    $azimuth_ref) = @_;
 
   my $by_integration;
   my $integration_by_harmony;
@@ -1908,6 +1909,7 @@ sub addSubCluster {
     parameterSampleFile4_ref => $signacX_ref,
     parameterSampleFile5_ref => $singleR_ref,
     parameterSampleFile6 => $def->{dynamic_bubble_files},
+    parameterSampleFile7_ref => $azimuth_ref,
     output_file_ext      => ".meta.rds,.files.csv",
     sh_direct            => 1,
     pbs                  => {

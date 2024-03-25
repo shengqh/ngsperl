@@ -678,7 +678,7 @@ sub getScRNASeqConfig {
             }
           }
 
-          $subcluster_task = addSubCluster($config, $def, $tasks, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, ".dynamic_subcluster.html");
+          $subcluster_task = addSubCluster($config, $def, $tasks, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, ".dynamic_subcluster.html", $signacX_ref, $singleR_ref,  $azimuth_ref);
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_dynamic_choose")) {
@@ -917,7 +917,7 @@ sub getScRNASeqConfig {
           };
           my $rename_map = $def->{"multires_rename_map"};
 
-          addSubCluster($config, $def, $tasks, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $signacX_ref, $singleR_ref, , ".multires_subcluster.html");
+          addSubCluster($config, $def, $tasks, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, ".multires_subcluster.html", $signacX_ref, $singleR_ref, $azimuth_ref);
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
           if(getValue($def, "perform_multires_choose", 0)) {

@@ -1,16 +1,17 @@
 rm(list=ls()) 
-outFile='P10940'
+outFile='iSGS_cell_atlas'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge/result/P10940.final.rds'
-parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_1_call/result/P10940.scDynamic.meta.rds'
-parFile3='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/essential_genes/result/P10940.txt'
+parSampleFile7='fileList7.txt'
+parFile1='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/essential_genes/result/iSGS_cell_atlas.txt'
 
 
-setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
+setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -106,6 +107,12 @@ bHasSingleR<-FALSE
 if(exists('parSampleFile5')){
   meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
   bHasSingleR<-TRUE
+}
+
+bHasAzimuth<-FALSE
+if(exists('parSampleFile7')){
+  meta = fill_meta_info_list(parSampleFile7, meta, "Azimuth_finest", "Azimuth")
+  bHasAzimuth<-TRUE
 }
 
 obj<-read_object(parFile1)
@@ -286,11 +293,54 @@ get_bubblemap_file<-function(pct, bubble_file_map, bubblemap_file){
   }
 }
 
+check_cell_type<-function(subobj, ct_column, filelist){
+  stopifnot(ct_column %in% colnames(subobj@meta.data))
+
+  sxobj=get_filtered_obj(subobj, subobj@meta.data, ct_column)
+  sxnames<-levels(sxobj[[ct_column]])
+
+  g4<-get_dim_plot_labelby(sxobj, reduction="umap", label.by = ct_column, label=T) + ggtitle(ct_column)
+  g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = ct_column, label=T) + ggtitle(paste0(subumap, ": ", ct_column))
+  g<-g4+g5+plot_layout(ncol=2)
+
+  signacx_file=paste0(curprefix, ".", ct_column, ".umap.png")
+  ggsave(signacx_file, g, width=3600, height=1500, dpi=300, units="px", bg="white")
+  rm(g4, g5, g)
+
+  cur_df = data.frame("file"=signacx_file, "type"=ct_column, "resolution"="", "celltype"=pct)
+  filelist<-rbind(filelist, cur_df)
+
+  if(has_bubblemap){
+    g<-get_sub_bubble_plot(obj, ct_column, sxobj, ct_column, bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
+
+    dot_file = paste0(curprefix, ".dot.SignacX.png")
+    ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, ct_column), dpi=300, units="px", bg="white")
+    rm(g)
+
+    filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), paste0(ct_column, " celltype"), "", pct))
+  }
+
+  if(pct %in% names(bubble_file_map)){
+    cur_bubblemap_file = bubble_file_map[[pct]]
+    g<-get_sub_bubble_plot(obj, ct_column, sxobj, ct_column, cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
+
+    dot_file = paste0(curprefix, ".dot.SignacX.subcelltypes.png")
+    ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, ct_column), dpi=300, units="px", bg="white")
+    rm(g)
+
+    filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), paste0(ct_column, " sub celltype"), "", pct))
+  }
+
+  rm(sxobj)
+
+  return(filelist)
+}
+
 filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[10]
 cat("memory used: ", lobstr_mem_used(), "\n")
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
@@ -332,100 +382,18 @@ for(pct in previous_celltypes){
   reductions_rds = paste0(curprefix, ".reductions.rds")
   saveRDS(subobj@reductions, reductions_rds)
 
-  min_percentage = 0.05
-  bHasCurrentSignacX<-FALSE
   if(bHasSignacX){
-    sx<-table(subobj$SignacX)
-    sx<-sx[sx > max(5, ncol(subobj) * min_percentage)]
-    sxnames<-names(sx)
-    
-    sxobj<-subset(subobj, SignacX %in% sxnames)
-    sxobj$SignacX<-as.character(sxobj$SignacX)
-
-    g4<-get_dim_plot_labelby(sxobj, reduction="umap", label.by = "SignacX", label=T) + ggtitle("SignacX")
-    g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = "SignacX", label=T) + ggtitle(paste0(subumap, ": SignacX"))
-    g<-g4+g5+plot_layout(ncol=2)
-
-    signacx_file=paste0(curprefix, ".SignacX.umap.png")
-    ggsave(signacx_file, g, width=3600, height=1500, dpi=300, units="px", bg="white")
-    rm(g4, g5, g)
-
-    bHasCurrentSignacX = any(sxnames != "Unclassified")
-
-    cur_df = data.frame("file"=signacx_file, "type"="SignacX", "resolution"="", "celltype"=pct)
-    filelist<-rbind(filelist, cur_df)
-
-    if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
-
-      dot_file = paste0(curprefix, ".dot.SignacX.png")
-      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), dpi=300, units="px", bg="white")
-      rm(g)
-
-      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SignacX celltype", "", pct))
-    }
-
-    if(pct %in% names(bubble_file_map)){
-      cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "SignacX", sxobj, "SignacX", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
-
-      dot_file = paste0(curprefix, ".dot.SignacX.subcelltypes.png")
-      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, "SignacX"), dpi=300, units="px", bg="white")
-      rm(g)
-
-      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SignacX sub celltype", "", pct))
-    }
-
-    rm(sxobj)
+    filelist = check_cell_type(subobj, "SignacX", filelist)
   }
 
-  bHasCurrentSingleR<-FALSE
   if(bHasSingleR){
-    sx<-table(subobj$SingleR)
-    sx<-sx[sx > max(5, ncol(subobj) * min_percentage)]
-    sxnames<-names(sx)
-
-    srobj<-subset(subobj, SingleR %in% sxnames)
-    srobj$SingleR<-as.character(srobj$SingleR)
-    bHasCurrentSingleR<-TRUE
-
-    g4<-get_dim_plot_labelby(srobj, reduction="umap", label.by = "SingleR", label=T) + ggtitle("SingleR")
-    g5<-get_dim_plot_labelby(srobj, reduction=subumap, label.by = "SingleR", label=T) + ggtitle(paste0(subumap, ": SingleR"))
-    g<-g4+g5+plot_layout(ncol=2)
-    signacr_file=paste0(curprefix, ".SingleR.umap.png")
-    ggsave(signacr_file, g, width=3600, height=1500, dpi=300, units="px", bg="white")
-
-    rm(g4, g5, g)
-
-    cur_df = data.frame("file"=signacr_file, "type"="SingleR", "resolution"="", "celltype"=pct)
-    filelist<-rbind(filelist, cur_df)
-
-    if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
-
-      dot_file = paste0(curprefix, ".dot.SingleR.png")
-      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), dpi=300, units="px", bg="white")
-      rm(g)
-
-      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SingleR celltype", "", pct))
-    }
-
-    if(pct %in% names(bubble_file_map)){
-      cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "SingleR", srobj, "SingleR", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
-
-      dot_file = paste0(curprefix, ".dot.SingleR.subcelltypes.png")
-      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(srobj, "SingleR"), dpi=300, units="px", bg="white")
-      rm(g)
-
-      filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), "SingleR sub celltype", "", pct))
-    }
-
-    bHasCurrentSingleR = any(sxnames != "unclassified")
-
-    rm(srobj)
+    filelist = check_cell_type(subobj, "SingleR", filelist)
   }
-  
+
+  if(bHasAzimuth){
+    filelist = check_cell_type(subobj, "Azimuth", filelist)
+  }
+   
   cluster = clusters[10]
   markers_map = list()
   for(cluster in clusters){
@@ -494,24 +462,6 @@ for(pct in previous_celltypes){
     
     meta_rds = paste0(cluster_prefix, ".meta.rds")
     saveRDS(subobj@meta.data, meta_rds)
-    
-    # if(bHasCurrentSignacX){
-    #   sx<-table(subobj$SignacX)
-    #   sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
-    #   sxnames<-names(sx)
-    #   sxnames<-sxnames[sxnames != "Unclassified"]
-    #   sxobj<-subset(subobj, SignacX %in% sxnames)
-    #   sxobj$SignacX<-as.character(sxobj$SignacX)
-    # }
-
-    # if(bHasCurrentSingleR){
-    #   sx<-table(subobj$SingleR)
-    #   sx<-sx[sx > max(5, ncol(subobj) * 0.01)]
-    #   sxnames<-names(sx)
-    #   sxnames<-sxnames[sxnames != "unclassified"]
-    #   srobj<-subset(subobj, SingleR %in% sxnames)
-    #   srobj$SingleR<-as.character(srobj$SingleR)
-    # }
 
     bar_file=paste0(cluster_prefix, ".bar.png")
     g<-get_barplot(
