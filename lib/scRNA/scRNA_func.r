@@ -3024,3 +3024,32 @@ save_volcano_plot<-function(edgeR_out_table,
     ggsave(volcano_file, p, width=width, height=height, units="in", dpi=300, bg="white")
   }
 }
+
+is_seurat_v5_object<-function(obj){
+  return(Version(obj) > '5')
+}
+
+convert_seurat_v5_to_v3<-function(obj){
+  if(is_seurat_v5_object(obj)){
+    obj[["RNA"]] <- as(object = obj[["RNA"]], Class = "Assay")
+    obj@version=package_version("3.0.0")
+  }
+  return(obj)
+}
+
+get_filtered_obj<-function(obj, ct_meta, filter_column){
+  ct_tbl = table(ct_meta[,filter_column])
+  ct_tbl = ct_tbl[order(ct_tbl, decreasing=T)]
+  top5=names(ct_tbl)[1:min(5, length(ct_tbl))]
+
+  ct_tbl = ct_tbl / sum(ct_tbl)
+  ct_tbl = ct_tbl[ct_tbl >= 0.01]
+  topperc=names(ct_tbl)
+
+  all_cts=unique(c(top5, topperc))
+
+  cur_meta = ct_meta[ct_meta[,filter_column] %in% all_cts,]
+  cells = rownames(cur_meta)
+  ct_obj = subset(obj, cells=cells)
+  return(ct_obj)
+}
