@@ -57,6 +57,9 @@ if(file.exists("iter_png.txt")){
 }
 
 meta_file=paste0(detail_prefix, ".meta.rds")
+if(!file.exists(meta_file)){
+  stop(paste0("Cannot find file ", meta_file))
+}
 meta<-readRDS(meta_file)
 
 cts<-levels(meta[,celltype_column])

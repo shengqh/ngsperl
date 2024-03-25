@@ -6,12 +6,12 @@ parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.iter_png.csv'
+parFile1='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_3_choose/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_3_choose/result/iSGS_cell_atlas.meta.rds'
+parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call_validation/result')
+setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_3_choose_validation/result')
 
 ### Parameter setting end ###
 
@@ -27,7 +27,7 @@ bubblemap_file = myoptions$bubblemap_file
 cur_assay = ifelse(is_one(myoptions$by_sctransform), "SCT", "RNA")
 species = myoptions$species
 
-file_dir=paste0(outFile, ".dynamic_call_validation")
+file_dir=paste0(outFile, gsub(".html", "", myoptions$rmd_ext))
 dir.create(file_dir, showWarnings=FALSE)
 file_prefix=file.path(file_dir, outFile)
 
@@ -91,16 +91,6 @@ saveRDS(meta, paste0(file_prefix, ".meta.rds"))
 
 obj<-read_object(parFile1)
 obj@meta.data = meta
-
-get_filtered_obj<-function(obj, ct_meta, filter_column){
-  ct_tbl = table(ct_meta[,filter_column])
-  ct_tbl = ct_tbl / sum(ct_tbl)
-  ct_tbl = ct_tbl[ct_tbl > 0.01]
-  cur_meta = ct_meta[ct_meta[,filter_column] %in% names(ct_tbl),]
-  cells = rownames(cur_meta)
-  ct_obj = subset(obj, cells=cells)
-  return(ct_obj)
-}
 
 if(length(unique(meta$orig.ident)) > 1){
   validation_columns<-c("orig.ident", validation_columns)
