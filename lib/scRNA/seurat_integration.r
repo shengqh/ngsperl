@@ -36,7 +36,9 @@ myoptions<-split(options_table$V1, options_table$V2)
 batch_for_integration<-ifelse(myoptions$batch_for_integration == "0", FALSE, TRUE)
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 
-prefix<-outFile
+detail_folder=paste0(myoptions$task_name, gsub(".html","",myoptions$rmd_ext))
+dir.create(detail_folder, showWarnings = FALSE)
+detail_prefix=file.path(detail_folder, myoptions$task_name)
 
 has_batch_file<-file.exists(parSampleFile2)
 
@@ -45,7 +47,7 @@ pca_dims<-1:as.numeric(myoptions$pca_dims)
 rawobj<-readRDS(parFile1)
 
 cat("preprocessing_rawobj ...\n")
-finalList<-preprocessing_rawobj(rawobj, myoptions, prefix)
+finalList<-preprocessing_rawobj(rawobj, myoptions, detail_prefix)
 rawobj<-finalList$rawobj
 finalList$rawobj<-NULL
 
@@ -123,7 +125,7 @@ obj <- ScaleData(obj, verbose = FALSE)
 cat("RunPCA ... \n")
 obj <- RunPCA(object = obj, verbose=FALSE)
 
-output_ElbowPlot(obj, outFile, "pca")
+output_ElbowPlot(obj, detail_prefix, "pca")
 
 cat("RunUMAP ... \n")
 obj <- RunUMAP(obj, reduction = "pca", dims = 1:30)    
@@ -140,4 +142,4 @@ saveRDS(finalList, file=finalListFile)
 rm(finalList)
 
 cat("output_integration_dimplot ... \n")
-output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
+output_integration_dimplot(obj, detail_prefix, FALSE, myoptions$qc_genes)

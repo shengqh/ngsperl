@@ -1,17 +1,18 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='iSGS_cell_atlas'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_rawdata/result/combined.rawobj.rds'
-parFile2='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/essential_genes/result/combined.txt'
-parFile3='/nobackup/h_cqs/shengq2/program/collaborations/celestine_wanjalla/20230115_combined_scRNA_hg38/20230501_filter_config.txt'
+parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA_nosct/seurat_rawdata/result/iSGS_cell_atlas.rawobj.rds'
+parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA_nosct/essential_genes/result/iSGS_cell_atlas.txt'
+parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_sct2_merge/result')
+setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA_nosct/seurat_merge/result')
 
 ### Parameter setting end ###
 
+source("scRNA_func.r")
 library(dplyr)
 library(Seurat)
 library(ggplot2)
@@ -24,13 +25,17 @@ library(stringr)
 library(glmGamPoi)
 require(data.table)
 library(patchwork)
-source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
+
+detail_folder=paste0(myoptions$task_name, gsub(".html","",myoptions$rmd_ext))
+dir.create(detail_folder, showWarnings = FALSE)
+detail_prefix=file.path(detail_folder, myoptions$task_name)
+
 npcs<-as.numeric(myoptions$pca_dims)
 pca_dims<-1:npcs
 
@@ -60,7 +65,7 @@ if(!is_preprocessed){
   finalList<-preprocessing_rawobj(
       rawobj=obj, 
       myoptions=myoptions, 
-      prefix=prefix, 
+      prefix=detail_prefix, 
       filter_config_file=parFile3)
 
   obj<-finalList$rawobj
@@ -117,4 +122,5 @@ saveRDS(finalList, file=finalListFile)
 #finalList<-readRDS(finalListFile)
 
 cat("output_integration_dimplot ... \n")
-output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
+output_integration_dimplot(obj, detail_prefix, FALSE, myoptions$qc_genes)
+

@@ -30,7 +30,9 @@ option_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F) %>%
 
 myoptions<-split(option_table$Value, option_table$Parameter)
 
-outFile=myoptions$task_name
+detail_folder=paste0(myoptions$task_name, gsub(".html","",myoptions$rmd_ext))
+detail_prefix=file.path(detail_folder, myoptions$task_name)
+
 is_preprocessed=is_one(myoptions$is_preprocessed)
 ```
 
@@ -43,69 +45,69 @@ print_table(option_table, row.names=F)
 # elbowplot
 
 ```{r, results="asis", echo=FALSE}
-include_graphics(paste0(outFile,".elbowplot.pca.png"))
+include_graphics(paste0(detail_prefix,".elbowplot.pca.png"))
 ```
 
 # Sample cells
 
 ```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
-tbl<-read.csv(paste0(outFile, ".filtered.cell.csv"))
+tbl<-read.csv(paste0(detail_prefix, ".filtered.cell.csv"))
 print(kable(tbl, row.names=F) %>%	kable_styling())
 ```
 
 ```{r, results="asis", echo=FALSE, eval=is_preprocessed}
-tbl<-fread(paste0(outFile, ".Ident.cell.txt"))
+tbl<-fread(paste0(detail_prefix, ".Ident.cell.txt"))
 print(kable(tbl, row.names=F) %>%	kable_styling())
 ```
 
 ```{r, results="asis", echo=FALSE}
-include_graphics(paste0(outFile,".Ident.cell.bar.png"))
+include_graphics(paste0(detail_prefix,".Ident.cell.bar.png"))
 ```
 
 ```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
 cat("\n\n# Filtering cutoffs\n\n")
-include_graphics(paste0(outFile,".qc.1.png"))
+include_graphics(paste0(detail_prefix,".qc.1.png"))
 ```
 
 ```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
 cat("\n\n# Number of reads ~ percentage of mitochondral\n\n")
-include_graphics(paste0(outFile,".qc.2.png"))
+include_graphics(paste0(detail_prefix,".qc.2.png"))
 ```
 
 ```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
 cat("\n\n# Number of features ~ percentage of mitochondral\n\n")
-include_graphics(paste0(outFile,".qc.3.png"))
+include_graphics(paste0(detail_prefix,".qc.3.png"))
 ```
 
 ```{r, results="asis", echo=FALSE, eval=!is_preprocessed}
 cat("\n\n# Sample characters after filtering\n\n")
-include_graphics(paste0(outFile,".qc.4.png"))
+include_graphics(paste0(detail_prefix,".qc.4.png"))
 ```
 
 # Sample UMAP
 
 ```{r, results="asis", echo=FALSE}
-include_graphics(paste0(outFile,".Ident.png"))
+include_graphics(paste0(detail_prefix,".Ident.png"))
 ```
 
 # Sample exp UMAP
 
 ```{r, results="asis", echo=FALSE}
-include_graphics(paste0(outFile,".Ident.qc.exp.png"))
+include_graphics(paste0(detail_prefix,".Ident.qc.exp.png"))
 ```
 
 ```{r, results="asis", echo=FALSE, fig.width=5, fig.height=5}
-adt_file=paste0(outFile,".ADT.txt")
+adt_file=paste0(detail_prefix,".ADT.txt")
 if(file.exists(adt_file)){
   result = "\n\n# Protein Antibodies\n\n"
   adts=readLines(adt_file)
   for(adt in adts){
     result=paste0(result, "\n\n## ", adt, "\n\n")
-    adt_common_png=paste0(outFile,".",adt,".common.png")
+    adt_common_png=paste0(detail_prefix,".",adt,".common.png")
     if(file.exists(adt_common_png)){
       result=paste0(result, getFigure_width_height(adt_common_png, in_details=FALSE, 10, 5))
     }else{
-      adt_png=paste0(outFile,".",adt,".png")
+      adt_png=paste0(detail_prefix,".",adt,".png")
       result=paste0(result, getFigure_width_height(adt_png, in_details=FALSE, 5, 5))
     }
   }

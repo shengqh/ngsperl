@@ -270,6 +270,7 @@ sub add_seurat {
     parameterFile3 => $qc_filter_config_file,
     parameterSampleFile1     => {
       task_name             => getValue( $def, "task_name" ),
+      rmd_ext => $rmd_ext,
       Mtpattern             => getValue( $def, "Mtpattern" ),
       rRNApattern           => getValue( $def, "rRNApattern" ),
       Remove_rRNA           => getValue( $def, "Remove_rRNA" ),
@@ -3227,6 +3228,7 @@ sub add_individual_qc_tasks{
   }
 
   my $qc_report_task = $raw_individual_qc_task . "_report";
+  my $rmd_ext = ".${prefix}qc.html";
   $config->{$qc_report_task} = {
     class => "CQS::UniqueR",
     perform => 1,
@@ -3234,8 +3236,9 @@ sub add_individual_qc_tasks{
     rtemplate => "../scRNA/scRNA_func.r,../scRNA/individual_qc_report.r",
     rReportTemplate => "../scRNA/individual_qc_report.Rmd;reportFunctions.R",
     run_rmd_independent => 1,
-    rmd_ext => ".${prefix}qc.html",
+    rmd_ext => $rmd_ext,
     parameterSampleFile1 => {
+      rmd_ext => $rmd_ext,
       species => getValue( $def, "species" ),
       prefix => $project_name,
       reduction => $reduction,

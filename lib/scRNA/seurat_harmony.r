@@ -33,7 +33,9 @@ random.seed=20200107
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-prefix<-outFile
+detail_folder=paste0(myoptions$task_name, gsub(".html","",myoptions$rmd_ext))
+dir.create(detail_folder, showWarnings = FALSE)
+detail_prefix=file.path(detail_folder, myoptions$task_name)
 
 has_batch_file<-file.exists(parSampleFile2)
 npcs<-as.numeric(myoptions$pca_dims)
@@ -41,7 +43,7 @@ pca_dims<-1:npcs
 
 obj<-readRDS(parFile1)
 
-finalList<-preprocessing_rawobj(obj, myoptions, prefix)
+finalList<-preprocessing_rawobj(obj, myoptions, detail_prefix)
 obj<-finalList$rawobj
 finalList<-finalList[names(finalList) != "rawobj"]
 
@@ -72,7 +74,7 @@ obj<-do_harmony(
 reduction="harmony"
 
 for (reduct in c("pca", "harmony")){
-  output_ElbowPlot(obj, outFile, reduct)
+  output_ElbowPlot(obj, detail_prefix, reduct)
 }
 
 cat("RunUMAP ... ")
@@ -87,4 +89,4 @@ finalList$obj<-obj
 finalListFile<-paste0(outFile, ".final.rds")
 saveRDS(finalList, file=finalListFile)
 
-output_integration_dimplot(obj, outFile, FALSE, myoptions$qc_genes)
+output_integration_dimplot(obj, detail_prefix, FALSE, myoptions$qc_genes)
