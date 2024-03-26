@@ -810,8 +810,9 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="")
   Mtpattern= myoptions$Mtpattern
   rRNApattern=myoptions$rRNApattern
   
+  all_samples=unique(rawobj$orig.ident)
   Cutoffs=init_cutoffs(
-    all_samples=unique(rawobj$orig.ident), 
+    all_samples=all_samples, 
     myoptions=myoptions, 
     filter_config_file=filter_config_file)
 
@@ -828,6 +829,10 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="")
     geom_vline(data=Cutoffs, aes(xintercept=nCount_cutoff, color=sample)) 
 
   p<-plot1+plot2
+
+  if(length(all_samples) > 10){
+    p<-p & NoLegend()
+  }
   ggsave(paste0(prefix, ".qc.1.png"), p, width=11, height=5, dpi=300, units="in", bg="white")
 
   mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
@@ -1168,7 +1173,7 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   return(g)
 }
 
-get_dot_width<-function(g, min_width=4400){
+get_dot_width<-function(g, min_width=5000){
   if(!all(c("features.plot","feature.groups") %in% colnames(g$data))){
     stop(paste0("features.plot or feature.groups is not in ", paste0(colnames(g$data), collapse = ",")))
   }
@@ -3037,7 +3042,7 @@ convert_seurat_v5_to_v3<-function(obj){
   return(obj)
 }
 
-get_filtered_obj<-function(subobj, ct_meta, filter_column){
+get_filtered_obj<-function(subobj, filter_column, ct_meta=subobj@meta.data){
   ct_tbl = table(ct_meta[,filter_column])
   ct_tbl = ct_tbl[order(ct_tbl, decreasing=T)]
   top5=names(ct_tbl)[1:min(5, length(ct_tbl))]
@@ -3052,6 +3057,6 @@ get_filtered_obj<-function(subobj, ct_meta, filter_column){
   cells = rownames(cur_meta)
   ct_obj = subset(subobj, cells=cells)
 
-  ct_obj@meta.data[,filter_column] = factor_by_count(ct_obj[[filter_column]])
+  ct_obj@meta.data[,filter_column] = factor_by_count(ct_obj@meta.data[,filter_column])
   return(ct_obj)
 }
