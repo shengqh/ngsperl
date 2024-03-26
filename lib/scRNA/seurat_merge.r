@@ -99,7 +99,7 @@ obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
 # writeLines(paste0("pcs\t", final_pcs), con=paste0(outFile, ".pca.txt"))
 # cat(paste0("recommend pcs=", final_pcs))
 
-output_ElbowPlot(obj, outFile, "pca")
+output_ElbowPlot(obj, detail_prefix, "pca")
 
 cat("RunUMAP ... \n")
 obj <- RunUMAP(object = obj, dims=pca_dims, verbose = FALSE)
