@@ -293,27 +293,27 @@ get_bubblemap_file<-function(pct, bubble_file_map, bubblemap_file){
   }
 }
 
-check_cell_type<-function(subobj, ct_column, filelist){
+check_cell_type<-function(subobj, ct_column, filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map){
   stopifnot(ct_column %in% colnames(subobj@meta.data))
 
-  sxobj=get_filtered_obj(subobj, subobj@meta.data, ct_column)
+  sxobj=get_filtered_obj(subobj, ct_column)
   sxnames<-levels(sxobj[[ct_column]])
 
   g4<-get_dim_plot_labelby(sxobj, reduction="umap", label.by = ct_column, label=T) + ggtitle(ct_column)
   g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = ct_column, label=T) + ggtitle(paste0(subumap, ": ", ct_column))
   g<-g4+g5+plot_layout(ncol=2)
 
-  signacx_file=paste0(curprefix, ".", ct_column, ".umap.png")
-  ggsave(signacx_file, g, width=3600, height=1500, dpi=300, units="px", bg="white")
+  ct_file=paste0(curprefix, ".", ct_column, ".umap.png")
+  ggsave(ct_file, g, width=3600, height=1500, dpi=300, units="px", bg="white")
   rm(g4, g5, g)
 
-  cur_df = data.frame("file"=signacx_file, "type"=ct_column, "resolution"="", "celltype"=pct)
+  cur_df = data.frame("file"=ct_file, "type"=ct_column, "resolution"="", "celltype"=pct)
   filelist<-rbind(filelist, cur_df)
 
   if(has_bubblemap){
-    g<-get_sub_bubble_plot(obj, ct_column, sxobj, ct_column, bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
+    g<-get_sub_bubble_plot(obj, ct_column, sxobj, ct_column, bubblemap_file, add_num_cell=TRUE, species=species)
 
-    dot_file = paste0(curprefix, ".dot.SignacX.png")
+    dot_file = paste0(curprefix, ".dot.", ct_column, ".png")
     ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, ct_column), dpi=300, units="px", bg="white")
     rm(g)
 
@@ -324,7 +324,7 @@ check_cell_type<-function(subobj, ct_column, filelist){
     cur_bubblemap_file = bubble_file_map[[pct]]
     g<-get_sub_bubble_plot(obj, ct_column, sxobj, ct_column, cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
-    dot_file = paste0(curprefix, ".dot.SignacX.subcelltypes.png")
+    dot_file = paste0(curprefix, ".dot.", ct_column, ".subcelltypes.png")
     ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, ct_column), dpi=300, units="px", bg="white")
     rm(g)
 
@@ -340,6 +340,7 @@ filelist<-NULL
 allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
+#previous_celltypes=rev(previous_celltypes)
 pct<-previous_celltypes[10]
 cat("memory used: ", lobstr_mem_used(), "\n")
 for(pct in previous_celltypes){
@@ -383,15 +384,15 @@ for(pct in previous_celltypes){
   saveRDS(subobj@reductions, reductions_rds)
 
   if(bHasSignacX){
-    filelist = check_cell_type(subobj, "SignacX", filelist)
+    filelist = check_cell_type(subobj, "SignacX", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
   }
 
   if(bHasSingleR){
-    filelist = check_cell_type(subobj, "SingleR", filelist)
+    filelist = check_cell_type(subobj, "SingleR", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
   }
 
   if(bHasAzimuth){
-    filelist = check_cell_type(subobj, "Azimuth", filelist)
+    filelist = check_cell_type(subobj, "Azimuth", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
   }
    
   cluster = clusters[10]
