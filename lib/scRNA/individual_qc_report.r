@@ -11,7 +11,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/raw_qc_sct2_report/result')
+setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA_nosct/raw_qc_report/result')
 
 ### Parameter setting end ###
 
@@ -25,15 +25,18 @@ options(future.globals.maxSize= 10779361280)
 myoptions = read_file_map(parSampleFile1, do_unlist=FALSE)
 doublet_column = myoptions$doublet_column
 celltype_cluster_column = myoptions$celltype_column
-
 celltype_column="orig.ident"
+
+rmd_ext=gsub(".html","",myoptions$rmd_ext)
+detail_folder=paste0(myoptions$prefix, rmd_ext)
+dir.create(detail_folder, showWarnings = FALSE)
+detail_prefix=file.path(detail_folder, myoptions$prefix)
 
 obj_map<-read_file_map(parSampleFile2)
 
 sample_names=names(obj_map)
 
 validation_columns=c()
-
 
 has_sctk<-file.exists(parSampleFile3)
 if(has_sctk){
@@ -69,7 +72,7 @@ if(has_azimuth){
   validation_columns<-c(validation_columns, "Azimuth")
 }
 
-draw_figure<-function(sample_name, cur_meta, cur_validation_columns){
+draw_figure<-function(sample_prefix, cur_meta, cur_validation_columns){
   alltbl=NULL
 
   col_name="SignacX"
@@ -91,7 +94,7 @@ draw_figure<-function(sample_name, cur_meta, cur_validation_columns){
   height = max(800, length(unique(alltbl$Var1)) * 150) + 500
   width = max(1000, length(unique(alltbl$Var2)) * 50) + 1000
 
-  png(paste0(sample_name, ".validation.png"), width=width, height=height, res=300)
+  png(paste0(sample_prefix, ".validation.png"), width=width, height=height, res=300)
   print(g)
   dev.off()
 }
@@ -103,6 +106,8 @@ sample_name = sample_names[1]
 for(sample_name in sample_names){
   cat("read", sample_name, "...\n")
   obj_file = obj_map[[sample_name]]
+
+  sample_prefix = file.path(detail_folder, sample_name)
 
   object.list<-readRDS(obj_file)
   stats_df<-rbind(stats_df, object.list[[sample_name]]$preprocess)
@@ -183,25 +188,24 @@ for(sample_name in sample_names){
       g2<-g2 + facet_grid(DF~.)
     }
     g<-g1+g2+plot_layout(design="ABBB")
-    png(paste0(sample_name, ".decontX.png"), width=4400, height=1600, res=300)
-    print(g)
-    dev.off()
+    ggsave(paste0(sample_prefix, ".decontX.png"), width=4400, height=1600, dpi=300, units="px", bg="white")
   }
   
   rownames(cur_meta)<-paste0(sample_name, "_", rownames(cur_meta))
   cat("save meta ...\n")
-  saveRDS(cur_meta, paste0(sample_name, ".meta.rds"))
+  saveRDS(cur_meta, paste0(sample_prefix, ".meta.rds"))
 
   cat("draw_figure ...\n")
-  draw_figure(sample_name, cur_meta, cur_validation_columns)
+  draw_figure(sample_prefix, cur_meta, cur_validation_columns)
 }
 
 stats_df<-stats_df[,colnames(stats_df) != "tringsAsFactors"]
 if(all(colnames(stats_df)[1:2] == "sample")){
   stats_df=stats_df[,c(2:ncol(stats_df))]
 }
-write.csv(stats_df, "sample_summary.csv", row.names=F)
+write.csv(stats_df, file.path(detail_folder, "sample_summary.csv"), row.names=F)
 
 ct_tb<-acast(ct_tb, "Sample~Var1",  value.var="Freq", fill=0)
-write.csv(ct_tb, "sample_celltype.csv", row.names=TRUE)
-writeLines(validation_columns, "validation_columns.txt")
+write.csv(ct_tb, file.path(detail_folder, "sample_celltype.csv"), row.names=TRUE)
+writeLines(validation_columns, file.path(detail_folder,"validation_columns.txt"))
+

@@ -39,6 +39,7 @@ option_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F) %>%
   dplyr::rename(Value=V1, Parameter=V2)
 
 myoptions<-split(option_table$Value, option_table$Parameter)
+detail_folder=paste0(myoptions$prefix, gsub(".html", "", myoptions$rmd_ext))
 
 print(kable(option_table))
 
@@ -49,7 +50,7 @@ samples_names=names(obj_map)
 # Sample summary
 
 ```{r echo=FALSE, results="asis"}
-stats_df<-fread("sample_summary.csv", data.table=F)
+stats_df<-fread(file.path(detail_folder, "sample_summary.csv"), data.table=F)
 if(all(is.na(stats_df$cluster_remove))){
   stats_df=stats_df[,colnames(stats_df) != "cluster_remove"]
 }
@@ -59,7 +60,7 @@ print(kable(stats_df))
 # Sample/Celltype
 
 ```{r echo=FALSE, results="asis"}
-ct_tb<-fread("sample_celltype.csv", data.table=F)
+ct_tb<-fread(file.path(detail_folder, "sample_celltype.csv"), data.table=F)
 colnames(ct_tb)[1] = "sample"
 print(kable(ct_tb))
 ```
@@ -121,7 +122,7 @@ figureRmd<-function(obj_map, samples_names){
     result<-paste0(result, getFigure(paste0(sample_prefix, ".bubble.png"), FALSE))
 
     result<-paste0(result, "\n## Validation of ", cur_sample, "\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".validation.png"), FALSE))
+    result<-paste0(result, getFigure(file.path(detail_folder, paste0(cur_sample, ".validation.png")), FALSE))
     result<-paste0(result, "\n---\n")
   }
   return(result)
