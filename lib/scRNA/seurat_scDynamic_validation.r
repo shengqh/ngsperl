@@ -126,7 +126,7 @@ for(ct in cts){
   }
 
   if("SingleR" %in% validation_columns){
-    ct_obj = get_filtered_obj(obj, ct_meta, "SingleR")
+    ct_obj = get_filtered_obj(obj, "SingleR", ct_meta)
     singleR_ct=unique(ct_obj$SingleR)
 
     g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="SingleR",  title="SingleR in old UMAP") + guides(fill=guide_legend(ncol =1))
@@ -142,7 +142,7 @@ for(ct in cts){
   }
 
   if("SignacX" %in% validation_columns){
-    ct_obj = get_filtered_obj(obj, ct_meta, "SignacX")
+    ct_obj = get_filtered_obj(obj, "SignacX", ct_meta)
     signacX_ct=unique(ct_obj$SignacX)
 
     g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="SignacX",  title="SignacX in old UMAP") + guides(fill=guide_legend(ncol =1))
@@ -158,7 +158,7 @@ for(ct in cts){
   }
 
   if("Azimuth" %in% validation_columns){
-    ct_obj = get_filtered_obj(obj, ct_meta, "Azimuth")
+    ct_obj = get_filtered_obj(obj, "Azimuth", ct_meta)
 
     g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="Azimuth",  title="Azimuth in old UMAP") + guides(fill=guide_legend(ncol =1))
     ggsave(paste0(file_prefix, ".", pct, ".Azimuth.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
