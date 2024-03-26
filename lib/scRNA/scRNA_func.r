@@ -173,13 +173,19 @@ MyDimPlot<-function(...){
 
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
-MyDoHeatMap<-function(obj, max_cell=5000, ...){
+MyDoHeatMap<-function(obj, max_cell=5000, features=NULL, assay=NULL, slot = "scale.data", ...){
   if(ncol(obj) > max_cell){
-    subsampled <- subset(obj, cells = sample(colnames(obj), size=max_cell, replace=F))
-    g<-DoHeatmap(subsampled, ...)
+    cur_obj <- subset(obj, cells = sample(colnames(obj), size=max_cell, replace=F))
   }else{
-    g<-DoHeatmap(obj, ...)
+    cur_obj <- obj
   }
+  if(slot=="scale.data"){
+    scale_data=MyGetAssayData(cur_obj, assay=assay, slot="scale.data")
+    if(!all(features %in% rownames(scale_data))){
+      cur_obj <- ScaleData(cur_obj, features=features)
+    }
+  }
+  g<-DoHeatmap(cur_obj, features=features, assay=assay, slot=slot, ...)
   return(g)
 }
 
