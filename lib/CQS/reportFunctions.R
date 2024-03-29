@@ -340,6 +340,16 @@ get_log_cpm<-function(counts, prefix=NULL, filterCPM=TRUE, transform=TRUE){
   }
 }
 
+read_file_map<-function(file_list_path, sep="\t", header=F, do_unlist=TRUE){
+  tbl=fread(file_list_path, header=header, data.table=FALSE)
+
+  result<-split(tbl$V1, tbl$V2)
+  if(do_unlist){
+    result<-unlist(result)
+  }
+  return(result)
+}
+
 ###################################
 #report functions end
 ###################################

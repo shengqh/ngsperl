@@ -29,16 +29,6 @@ library(ggplot2)
 library(tibble)
 library(cowplot)
 
-is_one<-function(value, defaultValue=FALSE){
-  if(is.null(value)){
-    return(defaultValue)
-  }
-  if(is.na(value)){
-    return(defaultValue)
-  }
-  return(value == '1')
-}
-
 if(exists("parSampleFile4")){
   myoptions_tbl<-read.table(parSampleFile4, sep="\t", stringsAsFactors = F)
   myoptions<-split(myoptions_tbl$V1, myoptions_tbl$V2)

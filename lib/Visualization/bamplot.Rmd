@@ -1,0 +1,80 @@
+---
+title: "BAM Plot Report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
+
+```{r setup, include=FALSE}
+library(kableExtra)
+library(formatR)
+
+source("reportFunctions.R")
+
+myoptions<-read_file_map("fileList1.report.txt", do_unlist=FALSE)
+
+task_name=myoptions$task_name
+email=myoptions$email
+affiliation=myoptions$affiliation
+gene_shift=myoptions$gene_shift
+
+knitr::opts_chunk$set(
+  echo=FALSE,  
+  message=FALSE, 
+  warning=FALSE, 
+  results='asis', 
+  tidy=FALSE)
+```
+
+---
+author:
+- name: `r email`
+  affiliation: `r affiliation`
+---
+
+No matter whether the gene is in forward or reverse strand, it is always shown from 5' to 3' in the figure.
+
+```{r}
+if(gene_shift > 0){
+  cat("The gene locus was shifted", gene_shift, "bases to include possible promoter/TF region.\n\n")
+}
+```
+
+```{r}
+getFigure_width_height<-function(filepath){
+  result = paste0("\n```{r,echo=FALSE,results='asis', fig.width=12, out.width='100%', fig.height=8, out.height='100%'}\n")
+  return(paste0(result, "knitr::include_graphics('", filepath, "')\n```\n\n"))
+}
+```
+
+```{r}
+gff_file <- paste0(task_name, ".gff")
+gff = fread(gff_file, header=FALSE, sep="\t")
+gff$gene_strand=paste0(gff$V2, " (", gff$V7, ")")
+
+result=""
+for(idx in c(1:nrow(gff))){
+  gene = gff$V2[idx]
+  gene_strand = gff$gene_strand[idx]
+  pdf_file = paste0(task_name, "_", gene, ".pdf")
+  result = paste0(result, "\n# ", gene_strand, "\n\n")
+  result = paste0(result, "![](./", pdf_file, "){width=800 height=700}\n\n")
+}
+gene_rmd="genes.rmd"
+writeLines(result, gene_rmd)
+```
+
+```{r child=gene_rmd}
+```

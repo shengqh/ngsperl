@@ -102,7 +102,7 @@ if(is.na(height)){
   plotHeight=height
 }
 if(plotStyle == 'MULTIPLE'){
-  plotHeight = max(plotHeight, (nrow(plotTable)+1))
+  plotHeight = max(plotHeight, (nrow(plotTable) * 0.5 +1))
 }
 
 #now open up the pdf if this is a multipage pdf

@@ -648,6 +648,10 @@ python $rename_2_py __NAME__.all_dGiven.peaks.raw.txt __NAME__.all_dGiven.peaks.
     }
   }
 
+  if($def->{perform_bamplot}){
+    add_bamplot($config, $def, $summary_ref, $target_dir, $bam_ref);
+  }
+
   $config->{"sequencetask"} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,

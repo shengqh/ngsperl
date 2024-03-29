@@ -3720,24 +3720,36 @@ sub add_bamplot {
       print("writing annotation_locus to " . $gff_value . "\n");
       writeAnnotationLocus_gff($def->{annotation_locus}, $gff_value);
     }else{
-      $config->{gene_pos} = {
-        class        => "Annotation::PrepareGenePosition",
-        perform      => 1,
-        target_dir   => $target_dir . "/" . getNextFolderIndex($def) . "gene_pos",
-        option       => "",
-        dataset_name => getValue($def, "dataset_name"),
-        gene_names   => getValue($def, "gene_names"),
-        add_chr      => getValue($def, "add_chr"),
-        output_gff   => 1,
-        pbs          => {
+      $config->{bamplot_gene_gff} = {
+        class => "CQS::UniqueR",
+        target_dir => $target_dir . "/" . getNextFolderIndex($def) . "bamplot_gene_gff",
+        check_program => 0,
+        rtemplate => "../CQS/countTableVisFunctions.R,../Annotation/get_gene_locus.r",
+        output_file_ext => ".gff",
+        parameterSampleFile1 => {
+          task_name => getValue($def, "task_name"),
+          email => getValue($def, "email"),
+
+          biomart_host => getValue($def, "biomart_host"),
+          biomart_dataset   => getValue($def, "biomart_dataset"),
+          biomart_symbolKey => getValue($def, "biomart_symbolKey"),
+          biomart_add_chr => getValue($def, "biomart_add_chr"),
+
+          gene_names => getValue($def, "gene_names"),
+          gene_shift => getValue($def, "gene_shift", 0),
+
+          output_gff => 1,
+        },
+        sh_direct   => 1,
+        pbs => {
           "nodes"     => "1:ppn=1",
           "walltime"  => "2",
           "mem"       => "10gb"
-        },
+        }
       };
       $gff_key = "gff_file_ref";
-      $gff_value = "gene_pos";
-      push( @$tasks, "gene_pos" );
+      $gff_value = "bamplot_gene_gff";
+      push( @$tasks, "bamplot_gene_gff" );
     }
   }else{
     $gff_key = "gff_file";
@@ -3748,7 +3760,7 @@ sub add_bamplot {
     class              => "Visualization::Bamplot",
     perform            => 1,
     target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
-    option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
+    option             => "-g " . getValue($def, "dataset_name") . " -y uniform -r --save-temp",
     source_ref         => $bam_ref,
     $gff_key           => $gff_value,
     is_rainbow_color   => 0,
@@ -3765,6 +3777,31 @@ sub add_bamplot {
     },
   };
   push( @$tasks, "bamplot" );
+
+  $config->{bamplot_html} = {
+    class              => "CQS::UniqueRmd",
+    perform            => 1,
+    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
+    report_rmd_file => "../Visualization/bamplot.Rmd",
+    additional_rmd_files => "../CQS/reportFunctions.R",
+    option => "",
+    parameterSampleFile1 => {
+      task_name => getValue($def, "task_name"),
+      email => getValue($def, "email"),
+      affiliation => getValue($def, "affiliation", ""),
+      gene_shift => getValue($def, "gene_shift", 0),
+    },
+    suffix => ".report",
+    output_file_ext => ".report.html",
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+  push( @$tasks, "bamplot_html" );
 };
 
 sub add_fastq_screen {
