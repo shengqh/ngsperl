@@ -711,7 +711,7 @@ do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch
   #no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
   #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
   #we need to do sctransform first, then do RNA assay normalization and scale, otherwise, after sctransform, the scale.data slot will be discarded.
-  obj<-do_normalization(obj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+  obj<-do_normalization(obj, selection.method="vst", nfeatures=2000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
 
   DefaultAssay(obj)<-assay
 
@@ -1505,16 +1505,15 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     feats<-c(feats, "percent.hb")
   }
 
-  png(file=paste0(prefix, ".qc.violin.png"), width=6000, height=4000, res=300)
-  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = 3) + NoLegend()
-  print(g)
-  dev.off()
+  cat("draw qc voilin ...\n")
+  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = 3, raster=FALSE) + NoLegend()
+  ggsave(paste0(prefix, ".qc.violin.png"), g, width=6000, height=4000, dpi=300, units="px", bg="white")
 
   if('umap' %in% names(rawobj@reductions)){
     nfeature<-length(feats)
 
     by.col=nfeature>=nsample
-    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col)
+    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col, raster=FALSE)
     if(by.col){
       width = nsample * 800
       height = nfeature * 700
@@ -1523,41 +1522,37 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
       height = nsample * 700
     }
 
-    png(paste0(prefix, ".qc.exp.png"), width=width, height=height, res=300)
-    print(g)
-    dev.off()  
+    cat("draw qc exp ...\n")
+    ggsave(paste0(prefix, ".qc.exp.png"), g, width=width, height=height, dpi=300, units="px", bg="white")
   }
 
-  png(file=paste0(prefix, ".qc.png"), width=2600, height=1200, res=300)
-  p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + NoLegend()
-  p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") + NoLegend()
+  cat("draw qc scatter ...\n")
+  p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt", raster=FALSE) + NoLegend()
+  p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", raster=FALSE) + NoLegend()
   p<-p1+p2+plot_layout(ncol=2)
-  print(p)
-  dev.off()
+  ggsave(paste0(prefix, ".qc.png"), p, width=2600, height=1200, dpi=300, units="px", bg="white")
   
   mt<-data.frame(mt=rawobj$percent.mt, Sample=unlist(rawobj[[ident_name]]), nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
   nwidth=ceiling(sqrt(nsample))
   nheight=ceiling(nsample/nwidth)
-  
-  png(file=paste0(prefix, ".qc.read.png"), width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), res=300)
+
+  cat("draw qc mt and read ...\n")  
   p1<-ggplot(mt, aes(y=mt,x=nCount) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  print(p1)
-  dev.off()
+  ggsave(paste0(prefix, ".qc.read.png"), p1, width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), dpi=300, units="px", bg="white")
 
-  png(file=paste0(prefix, ".qc.feature.png"), width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), res=300)
+  cat("draw qc mt and feature ...\n")  
   p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
     geom_bin2d(bins = 70) + 
     scale_fill_continuous(type = "viridis") + 
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  print(p2)
-  dev.off()
+  ggsave(paste0(prefix, ".qc.feature.png"), p2, width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), dpi=300, units="px", bg="white")
 
   ct<-as.data.frame(table(rawobj[[ident_name]]))
   colnames(ct)<-c("Sample","Cell")
@@ -1594,16 +1589,15 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     }
   }
   write.table(ct, paste0(prefix, ".cell.txt"), sep="\t", row.names=F)
-  
+
+  cat("draw qc cell bar...\n")  
   if("Project" %in% colnames(ct)){
     g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Project))
   }else{
     g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Sample)) + NoLegend()
   }
   g<-g + geom_bar(stat="identity") + theme_bw3(axis.x.rotate = T)
-  png(paste0(prefix, ".cell.bar.png"), width=max(3000, nrow(ct) * 100), height=2000, res=300)
-  print(g)
-  dev.off()
+  ggsave(paste0(prefix, ".cell.bar.png"), g, width=max(3000, nrow(ct) * 100), height=2000, dpi=300, units="px", bg="white")
 }
 
 myScaleData<-function(object, features, assay, ...){
@@ -1801,7 +1795,7 @@ get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1, target_
     #   colnames(ct_count)<-colnames(de_obj)
     # }
 
-    ct_count<-MyGetAssayData(object = de_obj, assay = "RNA", slot = "counts")
+    ct_count<-MyGetAssayData(obj = de_obj, assay = "RNA", slot = "counts")
     groupings<-unlist(de_obj$orig.ident)
     p_count<-sumcount(ct_count, groupings)
 
@@ -1827,15 +1821,16 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
     writeLines(rownames(rawobj$ADT@counts), paste0(outFile, ".antibodies.txt"))
   }
 
-  C <- rawobj@assays$RNA@counts
+  cat("draw top 20 gene figure\n")
+  C <- MyGetAssayData(obj=rawobj, assay="RNA", slot="counts")
   if(ncol(C) > 100000){
     cat("Too many cells, sample 100000 cells for top20 genes visualization\n")
     C <- C[,sample(1:ncol(C), 100000)]
   }
   C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
-  mc<-rowMedians(C)
+  mc <- MatrixGenerics::rowMedians(C)
   most_expressed <- order(mc, decreasing = T)[20:1]
-  tm<-as.matrix(Matrix::t(C[most_expressed,]))
+  tm <- as.matrix(Matrix::t(C[most_expressed,]))
 
   png(paste0(outFile, ".top20.png"), width=3000, height=2000, res=300)
   par(mar = c(4, 8, 2, 1))
@@ -1846,13 +1841,16 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
   has_project = ifelse("project" %in% colnames(rawobj@meta.data), any(rawobj$orig.ident != rawobj$project),FALSE)
   has_sample = ifelse("sample" %in% colnames(rawobj@meta.data), any(rawobj$orig.ident != rawobj$sample), FALSE)
 
+  cat("draw qc by orig.ident\n")
   draw_feature_qc(outFile, rawobj, "orig.ident")
 
   if(has_sample){
+    cat("draw qc by sample\n")
     draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
   }
 
   if(has_project){
+    cat("draw qc by project\n")
     draw_feature_qc(paste0(outFile, ".project"), rawobj, "project")
   }
 
@@ -1945,7 +1943,7 @@ sub_cluster<-function(subobj,
       #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
     }else{
       cat(key, "redo normalization\n")
-      subobj<-do_normalization(subobj, selection.method="vst", nfeatures=3000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+      subobj<-do_normalization(subobj, selection.method="vst", nfeatures=2000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
     }
     cat(key, "RunPCA\n")
     subobj<-RunPCA(subobj, npcs=cur_npcs)
@@ -3051,13 +3049,13 @@ convert_seurat_v5_to_v3<-function(obj){
 get_filtered_obj<-function(subobj, filter_column, ct_meta=subobj@meta.data){
   ct_tbl = table(ct_meta[,filter_column])
   ct_tbl = ct_tbl[order(ct_tbl, decreasing=T)]
-  top5=names(ct_tbl)[1:min(5, length(ct_tbl))]
+  top=names(ct_tbl)[1:min(10, length(ct_tbl))]
 
   ct_tbl = ct_tbl / sum(ct_tbl)
   ct_tbl = ct_tbl[ct_tbl >= 0.01]
   topperc=names(ct_tbl)
 
-  all_cts=unique(c(top5, topperc))
+  all_cts=unique(c(top, topperc))
 
   cur_meta = ct_meta[as.character(ct_meta[,filter_column]) %in% all_cts,]
   cells = rownames(cur_meta)

@@ -292,7 +292,7 @@ sub add_seurat {
       thread => $thread,
     },
     parameterSampleFile2 =>  $def->{"batch_for_integration_groups"},
-    output_file_ext      => ".final.rds,.qc.1.png,.qc.2.png,.qc.3.png,.qc.4.png,.sample_cell.csv,.final.png",
+    output_file_ext      => ".final.rds",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=$thread",
@@ -1709,7 +1709,7 @@ sub addDynamicCluster {
   my ($config, $def, $summary, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column, $by_harmony) = @_;
 
   my $output_file_ext = $by_individual_sample ? ".celltype_cell_num.csv":".iter_png.csv,.scDynamic.meta.rds";
-  my $rmd_ext = $by_individual_sample ? ".dynamic_call_individual.html":".dynamic_call.html";
+  my $rmd_ext = $by_individual_sample ? ".scDynamic_call_individual.html":".scDynamic_call.html";
   my $rReportTemplate = $by_individual_sample ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R":"../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R";
   my $rscript = $by_harmony ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_harmony.r" : "../scRNA/seurat_scDynamic_one_layer_one_resolution.r";
 
@@ -1725,6 +1725,7 @@ sub addDynamicCluster {
     parameterFile3_ref => $essential_gene_task,
     parameterSampleFile1     => {
       task_name             => getValue( $def, "task_name" ),
+      rmd_ext => $rmd_ext,
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),

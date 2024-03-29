@@ -6,12 +6,12 @@ parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_3_choose/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_3_choose/result/iSGS_cell_atlas.meta.rds'
-parFile3=''
+parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.iter_png.csv'
 
 
-setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_3_choose_validation/result')
+setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_1_call_validation/result')
 
 ### Parameter setting end ###
 
@@ -96,6 +96,30 @@ if(length(unique(meta$orig.ident)) > 1){
   validation_columns<-c("orig.ident", validation_columns)
 }
 
+do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct){
+  tbl = as.data.frame(table(ct_meta[,validation_column]))
+  tbl=tbl[order(tbl$Freq, decreasing=TRUE),]
+  write.csv(tbl, paste0(file_prefix, ".", pct, ".", validation_column, ".csv"), row.names=FALSE)
+
+  ct_obj = get_filtered_obj(obj, validation_column, ct_meta)
+  cur_ct=unique(ct_obj@meta.data[,validation_column])
+
+  g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by=validation_column,  title=paste0(validation_column, " in old UMAP")) + guides(fill=guide_legend(ncol =1))
+  ggsave(paste0(file_prefix, ".", pct, ".", validation_column, ".png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
+
+  validation_cell=paste0(validation_column, "_Cell")
+
+  ct_obj@meta.data = add_column_count(ct_obj@meta.data, validation_column, validation_cell)
+  g<-get_bubble_plot( ct_obj, 
+                      assay=cur_assay,
+                      group.by=validation_cell, 
+                      bubblemap_file = bubblemap_file, 
+                      species=species)
+  ggsave(paste0(file_prefix, ".", pct, ".", validation_column, ".bubble.png"), g, width=get_dot_width(g), height=get_dot_height(ct_obj, validation_column), units="px", dpi=300, bg="white")
+
+  return(cur_ct)
+}
+
 cts = unique(meta[,celltype_column])
 
 ct = cts[1]
@@ -126,50 +150,15 @@ for(ct in cts){
   }
 
   if("SingleR" %in% validation_columns){
-    ct_obj = get_filtered_obj(obj, "SingleR", ct_meta)
-    singleR_ct=unique(ct_obj$SingleR)
-
-    g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="SingleR",  title="SingleR in old UMAP") + guides(fill=guide_legend(ncol =1))
-    ggsave(paste0(file_prefix, ".", pct, ".SingleR.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
-
-    ct_obj@meta.data = add_column_count(ct_obj@meta.data, "SingleR", "SingleR_Cell")
-    g<-get_bubble_plot( ct_obj, 
-                        assay=cur_assay,
-                        group.by="SingleR_Cell", 
-                        bubblemap_file = bubblemap_file, 
-                        species=species)
-    ggsave(paste0(file_prefix, ".", pct, ".SingleR.bubble.png"), g, width=get_dot_width(g), height=get_dot_height(ct_obj, "SingleR"), units="px", dpi=300, bg="white")
+    singleR_ct = do_validation(obj, ct_meta, "SingleR", file_prefix, pct)
   }
 
   if("SignacX" %in% validation_columns){
-    ct_obj = get_filtered_obj(obj, "SignacX", ct_meta)
-    signacX_ct=unique(ct_obj$SignacX)
-
-    g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="SignacX",  title="SignacX in old UMAP") + guides(fill=guide_legend(ncol =1))
-    ggsave(paste0(file_prefix, ".", pct, ".SignacX.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
-
-    ct_obj@meta.data = add_column_count(ct_obj@meta.data, "SignacX", "SignacX_Cell")
-    g<-get_bubble_plot( ct_obj, 
-                        assay=cur_assay,
-                        group.by="SignacX_Cell", 
-                        bubblemap_file = bubblemap_file, 
-                        species=species)
-    ggsave(paste0(file_prefix, ".", pct, ".SignacX.bubble.png"), g, width=get_dot_width(g), height=get_dot_height(ct_obj, "SignacX"), units="px", dpi=300, bg="white")
+    signacX_ct = do_validation(obj, ct_meta, "SignacX", file_prefix, pct)
   }
 
   if("Azimuth" %in% validation_columns){
-    ct_obj = get_filtered_obj(obj, "Azimuth", ct_meta)
-
-    g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by="Azimuth",  title="Azimuth in old UMAP") + guides(fill=guide_legend(ncol =1))
-    ggsave(paste0(file_prefix, ".", pct, ".Azimuth.png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
-
-    ct_obj@meta.data = add_column_count(ct_obj@meta.data, "Azimuth", "Azimuth_Cell")
-    g<-get_bubble_plot( ct_obj, 
-                        assay=cur_assay,
-                        group.by="Azimuth_Cell", 
-                        bubblemap_file = bubblemap_file, 
-                        species=species)
-    ggsave(paste0(file_prefix, ".", pct, ".Azimuth.bubble.png"), g, width=get_dot_width(g), height=get_dot_height(ct_obj, "Azimuth"), units="px", dpi=300, bg="white")
+    azimuth_ct = do_validation(obj, ct_meta, "Azimuth", file_prefix, pct)
   }
 
   if(all(c("SignacX", "SingleR") %in% validation_columns)){

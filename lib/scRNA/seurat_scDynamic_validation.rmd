@@ -108,6 +108,9 @@ iter_figure_rmd<-function(detail_prefix, cts, iter_png){
       singleR_file = paste0(detail_prefix, ".", ct_name, ".SingleR.png")
       if(file.exists(singleR_file)){
         result<-paste0(result, paste0("\n\n## SingleR\n\n"))
+        singleR_csv = paste0(detail_prefix, ".", ct_name, ".SingleR.csv")
+        result<-paste0(result, getTable(singleR_csv))
+
         result<-paste0(result, paste0("\n\n### UMAP\n\n"))
         result<-paste0(result, getFigure(singleR_file))
 
@@ -119,6 +122,9 @@ iter_figure_rmd<-function(detail_prefix, cts, iter_png){
       signacX_file = paste0(detail_prefix, ".", ct_name, ".SignacX.png")
       if(file.exists(signacX_file)){
         result<-paste0(result, paste0("\n\n## SignacX\n\n"))
+        SignacX_csv = paste0(detail_prefix, ".", ct_name, ".SignacX.csv")
+        result<-paste0(result, getTable(SignacX_csv))
+
         result<-paste0(result, paste0("\n\n### UMAP\n\n"))
         result<-paste0(result, getFigure(signacX_file))
 
@@ -130,6 +136,9 @@ iter_figure_rmd<-function(detail_prefix, cts, iter_png){
       azimuth_file = paste0(detail_prefix, ".", ct_name, ".Azimuth.png")
       if(file.exists(azimuth_file)){
         result<-paste0(result, paste0("\n\n## Azimuth\n\n"))
+        Azimuth_csv = paste0(detail_prefix, ".", ct_name, ".Azimuth.csv")
+        result<-paste0(result, getTable(Azimuth_csv))
+
         result<-paste0(result, paste0("\n\n### UMAP\n\n"))
         result<-paste0(result, getFigure(azimuth_file))
 

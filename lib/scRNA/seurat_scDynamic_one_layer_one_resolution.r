@@ -249,7 +249,7 @@ if(by_individual_sample){
                           cur_npcs = npcs, 
                           cur_pca_dims = c(1:npcs),
                           vars.to.regress = vars.to.regress,
-                          essential_genes = essential_genes)    
+                          essential_genes = NULL)    
 
     res_list = do_analysis( tmp_folder = tmp_folder,
                             cur_folder = cur_folder,
@@ -263,7 +263,7 @@ if(by_individual_sample){
                             prefix = sample, 
                             vars.to.regress = vars.to.regress, 
                             bubblemap_file = bubblemap_file, 
-                            essential_genes = essential_genes,
+                            essential_genes = NULL,
                             by_individual_sample = 1,
                             species = species)
 
@@ -295,7 +295,7 @@ if(by_individual_sample){
                           prefix = prefix, 
                           vars.to.regress = vars.to.regress, 
                           bubblemap_file = bubblemap_file, 
-                          essential_genes = essential_genes,
+                          essential_genes = NULL,
                           by_individual_sample = 0,
                           species = species);
 }

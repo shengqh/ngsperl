@@ -6,12 +6,12 @@ parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/essential_genes/result/iSGS_cell_atlas.txt'
+parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/essential_genes/result/iSGS_cell_atlas.txt'
 
 
-setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
+setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -189,8 +189,9 @@ if(!is_file_empty(parSampleFile3)){
         cells<-rownames(submeta)
       }else{
         cur_custers = unique(submeta[,cluster_column])
-        if(!(all(cluster %in% unlist(submeta[,cluster_column])))){
-          stop(paste0("Cannot find cluster ", paste0(cluster, collapse = "/"), " in cell type ", from, " of cluster ", cluster_column))
+        missed_clusters = setdiff(cluster, cur_custers)
+        if(length(missed_clusters) > 0){
+          stop(paste0("Cannot find cluster ", paste0(missed_clusters, collapse = "/"), " in cell type ", from, " of cluster ", cluster_column))
         }
 
         cells<-rownames(submeta)[submeta[,cluster_column] %in% cluster]

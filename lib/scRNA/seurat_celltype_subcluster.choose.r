@@ -1,18 +1,19 @@
 rm(list=ls()) 
-outFile='P8870_mm10'
+outFile='iSGS_cell_atlas'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/seurat_sct2_merge/result/P8870_mm10.final.rds'
-parFile2='/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/seurat_sct2_merge_dr0.1_2_subcluster_rh/result/P8870_mm10.meta.rds'
-parFile3='/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/essential_genes/result/P8870_mm10.txt'
-parFile4='/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/seurat_sct2_merge_dr0.1_2_subcluster_rh/result/P8870_mm10.files.csv'
+parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_2_subcluster_rh/result/iSGS_cell_atlas.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/essential_genes/result/iSGS_cell_atlas.txt'
+parFile4='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_2_subcluster_rh/result/iSGS_cell_atlas.files.csv'
 
 
-setwd('/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/seurat_sct2_merge_dr0.1_3_choose/result')
+setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_3_choose/result')
 
 ### Parameter setting end ###
 
+source("scRNA_func.r")
 library(tools)
 library(dplyr)
 library(Seurat)
@@ -28,7 +29,6 @@ library(stringr)
 library(htmltools)
 library(patchwork)
 library(testit)
-source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -193,13 +193,24 @@ if(!dir.exists(tmp_folder)){
 }
 setwd(tmp_folder)
 
+#meta = obj@meta.data
+#meta[, cur_layer] = as.character(meta[, cur_layer])
+
+meta$seurat_clusters=-1
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[2]
 for(pct in previous_celltypes){
   cat(pct, "\n")
+
+  cells<-rownames(meta)[meta[,previous_layer] == pct]
+
   best_res_row = subset(best_res_tbl, V3==pct)
   if(nrow(best_res_row) > 0){
-    best_res=as.numeric(subset(best_res_row, V2 == "resolution")$V1)
+    best_res_str=subset(best_res_row, V2 == "resolution")$V1
+    best_res=as.numeric(best_res_str)
+    if(is.na(best_res)){
+      best_res=best_res_str
+    }
   }else{
     best_res=0
   }
@@ -209,24 +220,32 @@ for(pct in previous_celltypes){
 
   reductions_rds = file.path(sub_dir, "details", paste0(outFile, ".", celltype_to_filename(pct), ".reductions.rds"))
   reductions<-readRDS(reductions_rds)
-  cells<-rownames(reductions$umap)
-  subobj<-subset(obj, cells=cells)
-  subobj@reductions<-reductions
   
   subumap<-as.data.frame(reductions$subumap@cell.embeddings)
   subumap<-subumap[rownames(subumap) %in% colnames(obj),,drop=FALSE]
   obj@reductions$subumap@cell.embeddings[rownames(subumap), "SUBUMAP_1"] = subumap$subumap_1
   obj@reductions$subumap@cell.embeddings[rownames(subumap), "SUBUMAP_2"] = subumap$subumap_2
 
-  cell_filename = paste0(outFile, ".pre.", celltype_to_filename(pct), ".cell.png")
-  save_highlight_cell_plot(cell_filename, subobj, group.by="orig.ident", reduction="subumap", reorder = FALSE) 
-  rm(subobj)
+  # subobj<-subset(obj, cells=cells)
+  # subobj@reductions<-reductions
+  # cell_filename = paste0(outFile, ".pre.", celltype_to_filename(pct), ".cell.png")
+  # save_highlight_cell_plot(cell_filename, subobj, group.by="orig.ident", reduction="subumap", reorder = FALSE) 
+  # rm(subobj)
   
-  if((best_res == 0) | (nrow(pct_res_files) == 0) | (!best_res %in% pct_res_files$resolution)){
+  is_single_cluster=FALSE
+  if((best_res == 0) | (nrow(pct_res_files) == 0)){
+    is_single_cluster=TRUE
+  }
+  if(is.numeric(best_res) & (!best_res %in% pct_res_files$resolution)){
+    is_single_cluster=TRUE
+  }
+
+  if(is_single_cluster){
     #no corresponding files, which means only one sub cluster
     cat("  only one subcluster\n")
+    meta[cells, "sub_clusters"] = 0
     meta[cells, seurat_clusters] = cluster_index
-    meta[cells, resolution_col] = 0
+    meta[cells, resolution_col] = "0"
     cluster_index = cluster_index + 1
     
     if(nrow(best_res_row) > 0){
@@ -240,9 +259,70 @@ for(pct in previous_celltypes){
       allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
     }
     
+    print(table(meta[,cur_layer], meta$seurat_clusters))
+
     next
   }
+
+  if(is.character(best_res)){
+    #assign cell type based on SignacX/SingleR/Azimuth
+    cat("  assign cluster by", best_res, "\n")
+    stopifnot(all(cells %in% rownames(meta)))
+
+    cur_meta=meta[cells,]
+    cur_meta$cur_layer = cur_meta[,best_res]
+    cur_meta$cur_layer[is.na(cur_meta$cur_layer)] = "DELETE"
+
+    ct_tbl=subset(best_res_row, V2 != "resolution")
+    if(!"DELETE" %in% ct_tbl$V2){
+      #The cell types not in list will be deleted.
+      ct_tbl=rbind(ct_tbl, data.frame(V1="OTHERS", V2="DELETE", V3=pct))
+    }
+
+    source_cts=unique(ct_tbl$V1)
+    anno_cts=setdiff(source_cts, "OTHERS")
+
+    source_ct=source_cts[2]
+    for(source_ct in source_cts){
+      target_ct=ct_tbl$V2[ct_tbl$V1==source_ct]
+      cat("   ", source_ct, "to", target_ct, "\n")
+      if(source_ct == "OTHERS"){
+        cur_cells=rownames(cur_meta)[!cur_meta[,best_res] %in% anno_cts]
+      }else{
+        cur_cells=rownames(cur_meta)[cur_meta[,best_res] %in% source_ct]
+      }
+      cur_meta[cur_cells, "cur_layer"] = target_ct
+    }
+    cur_meta$seurat_clusters[cur_meta$cur_layer == "DELETE"] = -10000
+
+    tbl=table(cur_meta$cur_layer)
+    tbl=tbl[names(tbl) != "DELETE"]
+    tbl=tbl[order(tbl, decreasing = T)]
+
+    cur_index = 1
+    for(tname in names(tbl)){
+      cur_meta$seurat_clusters[cur_meta$cur_layer == tname] = cur_index
+      cur_index = cur_index + 1
+    }
   
+    cur_meta$sub_clusters<-cur_meta$seurat_clusters
+    cur_meta$seurat_clusters<-cur_meta$seurat_clusters + cluster_index
+    cluster_index = max(cur_meta$seurat_clusters) + 1
+    
+    meta[rownames(cur_meta), resolution_col] = best_res
+    meta[rownames(cur_meta), seurat_clusters] = cur_meta$seurat_clusters
+    meta[rownames(cur_meta), cur_layer] = cur_meta$cur_layer
+    meta[rownames(cur_meta), "sub_clusters"] = cur_meta$sub_clusters
+
+    if(output_heatmap){
+      allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
+    }
+    
+    print(table(meta[,cur_layer], meta$seurat_clusters))
+
+    next
+  }
+
   cur_res_files = subset(pct_res_files, resolution==best_res)
   file_map = split(cur_res_files$file, cur_res_files$type)
   
@@ -290,7 +370,7 @@ for(pct in previous_celltypes){
       mname=unique(merge_tbl$V2)[1]
       for (mname in unique(merge_tbl$V2)){
         mcts=merge_tbl$V1[merge_tbl$V2==mname]
-        cur_meta[cur_meta$seurat_clusters_str %in% mcts, "cur_layer"] = mname
+        cur_meta[cur_meta$seurat_clusters_str %in% mcts, cur_layer] = mname
         if (mname == "DELETE"){
           cur_meta[cur_meta$seurat_clusters_str %in% mcts, "seurat_clusters"] = -10000
         }else{
@@ -323,6 +403,8 @@ for(pct in previous_celltypes){
     cur_top10 = get_top10_markers(cur_markers)
     allmarkers=c(allmarkers, cur_top19$gene)
   }
+
+  print(table(meta[,cur_layer], meta$seurat_clusters))
 }
 
 setwd(cur_folder)
