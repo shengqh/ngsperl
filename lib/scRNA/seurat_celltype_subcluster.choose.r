@@ -299,7 +299,7 @@ for(pct in previous_celltypes){
     tbl=tbl[names(tbl) != "DELETE"]
     tbl=tbl[order(tbl, decreasing = T)]
 
-    cur_index = 1
+    cur_index = 0
     for(tname in names(tbl)){
       cur_meta$seurat_clusters[cur_meta$cur_layer == tname] = cur_index
       cur_index = cur_index + 1
