@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='SADIE_adipose'
+outFile='P10940'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_adipose/files_edgeR_inCluster_bySample_GSEA_Hs_test_report/result')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_byCell_GSEA_Hs_report/result')
 
 ### Parameter setting end ###
 
@@ -54,7 +54,14 @@ if(nrow(files) == 1 & files$V2[1] == outFile){
   rownames(files)<-files$V2
 }
 
-gsea_folder = paste0(outFile, ".gsea/")
+mytbl=read.table(parSampleFile2, header=FALSE, as.is=TRUE, sep="\t")
+myoptions=split(mytbl$V1, mytbl$V2)
+
+if(is.null(myoptions$edgeR_suffix)){
+  gsea_folder = paste0(outFile, ".gsea/")
+}else{
+  gsea_folder = paste0(outFile, myoptions$edgeR_suffix, ".gsea/")
+}
 dir.create(gsea_folder, showWarnings = FALSE)
 
 vfiles = display_gsea(files, gsea_folder, print_rmd = FALSE)
