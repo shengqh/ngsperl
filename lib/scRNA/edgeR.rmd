@@ -33,8 +33,7 @@ library(knitr)
 source('scRNA_func.r')
 source('reportFunctions.R')
 
-options_table<-read.table("fileList3.txt", sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
+myoptions<-read_file_map("fileList3.txt", do_unlist=FALSE)
 
 is_between_cluster = is_one(myoptions$bBetweenCluster)
 
@@ -104,7 +103,7 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
     result<-paste0(result, "\n# ", comp, "\n\n")
     comp_files<-subset(edgeR_files, comparison == comp)
 
-    cts = as.character(rev(comp_files$cellType))
+    cts = as.character(comp_files$cellType)
     ct<-cts[1]
 
     sig_file_map=unlist(split(comp_files$sigFile, comp_files$cellType))
