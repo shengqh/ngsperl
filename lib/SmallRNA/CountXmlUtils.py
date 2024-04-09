@@ -47,10 +47,10 @@ def readCountXmlQueries(fileName, minCount):
   return(result)
 
 def defaultAcceptFeatureName(featureName):
-  return(True);
+  return(True)
 
 def readCountXmlFeatures(fileName, acceptFunc = defaultAcceptFeatureName):
-  queryMap = readCountXmlQueryMap(fileName);
+  queryMap = readCountXmlQueryMap(fileName)
   
   result = []
   tree = ET.parse(fileName)
@@ -79,7 +79,7 @@ def readCountXmlFeatures(fileName, acceptFunc = defaultAcceptFeatureName):
 
 
 def readCountXmlQueriesInFeatures(fileName, acceptFunc = defaultAcceptFeatureName):
-  queryMap = readCountXmlQueryMap(fileName);
+  queryMap = readCountXmlQueryMap(fileName)
   
   result = set()
   tree = ET.parse(fileName)
