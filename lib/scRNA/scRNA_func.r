@@ -1757,7 +1757,7 @@ sumcount<-function(ct_count, groupings){
 get_seurat_sum_count<-function(obj, cluster_name, min_cell_per_sample=1, target_folder="./"){
   clusterDf<-obj@meta.data
   if("seurat_clusters" %in% colnames(clusterDf)){
-    cts = as.character(unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = T), cluster_name]))
+    cts = as.character(unique(clusterDf[order(clusterDf$seurat_clusters, decreasing = F), cluster_name]))
   }else{
     tbl = table(clusterDf[,cluster_name])
     tbl = tbl[order(tbl, decreasing = T)]
@@ -2150,7 +2150,7 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
   geneexp=FetchData(cell_obj,vars=c(sig_gene))
   colnames(geneexp)<-"Gene"
   colorRange<-c(min(geneexp), max(geneexp))
-  fix.sc <- scale_color_gradientn(colors=c("lightgrey", "blue"), limits = colorRange)
+  fix.sc <- scale_color_gradientn(colors=c("lightgrey", "red"), limits = colorRange)
   
   geneexp$Group<-cell_obj$DisplayGroup
   geneexp$Sample<-cell_obj$orig.ident
@@ -2186,7 +2186,7 @@ BC")
       p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="umap", raster=FALSE)
     }
     p1$data$Group=cell_obj@meta.data[rownames(p1$data), "DisplayGroup"]
-    p1<-p1+facet_grid(~Group) + theme_bw3() + ggtitle("")
+    p1<-p1+facet_grid(~Group) + theme_bw3() + ggtitle("") + theme(aspect.ratio=1)
     
     if(!DE_by_cell){
       melt_cpm = as.data.frame(t(log_cpm[sig_gene,,drop=F]))
