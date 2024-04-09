@@ -186,12 +186,12 @@ for(pct in pcts){
   result<-paste0(result, paste0("\n\n#### User defined markers\n\n"))
   last_files<-files[files$pct==pct & files$type=="dot",]
   dot_file<-last_files$fname[nrow(last_files)]
-  result<-paste0(result, getFigure(dot_file, TRUE))
+  result<-paste0(result, getFigure(dot_file))
 
   if(pct %in% names(cta_map)){
     cta_file = cta_map[[pct]]
     result<-paste0(result, paste0("\n\n#### Cell type annotation score\n\n"))
-    result<-paste0(result, getFigure(cta_file, TRUE))
+    result<-paste0(result, getFigure(cta_file))
   }
 
   if(!by_individual_sample){
