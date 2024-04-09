@@ -915,6 +915,16 @@ is_one<-function(value, defaultValue=FALSE){
   return(value == '1')
 }
 
+get_text_width <- function(txt, font_family, font_size = 10, units = "inches", res=300) {
+  tmp_file <- tempfile(fileext = ".png")
+  png(tmp_file, res=res)
+  par(family = font_family, ps = font_size)
+  ret = strwidth(txt, units = units)
+  dev.off()
+  unlink(tmp_file)
+
+  return(ret)
+}
 
 ###############################################################################
 # End funtions in count table barplot and pie chart
