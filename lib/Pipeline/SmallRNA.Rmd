@@ -1,5 +1,4 @@
 ---
-title: "smallRNA Sequencing Analysis Report"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
@@ -24,7 +23,7 @@ knitr::opts_chunk$set(echo = FALSE,  message=FALSE, warning=FALSE, results = 'hi
 files<-read.table("fileList1.txt", header=FALSE, as.is=TRUE)
 files=split(files$V1, files$V2)
 
-myoptions<-read.table("fileList2.txt", header=FALSE, as.is=TRUE)
+myoptions<-fread("fileList2.txt", header=FALSE)
 myoptions$V1 <- as.character(myoptions$V1)
 option_map<-split(myoptions$V1, myoptions$V2)
 
@@ -93,7 +92,9 @@ categoryRmd<-function(dfCategory, fileName, header){
     result<-paste0(result, lines)
 
     if(file.exists('fileList7.txt')){
-      comparisons = unique(read.table('fileList7.txt', sep="\t")$V2)
+      tbl=read.table('fileList7.txt', sep="\t", header=FALSE, stringsAsFactor=FALSE)
+      comparisons = unique(tbl[,ncol(tbl)])
+      comparison=comparisons[1]
       for(comparison in comparisons){
         volcano<-paste0("deseq2_", category, "_volcano_", comparison)
         result<-paste0(result, getCategory(volcano, paste0("Volcano plot of comparison ", comparison, "of ", name)))
@@ -193,6 +194,7 @@ if(file.exists('fileList8.txt')){
 }
 
 hasHostDEseq2<-any(grepl("deseq2_host_vis", names(files)))
+hasNonhostDEseq2<-any(grepl("deseq2_nonhost_vis", names(files)))
 
 if ("DE_use_raw_pvalue" %in% names(option_map) & option_map$DE_use_raw_pvalue=="1") {
   pValueText="p value"
@@ -202,10 +204,20 @@ if ("DE_use_raw_pvalue" %in% names(option_map) & option_map$DE_use_raw_pvalue=="
 deseq2criteria<-paste0("absolute fold change >= ", option_map$DE_fold_change, " and ", pValueText, " <= ", option_map$DE_pvalue)  
 ```
 
+---
+title: SmallRNA Sequencing Analysis Report of Project `r gsub(":", " ", option_map['task_name'])`
+author:
+- name: `r option_map['email']`
+  affiliation: `r option_map['affiliation']`
+---
+
+
 <br>
 
 # Summary
+
 This report includes summary (section 1), preprocessing (section 2), host genome (section 3)
+
 ```{r, echo=FALSE, results='asis'}
 if(hasNonhostGenome){
   cat(", nonhost genome (section 4)")
@@ -309,6 +321,20 @@ if(hasNonhostGenome | hasNonhostLibrary){
 <br>
 
 ```{r nonhostgenome, eval=hasNonhostGenome, child=nonhostGenomeFile} 
+```
+
+
+```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("deseq2_nonhost_vis", "DESeq2 result of nonhost genomes", trunk.eval=hasNonhostDEseq2), eval=hasNonhostDEseq2}
+cat('### Non-host genome DESeq2 result\n') 
+if ("DE_use_raw_pvalue" %in% names(option_map) & option_map$DE_use_raw_pvalue == "1") {
+  pValueText="p value"
+} else {
+  pValueText="FDR-adjusted p-value"
+}
+deseq2criteria<-paste0("absolute fold change >= ", option_map$DE_fold_change, " and ", pValueText, " <= ", option_map$DE_pvalue)
+cat("Differential expression analysis criteria:", deseq2criteria, "\n\n")
+
+check_and_include_graphics(files$deseq2_nonhost_vis)
 ```
 
 <br>

@@ -2996,6 +2996,11 @@ fi
         }
       }
 
+      if(scalar(@nonhost_genome_groups) > 1){
+        push( @report_files, "deseq2_nonhost_genome_${DE_library_key}_vis", ".nonhost_genome.DESeq2.Matrix.png" );
+        push( @report_names, "deseq2_nonhost_vis" );
+      }
+
       if ( defined $config->{bowtie1_tRNA_pm_table} ) {
         push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.heatmap.png" );
         push( @report_files, "count_table_correlation",     "^.*tRNA_pm_${task_name}.count.PCA.png" );
@@ -3112,6 +3117,8 @@ fi
 
     my $options = {
       "task_name" => $task_name,
+      "email" => getValue($def, "email"),
+      "affiliation" => getValue($def, "affiliation", ""),
       "DE_fold_change" => getValue( $def, "DE_fold_change" ),
       "DE_pvalue"      => getValue( $def, "DE_pvalue" ),
       "DE_use_raw_pvalue"=> getValue( $def, "DE_use_raw_pvalue" ),
