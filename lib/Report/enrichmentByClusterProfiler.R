@@ -82,12 +82,13 @@ enrichmentByClusterProfiler = function(selectedProteins,
       maxGSSize = maxGSSize,
       readable = TRUE
     )
-    xReactome = xReactome %>% arrange((pvalue)) %>% mutate(
-      qscore = -log(qvalue, base = 10),
-      NegLog10pAdj = -log(p.adjust, base = 10),
-      CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
-        as.integer(x[1]) / as.integer(x[2]))
-    )
+    xReactome = xReactome %>% 
+      dplyr::arrange((pvalue)) %>% 
+      dplyr::mutate(qscore = -log(qvalue, base = 10),
+                    NegLog10pAdj = -log(p.adjust, base = 10),
+                    CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
+                      as.integer(x[1]) / as.integer(x[2]))
+                   )
     listEnrichments[["Reactome"]] = xReactome
   }
 
@@ -105,12 +106,13 @@ enrichmentByClusterProfiler = function(selectedProteins,
       qvalueCutoff = qvalueCutoff
     )
     kkx <- setReadable(kk, OrgDb, toType)
-    kkx = kkx %>% arrange((pvalue)) %>% mutate(
-      qscore = -log(qvalue, base = 10),
-      NegLog10pAdj = -log(p.adjust, base = 10),
-      CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
-        as.integer(x[1]) / as.integer(x[2]))
-    )
+    kkx = kkx %>% 
+      dplyr::arrange((pvalue)) %>% 
+      dplyr::mutate(qscore = -log(qvalue, base = 10),
+                    NegLog10pAdj = -log(p.adjust, base = 10),
+                    CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
+                      as.integer(x[1]) / as.integer(x[2]))
+                    )
     listEnrichments[["KEGG"]] = kkx
   }
 
@@ -130,12 +132,13 @@ enrichmentByClusterProfiler = function(selectedProteins,
       qvalueCutoff = qvalueCutoff,
       readable      = TRUE
     )
-    ego = ego %>% arrange((pvalue)) %>% mutate(
-      qscore = -log(qvalue, base = 10),
-      NegLog10pAdj = -log(p.adjust, base = 10),
-      CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
-        as.integer(x[1]) / as.integer(x[2]))
-    )
+    ego = ego %>% 
+      dplyr::arrange((pvalue)) %>% 
+      dplyr::mutate(qscore = -log(qvalue, base = 10),
+                    NegLog10pAdj = -log(p.adjust, base = 10),
+                    CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
+                      as.integer(x[1]) / as.integer(x[2]))
+                    )
     listEnrichments[["GO.BP"]] = ego
   }
 
@@ -155,12 +158,13 @@ enrichmentByClusterProfiler = function(selectedProteins,
       qvalueCutoff = qvalueCutoff,
       readable      = TRUE
     )
-    ego = ego %>% arrange((pvalue)) %>% mutate(
-      qscore = -log(qvalue, base = 10),
-      NegLog10pAdj = -log(p.adjust, base = 10),
-      CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
-        as.integer(x[1]) / as.integer(x[2]))
-    )
+    ego = ego %>% 
+      dplyr::arrange((pvalue)) %>% 
+      dplyr::mutate(qscore = -log(qvalue, base = 10),
+                    NegLog10pAdj = -log(p.adjust, base = 10),
+                    CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
+                      as.integer(x[1]) / as.integer(x[2]))
+                    )
     listEnrichments[["GO.MF"]] = ego
   }
   if ("GO.CC" %in% modules) {
@@ -179,12 +183,13 @@ enrichmentByClusterProfiler = function(selectedProteins,
       qvalueCutoff = qvalueCutoff,
       readable      = TRUE
     )
-    ego = ego %>% arrange((pvalue)) %>% mutate(
-      qscore = -log(qvalue, base = 10),
-      NegLog10pAdj = -log(p.adjust, base = 10),
-      CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
-        as.integer(x[1]) / as.integer(x[2]))
-    )
+    ego = ego %>% 
+      dplyr::arrange((pvalue)) %>% 
+      dplyr::mutate(qscore = -log(qvalue, base = 10),
+                    NegLog10pAdj = -log(p.adjust, base = 10),
+                    CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
+                      as.integer(x[1]) / as.integer(x[2]))
+                    )
     listEnrichments[["GO.CC"]] = ego
   }
 
@@ -213,12 +218,13 @@ enrichmentByClusterProfiler = function(selectedProteins,
       qvalueCutoff = qvalueCutoff
     )
     wpx <- setReadable(wp, OrgDb, toType) #transform geneID to input genesymbolID
-    wpx = wpx %>% arrange((pvalue)) %>% mutate(
-      qscore = -log(qvalue, base = 10),
-      NegLog10pAdj = -log(p.adjust, base = 10),
-      CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
-        as.integer(x[1]) / as.integer(x[2]))
-    )
+    wpx = wpx %>% 
+      dplyr::arrange((pvalue)) %>% 
+      dplyr::mutate(qscore = -log(qvalue, base = 10),
+                    NegLog10pAdj = -log(p.adjust, base = 10),
+                    CountRatio = sapply(strsplit(GeneRatio, "/"), function(x)
+                      as.integer(x[1]) / as.integer(x[2]))
+                    )
     listEnrichments[["WikiPathways"]] = wpx
   }
 
@@ -256,18 +262,23 @@ makeBarPlotClusterProfilerEnrichment=function(dp,minCount=5,top=10,valueCut=NULL
   }
 
   if(!is.null(valueCut)){
-    dataForPlotFrameP=dataForPlotFrame %>% group_by(Module) %>% filter(Count>=minCount & !!sym((fill))<=valueCut)
+    dataForPlotFrameP=dataForPlotFrame %>% 
+      dplyr::group_by(Module) %>% 
+      dplyr::filter(Count>=minCount & !!sym((fill))<=valueCut)
   }else{
-    dataForPlotFrameP=dataForPlotFrame %>% group_by(Module) %>% filter(Count>=minCount)
+    dataForPlotFrameP=dataForPlotFrame %>% 
+      dplyr::group_by(Module) %>% 
+      dplyr::filter(Count>=minCount)
   }
   if (nrow(dataForPlotFrameP) == 0) {
     warning(paste0("No valid pathway. Skip making figure"))
     return(NULL)
   }
   
-  dataForPlotFrameP = dataForPlotFrameP %>% top_n(-top,wt=get(topBy)) %>%
-    mutate(Description = reorder_within(x=Description,by=!!sym(y), within=Module)) %>%
-    arrange(desc(!!sym(y)))
+  dataForPlotFrameP = dataForPlotFrameP %>% 
+    dplyr::top_n(-top,wt=get(topBy)) %>%
+    dplyr::mutate(Description = reorder_within(x=Description,by=!!sym(y), within=Module)) %>%
+    dplyr::arrange(desc(!!sym(y)))
 
   p=dataForPlotFrameP %>%
     ggplot(aes_string(x="Description",y=y,fill=fill))+geom_bar(stat = "identity")+
@@ -298,10 +309,16 @@ makeBarPlotClusterProfilerEnrichment=function(dp,minCount=5,top=10,valueCut=NULL
 }
 
 
-makeHeatmapClusterProfilerEnrichment=function(dataForPlot,minCount=5,top=3,
-                                              topBy="pvalue",fill="NegLog10pAdj",returnData=FALSE,
-                                              cluster_rows =TRUE,cluster_columns=TRUE,
-                                              changeNA=NULL,na_col="grey") { #Please note changeNA values will change heatmap cluster
+makeHeatmapClusterProfilerEnrichment=function(dataForPlot,
+                                              minCount=5,
+                                              top=3,
+                                              topBy="pvalue",
+                                              fill="NegLog10pAdj",
+                                              returnData=FALSE,
+                                              cluster_rows =TRUE,
+                                              cluster_columns=TRUE,
+                                              changeNA=NULL,
+                                              na_col="grey") { #Please note changeNA values will change heatmap cluster
 
   if (class(dataForPlot)=="list") { #list as input, make into data.frame
     dataForPlotFrame=NULL
@@ -321,9 +338,16 @@ makeHeatmapClusterProfilerEnrichment=function(dataForPlot,minCount=5,top=3,
     }
   }
 
-  selectedPathways=dataForPlotFrame %>% group_by(Module) %>% filter(Count>=minCount) %>% top_n(-top,wt=get(topBy)) %>% pull(Description)
-  dataForPlotFrameForHeatmap=dataForPlotFrame %>% filter(Description %in% selectedPathways) %>%
-    dplyr::select("Description",all_of(fill),"Module") %>% pivot_wider(names_from = Module      , values_from = all_of(fill))
+  selectedPathways=dataForPlotFrame %>% 
+    dplyr::group_by(Module) %>% 
+    dplyr::filter(Count>=minCount) %>% 
+    dplyr::top_n(-top,wt=get(topBy)) %>% 
+    dplyr::pull(Description)
+
+  dataForPlotFrameForHeatmap=dataForPlotFrame %>% 
+    dplyr::filter(Description %in% selectedPathways) %>%
+    dplyr::select("Description",all_of(fill),"Module") %>% 
+    dplyr::pivot_wider(names_from = Module, values_from = all_of(fill))
 
   temp=colnames(dataForPlotFrameForHeatmap)
   dataForPlotFrameForHeatmap=data.frame(dataForPlotFrameForHeatmap)
@@ -349,8 +373,12 @@ makeHeatmapClusterProfilerEnrichment=function(dataForPlot,minCount=5,top=3,
     } else {
       col_fun = circlize::colorRamp2(c(0, dataForPlotFrameForHeatmapMinValue, dataForPlotFrameForHeatmapMaxAbsValue), c("white", "white", "red"))
     }
-    p=Heatmap(dataForPlotFrameForHeatmap, heatmap_legend_param = list(title = heatmapTitle),
-              col=col_fun,na_col = na_col,cluster_rows =cluster_rows,cluster_columns=cluster_columns)
+    p=Heatmap(dataForPlotFrameForHeatmap, 
+              heatmap_legend_param = list(title = heatmapTitle),
+              col=col_fun,
+              na_col = na_col,
+              cluster_rows =cluster_rows,
+              cluster_columns=cluster_columns)
   }
   return(p)
 }
@@ -360,12 +388,19 @@ makeHeatmapClusterProfilerEnrichment=function(dataForPlot,minCount=5,top=3,
 #For example, 30 proteins selected in 70 proteins universe.
 makePercentInUniverseBarPlotClusterProfilerEnrichment=function(enrichmentResult,minCount=5,module="KEGG") {
   dataForPlot=data.frame(enrichmentResult[[module]]) %>%
-    filter(Count>=minCount) %>%
-    mutate(Selected=Count/sapply(strsplit(BgRatio,"/"),function(x) as.numeric(x[1])),
-           BgNotSelected=1-Selected) %>% mutate(Description=forcats::fct_reorder(Description, Selected))
+    dplyr::filter(Count>=minCount) %>%
+    dplyr::mutate(Selected=Count/sapply(strsplit(BgRatio,"/"),function(x) as.numeric(x[1])),
+                  BgNotSelected=1-Selected) %>% 
+    dplyr::mutate(Description=forcats::fct_reorder(Description, Selected))
+
   dataForPlot=dataForPlot[,c("Description","Selected","BgNotSelected")] %>%
     pivot_longer(cols =c("Selected","BgNotSelected"),names_to = "Category",values_to = "Proportion")
-  p=ggplot(dataForPlot,aes(y=Description,x=Proportion ,fill=Category))+geom_col()+xlab("Proportion")+ggtitle(module)
+
+  p=ggplot(dataForPlot,aes(y=Description,x=Proportion ,fill=Category))+
+    geom_col()+
+    xlab("Proportion")+
+    ggtitle(module)
+
   return(p)
 }
 
@@ -403,43 +438,56 @@ enrichmentObjToTable=function(dataForPlot,splitGenes=FALSE) {
 }
 
 
-showGenesValueClusterProfilerEnrichment=function(dataForPlot,geneValue,minCount=5,top=3,
-                                                 selectedPathways=NULL,
-                                              topBy="pvalue",fill="NegLog10pAdj",returnData=FALSE,
-                                              rankGeneByModule=NULL,
-                                              proteinToOnePathway=FALSE,
-                                              changeNA=NULL,na_col="grey",figType=c("boxplot","dotplot")) { #Please note changeNA values will change heatmap cluster
+showGenesValueClusterProfilerEnrichment=function( dataForPlot,
+                                                  geneValue,
+                                                  minCount=5,
+                                                  top=3,
+                                                  selectedPathways=NULL,
+                                                  topBy="pvalue",
+                                                  fill="NegLog10pAdj",
+                                                  returnData=FALSE,
+                                                  rankGeneByModule=NULL,
+                                                  proteinToOnePathway=FALSE,
+                                                  changeNA=NULL,
+                                                  na_col="grey",
+                                                  figType=c("boxplot","dotplot")) { #Please note changeNA values will change heatmap cluster
   figType=match.arg(figType)
   dataForPlotFrame=enrichmentObjToTable(dataForPlot,splitGenes = TRUE)
 
   if (is.null(selectedPathways)) {
     #selectedPathways=unique(dataForPlotFrame %>% dplyr::select(-geneID)) %>% group_by(Module) %>% filter(Count>=minCount) %>% top_n(-top,wt=get(topBy)) %>% pull(Description)
-    selectedPathways=unique(dataForPlotFrame %>% dplyr::select(-geneID)) %>% filter(Count>=minCount) %>% top_n(-top,wt=get(topBy)) %>% pull(Description)
+    selectedPathways=unique(dataForPlotFrame %>% 
+      dplyr::select(-geneID)) %>% 
+      dplyr::filter(Count>=minCount) %>% 
+      dplyr::top_n(-top,wt=get(topBy)) %>% 
+      dplyr::pull(Description)
+
     selectedPathways=unique(selectedPathways)
   }
 
 
 
   if (proteinToOnePathway) {
-    dataForPlotFrame=dataForPlotFrame %>% group_by(geneID) %>% slice_min(pvalue) %>% ungroup()
+    dataForPlotFrame=dataForPlotFrame %>% 
+      dplyr::group_by(geneID) %>% 
+      dplyr::slice_min(pvalue) %>% 
+      dplyr::ungroup()
   }
 
   if ("Module" %in% colnames(geneValue) & "Module" %in% colnames(dataForPlotFrame)) {
-    dataForPlotFrameWithValue=dataForPlotFrame %>% left_join(geneValue,by=c("geneID","Module"))
+    dataForPlotFrameWithValue=dataForPlotFrame %>% 
+      dplyr::left_join(geneValue,by=c("geneID","Module"))
   } else {
     #dataForPlotFrameWithValue=dataForPlotFrame %>% left_join(geneValue,by=c("geneID"))
-    dataForPlotFrameWithValue=dataForPlotFrame %>% inner_join(geneValue,by=c("geneID"))
-
+    dataForPlotFrameWithValue=dataForPlotFrame %>% 
+      dplyr::inner_join(geneValue,by=c("geneID"))
   }
 
 
-  dataForPlotFrameWithValue=dataForPlotFrameWithValue %>% filter(Description %in% selectedPathways)
-
-
-
+  dataForPlotFrameWithValue=dataForPlotFrameWithValue %>% 
+    dplyr::filter(Description %in% selectedPathways)
 
   valueColumnName=setdiff(colnames(geneValue),c("geneID","Module"))[1]
-
 
   #browser()
   DescriptionValues=tapply(dataForPlotFrameWithValue[[valueColumnName]],dataForPlotFrameWithValue$Description,median,na.rm=TRUE)
@@ -463,22 +511,29 @@ showGenesValueClusterProfilerEnrichment=function(dataForPlot,geneValue,minCount=
   return(p+theme_bw())
 }
 
-
 simplifyClusterProfilerEnrichment=function(enrichmentObj,method=c("pvalue","Count","CountRatio")) {
   method=match.arg(method)
   dataForPlotFrame=enrichmentObjToTable(enrichmentObj,splitGenes = TRUE)
 
   if (method=="pvalue") {
-    dataForPlotFrameSimplified=dataForPlotFrame %>% group_by(geneID) %>% slice_min(pvalue)
+    dataForPlotFrameSimplified=dataForPlotFrame %>% 
+      dplyr::group_by(geneID) %>% 
+      dplyr::slice_min(pvalue)
   } else if (method=="Count" | method=="CountRatio") {
-    dataForPlotFrameSimplified=dataForPlotFrame %>% group_by(geneID) %>% slice_max(Count)
+    dataForPlotFrameSimplified=dataForPlotFrame %>% 
+      dplyr::group_by(geneID) %>% 
+      dplyr::slice_max(Count)
   }
   #return(dataForPlotFrameSimplified[,c("geneID","Description")])
   return(structure(dataForPlotFrameSimplified[["Description"]],names=dataForPlotFrameSimplified[["geneID"]]))
 }
 
-compareClusterByClusterProfiler=function(geneList,fun=GSEA,idType=c("gene_symbol","entrez_gene","ensembl_gene"),msigdbrCat="C2",msigdbrSubCat=NULL,
-                                         merge=FALSE) {
+compareClusterByClusterProfiler=function( geneList,
+                                          fun=GSEA,
+                                          idType=c("gene_symbol","entrez_gene","ensembl_gene"),
+                                          msigdbrCat="C2",
+                                          msigdbrSubCat=NULL,
+                                          merge=FALSE) {
   require(msigdbr)
   require(DOSE)
   require(clusterProfiler)
