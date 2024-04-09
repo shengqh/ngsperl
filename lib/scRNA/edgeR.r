@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='scRNA_6542'
+outFile='P10940'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/h_gelbard_lab/projects/20210818_6542_scRNA/20240305_Wenda_check_cells/scRNA_6542.final.rds'
-parFile2=''
+parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.final.rds'
+parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.meta.rds'
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20210818_6542_scRNA/20240305_6542_scRNA_DE/files_edgeR_inCluster_byCell/result')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
