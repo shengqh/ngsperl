@@ -38,11 +38,14 @@ options_table<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors 
 myoptions<-split(options_table$V1, options_table$V2)
 task_name<-myoptions$task_name
 
-edgeR_files=data.frame(fread(paste0(task_name, ".edgeR_vis/", task_name, ".vis.files.csv")), row.names=1)
+if(is.null(myoptions$edgeR_suffix)){
+  detail_folder = paste0(task_name, ".edgeR_vis/")
+}else{
+  detail_folder = paste0(task_name, myoptions$edgeR_suffix, ".vis/")
+}
+edgeR_files=data.frame(fread(paste0(detail_folder, task_name, ".vis.files.csv")), row.names=1)
 rownames(edgeR_files)<-basename(edgeR_files$prefix)
 comparisons<-unique(edgeR_files$comparison)
-
-detail_folder=paste0(task_name, ".edgeR_vis/")
 ```
 
 ---
@@ -65,6 +68,7 @@ for(comp in comparisons){
     result<-paste0(result, getFigure(sigGenePerc_png))
   }
 
+  comp_files=comp_files[rev(rownames(comp_files)),]
   ct_comp=rownames(comp_files)[2]
   for(ct_comp in rownames(comp_files)){
     result = paste0(result, "## ", ct_comp, "\n\n")
@@ -79,6 +83,12 @@ for(comp in comparisons){
     if(file.exists(heatmap_png)){
       result<-paste0(result,"\n### DE gene heatmap\n\n")
       result<-paste0(result, getFigure(heatmap_png))
+    }
+
+    top_png=comp_files[ct_comp, "top_png"]
+    if(file.exists(top_png)){
+      result<-paste0(result,"\n### Top gene\n\n")
+      result<-paste0(result, getFigure(top_png))
     }
   }
 }
