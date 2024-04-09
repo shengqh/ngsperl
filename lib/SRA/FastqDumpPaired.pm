@@ -43,7 +43,7 @@ sub perform {
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
   my $prefetch_option = get_option($config, $section, "prefetch_option", "-X 50G");
 
-  $option = $option . " --split-3 --defline-qual '+' --gzip ";
+  my $single_cell_data_type = get_option($config, $section, "single_cell_data_type", 0);
 
   my $raw_files = getSraFiles( $config, $section );
 
@@ -61,9 +61,17 @@ sub perform {
 
     my $current_dir = create_directory_or_die($result_dir . "/" . $sample_name);
 
-    my $final_file = $ispaired ? $sample_name . "_1.fastq.gz" : $sample_name . ".fastq.gz";
+    my $final_file_1;
+    my $final_file_2;
+    if($single_cell_data_type == 2){ #R1 and R2
+      $final_file_1 = $sample_name . "_S1_L001_R1_001.fastq.gz";
+      $final_file_2 = $sample_name . "_S1_L001_R2_001.fastq.gz";
+    }else{
+      $final_file_1 = $sample_name . "_1.fastq.gz";
+      $final_file_2 = $sample_name . "_2.fastq.gz";
+    }
 
-    print $sh "if [[ ! -s $current_dir/$final_file ]]; then
+    print $sh "if [[ ! -s $current_dir/$final_file_1 ]]; then
   \$MYCMD ./$pbs_name 
 fi
 ";
@@ -72,7 +80,7 @@ fi
       next;
     }
 
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file, "", 0, undef, 'sh' );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file_1, "", 0, undef, 'sh' );
 
     if ( $sample_file =~ /GSM/ ) {
       my $srr_file = GsmToSrr( $sample_file );
@@ -82,6 +90,8 @@ fi
       $sample_file = $srr_file;
     }
     if ( $sample_file =~ /\.sra/ ) {
+      my $dump_file_1 = "${sample_name}_1.fastq.gz";
+      my $dump_file_2 = "${sample_name}_2.fastq.gz";
       if ($is_restricted_data){
         print $pbs "
 ln -s $sample_file ${sample_name}.sra 
@@ -92,9 +102,13 @@ fastq-dump $option ${sample_name}.sra
 status=\$?
 if [[ \$status -ne 0 ]]; then
   touch $sample_name.failed
-  rm -f $final_file
+  rm -f $dump_file_1 $dump_file_2
 else
   touch $sample_name.succeed
+  if [[ $dump_file_1 != $final_file_1 ]]; then #for single cell data
+    mv $dump_file_1 $final_file_1
+    mv $dump_file_2 $final_file_2
+  fi
 fi
 rm -f ${sample_name}.sra
 ";
@@ -104,7 +118,19 @@ if [ -z \${SLURM_JOBID+x} ]; then
   echo \"in bash mode\"; 
   ln -s $sample_file ${sample_name}.sra 
   fastq-dump $option ${sample_name}.sra
-  rm ${sample_name}.sra
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.failed
+    rm -f $dump_file_1 $dump_file_2
+  else
+    touch $sample_name.succeed
+    if [[ $dump_file_1 != $final_file_1 ]]; then #for single cell data
+      mv $dump_file_1 $final_file_1
+      mv $dump_file_2 $final_file_2
+    fi
+  fi
+  rm -f ${sample_name}.sra
 else 
   echo \"in cluster mode\"; 
   localdir=/tmp/myjob_\${SLURM_JOBID}
@@ -125,9 +151,20 @@ else
   echo performing fastq-dump on ${sample_name}.sra
   fastq-dump $option ${sample_name}.sra
 
-  rm ${sample_name}.sra
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    touch $sample_name.failed
+    rm -f $dump_file_1 $dump_file_2
+  else
+    touch $sample_name.succeed
+    if [[ '$dump_file_1' != '$final_file_1' ]]; then #for single cell data
+      mv $dump_file_1 $final_file_1
+      mv $dump_file_2 $final_file_2
+    fi
+  fi
+  rm -f ${sample_name}.sra
 
-  if [[ -s $final_file ]]; then
+  if [[ -s $final_file_1 ]]; then
     echo copying result back to $result_dir
     mv -f ${sample_name}* $result_dir
   fi
@@ -156,6 +193,8 @@ echo dump $sample_name
 
       my @sample_files = split( '\s+', $sample_file );
       if ( scalar(@sample_files) == 1 ) {
+        my $dump_file_1 = "${sample_file}_1.fastq.gz";
+        my $dump_file_2 = "${sample_file}_2.fastq.gz";
         print $pbs "
 rm -f $sample_name.failed
 
@@ -178,10 +217,12 @@ if [[ -s ${sample_file}.sra ]]; then
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch $sample_name.fasterq.failed
-    rm -f ${sample_file}_1.fastq.gz ${sample_file}_2.fastq.gz ${sample_file}.fastq.gz
+    rm -f $dump_file_1 $dump_file_2 ${sample_file}.fastq.gz
   else
-    mv ${sample_file}_1.fastq.gz ${sample_name}_1.fastq.gz
-    mv ${sample_file}_2.fastq.gz ${sample_name}_2.fastq.gz
+    if [[ '$dump_file_1' != '$final_file_1' ]]; then
+      mv $dump_file_1 $final_file_1
+      mv $dump_file_2 $final_file_2
+    fi
   fi
 fi
 ";
@@ -222,6 +263,12 @@ rm -rf ${sf}_1.fastq.gz ${sf}_2.fastq.gz ${sf}.sra
 
 ";
         }
+        print $pbs "
+if [[ '${sample_name}_1.fastq.gz' != '$final_file_1' ]]; then #for single cell data
+  mv ${sample_name}_1.fastq.gz $final_file_1
+  mv ${sample_name}_2.fastq.gz $final_file_2
+fi
+";
       }
     }
     else {
@@ -247,6 +294,7 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $raw_files = getSraFiles( $config, $section );
+  my $is_single_cell_data = get_option($config, $section, "is_single_cell_data", 0);
 
   my $result = {};
   for my $sample_name ( keys %$raw_files ) {
