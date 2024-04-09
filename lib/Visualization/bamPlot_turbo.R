@@ -134,11 +134,19 @@ for(n in 1:nrow(summaryTable)){
   
   #if a multipage PDF, open up the pdf
   if(multiPage == 'MULTIPLE_PAGE'){
-    pageName = paste('_',name,'.pdf',sep='')		     
-    pageOutFile = gsub('.pdf',pageName,outFile)
-    cat("saving ", pageOutFile, "\n")
-    pdf(file=pageOutFile,width = plotWidth,height =plotHeight)	
+    if(grepl(".png$", outFile)){
+      pageName = paste('_',name,'.png',sep='')		     
+      pageOutFile = gsub('.png',pageName,outFile)
+      cat("saving ", pageOutFile, "\n")
+      png(filename=pageOutFile,width = plotWidth,height =plotHeight, res=300, units='in')	
+    }else{
+      pageName = paste('_',name,'.pdf',sep='')		     
+      pageOutFile = gsub('.pdf',pageName,outFile)
+      cat("saving ", pageOutFile, "\n")
+      pdf(file=pageOutFile,width = plotWidth,height =plotHeight)	
+    }
   }
+
   #check if the beds have any data
   if(nrow(bedNameTable) >1){
     hasBed=TRUE

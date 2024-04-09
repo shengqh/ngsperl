@@ -107,12 +107,10 @@ fi
 
         my $colorStr = $rainbow_color ? "" : "--color $bamColor";
 
-        my $final_file = "${bamName}.pdf";
         print $pbs "
-if [ ! -s $final_file ]; then
-  cp -f $gff_file $curgff
-  bamPlot_turbo $option -b \"$bamFile\" -n \"$bamName\" -i $curgff $colorStr -o .
-fi
+cp -f $gff_file $curgff
+bamPlot_turbo $option -b \"$bamFile\" -n \"$bamName\" -i $curgff $colorStr -o .
+
 ";
       }
     }
@@ -123,12 +121,13 @@ fi
       my $curbam_fileStr = join( ',', @curbam_files );
       my $colorStr = $rainbow_color ? "" : "--color " . join( ':', @bam_colors );
 
-      my $final_file  = "${name}.pdf";
+      my $cur_final_pdf  = "${name}.pdf";
+      my $cur_final_png  = "${name}.png";
       print $pbs "
-if [ ! -s $final_file ]; then
-  cp -f $gff_file $curgff
-  bamPlot_turbo $option -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -i $curgff $colorStr -o .
-fi
+
+cp -f $gff_file $curgff
+bamPlot_turbo $option -b \"$curbam_fileStr\" -n \"$curbam_nameStr\" -i $curgff $colorStr -o .
+
 ";
 
       if ($draw_by_r) {
@@ -136,7 +135,8 @@ fi
         my $summaryfile = "${name}/${name}_summary.txt";
         print $pbs "
 if [ -s $summaryfile ]; then
-  R --vanilla -f $rscript --args $summaryfile $final_file UNIFORM MULTIPLE MULTIPLE_PAGE $draw_by_r_width $draw_by_r_height
+  #R --vanilla -f $rscript --args $summaryfile $cur_final_pdf UNIFORM MULTIPLE MULTIPLE_PAGE $draw_by_r_width $draw_by_r_height
+  R --vanilla -f $rscript --args $summaryfile $cur_final_png UNIFORM MULTIPLE MULTIPLE_PAGE $draw_by_r_width $draw_by_r_height
 fi
 ";
       }

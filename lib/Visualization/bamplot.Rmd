@@ -44,7 +44,7 @@ author:
   affiliation: `r affiliation`
 ---
 
-No matter whether the gene is in forward or reverse strand, it is always shown from 5' to 3' in the figure.
+Regardless of whether the gene is in the forward or reverse strand, it is always displayed from the 5' to 3' direction in the figure.
 
 ```{r}
 if(gene_shift > 0){
@@ -68,9 +68,9 @@ result=""
 for(idx in c(1:nrow(gff))){
   gene = gff$V2[idx]
   gene_strand = gff$gene_strand[idx]
-  pdf_file = paste0(task_name, "_", gene, ".pdf")
+  png_file = paste0(task_name, "_", gene, ".png")
   result = paste0(result, "\n# ", gene_strand, "\n\n")
-  result = paste0(result, "![](./", pdf_file, "){width=800 height=700}\n\n")
+  result = paste0(result, getFigure_width_height(png_file), "\n\n")
 }
 gene_rmd="genes.rmd"
 writeLines(result, gene_rmd)
