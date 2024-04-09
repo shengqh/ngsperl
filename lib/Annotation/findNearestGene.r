@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P11057_cutrun_hg38'
+outFile='11310_cutrun_mm10'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/data/cqs/references/gencode/GRCh38.p13/gencode.v38.annotation.gtf.map.bed'
+parFile1='/data/cqs/references/gencode/GRCm38.p6/gencode.vM25.annotation.gtf.map.bed'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/shengq2/20240202_11057_cutruntools2_hg38_test/seacr_gene/result')
+setwd('/nobackup/brown_lab/projects/20240405_cutrun_11310_mm10/macs2_narrow/result')
 
 ### Parameter setting end ###
 
@@ -19,8 +19,10 @@ library(ChIPpeakAnno)
 
 genes <- read.table(parFile1, sep="\t", header=F)
 dup<-genes[duplicated(genes$V4),]
-dup$V4<-paste0(dup$V4,":",dup$V2)
-genes[rownames(dup), "V4"] = dup$V4
+if(nrow(dup) > 0){
+  dup$V4<-paste0(dup$V4,":",dup$V2)
+  genes[rownames(dup), "V4"] = dup$V4
+}
 
 assert(sum(duplicated(genes$V4)) == 0)
  
@@ -53,4 +55,3 @@ for (i in c(1:nrow(files))){
 }
 
 write.csv(res, paste0(outFile, ".files.csv"), row.names=F)
-
