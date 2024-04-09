@@ -1348,7 +1348,8 @@ sub addEdgeRTask {
 
   my $edgeRscript = "../scRNA/edgeR.r";
   my $edgeRmd =  "../scRNA/edgeR.rmd";
-  my $rmd_ext = ".edgeR_by_cell.html";
+
+  my $edgeR_suffix = ".edgeR_by_cell";
   if ($bBetweenCluster) {
     $edgeRtaskname  = $edgeRtaskname . "_betweenCluster_byCell";
     $curClusterName = getValue( $def, "DE_cluster_name" );
@@ -1377,7 +1378,7 @@ sub addEdgeRTask {
       $rCodeDic->{"filter_min_cell_per_sample"}=getValue( $def, "DE_by_sample_min_cell_per_sample" );
       $edgeRtaskname = $edgeRtaskname . "_bySample";
       $edgeRscript = "../scRNA/edgeR_pseudo.r";
-      $rmd_ext = ".edgeR_by_sample.html";
+      $edgeR_suffix = ".edgeR_by_sample";
     }
 
     $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
@@ -1386,6 +1387,7 @@ sub addEdgeRTask {
     $pairs  = getValue( $def, "pairs" );
   }
   $rCodeDic->{"cluster_name"} = $curClusterName;
+  my $rmd_ext = "${edgeR_suffix}.html";
 
   $config->{$edgeRtaskname} = {
     class                => "CQS::UniqueR",
@@ -1426,7 +1428,7 @@ sub addEdgeRTask {
     target_dir         => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname,
     rtemplate          => "../scRNA/scRNA_func.r,../scRNA/edgeRvis.r",
     rReportTemplate      => "../scRNA/edgeRvis.rmd;reportFunctions.R",
-    rmd_ext => ".edgeR_vis.html",
+    rmd_ext => "${edgeR_suffix}.vis.html",
     run_rmd_independent => 1,
     parameterFile2_ref => [$edgeRtaskname],
     output_file_ext    => ".vis.files.csv",
@@ -1439,6 +1441,7 @@ sub addEdgeRTask {
       "bBetweenCluster" => $bBetweenCluster,
       "DE_by_cell" => $DE_by_cell,
       "reduction" => $reduction,
+      "edgeR_suffix" => $edgeR_suffix,
     },
     sh_direct          => 1,
     pbs                => {
@@ -1505,6 +1508,7 @@ sub addEdgeRTask {
         organism         => getValue( $def, "webgestalt_organism" ),
         interestGeneType => $def->{interestGeneType},
         referenceSet     => $def->{referenceSet},
+        "edgeR_suffix" => $edgeR_suffix,
       },
       output_file_ext    => ".WebGestaltR.files.csv",
       rCode              => "",
@@ -1524,6 +1528,8 @@ sub addEdgeRTask {
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
       rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltDeseq2_all.r",
       rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
+      run_rmd_independent => 1,
+      rmd_ext => "${edgeR_suffix}.WebGestalt_edgeR.html",
       output_to_result_directory => 1,
       parameterFile1_ref   => [ $webgestaltTaskName ],
       parameterFile2_ref   => [ $edgeRtaskname ],
@@ -1531,6 +1537,7 @@ sub addEdgeRTask {
         "email" => getValue($def, "email"),
         "affiliation" => $def->{"affiliation"},
         "task_name" => getValue( $def, "task_name" ),
+        "edgeR_suffix" => $edgeR_suffix,
       },
       output_file_ext    => ".link.files.csv",
       sh_direct                  => 1,
@@ -1574,6 +1581,7 @@ sub addEdgeRTask {
           "email" => getValue($def, "email"),
           "affiliation" => $def->{"affiliation"},
           "task_name" => getValue( $def, "task_name" ),
+          "edgeR_suffix" => $edgeR_suffix,
           rmdformats => "readthedown",
         },
         sh_direct                  => 0,
@@ -1594,13 +1602,14 @@ sub addEdgeRTask {
         rtemplate                  => "GSEAReport.R",
         rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;reportFunctions.R",
         run_rmd_independent => 1,
-        rmd_ext => ".gsea.html",
+        rmd_ext => "${edgeR_suffix}.gsea.html",
         parameterSampleFile1_ref   => [$gseaTaskName],
         parameterSampleFile1_names => ["gsea"],
         parameterSampleFile2 => {
           "email" => getValue($def, "email"),
           "affiliation" => $def->{"affiliation"},
           "task_name" => getValue( $def, "task_name" ),
+          "edgeR_suffix" => $edgeR_suffix,
         },
         remove_empty_parameter => 1,
         output_ext => "gsea_files.csv",
@@ -1627,6 +1636,7 @@ sub addEdgeRTask {
           "email" => getValue($def, "email"),
           "affiliation" => $def->{"affiliation"},
           "task_name" => getValue( $def, "task_name" ),
+          "edgeR_suffix" => $edgeR_suffix,
           rmdformats => "readthedown",
         },
         sh_direct                  => 1,
@@ -1647,13 +1657,14 @@ sub addEdgeRTask {
         rtemplate                  => "GSEAReport.R",
         rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;reportFunctions.R",
         run_rmd_independent => 1,
-        rmd_ext => ".gsea.html",
+        rmd_ext => "${edgeR_suffix}.gsea.html",
         parameterSampleFile1_ref   => [$gseaTaskName],
         parameterSampleFile1_names => ["gsea"],
         parameterSampleFile2 => {
           "email" => getValue($def, "email"),
           "affiliation" => $def->{"affiliation"},
           "task_name" => getValue( $def, "task_name" ),
+          "edgeR_suffix" => $edgeR_suffix,
         },
         remove_empty_parameter => 1,
         output_ext => "gsea_files.csv",
@@ -3371,7 +3382,7 @@ sub add_fragment_cells {
 }
 
 sub add_cellbender_v2 {
-  my ($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def ) = @_;
+  my ($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref ) = @_;
   my $expect_cells_task = $cellbender_prefix . "_01_expect_cells";
   $config->{$expect_cells_task} = {
     class => "CQS::IndividualR",
@@ -3440,6 +3451,7 @@ rm -f ckpt.tar.gz
     output_file_ext => ".txt",
     parameterSampleFile1_ref => [ $cellbender_task, ".cellbender_filtered.h5" ],
     parameterSampleFile2_ref => $filtered_files_def,
+    parameterSampleFile3_ref => $decontX_counts_ref,
     output_to_same_folder => 0,
     output_file_ext => ".cellbender_filtered.clean.h5",
     pbs => {
