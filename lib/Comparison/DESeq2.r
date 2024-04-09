@@ -1,6 +1,5 @@
-
-rootdir<-"/data/h_gelbard_lab/projects/20230606_9686_AG_RNAseq_iSGS_estrogen/deseq2_proteincoding_genetable/result"
-inputfile<-"RNAseq_human.define" 
+rootdir<-"/nobackup/shah_lab/shengq2/20240317_ECa3_rnaseq_hg38/deseq2_genetable/result"
+inputfile<-"ECa3.define" 
 
 pvalue<-0.05
 useRawPvalue<-0
@@ -8,7 +7,7 @@ foldChange<-2
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
-showLabelInPCA<-1
+showLabelInPCA<-0
 showDEGeneCluster<-0
 addCountOne<-0
 usePearsonInHCA<-1
@@ -19,7 +18,10 @@ transformTable<-0
 exportSignificantGeneName<-1
 thread<-8
 
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-TRUE;top25cvInHCA<-FALSE;
+independentFiltering<-TRUE
+
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;top25cvInHCA<-TRUE;
+cooksCutoff<-TRUE
 #predefined_condition_end
 
 options(bitmapType='cairo')
@@ -410,11 +412,13 @@ if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
   myoptions = split(options_table$V1, options_table$V2)
   feature_name_regex = myoptions$feature_name_regex
+  feature_name_filter = myoptions$feature_name_filter
   if("n_first" %in% names(myoptions)){
     n_first = as.numeric(myoptions$n_first)
   }
 }else{
   feature_name_regex=NA
+  feature_name_filter=NA
 }
 
 countfile_index = 1
@@ -436,6 +440,19 @@ for(countfile_index in c(1:length(countfiles))){
   
   if(transformTable){
     data<-t(data)
+  }
+
+  if(!is.na(feature_name_filter)){
+    if(!is.null(feature_name_filter)){
+      if(feature_name_filter != ""){
+        if("Feature_gene_name" %in% colnames(data)){
+          cat("Filter feature name by ", feature_name_filter, "\n")
+          discarded=data[!grepl(feature_name_filter, data$Feature_gene_name, perl=TRUE),]
+          cat("  Discarded ", nrow(discarded), " features\n")
+          data=data[grepl(feature_name_filter, data$Feature_gene_name, perl=TRUE),]
+        }
+      }
+    }
   }
 
   if(!is.na(feature_name_regex)){

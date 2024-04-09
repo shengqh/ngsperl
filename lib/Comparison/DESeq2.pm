@@ -72,6 +72,9 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
+  #print("writeParameterSampleFile in DESeq2\n");
+  writeParameterSampleFile( $config, $section, $result_dir, 1 );
+
   my $comparisons = get_raw_files( $config, $section );
   my @comparison_names = keys %{$comparisons};
 
@@ -112,8 +115,6 @@ sub perform {
   my $cooksCutoff               = get_option( $config, $section, "cooksCutoff",                  'DEFAULT' );
   my $independentFiltering      = get_option( $config, $section, "independentFiltering", 'TRUE' );
 
-  writeParameterSampleFile( $config, $section, $result_dir, 1 );
-  
   my $rCode = get_option( $config, $section, "rCode", "" );
 
   my $libraryFile = parse_param_file( $config, $section, "library_file", 0 );
