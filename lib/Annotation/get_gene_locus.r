@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='tfchalab_cutrun_mm10'
+outFile='5057_AD_combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
@@ -8,17 +8,17 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20240319_cutrun_chalab_mm10_tf/bamplot_gene_gff/result')
+setwd('/workspace/shengq2/kasey_vickers_projects/2020_projects/20200805_5057_AD_rnaseq_hsammu_combined_byMars/20240401_bamplot/bamplot_gene_gff/result')
 
 ### Parameter setting end ###
 
+source("countTableVisFunctions.R")
 options(bitmapType='cairo')
 
 library(biomaRt)
 library(gtools)
 library(stringr)
 
-source('countTableVisFunctions.R')
 
 myoptions<-read_file_map(parSampleFile1, do_unlist=FALSE)
 
@@ -31,6 +31,8 @@ if(!grepl("^http", biomart_host)){
 biomart_dataset = myoptions$biomart_dataset
 biomart_symbolKey = myoptions$biomart_symbolKey
 biomart_add_chr = is_one(myoptions$biomart_add_chr)
+biomart_add_prefix = myoptions$biomart_add_prefix
+prefix=paste0(biomart_add_prefix, ifelse(biomart_add_chr, "chr", ""))
 
 output_gff = is_one(myoptions$output_gff)
 
@@ -54,19 +56,16 @@ colnames(gene_locus)<-c("chr",  "start",  "end", "gene", "strand")
 gene_locus$strand[gene_locus$strand==1] = '+'
 gene_locus$strand[gene_locus$strand==-1] = '-'
   
-if(biomart_add_chr){
-  cat("add chr to chromosome name\n")
-  gene_locus$chr = paste0("chr", gene_locus$chr)
-}
+gene_locus$chr = paste0(prefix, gene_locus$chr)
 
 write.table(gene_locus, file=paste0(myoptions$task_name, ".gene_locus_raw.txt"), row.names = F,col.names = TRUE, quote = F, sep="\t")
 
 if(gene_shift != 0){
-  cat("shift gene to left with", gene_shift, "\n")
+  cat("shift gene ", gene_shift, " bases\n")
   is_forward_strand= gene_locus$strand == '+'
-  gene_locus$start[is_forward_strand] = gene_locus$start[is_forward_strand] - gene_shift
+  gene_locus$start = gene_locus$start - gene_shift
   gene_locus$start[gene_locus$start < 1] = 1
-  gene_locus$end[!is_forward_strand] = gene_locus$end[!is_forward_strand] + gene_shift
+  gene_locus$end = gene_locus$end + gene_shift
 }
 
 ll = unlist(lapply(gene_locus$chr, nchar))
