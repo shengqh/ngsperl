@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='SADIE_adipose'
+outFile='P10940'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/data/adipose.v4.DE.rds'
-parFile2='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_adipose/files_edgeR_inCluster_bySample/result/SADIE_adipose.edgeR.files.csv'
-parFile3=''
+parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.final.rds'
+parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_byCell/result/P10940.edgeR.files.csv'
+parFile3='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.meta.rds'
 
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_adipose/files_edgeR_inCluster_bySample_vis/result')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_byCell_vis/result')
 
 ### Parameter setting end ###
 
@@ -64,7 +64,11 @@ if(!bBetweenCluster){
   }
 }
 
-detail_folder = paste0(outFile, ".edgeR_vis/")
+if(is.null(myoptions$edgeR_suffix)){
+  detail_folder = paste0(outFile,  ".edgeR_vis/")
+}else{
+  detail_folder = paste0(outFile, myoptions$edgeR_suffix, ".vis/")
+}
 if(!file.exists(detail_folder)){
   dir.create(detail_folder)
 }
@@ -82,6 +86,7 @@ for (comp in rownames(edgeRres)){
   sigGene=length(readLines(sigGenenameFile))
   visFile=""
 
+  top_png=""
   prefix=paste0(detail_folder, comp)
   if (sigGene > 0){
     visFile=paste0(prefix, ".sig_genename.pdf")
@@ -141,7 +146,6 @@ for (comp in rownames(edgeRres)){
                         features=siggenes$gene, 
                         group.by="DisplayGroup", 
                         group.colors=groupColors, 
-                        label=sigGene<20, 
                         angle=0,
                         group.bar.height=0.05,
                         vjust=0.1) + guides(color = "none")
@@ -151,9 +155,11 @@ for (comp in rownames(edgeRres)){
                         features=siggenes$gene, 
                         group.by="DisplayGroup", 
                         group.colors=groupColors, 
-                        label=sigGene<20, 
                         angle=0,
                         group.bar.height=0.05) + guides(color = "none")
+      }
+      if(sigGene > 20){
+        g<-g + theme(axis.text.y=element_blank())
       }
       ggsave(paste0(prefix, ".sig_gene.heatmap.png"), g, width=8, height=heatmap_height, dpi=300, units="in", bg="white")
 
@@ -183,6 +189,7 @@ for (comp in rownames(edgeRres)){
 
       pdf(file=visFile, onefile = T, width=width, height=10)
       siggene<-topNgenes[1]
+      is_first=TRUE
       for (sig_gene in topNgenes){
         p<-get_sig_gene_figure( cell_obj, 
                                 sigout, 
@@ -194,12 +201,17 @@ for (comp in rownames(edgeRres)){
                                 scale_data=FALSE)
 
         print(p)
+        if(is_first){
+          top_png = paste0(prefix, ".", sig_gene, ".png")
+          ggsave(top_png, p, width=8, height=6, dpi=300, units="in", bg="white")
+          is_first=FALSE
+        }
         #break
       }
       dev.off()
     #}
   }
-  curDF<-data.frame("prefix"=prefix, "sigGeneVisFile"=visFile, "sigGene"=sigGene, "totalGene"=totalGene, "cluster"=cellType, "comparison"=comparison)
+  curDF<-data.frame("prefix"=prefix, "sigGeneVisFile"=visFile, "sigGene"=sigGene, "totalGene"=totalGene, "cluster"=cellType, "comparison"=comparison, "top_png"=top_png)
   if(is.null(result)){
     result<-curDF
   }else{
@@ -227,7 +239,12 @@ if(!bBetweenCluster){
     obj@meta.data$sigRate=unlist(rateMap[as.character(unlist(obj[[cluster_name]]))])
     obj@meta.data$sigRate[is.na(obj$sigRate)]<-0
     
-    p1<-get_dim_plot_labelby(obj, label.by = cluster_name) + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5))
+    if(cluster_name == "seurat_cell_type"){
+      p1<-get_dim_plot(obj, group.by="seurat_clusters", label.by = cluster_name) 
+    }else{
+      p1<-get_dim_plot_labelby(obj, label.by = cluster_name)
+    }
+    p1 <- p1 + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + guides(fill=guide_legend(ncol =1))
     p2<-MyFeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red"), raster=FALSE) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
     g<-ggarrange(p1, p2, ncol = 2, labels = c("A", "B"))
     ggsave(paste0(detail_folder, outFile, ".", comp, ".sigGenePerc.png"), g, width=14, height=7, dpi=300, units="in", bg="white")
