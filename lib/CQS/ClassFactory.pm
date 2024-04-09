@@ -59,12 +59,12 @@ sub performTask {
 }
 
 sub performTaskByPattern {
-  my ( $config, $section_pattern ) = @_;
+  my ( $config, $section_pattern, $runImmediately ) = @_;
   for my $section (sort keys %$config){
     if ($section =~ /$section_pattern/){
       if (ref $config->{$section} eq ref {}){
         if (defined $config->{$section}{class}){
-          performTask($config, $section);
+          performTask($config, $section, $runImmediately);
         }
       }
     }
