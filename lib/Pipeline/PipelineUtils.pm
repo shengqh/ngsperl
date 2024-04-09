@@ -541,8 +541,12 @@ sub addDEseq2 {
     $rCode = $rCode . "filterBaseMean=1;filterBaseMeanValue=" . getValue($def, "filterBaseMeanValue", 30) . ";";
   }
 
+  if(not defined $feature_name_regex){
+    $feature_name_regex = getValue($def, "DE_feature_name_regex", "");
+  }
+
   if(not defined $n_first){
-    $n_first = -1;
+    $n_first = getValue($def, "DE_n_first", -1);
   }
 
   $config->{$taskName} = {
@@ -572,6 +576,7 @@ sub addDEseq2 {
     rCode                        => $rCode,
     parameterSampleFile1 => {
       feature_name_regex => $feature_name_regex,
+      feature_name_filter => getValue($def, "DE_feature_name_filter", ""),
       n_first => $n_first,
     },
     pbs                          => {
@@ -3088,36 +3093,25 @@ sub addLocusCoverage {
 sub addBamsnapLocus {
   my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref) = @_;
 
-  my $bamsnap_raw_option = $def->{bamsnap_raw_option};
-  my $option = "";
-  if(defined $bamsnap_raw_option) {
-    for my $key (keys %$bamsnap_raw_option){
-      $option = $option . " " . $key . " " . $bamsnap_raw_option->{$key};
-    }
-  }
-
-  my $gene_track = ($def->{bamsnap_option} =~ /no_gene_track/) ? "" : "gene";
-  my $width = getValue($def, "bamsnap_width", 2000);
-  my $height = getValue($def, "bamsnap_height", 3000);
+  my $option = getValue($def, "bamsnap_option", "-coverage_color 000000 -coverage_vaf 2.0 -draw coordinates bamplot gene -bamplot coverage base read -width 2000 -height 3000 -margin 40");
 
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
     docker_prefix         => "bamsnap_",
-    #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => $option . " -draw coordinates bamplot $gene_track -bamplot coverage -width $width -height $height -out __NAME__.png",
+    option                => $option . " -out __NAME__.png",
     interpretor           => "",
     check_program         => 0,
     program               => "bamsnap",
     source                => getValue($def, "bamsnap_locus"),
     source_arg            => "-pos",
     parameterSampleFile2_ref => $bam_ref,
-    parameterSampleFile2_arg => "-bam",
+    parameterSampleFile2_arg => "\\\n  -bam",
     parameterSampleFile2_type => "array",
-    parameterSampleFile2_join_delimiter => " \\\n",
-    parameterSampleFile2_name_arg => "-title",
-    parameterSampleFile2_name_join_delimiter => '" ' . "\\\n" . '"',
+    parameterSampleFile2_join_delimiter => " \\\n       ",
+    parameterSampleFile2_name_arg => "\\\n  -title",
+    parameterSampleFile2_name_join_delimiter => '" ' . "\\\n         " . '"',
     parameterSampleFile2_name_has_comma => 1,
     output_to_same_folder => 1,
     output_arg            => "-out",
@@ -3734,6 +3728,7 @@ sub add_bamplot {
           biomart_dataset   => getValue($def, "biomart_dataset"),
           biomart_symbolKey => getValue($def, "biomart_symbolKey"),
           biomart_add_chr => getValue($def, "biomart_add_chr"),
+          biomart_add_prefix => getValue($def, "biomart_add_prefix"),
 
           gene_names => getValue($def, "gene_names"),
           gene_shift => getValue($def, "gene_shift", 0),
