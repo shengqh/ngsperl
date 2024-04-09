@@ -91,7 +91,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_outputPdf",  getValue( $def, "outputPdf",  0 ) );
   initDefaultValue( $def, "DE_outputPng",  getValue( $def, "outputPng",  1 ) );
   initDefaultValue( $def, "DE_outputTIFF", getValue( $def, "outputTIFF", 0 ) );
-  initDefaultValue( $def, "DE_showVolcanoLegend", 1 );
+  initDefaultValue( $def, "DE_showVolcanoLegend", 0 );
 
   return $def;
 }

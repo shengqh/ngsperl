@@ -489,7 +489,7 @@ sub getOutputFormat {
   $result = addOutputOption( $def, $result, "DE_outputPdf",         0,                          "outputPdf" );
   $result = addOutputOption( $def, $result, "DE_outputPng",         1,                          "outputPng" );
   $result = addOutputOption( $def, $result, "DE_outputTIFF",        0,                          "outputTIFF" );
-  $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 1,                          "showVolcanoLegend" );
+  $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 0,                          "showVolcanoLegend" );
   $result = addOutputOption( $def, $result, "use_pearson_in_hca",   $def->{use_pearson_in_hca}, "usePearsonInHCA" );
 
   if($is_DE){

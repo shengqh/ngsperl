@@ -123,7 +123,7 @@ if(!exists("thread")){
 }
 
 if(!exists("showVolcanoLegend")){
-  showVolcanoLegend<-1
+  showVolcanoLegend<-0
 }
 
 if(!exists("cooksCutoff")){

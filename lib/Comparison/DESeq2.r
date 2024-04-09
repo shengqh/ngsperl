@@ -119,7 +119,7 @@ if(!exists("thread")){
 }
 
 if(!exists("showVolcanoLegend")){
-  showVolcanoLegend<-1
+  showVolcanoLegend<-0
 }
 
 if(!exists("cooksCutoff")){
@@ -1013,19 +1013,20 @@ for(countfile_index in c(1:length(countfiles))){
       diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
       diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
     }
-    
+
+    diffResult$colour=factor(diffResult$colour,levels=c("grey","blue","red"))
+    diffResult$log10pvalue=-log10(diffResult$pvalue)
+    diffResult<-diffResult[order(diffResult$colour),]
     write.csv(diffResult, file=paste0(prefix, "_DESeq2_volcanoPlot.csv"))
     
-    yname=bquote(-log10(p~value))
-    xname=bquote(log[2]~Fold~Change)
     p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-      scale_y_continuous(trans=reverselog_trans(10),name=yname) +
+      scale_x_continuous(name=bquote(log[2](FoldChange)),breaks=pretty_breaks(n=4))+
+      scale_y_continuous(name=bquote(-log[10](pValue)),breaks=pretty_breaks(n=4))+
       geom_point(aes(size=log10BaseMean,colour=colour))+
       scale_color_manual(values=changeColours,guide = FALSE)+
-      scale_x_continuous(name=xname)+
       geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
       geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-      guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+      guides(size=guide_legend(title=bquote(log[10](BaseMean))))+
       theme_bw()+
       scale_size(range = c(3, 7))+
       theme(axis.text = element_text(colour = "black",size=30),
@@ -1372,20 +1373,23 @@ if (! is.null(resultAllOut)) {
       diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
       diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
     }
+
+    diffResult$colour=factor(diffResult$colour,levels=c("grey","blue","red"))
+    diffResult$log10pvalue=-log10(diffResult$pvalue)
+
+    filePrefix<-paste0(allprefix,"_DESeq2_volcanoPlot")
+    saveRDS(diffResult, paste0(filePrefix, ".rds"))
     
-    if (useRawPvalue==1) {
-      p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-        scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
-    } else {
-      p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-        scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
-    }
-    p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
+    strip_font_family="Times"
+    pair_font_size=25
+    p<-ggplot(diffResult,aes(x=log2FoldChange,y=log10pvalue))+
+      geom_point(aes(size=log10BaseMean,colour=colour))+
       scale_color_manual(values=changeColours,guide = FALSE)+
-      scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+      scale_x_continuous(name=bquote(log[2](FoldChange)))+
+      scale_y_continuous(name=bquote(log[10](pValue))) +
       geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
       geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-      guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
+      guides(size=guide_legend(title=bquote(log[10](BaseMean))))+
       theme_bw()+
       scale_size(range = c(3, 7))+
       facet_grid(. ~ Comparison)+
@@ -1393,13 +1397,25 @@ if (! is.null(resultAllOut)) {
             axis.title = element_text(size=25),
             legend.text= element_text(size=25),
             legend.title= element_text(size=25),
-            strip.text.x = element_text(size = 25),
+            strip.text.x = element_text(family = strip_font_family, size=pair_font_size),
             strip.background=element_rect(fill="white"))
-    
-    pwidth<-max(12,4*length(allComparisons)+4)
-    owidth<-max(4000, 1500*length(allComparisons)+1000)
-    filePrefix<-paste0(allprefix,"_DESeq2_volcanoPlot")
-    drawPlot(filePrefix, outputFormat, pwidth, 7, owidth, 2000, p, "Volcano")
+
+    get_text_width <- function(txt, font_family, font_size = 10, units = "inches", res=300) {
+      tmp_file <- tempfile(fileext = ".png")
+      png(tmp_file, res=res)
+      par(family = font_family, ps = font_size)
+      ret = strwidth(txt, units = units)
+      dev.off()
+      unlink(tmp_file)
+
+      return(ret)
+    }
+
+    max_pair=max(get_text_width(unique(diffResult$Comparison), font = strip_font_family, font_size = pair_font_size, units = 'inches')) + 0.1
+
+    pwidth<-max(12,length(unique(diffResult$Comparison))*max_pair+1)
+    owidth<-pwidth * 300
+    drawPlot(filePrefix, outputFormat, pwidth, 7, owidth, 2100, p, "Volcano")
     
     #output a summary table with numbers of gisnificant changed genes
     sigGeneSummaryTable<-t(table(diffResult[,"Significant"],diffResult[,"Comparison"]))

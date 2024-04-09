@@ -119,7 +119,9 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_outputPdf",  getValue( $def, "outputPdf",  0 ) );
   initDefaultValue( $def, "DE_outputPng",  getValue( $def, "outputPng",  1 ) );
   initDefaultValue( $def, "DE_outputTIFF", getValue( $def, "outputTIFF", 0 ) );
-  initDefaultValue( $def, "DE_showVolcanoLegend", 1 );
+  initDefaultValue( $def, "DE_showVolcanoLegend", 0 ); #remove size legend from volcano plot
+
+  initDefaultValue( $def, "REPORT_use_enhanced_volcano", 1 );
 
   return $def;
 }
@@ -1397,7 +1399,11 @@ fi
         push( @report_names, "deseq2_volcano_plot" );
       }
       else {
-        push( @report_files, $deseq2taskname, "_DESeq2_volcanoEnhanced.png" );
+        if($def->{REPORT_use_enhanced_volcano}){
+          push( @report_files, $deseq2taskname, "_DESeq2_volcanoEnhanced.png" );
+        }else{
+          push( @report_files, $deseq2taskname, "_DESeq2_volcanoPlot.png" );
+        }
         push( @report_names, "deseq2_volcano_plot" );
       }
       for my $key ( keys %$pairs ) {
