@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='Aorta_9240'
-outFile='Aorta_9240'
+sample_name='DKO_F'
+outFile='DKO_F'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/raw_dynamic_qc_sct2_decontX/result/Aorta_9240')
+setwd('/nobackup/vickers_lab/projects/20240402_6487_DM_scRNA_mouse_cellbender/decontX/result/DKO_F')
 
 ### Parameter setting end ###
 
@@ -57,49 +57,51 @@ draw_umap<-function(sce, png_file){
   dev.off()
 }
 
-sample_name=names(sample_map)[1]
-for (sample_name in names(sample_map)){
-  cat(sample_name, "\n")
-  countfile = sample_map[sample_name]
-  raw_countfile = raw_map[sample_name]
+sample_name=outFile
+cat(sample_name, "\n")
+countfile = sample_map[sample_name]
+raw_countfile = raw_map[sample_name]
 
-  clusters = NULL
-  if(grepl(".rds$", countfile)){
-    #countfile is a object file, containing cell_type/cluster information
-    obj<-readRDS(countfile)
-    if(is.list(obj)){
-      obj=obj$obj
-    }
-    if("layer4" %in% colnames(obj@meta.data)){
-      clusters = obj@meta.data$layer4
-    }
+clusters = NULL
+if(grepl(".rds$", countfile)){
+  #countfile is a object file, containing cell_type/cluster information
+  obj<-readRDS(countfile)
+  if(is.list(obj)){
+    obj=obj$obj
   }
-  
-  sce <- read_sce(countfile, myoptions$species)
-  sce.raw <- read_sce(raw_countfile, myoptions$species)
-
-  common_genes = intersect(row.names(sce), row.names(sce.raw))
-  sce=sce[common_genes,]
-  sce.raw=sce.raw[common_genes,]
-
-  sce <- decontX(sce, background = sce.raw, z=clusters)
-
-  draw_umap(sce, paste0(sample_name, ".decontX.png"))
-
-  meta=colData(sce)
-  saveRDS(meta, paste0(sample_name, ".decontX.meta.rds"))
-
-  if(myoptions$remove_decontX & myoptions$remove_decontX_by_contamination > 0){
-    decontX_sce = sce[, sce@metadata$decontX$estimates$all_cells$contamination < myoptions$remove_decontX_by_contamination]
-  
-    draw_umap(decontX_sce, paste0(sample_name, ".decontX.after.png"))
-
-    filtered = data.frame("Pre_filter_cell" = ncol(sce), "Post_filter_cell" = ncol(decontX_sce))
-    write.csv(filtered, paste0(sample_name, ".decontX.filtered.csv"), row.names=FALSE)
-
-    counts = counts(decontX_sce)
-  }else{
-    counts = ceiling(decontXcounts(sce))
+  if("layer4" %in% colnames(obj@meta.data)){
+    clusters = obj@meta.data$layer4
   }
-  saveRDS(counts, paste0(sample_name, ".decontX.counts.rds"))
 }
+
+sce <- read_sce(countfile, myoptions$species)
+sce.raw <- read_sce(raw_countfile, myoptions$species)
+
+common_genes = intersect(row.names(sce), row.names(sce.raw))
+sce=sce[common_genes,]
+sce.raw=sce.raw[common_genes,]
+
+sce <- decontX(sce, background = sce.raw, z=clusters)
+
+draw_umap(sce, paste0(sample_name, ".decontX.png"))
+
+meta=colData(sce)
+saveRDS(meta, paste0(sample_name, ".decontX.meta.rds"))
+
+if(myoptions$remove_decontX & (myoptions$remove_decontX_by_contamination > 0)){
+  cat("  remove cells with contamination > ", myoptions$remove_decontX_by_contamination, "\n")
+  decontX_sce = sce[, sce@metadata$decontX$estimates$all_cells$contamination < myoptions$remove_decontX_by_contamination]
+
+  draw_umap(decontX_sce, paste0(sample_name, ".decontX.after.png"))
+
+  filtered = data.frame("Pre_filter_cell" = ncol(sce), "Post_filter_cell" = ncol(decontX_sce))
+  write.csv(filtered, paste0(sample_name, ".decontX.filtered.csv"), row.names=FALSE)
+
+  #we only remove the cells but not change the gene read counts
+  counts = counts(decontX_sce)
+}else{
+  #update the gene read count
+  counts = ceiling(decontXcounts(sce))
+}
+saveRDS(counts, paste0(sample_name, ".decontX.counts.rds"))
+
