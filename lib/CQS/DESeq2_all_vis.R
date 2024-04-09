@@ -1,3 +1,17 @@
+rm(list=ls()) 
+outFile='9074_ES.host_genome.DESeq2.Matrix'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3=''
+useRawPvalue=1;
+
+setwd('/nobackup/vickers_lab/projects/20230131_9074_ES_ARMseq_human_byMars_hg38/data_visualization/deseq2_host_genome_TotalReads_vis/result')
+
+### Parameter setting end ###
+
 options(bitmapType='cairo')
 
 resultFile<-outFile
@@ -16,13 +30,6 @@ if(!exists("fixColumn")){
 #for volcano plot
 library(scales)
 library(ggplot2)
-reverselog_trans <- function(base = exp(1)) {
-  trans <- function(x) -log(x, base)
-  inv <- function(x) base^(-x)
-  trans_new(paste0("reverselog-", format(base)), trans, inv, 
-      log_breaks(base = base), 
-      domain = c(1e-100, Inf))
-}
 
 addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
   if (visLayoutFileList!="") {
@@ -60,7 +67,6 @@ addVisLayout<-function(datForFigure, visLayoutFileList,LayoutKey="LayoutKey") {
   }
   return(datForFigure)
 }
-
 
 deseq2ResultFile<-read.delim(deseq2ResultFileList,header=F,as.is=T)
 
@@ -111,54 +117,81 @@ diffResult$colour[which(diffResult$Significant==1 & diffResult$log2FoldChange<0)
 #diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange>=log2(foldChange))]<-"red"
 #diffResult$colour[which(diffResult$padj<=pvalue & diffResult$log2FoldChange<=-log2(foldChange))]<-"blue"
 
+diffResult$colour=factor(diffResult$colour,levels=c("grey","blue","red"))
+
 diffResult<-addVisLayout(diffResult,visLayoutFileList)
 
-if (useRawPvalue==1) {
-  p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-      scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
-} else {
-  p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-      scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
-}
-p<-p+
-    geom_point(aes(size=log10BaseMean,colour=colour))+
-    scale_color_manual(values=changeColours,guide="none")+
-    scale_x_continuous(name=bquote(log[2]~Fold~Change),breaks=pretty_breaks(n=4))+
-    geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
-    geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-    guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+
-    theme_bw()+
-    scale_size(range = c(1, 4))+
-    theme(axis.text = element_text(colour = "black",size=20),
-        axis.title = element_text(size=20),
-        legend.text= element_text(size=20),
-        legend.title= element_text(size=20))+
-    theme(strip.text.x = element_text(size = 13),
-        strip.text.y = element_text(size = 13),
-        strip.background = element_blank(),
-        legend.position="top")
-    
-width<-max(1600,length(unique(diffResult$Pairs))*800)
-height<-max(1600,length(unique(diffResult$Module))*800)
+#use log10pvalue instead of pvalue with reverse log scale, otherwise the facet_grid scales might not work.
+diffResult$log10pvalue=-log10(diffResult$pvalue)
 
+saveRDS(diffResult, paste0(resultFile, ".rds"))
+
+pair_font_size=16
+module_font_size=24
+
+strip_font_family="Times"
+
+get_text_width <- function(txt, font_family, font_size = 10, units = "inches", res=300) {
+  tmp_file <- tempfile(fileext = ".png")
+  png(tmp_file, res=res)
+  par(family = font_family, ps = font_size)
+  ret = strwidth(txt, units = units)
+  dev.off()
+  unlink(tmp_file)
+
+  return(ret)
+}
+
+max_pair=max(get_text_width(unique(diffResult$Pairs), font = strip_font_family, font_size = pair_font_size, units = 'inches')) + 0.1
+max_module=max(get_text_width(unique(diffResult$Module), font = strip_font_family, font_size = module_font_size, units = 'inches')) + 0.1
+
+width<-max(6,length(unique(diffResult$Pairs))*max_pair)
+height<-max(6,length(unique(diffResult$Module))*max_module)
+
+formula=NULL
 if((width > height) | fixColumn){
   if (visLayoutFileList!="") {
-    p<-p+facet_grid(Row_Group~Col_Group,scales = "free")
+    formula=as.formula("Row_Group~Col_Group")
   } else {
-    p<-p+facet_grid(Module~Pairs)
+    formula=as.formula("Module~Pairs")
   }
+  xfondsize=pair_font_size
+  yfondsize=module_font_size
 }else{
   if (visLayoutFileList!="") {
-    p<-p+facet_grid(Col_Group~Row_Group,scales = "free")
+    formula=as.formula("Col_Group~Row_Group")
   } else {
-    p<-p+facet_grid(Pairs~Module)
+    formula=as.formula("Pairs~Module")
   }
+  xfondsize=module_font_size
+  yfondsize=pair_font_size
   tmp<-width
   width<-height
   height<-tmp
 }
 
-png(filename=paste0(resultFile, ".png"), width=width, height=height, res=300)
-print(p)
-dev.off()
+width=width+1
+height=height+1.5
 
+diffResult<-diffResult[order(diffResult$colour),]
+p<-ggplot(diffResult,aes(x=log2FoldChange,y=log10pvalue))+
+    geom_point(aes(colour=colour), size=4)+
+    scale_color_manual(values=changeColours,guide="none")+
+    scale_x_continuous(name=bquote(log[2](FoldChange)),breaks=pretty_breaks(n=4))+
+    scale_y_continuous(name=bquote(-log[10](pValue)),breaks=pretty_breaks(n=4))+
+    geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
+    geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
+    theme_bw()+
+    scale_size(range = c(1, 4))+
+    theme(axis.text = element_text(colour = "black",size=20),
+        axis.title = element_text(size=20),
+        legend.text= element_text(size=20),
+        legend.title= element_text(size=20),
+        strip.text.x = element_text(family = strip_font_family, size=xfondsize),
+        strip.text.y = element_text(family = strip_font_family, size=yfondsize),
+        strip.background = element_blank(),
+        legend.position="top") +
+    facet_grid(formula, scales="free")
+
+ggsave(filename=paste0(resultFile, ".png"), p, width=width, height=height, units="in", dpi=300)
+ggsave(filename=paste0(resultFile, ".pdf"), p, width=width, height=height, units="in", dpi=300)
