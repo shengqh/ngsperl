@@ -296,14 +296,14 @@ sub getScRNASeqConfig {
     my $hto_summary_task = undef;
     my $raw_files_def = "raw_files";
     my $files_def = "files";
+    my $filtered_files_def = "files";
 
-    if(getValue($def, "perform_cellbender", 0)){
-      my $cellbender_prefix = "cellbender";
-      $files_def = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $files_def, $raw_files_def );
-    }
+    my $perform_cellbender = getValue($def, "perform_cellbender", 0);
 
     my $perform_decontX = getValue($def, "perform_decontX", 0);
     my $remove_decontX = $perform_decontX && getValue($def, "remove_decontX", 0);
+    my $remove_decontX_by_contamination = getValue($def, "remove_decontX_by_contamination", 0.25);
+
     my $prefix = "";
 
     my $raw_individual_qc_task = undef;
@@ -314,78 +314,37 @@ sub getScRNASeqConfig {
     my $perform_individual_qc = getValue($def, "perform_individual_qc", 1);
 
     my $decontX_task = undef;
+    my $decontX_counts_ref = undef;
     if ($perform_decontX){
       $decontX_task = "decontX";
-      add_decontX($config, $def, $tasks, $target_dir, $decontX_task, "files", "raw_files", {}, 1);
+      add_decontX($config, $def, $tasks, $target_dir, $decontX_task, $filtered_files_def, $raw_files_def, {}, 1);
       $decontX_ref = [$decontX_task, ".meta.rds"];
+      $decontX_counts_ref = [$decontX_task, ".counts.rds"];
+      if($remove_decontX){
+        $files_def = $decontX_counts_ref;
+        $prefix = "decontX_";
+      }
+    }
+
+    if($perform_cellbender){
+      my $cellbender_prefix = "cellbender";
+      $files_def = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref );
+
+      if($remove_decontX){
+        $prefix = $prefix . "cellbender_";
+      }else{
+        $prefix = "cellbender_";
+      }
+
+      $remove_decontX = 0;
     }
 
     if ( $perform_sctk ){
-      my $sctk_task = "sctk";
+      my $sctk_task = $prefix . "sctk";
       add_sctk($config, $def, $tasks, $target_dir, $sctk_task, $files_def);
       $sctk_ref = [$sctk_task, ".meta.rds"];
     }
 
-    # my $signacX_ref = undef;
-    # if (getValue( $def, "perform_SignacX", 0 ) ) {
-    #   my $signacX_task = "SignacX";
-    #   add_signacx( $config, $def, $tasks, $target_dir, $project_name, $signacX_task, $files_def, "pca", 1);
-    #   $signacX_ref = [ $signacX_task, ".meta.rds" ];
-    # }
-
-    # my $singleR_ref = undef;
-    # if (getValue( $def, "perform_SingleR", 0 ) ) {
-    #   my $singleR_task = "SingleR";
-    #   my $cur_options = {
-    #     task_name => $project_name,
-    #     reduction => "pca", 
-    #   };
-    #   add_singleR_cell( $config, $def, $tasks, $target_dir, $singleR_task, $files_def, $cur_options, 1 );
-    #   $singleR_ref = [ $singleR_task, ".meta.rds" ];
-    # }
-
-    if ( $perform_individual_qc ){
-      ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
-    }
-
-    if( $def->{"perform_individual_dynamic_qc"} ){
-      my $sct_str = get_sct_str($def);
-      my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
-      add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
-
-      if($def->{"perform_decontX"}){
-        $decontX_task = "${raw_individual_dynamic_qc_task}_decontX";
-        add_decontX($config, $def, $tasks, $target_dir, $decontX_task, [$raw_individual_dynamic_qc_task, ".rds"], "raw_files", {}, 1);
-        $decontX_ref = [$decontX_task, ".meta.rds"];
-      }
-
-      if($def->{"perform_DoubletFinder"}){
-        my $df_task = "${raw_individual_dynamic_qc_task}_DoubletFinder";
-        addDoubletFinder_individual($config, $def, $tasks, $target_dir, $df_task, [$raw_individual_dynamic_qc_task, ".rds"]);
-        $doublet_finder_ref = [$df_task, ".meta.rds"];
-      }
-    }
-
-    if ($perform_decontX && $remove_decontX){
-      $files_def = [$decontX_task, ".counts.rds"];
-      $prefix = "decontX_";
-
-      if ( $perform_sctk ){
-        my $sctk_task = "${prefix}sctk";
-        add_sctk($config, $def, $tasks, $target_dir, $sctk_task, $files_def);
-        $sctk_ref = [$sctk_task, ".meta.rds"];
-      }
-
-      # if(getValue($def, "perform_doublet_finder", 0)){
-      #   my $df_task = "${prefix}doublet_finder";
-      #   addDoubletFinder_individual($config, $def, $tasks, $target_dir, $df_task, $files_def);
-      #   $doublet_finder_ref = [$df_task, ".meta.rds"];
-      # }
-
-      if ( $perform_individual_qc ){
-        ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref);
-      }
-    }
 
     if($remove_doublets){
       my $doublets_ref = undef;
@@ -404,11 +363,17 @@ sub getScRNASeqConfig {
         
         $files_def = [$nodoublets_task, ".counts.rds"];
         $prefix = "${prefix}nd_";
-
-        if ( $perform_individual_qc ){
-          ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
-        }
       }
+    }
+
+    if ( $perform_individual_qc ){
+      ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+    }
+
+    if( $def->{"perform_individual_dynamic_qc"} ){
+      my $sct_str = get_sct_str($def);
+      my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
+      add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
     }
 
     my $files = $def->{files};
