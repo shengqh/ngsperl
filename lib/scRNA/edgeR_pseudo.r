@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='SADIE_pbmc'
+outFile='P10940'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/data/pbmc.v4.DE.rds'
-parFile2=''
+parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.final.rds'
+parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample/result')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -29,6 +29,17 @@ foldChange<-as.numeric(myoptions$foldChange)
 useRawPvalue<-is_one(myoptions$useRawPvalue)
 cluster_name=myoptions$cluster_name
 min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
+
+comparisons<-read.table(parSampleFile2, stringsAsFactors = F, fill=TRUE, header=F)
+if(ncol(comparisons) == 3){
+  colnames(comparisons)<-c("Value", "Key", "Comparison")
+}else{
+  colnames(comparisons)<-c("Value", "Comparison")
+  comparisons$Key = "groups"
+}
+
+comparisonNames<-unique(comparisons$Comparison)
+
 
 if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
@@ -77,16 +88,6 @@ if(1){
   cts<-sample_count_df$cluster
   cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
   cts_file_map<-unlist(split(sample_count_df$pusedo_file, sample_count_df$cluster))
-
-  comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
-  if(ncol(comparisons) == 3){
-    colnames(comparisons)<-c("Value", "Key", "Comparison")
-  }else{
-    colnames(comparisons)<-c("Value", "Comparison")
-    comparisons$Key = "groups"
-  }
-
-  comparisonNames<-unique(comparisons$Comparison)
 
   designMatrix<-NULL
 
@@ -265,7 +266,7 @@ for(idx in c(1:nrow(designMatrix))){
                                   prefix=prefix, 
                                   useRawPvalue=useRawPvalue, 
                                   pvalue=pvalue, 
-                                  foldChange=foldchange, 
+                                  foldChange=foldChange, 
                                   comparisonTitle=paste0(cellType, " : ", comp))
 
   cat("  cpm", "\n")
