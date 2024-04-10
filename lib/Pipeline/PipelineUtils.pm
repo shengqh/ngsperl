@@ -577,6 +577,9 @@ sub addDEseq2 {
     parameterSampleFile1 => {
       feature_name_regex => $feature_name_regex,
       feature_name_filter => getValue($def, "DE_feature_name_filter", ""),
+      enhanced_volcano_red_blue_only => getValue($def, "DE_enhanced_volcano_red_blue_only", 0),
+      title_in_volcano => getValue($def, "DE_title_in_volcano", 1),
+      caption_in_volcano => getValue($def, "DE_caption_in_volcano", 1),
       n_first => $n_first,
     },
     pbs                          => {
