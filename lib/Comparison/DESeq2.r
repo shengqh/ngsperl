@@ -1,5 +1,6 @@
-rootdir<-"/nobackup/shah_lab/shengq2/20240317_ECa3_rnaseq_hg38/deseq2_genetable/result"
-inputfile<-"ECa3.define" 
+
+rootdir<-"/nobackup/vickers_lab/projects/20240206_Linton_11055_bulkRNA_human/deseq2_proteincoding_genetable/result"
+inputfile<-"RNAseq_human.define" 
 
 pvalue<-0.05
 useRawPvalue<-0
@@ -20,7 +21,7 @@ thread<-8
 
 independentFiltering<-TRUE
 
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-TRUE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;top25cvInHCA<-TRUE;
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;top25cvInHCA<-FALSE;
 cooksCutoff<-TRUE
 #predefined_condition_end
 
@@ -230,27 +231,27 @@ options(expressions=5e4)
 
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 
-openPlot<-function(filePrefix, format, pdfWidth, pdfHeight, otherWidth, otherHeight, figureName){
+openPlot<-function(filePrefix, format, width_inch, height_inch, figureName){
   fileName<-paste0(filePrefix, ".", tolower(format))
   if(format == "PDF"){
-    pdf(fileName, width=pdfWidth, height=pdfHeight, useDingbats=FALSE)
+    pdf(fileName, width=width_inch, height=height_inch, useDingbats=FALSE)
   }else if(format == "TIFF"){
-    tiff(filename=fileName, width=otherWidth, height=otherHeight, res=300)
+    tiff(filename=fileName, width=width_inch, height=height_inch, units="in", res=300)
   }else {
-    png(filename=fileName, width=otherWidth, height=otherHeight, res=300)
+    png(filename=fileName, width=width_inch, height=height_inch, units="in", res=300)
   }
   cat("saving", figureName, "to ", fileName, "\n")
 }
 
-drawPlot<-function(filePrefix, outputFormat, pdfWidth, pdfHeight, otherWidth, otherHeight, p, figureName){
+drawPlot<-function(filePrefix, outputFormat, width_inch, height_inch, p, figureName){
   for(format in outputFormat){  
-    openPlot(filePrefix, format, pdfWidth, pdfHeight, otherWidth, otherHeight, figureName)  
+    openPlot(filePrefix, format, width_inch, height_inch, figureName)  
     print(p)
     dev.off()
   }
 }
 
-drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
+drawHCA_heatmap3<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
   genecount<-nrow(rldselect)
   showRowDendro = genecount <= 50
   if(genecount > 2){
@@ -271,7 +272,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     
     filePrefix<-paste0(prefix, "_DESeq2-vsd-heatmap")
     for(format in outputFormat){
-      openPlot(filePrefix, format, 10, 10, 3000, 3000, "HCA")
+      openPlot(filePrefix, format, 6, 6, "HCA")
       if(usePearsonInHCA){
         heatmap3(rldselect, 
                  col = hmcols, 
@@ -305,7 +306,60 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   }
 }
 
-drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat,scalePCs=TRUE){
+calc_ht_size = function(ht, unit = "inch", merge_legends = FALSE) {
+    pdf(NULL)
+    ht = draw(ht, merge_legends=merge_legends)
+    w = ComplexHeatmap:::width(ht)
+    w = convertX(w, unit, valueOnly = TRUE)
+    h = ComplexHeatmap:::height(ht)
+    h = convertY(h, unit, valueOnly = TRUE)
+    dev.off()
+
+    c(w, h)
+}
+
+drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
+  if(!require(ComplexHeatmap, quietly=TRUE)){
+    drawHCA_heatmap3(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat)
+    return
+  }
+
+  mat_scaled = t(scale(t(rldselect)))
+
+  cc = designData |> dplyr::mutate(Color=as.character(conditionColors)) |>
+    dplyr::select(Condition, Color) |>
+    unique()
+  colors=unlist(split(cc$Color, cc$Condition))
+  ha=HeatmapAnnotation( Group=designData$Condition,
+                        col=list(Group=colors),
+                        annotation_legend_param = list(Group = list(ncol = 1, title = "Group", title_position = "topleft")))
+
+  if(usePearsonInHCA){
+    clustering_distance_columns="pearson"
+  }else{
+    clustering_distance_columns="euclidean"
+  }
+  ht<-Heatmap( mat_scaled,
+              show_row_names=FALSE,
+              cluster_rows=TRUE, 
+              cluster_columns=TRUE, 
+              show_column_dend=TRUE, 
+              show_row_dend=FALSE,
+              clustering_distance_columns=clustering_distance_columns,
+              name="zscore",
+              top_annotation=ha)
+  
+  ht_sizes = calc_ht_size(ht, merge_legends=TRUE)
+
+  filePrefix=paste0(prefix, "_DESeq2-vsd-heatmap")
+  for(format in outputFormat){  
+    openPlot(filePrefix, format, ht_sizes[1], ht_sizes[2], "HCA")  
+    draw(ht, merge_legends=TRUE)
+    ignored=dev.off()
+  }
+}
+
+drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat,scalePCs=TRUE, width_inch=3.5){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     pca<-prcomp(t(rldmatrix))
@@ -332,10 +386,10 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
       geom_vline(aes(xintercept=0), size=.2) + 
       xlab(pcalabs[1]) + ylab(pcalabs[2]) +
       scale_color_manual(values=c("red", "blue")) +
-      theme_bw3() + theme(legend.position="top")
+      theme_bw3() + theme(aspect.ratio=1, legend.position="top")
     
     filePrefix<-paste0(prefix, "_DESeq2-vsd-pca")
-    drawPlot(filePrefix, outputFormat, 6, 5, 3000, 3000, g, "PCA")
+    drawPlot(filePrefix, outputFormat, width_inch, width_inch * 1.1, g, "PCA")
   }
 }
 
@@ -360,15 +414,6 @@ myEstimateSizeFactors<-function(dds){
     }
   }
   return(dds)
-}
-
-#for volcano plot
-reverselog_trans <- function(base = exp(1)) {
-  trans <- function(x) -log(x, base)
-  inv <- function(x) base^(-x)
-  trans_new(paste0("reverselog-", format(base)), trans, inv, 
-            log_breaks(base = base), 
-            domain = c(1e-100, Inf))
 }
 
 ###########################
@@ -407,18 +452,23 @@ sigTableAll<-NULL
 sigTableAllGene<-NULL
 sigTableAllVar<-c("baseMean","log2FoldChange","lfcSE","stat","pvalue","padj","FoldChange")
 
+feature_name_regex=NA
+feature_name_filter=NA
 n_first=-1
+enhanced_volcano_red_blue_only=FALSE
+title_in_volcano=TRUE
+caption_in_volcano=TRUE
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
   myoptions = split(options_table$V1, options_table$V2)
   feature_name_regex = myoptions$feature_name_regex
   feature_name_filter = myoptions$feature_name_filter
+  enhanced_volcano_red_blue_only = myoptions$enhanced_volcano_red_blue_only == "1"
+  title_in_volcano = myoptions$title_in_volcano == "1"
+  caption_in_volcano = myoptions$caption_in_volcano == "1"
   if("n_first" %in% names(myoptions)){
     n_first = as.numeric(myoptions$n_first)
   }
-}else{
-  feature_name_regex=NA
-  feature_name_filter=NA
 }
 
 countfile_index = 1
@@ -761,17 +811,24 @@ for(countfile_index in c(1:length(countfiles))){
 
     rsdata<-melt(rldmatrix)
     colnames(rsdata)<-c("Gene", "Sample", "log2Count")
-    png(filename=paste0(prefix, "_DESeq2-log2-density.png"), width=4000, height=3000, res=300)
-    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + xlab("DESeq2 log2 transformed count") + guides(color = FALSE)
-    print(g)
-    dev.off()
+    g<-ggplot(rsdata) + 
+      geom_density(aes(x=log2Count, colour=Sample)) + 
+      xlab(bquote(log[2](count))) + 
+      theme_bw3() +
+      guides(color = FALSE)
+    ggsave(paste0(prefix, "_DESeq2-log2-density.png"), g, width=5, height=3, units="in", dpi=300)
     
-    width=max(4000, ncol(rldmatrix) * 40 + 1000)
-    height=max(3000, ncol(rldmatrix) * 40)
-    png(filename=paste0(prefix, "_DESeq2-log2-density-individual.png"), width=width, height=height, res=300)
-    g<-ggplot(rsdata) + geom_density(aes(x=log2Count, colour=Sample)) + facet_wrap(~Sample, scales = "free") + xlab("DESeq2 log2 transformed count") + theme_bw3() + guides(color = FALSE)
-    print(g)
-    dev.off()
+    ncol=ceiling(sqrt(ncol(rldmatrix)))
+    nrow=ceiling(ncol(rldmatrix)/ncol)
+    width=max(6, ncol * 2)
+    height=max(6, nrow * 2)
+    g<-ggplot(rsdata) + 
+      geom_density(aes(x=log2Count, colour=Sample)) + 
+      facet_wrap(~Sample, scales = "free", ncol=ncol) + 
+      xlab(bquote(log[2](count))) + 
+      theme_bw3() + 
+      guides(color = FALSE)
+    ggsave(paste0(prefix, "_DESeq2-log2-density-individual.png"), g, width=width, height=height, units="in", dpi=300)
     
     fitType<-"parametric"
     if(nrow(comparisonData) < 5){
@@ -819,15 +876,32 @@ for(countfile_index in c(1:length(countfiles))){
       rldmatrix=as.matrix(assayvsd)
       
       #draw pca graph
-      drawPCA(paste0(prefix,"_geneAll"), rldmatrix, showLabelInPCA, designData, designData$Condition, outputFormat)
+      drawPCA(prefix=paste0(prefix,"_geneAll"), 
+              rldmatrix=rldmatrix, 
+              showLabelInPCA=showLabelInPCA, 
+              designData=designData, 
+              condition=designData$Condition, 
+              outputFormat=outputFormat,
+              scalePCs=TRUE)
       
       if(exists("top25cvInHCA") && top25cvInHCA){
         rv<-rowVars(rldmatrix)
         countHT<-rldmatrix[rv>=quantile(rv)[4],]
-        drawHCA(paste0(prefix,"_geneTop25variance"), countHT, ispaired, designData, conditionColors, gnames, outputFormat)
+        drawHCA(prefix=paste0(prefix,"_geneTop25variance"), 
+                rldselect=countHT, 
+                ispaired=ispaired, 
+                designData=designData, 
+                conditionColors=conditionColors, 
+                gnames=ganems, 
+                outputFormat=outputFormat)
       }else{
-        #draw heatmap
-        drawHCA(paste0(prefix,"_geneAll"), rldmatrix, ispaired, designData, conditionColors, gnames, outputFormat)
+        drawHCA(prefix=paste0(prefix,"_geneAll"), 
+                rldselect=rldmatrix, 
+                ispaired=ispaired, 
+                designData=designData, 
+                conditionColors=conditionColors, 
+                gnames=ganems, 
+                outputFormat=outputFormat)
       }
     }
     
@@ -994,7 +1068,7 @@ for(countfile_index in c(1:length(countfiles))){
         theme(axis.text = element_text(colour = "black"))
       
       filePrefix<-paste0(prefix,"_DESeq2_sig_barplot")
-      drawPlot(filePrefix, outputFormat, 7, 7, 3000, 3000, p, "PCA")
+      drawPlot(filePrefix, outputFormat, 6, 6, p, "PCA")
     } else {
       print(paste0("No gene with adjusted p value less than ",pvalue," and fold change larger than ",foldChange))
     }
@@ -1017,11 +1091,16 @@ for(countfile_index in c(1:length(countfiles))){
     diffResult$colour=factor(diffResult$colour,levels=c("grey","blue","red"))
     diffResult$log10pvalue=-log10(diffResult$pvalue)
     diffResult<-diffResult[order(diffResult$colour),]
+    diffResult$colour<-as.character(diffResult$colour)
+
     write.csv(diffResult, file=paste0(prefix, "_DESeq2_volcanoPlot.csv"))
     
-    p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
-      scale_x_continuous(name=bquote(log[2](FoldChange)),breaks=pretty_breaks(n=4))+
-      scale_y_continuous(name=bquote(-log[10](pValue)),breaks=pretty_breaks(n=4))+
+    xname=bquote(log[2](fold~change))
+    yname=bquote(-log[10](p~value))
+
+    p<-ggplot(diffResult,aes(x=log2FoldChange,y=log10pvalue))+
+      scale_x_continuous(name=xname,breaks=pretty_breaks(n=4))+
+      scale_y_continuous(name=yname,breaks=pretty_breaks(n=4))+
       geom_point(aes(size=log10BaseMean,colour=colour))+
       scale_color_manual(values=changeColours,guide = FALSE)+
       geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
@@ -1036,42 +1115,62 @@ for(countfile_index in c(1:length(countfiles))){
     
     if(!showVolcanoLegend){
       p<-p+ theme(legend.position = "none")
-      pdfWidth=10
-      otherWidth=3000
+      width_inch=7
     }else{
-      pdfWidth=15
-      otherWidth=4500
+      width_inch=10
     }
     
     filePrefix<-paste0(prefix,"_DESeq2_volcanoPlot")
-    drawPlot(filePrefix, outputFormat, pdfWidth, 10, otherWidth, 3000, p, "Volcano")
+    drawPlot(filePrefix, outputFormat, width_inch, 7, p, "Volcano")
 
-    if(require("EnhancedVolcano")){
+    if(require("EnhancedVolcano", quietly=TRUE)){
       if(!("Feature_gene_name" %in% colnames(diffResult))){
         diffResult$Feature_gene_name=rownames(diffResult)
       }
 
+      if(enhanced_volcano_red_blue_only){
+        keyvals.colour=diffResult$colour
+        names(keyvals.colour)[keyvals.colour == 'red'] <- 'Up'
+        names(keyvals.colour)[keyvals.colour == 'grey'] <- 'NS'
+        names(keyvals.colour)[keyvals.colour == 'blue'] <- 'Down'
+      }else{
+        keyvals.colour=NULL
+      }
+
+      if(title_in_volcano){
+        title=comparisonTitle
+      }else{
+        title=NULL
+      }
+
+      if(caption_in_volcano){
+        caption=paste0("total = ", nrow(diffResult), " variables")
+      }else{
+        caption=NULL
+      }
+
       if(packageVersion("EnhancedVolcano") == '1.8.0'){
         if(useRawPvalue == 1){
-          yname=bquote(-log10(p~value))
           yvar="pvalue"
         }else{
-          yname=bquote(-log10(adjusted~p~value))
+          yname=bquote(-log[10](adjusted~p~value))
           yvar="padj"
         }
+
         p<-EnhancedVolcano(diffResult,
             lab = diffResult$Feature_gene_name,
             x = 'log2FoldChange',
             y = yvar,
-            title = comparisonTitle,
             pCutoff = pvalue,
             FCcutoff = log2(foldChange),
             pointSize = 3.0,
             labSize = 6.0,
+            colCustom = keyvals.colour,
             colAlpha = 1,
-            subtitle = NULL) + ylab(yname)
+            title = title,
+            subtitle = NULL,
+            caption = caption) + ylab(yname) + xlab(xname)
       }else{
-        yname=bquote(-log10(p~value))
         if(useRawPvalue == 1){
           pCutoffCol="pvalue"
         }else{
@@ -1081,25 +1180,27 @@ for(countfile_index in c(1:length(countfiles))){
             lab = diffResult$Feature_gene_name,
             x = 'log2FoldChange',
             y = 'pvalue',
-            title = comparisonTitle,
             pCutoff = pvalue,
             pCutoffCol = pCutoffCol,
             FCcutoff = log2(foldChange),
             pointSize = 3.0,
             labSize = 6.0,
+            colCustom = keyvals.colour,
             colAlpha = 1,
-            subtitle = NULL) + ylab(yname)
+            title = title,
+            subtitle = NULL,
+            caption = caption) + ylab(yname) + xlab(xname)
       }
       filePrefix<-paste0(prefix,"_DESeq2_volcanoEnhanced")
-      drawPlot(filePrefix, outputFormat, 10, 10, 3000, 3000, p, "Volcano")
+      drawPlot(filePrefix, outputFormat, 7, 7, p, "Volcano")
     }
   }
   
   if(length(pairedspearman) > 0){
     filePrefix<-paste0(prefix, "_", ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup), "spearman"))
-    fwidth<-max(2000, 1000 * length(pairedspearman))
+    fwidth<-max(6, 1 * length(pairedspearman))
     for(format in outputFormat){
-      openPlot(filePrefix, format, 7, 7, fwidth, 2000, "Spearman correlation")
+      openPlot(filePrefix, format, fwidth, 6, "Spearman correlation")
       boxplot(pairedspearman)
       dev.off()
     }
@@ -1298,45 +1399,45 @@ if(!is.null(sigTableAll)){
     colors<-makeColors(length(allSigNameList))
     for(format in outputFormat){ 
       filePrefix<-paste0(allprefix,"_significantVenn")
-      openPlot(filePrefix, format, 7, 7, 2000, 2000, "Venn")
+      openPlot(filePrefix, format, 7, 7, "Venn")
       venn.diagram1(allSigNameList,cex=2,cat.cex=2,cat.col=colors,fill=colors)
       dev.off()
     }
   }
-  #Do heatmap significant genes if length larger or equal than 2
-  if (length(allSigNameList)>=2) {
-    temp<-cbind(unlist(allSigNameList),unlist(allSigDirectionList))
-    colnames(temp)<-c("Gene","Direction")
-    temp<-cbind(temp,comparisonName=rep(names(allSigNameList),sapply(allSigNameList,length)))
-    temp<-data.frame(temp)
-    dataForFigure<-temp
-    #geting dataForFigure order in figure
-    temp$Direction<-as.integer(as.character(temp$Direction))
-    temp<-acast(temp, Gene~comparisonName ,value.var="Direction")
-    temp<-temp[do.call(order, data.frame(temp)),]
-    maxNameChr<-max(nchar(row.names(temp)))
-    if (maxNameChr>70) {
-      tmpNames<-substr(row.names(temp),0,70)
-      if(length(tmpNames) == length(unique(tmpNames))){
-        row.names(temp)<-tmpNames
-        dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
-        warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
-      }
-    }
-    dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
+  # #Do heatmap significant genes if length larger or equal than 2
+  # if (length(allSigNameList)>=2) {
+  #   temp<-cbind(unlist(allSigNameList),unlist(allSigDirectionList))
+  #   colnames(temp)<-c("Gene","Direction")
+  #   temp<-cbind(temp,comparisonName=rep(names(allSigNameList),sapply(allSigNameList,length)))
+  #   temp<-data.frame(temp)
+  #   dataForFigure<-temp
+  #   #geting dataForFigure order in figure
+  #   temp$Direction<-as.integer(as.character(temp$Direction))
+  #   temp<-acast(temp, Gene~comparisonName ,value.var="Direction")
+  #   temp<-temp[do.call(order, data.frame(temp)),]
+  #   maxNameChr<-max(nchar(row.names(temp)))
+  #   if (maxNameChr>70) {
+  #     tmpNames<-substr(row.names(temp),0,70)
+  #     if(length(tmpNames) == length(unique(tmpNames))){
+  #       row.names(temp)<-tmpNames
+  #       dataForFigure$Gene<-substr(dataForFigure$Gene,0,70)
+  #       warning(paste0("The gene names were too long (",maxNameChr,"). Only first 70 letters were kept."))
+  #     }
+  #   }
+  #   dataForFigure$Gene<-factor(dataForFigure$Gene,levels=row.names(temp))
     
-    g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
-      geom_tile(aes(fill=Direction), color="white") +
-      scale_fill_manual(values=c("light green", "red")) +
-      theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
-            axis.text.y = element_text(size=textSize, face="bold")) +
-      coord_equal()
+  #   g<-ggplot(dataForFigure, aes(comparisonName, Gene))+
+  #     geom_tile(aes(fill=Direction), color="white") +
+  #     scale_fill_manual(values=c("light green", "red")) +
+  #     theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.5, face="bold"),
+  #           axis.text.y = element_text(size=textSize, face="bold")) +
+  #     coord_equal()
     
-    width=min(max(2500, 60 * length(unique(dataForFigure$comparisonName))),30000)
-    height=min(max(2000, 40 * length(unique(dataForFigure$Gene))),30000)
-    filePrefix<-paste0(allprefix,"_significantHeatmap")
-    drawPlot(filePrefix, outputFormat, 7, 7, width, height, g, "Significant Heatmap")
-  }
+  #   width=min(max(8, 3 * length(unique(dataForFigure$comparisonName))),20)
+  #   height=min(max(7, 40 * length(unique(dataForFigure$Gene))),100)
+  #   filePrefix<-paste0(allprefix,"_significantHeatmap")
+  #   drawPlot(filePrefix, outputFormat, 7, 7, g, "Significant Heatmap")
+  # }
 }
 
 if (! is.null(resultAllOut)) {
@@ -1383,15 +1484,13 @@ if (! is.null(resultAllOut)) {
     strip_font_family="Times"
     pair_font_size=25
     p<-ggplot(diffResult,aes(x=log2FoldChange,y=log10pvalue))+
-      geom_point(aes(size=log10BaseMean,colour=colour))+
+      geom_point(aes(colour=colour))+
       scale_color_manual(values=changeColours,guide = FALSE)+
       scale_x_continuous(name=bquote(log[2](FoldChange)))+
       scale_y_continuous(name=bquote(log[10](pValue))) +
       geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
       geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
-      guides(size=guide_legend(title=bquote(log[10](BaseMean))))+
       theme_bw()+
-      scale_size(range = c(3, 7))+
       facet_grid(. ~ Comparison)+
       theme(axis.text = element_text(colour = "black",size=25),
             axis.title = element_text(size=25),
@@ -1413,9 +1512,8 @@ if (! is.null(resultAllOut)) {
 
     max_pair=max(get_text_width(unique(diffResult$Comparison), font = strip_font_family, font_size = pair_font_size, units = 'inches')) + 0.1
 
-    pwidth<-max(12,length(unique(diffResult$Comparison))*max_pair+1)
-    owidth<-pwidth * 300
-    drawPlot(filePrefix, outputFormat, pwidth, 7, owidth, 2100, p, "Volcano")
+    pwidth<-max(12, length(unique(diffResult$Comparison))*max_pair+1)
+    drawPlot(filePrefix, outputFormat, pwidth, 7, p, "Volcano")
     
     #output a summary table with numbers of gisnificant changed genes
     sigGeneSummaryTable<-t(table(diffResult[,"Significant"],diffResult[,"Comparison"]))
