@@ -629,7 +629,7 @@ export NUMEXPR_MAX_THREADS=12
         "heatmap_cexCol" => $def->{heatmap_cexCol},
       },
       parameterFile4 => $def->{covariance_file},
-      rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+      rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.v2.R",
       output_file     => "parameterSampleFile1",
       output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
       can_result_be_empty_file => 1,
