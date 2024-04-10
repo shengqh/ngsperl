@@ -8,11 +8,11 @@ library(reshape2)
 ###############################################################################
 # Functions in pipeline
 ###############################################################################
-saveInError<-function(message="",filePrefix="",fileSuffix=paste0(Sys.Date(),".error")) {
-	if (filePrefix=="") {
+saveInError<-function(message="",file_prefix="",fileSuffix=paste0(Sys.Date(),".error")) {
+	if (file_prefix=="") {
 		filename<-fileSuffix
 	} else {
-		filename<-paste0(filePrefix,".",fileSuffix)
+		filename<-paste0(file_prefix,".",fileSuffix)
 	}
 	save.image(paste0(filename,".RData"))
 	writeLines(message,paste0(filename))
@@ -924,6 +924,53 @@ get_text_width <- function(txt, font_family, font_size = 10, units = "inches", r
   unlink(tmp_file)
 
   return(ret)
+}
+
+# get ComplexHeatmap plot size
+calc_ht_size = function(ht, unit = "inch", merge_legends = FALSE) {
+  pdf(NULL)
+  ht = draw(ht, merge_legends=merge_legends)
+  w = ComplexHeatmap:::width(ht)
+  w = convertX(w, unit, valueOnly = TRUE)
+  h = ComplexHeatmap:::height(ht)
+  h = convertY(h, unit, valueOnly = TRUE)
+  dev.off()
+
+  c(w, h)
+}
+
+open_plot<-function(file_prefix, format, width_inch, height_inch, figure_name){
+  fileName<-paste0(file_prefix, ".", tolower(format))
+  if(format == "PDF"){
+    pdf(fileName, width=width_inch, height=height_inch, useDingbats=FALSE)
+  }else if(format == "TIFF"){
+    tiff(filename=fileName, width=width_inch, height=height_inch, units="in", res=300)
+  }else {
+    png(filename=fileName, width=width_inch, height=height_inch, units="in", res=300)
+  }
+  cat("saving", figure_name, "to", fileName, "\n")
+}
+
+save_complexheatmap_plot<-function(file_prefix, outputFormat, ht, width_inch=NULL, height_inch=NULL ){
+  if(is.null(width_inch) | is.null(height_inch)){
+    ht_sizes = calc_ht_size(ht, merge_legends=TRUE)
+    width_inch = ht_sizes[1]
+    height_inch = ht_sizes[2]
+  }
+
+  for(format in outputFormat){  
+    open_plot(file_prefix, format, ht_sizes[1], ht_sizes[2], "HCA")  
+    draw(ht, merge_legends=TRUE)
+    ignored=dev.off()
+  }  
+}
+
+save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, p){
+  for(format in outputFormat){  
+    fileName<-paste0(file_prefix, ".", tolower(format))
+    cat("saving", fileName, "\n")
+    ggsave(fileName, plot=p, width=width_inch, height=height_inch, units="in", dpi=300, bg="white")
+  }
 }
 
 ###############################################################################
