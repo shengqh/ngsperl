@@ -325,6 +325,8 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
     };
     push @$summary_ref, ( $macs2_broad_task );
     $peak_calling_task = $macs2_broad_task;
+
+    add_peak_count($config, $def, $summary_ref, $target_dir, $macs2_broad_task . "_count", $macs2_broad_task);
   }
    
   if($def->{perform_macs2_narrow}){
@@ -348,6 +350,8 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
     };
     push @$summary_ref, ( $macs2_narrow_task );
     $peak_calling_task = $macs2_narrow_task;
+
+    add_peak_count($config, $def, $summary_ref, $target_dir, $macs2_narrow_task . "_count", $macs2_narrow_task);
   }
  
   if($def->{perform_seacr}){
@@ -447,6 +451,8 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
         },
       },
       push @$summary_ref, ($genomecov_seacr_task);
+
+      add_peak_count($config, $def, $summary_ref, $target_dir, $genomecov_seacr_task . "_count", [$genomecov_seacr_task, ".relaxed.sort.bed"]);
 
       $seacr_task = $genomecov_seacr_task;
       $peak_calling_task = $seacr_task;
@@ -632,6 +638,8 @@ python $rename_2_py __NAME__.all_dGiven.peaks.raw.txt __NAME__.all_dGiven.peaks.
       },
     },
     push @$summary_ref, ($homer_mergePeaks);
+
+    add_peak_count($config, $def, $summary_ref, $target_dir, $homer_mergePeaks . "_count", $homer_mergePeaks);
 
     my $homer_motif = "homer_04_motif";
     addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $homer_mergePeaks, ".bed", $homer_motif );
