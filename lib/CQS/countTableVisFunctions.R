@@ -915,6 +915,16 @@ is_one<-function(value, defaultValue=FALSE){
   return(value == '1')
 }
 
+to_character<-function(value, defaultValue=""){
+  if(is.null(value)){
+    return(defaultValue)
+  }
+  if(is.na(value)){
+    return(defaultValue)
+  }
+  return(as.character(value))
+}
+
 get_text_width <- function(txt, font_family, font_size = 10, units = "inches", res=300) {
   tmp_file <- tempfile(fileext = ".png")
   png(tmp_file, res=res)
@@ -939,8 +949,9 @@ calc_ht_size = function(ht, unit = "inch", merge_legends = FALSE) {
   c(w, h)
 }
 
-open_plot<-function(file_prefix, format, width_inch, height_inch, figure_name){
+open_plot<-function(file_prefix, format, width_inch, height_inch){
   fileName<-paste0(file_prefix, ".", tolower(format))
+  cat("saving", fileName, "\n")
   if(format == "PDF"){
     pdf(fileName, width=width_inch, height=height_inch, useDingbats=FALSE)
   }else if(format == "TIFF"){
@@ -948,7 +959,6 @@ open_plot<-function(file_prefix, format, width_inch, height_inch, figure_name){
   }else {
     png(filename=fileName, width=width_inch, height=height_inch, units="in", res=300)
   }
-  cat("saving", figure_name, "to", fileName, "\n")
 }
 
 save_complexheatmap_plot<-function(file_prefix, outputFormat, ht, width_inch=NULL, height_inch=NULL ){
@@ -959,17 +969,129 @@ save_complexheatmap_plot<-function(file_prefix, outputFormat, ht, width_inch=NUL
   }
 
   for(format in outputFormat){  
-    open_plot(file_prefix, format, ht_sizes[1], ht_sizes[2], "HCA")  
+    open_plot(file_prefix, format, width_inch, height_inch)  
     draw(ht, merge_legends=TRUE)
     ignored=dev.off()
   }  
 }
 
-save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, p){
+save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, plot){
   for(format in outputFormat){  
     fileName<-paste0(file_prefix, ".", tolower(format))
     cat("saving", fileName, "\n")
-    ggsave(fileName, plot=p, width=width_inch, height=height_inch, units="in", dpi=300, bg="white")
+    ggsave(fileName, plot=plot, width=width_inch, height=height_inch, units="in", dpi=300, bg="white")
+  }
+}
+
+draw_density_plot<-function(log2counts, prefix, outputFormat, width_inch=5, height_inch=3){
+  rsdata<-reshape2::melt(as.matrix(log2counts))
+  colnames(rsdata)<-c("Gene", "Sample", "log2Count")
+  g<-ggplot(rsdata) + 
+    geom_density(aes(x=log2Count, colour=Sample)) + 
+    xlab(bquote(log[2](count))) + 
+    theme_bw3() +
+    guides(color = FALSE)
+  save_ggplot2_plot(file_prefix=prefix, 
+                    outputFormat=outputFormat, 
+                    width_inch=width_inch, 
+                    height_inch=height_inch, 
+                    plot=g)
+  
+  ncol=ceiling(sqrt(ncol(log2counts)))
+  nrow=ceiling(ncol(log2counts)/ncol)
+  width=max(6, ncol * 2)
+  height=max(6, nrow * 2)
+  g<-ggplot(rsdata) + 
+    geom_density(aes(x=log2Count, colour=Sample)) + 
+    facet_wrap(~Sample, scales = "free", ncol=ncol) + 
+    xlab(bquote(log[2](count))) + 
+    theme_bw3() + 
+    guides(color = FALSE)
+  save_ggplot2_plot(file_prefix=paste0(prefix, ".individual"),
+                    outputFormat=outputFormat, 
+                    width_inch=width, 
+                    height_inch=height, 
+                    plot=g)
+}
+
+drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=6, height_inch=5, scalePCs=TRUE){
+  genecount<-nrow(rldmatrix)
+  if(genecount > 2){
+    pca<-prcomp(t(rldmatrix))
+    supca<-summary(pca)$importance
+
+    npc = min(10, ncol(supca))
+    pca_res = t(supca)[c(1:npc),] %>% 
+      as.data.frame() %>% 
+      tibble::rownames_to_column("PC") %>% 
+      dplyr::rename("Proportion" = "Proportion of Variance", "Cumulative" = "Cumulative Proportion")
+
+    pca_res$PC <- factor(pca_res$PC, levels = pca_res$PC)
+
+    g1<-ggplot(pca_res, aes(x=PC, y=Proportion)) +
+      geom_bar(stat="identity", fill="steelblue") +
+      geom_text(aes(label=Proportion), vjust=-0.3, size=3.5) +
+      scale_y_continuous(labels = scales::percent) +
+      labs(x = "Principal Components", y = "Proportion of Variance", title = "Proportion of Variance Explained by Each PC") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+    g2<-ggplot(pca_res, aes(x=PC, y=Cumulative)) + 
+      geom_bar(stat="identity", fill="steelblue") +
+      geom_text(aes(label=Cumulative), vjust=-0.3, size=3.5) +
+      scale_y_continuous(labels = scales::percent) +
+      labs(x = "Principal Components", y = "Cumulative Proportion of Variance", title = "Cumulative Proportion of Variance Explained by PCs") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  
+
+    g<-ggdraw() +
+      draw_plot(g1, x = 0, y = .5, width = 1, height = .5) +
+      draw_plot(g2, x = 0, y = 0, width = 1, height = .5)
+
+    save_ggplot2_plot(file_prefix=paste0(file_prefix, ".bar"),
+                      outputFormat=outputFormat, 
+                      width_inch=8, 
+                      height_inch=8, 
+                      plot=g)
+
+    pcadata<-data.frame(pca$x)
+    if (scalePCs) {
+      pcadata=as.data.frame(scale(pcadata))
+    }
+    pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
+    pcadata["sample"]<-row.names(pcadata)
+
+    has_group<-!is.na(groups[1])
+
+    if(has_group){
+      pcadata$group<-groups
+    }
+    
+    if(showLabelInPCA){
+      g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
+        geom_text(vjust=-0.6, size=4)
+    }else{
+      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) +
+        theme(legend.position="top")
+    }
+    if(has_group){
+      g<-g+geom_point(aes(col=group), size=4) + 
+        scale_colour_manual(name="",values = groupColors)
+    }else{
+      g<-g+geom_point(size=4) 
+    }
+    g<-g+scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
+      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
+      geom_hline(aes(yintercept=0), linewidth=.2) + 
+      geom_vline(aes(xintercept=0), linewidth=.2) + 
+      xlab(pcalabs[1]) + ylab(pcalabs[2]) +
+      theme_bw2() + theme(aspect.ratio=1)
+    
+    save_ggplot2_plot(file_prefix=file_prefix,
+                      outputFormat=outputFormat, 
+                      width_inch=width_inch, 
+                      height_inch=height_inch, 
+                      plot=g)
   }
 }
 
