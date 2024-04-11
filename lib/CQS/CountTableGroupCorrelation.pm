@@ -27,25 +27,6 @@ sub new {
   return $self;
 }
 
-sub getRcode {
-  my ( $self, $config, $section ) = @_;
-  my $result = get_option( $config, $section, "rCode", "" );
-
-  my $suffix = get_option( $config, $section, "suffix", "" );
-  if ( $suffix ne "" ) {
-    $result = $result . 'suffix="' . $suffix . '";';
-  }
-
-  my $output_to_result_dir = get_option( $config, $section, "output_to_result_dir", 0 );
-  if ($output_to_result_dir) {
-    $result = $result . 'outputDirectory=".";';
-    my $output_include_folder_name = get_option( $config, $section, "output_include_folder_name", 1 );
-    $result = $result . "output_include_folder_name=" . ($output_include_folder_name?"TRUE":"FALSE") . ";";
-  }
-
-  return $result;
-}
-
 sub result {
   my ( $self, $config, $section, $pattern ) = @_;
 
