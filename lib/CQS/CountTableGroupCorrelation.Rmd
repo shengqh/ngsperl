@@ -1,0 +1,77 @@
+---
+title: "Gene table correlation report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=7, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+```
+
+```{r}
+source('reportFunctions.R')
+source('countTableVisFunctions.R')
+
+myoptions<-read_file_map("fileList4.txt", do_unlist=FALSE)
+
+outputDirectory = to_character(myoptions$outputDirectory, "")
+output_include_folder_name = is_one(myoptions$output_include_folder_name, 1)
+```
+
+---
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+library(knitr)
+library(kableExtra)
+
+prefix_list = readLines("prefix_list.txt")
+group_tabl = fread("fileList2.txt", header=FALSE, data.table=FALSE)
+has_multiple_groups = length(unique(group_tabl$V2)) > 2
+
+result = ""
+for(prefix in prefix_list){
+  result = paste0(result, "\n# ", basename(prefix), "\n\n")
+  result = paste0(result, "\n## Density plot\n\n")
+  result = paste0(result, getFigure(paste0(prefix,".density.png")))
+  result = paste0(result, getFigure(paste0(prefix,".density.individual.png")))
+  result = paste0(result, "\n## PCA plot\n\n")
+  result = paste0(result, getFigure(paste0(prefix,".PCA.bar.png")))
+  result = paste0(result, getFigure(paste0(prefix,".PCA.png")))
+  result = paste0(result, "\n## Heatmap plot\n\n")
+  result = paste0(result, getFigure(paste0(prefix,".heatmap.png")))
+  result = paste0(result, "\n## Correlation plot\n\n")
+  result = paste0(result, getFigure(paste0(prefix,".Correlation.png")))
+
+  if(has_multiple_groups){
+    result = paste0(result, "\n## Group heatmap plot\n\n")
+    result = paste0(result, getFigure(paste0(prefix,".Group.heatmap.png")))
+    result = paste0(result, "\n## Group correlation plot\n\n")
+    result = paste0(result, getFigure(paste0(prefix,".Group.Correlation.png")))
+  }
+}
+
+writeLines(result, "qc.rmd")
+```
+
+```{r, child='qc.rmd'}
+```
