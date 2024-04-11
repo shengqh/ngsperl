@@ -7,14 +7,15 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;useGreenRedColorInHCA<-FALSE;top25cvInHCA<-FALSE;
+
 
 setwd('/nobackup/vickers_lab/projects/20240206_Linton_11055_bulkRNA_human/genetable/result')
 
 ### Parameter setting end ###
 
-source("countTableVisFunctions.R")
+# For v2, we use ComplexHeatmap instead of heatmap3, also adjusted the figure size.
 
+source("countTableVisFunctions.R")
 library(data.table)
 
 options(bitmapType='cairo')
@@ -29,39 +30,53 @@ library(ggplot2)
 library(tibble)
 library(cowplot)
 library(ComplexHeatmap)
+library(EnhancedVolcano)
 
-if(exists("parSampleFile4")){
-  myoptions_tbl<-read.table(parSampleFile4, sep="\t", stringsAsFactors = F)
-  myoptions<-split(myoptions_tbl$V1, myoptions_tbl$V2)
+myoptions=read_file_map(parSampleFile4, do_unlist=FALSE)
 
-  draw_all_groups_in_HCA<-is_one(myoptions$draw_all_groups_in_HCA)
-  draw_umap<-is_one(myoptions$draw_umap)
-  heatmap_cexCol = myoptions$heatmap_cexCol
-  if(!is.na(heatmap_cexCol)){
-    if(heatmap_cexCol == ""){
-      heatmap_cexCol<-NA
-    }else{
-      heatmap_cexCol<-as.numeric(heatmap_cexCol)
-    }
-  }
+draw_all_groups_in_HCA = is_one(myoptions$draw_all_groups_in_HCA)
+draw_umap = is_one(myoptions$draw_umap)
+n_first = to_numeric(myoptions$n_first, -1)
+usePearsonInHCA = is_one(myoptions$usePearsonInHCA, TRUE)
+showLabelInPCA = is_one(myoptions$showLabelInPCA, TRUE)
+top25cvInHCA = is_one(myoptions$top25cv_in_hca)
+use_green_red_color_in_hca = is_one(myoptions$use_green_red_color_in_hca)
+onlySamplesInGroup = is_one(myoptions$onlySamplesInGroup)
+hasRowNames = is_one(myoptions$hasRowNames)
+useGroupAsBatch = is_one(myoptions$useGroupAsBatch)
+transformTable = is_one(myoptions$transformTable)
+suffix = to_character(myoptions$suffix, "")
+idIndex = to_numeric(myoptions$idIndex, 1)
+minMedian = to_numeric(myoptions$minMedian, 1)
+minMedianInGroup = to_numeric(myoptions$minMedianInGroup, 1)
+fixColorRange = is_one(myoptions$fixColorRange, 1)
 
-  if("n_first" %in% names(myoptions)){
-    n_first = as.numeric(myoptions$n_first)
-  }else{
-    n_first = -1
-  }
-}else{
-  draw_all_groups_in_HCA<-FALSE
-  draw_umap<-FALSE
-  heatmap_cexCol<-NA
-  n_first = -1
+outputDirectory = to_character(myoptions$outputDirectory, "")
+output_include_folder_name = is_one(myoptions$output_include_folder_name, 1)
+
+outputPdf = is_one(myoptions$outputPdf)
+outputPng = is_one(myoptions$outputPng, TRUE)
+outputTIFF = is_one(myoptions$outputTIFF)
+
+outputFormat<-c()
+if(outputPdf){
+  outputFormat<-c("PDF")
 }
+if(outputPng){
+  outputFormat<-c(outputFormat, "PNG")
+}
+if(outputTIFF){
+  outputFormat<-c(outputFormat, "TIFF")
+}
+if(length(outputFormat) == 0){
+  outputFormat<-c("PDF")
+}
+
+task_suffix<-suffix
 
 countTableFileList<-parSampleFile1
 groupFileList<-parSampleFile2
 colorFileList<-parSampleFile3
-
-fixColorRange<-TRUE
 
 geneFile<-parFile1
 totalCountFile<-parFile3
@@ -77,72 +92,6 @@ if(file.exists((covarianceFile))){
   has_batch<-FALSE
 }
 
-if(!exists("onlySamplesInGroup")){
-  onlySamplesInGroup=TRUE
-}
-
-if(!exists("outputPdf")){
-  outputPdf<-FALSE
-}
-
-if(!exists("outputPng") | !outputPdf ){
-  outputPng<-TRUE
-}
-
-outputFormat<-c()
-if(outputPdf){
-  outputFormat<-c("PDF")
-}
-if(outputPng){
-  outputFormat<-c(outputFormat, "PNG")
-}
-
-if(!exists("hasRowNames")){
-  hasRowNames<-NA
-}
-
-if(exists("useGreenRedColorInHCA") && useGreenRedColorInHCA){
-  hmcols <- colorRampPalette(c("green", "black", "red"))(256)
-}else{
-  hmcols <- colorRampPalette(rev(brewer.pal(n = 7, name ="RdYlBu")))(256)
-}
-
-if(!exists("useGroupAsBatch")){
-  useGroupAsBatch<-FALSE
-}
-
-if(!exists("showLabelInPCA")){
-  showLabelInPCA<-TRUE
-}
-
-if(!exists("transformTable")){
-  transformTable<-FALSE
-}
-
-if(!exists("suffix")){
-  suffix<-""
-}
-
-if(!exists("idIndex")){
-  idIndex<-1
-}
-
-task_suffix<-suffix
-
-#outputDirectory<-"."
-output_include_folder_name<-1
-if(!exists("outputDirectory")){
-  outputDirectory<-""
-}
-
-if (!exists("minMedian")){
-  minMedian<-1
-}
-
-if (!exists("minMedianInGroup")){
-  minMedianInGroup<-1
-}
-
 #source("/home/zhaos/source/ngsperl/lib/CQS/countTableVisFunctions.R")
 
 ##Solving node stack overflow problem start###
@@ -151,16 +100,14 @@ if (!exists("minMedianInGroup")){
 #http://stackoverflow.com/questions/16559250/error-in-heatmap-2-gplots/25877485#25877485
 
 # Convert a byte-compiled function to an interpreted-code function 
-unByteCode <- function(fun)
-{
+unByteCode <- function(fun) {
   FUN <- eval(parse(text=deparse(fun)))
   environment(FUN) <- environment(fun)
   FUN
 }
 
 # Replace function definition inside of a locked environment **HACK** 
-assignEdgewise <- function(name, env, value)
-{
+assignEdgewise <- function(name, env, value) {
   unlockBinding(name, env=env)
   assign( name, envir=env, value=value)
   lockBinding(name, env=env)
@@ -169,8 +116,7 @@ assignEdgewise <- function(name, env, value)
 
 # Replace byte-compiled function in a locked environment with an interpreted-code
 # function
-unByteCodeAssign <- function(fun)
-{
+unByteCodeAssign <- function(fun) {
   name <- gsub('^.*::+','', deparse(substitute(fun)))
   FUN <- unByteCode(fun)
   retval <- assignEdgewise(name=name,
@@ -186,79 +132,6 @@ unByteCodeAssign(stats:::plotNode)
 # Now raise the interpreted code recursion limit (you may need to adjust this,
 #  decreasing if it uses to much memory, increasing if you get a recursion depth error ).
 options(expressions=5e4)
-drawPCA<-function(filename, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=7, height_inch=6,scalePCs=TRUE){
-  genecount<-nrow(rldmatrix)
-  if(genecount > 2){
-    pca<-prcomp(t(rldmatrix))
-    supca<-summary(pca)$importance
-
-    npc = min(10, ncol(supca))
-    pca_res = t(supca)[c(1:npc),] %>% 
-      as.data.frame() %>% 
-      tibble::rownames_to_column("PC") %>% 
-      dplyr::rename("Proportion" = "Proportion of Variance", "Cumulative" = "Cumulative Proportion")
-
-    pca_res$PC <- factor(pca_res$PC, levels = pca_res$PC)
-
-    g1<-ggplot(pca_res, aes(x=PC, y=Proportion)) +
-      geom_bar(stat="identity", fill="steelblue") +
-      geom_text(aes(label=Proportion), vjust=-0.3, size=3.5) +
-      scale_y_continuous(labels = scales::percent) +
-      labs(x = "Principal Components", y = "Proportion of Variance", title = "Proportion of Variance Explained by Each PC") +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-    g2<-ggplot(pca_res, aes(x=PC, y=Cumulative)) + 
-      geom_bar(stat="identity", fill="steelblue") +
-      geom_text(aes(label=Cumulative), vjust=-0.3, size=3.5) +
-      scale_y_continuous(labels = scales::percent) +
-      labs(x = "Principal Components", y = "Cumulative Proportion of Variance", title = "Cumulative Proportion of Variance Explained by PCs") +
-      theme_minimal() +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))  
-
-    g<-ggdraw() +
-      draw_plot(g1, x = 0, y = .5, width = 1, height = .5) +
-      draw_plot(g2, x = 0, y = 0, width = 1, height = .5)
-
-    ggsave(paste0(filename, ".bar.png"), g, width = 8, height = 8, dpi = 300, units = "in", bg="white")
-
-    pcadata<-data.frame(pca$x)
-    if (scalePCs) {
-      pcadata=as.data.frame(scale(pcadata))
-    }
-    pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
-    pcadata["sample"]<-row.names(pcadata)
-    if(!is.na(groups[1])){
-      pcadata$group<-groups
-    }
-    
-    if(showLabelInPCA){
-      g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-        geom_text(vjust=-0.6, size=4)
-    }else{
-      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) +
-        theme(legend.position="top")
-    }
-    if(!is.na(groups[1])){
-      g<-g+geom_point(aes(col=group), size=4) + 
-        scale_colour_manual(name="",values = groupColors)
-    }else{
-      g<-g+geom_point(size=4) 
-    }
-    g<-g+scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
-      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(yintercept=0), linewidth=.2) + 
-      geom_vline(aes(xintercept=0), linewidth=.2) + 
-      xlab(pcalabs[1]) + ylab(pcalabs[2]) +
-      theme_bw2() + theme(aspect.ratio=1)
-
-    save_ggplot2_plot(file_prefix=filename, 
-      outputFormat=outputFormat, 
-      width_inch=width_inch, 
-      height_inch=height_inch, 
-      g)
-  }
-}
 
 ##Solving node stack overflow problem end###
 
@@ -287,6 +160,8 @@ succeed_file<-"correlation.succeed"
 if(file.exists(succeed_file)){
   unlink(succeed_file)
 }
+
+prefix_list=c()
 
 i<-2
 for (i in 1:nrow(countTableFileAll)) {
@@ -334,11 +209,11 @@ for (i in 1:nrow(countTableFileAll)) {
   }
   
   if (nrow(count)==0) {
-    next;
+    next
   }
   
   if (ncol(count)<2) {
-    next;
+    next
   }
   
   if(!is.na(genes)){
@@ -425,7 +300,10 @@ for (i in 1:nrow(countTableFileAll)) {
     }
     curSuffix<-gsub("\\s+", "_", curSuffix)
     
-    write.table(validSampleToGroup, paste0(outputFilePrefix,curSuffix,".correlation.groups"),col.names=F, row.names=F, quote=F, sep="\t")
+    cur_file_prefix=paste0(outputFilePrefix, curSuffix)
+    prefix_list=c(prefix_list, cur_file_prefix)
+
+    write.table(validSampleToGroup, paste0(cur_file_prefix, ".correlation.groups"), col.names=F, row.names=F, quote=F, sep="\t")
     
     #filter reads/genes by parameter
     validCountNum<-filterCountTable(countNum,validSampleToGroup,minMedian=minMedian,minMedianInGroup=minMedianInGroup)
@@ -453,7 +331,7 @@ for (i in 1:nrow(countTableFileAll)) {
         stop(paste0("Sample ", notValidSamples, " not found in total count table ", totalCountFile, "\n"))
       }
       countNumVsd<-10^6*t(t(validCountNum)/totalCount[colnames(validCountNum)])
-      write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".RPM.txt"),col.names=NA, quote=F, sep="\t")
+      write.table(countNumVsd, paste0(cur_file_prefix,".RPM.txt"),col.names=NA, quote=F, sep="\t")
       countNumVsd<-log2(countNumVsd+1)
       ylab<-"log2(Mapped Reads per Million)"
     } else {
@@ -463,21 +341,21 @@ for (i in 1:nrow(countTableFileAll)) {
       if (class(vsdres) == "try-error") {
         message=paste0("Warning: varianceStabilizingTransformation function failed.\n",as.character(vsdres))
         warning(message)
-        writeLines(message,paste0(outputFilePrefix,curSuffix,".vsd.warning"))
+        writeLines(message,paste0(cur_file_prefix,".vsd.warning"))
         next;
       }
       
       if(has_batch){
-        saveRDS(dds, paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.vsd.rds"))
+        saveRDS(dds, paste0(cur_file_prefix,".before_removeBatchEffect.dds.rds"))
 
         countNumVsd<-assay(dds)
         colnames(countNumVsd)<-colnames(validCountNum)
-        write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.vsd.txt"),col.names=NA, quote=F, sep="\t")
+        write.table(countNumVsd, paste0(cur_file_prefix,".before_removeBatchEffect.vsd.txt"),col.names=NA, quote=F, sep="\t")
 
         dds$batch<-batch_map[colnames(dds)]
         ntop = 3000
 
-        png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.batch.png"), width=2000, height=2000, res=300)
+        png(paste0(cur_file_prefix,".before_removeBatchEffect.batch.png"), width=2000, height=2000, res=300)
         g<-plotPCA(dds, "batch", ntop=ntop) + theme_bw3()
         print(g)
         dev.off()
@@ -487,41 +365,41 @@ for (i in 1:nrow(countTableFileAll)) {
           stopifnot(all(rownames(colData(dds)) == validSampleToGroup$V1))
           dds$group = validSampleToGroup$V2
 
-          png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.group.png"), width=2000, height=2000, res=300)
+          png(paste0(cur_file_prefix,".before_removeBatchEffect.group.png"), width=2000, height=2000, res=300)
           g<-plotPCA(dds, "group", ntop=ntop) + theme_bw3()
           print(g)
           dev.off()
 
-          png(paste0(outputFilePrefix,curSuffix,".before_removeBatchEffect.batch_group.png"), width=2000, height=2000, res=300)
+          png(paste0(cur_file_prefix,".before_removeBatchEffect.batch_group.png"), width=2000, height=2000, res=300)
           g<-plotPCA(dds, c("batch", "group"), ntop=ntop) + theme_bw3()
           print(g)
           dev.off()
         }
 
         assay(dds) <- limma::removeBatchEffect(assay(dds), dds$batch)
-        png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.batch.png"), width=2000, height=2000, res=300)
+        png(paste0(cur_file_prefix,".after_removeBatchEffect.batch.png"), width=2000, height=2000, res=300)
         g<-plotPCA(dds, "batch", ntop=ntop) + theme_bw3()
         print(g)
         dev.off()
 
         if(hasMultipleGroup){
-          png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.group.png"), width=2000, height=2000, res=300)
+          png(paste0(cur_file_prefix,".after_removeBatchEffect.group.png"), width=2000, height=2000, res=300)
           g<-plotPCA(dds, "group", ntop=ntop) + theme_bw3()
           print(g)
           dev.off()
 
-          png(paste0(outputFilePrefix,curSuffix,".after_removeBatchEffect.batch_group.png"), width=2000, height=2000, res=300)
+          png(paste0(cur_file_prefix,".after_removeBatchEffect.batch_group.png"), width=2000, height=2000, res=300)
           g<-plotPCA(dds, c("batch", "group"), ntop=ntop) + theme_bw3()
           print(g)
           dev.off()
         }
       }
 
-      saveRDS(dds, paste0(outputFilePrefix,curSuffix,".vsd.rds"))
+      saveRDS(dds, paste0(cur_file_prefix,".dds.rds"))
 
       countNumVsd<-assay(dds)
       colnames(countNumVsd)<-colnames(validCountNum)
-      write.table(countNumVsd, paste0(outputFilePrefix,curSuffix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
+      write.table(countNumVsd, paste0(cur_file_prefix,".vsd.txt"),col.names=NA, quote=F, sep="\t")
       
       ylab<-"VSD"
     }
@@ -535,7 +413,7 @@ for (i in 1:nrow(countTableFileAll)) {
         }
       }
       cat("There are", nrow(countNumVsd), "genes will be used for visualization.\n")
-      write.csv(countNumVsd, paste0(outputFilePrefix,curSuffix,".genes.csv"), quote=F)
+      write.csv(countNumVsd, paste0(cur_file_prefix,".genes.csv"), quote=F)
     }
 
     hasMultipleGroup<-length(unique(validSampleToGroup$V2)) > 1
@@ -561,17 +439,21 @@ for (i in 1:nrow(countTableFileAll)) {
       colors<-NA
       conditionColors<-NA
     }
-    
-    #visualization    
-    countHT<-countNumVsd
 
+    #density plot
+    log2counts<-log2(validCountNum[rownames(countNumVsd), colnames(countNumVsd) ]+1)
+    draw_density_plot(log2counts=log2counts, 
+                      prefix=paste0(cur_file_prefix,".density"), 
+                      outputFormat=outputFormat)
+
+    #visualization    
     if(draw_umap){
       library(magrittr)
       library(umap)
 
       set.seed(20211230)
 
-      normalized_counts<-t(countHT)
+      normalized_counts<-t(countNumVsd)
       umap_results <- umap::umap(normalized_counts)
 
       umap_plot_df <- data.frame(umap_results$layout) %>% tibble::rownames_to_column("Sample")
@@ -580,58 +462,24 @@ for (i in 1:nrow(countTableFileAll)) {
       g<-ggplot(umap_plot_df, aes(x = X1, y = X2, color = Group)) + geom_point() + theme_bw2() + xlab('UMAP_1') + ylab('UMAP_2')
       for(format in outputFormat){
         if("PDF" == format){
-          pdf(paste0(outputFilePrefix,curSuffix,".umap.pdf"),width=7,height=6)
+          pdf(paste0(cur_file_prefix,".umap.pdf"),width=7,height=6)
         }else{
-          png(paste0(outputFilePrefix,curSuffix,".umap.png"),width=2000,height=1600,res=300)
+          png(paste0(cur_file_prefix,".umap.png"),width=2000,height=1600,res=300)
         }
         print(g)
         dev.off()
       }
     }
-
-    #density plot
-    dataForPlot<-reshape2::melt(countHT)
-    colnames(dataForPlot)[2]<-"Sample"
-    p<-ggplot(dataForPlot, aes(value, colour = Sample)) +
-      geom_density() + 
-      theme_bw2() + 
-      xlab(ylab) + 
-      theme(legend.position = "none")
-
-    save_ggplot2_plot(file_prefix=paste0(outputFilePrefix,curSuffix,".density"), 
-      outputFormat=outputFormat, 
-      width_inch=5, 
-      height_inch=3, 
-      p)
-
-    nsample=length(unique(dataForPlot$Sample))
-    ncol=ceiling(sqrt(nsample))
-    nrow=ceiling(nsample/ncol)
-    width=max(6, ncol * 2)
-    height=max(6, nrow * 2)
-
-    g<-ggplot(dataForPlot) + 
-      geom_density(aes(x=value, colour=Sample)) + 
-      facet_wrap(~Sample, scales = "free", ncol=ncol) + 
-      xlab(ylab) + 
-      theme_bw3() + 
-      guides(color = FALSE)
-    
-    save_ggplot2_plot(file_prefix=paste0(outputFilePrefix,curSuffix,".density-individual"), 
-      outputFormat=outputFormat, 
-      width_inch=width, 
-      height_inch=height, 
-      g)
    
-    if(exists("top25cvInHCA") && top25cvInHCA){
+    if(top25cvInHCA){
       rv<-rowVars(countNumVsd)
       countVar25<-countNumVsd[rv>=quantile(rv)[4],]
-      write.csv(countVar25, paste0(outputFilePrefix,curSuffix,".heatmap.top25variance.csv"))
+      write.csv(countVar25, paste0(cur_file_prefix,".heatmap.top25variance.csv"))
   
-      countList = list(countHT, countVar25)
+      countList = list(countNumVsd, countVar25)
       names(countList)=c("all", "top25vars")
     }else{
-      countList = list(countHT)
+      countList = list(countNumVsd)
       names(countList)=c("all")
     }
     
@@ -682,10 +530,10 @@ for (i in 1:nrow(countTableFileAll)) {
       cat("Doing correlation analysis of samples ...\n")
       #correlation distribution
       countNumCor<-corTableWithoutZero(countNumVsd,method="spearman")
-      write.csv(countNumCor, file=paste0(outputFilePrefix,curSuffix,".Correlation.csv"), row.names=T)
+      write.csv(countNumCor, file=paste0(cur_file_prefix,".Correlation.csv"), row.names=T)
 
       countNumCorTest<-corTestTableWithoutZero(countNumVsd,method="spearman")
-      write.csv(countNumCorTest, file=paste0(outputFilePrefix,curSuffix,".Correlation.Test.csv"), row.names=T)
+      write.csv(countNumCorTest, file=paste0(cur_file_prefix,".Correlation.Test.csv"), row.names=T)
 
       if(hasMultipleGroup){
         ha=HeatmapAnnotation( Group=groups,
@@ -724,21 +572,21 @@ for (i in 1:nrow(countTableFileAll)) {
                     show_row_dend=FALSE,
                     name="zscore",
                     use_raster=FALSE)
-        file_prefix=paste0(outputFilePrefix,curSuffix,".Group.heatmap")
-        save_complexheatmap_plot(file_prefix, outputFormat, ht)
+        file_prefix=paste0(cur_file_prefix,".Group.heatmap")
+        save_complexheatmap_plot(file_prefix, outputFormat, ht, width_inch=5, height_inch=4)
 
         cat("Doing correlation analysis of groups ...\n")
         
         #correlation distribution
         countNumCor<-corTableWithoutZero(countNumVsdGroup,method="spearman")
-        write.csv(countNumCor, file=paste0(outputFilePrefix,curSuffix,".Group.Correlation.csv"), row.names=T)
+        write.csv(countNumCor, file=paste0(cur_file_prefix,".Group.Correlation.csv"), row.names=T)
         if (any(is.na(countNumCor)) | length(unique(as.vector(countNumCor)))<=1) {
           cat("NA in group correlation matrix or not enought unique values. Can't draw group correlation figure\n")
           next
         }
 
         countNumCorTest<-corTestTableWithoutZero(countNumVsdGroup,method="spearman")
-        write.csv(countNumCorTest, file=paste0(outputFilePrefix,curSuffix,".Group.Correlation.Test.csv"), row.names=T)
+        write.csv(countNumCorTest, file=paste0(cur_file_prefix,".Group.Correlation.Test.csv"), row.names=T)
         
         ## Complete cases only, if NA present hclust fails, remove groups with NA
         countNumCor.lower <- countNumCor
@@ -754,8 +602,8 @@ for (i in 1:nrow(countTableFileAll)) {
                     show_row_dend=FALSE,
                     name="Spearman",
                     use_raster=FALSE)
-        file_prefix=paste0(outputFilePrefix,curSuffix,".Group.Correlation")
-        save_complexheatmap_plot(file_prefix, outputFormat, ht)        
+        file_prefix=paste0(cur_file_prefix,".Group.Correlation")
+        save_complexheatmap_plot(file_prefix, outputFormat, ht, width_inch=5, height_inch=4)        
       }
     } else {
       cat("Not enough samples or genes. Can't do correlation analysis.\n")
@@ -771,3 +619,5 @@ if(length(missed_count_tables) == 0){
 }else{
   writeLines(missed_count_tables, "count_table_missing.txt")
 }
+
+writeLines(prefix_list, "prefix_list.txt")
