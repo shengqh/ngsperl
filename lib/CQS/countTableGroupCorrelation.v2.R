@@ -2,7 +2,7 @@ rm(list=ls())
 outFile=''
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
+parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
@@ -13,9 +13,9 @@ setwd('/nobackup/vickers_lab/projects/20240206_Linton_11055_bulkRNA_human/geneta
 
 ### Parameter setting end ###
 
+source("countTableVisFunctions.R")
 # For v2, we use ComplexHeatmap instead of heatmap3, also adjusted the figure size.
 
-source("countTableVisFunctions.R")
 library(data.table)
 
 options(bitmapType='cairo')
@@ -143,9 +143,7 @@ if (geneFile!="") { #visualization based on genes in geneFile only
 }
 
 if(colorFileList != ""){
-  colorsTab<-read.table(colorFileList, sep="\t", header=F, stringsAsFactors=F)
-  groupColors<-colorsTab$V1
-  names(groupColors)<-colorsTab$V2
+  groupColors=read_file_map(colorFileList, do_unlist=TRUE)
 }else{
   groupColors<-NA
 }
@@ -275,8 +273,10 @@ for (i in 1:nrow(countTableFileAll)) {
       }
       
       groups<-validSampleToGroup$V2
-      if (is.na(groupColors)){
-        colors<-makeColors(length(unique(groups)))
+      if (is.na(groupColors[1])){
+        unique_groups = unique(groups)
+        colors<-makeColors(length(unique_groups))
+        names(colors)=unique_groups
       }else{
         colors<-groupColors
       }
@@ -420,20 +420,20 @@ for (i in 1:nrow(countTableFileAll)) {
     if (hasMultipleGroup) {
       groups<-validSampleToGroup$V2
       if(!draw_all_groups_in_HCA){
-        if (is.na(groupColors)){
+        if (is.na(groupColors[1])){
           unique_groups = unique(groups)
           colors<-makeColors(length(unique_groups))
           names(colors)=unique_groups
         }else{
           colors<-groupColors
         }
-        conditionColors<-as.matrix(data.frame(Group=colors[groups]))
       }else{
         cc<-conditionColors[validSampleToGroup$V1,]
         gname = ifelse(title == "all", "Group", title)
         colors<-unique(cc[,gname])
         names(colors)<-unique(validSampleToGroup$V2)
       }
+      conditionColors<-as.matrix(data.frame(Group=colors[groups]))
     }else{
       groups<-NA
       colors<-NA
@@ -621,3 +621,4 @@ if(length(missed_count_tables) == 0){
 }
 
 writeLines(prefix_list, "prefix_list.txt")
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
