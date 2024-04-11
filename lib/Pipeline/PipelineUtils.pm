@@ -36,6 +36,7 @@ our %EXPORT_TAGS = (
     addBamStat 
     addOutputOption 
     getOutputFormat
+    add_table_correlation
     getDEseq2TaskName 
     addDEseq2 
     addDeseq2Visualization 
@@ -505,6 +506,28 @@ sub getOutputFormat {
   return ($result);
 }
 
+sub get_output_hash {
+  my ( $def, $result, $is_DE ) = @_;
+
+  if(!defined $is_DE){
+    $is_DE = 0;
+  }
+
+  $result->{outputPdf} = getValue($def, "DE_outputPdf",         0);
+  $result->{outputPng} = getValue($def, "DE_outputPng",         1);
+  $result->{outputTIFF} = getValue($def, "DE_outputTIFF",        0);
+  $result->{showVolcanoLegend} = getValue($def, "DE_showVolcanoLegend", 0);
+  $result->{usePearsonInHCA} = getValue($def, "use_pearson_in_hca",   $def->{use_pearson_in_hca});
+
+  if($is_DE){
+    $result->{showLabelInPCA} = getValue($def, "DE_show_label_PCA", getValue($def, "show_label_PCA", 1));
+  }else{
+    $result->{showLabelInPCA} = getValue($def, "show_label_PCA", 1);
+  }
+
+  return ($result);
+}
+
 sub has_contrast {
   my $def = shift;
   my $pairs = $def->{pairs};
@@ -847,6 +870,91 @@ sub addDiffbind {
       "mem"      => getValue($def, "diffbind_mem", "80gb")
     },
   };
+  push @$tasks, $task_name;
+}
+
+sub add_table_correlation {
+  my ($config, $def, $tasks, $task_name, $task_dir, $count_file_ref) = @_;
+
+  my $rCode = getValue( $def, "correlation_rcode", "" );
+  my $project_name = getValue($def, "task_name");
+
+  my $options = {     
+    "task_name" => $project_name,
+    "email" => getValue($def, "email"),
+    "affiliation" => getValue($def, "affiliation", ""),
+    "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
+    "draw_umap" => getValue($def, "draw_umap", 0),
+    "use_green_red_color_in_hca" => getValue($def, "use_green_red_color_in_hca", 0),
+    "top25cv_in_hca" => getValue($def, "top25cv_in_hca", 0),
+    "showLabelInPCA" => getValue($def, "show_label_PCA", 1),
+    "outputPdf" => getValue($def, "outputPdf", 0),
+    "outputPng" => getValue($def, "outputPng", 1),
+    "outputTIFF" => getValue($def, "outputTIFF", 0),
+    "usePearsonInHCA" => getValue($def, "use_pearson_in_hca",   $def->{use_pearson_in_hca}),
+    "n_first" => getValue($def, "correlation_n_first", -1),
+    "onlySamplesInGroup" => getValue($def, "correlation_onlySamplesInGroup", 0),
+  };
+
+  my $correlation_script="countTableGroupCorrelation.v2.R";
+
+  $config->{$task_name} = {
+    class           => "CQS::CountTableGroupCorrelation",
+    perform         => 1,
+    rCode           => $rCode,
+    target_dir      => $task_dir,
+    parameterSampleFile4 => $options,
+    parameterFile4 => $def->{covariance_file},
+    rtemplate       => "countTableVisFunctions.R,$correlation_script",
+    rReportTemplate => "CountTableGroupCorrelation.Rmd;reportFunctions.R",
+    run_rmd_independent => 1,
+    output_file     => "parameterSampleFile1",
+    output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png",
+    can_result_be_empty_file => 1,
+    sh_direct       => 1,
+    pbs             => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "23",
+      "mem"       => "100gb"
+    },
+  };
+  if ( is_array($count_file_ref) ) {
+    $config->{$task_name}{parameterSampleFile1_ref} = $count_file_ref;
+  }
+  else {
+    $config->{$task_name}{parameterSampleFile1} = { $project_name => [$count_file_ref] };
+    $config->{$task_name}{output_to_result_dir} = 1;
+  }
+
+  if ( defined $def->{groups} ) {
+    $config->{$task_name}{parameterSampleFile2} = { all => $def->{groups} };
+  }
+
+  if ( defined $def->{correlation_groups} ) {
+    $config->{$task_name}{parameterSampleFile2} = $def->{correlation_groups};
+  }
+
+  if ( defined $def->{groups_colors} ) {
+    $config->{$task_name}{parameterSampleFile3} = $def->{groups_colors};
+  }
+
+  if ( defined $def->{correlation_groups_colors} ) {
+    $config->{$task_name}{parameterSampleFile3} = $def->{correlation_groups_colors};
+  }
+
+  if ( defined $config->{$task_name}{parameterSampleFile3} ) {
+    my $colorGroups = $config->{$task_name}{parameterSampleFile3};
+    my $corGroups   = $config->{$task_name}{parameterSampleFile2};
+    for my $title ( keys %$corGroups ) {
+      my $titleGroups = $corGroups->{$title};
+      for my $subGroup ( keys %$titleGroups ) {
+        if ( !defined $colorGroups->{$subGroup} ) {
+          my %cgroups = %$colorGroups;
+          die "Color of group '$subGroup' was not define in " . Dumper($colorGroups);
+        }
+      }
+    }
+  }
   push @$tasks, $task_name;
 }
 
