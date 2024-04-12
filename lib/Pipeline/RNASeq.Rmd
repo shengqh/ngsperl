@@ -175,7 +175,11 @@ cat("**Uniquely mapped ratio** = Uniquely mapped / Input reads\n\n**Mapped ratio
 
 ```{r, echo=FALSE,results='asis', eval=has_star_chromosome_png, fig.align="center", fig.align="center", fig.cap=figRef("STAR_chromosome_png", "The reads mapped to each chromosome in each sample")}
 include_graphics(file_map$STAR_chromosome_png)
-cat("\n\n<mark>If there are a significant number of reads mapped to GL000220.1/KI270733.1, it might indicate incomplete rRNA depletion since the most highly expressed rRNA locus is on GL000220.1/KI270733.1 scaffold. Reference contigs GL000220.1 and KI270733.1, which contain near-complete matches to U13369.1, the GenBank sequence that has served as an rDNA reference. [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6061828/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6061828/)</mark>\n\n")
+csv_file=gsub(".png$", ".csv", file_map$STAR_chromosome_png)
+chrom_counts=fread(csv_file)
+if("GL000220.1" %in% chrom_counts$Chrom) {
+  cat("\n\n<mark>If there are a significant number of reads mapped to GL000220.1/KI270733.1, it might indicate incomplete rRNA depletion since the most highly expressed rRNA locus is on GL000220.1/KI270733.1 scaffold. Reference contigs GL000220.1 and KI270733.1, which contain near-complete matches to U13369.1, the GenBank sequence that has served as an rDNA reference. [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6061828/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6061828/)</mark>\n\n")
+}
 ```
 
 ```{r, echo=FALSE,results='asis', eval = "STAR_gene_body_coverage_png" %in% names(file_map), fig.align="center", fig.cap=figRef("STAR_gene_body_coverage_png", "The coverage of reads mapped to gene body in each sample")}
