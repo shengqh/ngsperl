@@ -155,13 +155,23 @@ sub getValue {
   if ( defined $def->{$name} ) {
     return $def->{$name};
   }
-  elsif ( defined $defaultValue ) {
+
+  if(is_array($name)){
+    for my $n (@$name){
+      #print("check $n\n");
+      if ( defined $def->{$n} ) {
+        #print("find " . $def->{$n}. "\n");
+        return $def->{$n};
+      }
+    }
+  }
+
+  if ( defined $defaultValue ) {
     return $defaultValue;
   }
-  else {
-    print Dumper(longmess());
-    die "Define $name in user definition first.";
-  }
+
+  print Dumper(longmess());
+  die "Define $name in user definition first.";
 }
 
 ####
