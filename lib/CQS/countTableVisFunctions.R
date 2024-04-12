@@ -936,17 +936,15 @@ get_text_width <- function(txt, font_family, font_size = 10, units = "inches", r
   return(ret)
 }
 
-# get ComplexHeatmap plot size
-calc_ht_size = function(ht, unit = "inch", merge_legends = FALSE) {
-  pdf(NULL)
-  ht = draw(ht, merge_legends=merge_legends)
-  w = ComplexHeatmap:::width(ht)
-  w = convertX(w, unit, valueOnly = TRUE)
-  h = ComplexHeatmap:::height(ht)
-  h = convertY(h, unit, valueOnly = TRUE)
+get_text_height <- function(font_family, font_size = 10, units = "inches", res=300) {
+  tmp_file <- tempfile(fileext = ".png")
+  png(tmp_file, res=res)
+  par(family = font_family, ps = font_size)
+  ret = strwidth('M', units = units)
   dev.off()
+  unlink(tmp_file)
 
-  c(w, h)
+  return(ret)
 }
 
 open_plot<-function(file_prefix, format, width_inch, height_inch){
@@ -961,18 +959,64 @@ open_plot<-function(file_prefix, format, width_inch, height_inch){
   }
 }
 
-save_complexheatmap_plot<-function(file_prefix, outputFormat, ht, width_inch=NULL, height_inch=NULL ){
-  if(is.null(width_inch) | is.null(height_inch)){
-    ht_sizes = calc_ht_size(ht, merge_legends=TRUE)
-    width_inch = ht_sizes[1]
-    height_inch = ht_sizes[2]
+init_heatmap_param<-function(htdata, show_row_names, show_column_names, default_heatmap_width_inch=5, default_heatmap_height_inch=5){
+  if(show_row_names){
+    heatmap_height=unit(max(nrow(htdata) * 0.2, default_heatmap_height_inch), "inch")
+  }else{
+    heatmap_height=unit(default_heatmap_width_inch, "inch")
   }
 
-  for(format in outputFormat){  
-    open_plot(file_prefix, format, width_inch, height_inch)  
-    draw(ht, merge_legends=TRUE)
-    ignored=dev.off()
+  if(show_column_names){
+    heatmap_width=unit(max(ncol(htdata) * 0.2, default_heatmap_height_inch), "inch")
+  }else{
+    heatmap_width=unit(default_heatmap_height_inch, "inch")
+  }
+
+  list(heatmap_width=heatmap_width, heatmap_height=heatmap_height)
+}
+
+# get ComplexHeatmap plot size
+# in order to use this function, the ComplexHeatmap object should be drawn with heatmap_width and heatmap_height first.
+calc_ht_size = function(ht, unit = "inch", merge_legends = FALSE) {
+  pdf(NULL)
+  ht2 = draw(ht, merge_legends=merge_legends)
+  w = ComplexHeatmap:::width(ht2)
+  w = convertX(w, unit, valueOnly = TRUE)
+  h = ComplexHeatmap:::height(ht2)
+  h = convertY(h, unit, valueOnly = TRUE)
+  dev.off()
+
+  c(w, h)
+}
+
+draw_heatmap_png<-function( filepath, 
+                            htdata, 
+                            name, 
+                            show_row_names, 
+                            show_column_names,
+                            save_rds=TRUE,
+                            ...){
+  if(save_rds){
+    saveRDS(htdata, file=paste0(filepath, ".rds"))
   }  
+
+  heatmap_size = init_heatmap_param(htdata, show_row_names=show_row_names, show_column_names=show_column_names)
+  #print(paste0("heatmap_size=", heatmap_size, "\n"))
+
+  ht<-Heatmap(htdata,
+              show_row_names=show_row_names,
+              show_column_names=show_column_names,
+              name=name,
+              use_raster=FALSE,
+              heatmap_width=heatmap_size$heatmap_width,
+              heatmap_height=heatmap_size$heatmap_height,...)
+
+  ss = calc_ht_size(ht, merge_legends=TRUE )
+  #print(paste0("calc_ht_size=", ss, "\n"))
+
+  png(filepath, width=ss[1], height=ss[2], units="in", res=300)
+  draw(ht, merge_legends=TRUE)
+  ignored=dev.off()
 }
 
 save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, plot){
