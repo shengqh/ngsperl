@@ -148,6 +148,9 @@ sub initializeSmallRNADefaultOptions {
 
   #"TotalReads" or "None"
   initDefaultValue( $def, "normalize_by", "TotalReads");
+  my $normalize_by = getValue($def, "normalize_by");
+  my $correlation_totalCountKey = $normalize_by eq 'None' ? 'None':$normalize_by eq 'TotalReads'?'Reads for Mapping':$normalize_by;
+  initDefaultValue( $def, "totalCountKey", $correlation_totalCountKey );
 
   initDefaultValue( $def, "DE_fold_change",              1.5 );
   initDefaultValue( $def, "DE_min_median_read_top",      2 );
@@ -238,14 +241,19 @@ sub initializeSmallRNADefaultOptions {
     ( getValue( $def, "export_contig_details" ) ? " --exportContigDetails" : "" );                              #contig_detail
   initDefaultValue( $def, "sequence_count_option", $defaultSequenceCountOption );
 
+  initDefaultValue( $def, "totalCountKey", "" );
   #visualization
   initDefaultValue( $def, "use_least_groups", 0 );
-
+  initDefaultValue( $def, "minMedian", 0 );
+  initDefaultValue( $def, "minMedianInGroup", 1 );
+  
   initDefaultValue( $def, "perform_nonhost_mappedToHost", 0 );
 
   initDefaultValue( $def, "perform_host_tRH_analysis", 0 );
 
   initDefaultValue( $def, "perform_host_tRnaFragmentHalves_analysis", 0 );
+
+  initDefaultValue( $def, "correlation_n_first", 20000);
 
   initDefaultValue( $def, "correlation_rcode", "" );
   my $str = $def->{correlation_rcode};
