@@ -2,14 +2,14 @@ rm(list=ls())
 outFile=''
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2=''
-parFile3=''
+parFile2='/nobackup/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/9074_ES.Category.Table.csv'
+parFile3='/nobackup/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/preprocessing/fastqc_post_trim_summary/result/9074_ES.countInFastQcVis.Result.Reads.csv'
 
 
-setwd('/nobackup/vickers_lab/projects/20240206_Linton_11055_bulkRNA_human/genetable/result')
+setwd('/nobackup/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/data_visualization/count_table_correlation_TotalReads/result')
 
 ### Parameter setting end ###
 
@@ -29,8 +29,8 @@ library(dplyr)
 library(ggplot2)
 library(tibble)
 library(cowplot)
-library(ComplexHeatmap)
 library(EnhancedVolcano)
+suppressPackageStartupMessages(library("ComplexHeatmap"))
 
 myoptions=read_file_map(parSampleFile4, do_unlist=FALSE)
 
@@ -50,6 +50,8 @@ idIndex = to_numeric(myoptions$idIndex, 1)
 minMedian = to_numeric(myoptions$minMedian, 1)
 minMedianInGroup = to_numeric(myoptions$minMedianInGroup, 1)
 fixColorRange = is_one(myoptions$fixColorRange, 1)
+useLeastGroups = is_one(myoptions$useLeastGroups, 1)
+totalCountKey = to_character(myoptions$totalCountKey, "None")
 
 outputDirectory = to_character(myoptions$outputDirectory, "")
 output_include_folder_name = is_one(myoptions$output_include_folder_name, 1)
@@ -91,6 +93,8 @@ if(file.exists((covarianceFile))){
 }else{
   has_batch<-FALSE
 }
+
+error_prefix=paste0(task_suffix, ".", Sys.Date(), ".warning")
 
 #source("/home/zhaos/source/ngsperl/lib/CQS/countTableVisFunctions.R")
 
@@ -161,7 +165,7 @@ if(file.exists(succeed_file)){
 
 prefix_list=c()
 
-i<-2
+i<-1
 for (i in 1:nrow(countTableFileAll)) {
   countTableFile<-countTableFileAll[i,1]
   #countTableFile<-paste0("C:/projects", countTableFile)
@@ -315,6 +319,7 @@ for (i in 1:nrow(countTableFileAll)) {
     }
 
     if (bNormalizeByCount) { #normlize with total count *10^6
+      cat("Normalizing by", totalCountKey, "\n")
       totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
       if(!(totalCountKey %in% rownames(totalCount))){
         if(!file.exists(parFile2)){
@@ -483,7 +488,21 @@ for (i in 1:nrow(countTableFileAll)) {
       names(countList)=c("all")
     }
     
-    cur_name=names(countList)[2]
+    if(hasMultipleGroup){
+      ha=HeatmapAnnotation( Group=groups,
+                            col=list(Group=colors),
+                            annotation_legend_param = list(Group = list(ncol = 1, title = "Group", title_position = "topleft")))
+    }else{
+      ha=NULL
+    }
+
+    if(usePearsonInHCA){
+      clustering_distance_columns="pearson"
+    }else{
+      clustering_distance_columns="euclidean"
+    }
+
+    cur_name=names(countList)[1]
     for(cur_name in names(countList)){
       cur_counts = countList[[cur_name]]
       
@@ -496,31 +515,14 @@ for (i in 1:nrow(countTableFileAll)) {
 
         mat_scaled = t(scale(t(cur_counts)))
 
-        if(hasMultipleGroup){
-          ha=HeatmapAnnotation( Group=groups,
-                                col=list(Group=colors),
-                                annotation_legend_param = list(Group = list(ncol = 1, title = "Group", title_position = "topleft")))
-        }else{
-          ha=NULL
-        }
-
-        if(usePearsonInHCA){
-          clustering_distance_columns="pearson"
-        }else{
-          clustering_distance_columns="euclidean"
-        }
-        ht<-Heatmap( mat_scaled,
-                    show_row_names=FALSE,
-                    cluster_rows=TRUE, 
-                    cluster_columns=TRUE, 
-                    show_column_dend=TRUE, 
-                    show_row_dend=FALSE,
-                    clustering_distance_columns=clustering_distance_columns,
-                    name="zscore",
-                    top_annotation=ha,
-                    use_raster=FALSE)
-        file_prefix=paste0(outputFilePrefix, curSuffix, gene_suffix, ".heatmap")
-        save_complexheatmap_plot(file_prefix, outputFormat, ht)
+        draw_heatmap_png( filepath=paste0(outputFilePrefix, curSuffix, gene_suffix, ".heatmap.png"), 
+                          htdata=mat_scaled, 
+                          name="zscore", 
+                          show_row_names=FALSE, 
+                          show_column_names=TRUE,
+                          show_row_dend=FALSE,
+                          top_annotation=ha,
+                          clustering_distance_columns=clustering_distance_columns )
       } else {
         cat("Not enough samples or genes. Can't Draw heatmap for", title, "samples.\n")
       }
@@ -535,45 +537,33 @@ for (i in 1:nrow(countTableFileAll)) {
       countNumCorTest<-corTestTableWithoutZero(countNumVsd,method="spearman")
       write.csv(countNumCorTest, file=paste0(cur_file_prefix,".Correlation.Test.csv"), row.names=T)
 
-      if(hasMultipleGroup){
-        ha=HeatmapAnnotation( Group=groups,
-                              col=list(Group=colors),
-                              annotation_legend_param = list(Group = list(ncol = 1, title = "Group", title_position = "topleft")))
-      }else{
-        ha=NULL
+      if(any(is.na(countNumCor))){
+        saveInError(paste0("NA in correlation matrix. Can't draw correlation figure for ",countTableFile), fileSuffix = error_prefix)
+        next
       }
-
-      ht<-Heatmap(countNumCor,
-                  show_row_names=TRUE,
-                  cluster_rows=TRUE, 
-                  cluster_columns=TRUE, 
-                  show_column_dend=TRUE, 
-                  show_row_dend=FALSE,
-                  name="Spearman",
-                  top_annotation=ha,
-                  use_raster=FALSE)
-      file_prefix=paste0(outputFilePrefix, curSuffix, ".Correlation")
-      save_complexheatmap_plot(file_prefix, outputFormat, ht)
+      
+      draw_heatmap_png( filepath=paste0(cur_file_prefix, ".Correlation.png"), 
+                        htdata=countNumCor, 
+                        name="Spearman", 
+                        show_row_names=TRUE, 
+                        show_column_names=TRUE,
+                        top_annotation=ha )
       
       if (hasMultipleGroup) {
         if(length(unique(validSampleToGroup$V2)) < 3){
-          saveInError(paste0("Less than 3 groups. Can't do correlation analysis for group table for ",countTableFile),fileSuffix = paste0(suffix,Sys.Date(),".warning"))
+          saveInError(paste0("Less than 3 groups. Can't do correlation analysis for group table for ", countTableFile),fileSuffix = error_prefix)
           next
         }
         
         countNumVsdGroup<-mergeTableBySampleGroup(countNumVsd, validSampleToGroup)
         mat_scaled = t(scale(t(countNumVsdGroup)))
 
-        ht<-Heatmap(mat_scaled,
-                    show_row_names=FALSE,
-                    cluster_rows=TRUE, 
-                    cluster_columns=TRUE, 
-                    show_column_dend=TRUE, 
-                    show_row_dend=FALSE,
-                    name="zscore",
-                    use_raster=FALSE)
-        file_prefix=paste0(cur_file_prefix,".Group.heatmap")
-        save_complexheatmap_plot(file_prefix, outputFormat, ht, width_inch=5, height_inch=4)
+        draw_heatmap_png( filepath=paste0(cur_file_prefix, ".Group.heatmap.png"), 
+                          htdata=mat_scaled, 
+                          name="zscore", 
+                          show_row_names=FALSE, 
+                          show_column_names=TRUE,
+                          show_row_dend=FALSE)
 
         cat("Doing correlation analysis of groups ...\n")
         
@@ -594,16 +584,11 @@ for (i in 1:nrow(countTableFileAll)) {
         completecases <- rownames(countNumCor)[which(complete.cases(countNumCor.na) ==T)]
         countNumCor <- countNumCor[completecases, completecases]
 
-        ht<-Heatmap(countNumCor,
-                    show_row_names=TRUE,
-                    cluster_rows=TRUE, 
-                    cluster_columns=TRUE, 
-                    show_column_dend=TRUE, 
-                    show_row_dend=FALSE,
-                    name="Spearman",
-                    use_raster=FALSE)
-        file_prefix=paste0(cur_file_prefix,".Group.Correlation")
-        save_complexheatmap_plot(file_prefix, outputFormat, ht, width_inch=5, height_inch=4)        
+        draw_heatmap_png( filepath=paste0(cur_file_prefix, ".Group.Correlation.png"), 
+                          htdata=countNumCor, 
+                          name="Spearman", 
+                          show_row_names=TRUE, 
+                          show_column_names=TRUE )
       }
     } else {
       cat("Not enough samples or genes. Can't do correlation analysis.\n")
@@ -621,4 +606,4 @@ if(length(missed_count_tables) == 0){
 }
 
 writeLines(prefix_list, "prefix_list.txt")
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
+
