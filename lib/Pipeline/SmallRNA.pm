@@ -45,14 +45,14 @@ sub getSmallRNAConfig {
 
   initializeSmallRNADefaultOptions($def);
 
-  my ( $config, $individual_ref, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref ) = getPrepareConfig( $def, 1 );
+  my ( $config, $tasks, $summary_ref, $cluster, $not_identical_ref, $preprocessing_dir, $class_independent_dir, $identical_ref, $host_identical_ref ) = getPrepareConfig( $def, 1 );
 
   $def = $config->{def};
   delete $config->{def};
 
   #merge summary and individual 
-  push @$individual_ref, @$summary_ref;
-  $summary_ref = $individual_ref;
+  push @$tasks, @$summary_ref;
+  $summary_ref=undef;
 
   my $task_name = $def->{task_name};
 
@@ -181,14 +181,14 @@ sub getSmallRNAConfig {
     $def->{correlation_rcode} = $def->{correlation_rcode} . "showLabelInPCA<-FALSE;";
   }
 
-  my $normalize_by = getValue($def, "normalize_by");
-
   if ( $def->{correlation_rcode} !~ /totalCountKey/ ) {
-    my $correlation_totalCountKey = $normalize_by eq 'None' ? 'None':$normalize_by eq 'TotalReads'?'Reads for Mapping':$normalize_by;
+    my $correlation_totalCountKey = getValue($def, "totalCountKey");
     $def->{correlation_rcode} = $def->{correlation_rcode} . "totalCountKey='$correlation_totalCountKey';";
   }
 
   if ( $def->{correlation_rcode} !~ /minMedian/ ) {        #set filter parameters
+    initDefaultValue( $def, "minMedian", 0 );
+    initDefaultValue( $def, "minMedianInGroup", 1 );
     $def->{correlation_rcode} = $def->{correlation_rcode} . "minMedian=0;minMedianInGroup=1;";
   }
 
@@ -391,7 +391,7 @@ sub getSmallRNAConfig {
 
     #1 mismatch search, NTA
     my $hostBowtieTask = "bowtie1_genome_1mm_NTA";
-    addBowtie( $config, $def, $individual_ref, $hostBowtieTask, $host_intermediate_dir, $def->{bowtie1_index}, $host_identical_ref, $def->{bowtie1_option_1mm} );
+    addBowtie( $config, $def, $tasks, $hostBowtieTask, $host_intermediate_dir, $def->{bowtie1_index}, $host_identical_ref, $def->{bowtie1_option_1mm} );
 
     my $bamSource = $hostBowtieTask;
 
@@ -432,7 +432,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       };
 
       $bamSource = ["filterMixBam", ".fixed.bam"];
-      push @$individual_ref, ("filterMixBam");
+      push @$tasks, ("filterMixBam");
 
       # my $filterMixBam_summary = "filterMixBam_summary";
       # $config->{$filterMixBam_summary} = {
@@ -457,7 +457,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
 
     if ($isHomologyAnalysis) {
       my $realBowtieTask = "bowtie1_real_genome_1mm_NTA";
-      addBowtie( $config, $def, $individual_ref, $realBowtieTask, $host_intermediate_dir, $real_genome_bowtie1_index, $host_identical_ref, $def->{bowtie1_option_1mm} );
+      addBowtie( $config, $def, $tasks, $realBowtieTask, $host_intermediate_dir, $real_genome_bowtie1_index, $host_identical_ref, $def->{bowtie1_option_1mm} );
 
       my $homologyTask = "bowtie1_genome_1mm_NTA_homology";
       $config->{$homologyTask} = {
@@ -480,7 +480,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       };
 
       $bamSource = $homologyTask;
-      push @$individual_ref, ("$homologyTask");
+      push @$tasks, ("$homologyTask");
     }
 
     my $host_genome = {
@@ -508,7 +508,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       $host_genome->{bowtie1_genome_1mm_NTA_smallRNA_count}{cca_files_ref} = ["identical_check_cca"];
     }
 
-    push @$individual_ref, ("bowtie1_genome_1mm_NTA_smallRNA_count");
+    push @$tasks, ("bowtie1_genome_1mm_NTA_smallRNA_count");
 
     my $countTask = "bowtie1_genome_1mm_NTA_smallRNA_count";
 
@@ -575,7 +575,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       }
     );
     $config = merge_hash_right_precedent( $config, $host_genome );
-    push @$summary_ref, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category" );
+    push @$tasks, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
     my $tRnaAnalysis = {};
     if ($notMicroRNAOnly) {
@@ -599,7 +599,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           "mem"       => "10gb"
         },
       };
-      push @$summary_ref, ("host_genome_tRNA_category");
+      push @$tasks, ("host_genome_tRNA_category");
 
       if (getValue($def, "perform_host_tRNA_absolute_position")){
         my $tTask = $countTask . "_tRNA_abs_position";
@@ -623,7 +623,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             "mem"       => "10gb"
           },
         };
-        push @$individual_ref, $tTask;
+        push @$tasks, $tTask;
 
         my $tVisTask = "host_tRNA_abs_position_vis";
         $config->{$tVisTask} = {
@@ -648,7 +648,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             "mem"       => "10gb"
           },
         };
-        push @$summary_ref, $tVisTask;
+        push @$tasks, $tVisTask;
       }
 
       if ($perform_host_tRnaFragmentHalves_analysis) {
@@ -702,7 +702,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             "mem"       => "10gb"
           },
         };
-        push @$individual_ref, $tTask;
+        push @$tasks, $tTask;
 
         $config->{$tTableTask} = {
           class      => "CQS::SmallRNATable",
@@ -721,7 +721,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             "mem"       => "40gb"
           },
         };
-        push @$summary_ref, $tTableTask;
+        push @$tasks, $tTableTask;
 
         $config->{$tCategoryTask} = {
           class                     => "CQS::UniqueR",
@@ -743,7 +743,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             "mem"       => "10gb"
           },
         };
-        push @$summary_ref, $tCategoryTask;
+        push @$tasks, $tCategoryTask;
       }
 
       # if ($perform_host_tRH_analysis) {
@@ -768,7 +768,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       #       "mem"       => "10gb"
       #     },
       #   };
-      #   push @$individual_ref, $tRHTask;
+      #   push @$tasks, $tRHTask;
 
       #   $config->{$tRHTableTask} = {
       #     class      => "CQS::SmallRNATable",
@@ -789,7 +789,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       #     },
       #   };
 
-      #   push @$summary_ref, $tRHTableTask;
+      #   push @$tasks, $tRHTableTask;
 
       #   $config->{$tRHCategory} = {
       #     class                     => "CQS::UniqueR",
@@ -813,14 +813,14 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       #       "mem"       => "10gb"
       #     },
       #   };
-      #   push @$summary_ref, $tRHCategory;
+      #   push @$tasks, $tRHCategory;
       # }
 
       if ( $def->{perform_host_tRNA_start_position} && $def->{unique_groups}) {
         my $tTask = "host_genome_tRNA_start_position_vis";
         addPositionVis(
           $config, $def,
-          $summary_ref,
+          $tasks,
           $tTask,
           $data_visualization_dir,
           {
@@ -838,7 +838,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           my $tStartPositionTask = $tTableTask . "_start_position_vis";
           addPositionVis(
             $config, $def,
-            $summary_ref,
+            $tasks,
             $tStartPositionTask,
             $data_visualization_dir,
             {
@@ -874,7 +874,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             "mem"       => "10gb"
           },
         };
-        push( @$summary_ref, $visualizationTask );
+        push( @$tasks, $visualizationTask );
       }
     }
 
@@ -894,7 +894,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           "mem"       => "10gb"
         },
       };
-      push( @$individual_ref, "bowtie1_genome_xml2bam" );
+      push( @$tasks, "bowtie1_genome_xml2bam" );
 
       if ( getValue( $def, "host_bamplot" ) ) {
         my $plot_gff = getValue( $def, "host_bamplot_gff" );
@@ -928,7 +928,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             "mem"      => "10gb"
           },
         };
-        push @$summary_ref, ("host_bamplot");
+        push @$tasks, ("host_bamplot");
       }
     }
 
@@ -1066,13 +1066,13 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       my @visual_source_reads = ();
 
       #miRNA
-      addDEseq2( $config, $def, $summary_ref, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "miRNA_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],
+      addDEseq2( $config, $def, $tasks, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $tasks, "miRNA_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "miRNA_NTA_base", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.base.count\$" ],
+      addDEseq2( $config, $def, $tasks, "miRNA_NTA_base", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.base.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
 
-      addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],
+      addDEseq2( $config, $def, $tasks, "miRNA_isomiR", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
 
       if(getValue($def, "use_isomiR_in_vis", 1)){
@@ -1081,18 +1081,18 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         push @visual_source, "miRNA";
       }
 
-      addDEseq2( $config, $def, $summary_ref, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ],
+      addDEseq2( $config, $def, $tasks, "miRNA_isomiR_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.isomiR_NTA.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "miRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$" ],
+      addDEseq2( $config, $def, $tasks, "miRNA_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.read.count\$" ],
         $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
-      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_miRNA", [ "miRNA_isomiR", "miRNA_NTA", "miRNA_isomiR_NTA" ],
+      addDeseq2Visualization( $config, $def, $tasks, "host_genome_miRNA", [ "miRNA_isomiR", "miRNA_NTA", "miRNA_isomiR_NTA" ],
         $data_visualization_dir, "pairs_host_miRNA_deseq2_vis_layout", $libraryKey );
       push @visual_source_reads, "miRNA_reads";
 
       if ($notMicroRNAOnly) {
         my @biotypes = ();
 
-        addDEseq2( $config, $def, $summary_ref, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
+        addDEseq2( $config, $def, $tasks, "tRNA_aminoacid", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".tRNA.aminoacid.count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
 
         push(@biotypes, "tRNA");
@@ -1123,13 +1123,13 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           my $biotype_name = $biotype eq "other" ? "otherSmallRNA" : $biotype;
           my $biotype_feature_regex = $biotype eq "tRNA" ? "(^.*?tRNA-[^-]+-[^-]+)-" : undef;
 
-          $deseq2Task = addDEseq2( $config, $def, $summary_ref, $biotype_name, [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.count\$" ],
+          $deseq2Task = addDEseq2( $config, $def, $tasks, $biotype_name, [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.count\$" ],
             $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, $biotype_feature_regex );
           push( @visual_source, $biotype_name );
 
           #Due to the fact that the read counts of ERV sequences are too low, we don't do DE analysis for ERV sequences
           if ($biotype ne "ERV"){
-            addDEseq2( $config, $def, $summary_ref, "${biotype_name}_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.read.count\$" ],
+            addDEseq2( $config, $def, $tasks, "${biotype_name}_reads", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".${biotype}.read.count\$" ],
               $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
             push @visual_source_reads, "${biotype_name}_reads";
           }
@@ -1137,21 +1137,21 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       }
 
       #host genome smallRNA visualization
-      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome",       \@visual_source,       $data_visualization_dir, "pairs_host_deseq2_vis_layout",       $libraryKey );
-      addDeseq2Visualization( $config, $def, $summary_ref, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_reads_deseq2_vis_layout", $libraryKey );
+      addDeseq2Visualization( $config, $def, $tasks, "host_genome",       \@visual_source,       $data_visualization_dir, "pairs_host_deseq2_vis_layout",       $libraryKey );
+      addDeseq2Visualization( $config, $def, $tasks, "host_genome_reads", \@visual_source_reads, $data_visualization_dir, "pairs_host_reads_deseq2_vis_layout", $libraryKey );
 
       for my $tKey (sort keys %$tRnaAnalysis){
         my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
-        addDEseq2( $config, $def, $summary_ref, $tKey,           [ $tTableTask, ".tRNA.count\$" ],           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        addDEseq2( $config, $def, $summary_ref, "${tKey}_reads",     [ $tTableTask, ".tRNA.read.count\$" ],      $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
-        addDEseq2( $config, $def, $summary_ref, "${tKey}_aminoacid", [ $tTableTask, ".tRNA.aminoacid.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $tasks, $tKey,           [ $tTableTask, ".tRNA.count\$" ],           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $tasks, "${tKey}_reads",     [ $tTableTask, ".tRNA.read.count\$" ],      $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
+        addDEseq2( $config, $def, $tasks, "${tKey}_aminoacid", [ $tTableTask, ".tRNA.aminoacid.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
     }
 
     if ( $do_comparison || defined $groups || defined $def->{tRNA_vis_group} ) {
       addPositionVis(
         $config, $def,
-        $summary_ref,
+        $tasks,
         "host_genome_miRNA_PositionVis",
         $data_visualization_dir,
         {
@@ -1172,7 +1172,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
 
         addPositionVis(
           $config, $def,
-          $summary_ref,
+          $tasks,
           "host_genome_tRNA_PositionVis",
           $data_visualization_dir,
           {
@@ -1184,7 +1184,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         );
         addPositionVis(
           $config, $def,
-          $summary_ref,
+          $tasks,
           "host_genome_tRNA_PositionVis_anticodon",
           $data_visualization_dir,
           {
@@ -1198,7 +1198,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         if ( $def->{hasYRNA} ) {
           addPositionVis(
             $config, $def,
-            $summary_ref,
+            $tasks,
             "host_genome_yRNA_PositionVis",
             $data_visualization_dir,
             {
@@ -1211,7 +1211,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         if ( $def->{hasSnRNA} ) {
           addPositionVis(
             $config, $def,
-            $summary_ref,
+            $tasks,
             "host_genome_snRNA_PositionVis",
             $data_visualization_dir,
             {
@@ -1224,7 +1224,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         if ( $def->{hasSnoRNA} ) {
           addPositionVis(
             $config, $def,
-            $summary_ref,
+            $tasks,
             "host_genome_snoRNA_PositionVis",
             $data_visualization_dir,
             {
@@ -1238,7 +1238,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           my $tTableTask = $tRnaAnalysis->{$tKey}{table_section};
           addPositionVis(
             $config, $def,
-            $summary_ref,
+            $tasks,
             "host_genome_${tKey}_PositionVis",
             $data_visualization_dir,
             {
@@ -1248,7 +1248,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           );
           addPositionVis(
             $config, $def,
-            $summary_ref,
+            $tasks,
             "host_genome_${tKey}_PositionVis_anticodon",
             $data_visualization_dir,
             {
@@ -1331,8 +1331,8 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       push( @files_for_annotate_unmapped, "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount\$" );
       push( @names_for_annotate_unmapped, "host_genome" );
 
-      push @$individual_ref, ( $readTask, "bowtie1_genome_unmapped_reads" );
-      push @$summary_ref, ("bowtie1_genome_host_reads_table");
+      push @$tasks, ( $readTask, "bowtie1_genome_unmapped_reads" );
+      push @$tasks, ("bowtie1_genome_host_reads_table");
       push @table_for_pieSummary,
         ( "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.dupcount", "bowtie1_genome_unmapped_reads", ".short.fastq.dupcount", "bowtie1_genome_unmapped_reads",
         ".unmapped.fastq.dupcount" );
@@ -1343,7 +1343,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       $identical_count_ref = [ "bowtie1_genome_unmapped_reads", ".unmapped.fastq.dupcount\$" ];
 
       if ( $do_comparison and $def->{perform_host_genome_reads_deseq2} ) {
-        addDEseq2( $config, $def, $summary_ref, "bowtie1_genome_host_reads", [ "bowtie1_genome_host_reads_table", ".count\$" ],
+        addDEseq2( $config, $def, $tasks, "bowtie1_genome_host_reads", [ "bowtie1_genome_host_reads_table", ".count\$" ],
           $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       }
 
@@ -1370,10 +1370,10 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             "mem"       => "10gb"
           },
         };
-        push @$summary_ref, ("bowtie1_genome_short_reads_table");
+        push @$tasks, ("bowtie1_genome_short_reads_table");
 
         if ( $def->{perform_short_reads_deseq2} && $do_comparison ) {
-          addDEseq2( $config, $def, $summary_ref, "short_reads", [ $short_reads_table, ".count.txt\$" ],
+          addDEseq2( $config, $def, $tasks, "short_reads", [ $short_reads_table, ".count.txt\$" ],
             $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         }
       }
@@ -1438,7 +1438,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           "mem"       => "10gb"
         },
       };
-      push @$summary_ref, ("host_length_dist_category");
+      push @$tasks, ("host_length_dist_category");
     }
   }
 
@@ -1450,22 +1450,22 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
   if ( $do_comparison and $perform_class_independent_analysis ) {
     my $taskKey = "top${top_read_number}";
 
-    addDEseq2( $config, $def, $summary_ref, "${taskKey}_reads", [ "identical_sequence_count_table", ".read.count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
-    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_reads", ["${taskKey}_reads"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
+    addDEseq2( $config, $def, $tasks, "${taskKey}_reads", [ "identical_sequence_count_table", ".read.count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
+    addDeseq2Visualization( $config, $def, $tasks, "${taskKey}_reads", ["${taskKey}_reads"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
 
-    addDEseq2( $config, $def, $summary_ref, "${taskKey}_contigs", [ "identical_sequence_count_table", ".count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
-    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_contigs", ["${taskKey}_contigs"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
+    addDEseq2( $config, $def, $tasks, "${taskKey}_contigs", [ "identical_sequence_count_table", ".count\$" ], $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
+    addDeseq2Visualization( $config, $def, $tasks, "${taskKey}_contigs", ["${taskKey}_contigs"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
 
-    addDEseq2( $config, $def, $summary_ref, "${taskKey}_minicontigs", [ "identical_sequence_count_table", ".minicontig.count\$" ],
+    addDEseq2( $config, $def, $tasks, "${taskKey}_minicontigs", [ "identical_sequence_count_table", ".minicontig.count\$" ],
       $class_independent_dir, $DE_min_median_read_top, $libraryFile, $libraryKey );
-    addDeseq2Visualization( $config, $def, $summary_ref, "${taskKey}_minicontigs", ["${taskKey}_minicontigs"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
+    addDeseq2Visualization( $config, $def, $tasks, "${taskKey}_minicontigs", ["${taskKey}_minicontigs"], $data_visualization_dir, "pairs_top_deseq2_vis_layout", $libraryKey );
   }
 
   if ( $search_nonhost_database && getValue( $def, "search_combined_nonhost" ) ) {
 
     #Mapping host genome reads to non-host databases
     addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "HostGenomeReads_NonHost_pm", $nonhost_library_dir,    #general option
+      $config, $def, $tasks, $tasks, "HostGenomeReads_NonHost_pm", $nonhost_library_dir,    #general option
       $def->{bowtie1_all_nonHost_index}, [ "bowtie1_genome_unmapped_reads", ".mappedToHostGenome.fastq.gz" ],    #bowtie option
       $def->{smallrnacount_option} . ' --keepChrInName --categoryMapFile ' . $def->{all_nonHost_map},            #count option
       $def->{nonhost_table_option},                                                                              #table option
@@ -1474,7 +1474,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
 
     addNonhostVis(
       $config, $def,
-      $summary_ref,
+      $tasks,
       "HostGenomeReads_NonHost_vis",
       $data_visualization_dir,
       {
@@ -1537,7 +1537,7 @@ fi
       },
     };
 
-    push( @$individual_ref, $refseq_bacteria_bowtie );
+    push( @$tasks, $refseq_bacteria_bowtie );
 
     my $refseq_bacteria_bowtie_count = "refseq_bacteria_bowtie_count";
     $config->{$refseq_bacteria_bowtie_count} = {
@@ -1570,7 +1570,7 @@ fi
       },
     };
 
-    push( @$individual_ref, $refseq_bacteria_bowtie_count );
+    push( @$tasks, $refseq_bacteria_bowtie_count );
 
     my $categories = ["species", "genus", "family", "order", "class", "phylum" ];
     my $file_exts = [];
@@ -1606,7 +1606,7 @@ fi
       },
     };
 
-    push( @$summary_ref, $refseq_bacteria_table );  
+    push( @$tasks, $refseq_bacteria_table );  
 
     if ($refseq_bacteria_count eq "both"){
       push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
@@ -1671,21 +1671,21 @@ fi
         "mem"       => getValue($def, "${refseq_bacteria_krona}_mem", "20gb"),
       },
     };
-    push( @$summary_ref, $refseq_bacteria_krona );  
+    push( @$tasks, $refseq_bacteria_krona );  
 
     if ($do_comparison) {
       for my $cat (@$categories){
         if ($refseq_bacteria_count eq "both"){
-          addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
+          addDEseq2( $config, $def, $tasks, "refseq_bacteria_${cat}_estimated", [ $refseq_bacteria_table, ".${cat}.estimated.count\$" ],
             $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-          addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_aggregated", [ $refseq_bacteria_table, ".${cat}.aggregated.count\$" ],
+          addDEseq2( $config, $def, $tasks, "refseq_bacteria_${cat}_aggregated", [ $refseq_bacteria_table, ".${cat}.aggregated.count\$" ],
             $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         }else{
-          addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_${cat}_${refseq_bacteria_count}", [ $refseq_bacteria_table, ".${cat}.${refseq_bacteria_count}.count\$" ],
+          addDEseq2( $config, $def, $tasks, "refseq_bacteria_${cat}_${refseq_bacteria_count}", [ $refseq_bacteria_table, ".${cat}.${refseq_bacteria_count}.count\$" ],
             $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
         }
       }
-      addDEseq2( $config, $def, $summary_ref, "refseq_bacteria_read", [ $refseq_bacteria_table, ".read.count\$" ],
+      addDEseq2( $config, $def, $tasks, "refseq_bacteria_read", [ $refseq_bacteria_table, ".read.count\$" ],
         $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
     }
   }
@@ -1697,7 +1697,7 @@ fi
   # if ($search_nonhost_genome && $search_custom_group_by_gene){
   #   my $nonhostGroup = "";
   #   my $bowtie1Task = "custom_bowtie1_pm";
-  #   addBowtie( $config, $def, $individual_ref, $bowtie1Task, $nonhost_genome_dir, $def->{"bowtie1_${nonhostGroup}_index"}, $sourceRef, $def->{bowtie1_option_pm} );
+  #   addBowtie( $config, $def, $tasks, $bowtie1Task, $nonhost_genome_dir, $def->{"bowtie1_${nonhostGroup}_index"}, $sourceRef, $def->{bowtie1_option_pm} );
   # }
 
   #Mapping unmapped reads to nonhost genome
@@ -1707,7 +1707,7 @@ fi
     for my $nonhostGroup (@nonhost_genome_groups) {
       my $force_species_file = $nonhostGroup =~ /custom/;
       addNonhostDatabase(
-        $config, $def, $individual_ref, $summary_ref, "${nonhostGroup}_pm", $nonhost_genome_dir,    #general option
+        $config, $def, $tasks, $tasks, "${nonhostGroup}_pm", $nonhost_genome_dir,    #general option
         $def->{"bowtie1_${nonhostGroup}_index"}, $identical_ref,                                    #bowtie option
         $def->{smallrnacount_option} . ' --keepChrInName --keepSequence',                                #count option
         $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{"${nonhostGroup}_species_map"},    #table option
@@ -1718,7 +1718,7 @@ fi
 
       addNonhostVis(
         $config, $def,
-        $summary_ref,
+        $tasks,
         "nonhost_genome_${nonhostGroup}_vis",
         $data_visualization_dir,
         {
@@ -1734,9 +1734,9 @@ fi
       push @name_for_shortReadSource, ( $nonhostGroup);
 
       if ($do_comparison) {
-        addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}", [ "bowtie1_${nonhostGroup}_pm_table", ".Species.count\$" ],
+        addDEseq2( $config, $def, $tasks, "${nonhostGroup}", [ "bowtie1_${nonhostGroup}_pm_table", ".Species.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-        addDEseq2( $config, $def, $summary_ref, "${nonhostGroup}_reads", [ "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ],
+        addDEseq2( $config, $def, $tasks, "${nonhostGroup}_reads", [ "bowtie1_${nonhostGroup}_pm_table", ".read.count\$" ],
           $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey, undef, $de_top_reads );
       }
       push @name_for_mapPercentage,      ( "bowtie1_${nonhostGroup}_pm_count", ".count.mapped.xml\$" );
@@ -1778,7 +1778,7 @@ fi
             "mem"      => "20gb"
           },
         };
-        push( @$individual_ref, "bowtie1_" . $nonhost_count2bam );
+        push( @$tasks, "bowtie1_" . $nonhost_count2bam );
       }
     }
 
@@ -1804,7 +1804,7 @@ fi
           "mem"       => "10gb"
         },
       };
-      push( @$summary_ref, "nonhost_genome_count" );
+      push( @$tasks, "nonhost_genome_count" );
 
       $config->{microbial_genome_count} = {
         class              => "CQS::UniqueR",
@@ -1825,15 +1825,15 @@ fi
           "mem"       => "10gb"
         },
       };
-      push( @$summary_ref, "microbial_genome_count" );
+      push( @$tasks, "microbial_genome_count" );
     }
     
     push @name_for_readSummary, @nonhost_genome_group_names;
     push @overlapNames, @nonhost_genome_group_names;
 
     if ( $do_comparison && ( !$search_nonhost_genome_custom_group_only ) ) {
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome",       \@nonhost_genome_groups,      $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_genome_reads", \@nonhost_genome_group_reads, $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
+      addDeseq2Visualization( $config, $def, $tasks, "nonhost_genome",       \@nonhost_genome_groups,      $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
+      addDeseq2Visualization( $config, $def, $tasks, "nonhost_genome_reads", \@nonhost_genome_group_reads, $data_visualization_dir, "pairs_nonHostGroups_deseq2_vis_layout", $libraryKey );
     }
 
     #my $is_custom_analyzed = 0;
@@ -1868,11 +1868,11 @@ fi
           "mem"      => "40gb"
         },
       };
-      push(@$individual_ref, $gene_bam_task);
+      push(@$tasks, $gene_bam_task);
 
       my $feature_count_task = "${gene_bam_task}_count";
       $def->{"featureCounts_option"} = getValue($def, "featureCounts_option", "-g gene_name -t exon");
-      add_featurecount($config, $def, $individual_ref, $intermediate_dir, $feature_count_task, [$gene_bam_task, '.bam$'], getValue($def, "custom_group_gtf"), 1);
+      add_featurecount($config, $def, $tasks, $intermediate_dir, $feature_count_task, [$gene_bam_task, '.bam$'], getValue($def, "custom_group_gtf"), 1);
 
       my $gene_table_task = "bowtie1_${nonhostGroup}_pm_gene_table";
       #my $name_map_file = $def->{name_map_file};
@@ -1890,7 +1890,7 @@ fi
           "mem"       => "40gb"
         },
       };
-      push(@$summary_ref, $gene_table_task);
+      push(@$tasks, $gene_table_task);
     }
   }
 
@@ -1898,7 +1898,7 @@ fi
   if ($search_nonhost_library) {
     #Mapping unmapped reads to miRBase library
     addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "miRBase_pm", $nonhost_library_dir,    #general option
+      $config, $def, $tasks, $tasks, "miRBase_pm", $nonhost_library_dir,    #general option
       $def->{bowtie1_miRBase_index}, $identical_ref,                                       #bowtie option
       $def->{mirbase_count_option} . " -m --keepChrInName --keepSequence",                 #count option
       $def->{nonhost_table_option},                                                        #table option
@@ -1912,7 +1912,7 @@ fi
 
     #Mapping unmapped reads to tRNA library
     addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "tRNA_pm", $nonhost_library_dir,       #general option
+      $config, $def, $tasks, $tasks, "tRNA_pm", $nonhost_library_dir,       #general option
       $def->{bowtie1_tRNA_index}, $identical_ref,                                          #bowtie option
       $def->{smallrnacount_option} . " --keepChrInName --keepSequence",                    #count option
       $def->{nonhost_table_option} . ' --categoryMapFile ' . $def->{trna_category_map},    #table option
@@ -1923,7 +1923,7 @@ fi
 
     addNonhostVis(
       $config, $def,
-      $summary_ref,
+      $tasks,
       "nonhost_library_tRNA_vis",
       $data_visualization_dir,
       {
@@ -1957,7 +1957,7 @@ fi
           "mem"       => "10gb"
         },
       };
-      push( @$summary_ref, $tRNA_bacteria_reads_task );
+      push( @$tasks, $tRNA_bacteria_reads_task );
     }
 
     if ( getValue( $def, "perform_nonhost_tRNA_coverage", 0 ) ) {
@@ -1984,11 +1984,11 @@ fi
           "mem"       => "10gb"
         },
       };
-      push( @$summary_ref, $positionTask );
+      push( @$tasks, $positionTask );
 
       addPositionVis(
         $config, $def,
-        $summary_ref,
+        $tasks,
         $visualizationTask,
         $data_visualization_dir,
         {
@@ -2001,7 +2001,7 @@ fi
 
     #Mapping unmapped reads to rRNA library
     addNonhostDatabase(
-      $config, $def, $individual_ref, $summary_ref, "rRNA_pm", $nonhost_library_dir,    #general option
+      $config, $def, $tasks, $tasks, "rRNA_pm", $nonhost_library_dir,    #general option
       $def->{bowtie1_rRNA_index}, $identical_ref,                                       #bowtie option
       $def->{smallrnacount_option} . ' --keepChrInName --keepSequence --categoryMapFile ' . $def->{rrna_category_map},    #count option                                          #count option
       $def->{nonhost_table_option},                                                                                       #table option
@@ -2036,11 +2036,11 @@ fi
           "mem"       => "10gb"
         },
       };
-      push( @$summary_ref, $positionTask );
+      push( @$tasks, $positionTask );
 
       addPositionVis(
         $config, $def,
-        $summary_ref,
+        $tasks,
         $visualizationTask,
         $data_visualization_dir,
         {
@@ -2053,7 +2053,7 @@ fi
 
     addNonhostVis(
       $config, $def,
-      $summary_ref,
+      $tasks,
       "nonhost_library_rRNA_vis",
       $data_visualization_dir,
       {
@@ -2088,31 +2088,31 @@ fi
     if ($do_comparison) {
       my $tRNADeseq2 = [];
       push @$tRNADeseq2,
-        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA", [ "bowtie1_tRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+        addDEseq2( $config, $def, $tasks, "nonhost_tRNA", [ "bowtie1_tRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       push @$tRNADeseq2,
-        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_species", [ "nonhost_library_tRNA_vis", ".Species12.csv\$" ],
+        addDEseq2( $config, $def, $tasks, "nonhost_tRNA_species", [ "nonhost_library_tRNA_vis", ".Species12.csv\$" ],
         $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       push @$tRNADeseq2,
-        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_type", [ "nonhost_library_tRNA_vis", ".tRNAType1.csv\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
+        addDEseq2( $config, $def, $tasks, "nonhost_tRNA_type", [ "nonhost_library_tRNA_vis", ".tRNAType1.csv\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
         $libraryKey );
       push @$tRNADeseq2,
-        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_anticodon", [ "nonhost_library_tRNA_vis", ".tRNAType2.csv\$" ],
+        addDEseq2( $config, $def, $tasks, "nonhost_tRNA_anticodon", [ "nonhost_library_tRNA_vis", ".tRNAType2.csv\$" ],
         $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       push @$tRNADeseq2,
-        addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_reads", [ "bowtie1_tRNA_pm_table", ".read.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
-      addDEseq2( $config, $def, $summary_ref, "nonhost_tRNA_category", [ "bowtie1_tRNA_pm_table", ".Species.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
+        addDEseq2( $config, $def, $tasks, "nonhost_tRNA_reads", [ "bowtie1_tRNA_pm_table", ".read.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $tasks, "nonhost_tRNA_category", [ "bowtie1_tRNA_pm_table", ".Species.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
         $libraryKey );
 
       if($perform_nonhost_tRNA_bacteria_reads){
-        addDEseq2( $config, $def, $summary_ref, $tRNA_bacteria_reads_task, [ $tRNA_bacteria_reads_task, ".read.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
+        addDEseq2( $config, $def, $tasks, $tRNA_bacteria_reads_task, [ $tRNA_bacteria_reads_task, ".read.count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile,
           $libraryKey );
       }
 
 
-      addDeseq2Visualization( $config, $def, $summary_ref, "nonhost_tRNA", [ "nonhost_tRNA", "nonhost_tRNA_species", "nonhost_tRNA_type", "nonhost_tRNA_anticodon", "nonhost_tRNA_reads" ],
+      addDeseq2Visualization( $config, $def, $tasks, "nonhost_tRNA", [ "nonhost_tRNA", "nonhost_tRNA_species", "nonhost_tRNA_type", "nonhost_tRNA_anticodon", "nonhost_tRNA_reads" ],
         $data_visualization_dir, "pairs_nonHostLibrary_deseq2_vis_layout", $libraryKey );
 
-      addDEseq2( $config, $def, $summary_ref, "nonhost_rRNA", [ "bowtie1_rRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      addDEseq2( $config, $def, $tasks, "nonhost_rRNA", [ "bowtie1_rRNA_pm_table", ".count\$" ], $nonhost_library_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
     }
   }
 
@@ -2137,7 +2137,7 @@ fi
         "mem"       => "10gb"
       },
     };
-    push( @$summary_ref, "nonhost_count" );
+    push( @$tasks, "nonhost_count" );
   }
 
   if ( $def->{perform_nonhost_mappedToHost} ) {
@@ -2166,10 +2166,10 @@ fi
         "mem"       => "10gb"
       },
     };
-    push @$individual_ref, $bowtie1readTask;
+    push @$tasks, $bowtie1readTask;
 
     my $bowtie1readMapTask = "bowtie1_nonhost_mappedreads_host";
-    addBowtie( $config, $def, $individual_ref, $bowtie1readMapTask, $data_visualization_dir, $def->{bowtie1_index}, [$bowtie1readTask], $def->{bowtie1_option_2mm} );
+    addBowtie( $config, $def, $tasks, $bowtie1readMapTask, $data_visualization_dir, $def->{bowtie1_index}, [$bowtie1readTask], $def->{bowtie1_option_2mm} );
 
     my $bowtie1readMapMismatchTask = "bowtie1_nonhost_mappedreads_host_mismatch_table";
     $config->{$bowtie1readMapMismatchTask} = {
@@ -2197,7 +2197,7 @@ fi
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, $bowtie1readMapMismatchTask;
+    push @$tasks, $bowtie1readMapMismatchTask;
   }
 
   if ( $search_nonhost_database && ( !$search_nonhost_genome_custom_group_only ) ) {
@@ -2225,7 +2225,7 @@ fi
           "mem"       => "10gb"
         },
       };
-      push @$summary_ref, "nonhost_overlap_vis";
+      push @$tasks, "nonhost_overlap_vis";
     }
 
     $config->{final_unmapped_reads} = {
@@ -2266,8 +2266,8 @@ fi
     };
 
     $identical_ref = [ "final_unmapped_reads", ".fastq.gz\$" ];
-    push @$individual_ref,      ("final_unmapped_reads");
-    push @$summary_ref,         ("final_unmapped_reads_summary");
+    push @$tasks,      ("final_unmapped_reads");
+    push @$tasks,         ("final_unmapped_reads_summary");
     push @table_for_pieSummary, ( "final_unmapped_reads", ".dupcount" );
     push @name_for_pieSummary,  ("UnMapped");
 
@@ -2284,7 +2284,7 @@ fi
           "mem"       => "10gb"
         },
       };
-      push @$individual_ref, "map_percentage";
+      push @$tasks, "map_percentage";
     }
   }
 
@@ -2306,47 +2306,18 @@ fi
         "mem"       => "10gb"
       },
     };
-    push @$individual_ref, "annotate_unmapped_reads";
+    push @$tasks, "annotate_unmapped_reads";
   }
 
-  my $corr_output_file_ext      = ".Correlation.png;.heatmap.png;.PCA.png;";
-  my $corr_output_file_task_ext = "";
-  if ( ( defined $def->{groups} ) && ( scalar( keys %$groups ) >= 3 ) ) {
-    $corr_output_file_task_ext = ".Group.heatmap.png;.Group.Correlation.Cluster.png;";
-  }
-
+  my $normalize_by = getValue($def, "normalize_by");
   my $correlation_folder = "count_table_correlation";
   if($normalize_by ne 'None'){
     $correlation_folder = $correlation_folder . '_' . $normalize_by;
   }
-  $config->{count_table_correlation} = {
-    class                     => "CQS::CountTableGroupCorrelation",
-    perform                   => 1,
-    target_dir                => "$data_visualization_dir/$correlation_folder",
-    rtemplate                 => "countTableVisFunctions.R,countTableGroupCorrelation.R",
-    output_file               => "parameterSampleFile1",
-    output_file_ext           => $corr_output_file_ext,
-    output_file_task_ext      => $corr_output_file_task_ext,
-    output_to_result_dir      => getValue($def, "correlation_output_to_result_dir", 0),
-    output_include_folder_name => getValue($def, "correlation_output_include_folder_name", 1),
-    parameterSampleFile1_ref  => \@table_for_correlation,
-    parameterSampleFile2      => $def->{tRNA_vis_group},
-    parameterSampleFile2Order => $def->{groups_order},
-    parameterFile3_ref        => [ "fastqc_count_vis", ".Reads.csv\$" ],
-    parameterSampleFile4 => {
-      "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
-      "draw_umap" => getValue($def, "draw_umap", 0),
-      "heatmap_cexCol" => $def->{heatmap_cexCol},
-      n_first => 20000,
-    },
-    rCode                     => $def->{correlation_rcode} . $R_font_size,
-    sh_direct                 => 1,
-    pbs                       => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "40gb"
-    },
-  };
+
+  my $cor_dir = "$data_visualization_dir/$correlation_folder";
+  $def->{correlation_rcode} = "";
+  add_table_correlation($config, $def, $tasks, "count_table_correlation", $cor_dir, \@table_for_correlation, [ "fastqc_count_vis", ".Reads.csv\$" ]);
 
   if($search_host_genome){
     $config->{count_table_correlation}{parameterFile2_ref} = [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv" ];
@@ -2363,8 +2334,6 @@ fi
       $config->{count_table_correlation}{parameterSampleFile2} = $correlationGroups;
     }
   }
-
-  push @$summary_ref, ("count_table_correlation");
 
   if(defined $deseq2Task){
     if($def->{perform_permanova}){
@@ -2397,7 +2366,7 @@ fi
         },
       };
 
-      push @$summary_ref, ("count_table_permanova");
+      push @$tasks, ("count_table_permanova");
     }
   }
 
@@ -2426,7 +2395,7 @@ fi
       },
     };
 
-    push @$summary_ref, ("reads_in_tasks");
+    push @$tasks, ("reads_in_tasks");
   }
 
   if ( $search_host_genome && $search_nonhost_database ) {
@@ -2473,7 +2442,7 @@ fi
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
+    push @$tasks, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
 
     if($perform_nonhost_genome_count){  
       my $rCode = get_unique_groups_str($def);
@@ -2496,7 +2465,7 @@ fi
           "mem"       => "10gb"
         },
       };
-      push @$summary_ref, "host_microbial_vis";
+      push @$tasks, "host_microbial_vis";
     }
   }
 
@@ -2523,7 +2492,7 @@ fi
           "mem"       => "10gb"
         },
       };
-      push @$summary_ref, "top_sequence_mapped_in_categories";
+      push @$tasks, "top_sequence_mapped_in_categories";
     }
     
     if ($perform_short_reads_source) {
@@ -2550,26 +2519,26 @@ fi
           "mem"       => "40gb"
         },
       };
-      push @$summary_ref, "short_reads_source";
+      push @$tasks, "short_reads_source";
     }
   }
 
   #add time cost task in the end of pipeline
   #search not identical reads to genome, for IGV
   if ( $search_host_genome && $search_not_identical ) {
-    addBowtie( $config, $def, $individual_ref, "bowtie1_genome_1mm_notidentical", $host_genome_dir, $def->{bowtie1_index}, $not_identical_ref, $def->{bowtie1_option_1mm} );
+    addBowtie( $config, $def, $tasks, "bowtie1_genome_1mm_notidentical", $host_genome_dir, $def->{bowtie1_index}, $not_identical_ref, $def->{bowtie1_option_1mm} );
   }
 
   #blast top reads
   if ( $blast_top_reads and $perform_class_independent_analysis ) {
     my $deseq2TopTask = getDEseq2TaskName( "top${top_read_number}_minicontigs", $libraryKey, $def );
     if ($do_comparison) {
-      addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2TopTask, $class_independent_dir );
+      addDeseq2SignificantSequenceBlastn( $config, $def, $tasks, $deseq2TopTask, $class_independent_dir );
     }
     else {
-      #addBlastn( $config, $def, $summary_ref, "identical_sequence_top${top_read_number}_contig_blast",     "identical_sequence_count_table", "sequence.count.fasta\$",   $class_independent_dir );
-      #addBlastn( $config, $def, $summary_ref, "identical_sequence_top${top_read_number}_read_blast",       "identical_sequence_count_table", "read.count.fasta\$",       $class_independent_dir );
-      addBlastn( $config, $def, $summary_ref, "identical_sequence_top${top_read_number}_minicontig_blast", "identical_sequence_count_table", "minicontig.count.fasta\$", $class_independent_dir );
+      #addBlastn( $config, $def, $tasks, "identical_sequence_top${top_read_number}_contig_blast",     "identical_sequence_count_table", "sequence.count.fasta\$",   $class_independent_dir );
+      #addBlastn( $config, $def, $tasks, "identical_sequence_top${top_read_number}_read_blast",       "identical_sequence_count_table", "read.count.fasta\$",       $class_independent_dir );
+      addBlastn( $config, $def, $tasks, "identical_sequence_top${top_read_number}_minicontig_blast", "identical_sequence_count_table", "minicontig.count.fasta\$", $class_independent_dir );
     }
   }
 
@@ -2595,19 +2564,19 @@ fi
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, "final_unmapped_reads_table";
+    push @$tasks, "final_unmapped_reads_table";
 
     if ($do_comparison) {
       $deseq2Task = addDEseq2(
-        $config, $def, $summary_ref,
+        $config, $def, $tasks,
         "final_unmapped_reads_minicontigs",
         [ "final_unmapped_reads_table", ".minicontig.count\$" ],
         $nonhost_blast_dir, $DE_min_median_read_top, $libraryFile, $libraryKey
       );
-      addDeseq2SignificantSequenceBlastn( $config, $def, $summary_ref, $deseq2Task, $nonhost_blast_dir );
+      addDeseq2SignificantSequenceBlastn( $config, $def, $tasks, $deseq2Task, $nonhost_blast_dir );
     }
     else {
-      addBlastn( $config, $def, $summary_ref, "final_unmapped_reads_minicontigs_blast", "final_unmapped_reads_table", "minicontig.count.fasta\$", $nonhost_blast_dir );
+      addBlastn( $config, $def, $tasks, "final_unmapped_reads_minicontigs_blast", "final_unmapped_reads_table", "minicontig.count.fasta\$", $nonhost_blast_dir );
     }
   }
 
@@ -2630,7 +2599,7 @@ fi
         "mem"      => "40gb"
       },
     };
-    push @$individual_ref, ("tDRmapper");
+    push @$tasks, ("tDRmapper");
   }
 
   #check batch effect
@@ -2647,7 +2616,7 @@ fi
       $batchConfig->{rCode}                     = ( defined $batchConfig->{rCode} ? $batchConfig->{rCode} : "" ) . "visLayoutAlphabet=TRUE;" . $R_font_size;
       $config->{$batchName}                     = $batchConfig;
 
-      push @$summary_ref, ($batchName);
+      push @$tasks, ($batchName);
     }
 
     #fastq_len_vis
@@ -2663,7 +2632,7 @@ fi
 
       $config->{$batchName} = $batchConfig;
 
-      push @$summary_ref, ($batchName);
+      push @$tasks, ($batchName);
     }
 
     #reads_in_tasks_pie
@@ -2680,7 +2649,7 @@ fi
 
       $config->{$batchName} = $batchConfig;
 
-      push @$summary_ref, ($batchName);
+      push @$tasks, ($batchName);
     }
 
     #bowtie1_genome_1mm_NTA_smallRNA_category
@@ -2696,7 +2665,7 @@ fi
 
       $config->{$batchName} = $batchConfig;
 
-      push @$summary_ref, ($batchName);
+      push @$tasks, ($batchName);
     }
   }
 
@@ -2724,7 +2693,7 @@ fi
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, ("read_summary");
+    push @$tasks, ("read_summary");
   }
 
   if ( $search_host_genome && $search_nonhost_database && $perform_bacteria_count ) {
@@ -2751,7 +2720,7 @@ fi
         "mem"       => "10gb"
       },
     };
-    push @$summary_ref, "bacteria_count";
+    push @$tasks, "bacteria_count";
 
     if(getValue($def, "search_refseq_bacteria")){
       $config->{bacteria_count_summary} = {
@@ -2771,7 +2740,7 @@ fi
           "mem"       => "10gb"
         },
       };
-      push @$summary_ref, "bacteria_count_summary";
+      push @$tasks, "bacteria_count_summary";
     }
   }
 
@@ -2796,17 +2765,17 @@ fi
       $bowtie_index_task = $fasta;
     }else{
       $bowtie_index_task = "bowtie1_" . $fasta_name . "_00_index";
-      add_bowtie_index($config, $def, $individual_ref, $fasta_folder, $bowtie_index_task, $fasta);
+      add_bowtie_index($config, $def, $tasks, $fasta_folder, $bowtie_index_task, $fasta);
       push(@$search_fasta_tasks, $bowtie_index_task);
     }
 
     if (getValue($def, "search_fasta_all_reads", 0)){
-      my @tasks = add_search_fasta($config, $def, $individual_ref, $summary_ref, $fasta_name . "_all", $fasta_folder, $bowtie_index_task, ["identical", "fastq.gz"], $bowtie1_option_pm, "", "" );
+      my @tasks = add_search_fasta($config, $def, $tasks, $tasks, $fasta_name . "_all", $fasta_folder, $bowtie_index_task, ["identical", "fastq.gz"], $bowtie1_option_pm, "", "" );
       push(@$search_fasta_tasks, @tasks)
     }
 
     if (getValue($def, "search_fasta_nonhost_reads", 0)){
-      my @tasks =add_search_fasta($config, $def, $individual_ref, $summary_ref, $fasta_name . "_nonhost", $fasta_folder, $bowtie_index_task, ["bowtie1_genome_unmapped_reads", '.unmapped.fastq.gz$'], $bowtie1_option_pm, "", "" );
+      my @tasks =add_search_fasta($config, $def, $tasks, $tasks, $fasta_name . "_nonhost", $fasta_folder, $bowtie_index_task, ["bowtie1_genome_unmapped_reads", '.unmapped.fastq.gz$'], $bowtie1_option_pm, "", "" );
       push(@$search_fasta_tasks, @tasks)
     }
 
@@ -2893,7 +2862,7 @@ fi
 
         if ($hasGroupHeatmap) {
           push( @report_files, "count_table_correlation",         ".miRNA.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",         ".miRNA.count.Group.Correlation.Cluster.png" );
+          push( @report_files, "count_table_correlation",         ".miRNA.count.Group.Correlation.png" );
           push( @report_names, "correlation_mirna_group_heatmap", "correlation_mirna_corr_cluster" );
         }
 
@@ -2971,7 +2940,7 @@ fi
 
           if ($hasGroupHeatmap) {
             push( @report_files, "count_table_correlation",        "smallRNA_1mm_.+.tRNA.count.Group.heatmap.png" );
-            push( @report_files, "count_table_correlation",        "smallRNA_1mm_.+.tRNA.count.Group.Correlation.Cluster.png" );
+            push( @report_files, "count_table_correlation",        "smallRNA_1mm_.+.tRNA.count.Group.Correlation.png" );
             push( @report_names, "correlation_trna_group_heatmap", "correlation_trna_corr_cluster" );
           }
         }
@@ -2984,7 +2953,7 @@ fi
 
         if ($hasGroupHeatmap) {
           push( @report_files, "count_table_correlation",          "${ngg}_.*.Species.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",          "${ngg}_.*.Species.count.Group.Correlation.Cluster.png" );
+          push( @report_files, "count_table_correlation",          "${ngg}_.*.Species.count.Group.Correlation.png" );
           push( @report_names, "correlation_${ngg}_group_heatmap", "correlation_${ngg}_corr_cluster" );
         }
 
@@ -3008,7 +2977,7 @@ fi
 
         if ($hasGroupHeatmap) {
           push( @report_files, "count_table_correlation",           "^.*tRNA_pm_${task_name}.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",           "^.*tRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
+          push( @report_files, "count_table_correlation",           "^.*tRNA_pm_${task_name}.count.Group.Correlation.png" );
           push( @report_names, "correlation_trnalib_group_heatmap", "correlation_trnalib_corr_cluster" );
         }
 
@@ -3027,7 +2996,7 @@ fi
 
         if ($hasGroupHeatmap) {
           push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.heatmap.png" );
-          push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.Correlation.Cluster.png" );
+          push( @report_files, "count_table_correlation",           "rRNA_pm_${task_name}.count.Group.Correlation.png" );
           push( @report_names, "correlation_rrnalib_group_heatmap", "correlation_rrnalib_corr_cluster" );
         }
 
@@ -3050,7 +3019,7 @@ fi
 
             if ($hasGroupHeatmap) {
               push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.heatmap.png" );
-              push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.Correlation.Cluster.png" );
+              push( @report_files, "count_table_correlation",           "${task_name}.${level}.aggregated.count.Group.Correlation.png" );
               push( @report_names, "correlation_refseq_bacteria_${level}_agg_group_heatmap", "correlation_refseq_bacteria_${level}_agg_corr_cluster" );
             }
 
@@ -3069,7 +3038,7 @@ fi
 
             if ($hasGroupHeatmap) {
               push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.heatmap.png" );
-              push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.Correlation.Cluster.png" );
+              push( @report_files, "count_table_correlation",           "${task_name}.${level}.estimated.count.Group.Correlation.png" );
               push( @report_names, "correlation_refseq_bacteria_${level}_est_group_heatmap", "correlation_refseq_bacteria_${level}_est_corr_cluster" );
             }
 
@@ -3157,7 +3126,7 @@ fi
         "mem"      => "10gb"
       },
     };
-    push( @$summary_ref, "report" );
+    push( @$tasks, "report" );
   }
 
   $config->{sequencetask} = {
@@ -3166,7 +3135,7 @@ fi
     target_dir => $def->{target_dir} . "/sequencetask",
     option     => "",
     source     => {
-      tasks => $individual_ref,
+      tasks => $tasks,
     },
     sh_direct => 0,
     cluster   => $cluster,

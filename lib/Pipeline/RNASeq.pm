@@ -78,6 +78,8 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "use_green_red_color_in_hca", 0 );
   initDefaultValue( $def, "output_bam_to_same_folder",  1 );
 
+  $def->{"totalCountKey"} = "None";
+  
   if(defined $def->{files}){
     my $files = $def->{files};
     my $nfiles = keys %$files;
@@ -122,6 +124,9 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_showVolcanoLegend", 0 ); #remove size legend from volcano plot
 
   initDefaultValue( $def, "REPORT_use_enhanced_volcano", 1 );
+
+  initDefaultValue( $def, "minMedian",  1 );
+  initDefaultValue( $def, "minMedianInGroup",  $def->{DE_min_median_read} );
 
   return $def;
 }
@@ -194,7 +199,11 @@ sub getRNASeqConfig {
     defined $def->{annovar_buildver} or die "Define annovar_buildver for calling variants";
   }
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+  my ( $config, $tasks, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+
+  #merge summary and individual 
+  push @$tasks, @$summary;
+  $summary=undef;
 
   #print(Dumper($def->{groups}));
   #print(Dumper($def->{correlation_groups}));
@@ -209,13 +218,13 @@ sub getRNASeqConfig {
 
   if($def->{perform_fastq_screen}){
     my $fastq_screen_task = "fastq_screen";
-    add_fastq_screen($config, $def, $individual, $target_dir, $fastq_screen_task, $source_ref);
+    add_fastq_screen($config, $def, $tasks, $target_dir, $fastq_screen_task, $source_ref);
   }
 
   my $count_table_column = 6;
   my $count_file_ref = $def->{count_file};
   if ( $def->{perform_mapping} && $def->{perform_counting} && ( $aligner eq "star" ) && $def->{perform_star_featurecount} ) {
-    my $sf_task = addStarFeaturecount($config, $def, $individual, $summary, $target_dir, $source_ref, "" );
+    my $sf_task = addStarFeaturecount($config, $def, $tasks, $tasks, $target_dir, $source_ref, "" );
 
     $source_ref      = [ $sf_task, "_Aligned.sortedByCoord.out.bam\$" ];
     $count_table_ref = [ $sf_task, '^(?!.*\.chromosome\.count).*\.count$' ];
@@ -224,7 +233,7 @@ sub getRNASeqConfig {
   }else {
     if ( $def->{perform_mapping} ) {
       if ($aligner eq "salmon"){
-        my ($salmon, $salmon_table) = add_salmon($config, $def, $individual, $summary, $target_dir, $source_ref, "");
+        my ($salmon, $salmon_table) = add_salmon($config, $def, $tasks, $tasks, $target_dir, $source_ref, "");
         $count_table_ref = [ $salmon, "quant.genes.sf" ];
         $source_ref      = [ $salmon, ".bam\$" ];
         $count_table_column = 4;
@@ -277,7 +286,7 @@ sub getRNASeqConfig {
           };
 
           $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
-          push @$summary, ("star_summary");
+          push @$tasks, ("star_summary");
         }
         else {
           $configAlignment = {
@@ -301,7 +310,7 @@ sub getRNASeqConfig {
         }
 
         $config = merge_hash_right_precedent( $config, $configAlignment );
-        push @$individual, $aligner;
+        push @$tasks, $aligner;
 
         $multiqc_depedents = $source_ref;
         if($def->{perform_umitools}){
@@ -341,7 +350,7 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
             }
           };
           $source_ref = $dedup_task;
-          push( @$individual, $dedup_task );
+          push( @$tasks, $dedup_task );
         }
       }
 
@@ -383,8 +392,8 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
           },
         };
 
-        push @$individual, "featurecount";
-        push @$summary,    "featurecount_summary";
+        push @$tasks, "featurecount";
+        push @$tasks,    "featurecount_summary";
         $count_table_ref = [ "featurecount", ".count\$" ];
         $multiqc_depedents = "featurecount";
       }
@@ -408,7 +417,7 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
         "mem"      => "40gb"
       },
     };
-    push @$individual, "$dexseq_count";
+    push @$tasks, "$dexseq_count";
 
     my $dexseq_count_table = "dexseq_count_table";
     $config->{$dexseq_count_table} = {
@@ -429,7 +438,7 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
         "mem"      => "20gb"
       },
     };
-    push @$summary, "$dexseq_count_table";
+    push @$tasks, "$dexseq_count_table";
   }
 
   if(defined $def->{annotation_genes_bed}){
@@ -451,17 +460,17 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
 
     if($def->{perform_bamsnap}){
       my $bamsnap_task = "annotation_genes_bamsnap";
-      addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, $geneLocus, $source_ref);
+      addBamsnap($config, $def, $tasks, $target_dir, $bamsnap_task, $geneLocus, $source_ref);
     }
 
     if($def->{bamsnap_coverage}){
       my $coverage_task = "annotation_genes_coverage";
-      addGeneCoverage($config, $def, $summary, $target_dir, $coverage_task, "annotation_genes", $source_ref, $geneLocus);
+      addGeneCoverage($config, $def, $tasks, $target_dir, $coverage_task, "annotation_genes", $source_ref, $geneLocus);
     }
 
     my $sizeFactorTask = "size_factor";
-    addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $source_ref);
-    addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
+    addSizeFactor($config, $def, $tasks, $target_dir, $sizeFactorTask, $source_ref);
+    addPlotGene($config, $def, $tasks, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
   }
 
   if(defined $def->{annotation_genes}){
@@ -472,25 +481,25 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
     $config->{annotation_genes} = \%gene_map;
     #print(Dumper($config->{annotation_genes}));
 
-    my $geneLocus = addGeneLocus($config, $def, $summary, $target_dir);
+    my $geneLocus = addGeneLocus($config, $def, $tasks, $target_dir);
 
     if($def->{perform_bamsnap}){
       my $bamsnap_task = "annotation_genes_bamsnap";
-      addBamsnap($config, $def, $summary, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $source_ref);
+      addBamsnap($config, $def, $tasks, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $source_ref);
     }
 
     if($def->{bamsnap_coverage}){
       my $coverage_task = "annotation_genes_coverage";
-      addGeneCoverage($config, $def, $summary, $target_dir, $coverage_task, "annotation_genes", $source_ref, $geneLocus);
+      addGeneCoverage($config, $def, $tasks, $target_dir, $coverage_task, "annotation_genes", $source_ref, $geneLocus);
     }
 
     my $sizeFactorTask = "size_factor";
-    addSizeFactor($config, $def, $summary, $target_dir, $sizeFactorTask, $source_ref);
-    addPlotGene($config, $def, $summary, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
+    addSizeFactor($config, $def, $tasks, $target_dir, $sizeFactorTask, $source_ref);
+    addPlotGene($config, $def, $tasks, $target_dir, "annotation_genes_plot", $sizeFactorTask, [ $geneLocus, ".bed" ], $source_ref);
   }
 
   if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
-    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $source_ref);
+    addBamsnapLocus($config, $def, $tasks, $target_dir, "bamsnap_locus", $source_ref);
   }
 
   my $perform_count_table = $def->{perform_counting} || $def->{perform_count_table};
@@ -513,7 +522,7 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
       },
     };
 
-    push @$summary, "genetable";
+    push @$tasks, "genetable";
 
     if ( getValue( $def, "perform_proteincoding_gene_only", 0 ) ) {
       $count_file_ref = [];
@@ -546,7 +555,7 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
         "mem"       => "10gb"
       },
     };
-    push (@$summary, $cpm_task);
+    push (@$tasks, $cpm_task);
 
     my $deconvolution_task = "deconvolution_2_call";
     $config->{$deconvolution_task} = {
@@ -581,7 +590,7 @@ export NUMEXPR_MAX_THREADS=12
         "mem"       => "40gb"
       },
     };
-    push (@$summary, $deconvolution_task);
+    push (@$tasks, $deconvolution_task);
 
     my $merge_task = "deconvolution_3_merge";
     $config->{$merge_task} = {
@@ -607,87 +616,12 @@ export NUMEXPR_MAX_THREADS=12
       },
     };
 
-    push (@$summary, $merge_task);
+    push (@$tasks, $merge_task);
   }
 
   if ( $def->{perform_correlation} ) {
     my $cor_dir = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
-
-    my $rCode = getValue( $def, "correlation_rcode", "" );
-    $rCode = getOutputFormat( $def, $rCode );
-    $rCode = addOutputOption( $def, $rCode, "use_green_red_color_in_hca", $def->{use_green_red_color_in_hca}, "useGreenRedColorInHCA" );
-    $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca",             $def->{top25cv_in_hca},             "top25cvInHCA" );
-
-    $config->{"genetable_correlation"} = {
-      class           => "CQS::CountTableGroupCorrelation",
-      perform         => 1,
-      rCode           => $rCode,
-      target_dir      => $cor_dir,
-      parameterSampleFile4 => {
-        "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
-        "draw_umap" => getValue($def, "draw_umap", 0),
-        "heatmap_cexCol" => $def->{heatmap_cexCol},
-      },
-      parameterFile4 => $def->{covariance_file},
-      rtemplate       => "countTableVisFunctions.R,countTableGroupCorrelation.v2.R",
-      output_file     => "parameterSampleFile1",
-      output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png;.Correlation.Cluster.png",
-      can_result_be_empty_file => 1,
-      sh_direct       => 1,
-      pbs             => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
-        "mem"       => "100gb"
-      },
-    };
-    if ( is_array($count_file_ref) ) {
-      $config->{genetable_correlation}{parameterSampleFile1_ref} = $count_file_ref;
-    }
-    else {
-      $config->{genetable_correlation}{parameterSampleFile1} = { $taskName => [$count_file_ref] };
-      $config->{genetable_correlation}{output_to_result_dir} = 1;
-    }
-
-    if ( defined $def->{groups} ) {
-      $config->{genetable_correlation}{parameterSampleFile2} = { all => $def->{groups} };
-    }
-
-    if ( defined $def->{correlation_groups} ) {
-      $config->{genetable_correlation}{parameterSampleFile2} = $def->{correlation_groups};
-    }
-
-    if ( defined $def->{groups_colors} ) {
-      $config->{genetable_correlation}{parameterSampleFile3} = $def->{groups_colors};
-    }
-
-    if ( defined $def->{correlation_groups_colors} ) {
-      $config->{genetable_correlation}{parameterSampleFile3} = $def->{correlation_groups_colors};
-    }
-
-    if ( defined $config->{genetable_correlation}{parameterSampleFile3} ) {
-      my $colorGroups = $config->{genetable_correlation}{parameterSampleFile3};
-      my $corGroups   = $config->{genetable_correlation}{parameterSampleFile2};
-      for my $title ( keys %$corGroups ) {
-        my $titleGroups = $corGroups->{$title};
-        for my $subGroup ( keys %$titleGroups ) {
-          if ( !defined $colorGroups->{$subGroup} ) {
-            my %cgroups = %$colorGroups;
-            die "Color of group '$subGroup' was not define in " . Dumper($colorGroups);
-          }
-        }
-      }
-    }
-    push @$summary, "genetable_correlation";
-
-    my $gene_file = $def->{correlation_gene_file};
-    if ( defined $gene_file ) {
-      $rCode                                                   = $rCode . "suffix<-\"_genes\"; hasRowNames=TRUE;";
-      $config->{"genetable_correlation_genes"}                 = dclone( $config->{"genetable_correlation"} );
-      $config->{"genetable_correlation_genes"}{target_dir}     = $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation_genes";
-      $config->{"genetable_correlation_genes"}{parameterFile1} = $gene_file;
-      $config->{"genetable_correlation_genes"}{rCode}          = $rCode;
-      push @$summary, "genetable_correlation_genes";
-    }
+    add_table_correlation($config, $def, $tasks, "genetable_correlation", $cor_dir, $count_file_ref);
   }
 
   my $deseq2taskname;
@@ -707,10 +641,10 @@ export NUMEXPR_MAX_THREADS=12
     else {
       $de_prefix="genetable";
     }
-    $deseq2taskname = addDEseq2( $config, $def, $summary, $de_prefix, $de_source, $def->{target_dir}, $def->{DE_min_median_read} );
+    $deseq2taskname = addDEseq2( $config, $def, $tasks, $de_prefix, $de_source, $def->{target_dir}, $def->{DE_min_median_read} );
 
     if ( getValue( $def, "perform_webgestalt" ) ) {
-      $webgestaltTaskName = addWebgestalt($config, $def, $summary, $target_dir, $deseq2taskname, [ $deseq2taskname, "sig_genename.txt\$" ]);
+      $webgestaltTaskName = addWebgestalt($config, $def, $tasks, $target_dir, $deseq2taskname, [ $deseq2taskname, "sig_genename.txt\$" ]);
 
       #if ( defined $def->{perform_link_webgestalt_deseq2} ) {
       $linkTaskName = $webgestaltTaskName . "_link_deseq2";
@@ -734,7 +668,7 @@ export NUMEXPR_MAX_THREADS=12
           "mem"       => "10gb"
         },
       };
-      push( @$summary, $linkTaskName );
+      push( @$tasks, $linkTaskName );
 
       if (getValue( $def, "perform_webgestaltHeatmap" )) {
         $webgestaltHeatmapTaskName = $webgestaltTaskName . "_heatmap_deseq2";
@@ -758,7 +692,7 @@ export NUMEXPR_MAX_THREADS=12
             "mem"       => "10gb"
           },
         };
-        push( @$summary, $webgestaltHeatmapTaskName );
+        push( @$tasks, $webgestaltHeatmapTaskName );
       }
       #}
     }
@@ -778,7 +712,7 @@ export NUMEXPR_MAX_THREADS=12
       my $keys = [keys %$pairs];
       #my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
 
-      add_gsea($config, $def, $summary, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, "" );
+      add_gsea($config, $def, $tasks, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, "" );
     }
 
     if ( $def->{perform_keggprofile} ) {
@@ -820,7 +754,7 @@ export NUMEXPR_MAX_THREADS=12
           "mem"       => "10gb"
         },
       };
-      push( @$summary, "keggprofile" );
+      push( @$tasks, "keggprofile" );
     }
   }
 
@@ -843,7 +777,7 @@ export NUMEXPR_MAX_THREADS=12
         "mem"       => "40gb"
       },
     };
-    push( @$summary, "rnaseqc" );
+    push( @$tasks, "rnaseqc" );
   }
 
   if ( $def->{perform_rnaseqBamQC} ) {
@@ -872,7 +806,7 @@ export NUMEXPR_MAX_THREADS=12
         "mem"       => "40gb"
       },
     };
-    push (@$individual, $rnaseqBamQC_task);
+    push (@$tasks, $rnaseqBamQC_task);
 
     my $rnaseqBamQCsummary_task = $rnaseqBamQC_task . "_summary";
     $config->{$rnaseqBamQCsummary_task} = {
@@ -891,7 +825,7 @@ export NUMEXPR_MAX_THREADS=12
         "mem"       => "10gb"
       },
     };
-    push( @$summary, $rnaseqBamQCsummary_task );
+    push( @$tasks, $rnaseqBamQCsummary_task );
   }
 
   if ( $def->{perform_qc3bam} ) {
@@ -910,7 +844,7 @@ export NUMEXPR_MAX_THREADS=12
         "mem"       => "40gb"
       },
     };
-    push( @$summary, "qc3" );
+    push( @$tasks, "qc3" );
   }
 
   if ( $def->{perform_bamplot} ) {
@@ -949,7 +883,7 @@ export NUMEXPR_MAX_THREADS=12
           "mem"       => "10gb"
         },
       };
-      push( @$summary, "gene_pos", "bamplot" );
+      push( @$tasks, "gene_pos", "bamplot" );
     }
     else {
       $config->{bamplot} = {
@@ -971,7 +905,7 @@ export NUMEXPR_MAX_THREADS=12
           "mem"       => "10gb"
         },
       };
-      push( @$summary, "bamplot" );
+      push( @$tasks, "bamplot" );
     }
   }
 
@@ -1075,7 +1009,7 @@ fi
         }
       };
 
-      push( @$individual, $refine_task );
+      push( @$tasks, $refine_task );
 
       $gatk_prefix = $refine_task . "_SNV_";
 
@@ -1099,7 +1033,7 @@ fi
           "mem"       => "40gb"
         },
       };
-      push( @$individual, $hc_task );
+      push( @$tasks, $hc_task );
 
       my $min_dp = getValue($def, "SNV_minimum_depth", 10);
       my $filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filter";
@@ -1148,7 +1082,7 @@ fi
           "mem"       => "10gb"
         }
       };
-      push( @$individual, $filter_task );
+      push( @$tasks, $filter_task );
 
       my $lefttrim_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_lefttrim";
       $config->{$lefttrim_task} = {
@@ -1167,7 +1101,7 @@ fi
           "mem"      => "10gb"
         },
       };
-      push( @$individual, $lefttrim_task );
+      push( @$tasks, $lefttrim_task );
 
       $pass_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_merge";
       $config->{$pass_task} = {
@@ -1193,7 +1127,7 @@ fi
           "mem"       => "10gb"
         }
       };
-      push( @$summary, $pass_task );
+      push( @$tasks, $pass_task );
     }else{
       my $gatk   = getValue( $def, "gatk_jar" );
       my $picard = getValue( $def, "picard_jar" );
@@ -1222,7 +1156,7 @@ fi
           "mem"       => "40gb"
         },
       };
-      push( @$individual, $refine_task );
+      push( @$tasks, $refine_task );
 
       my $hc_task = $refine_task . "_hc";
       $config->{$hc_task} = {
@@ -1244,7 +1178,7 @@ fi
           "mem"       => "40gb"
         },
       };
-      push( @$individual, $hc_task );
+      push( @$tasks, $hc_task );
 
       my $filter_task = $hc_task . "_filter";
       $config->{$filter_task} = {
@@ -1267,7 +1201,7 @@ fi
           "mem"       => "40gb"
         },
       };
-      push( @$summary, $filter_task );
+      push( @$tasks, $filter_task );
 
       $pass_task = $filter_task;
     }
@@ -1276,27 +1210,27 @@ fi
 
     if ( $def->{filter_variants_by_allele_frequency} ) {
       my $maf_filter_task = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
-      add_maf_filter($config, $def, $summary, $target_dir, $maf_filter_task, $pass_task);
+      add_maf_filter($config, $def, $tasks, $target_dir, $maf_filter_task, $pass_task);
       $pass_task = $maf_filter_task;
     }
 
     if ( $def->{perform_annovar} ) {
-      my $annovar_task = addAnnovar( $config, $def, $summary, $target_dir, $pass_task, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
+      my $annovar_task = addAnnovar( $config, $def, $tasks, $target_dir, $pass_task, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
 
       if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-        my $annovar_filter_task = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
+        my $annovar_filter_task = addAnnovarFilter( $config, $def, $tasks, $target_dir, $annovar_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
 
         if ( defined $def->{annotation_genes} ) {
-          addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_task );
+          addAnnovarFilterGeneannotation( $config, $def, $tasks, $target_dir, $annovar_filter_task );
         }
 
-        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
+        addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_task, $gatk_prefix, $gatk_index, $gatk_index_snv);
       }
     }
   }
 
   if ( getValue( $def, "perform_multiqc" ) ) {
-    addMultiQC( $config, $def, $summary, $target_dir, $target_dir, $multiqc_depedents );
+    addMultiQC( $config, $def, $tasks, $target_dir, $target_dir, $multiqc_depedents );
   }
 
   if ( getValue( $def, "perform_report" ) ) {
@@ -1383,9 +1317,13 @@ fi
 
       for my $title ( keys %$titles ) {
         push( @report_files,
-          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".density.png", "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".heatmap.png",
-          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".PCA.png",     "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".Correlation.Cluster.png" );
-        push( @report_names, $title . "_correlation_density", $title . "_correlation_heatmap", $title . "_correlation_PCA", $title . "_correlation_cluster" );
+          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".density.png", 
+          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".heatmap.png",
+          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".PCA.png" );
+        push( @report_names, 
+          $title . "_correlation_density", 
+          $title . "_correlation_heatmap", 
+          $title . "_correlation_PCA" );
       }
     }
 
@@ -1512,14 +1450,12 @@ fi
       
       sh_direct                  => 1,
       pbs                        => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "1",
         "mem"       => "10gb"
       },
     };
-    push( @$summary, "report" );
+    push( @$tasks, "report" );
   }
 
   $config->{sequencetask} = {
@@ -1528,14 +1464,11 @@ fi
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      step1 => $individual,
-      step2 => $summary,
+      tasks => $tasks,
     },
     sh_direct => 0,
     cluster   => $cluster,
     pbs       => {
-      "email"     => $def->{email},
-      "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => $def->{sequencetask_run_time},
       "mem"       => "40gb"
