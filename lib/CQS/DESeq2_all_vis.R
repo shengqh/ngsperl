@@ -177,8 +177,8 @@ diffResult<-diffResult[order(diffResult$colour),]
 p<-ggplot(diffResult,aes(x=log2FoldChange,y=log10pvalue))+
     geom_point(aes(colour=colour), size=4)+
     scale_color_manual(values=changeColours,guide="none")+
-    scale_x_continuous(name=bquote(log[2](FoldChange)),breaks=pretty_breaks(n=4))+
-    scale_y_continuous(name=bquote(-log[10](pValue)),breaks=pretty_breaks(n=4))+
+    scale_x_continuous(name=bquote(log[2](fold~change)),breaks=pretty_breaks(n=4))+
+    scale_y_continuous(name=bquote(-log[10](p~value)),breaks=pretty_breaks(n=4))+
     geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
     geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
     theme_bw()+

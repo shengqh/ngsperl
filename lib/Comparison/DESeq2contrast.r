@@ -1016,7 +1016,7 @@ for(countfile_index in c(1:length(countfiles))){
       p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
         coord_flip()+
         #     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
-        scale_y_continuous(name=bquote(log[2]~Fold~Change))+
+        scale_y_continuous(name=bquote(log[2](fold~change)))+
         theme_bw3() +
         theme(axis.text = element_text(colour = "black"))
       
@@ -1043,8 +1043,8 @@ for(countfile_index in c(1:length(countfiles))){
     
     write.csv(diffResult, file=paste0(prefix, "_DESeq2_volcanoPlot.csv"))
     
-    yname=bquote(-log10(p~value))
-    xname=bquote(log[2]~Fold~Change)
+    yname=bquote(-log[10](p~value))
+    xname=bquote(log[2](fold~change))
     p<-ggplot(diffResult,aes(x=log2FoldChange,y=pvalue))+
       scale_y_continuous(trans=reverselog_trans(10),name=yname) +
       geom_point(aes(size=log10BaseMean,colour=colour))+
@@ -1079,10 +1079,10 @@ for(countfile_index in c(1:length(countfiles))){
 
       if(packageVersion("EnhancedVolcano") == '1.8.0'){
         if(useRawPvalue == 1){
-          yname=bquote(-log10(p~value))
+          yname=bquote(-log[10](p~value))
           yvar="pvalue"
         }else{
-          yname=bquote(-log10(adjusted~p~value))
+          yname=bquote(-log[10](adjusted~p~value))
           yvar="padj"
         }
         p<-EnhancedVolcano(diffResult,
@@ -1097,7 +1097,7 @@ for(countfile_index in c(1:length(countfiles))){
             colAlpha = 1,
             subtitle = NULL) + ylab(yname)
       }else{
-        yname=bquote(-log10(p~value))
+        yname=bquote(-log[10](p~value))
         if(useRawPvalue == 1){
           pCutoffCol="pvalue"
         }else{
@@ -1405,11 +1405,11 @@ if (! is.null(resultAllOut)) {
         scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
     } else {
       p<-ggplot(diffResult,aes(x=log2FoldChange,y=padj))+
-        scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+        scale_y_continuous(trans=reverselog_trans(10),name=bquote(adjusted~p~value))
     }
     p<-p+geom_point(aes(size=log10BaseMean,colour=colour))+
       scale_color_manual(values=changeColours,guide = FALSE)+
-      scale_x_continuous(name=bquote(log[2]~Fold~Change))+
+      scale_x_continuous(name=bquote(log[2](fold~change)))+
       geom_hline(yintercept = 1,colour="grey",linetype = "dotted")+
       geom_vline(xintercept = 0,colour="grey",linetype = "dotted")+
       guides(size=guide_legend(title=bquote(log[10]~Base~Mean)))+

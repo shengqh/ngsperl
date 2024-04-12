@@ -492,7 +492,7 @@ dataForPlot=rbindlist(DiffResultsOutTableAll,idcol="Comparison")
 if (useRawPvalue==1) {
   p=ggplot(dataForPlot,aes(x=logFC,y=P.Value,colour=Significant))+scale_y_continuous(trans=reverselog_trans(10),name=bquote(p~value))
 } else {
-  p=ggplot(dataForPlot,aes(x=logFC,y=adj.P.Val,colour=Significant))+scale_y_continuous(trans=reverselog_trans(10),name=bquote(Adjusted~p~value))
+  p=ggplot(dataForPlot,aes(x=logFC,y=adj.P.Val,colour=Significant))+scale_y_continuous(trans=reverselog_trans(10),name=bquote(adjusted~p~value))
 }
 p=p+geom_point()+facet_wrap(~Comparison,scales="free")+scale_color_manual(values=changeColours,guide = "none")
 saveFigure(paste0(outFile,".VolcanoPlot.png"))

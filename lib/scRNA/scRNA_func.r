@@ -3010,7 +3010,7 @@ save_volcano_plot<-function(edgeR_out_table,
                             height=10,
                             extensions=c("png", "pdf")){
   library(EnhancedVolcano)  
-  yname=bquote(-log10(p~value))
+  yname=bquote(-log[10](p~value))
   if(useRawPvalue == 1){
     pCutoffCol="PValue"
   }else{

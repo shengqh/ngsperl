@@ -235,7 +235,7 @@ library(EnhancedVolcano)
 
 draw_volcano <- function(data, category, comparison, prefix, volcano_width, volcano_height, fdr, foldchange){
   diffResult<-as.data.frame(data)
-  yname=bquote(-log10(p~value))
+  yname=bquote(-log[10](p~value))
   p<-EnhancedVolcano(diffResult,
       lab = rownames(diffResult),
       x = 'logFC',
