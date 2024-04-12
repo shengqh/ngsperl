@@ -130,20 +130,20 @@ if(!exists("cooksCutoff")){
 cat("cooksCutoff=",cooksCutoff,"\n")
 
 library("DESeq2")
-library("heatmap3")
 library("lattice")
-#library("reshape")
 library("ggplot2")
 library("grid")
 library("scales")
 library("reshape2")
 library("VennDiagram")
 library("RColorBrewer")
-#library("preprocessCore")
 library("BiocParallel")
 library("ggrepel")
 library("stringr")
 library("data.table")
+suppressPackageStartupMessages(library("ComplexHeatmap"))
+
+source('countTableVisFunctions.R')
 
 setwd(rootdir)  
 comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
@@ -251,79 +251,7 @@ drawPlot<-function(filePrefix, outputFormat, width_inch, height_inch, p, figureN
   }
 }
 
-drawHCA_heatmap3<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
-  genecount<-nrow(rldselect)
-  showRowDendro = genecount <= 50
-  if(genecount > 2){
-    cexCol = max(1.0, 0.2 + 1/log10(ncol(rldselect)))
-    if(ispaired){
-      htColors<-rainbow(length(unique(designData$Paired)))
-      gsColors<-as.matrix(data.frame(Group=conditionColors, Sample=htColors[designData$Paired]))
-    }else{
-      gsColors = conditionColors;
-    }
-    if (genecount<=30) {
-      labRow=row.names(rldselect)
-      margins=c(12,8)
-    } else {
-      labRow=NA
-      margins=c(12,5)
-    }
-    
-    filePrefix<-paste0(prefix, "_DESeq2-vsd-heatmap")
-    for(format in outputFormat){
-      openPlot(filePrefix, format, 6, 6, "HCA")
-      if(usePearsonInHCA){
-        heatmap3(rldselect, 
-                 col = hmcols, 
-                 ColSideColors = gsColors, 
-                 ColSideLabs = "Group",
-                 margins=margins, 
-                 scale="r", 
-                 labRow=labRow,
-                 showRowDendro=showRowDendro,
-                 main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
-                 cexCol=cexCol, 
-                 useRaster=FALSE,
-                 legendfun=function() showLegend(legend=gnames, col=c("red","blue"),cex=1.0,x="center"))
-      }else{
-        heatmap3(rldselect, 
-                 col = hmcols, 
-                 ColSideColors = gsColors, 
-                 ColSideLabs = "Group",
-                 margins=margins, 
-                 scale="r", 
-                 distfun=dist, 
-                 labRow=labRow,
-                 showRowDendro=showRowDendro,
-                 main=paste0("Hierarchical Cluster Using ", genecount, " Genes"),  
-                 cexCol=cexCol, 
-                 useRaster=FALSE,
-                 legendfun=function() showLegend(legend=gnames, col=c("red","blue"),cex=1.0,x="center"))
-      }
-      dev.off()
-    }
-  }
-}
-
-calc_ht_size = function(ht, unit = "inch", merge_legends = FALSE) {
-    pdf(NULL)
-    ht = draw(ht, merge_legends=merge_legends)
-    w = ComplexHeatmap:::width(ht)
-    w = convertX(w, unit, valueOnly = TRUE)
-    h = ComplexHeatmap:::height(ht)
-    h = convertY(h, unit, valueOnly = TRUE)
-    dev.off()
-
-    c(w, h)
-}
-
 drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
-  if(!require(ComplexHeatmap, quietly=TRUE)){
-    drawHCA_heatmap3(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat)
-    return
-  }
-
   mat_scaled = t(scale(t(rldselect)))
 
   cc = designData |> dplyr::mutate(Color=as.character(conditionColors)) |>
@@ -339,24 +267,16 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   }else{
     clustering_distance_columns="euclidean"
   }
-  ht<-Heatmap( mat_scaled,
-              show_row_names=FALSE,
-              cluster_rows=TRUE, 
-              cluster_columns=TRUE, 
-              show_column_dend=TRUE, 
-              show_row_dend=FALSE,
-              clustering_distance_columns=clustering_distance_columns,
-              name="zscore",
-              top_annotation=ha)
-  
-  ht_sizes = calc_ht_size(ht, merge_legends=TRUE)
 
-  filePrefix=paste0(prefix, "_DESeq2-vsd-heatmap")
-  for(format in outputFormat){  
-    openPlot(filePrefix, format, ht_sizes[1], ht_sizes[2], "HCA")  
-    draw(ht, merge_legends=TRUE)
-    ignored=dev.off()
-  }
+  draw_heatmap_png( filepath=paste0(prefix, "_DESeq2-vsd-heatmap.png"), 
+                    htdata=mat_scaled, 
+                    name="zscore", 
+                    show_row_names=FALSE, 
+                    show_column_names=TRUE,
+                    save_rds=FALSE,
+                    clustering_distance_columns=clustering_distance_columns,
+                    top_annotation=ha,
+                    show_row_dend=FALSE)
 }
 
 drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat,scalePCs=TRUE, width_inch=3.5){
@@ -389,7 +309,8 @@ drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outp
       theme_bw3() + theme(aspect.ratio=1, legend.position="top")
     
     filePrefix<-paste0(prefix, "_DESeq2-vsd-pca")
-    drawPlot(filePrefix, outputFormat, width_inch, width_inch * 1.1, g, "PCA")
+
+    save_ggplot2_plot(filePrefix, outputFormat, width_inch, width_inch * 1.1, g);
   }
 }
 
@@ -807,29 +728,9 @@ for(countfile_index in c(1:length(countfiles))){
     write.csv(format(rld_normed, digits=3), paste0(prefix, "_DESeq2-log2-normalized-counts.csv"))
 
     #draw density graph
-    rldmatrix<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
+    log2counts<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
+    draw_density_plot(log2counts, paste0(prefix, "_DESeq2-log2-density"), outputFormat)
 
-    rsdata<-melt(rldmatrix)
-    colnames(rsdata)<-c("Gene", "Sample", "log2Count")
-    g<-ggplot(rsdata) + 
-      geom_density(aes(x=log2Count, colour=Sample)) + 
-      xlab(bquote(log[2](count))) + 
-      theme_bw3() +
-      guides(color = FALSE)
-    ggsave(paste0(prefix, "_DESeq2-log2-density.png"), g, width=5, height=3, units="in", dpi=300)
-    
-    ncol=ceiling(sqrt(ncol(rldmatrix)))
-    nrow=ceiling(ncol(rldmatrix)/ncol)
-    width=max(6, ncol * 2)
-    height=max(6, nrow * 2)
-    g<-ggplot(rsdata) + 
-      geom_density(aes(x=log2Count, colour=Sample)) + 
-      facet_wrap(~Sample, scales = "free", ncol=ncol) + 
-      xlab(bquote(log[2](count))) + 
-      theme_bw3() + 
-      guides(color = FALSE)
-    ggsave(paste0(prefix, "_DESeq2-log2-density-individual.png"), g, width=width, height=height, units="in", dpi=300)
-    
     fitType<-"parametric"
     if(nrow(comparisonData) < 5){
       fitType<-"mean"
@@ -869,12 +770,12 @@ for(countfile_index in c(1:length(countfiles))){
       }
     }
     
+    assayvsd<-assay(vsd)
+    write.csv(format(assayvsd, digits=3), file=paste0(prefix, "_DESeq2-vsd.csv"))
+    
+    rldmatrix=as.matrix(assayvsd)
+
     if(nrow(comparisonData) > 1){
-      assayvsd<-assay(vsd)
-      write.csv(format(assayvsd, digits=3), file=paste0(prefix, "_DESeq2-vsd.csv"))
-      
-      rldmatrix=as.matrix(assayvsd)
-      
       #draw pca graph
       drawPCA(prefix=paste0(prefix,"_geneAll"), 
               rldmatrix=rldmatrix, 
@@ -1149,6 +1050,7 @@ for(countfile_index in c(1:length(countfiles))){
         caption=NULL
       }
 
+      diffResult$Short_name<-gsub(";.+","", diffResult$Feature_gene_name)
       if(packageVersion("EnhancedVolcano") == '1.8.0'){
         if(useRawPvalue == 1){
           yvar="pvalue"
@@ -1158,7 +1060,7 @@ for(countfile_index in c(1:length(countfiles))){
         }
 
         p<-EnhancedVolcano(diffResult,
-            lab = diffResult$Feature_gene_name,
+            lab = diffResult$Short_name,
             x = 'log2FoldChange',
             y = yvar,
             pCutoff = pvalue,
@@ -1177,7 +1079,7 @@ for(countfile_index in c(1:length(countfiles))){
           pCutoffCol="padj"
         }
         p<-EnhancedVolcano(diffResult,
-            lab = diffResult$Feature_gene_name,
+            lab = diffResult$Short_name,
             x = 'log2FoldChange',
             y = 'pvalue',
             pCutoff = pvalue,
@@ -1481,7 +1383,6 @@ if (! is.null(resultAllOut)) {
     filePrefix<-paste0(allprefix,"_DESeq2_volcanoPlot")
     saveRDS(diffResult, paste0(filePrefix, ".rds"))
     
-    strip_font_family="Times"
     pair_font_size=25
     p<-ggplot(diffResult,aes(x=log2FoldChange,y=log10pvalue))+
       geom_point(aes(colour=colour))+
@@ -1496,21 +1397,10 @@ if (! is.null(resultAllOut)) {
             axis.title = element_text(size=25),
             legend.text= element_text(size=25),
             legend.title= element_text(size=25),
-            strip.text.x = element_text(family = strip_font_family, size=pair_font_size),
+            strip.text.x = element_text(size=pair_font_size),
             strip.background=element_rect(fill="white"))
 
-    get_text_width <- function(txt, font_family, font_size = 10, units = "inches", res=300) {
-      tmp_file <- tempfile(fileext = ".png")
-      png(tmp_file, res=res)
-      par(family = font_family, ps = font_size)
-      ret = strwidth(txt, units = units)
-      dev.off()
-      unlink(tmp_file)
-
-      return(ret)
-    }
-
-    max_pair=max(get_text_width(unique(diffResult$Comparison), font = strip_font_family, font_size = pair_font_size, units = 'inches')) + 0.1
+    max_pair=max(get_text_width(unique(diffResult$Comparison), font_family = "", font_size = pair_font_size)) + 0.1
 
     pwidth<-max(12, length(unique(diffResult$Comparison))*max_pair+1)
     drawPlot(filePrefix, outputFormat, pwidth, 7, p, "Volcano")
