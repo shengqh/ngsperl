@@ -491,17 +491,6 @@ sub getOutputFormat {
   $result = addOutputOption( $def, $result, "DE_outputPng",         1,                          "outputPng" );
   $result = addOutputOption( $def, $result, "DE_outputTIFF",        0,                          "outputTIFF" );
   $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 0,                          "showVolcanoLegend" );
-  $result = addOutputOption( $def, $result, "use_pearson_in_hca",   $def->{use_pearson_in_hca}, "usePearsonInHCA" );
-
-  if($is_DE){
-    if (defined $def->{DE_show_label_PCA}){
-      $result = addOutputOption( $def, $result, "DE_show_label_PCA", 1, "showLabelInPCA" );
-    }else{
-      $result = addOutputOption( $def, $result, "show_label_PCA",       1, "showLabelInPCA" );
-    }
-  }else{
-    $result = addOutputOption( $def, $result, "show_label_PCA",       1, "showLabelInPCA" );
-  }
 
   return ($result);
 }
@@ -513,11 +502,11 @@ sub get_output_hash {
     $is_DE = 0;
   }
 
-  $result->{outputPdf} = getValue($def, "DE_outputPdf",         0);
-  $result->{outputPng} = getValue($def, "DE_outputPng",         1);
-  $result->{outputTIFF} = getValue($def, "DE_outputTIFF",        0);
+  $result->{outputPdf} = getValue($def, "DE_outputPdf", 0);
+  $result->{outputPng} = getValue($def, "DE_outputPng", 1);
+  $result->{outputTIFF} = getValue($def, "DE_outputTIFF", 0);
   $result->{showVolcanoLegend} = getValue($def, "DE_showVolcanoLegend", 0);
-  $result->{usePearsonInHCA} = getValue($def, "use_pearson_in_hca",   $def->{use_pearson_in_hca});
+  $result->{usePearsonInHCA} = getValue($def, "use_pearson_in_hca", 0);
 
   if($is_DE){
     $result->{showLabelInPCA} = getValue($def, "DE_show_label_PCA", getValue($def, "show_label_PCA", 1));
@@ -578,7 +567,7 @@ sub addDEseq2 {
     output_to_dir                => getReportDir($def),
     option                       => "",
     sh_direct                    => 1,
-    show_label_PCA               => $def->{show_label_PCA},
+    show_label_PCA               => getValue($def, ["DE_showLabelInPCA", "showLabelInPCA", "show_label_PCA"], 1),
     use_pearson_in_hca           => $def->{use_pearson_in_hca},
     show_DE_gene_cluster         => $def->{DE_show_gene_cluster},
     pvalue                       => $def->{DE_pvalue},
@@ -597,6 +586,7 @@ sub addDEseq2 {
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
     rCode                        => $rCode,
+    docker_prefix => "deseq2_",
     parameterSampleFile1 => {
       feature_name_regex => $feature_name_regex,
       feature_name_filter => getValue($def, "DE_feature_name_filter", ""),
@@ -874,7 +864,7 @@ sub addDiffbind {
 }
 
 sub add_table_correlation {
-  my ($config, $def, $tasks, $task_name, $task_dir, $count_file_ref) = @_;
+  my ($config, $def, $tasks, $task_name, $task_dir, $count_file_ref, $parameterFile3_ref) = @_;
 
   my $rCode = getValue( $def, "correlation_rcode", "" );
   my $project_name = getValue($def, "task_name");
@@ -887,14 +877,27 @@ sub add_table_correlation {
     "draw_umap" => getValue($def, "draw_umap", 0),
     "use_green_red_color_in_hca" => getValue($def, "use_green_red_color_in_hca", 0),
     "top25cv_in_hca" => getValue($def, "top25cv_in_hca", 0),
-    "showLabelInPCA" => getValue($def, "show_label_PCA", 1),
+    "showLabelInPCA" => getValue($def, "show_label_PCA", 0),
     "outputPdf" => getValue($def, "outputPdf", 0),
     "outputPng" => getValue($def, "outputPng", 1),
     "outputTIFF" => getValue($def, "outputTIFF", 0),
-    "usePearsonInHCA" => getValue($def, "use_pearson_in_hca",   $def->{use_pearson_in_hca}),
+    "usePearsonInHCA" => getValue($def, "use_pearson_in_hca", 0),
     "n_first" => getValue($def, "correlation_n_first", -1),
     "onlySamplesInGroup" => getValue($def, "correlation_onlySamplesInGroup", 0),
+    "useLeastGroups" => getValue($def, "useLeastGroups", 0),
+    "minMedian" => getValue($def, "minMedian", 0),
+    "minMedianInGroup" => getValue($def, "minMedianInGroup", 1),
+    "totalCountKey" => getValue($def, "totalCountKey", "None"),
   };
+
+  my $corr_output_file_ext = ".density.png;.density.individual.png.Correlation.png;.heatmap.png;.PCA.png;";
+  my $corr_output_file_task_ext = "";
+  if ( defined $def->{groups} ){
+    my $groups = $def->{groups};
+    if(scalar( keys %$groups ) >= 3 ) {
+      $corr_output_file_task_ext = ".Group.heatmap.png;.Group.Correlation.png";
+    } 
+  }
 
   my $correlation_script="countTableGroupCorrelation.v2.R";
 
@@ -904,18 +907,26 @@ sub add_table_correlation {
     rCode           => $rCode,
     target_dir      => $task_dir,
     parameterSampleFile4 => $options,
+    parameterFile3_ref        => $parameterFile3_ref,
     parameterFile4 => $def->{covariance_file},
+
     rtemplate       => "countTableVisFunctions.R,$correlation_script",
     rReportTemplate => "CountTableGroupCorrelation.Rmd;reportFunctions.R",
     run_rmd_independent => 1,
+
     output_file     => "parameterSampleFile1",
-    output_file_ext => ".Correlation.png;.density.png;.heatmap.png;.PCA.png",
+    output_file_ext           => $corr_output_file_ext,
+    output_file_task_ext      => $corr_output_file_task_ext,
+    output_to_result_dir      => getValue($def, "correlation_output_to_result_dir", 0),
+    output_include_folder_name => getValue($def, "correlation_output_include_folder_name", 1),
+
     can_result_be_empty_file => 1,
+    docker_prefix => "correlation_",
     sh_direct       => 1,
     pbs             => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "23",
-      "mem"       => "100gb"
+      "mem"       => getValue($def, "correlation_mem", "40gb")
     },
   };
   if ( is_array($count_file_ref) ) {
