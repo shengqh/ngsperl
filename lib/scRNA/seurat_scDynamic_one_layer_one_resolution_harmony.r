@@ -120,23 +120,6 @@ obj[["layer0"]]<-"Unassigned"
 obj[["layer0_clusters"]]<-0
 obj[["layer0_raw"]]<-"Unassigned"
 
-cbind_celltype<-function(subobj, data_norm, cluster, new_cluster_ids, cur_layermap, cur_cts){
-  if(is.null(cur_layermap)){
-    return(cur_cts)
-  }
-  layer_ids<-unlist(cur_layermap[new_cluster_ids])
-  names(layer_ids) <- colnames(data_norm)
-  
-  oldcluster<-subobj[[cluster]][[1]]
-  cur_cts$seurat_clusters=oldcluster
-  cur_cts$raw_cell_type<-new_cluster_ids[oldcluster]
-  cur_cts$raw_seurat_cell_type<-paste0(cur_cts$seurat_cluster, ": ", cur_cts$raw_cell_type) 
-  cur_cts$cell_type<-layer_ids[oldcluster]
-  cur_cts$seurat_cell_type<-paste0(cur_cts$seurat_cluster, ": ", cur_cts$cell_type)
-
-  return(cur_cts)
-}
-
 get_empty_files<-function(){
   files = data.frame("previous_layer"=character(),
                      "cur_layer"=character(),
