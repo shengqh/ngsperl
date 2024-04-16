@@ -2966,8 +2966,11 @@ fi
       }
 
       if(scalar(@nonhost_genome_groups) > 1){
-        push( @report_files, "deseq2_nonhost_genome_${DE_library_key}_vis", ".nonhost_genome.DESeq2.Matrix.png" );
-        push( @report_names, "deseq2_nonhost_vis" );
+        my $vis_task = "deseq2_nonhost_genome_${DE_library_key}_vis";
+        if(defined $config->{$vis_task}){
+          push( @report_files, $vis_task, ".nonhost_genome.DESeq2.Matrix.png" );
+          push( @report_names, "deseq2_nonhost_vis" );
+        }
       }
 
       if ( defined $config->{bowtie1_tRNA_pm_table} ) {
