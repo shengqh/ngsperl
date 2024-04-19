@@ -170,6 +170,9 @@ sub initializeDefaultOptions {
 sub add_bam_recalibration {
   my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
+  my $bam_suffix = getValue($def, "bam_suffix", ".bam");
+  my $bam_index_suffix => getValue($def, "bam_index_suffix", ".bai");
+
   my $bam_recalibration = {
     BaseRecalibratorScatter => {
       class             => "GATK4::BaseRecalibratorScatter",
@@ -208,6 +211,8 @@ sub add_bam_recalibration {
       option            => "",
       source_ref        => $source,
       fasta_file        => $def->{ref_fasta},
+      bam_suffix => $bam_suffix,
+      bam_index_suffix => $bam_index_suffix,
       bqsr_report_files_ref => "GatherBQSRReports",
       sh_direct         => 0,
       pbs               => {
@@ -217,13 +222,13 @@ sub add_bam_recalibration {
       },
     },
     GatherSortedBamFiles => {
-      class                 => "GATK4::GatherSortedBamFilesSambamba",
+      class                 => "GATK4::GatherSortedBamFiles",
       perform               => 1,
       target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GatherSortedBamFiles",
       option                => "",
       gather_name_ref       => $source,
       source_ref            => ["ApplyBQSRScatter"],
-      extension             => ".recalibrated.bam",
+      extension             => ".recalibrated$bam_suffix",
       sh_direct             => 0,
       pbs                   => {
         "nodes"    => "1:ppn=8",
@@ -306,7 +311,7 @@ sub add_recalibrated_bam_to_gvcf {
 sub add_bam_to_gvcf {
   my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
   my $bam_recalibration_section = add_bam_recalibration($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source);
-  my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, [ $bam_recalibration_section, '.bam$']);
+  my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, [ $bam_recalibration_section, getValue($def, "bam_suffix". ".bam") . '$']);
   return($gvcf_section);
 }
 
@@ -506,6 +511,8 @@ sub getConfig {
     addGeneLocus($config, $def, $summary, $target_dir);
   }
 
+  my $bam_suffix = getValue($def, "bam_suffix", ".bam");
+
   $config->{general}{interval_list_file} = getValue($def, "interval_list_file");
 
   my $gatk_prefix = getValue($def, "gatk_prefix");
@@ -528,7 +535,7 @@ sub getConfig {
     } else {
       my $bam_task = "bwa_wgs";
       add_BWA_WGS($config, $def, $individual, $target_dir, $bam_task, $source_ref);
-      $bam_section = [ $bam_task, ".bam\$" ];
+      $bam_section = [ $bam_task, "$bam_suffix\$" ];
     }
   }
 
