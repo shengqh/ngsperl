@@ -32,6 +32,9 @@ sub perform {
 
   my $scatter_map = get_interval_file_map($config, $section);
 
+  my $bam_suffix = get_option( $config, $section, "bam_suffix", ".bam" );
+  my $bam_index_suffix = get_option( $config, $section, "bam_index_suffix", ".bai" );
+
   my $ref_fasta = get_option_file( $config, $section, "fasta_file", 1 );
 
   my $java_option = $self->get_java_option($config, $section, $memory);
@@ -56,8 +59,8 @@ sub perform {
     for my $scatter_name (sort keys %$scatter_map) {
       my $interval_file = $scatter_map->{$scatter_name};
       my $prefix = get_key_name($sample_name, $scatter_name);
-      my $final_file = $prefix . ".recalibrated.bam";
-      my $final_index = $prefix . ".recalibrated.bai";
+      my $final_file = $prefix . ".recalibrated$bam_suffix";
+      my $final_index = $prefix . ".recalibrated$bam_index_suffix";
       
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $prefix );
       my $pbs_name = basename($pbs_file);
@@ -68,8 +71,8 @@ sub perform {
 fi
 ";
 
-      my $tmp_file = $prefix . ".tmp.recalibrated.bam";
-      my $tmp_index = $prefix . ".tmp.recalibrated.bai";
+      my $tmp_file = $prefix . ".tmp.recalibrated$bam_suffix";
+      my $tmp_index = $prefix . ".tmp.recalibrated$bam_index_suffix";
 
       my $log_desc = $cluster->get_log_description($log);
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_index );
@@ -105,7 +108,8 @@ fi
 
 sub get_result_files {
   my ( $self, $config, $section, $result_dir, $sample_name, $scatter_name, $key_name ) = @_;
-  my $final_file = "${result_dir}/${sample_name}/${key_name}.recalibrated.bam";
+  my $bam_suffix = get_option( $config, $section, "bam_suffix", ".bam" );
+  my $final_file = "${result_dir}/${sample_name}/${key_name}.recalibrated$bam_suffix";
   return [$final_file];
 }
 
