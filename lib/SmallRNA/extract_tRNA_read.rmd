@@ -1,0 +1,183 @@
+---
+title: "tRNA read figure"
+author: 
+  name: 'Quanhu Sheng'
+  email: "quanhu.sheng.1@vumc.org"
+  affiliation: "CQS/Biostatistics, VUMC"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(tibble)
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(splitstackshape)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+source("reportFunctions.R")
+source("countTableVisFunctions.R")
+```
+
+```{r}
+totalCountFile=fread('fileList3.txt', header=FALSE)$V1[1]
+totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
+totalCount<-unlist(totalCount["Reads for Mapping",])
+```
+
+```{r, fig.width=8}
+myoptions = read_file_map("fileList2.txt", do_unlist=FALSE)
+
+min_count=to_numeric(myoptions$min_count, 1)
+
+result_file=paste0(myoptions$task_name, ".tRNA.txt.gz")
+
+all_dat=fread(result_file, data.table=FALSE)
+
+all_dat$original_sequence = toupper(all_dat$original_sequence)
+
+all_dat = all_dat[all_dat$query_count >= min_count | all_dat$category=="parent",]
+all_dat$map_end = all_dat$map_offset + all_dat$original_length - 1
+
+all_dat$nRPM = 10^6*(all_dat$query_count /totalCount[all_dat$sample])
+all_dat$RPM = paste0("RPM=", round(all_dat$nRPM, 2))
+all_dat$RPM[all_dat$category=="parent"] = "parent"
+
+samples = sort(unique(all_dat$sample))
+
+#trna = 'tRNA:tRNA-Ala-AGC-1-1'
+#trna = 'tRNA:tRNA-Arg-ACG-1-1'
+trna = myoptions$mismatch_feature
+
+cat("#", trna, "\n\n")
+
+trna_name=gsub("tRNA:", "", trna) 
+
+sample="AlkB_enzymes_Buffers"
+#sample="CAC_10_007DE_AlkB"
+
+detail_folder = "details/"
+dir.create(detail_folder, showWarnings = FALSE)
+
+rmd_content = ""
+for(sample in samples){
+  rmd_content = paste(rmd_content, "\n##", sample, "\n\n")
+
+  dat = all_dat[all_dat$sample==sample,]
+
+  cur_dat=dat |> 
+    dplyr::filter(feature_name==trna) |>
+    dplyr::arrange(category, sample, map_offset, original_length, original_sequence)
+
+  if(nrow(cur_dat)==0){
+    rmd_content = paste(rmd_content, "No read mapped to", trna,"in sample", sample, "\n\n")
+    next
+  }
+
+  if(all(cur_dat$category=="parent")){
+    rmd_content = paste(rmd_content, "No read mapped to", trna,"in sample", sample, "\n\n")
+    next
+  }
+
+  mid_position = 40
+
+  seq5 = cur_dat |> 
+    dplyr::filter(map_end < mid_position | category=="parent")
+
+  if(nrow(seq5)>0){
+    seq5 = seq5 |> dplyr::mutate(y=seq(1,n()))
+    data5 <- cSplit(seq5, 'original_sequence', sep = '', direction = 'long', stripWhite = FALSE) |>
+      dplyr::group_by(y) |>
+      dplyr::mutate(x=seq(1,n())+map_offset,
+                    x_loc=x-0.5) |> 
+      as.data.frame() 
+  }else{
+    data5 = NULL
+  }
+
+  seq3 = cur_dat[setdiff(rownames(cur_dat), rownames(seq5)),]
+
+  if(nrow(seq3)>0){
+    seq3 = seq3 |> dplyr::mutate(y=seq(2,n()+1))
+    data3 <- cSplit(seq3, 'original_sequence', sep = '', direction = 'long', stripWhite = FALSE) |>
+      dplyr::group_by(y) |>
+      dplyr::mutate(x=seq(1,n())+map_offset,
+                    x_loc=x-0.5) |> 
+      as.data.frame()
+  }else{
+    data3 = NULL
+  }
+
+  rpm_seq5 = seq5 |> dplyr::filter(category!="parent")
+  rpm_seq3 = rbind(seq5 |> dplyr::filter(category=="parent"), seq3)
+
+  all_data=rbind(data5, data3)
+
+  ref_seq = unlist(strsplit(cur_dat$original_sequence[cur_dat$category=="parent"], split=""))
+
+  all_data$ref_seq=ref_seq[all_data$x]
+
+  colors=c("A"="green", "C"="blue", "G"="brown", "T"="red", "N"="black" )
+
+  all_data$color=unname(colors[all_data$original_sequence])
+  all_data$color[all_data$original_sequence==all_data$ref_seq]="black"
+  all_data$fontface=ifelse(all_data$color=="black", 1, 2)
+
+  maxy = max(4, all_data$y) + 1
+  fontsize_inch = GeomLabel$default_aes$size * 0.0393701
+  height=fontsize_inch * maxy + 1
+  png_file = paste0(detail_folder, sample, ".", trna_name, ".png")
+
+  minx = min(all_data$x_loc) - 1
+  maxx = max(all_data$x_loc) + 1
+
+  g<-ggplot(all_data) + 
+    geom_text(aes(x=x_loc, y=y, label=original_sequence, color=color, fontface=fontface), family="mono", hjust = 0, show.legend = FALSE) + 
+    geom_text(data=rpm_seq3, aes(y=y, label=RPM), x=maxx + 1, family="mono", hjust = 0, show.legend = FALSE) +
+    theme_classic() +
+    scale_color_manual(values = c("black" = "black",
+                                  "green" = "green",
+                                  "red" = "red",
+                                  "brown" = "brown",
+                                  "blue"="blue")) + 
+    xlab("") + ylab("") +
+    scale_y_continuous(limits=c(0, maxy), expand = c(0, 0), breaks=seq(0, maxy, 1)) + 
+    theme(axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.line.y = element_blank())
+
+  if(nrow(rpm_seq5) > 0){
+    g = g + geom_text(data=rpm_seq5, aes(y=y, label=RPM), x=-1, family="mono", hjust = 1, show.legend = FALSE) +
+      scale_x_continuous(limits=c(minx - 10, maxx + 10), expand = c(0, 0), breaks=seq(0, 70, 10))
+  }else{
+    g = g + scale_x_continuous(limits=c(minx, maxx + 10), expand = c(0, 0), breaks=seq(0, 70, 10))
+  }          
+  ggsave(png_file, width=8,height=height, dpi=300, units="in", limitsize = FALSE)
+  rmd_content = paste(rmd_content, getFigure_width_height(png_file, in_details=FALSE, fig.width=8, fig.height=height), "\n\n")
+}
+figure_rmd="figure.rmd"
+writeLines(rmd_content, figure_rmd)
+```
+
+```{r child=figure_rmd}
+```
