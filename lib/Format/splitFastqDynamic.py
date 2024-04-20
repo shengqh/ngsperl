@@ -4,6 +4,7 @@ import os
 import math
 import enum
 import subprocess
+import sys
 from splitFastq import split_by_trunk
 
 # Enum for size units
@@ -134,5 +135,7 @@ def main():
   else:
     split_dynamic_paired_end(logger, inputFiles, args.outputPrefix, args.min_file_size_gb, args.trunk_file_size_gb, args.fill_length, args.compresslevel, args.call_fastqsplitter)
   
+  sys.exit(0)
+
 if __name__ == "__main__":
     main()
