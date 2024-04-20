@@ -77,7 +77,8 @@ sub getLipidomicsConfig {
     },
     parameterSampleFile2_ref => "files",
     suffix => ".preprocess",
-    output_file_ext => ".preprocess.html,.files.txt,preprocess_result/__NAME__.pos.sample_meta.csv",
+    output_file_ext => ".preprocess.html",
+    output_other_ext => ".files.txt,preprocess_result/__NAME__.pos.sample_meta.csv",
     can_result_be_empty_file => 0,
     sh_direct   => 1,
     pbs => {
@@ -107,7 +108,8 @@ sub getLipidomicsConfig {
       parameterSampleFile2_ref => ["preprocess", ".files.txt"],
       parameterSampleFile3_ref => ["preprocess", ".pos.sample_meta.csv"],
       suffix => ".qc",
-      output_file_ext => ".qc.html,.png_files.txt",
+      output_file_ext => ".qc.html",
+      output_other_ext => ".png_files.txt",
       can_result_be_empty_file => 0,
       sh_direct   => 1,
       pbs => {
@@ -141,7 +143,8 @@ sub getLipidomicsConfig {
         parameterSampleFile4 => getValue($def, "pairs"),
         parameterSampleFile5_ref => ["qc", ".png_files.txt"],
         suffix => ".limma",
-        output_file_ext => ".limma.html,.files.txt",
+        output_file_ext => ".limma.html",
+        output_other_ext => ".files.txt",
         can_result_be_empty_file => 0,
         sh_direct   => 1,
         pbs => {
