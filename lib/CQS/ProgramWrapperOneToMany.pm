@@ -162,6 +162,10 @@ fi
       $output_option = "";
     }
 
+    if(get_option($config, $section, "no_output", 0)){
+      $output_option = "";
+    }
+
     if ($curOption =~ /__FILE__/){
       my $param_option1 = get_program_param( $parameterSampleFile1, "", $parameterSampleFile1JoinDelimiter, $sample_name, $result_dir, 1 );
       $curOption =~ s/__FILE__/$param_option1/g;

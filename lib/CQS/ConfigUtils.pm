@@ -1329,6 +1329,9 @@ sub save_parameter_sample_file {
         }
       }
       else {
+        if(!defined $subSampleFiles){
+          $subSampleFiles = "";
+        }
         if ($fileOnly){
           print $list $subSampleFiles . "\n";
         }else{
@@ -2457,7 +2460,15 @@ sub process_parameter_sample_file {
       }
     }
   }else{
-    my $list_file = save_parameter_sample_file( $config, $section, $source_key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
+    my $no_prefix = get_option( $config, $section, "no_prefix", 0 );
+
+    my $filelist_name;
+    if($no_prefix){
+      $filelist_name = "fileList${index}.list";
+    }else{
+      $filelist_name = "${task_name}_${task_suffix}_fileList${index}.list";
+    }
+    my $list_file = save_parameter_sample_file( $config, $section, $source_key, "${result_dir}/${filelist_name}" );
 
     if($list_file ne ""){
       $input = basename($list_file);

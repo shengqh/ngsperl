@@ -41,7 +41,11 @@ sub perform {
 
   my $output_file_ext = get_output_ext( $config, $section, ".html" );
 
-  my $rfilename = ${task_name}. $self->{_suffix} . ".Rmd";
+  my $rmd_ext = $output_file_ext;
+  $rmd_ext =~ s/.html/.rmd/g;
+  #print("rmd_ext=" . $rmd_ext . "\n");
+
+  my $rfilename = ${task_name}. $rmd_ext;
   my $rfile     = build_rmd_file($config, $section, $result_dir, $rfilename);
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
@@ -51,7 +55,7 @@ sub perform {
   
   my $rscript = get_option_include_general($config, $section, "R", "R");
 
-  my $final_file = ${task_name}. $self->{_suffix} . ".html";
+  my $final_file = ${task_name}. $output_file_ext;
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir, $final_file );
 
   my $rlibs = get_option_include_general($config, $section, "R_LIBS", "");

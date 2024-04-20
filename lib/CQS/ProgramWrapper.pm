@@ -90,6 +90,8 @@ sub perform {
 
   my $check_file_ext = get_option($config, $section, "check_file_ext", "");
 
+  my $no_prefix = get_option( $config, $section, "no_prefix", 0 );
+
   my $interpretor = get_option( $config, $section, "interpretor", "" );
   my $program = get_option( $config, $section, "program" );
 
@@ -114,7 +116,14 @@ sub perform {
     }
 
     my ( $parameterSampleFile, $parameterSampleFilearg, $parameterSampleFileJoinDelimiter ) = get_parameter_sample_files( $config, $section, $key );
-    my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${task_name}_${task_suffix}_fileList${index}.list" );
+
+    my $filelist_name;
+    if($no_prefix){
+      $filelist_name = "fileList${index}.list";
+    }else{
+      $filelist_name = "${task_name}_${task_suffix}_fileList${index}.list";
+    }
+    my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${filelist_name}" );
     if ( $listfile ne "" ) {
       $listfile = basename($listfile);
       if ( $option =~ /$listfile/ ) {

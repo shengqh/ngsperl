@@ -59,6 +59,8 @@ sub perform {
   my $samtools_index_thread = $index_by_thread ? "-@ $thread":"";
   my $sambamba_index_thread = $index_by_thread ? "-t $thread":"";
 
+  my $do_bam_stat = get_option( $config, $section, "do_bam_stat",     1 );
+
   $option = $option . " -M";
 
   if ( !( $option =~ /\s-t\s/ ) ) {
@@ -133,10 +135,7 @@ fi
 ";
 
     print $pbs "
-
-if [[ -e $result_dir/${unsorted_bam_file}.failed ]]; then
-  rm $result_dir/${unsorted_bam_file}.failed
-fi
+rm -f ${unsorted_bam_file}.failed
 ";
 
     my $localized_files = [];
@@ -148,14 +147,17 @@ fi
 
 if [[ ! -e ${unsorted_bam_file}.succeed ]]; then
   echo bwa_mem=`date`
-  bwa mem $option $rg $bwa_index $sample_files_str  2> >(tee ${sample_name}.bwa.stderr.log >\&2) | samtools view -bS -o $unsorted_bam_file
+  bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bS -o $unsorted_bam_file
+
   status=\$?
   if [[ \$status -eq 0 ]]; then
     touch ${unsorted_bam_file}.succeed
+    rm -f ${unsorted_bam_file}.failed
   else
-    rm $unsorted_bam_file
+    rm -f $unsorted_bam_file ${unsorted_bam_file}.succeed
     touch ${unsorted_bam_file}.failed
   fi
+
   bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
 fi
 ";
@@ -190,12 +192,16 @@ fi
       next;
     }
 
-    print $pbs "
-if [[ -e ${unsorted_bam_file}.succeed ]]; then
+    my $bam_stat_condition = "";
+    if($do_bam_stat){
+      print $pbs "
+if [[ -e ${unsorted_bam_file}.succeed && ((1 -eq \$1) || (! -s $bam_stat)) ]]; then
   echo bamStat=`date` 
   python3 $py_script -i $unsorted_bam_file -o $bam_stat
 fi
 ";
+      $bam_stat_condition = "&& -s $bam_stat";
+    }
 
     my $rmlist = "";
 
@@ -208,7 +214,7 @@ fi
 ";
       if ($rmlist ne "") {
         print $pbs "
-if [[ -e ${unsorted_bam_file}.succeed ]]; then
+if [[ -e ${unsorted_bam_file}.succeed $bam_stat_condition ]]; then
   rm $rmlist
 fi
 ";
@@ -226,10 +232,15 @@ fi
         print $pbs "    
 if [[ (-e ${unsorted_bam_file}.succeed) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  sambamba sort -m $sort_memory $sambamba_sort_thread --tmpdir bwa_${sample_name} -o $sorted_bam_file $unsorted_bam_file && touch ${sorted_bam_file}.succeed
-  rm -rf bwa_${sample_name}
-  if [[ ! -e ${sorted_bam_file}.succeed ]]; then
-    rm $sorted_bam_file
+  sambamba sort -m $sort_memory $sambamba_sort_thread --tmpdir bwa_${sample_name} --sort-picard -o $sorted_bam_file $unsorted_bam_file
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sorted_bam_file}.succeed
+    rm -rf bwa_${sample_name} ${sorted_bam_file}.failed
+  else
+    rm -rf bwa_${sample_name} $sorted_bam_file ${sorted_bam_file}.succeed
+    touch ${sorted_bam_file}.failed
   fi
 fi
 
@@ -245,10 +256,15 @@ $chromosome_grep_command
         print $pbs "    
 if [[ (-e ${unsorted_bam_file}.succeed) && ((1 -eq \$1) || (! -s $sorted_bam_file)) ]]; then
   echo sort_bam=`date`
-  samtools sort -m $sort_memory $samtools_sort_thread -T bwa_${sample_name} -o $sorted_bam_file $unsorted_bam_file && touch ${sorted_bam_file}.succeed
-  rm -rf bwa_${sample_name}
-  if [[ ! -e ${sorted_bam_file}.succeed ]]; then
-    rm $sorted_bam_file
+  samtools sort -m $sort_memory $samtools_sort_thread -T bwa_${sample_name} -o $sorted_bam_file $unsorted_bam_file
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sorted_bam_file}.succeed
+    rm -rf bwa_${sample_name} ${sorted_bam_file}.failed
+  else
+    rm -rf bwa_${sample_name} $sorted_bam_file ${sorted_bam_file}.succeed
+    touch ${sorted_bam_file}.failed
   fi
 fi
 
@@ -282,7 +298,7 @@ if [[ (-e ${unsorted_bam_file}.succeed) && ((1 -eq \$1) || (! -s $sorted_bam_fil
   samtools sort -m $sort_memory $samtools_sort_thread -T bwa_${sample_name} -n -o $sorted_bam_file $unsorted_bam_file && touch ${sorted_bam_file}.succeed
   rm -rf bwa_${sample_name}
   if [[ ! -e ${sorted_bam_file}.succeed ]]; then
-    rm $sorted_bam_file
+    rm -f $sorted_bam_file
   fi
 fi
 ";
@@ -301,8 +317,8 @@ rm -rf bwa_${sample_name}
 
   if ($rmlist ne "") {
     print $pbs "
-if [[ -e ${sorted_bam_file}.succeed && -s $bam_stat ]]; then
-  rm $rmlist
+if [[ -e ${sorted_bam_file}.succeed $bam_stat_condition ]]; then
+  rm -f $rmlist
 fi
 ";
   }
@@ -329,6 +345,8 @@ sub result {
   my %raw_files        = %{ get_raw_files( $config, $section ) };
   my $output_unmapped_fastq = get_option( $config, $section, "output_unmapped_fastq", 0 );
 
+  my $do_bam_stat = get_option( $config, $section, "do_bam_stat",     1 );
+
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my $final_file;
@@ -350,7 +368,9 @@ sub result {
       push( @result_files, "${result_dir}/${sample_name}.unmapped.1.fq.gz" );
       push( @result_files, "${result_dir}/${sample_name}.unmapped.2.fq.gz" );
     }
-    push( @result_files, "${result_dir}/${sample_name}.bamstat" );
+    if($do_bam_stat){
+      push( @result_files, "${result_dir}/${sample_name}.bamstat" );
+    }
     push( @result_files, "${result_dir}/${sample_name}.bwa.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }

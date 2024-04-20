@@ -32,6 +32,9 @@ sub perform {
 
   my $scatter_map = get_interval_file_map($config, $section);
 
+  my $expect_bam_suffix = get_option( $config, $section, "bam_suffix", ".bam" );
+  my $expect_bam_index_suffix = get_option( $config, $section, "bam_index_suffix", ".bai" );
+
   my $ref_fasta = get_option_file( $config, $section, "fasta_file", 1 );
 
   my $java_option = $self->get_java_option($config, $section, $memory);
@@ -49,6 +52,11 @@ sub perform {
     my @sample_files = @{ $bam_files{$sample_name} };
     my $input_bam     = $sample_files[0];
 
+    my ($bam_suffix) = $input_bam =~ /(\.[^.]+)$/;
+    my $bam_index_suffix = $bam_suffix eq ".cram" ? ".crai" : ".bai";
+
+    die("expecting suffix $expect_bam_suffix, but found $bam_suffix") if $expect_bam_suffix ne $bam_suffix;
+
     my $recalibration_report = $bqsr_report_files->{$sample_name}[0];
 
     my $cur_dir = create_directory_or_die( $result_dir . "/$sample_name" );
@@ -56,8 +64,8 @@ sub perform {
     for my $scatter_name (sort keys %$scatter_map) {
       my $interval_file = $scatter_map->{$scatter_name};
       my $prefix = get_key_name($sample_name, $scatter_name);
-      my $final_file = $prefix . ".recalibrated.bam";
-      my $final_index = $prefix . ".recalibrated.bai";
+      my $final_file = $prefix . ".recalibrated$bam_suffix";
+      my $final_index = $prefix . ".recalibrated$bam_index_suffix";
       
       my $pbs_file = $self->get_pbs_filename( $pbs_dir, $prefix );
       my $pbs_name = basename($pbs_file);
@@ -68,27 +76,28 @@ sub perform {
 fi
 ";
 
-      my $tmp_file = $prefix . ".tmp.recalibrated.bam";
-      my $tmp_index = $prefix . ".tmp.recalibrated.bai";
-
       my $log_desc = $cluster->get_log_description($log);
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_index );
       print $pbs "
 gatk --java-options \"$java_option\" \\
   ApplyBQSR \\
   --add-output-sam-program-record \\
+  -AS \\
   -R ${ref_fasta} \\
   -I ${input_bam} \\
   --use-original-qualities \\
-  -O $tmp_file \\
+  -O $final_file \\
   -bqsr ${recalibration_report} \\
   -L ${interval_file}
 
-if [[ -s $tmp_index ]]; then
-  mv $tmp_file $final_file
-  mv $tmp_index $final_index
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch $prefix.failed
+  rm -f $prefix.succeed $final_file $final_index
+else
+  touch $prefix.succeed
+  rm -f $prefix.failed
 fi
-
 ";
       
       $self->close_pbs( $pbs, $pbs_file );
@@ -105,7 +114,10 @@ fi
 
 sub get_result_files {
   my ( $self, $config, $section, $result_dir, $sample_name, $scatter_name, $key_name ) = @_;
-  my $final_file = "${result_dir}/${sample_name}/${key_name}.recalibrated.bam";
+
+  my $expect_bam_suffix = get_option( $config, $section, "bam_suffix", ".bam" );
+
+  my $final_file = "${result_dir}/${sample_name}/${key_name}.recalibrated$expect_bam_suffix";
   return [$final_file];
 }
 

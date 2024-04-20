@@ -43,7 +43,7 @@ sub perform {
 
   my $faFile = get_param_file( $config->{$section}{fasta_file}, "fasta_file", 1 );
   my $blacklist_intervals = get_param_file( $config->{$section}{blacklist_file}, "blacklist_file", 0 );
-  my $blacklist_intervals_option = $blacklist_intervals ? "-XL " . $blacklist_intervals : "";
+  my $blacklist_intervals_option = $blacklist_intervals ? "\\\n  -XL " . $blacklist_intervals : "";
 
   my $extension = get_option( $config, $section, "extension", ".g.vcf" );
 
@@ -54,7 +54,7 @@ sub perform {
   my $interval_padding   = get_option( $config, $section, "interval_padding", 0 );
   my $restrict_intervals="";
   if ($interval_padding!=0) {
-    $restrict_intervals="-ip $interval_padding";
+    $restrict_intervals=" \\\n  -ip $interval_padding";
   }
   
   my %bam_files = %{ get_raw_files( $config, $section ) };
@@ -114,9 +114,7 @@ if [[ \$status -eq 0 ]]; then
   mv $snvTmpIndex $snvOutIndex
 else
   touch ${snvOut}.failed
-  rm -f ${snvOut}.succeed
-  rm -f $snvTmp
-  rm -f $snvTmpIndex
+  rm -f ${snvOut}.succeed $snvTmp $snvTmpIndex
 fi
 ";
       

@@ -106,11 +106,15 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
     my $final_file = $expect_result->{$sample_name}[-1];
+
+    print $sh "
+if [[ ! -s $final_file ]]; then
+    \$MYCMD ./$pbs_name 
+fi";
+
     my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     my $final_prefix = $sample_name . $output_file_prefix;

@@ -54,9 +54,12 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $gather_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $final_file = $gather_name . ".recal_data.csv";
+    print $sh "
+if [[ ! -s $final_file ]]; then
+  \$MYCMD ./$pbs_name
+fi
+";
 
     my $log_desc = $cluster->get_log_description($log);
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
@@ -65,6 +68,15 @@ gatk --java-options \"$java_option\" \\
   GatherBQSRReports \\
   -I ${input_bqsr_reports} \\
   -O ${final_file}
+
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${final_file}.succeed
+  rm -f ${final_file}.failed
+else
+  rm -rf ${final_file}.succeed ${final_file}
+  touch ${final_file}.failed
+fi
 ";
     
     $self->close_pbs( $pbs, $pbs_file );
