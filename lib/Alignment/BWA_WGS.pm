@@ -80,7 +80,7 @@ sub perform {
       }
     }
 
-    my $rg = "-R \"\@RG\\tID:${rg_sample_id}\\tSM:${rg_sample_name}\\tPL:ILLUMINA\"";
+    my $rg = "-R \"\@RG\\tID:${rg_sample_id}\\tPU:${rg_sample_name}\\tLB:${rg_sample_name}\\tSM:${rg_sample_name}\\tPL:ILLUMINA\"";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -101,7 +101,7 @@ echo bwa_mem=`date`
 
 rm ${final_file}.failed
 
-bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bhu - | sambamba sort -m $memory -l 0 -u -t $thread --tmpdir tmp -o ${final_file} /dev/stdin
+bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bhu - | sambamba sort -m $sort_memory -l 0 -u -t $thread --tmpdir tmp --sort-picard -o ${final_file} /dev/stdin
 
 status=\$?
 if [[ \$status -eq 0 ]]; then
