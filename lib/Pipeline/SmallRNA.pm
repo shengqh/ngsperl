@@ -574,6 +574,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         },
       }
     );
+
     $config = merge_hash_right_precedent( $config, $host_genome );
     push @$tasks, ( "bowtie1_genome_1mm_NTA_smallRNA_table", "bowtie1_genome_1mm_NTA_smallRNA_info", "bowtie1_genome_1mm_NTA_smallRNA_category" );
 
@@ -649,6 +650,62 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           },
         };
         push @$tasks, $tVisTask;
+      }
+
+      if($def->{perform_host_tRNA_mismatch_vis}){
+        my $mismatch_feature = getValue($def, "host_tRNA_mismatch_feature");
+
+        my $tTask = "host_tRNA_mismatch_vis";
+        $config->{$tTask} = {
+          class                 => "CQS::ProgramWrapper",
+          perform               => 1,
+          target_dir            => $host_genome_dir . "/$tTask",
+          option                => "",
+          interpretor           => "python3",
+          program               => "../SmallRNA/extract_tRNA_read.py",
+          no_prefix => 1,
+          source_arg            => "-i",
+          source_ref            => [ $countTask, ".count.mapped.xml" ],
+          output_to_same_folder => 1,
+          output_arg            => "-o",
+          output_file_prefix => ".tRNA.txt.gz",
+          output_ext            => ".tRNA.txt.gz",
+          sh_direct             => 1,
+          pbs                   => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "10gb"
+          },
+        };
+        push @$tasks, $tTask;
+
+        my $tVisTask = "host_tRNA_mismatch_vis_rmd";
+        $config->{$tVisTask} = {
+          class                     => "CQS::UniqueRmd",
+          perform                   => 1,
+          target_dir                => $host_genome_dir . "/$tTask",
+          report_rmd_file => "../SmallRNA/extract_tRNA_read.rmd",
+          additional_rmd_files => "../CQS/countTableVisFunctions.R;../CQS/reportFunctions.R",
+          parameterSampleFile2 => {
+            task_name => $def->{task_name},
+            email => $def->{email},
+            affiliation => getValue($def, "affiliation", ""),
+            min_count => getValue($def, "host_tRNA_mismatch_min_count", 1),
+            mismatch_feature => $mismatch_feature,
+          },
+          parameterSampleFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
+          parameterSampleFile4 => $config->{groups},
+          option => "",
+          output_file_ext => ".$mismatch_feature.html",
+          sh_direct   => 1,
+          no_docker => 1, 
+          pbs => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "2",
+            "mem"       => "10gb"
+          },
+        };
+        push @$tasks, $tVisTask;        
       }
 
       if ($perform_host_tRnaFragmentHalves_analysis) {
