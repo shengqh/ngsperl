@@ -2499,6 +2499,7 @@ sub add_BWA {
     bwa_index             => getValue( $def, "bwa_fasta" ),
     output_unmapped_fastq   => getValue( $def, "bwa_output_unmapped_fastq", 0),
     source_ref            => $source_ref,
+    do_bam_stat => getValue($def, "bwa_do_bam_stat", 1),
     output_to_same_folder => 1,
     rg_name_regex         => $rg_name_regex,
     sh_direct             => 0,
@@ -2539,13 +2540,17 @@ sub add_BWA_WGS {
 sub add_BWA_summary {
   my ($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex) = @_;
 
+  my $bwa_do_bam_stat = getValue($def, "bwa_do_bam_stat", 1);
+
+  my $bamstat_ref = $bwa_do_bam_stat ? [ $bwa, ".bamstat" ] : undef;
+
   $config->{ $bwa_summary } = {
     class                 => "CQS::UniqueR",
     perform               => 1,
     target_dir            => "${target_dir}/${bwa_summary}",
     option                => "",
     rtemplate             => "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r",
-    parameterSampleFile1_ref    => [$bwa, ".bamstat"],
+    parameterSampleFile1_ref    => $bamstat_ref,
     parameterSampleFile2_ref    => [$bwa, ".chromosome.count"],
     output_file           => "",
     output_file_ext       => ".BWASummary.csv",
@@ -2644,15 +2649,31 @@ sub add_split_fastq_dynamic {
   my $trunk_file_size_gb = getValue($def, "split_fastq_trunk_file_size_gb", 5);
   
   my $options = getValue($def, "call_fastqsplitter", 1) ? "--call_fastqsplitter ":"";
+  my $no_docker = getValue($def, "fastqsplitter_by_docker", 1) ? 0 : 1;
 
   $config->{ $split_fastq } = {
     class       => "CQS::ProgramWrapperOneToMany",
     perform     => 1,
     target_dir  => "$target_dir/$split_fastq",
-    option      => "",
     interpretor => "python3",
+    init_command => "set -o pipefail",
     program     => "../Format/splitFastqDynamic.py",
-    option      => $options . "--min_file_size_gb $min_file_size_gb --trunk_file_size_gb $trunk_file_size_gb --fill_length 3",
+    option      => $options . " \\
+  --min_file_size_gb $min_file_size_gb \\
+  --trunk_file_size_gb $trunk_file_size_gb \\
+  --fill_length 3 \\
+  -i __FILE__ \\
+  -o __NAME__
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  rm -f __NAME__.*
+  touch __NAME__.failed
+else
+  touch __NAME__.succeed
+  rm -f __NAME__.failed
+fi
+",
     source_ref      => $source_ref,
     source_arg            => "-i",
     source_join_delimiter => ",",
@@ -2665,6 +2686,8 @@ sub add_split_fastq_dynamic {
     iteration_arg         => "",
     iteration_fill_length => 3,
     sh_direct             => 1,
+    no_output => 1,
+    no_docker => $no_docker,
     use_tmp_folder => 0, #for split fastq, we don't need tmp folder
     pbs                   => {
       "nodes"     => "1:ppn=1",
@@ -2877,20 +2900,23 @@ sub add_BWA_and_summary_scatter {
   my $rg_name_regex = "(.+)_ITER_";
 
   my $bwa = "bwa_01_alignment";
-  add_BWA($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
+  if(0){
+    add_BWA_WGS($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex);
+  }else{
+    add_BWA($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
+    my $bwa_summary = "bwa_03_summary";
+    add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+  }
 
   my $bam_section = undef;
-  # my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
-  # if ($perform_mark_duplicates) {
-  #   $bam_section = "bwa_02_markduplicates";
-  #   addMarkduplicates_merge($config, $def, $tasks, $target_dir, $bam_section, $bwa);
-  # }else{
+  my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
+  if ($perform_mark_duplicates) {
+    $bam_section = "bwa_02_markduplicates";
+    addMarkduplicates_merge($config, $def, $tasks, $target_dir, $bam_section, $bwa);
+  }else{
     $bam_section = "bwa_02_merge";
     add_merge_bam($config, $def, $tasks, $target_dir, $bam_section, $bwa); 
-  # }
-
-  my $bwa_summary = "bwa_03_summary";
-  add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+  }
 
   if (getValue($def, "bwa_output_unmapped_fastq", 0)){
     my $merge_fastq = "bwa_04_unmapped_fastq";
@@ -2928,12 +2954,22 @@ java -Dsamjdk.compression_level=2 -Xms${java_memory_size}g -jar $picard_jar \\
   MarkDuplicates \\
   INPUT=__INPUT__ \\
   OUTPUT=__OUTPUT__ \\
-  METRICS_FILE=__NAME__.duplicate_metrics.txt \\
+  METRICS_FILE=__NAME__.duplicates_metrics.txt \\
   VALIDATION_STRINGENCY=SILENT \\
   OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 \\
   ASSUME_SORT_ORDER=\"$sort_order\" \\
   CLEAR_DT=\"false\" \\
-  ADD_PG_TAG_TO_READS=false
+  ADD_PG_TAG_TO_READS=false \\
+  CREATE_INDEX=\"true\"
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __OUTPUT__.failed
+  rm -f __OUTPUT__.succeed __NAME__.duplicates_marked.bam  __NAME__.duplicates_marked.bai
+else
+  rm -f __OUTPUT__.failed
+  touch __OUTPUT__.succeed
+fi
 ",
     interpretor           => "",
     check_program         => 0,

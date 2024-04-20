@@ -84,6 +84,14 @@ gatk --java-options \"-Xmx8g -Xms8g\"  \\
   --merge-input-intervals \\
   --consolidate
 
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${prefix}.succeed
+  rm -f ${prefix}.failed
+else
+  touch ${prefix}.failed
+  rm -rf ${prefix}.succeed $prefix
+fi
 ";
     
     $self->close_pbs( $pbs, $pbs_file );

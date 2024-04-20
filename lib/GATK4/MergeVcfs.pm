@@ -60,11 +60,18 @@ gatk --java-options \"-Xms${memory} -Xmx${memory}\" \\
       -I $filelist_basename \\
       -O $tmp_file
 
-if [[ -s $tmp_index ]]; then
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${final_file}.succeed
+  rm -f ${final_file}.failed
   mv $tmp_file $final_file
   mv $tmp_index $final_index
+else
+  touch ${final_file}.failed
+  rm -f ${final_file}.succeed
+  rm -f $tmp_file
+  rm -f $tmp_index
 fi
-
 ";
     
   $self->close_pbs( $pbs, $pbs_file );

@@ -38,7 +38,7 @@ sub perform {
  
   my $known_indels_sites_VCFs_option = "";
   if ($known_indels_sites_VCFs != 0) {
-    $known_indels_sites_VCFs_option = "--known-sites " . join(" --known-sites ", @$known_indels_sites_VCFs);
+    $known_indels_sites_VCFs_option = " \\\n  --known-sites " . join(" \\\n  --known-sites ", @$known_indels_sites_VCFs);
   }
 
   my $java_option = $self->get_java_option($config, $section, $memory);
@@ -82,6 +82,15 @@ gatk --java-options \"$java_option\" \\
   -O ${recalibration_report_filename} \\
   -L ${interval_file} \\
   --known-sites ${dbsnp_vcf} $known_indels_sites_VCFs_option
+
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  rm -f ${recalibration_report_filename}.failed
+  touch ${recalibration_report_filename}.succeed
+else
+  touch ${recalibration_report_filename}.failed
+  rm -f ${recalibration_report_filename}.succeed ${recalibration_report_filename}
+fi
 ";
       
       $self->close_pbs( $pbs, $pbs_file );

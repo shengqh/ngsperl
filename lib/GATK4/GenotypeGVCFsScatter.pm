@@ -71,26 +71,36 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $scatter_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
+    print $sh "
+if [[ ! -s $output_vcf_filename ]]; then
+  \$MYCMD ./$pbs_name
+fi
+";
 
     my $log_desc = $cluster->get_log_description($log);
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $output_vcf_filename_index );
     print $pbs "
-gatk --java-options \"-Xmx8g -Xms8g\" \\
+gatk --java-options \"-Xms8g -Xmx40g\" \\
   GenotypeGVCFs \\
   -R ${ref_fasta} \\
   -O ${tmp_file} \\
   -D ${dbsnp_vcf} \\
   -G StandardAnnotation -G AS_StandardAnnotation \\
   --only-output-calls-starting-in-intervals \\
-  --use-new-qual-calculator \\
   -V gendb://$WORKSPACE \\
   -L ${interval} \\
   --merge-input-intervals
 
-if [[ -s $tmp_index ]]; then
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${output_vcf_filename}.succeed
+  rm -f ${output_vcf_filename}.failed
+
   mv $tmp_file $output_vcf_filename
   mv $tmp_index $output_vcf_filename_index
+else
+  touch ${output_vcf_filename}.failed
+  rm -f ${output_vcf_filename}.succeed
 fi
 
 ";

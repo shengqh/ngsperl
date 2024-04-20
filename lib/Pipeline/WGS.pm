@@ -170,8 +170,10 @@ sub initializeDefaultOptions {
 sub add_bam_recalibration {
   my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $bam_suffix = getValue($def, "bam_suffix", ".bam");
-  my $bam_index_suffix => getValue($def, "bam_index_suffix", ".bai");
+  my $to_cram = getValue($def, "GatherSortedBamFiles_cram", 0);
+
+  my $bam_suffix = $to_cram ? ".cram": ".bam";
+  my $bam_index_suffix = $to_cram ? ".cram.crai": ".bai";
 
   my $bam_recalibration = {
     BaseRecalibratorScatter => {
@@ -211,8 +213,6 @@ sub add_bam_recalibration {
       option            => "",
       source_ref        => $source,
       fasta_file        => $def->{ref_fasta},
-      bam_suffix => $bam_suffix,
-      bam_index_suffix => $bam_index_suffix,
       bqsr_report_files_ref => "GatherBQSRReports",
       sh_direct         => 0,
       pbs               => {
@@ -228,7 +228,7 @@ sub add_bam_recalibration {
       option                => "",
       gather_name_ref       => $source,
       source_ref            => ["ApplyBQSRScatter"],
-      extension             => ".recalibrated$bam_suffix",
+      ref_fasta => getValue($def, "ref_fasta"),
       sh_direct             => 0,
       pbs                   => {
         "nodes"    => "1:ppn=8",
@@ -237,19 +237,64 @@ sub add_bam_recalibration {
       },
     },
   };
-
   my @newtasks = ("BaseRecalibratorScatter", 
       "GatherBQSRReports", 
       "ApplyBQSRScatter", 
       "GatherSortedBamFiles");
 
   push(@$tasks, @newtasks);
+  my $bam_task = "GatherSortedBamFiles";
+
+  if($to_cram){
+    my $BamToCram = "BamToCram";
+    my $ref_fasta = getValue($def, "ref_fasta");
+    $config->{$BamToCram} = {
+      class              => "CQS::ProgramWrapperOneToOne",
+      perform            => 1,
+      target_dir => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_${BamToCram}",
+      program => "",
+      check_program => 0,
+      source_ref => "GatherSortedBamFiles",
+      option => "
+echo sort bam to cram ...
+samtools sort -m 5G \\
+  --output-fmt CRAM \\
+  --reference $ref_fasta \\
+  --threads 8 \\
+  --write-index \\
+  -o __OUTPUT__ __FILE__
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+  rm -f __NAME__.succeed __OUTPUT__ __OUTPUT__.crai
+else
+  touch __NAME__.succeed 
+  rm -f __NAME__.failed 
+fi
+
+",
+      output_file_prefix => ".cram",
+      output_ext => ".cram",
+      output_by_file => 0,
+      use_tmp_folder => 0,
+      sh_direct          => 0,
+      pbs                => {
+        "nodes"     => "1:ppn=8",
+        "walltime"  => "24",
+        "mem"       => "40gb"
+      },
+    };
+    push(@$tasks, $BamToCram);
+
+    $bam_task = $BamToCram;
+  }
 
   foreach my $task (@newtasks){
     $config->{$task} = $bam_recalibration->{$task};
   }
 
-  return "GatherSortedBamFiles";
+  return $bam_task;
 }
 
 sub add_recalibrated_bam_to_gvcf {
@@ -262,11 +307,11 @@ sub add_recalibrated_bam_to_gvcf {
       target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_HaplotypeCallerScatter",
       #https://github.com/gatk-workflows/gatk4-germline-snps-indels/blob/master/haplotypecaller-gvcf-gatk4.wdl
       option            => "\\
-    -contamination 0 \\
-    -G StandardAnnotation -G StandardHCAnnotation -G AS_StandardAnnotation \\
-    -GQB 10 -GQB 20 -GQB 30 -GQB 40 -GQB 50 -GQB 60 -GQB 70 -GQB 80 -GQB 90 \\
-    --soft-clip-low-quality-ends true \\
-    --dont-use-soft-clipped-bases true",
+  -contamination 0 \\
+  -G StandardAnnotation -G StandardHCAnnotation -G AS_StandardAnnotation \\
+  -GQB 10 -GQB 20 -GQB 30 -GQB 40 -GQB 50 -GQB 60 -GQB 70 -GQB 80 -GQB 90 \\
+  --soft-clip-low-quality-ends true \\
+  --dont-use-soft-clipped-bases true",
       source_ref        => $source,
       java_option       => "",
       fasta_file        => $def->{ref_fasta},
@@ -311,7 +356,7 @@ sub add_recalibrated_bam_to_gvcf {
 sub add_bam_to_gvcf {
   my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
   my $bam_recalibration_section = add_bam_recalibration($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source);
-  my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, [ $bam_recalibration_section, getValue($def, "bam_suffix". ".bam") . '$']);
+  my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_recalibration_section);
   return($gvcf_section);
 }
 
@@ -673,8 +718,8 @@ fi
 
     my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
     if ($perform_mark_duplicates) {
-      my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
       if(!defined $config->{bwa_02_markduplicates}){
+        my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
         #if perform_split_fastq, markduplicates might be added with split_fastq tasks.
         my $markduplicates = "markduplicates";
         addMarkduplicates($config, $def, $summary, $target_dir, $markduplicates, $bam_section);
@@ -684,7 +729,7 @@ fi
 
     my $bam_recalibration_section = add_bam_recalibration($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
     
-    my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, [ $bam_recalibration_section, '.bam$']);
+    my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_recalibration_section);
 
     if($def->{perform_extract_bam}){
       my $extract_bam_locus = getValue($def, "extract_bam_locus");
@@ -712,19 +757,40 @@ fi
             perform               => 1,
             target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_HardFilterAndMakeSitesOnlyVcf",
             option                => "
-gatk --java-options \"-Xms10g -Xmx10g\" \\
+echo VariantFiltration ...
+gatk --java-options \"-Xms10g -Xmx18g\" \\
   VariantFiltration \\
   --filter-expression \"ExcessHet > 54.69\" \\
   --filter-name ExcessHet \\
   -O __NAME__.variant_filtered.vcf.gz \\
   -V __FILE__
 
-gatk --java-options \"-Xms10g -Xmx10g\" \\
-  MakeSitesOnlyVcf \\
-  -I __NAME__.variant_filtered.vcf.gz \\
-  -O __NAME__.variant_filtered.sites_only.vcf.gz
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.variant_filtered.vcf.gz.succeed
+  rm -f __NAME__.variant_filtered.vcf.gz.failed
 
-        ",
+  echo MakeSitesOnlyVcf ...
+  gatk --java-options \"-Xms10g -Xmx18g\" \\
+    MakeSitesOnlyVcf \\
+    -I __NAME__.variant_filtered.vcf.gz \\
+    -O __NAME__.tmp.variant_filtered.sites_only.vcf.gz
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch __NAME__.variant_filtered.sites_only.vcf.gz.succeed
+    rm -f __NAME__.variant_filtered.sites_only.vcf.gz.failed
+    mv __NAME__.tmp.variant_filtered.sites_only.vcf.gz __NAME__.variant_filtered.sites_only.vcf.gz
+    mv __NAME__.tmp.variant_filtered.sites_only.vcf.gz.tbi __NAME__.variant_filtered.sites_only.vcf.gz.tbi
+  else
+    touch __NAME__.variant_filtered.sites_only.vcf.gz.failed
+    rm -f __NAME__.variant_filtered.sites_only.vcf.gz.succeed __NAME__.tmp.variant_filtered.sites_only.vcf.gz __NAME__.tmp.variant_filtered.sites_only.vcf.gz.tbi
+  fi
+else
+  touch __NAME__.variant_filtered.vcf.gz.failed
+  rm -f __NAME__.variant_filtered.vcf.gz.succeed __NAME__.variant_filtered.vcf.gz __NAME__.variant_filtered.vcf.gz.tbi
+fi
+",
             interpretor           => "",
             program               => "",
             docker_prefix         => "gatk4_",
@@ -752,10 +818,29 @@ gatk --java-options \"-Xms10g -Xmx10g\" \\
             perform               => 1,
             target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_SitesOnlyGatherVcf",
             option                => "
-gatk --java-options -Xms6g GatherVcfsCloud  \\
+# --ignore-safety-checks makes a big performance difference so we include it in our invocation.
+# This argument disables expensive checks that the file headers contain the same set of
+# genotyped samples and that files are in order by position of first record.
+gatk --java-options \"-Xms6000m -Xmx6500m\" \\
+  GatherVcfsCloud \\
+  --ignore-safety-checks \\
+  --gather-type BLOCK \\
   --input __FILE__ \\
-  --output __NAME__.sites_only.vcf.gz && tabix __NAME__.sites_only.vcf.gz
-  ",
+  --output __NAME__.tmp.sites_only.vcf.gz 
+  
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.sites_only.vcf.gz.succeed
+  rm -f __NAME__.sites_only.vcf.gz.failed
+  mv __NAME__.tmp.sites_only.vcf.gz __NAME__.sites_only.vcf.gz 
+  mv __NAME__.tmp.sites_only.vcf.gz.tbi __NAME__.sites_only.vcf.gz.tbi
+
+  tabix __NAME__.sites_only.vcf.gz
+else
+  touch __NAME__.sites_only.vcf.gz.failed
+  rm -f __NAME__.sites_only.vcf.gz.succeed __NAME__.tmp.sites_only.vcf.gz __NAME__.tmp.sites_only.vcf.gz.tbi
+fi
+",
             interpretor           => "",
             program               => "",
             docker_prefix         => "gatk4_",
@@ -770,8 +855,8 @@ gatk --java-options -Xms6g GatherVcfsCloud  \\
             sh_direct             => 0,
             pbs                   => {
               "nodes"    => "1:ppn=1",
-              "walltime" => "4",
-              "mem"      => "10gb"
+              "walltime" => "24",
+              "mem"      => "7gb"
             },
           };
 
@@ -793,10 +878,11 @@ gatk --java-options -Xms6g GatherVcfsCloud  \\
             perform               => 1,
             target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_IndelsVariantRecalibrator",
             option                => "
-gatk --java-options \"-Xmx24g -Xms24g\" \\
+gatk --java-options \"-Xms24g -Xms25g\" \\
   VariantRecalibrator \\
+  -AS \\
   -V __FILE__ \\
-  -O __NAME__.indels.recal.vcf.gz \\
+  -O __NAME__.tmp.indels.recal.vcf.gz \\
   --tranches-file __NAME__.indels.tranches \\
   --trust-all-polymorphic \\
   -tranche $indel_tranche_str \\
@@ -806,8 +892,17 @@ gatk --java-options \"-Xmx24g -Xms24g\" \\
   --resource:mills,known=false,training=true,truth=true,prior=12 ${mills_resource_vcf} \\
   --resource:axiomPoly,known=false,training=true,truth=false,prior=10 ${axiomPoly_resource_vcf} \\
   --resource:dbsnp,known=true,training=false,truth=false,prior=2 ${dbsnp_resource_vcf}
-
-#__OUTPUT__
+ 
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.indels.recal.vcf.gz.succeed
+  rm -f __NAME__.indels.recal.vcf.gz.failed
+  mv __NAME__.tmp.indels.recal.vcf.gz __NAME__.indels.recal.vcf.gz
+  mv __NAME__.tmp.indels.recal.vcf.gz.tbi __NAME__.indels.recal.vcf.gz.tbi
+else
+  touch __NAME__.indels.recal.vcf.gz.failed
+  rm -f __NAME__.indels.recal.vcf.gz.succeed __NAME__.tmp.indels.recal.vcf.gz __NAME__.tmp.indels.recal.vcf.gz.tbi
+fi
 ",
             interpretor           => "",
             program               => "",
@@ -820,6 +915,7 @@ gatk --java-options \"-Xmx24g -Xms24g\" \\
             output_file_ext       => ".indels.recal.vcf.gz",
             output_other_ext      => ".indels.tranches",
             output_to_same_folder => 1,
+            no_output             => 1,
             other_localization_ext_array => [".tbi"],
             sh_direct             => 0,
             pbs                   => {
@@ -847,22 +943,32 @@ gatk --java-options \"-Xmx24g -Xms24g\" \\
             perform               => 1,
             target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_SNPsVariantRecalibratorClassic",
             option                => "
-gatk --java-options \"-Xmx3g -Xms3g\" \\
+gatk --java-options \"-Xmx24g -Xms24g\" \\
   VariantRecalibrator \\
+  -AS \\
   -V __FILE__ \\
-  -O __NAME__.snp.recal.vcf.gz \\
-  --tranches-file __NAME__.snp.tranches \\
+  -O __NAME__.tmp.snps.recal.vcf.gz \\
+  --tranches-file __NAME__.snps.tranches \\
   --trust-all-polymorphic \\
   -tranche $snp_tranche_str \\
   -an $snp_anno_str \\
   -mode SNP \\
   --max-gaussians $snp_max_gaussians \\
-  --resource:hapmap,known=false,training=true,truth=true,prior=15 ${hapmap_resource_vcf} \
-  --resource:omni,known=false,training=true,truth=true,prior=12 ${omni_resource_vcf} \
-  --resource:1000G,known=false,training=true,truth=false,prior=10 ${one_thousand_genomes_resource_vcf} \
+  --resource:hapmap,known=false,training=true,truth=true,prior=15 ${hapmap_resource_vcf} \\
+  --resource:omni,known=false,training=true,truth=true,prior=12 ${omni_resource_vcf} \\
+  --resource:1000G,known=false,training=true,truth=false,prior=10 ${one_thousand_genomes_resource_vcf} \\
   --resource:dbsnp,known=true,training=false,truth=false,prior=7 ${dbsnp_resource_vcf}
 
-#__OUTPUT__
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.snps.recal.vcf.gz.succeed
+  rm -f __NAME__.snps.recal.vcf.gz.failed
+  mv __NAME__.tmp.snps.recal.vcf.gz __NAME__.snps.recal.vcf.gz
+  mv __NAME__.tmp.snps.recal.vcf.gz.tbi __NAME__.snps.recal.vcf.gz.tbi
+else
+  touch __NAME__.snps.recal.vcf.gz.failed
+  rm -f __NAME__.snps.recal.vcf.gz.succeed __NAME__.tmp.snps.recal.vcf.gz __NAME__.tmp.snps.recal.vcf.gz.tbi
+fi
 ",
             interpretor           => "",
             program               => "",
@@ -872,9 +978,10 @@ gatk --java-options \"-Xmx3g -Xms3g\" \\
             source_ref            => $SitesOnlyGatherVcf,
             output_arg            => "-O",
             output_file_prefix    => "",
-            output_file_ext            => ".snps.recal.vcf.gz",
+            output_file_ext => ".snps.recal.vcf.gz",
             output_other_ext      => ".snps.tranches",
             output_to_same_folder => 1,
+            no_output => 1,
             other_localization_ext_array => [".tbi"],
             sh_direct             => 0,
             pbs                   => {
@@ -892,11 +999,10 @@ gatk --java-options \"-Xmx3g -Xms3g\" \\
             perform               => 1,
             target_dir            => "${target_dir}/" . $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_ApplyRecalibration",
             option                => "
-set -euo pipefail
-
 gatk --java-options \"-Xms5000m -Xmx6500m\" \\
   ApplyVQSR \\
-  -O tmp.indel.recalibrated.vcf \\
+  -AS \\
+  -O __NAME__.indel.recalibrated.vcf.gz \\
   -V __FILE__ \\
   --recal-file __parameterFile1__ \\
   --use-allele-specific-annotations \\
@@ -905,19 +1011,36 @@ gatk --java-options \"-Xms5000m -Xmx6500m\" \\
   --create-output-variant-index true \\
   -mode INDEL
 
-gatk --java-options \"-Xms5000m -Xmx6500m\" \\
-  ApplyVQSR \\
-  -O __NAME__.filtered.vcf.gz \\
-  -V tmp.indel.recalibrated.vcf \\
-  --recal-file __parameterFile3__ \\
-  --use-allele-specific-annotations \\
-  --tranches-file __parameterFile4__ \\
-  --truth-sensitivity-filter-level $snp_filter_level \\
-  --create-output-variant-index true \\
-  -mode SNP
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.indel.recalibrated.vcf.gz.succeed
+  rm -f __NAME__.indel.recalibrated.vcf.gz.failed
 
-rm tmp.indel.recalibrated.vcf tmp.indel.recalibrated.vcf.idx
-#__OUTPUT__
+  gatk --java-options \"-Xms5000m -Xmx6500m\" \\
+    ApplyVQSR \\
+    -O __NAME__.tmp.filtered.vcf.gz \\
+    -V __NAME__.indel.recalibrated.vcf.gz \\
+    --recal-file __parameterFile3__ \\
+    --use-allele-specific-annotations \\
+    --tranches-file __parameterFile4__ \\
+    --truth-sensitivity-filter-level $snp_filter_level \\
+    --create-output-variant-index true \\
+    -mode SNP
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch __NAME__.filtered.vcf.gz.succeed
+    rm -f __NAME__.filtered.vcf.gz.failed __NAME__.indel.recalibrated.vcf.gz __NAME__.indel.recalibrated.vcf.gz.tbi __NAME__.indel.recalibrated.vcf.gz.succeed
+    mv __NAME__.tmp.filtered.vcf.gz __NAME__.filtered.vcf.gz
+    mv __NAME__.tmp.filtered.vcf.gz.tbi __NAME__.filtered.vcf.gz.tbi
+  else
+    touch __NAME__.filtered.vcf.gz.failed
+    rm -f __NAME__.filtered.vcf.gz.succeed __NAME__.tmp.filtered.vcf.gz __NAME__.tmp.filtered.vcf.gz.tbi
+  fi
+else
+  touch __NAME__.indel.recalibrated.vcf.gz.failed
+  rm -f __NAME__.indel.recalibrated.vcf.gz.succeed __NAME__.indel.recalibrated.vcf.gz __NAME__.indel.recalibrated.vcf.gz.tbi
+fi
 ",
             interpretor           => "",
             program               => "",
@@ -937,7 +1060,7 @@ rm tmp.indel.recalibrated.vcf tmp.indel.recalibrated.vcf.idx
             sh_direct             => 0,
             pbs                   => {
               "nodes"    => "1:ppn=1",
-              "walltime" => "12",
+              "walltime" => "24",
               "mem"      => "7gb"
             },
           };
@@ -953,14 +1076,23 @@ set -euo pipefail
 # --ignore-safety-checks makes a big performance difference so we include it in our invocation.
 # This argument disables expensive checks that the file headers contain the same set of
 # genotyped samples and that files are in order by position of first record.
-gatk --java-options \"-Xms6000m -Xmx6500m\" \\
+gatk --java-options \"-Xms10g -Xmx10g\" \\
   GatherVcfsCloud \\
   --ignore-safety-checks \\
   --gather-type BLOCK \\
   --input __FILE__ \\
-  --output __NAME__.vcf.gz
+  --output __NAME__.tmp.vcf.gz
 
-tabix __NAME__.vcf.gz
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.vcf.gz.succeed
+  rm -f __NAME__.vcf.gz.failed 
+  mv __NAME__.tmp.vcf.gz __NAME__.vcf.gz
+  tabix __NAME__.vcf.gz
+else
+  touch __NAME__.vcf.gz.failed
+  rm -f __NAME__.vcf.gz.succeed __NAME__.tmp.vcf.gz
+fi
 ",
             interpretor           => "",
             program               => "",
@@ -999,6 +1131,15 @@ gatk --java-options \"-Xms6000m -Xmx7000m\" \\
   --OUTPUT __NAME__ \\
   --THREAD_COUNT 8 \\
   --TARGET_INTERVALS ${eval_interval_list}
+
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.succeed
+  rm -f __NAME__.failed 
+else
+  touch __NAME__.failed
+  rm -f __NAME__.succeed __NAME__.variant_calling_detail_metrics __NAME__.variant_calling_summary_metrics
+fi
 ",
             interpretor           => "",
             program               => "",

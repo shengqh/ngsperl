@@ -44,7 +44,7 @@ sub perform {
 
   for my $gather_name (sort keys %$gather_file_map){
     my $key_files = $gather_file_map->{$gather_name};
-    my $input_files = join(" \\\n      INPUT=", @$key_files);
+    my $input_files = join(" \\\n  INPUT=", @$key_files);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $gather_name );
     my $pbs_name = basename($pbs_file);
@@ -61,15 +61,20 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_index );
     print $pbs "
 java -Xms${memory} -jar /usr/gitc/picard.jar \\
-      MergeVcfs \\
-      INPUT=$input_files \\
-      OUTPUT=$tmp_file
+  MergeVcfs \\
+  INPUT=$input_files \\
+  OUTPUT=$tmp_file
 
-if [[ -s $tmp_index ]]; then
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch ${final_file}.succeed
+  rm -f ${final_file}.failed
   mv $tmp_file $final_file
   mv $tmp_index $final_index
+else
+  touch ${final_file}.failed
+  rm -f ${final_file}.succeed $tmp_file $tmp_index
 fi
-
 ";
     
     $self->close_pbs( $pbs, $pbs_file );
