@@ -22,6 +22,7 @@ our @ISA = qw(Exporter);
 our %EXPORT_TAGS = (
   'all' => [
     qw( 
+    do_add_gene_locus
     getIntermidiateDir
     getIndexName
     initPipelineOptions 
@@ -110,6 +111,7 @@ our %EXPORT_TAGS = (
     add_fastq_screen
     writeAnnotationLocus_bed
     writeAnnotationLocus_gff
+    add_split_fastq_dynamic
     )
   ]
 );
@@ -2228,36 +2230,44 @@ sub addXHMM {
   return ($cnvTask);
 }
 
+sub do_add_gene_locus {
+  my ($config, $def, $tasks, $target_dir, $task_name, $genes_str) = @_;
+  $genes_str =~ s/\s+/,/g;
+  $config->{$task_name} = {
+    class      => "CQS::UniqueR",
+    perform    => 1,
+    target_dir => $target_dir . '/' . $task_name,
+    rtemplate  => "../Annotation/getGeneLocus.r",
+    parameterSampleFile1 => {
+      host=>getValue( $def, "biomart_host" ),
+      dataset=>getValue( $def, "biomart_dataset" ),
+      symbolKey=>getValue( $def, "biomart_symbolKey" ),
+      genesStr=> $genes_str,
+      add_chr => getValue($def, "annotation_genes_add_chr", getValue($def, "has_chr_in_chromosome_name", 0))
+    },
+    docker_prefix => "biomart_",
+    rCode => "",
+    output_file => "",
+    output_file_ext => ".bed",
+    sh_direct       => 1,
+    'pbs'           => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '40gb',
+      'walltime' => '10'
+    },
+  };
+  push( @$tasks, $task_name );
+
+  return ($task_name);
+}
+
 sub addGeneLocus {
   my ($config, $def, $summary, $target_dir) = @_;
   my $geneLocus = undef;
   if ( defined $def->{annotation_genes} ) {
     $geneLocus = "annotation_genes_locus";
     my $genesStr = getValue( $def, "annotation_genes" );
-    $genesStr =~ s/\s+/,/g;
-    $config->{$geneLocus} = {
-      class      => "CQS::UniqueR",
-      perform    => 1,
-      target_dir => $target_dir . '/' . $geneLocus,
-      rtemplate  => "../Annotation/getGeneLocus.r",
-      parameterSampleFile1 => {
-        host=>getValue( $def, "biomart_host" ),
-        dataset=>getValue( $def, "biomart_dataset" ),
-        symbolKey=>getValue( $def, "biomart_symbolKey" ),
-        genesStr=> $genesStr,
-        add_chr => getValue($def, "annotation_genes_add_chr", 0)
-      },
-      rCode      =>"",
-      output_file => "",
-      output_file_ext => ".bed",
-      sh_direct       => 1,
-      'pbs'           => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '40gb',
-        'walltime' => '10'
-      },
-    };
-    push( @$summary, $geneLocus );
+    do_add_gene_locus($config, $def, $summary, $target_dir, $geneLocus, $genesStr);
   }
   return ($geneLocus);
 }
@@ -2940,6 +2950,8 @@ sub addMarkduplicates_merge {
   $java_memory_size =~ s/gb//g;
   $java_memory_size = $java_memory_size - 2;
 
+  my $ref_fasta = getValue($def, "ref_fasta");
+
   #default is the location in gatk docker
   my $picard_jar = getValue($def, "picard_jar", "/opt/picard.jar");
 
@@ -2950,17 +2962,17 @@ sub addMarkduplicates_merge {
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
     option                => "
-java -Dsamjdk.compression_level=2 -Xms${java_memory_size}g -jar $picard_jar \\
+gatk --java-options \"-Dsamjdk.compression_level=2 -Xms${java_memory_size}g\" \\
   MarkDuplicates \\
-  INPUT=__INPUT__ \\
-  OUTPUT=__OUTPUT__ \\
-  METRICS_FILE=__NAME__.duplicates_metrics.txt \\
-  VALIDATION_STRINGENCY=SILENT \\
-  OPTICAL_DUPLICATE_PIXEL_DISTANCE=2500 \\
-  ASSUME_SORT_ORDER=\"$sort_order\" \\
-  CLEAR_DT=\"false\" \\
-  ADD_PG_TAG_TO_READS=false \\
-  CREATE_INDEX=\"true\"
+  --INPUT __INPUT__ \\
+  --OUTPUT __OUTPUT__ \\
+  --METRICS_FILE __NAME__.duplicates_metrics.txt \\
+  --VALIDATION_STRINGENCY SILENT \\
+  --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500 \\
+  --SSUME_SORT_ORDER $sort_order \\
+  --CLEAR_DT false \\
+  --ADD_PG_TAG_TO_READS false \\
+  --CREATE_INDEX true
 
 status=\$?
 if [[ \$status -ne 0 ]]; then
@@ -2976,14 +2988,14 @@ fi
     program               => "",
     source_ref            => $source_ref,
     source_arg            => "",
-    source_join_delimiter => " \\\n  INPUT=",
+    source_join_delimiter => " \\\n  --INPUT ",
     output_to_same_folder => 1,
-    output_arg            => "-o",
+    output_arg            => "--OUTPUT",
     output_file_prefix    => ".duplicates_marked.bam",
     output_file_ext       => ".duplicates_marked.bam,.duplicates_marked.bai",
     use_tmp_folder => getValue($def, "mark_duplicates_use_tmp_folder", 0),
     sh_direct             => 0,
-    docker_prefix        => "picard_",
+    docker_prefix        => "gatk4_",
     pbs                   => {
       "nodes"     => "1:ppn=1",
       "walltime"  => getValue($def, "mark_duplicates_walltime", "48"),
@@ -2993,7 +3005,6 @@ fi
 
   push(@$tasks, $task_name);
 }
-
 
 sub addMarkduplicates {
   my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
