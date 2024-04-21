@@ -67,7 +67,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "aligner", "bwa" );
   if ( $def->{aligner} eq "bwa" ) {
-    initDefaultValue( $def, "bwa_option", "" );
+    initDefaultValue( $def, "bwa_option", "-K 100000000 -p -v 3" );
   }
 
   initDefaultValue( $def, "mark_duplicates_use_tmp_folder", 0 );
@@ -556,8 +556,6 @@ sub getConfig {
     addGeneLocus($config, $def, $summary, $target_dir);
   }
 
-  my $bam_suffix = getValue($def, "bam_suffix", ".bam");
-
   $config->{general}{interval_list_file} = getValue($def, "interval_list_file");
 
   my $gatk_prefix = getValue($def, "gatk_prefix");
@@ -580,7 +578,7 @@ sub getConfig {
     } else {
       my $bam_task = "bwa_wgs";
       add_BWA_WGS($config, $def, $individual, $target_dir, $bam_task, $source_ref);
-      $bam_section = [ $bam_task, "$bam_suffix\$" ];
+      $bam_section = [ $bam_task, ".bam\$" ];
     }
   }
 
