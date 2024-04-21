@@ -1302,6 +1302,7 @@ sub save_parameter_sample_file {
     }
 
     my $fileOnly = get_option( $config, $section, $key . "_fileonly", 0 );
+    my $fileFirst = get_option( $config, $section, $key . "_fileFirst", 1 );
 
     open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
     foreach my $sample_name (@orderedSampleNames) {
@@ -1314,7 +1315,11 @@ sub save_parameter_sample_file {
             if ($fileOnly){
               print $list $groupSampleName . "\n";
             }else{
-              print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+              if($fileFirst){
+                print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+              }else{
+                print $list "${sample_name}\t${groupName}\t${groupSampleName}\n";
+              }
             }
           }
         }
@@ -1324,7 +1329,11 @@ sub save_parameter_sample_file {
           if ($fileOnly){
             print $list $subSampleFile . "\n";
           }else{
-            print $list $subSampleFile . "\t$sample_name\n";
+            if($fileFirst){
+              print $list "$subSampleFile\t$sample_name\n";
+            }else{
+              print $list "$sample_name\t$subSampleFile\n";
+            }
           }
         }
       }
@@ -1335,7 +1344,11 @@ sub save_parameter_sample_file {
         if ($fileOnly){
           print $list $subSampleFiles . "\n";
         }else{
-          print $list $subSampleFiles . "\t$sample_name\n";
+          if($fileFirst){
+            print $list "$subSampleFiles\t$sample_name\n";
+          }else{
+            print $list "$sample_name\t$subSampleFiles\n";
+          }
         }
       }
     }
