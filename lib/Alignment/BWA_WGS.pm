@@ -33,11 +33,10 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
   my ($sort_memory, $isMB) = getMemoryPerThread($memory, $thread);
-  my $max_useful_memory = max(5, ($sort_memory * $thread - 10));
   if ($isMB) {
-    $sort_memory = $max_useful_memory . "M";
+    $sort_memory = $sort_memory . "M";
   }else{
-    $sort_memory = $max_useful_memory . "G";
+    $sort_memory = $sort_memory . "G";
   }
 
   my $selfname = $self->{_name};
@@ -86,33 +85,67 @@ sub perform {
     my $pbs_name = basename($pbs_file);
     my $log      = $self->get_log_filename( $log_dir, $sample_name );
 
-    print $sh "\$MYCMD ./$pbs_name \n";
-
     my $log_desc = $cluster->get_log_description($log);
 
-    my $final_file =  $sample_name . ".sortedByCoord.bam";
+    my $unsorted_file = "$sample_name.unsorted.cram";
+
+    my $final_file =  $sample_name . ".sortedByCoord.cram";
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, 0, $sample_file_0 );
+
+    my $tmp_file =  "tmp.${final_file}";
+
+    print $sh "
+if [[ ! -s $result_dir/$final_file ]]; then
+  \$MYCMD ./$pbs_name
+fi
+";
 
     my $localized_files = [];
     @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
 
     print $pbs "
-echo bwa_mem=`date`
+bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
 
-rm ${final_file}.failed
-
-bwa mem $option $rg $bwa_index $sample_files_str | samtools view -bhu - | sambamba sort -m $sort_memory -l 0 -u -t $thread --tmpdir tmp --sort-picard -o ${final_file} /dev/stdin
+echo bwa_mem_cram=`date`
+bwa mem $option \\
+  $rg \\
+  $bwa_index \\
+  $sample_files_str | \\
+  samtools view -Ch \\
+    -T $bwa_index \\
+    -o $unsorted_file -
 
 status=\$?
 if [[ \$status -eq 0 ]]; then
-  touch ${final_file}.succeed
-  bwa 2>\&1 | grep Version | cut -d ' ' -f2 | cut -d '-' -f1 | awk '{print \"bwa,v\"\$1}' > ${sample_name}.bwa.version
-  sambamba index ${final_file}
-else
-  rm $final_file
-  touch ${final_file}.failed
-fi
+  touch $unsorted_file.succeed
+  rm -f $unsorted_file.failed
 
+  echo samtools_sort=`date`
+  samtools sort \\
+    -m $sort_memory \\
+    -@ $thread \\
+    -T bwa_${sample_name} \\
+    --output-fmt CRAM \\
+    --reference $bwa_index \\
+    -o $tmp_file \\
+    $unsorted_file
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch $final_file.succeed
+    rm -f $final_file.failed $unsorted_file $unsorted_file.succeed
+    mv $tmp_file $final_file
+  
+    echo samtools_index=`date`
+    samtools index $final_file
+  else
+    touch $final_file.failed
+    rm -f $final_file.succeed $tmp_file
+  fi
+else
+  touch $unsorted_file.failed
+  rm -f $unsorted_file.succeed $unsorted_file
+fi
 ";
 
     $self->clean_temp_files($pbs, $localized_files);
@@ -139,8 +172,8 @@ sub result {
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
-    push( @result_files, "${result_dir}/${sample_name}.sortedByCoord.bam" );
-    push( @result_files, "${result_dir}/${sample_name}.sortedByCoord.bam.bai" );
+    push( @result_files, "${result_dir}/${sample_name}.sortedByCoord.cram" );
+    push( @result_files, "${result_dir}/${sample_name}.sortedByCoord.cram.crai" );
     push( @result_files, "${result_dir}/${sample_name}.bwa.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
