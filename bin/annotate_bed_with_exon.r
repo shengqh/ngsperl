@@ -7,7 +7,7 @@ setwd("/scratch/cqs/references/exomeseq/Twist")
 
 beddata<-read.table("Twist_Exome_Target_hg38.slop50.bed", sep="\t", stringsAsFactors=F)
 
-host="www.ensembl.org";dataset="hsapiens_gene_ensembl";symbolKey="hgnc_symbol";
+host="https://www.ensembl.org";dataset="hsapiens_gene_ensembl";symbolKey="hgnc_symbol";
 ensembl <- useMart("ensembl", host=host, dataset=dataset)
 exons <- getBM(attributes = c("ensembl_gene_id", "ensembl_exon_id", "chromosome_name", "exon_chrom_start", "exon_chrom_end", "strand"), mart = ensembl)
 exons$chromosome_name=paste0("chr", exons$chromosome_name)

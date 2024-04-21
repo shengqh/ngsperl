@@ -34,7 +34,8 @@ genes<-genes[!duplicated(genes)]
 ensembl <- useMart("ensembl", host=host, dataset=dataset)
 
 geneLocus<-getBM(attributes=c("chromosome_name", "start_position", "end_position", symbolKey, "strand", "ensembl_gene_id"),
-                 filters=symbolKey, values=genes, mart=ensembl, uniqueRows=TRUE)
+                 filters=symbolKey, values=genes, mart=ensembl, uniqueRows=TRUE,
+                 useCache=FALSE)
 
 geneLocus$score<-1000
 
@@ -61,7 +62,8 @@ missing<-genes[!(genes %in% geneLocus[,symbolKey])]
 writeLines(missing, paste0(outFile, ".missing"))
 
 exonLocus<-getBM(attributes=c("exon_chrom_start", "exon_chrom_end", "ensembl_gene_id"),
-                 filters="ensembl_gene_id", values=geneLocus$ensembl_gene_id, mart=ensembl, uniqueRows=TRUE)
+                 filters="ensembl_gene_id", values=geneLocus$ensembl_gene_id, mart=ensembl, uniqueRows=TRUE,
+                 useCache=FALSE)
 
 exonLocus<-exonLocus[,c("ensembl_gene_id", "exon_chrom_start", "exon_chrom_end")]
 

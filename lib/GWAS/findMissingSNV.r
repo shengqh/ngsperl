@@ -20,8 +20,11 @@ rownames(riskDbsnp)<-riskDbsnp$V1
 mappedDbsnp<-getBM(attributes=c(
   "refsnp_id", "chr_name", "chrom_start", "chrom_end", "chrom_strand",
   "allele", "allele_1", "minor_allele"),
-  filters="snp_filter", values=riskDbsnp$V1,
-  mart=ensembl, uniqueRows=TRUE)
+  filters="snp_filter", 
+  values=riskDbsnp$V1,
+  mart=ensembl, 
+  uniqueRows=TRUE,
+  useCache=FALSE)
 mappedDbsnp<-mappedDbsnp[str_length(mappedDbsnp$chr_name) < 3,]
 rownames(mappedDbsnp)<-mappedDbsnp$refsnp_id
 mappedDbsnp<-mappedDbsnp[rownames(riskDbsnp),]

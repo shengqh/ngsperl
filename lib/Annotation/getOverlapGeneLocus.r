@@ -35,7 +35,9 @@ filterlist<-gsub("^chr","",filterlist)
 
 geneLocus=getBM(attributes = c("chromosome_name", "start_position", "end_position", symbolKey, "strand", "ensembl_gene_id"),
               filters = c("chromosomal_region","biotype"),
-              values = list(chromosomal_region=filterlist,biotype="protein_coding"), mart = ensembl)
+              values = list(chromosomal_region=filterlist,biotype="protein_coding"), 
+              mart = ensembl,
+              useCache=FALSE)
 
 geneLocus$score<-1000
 
@@ -52,7 +54,11 @@ bedFile<-paste0(outFile, ".bed")
 write.table(geneLocus, file=bedFile, row.names=F, col.names = F, sep="\t", quote=F)
 
 exonLocus<-getBM(attributes=c("exon_chrom_start", "exon_chrom_end", "ensembl_gene_id"),
-                 filters="ensembl_gene_id", values=geneLocus$ensembl_gene_id, mart=ensembl, uniqueRows=TRUE)
+                 filters="ensembl_gene_id", 
+                 values=geneLocus$ensembl_gene_id, 
+                 mart=ensembl, 
+                 uniqueRows=TRUE,
+                 useCache=FALSE)
 
 exonLocus<-exonLocus[,c("ensembl_gene_id", "exon_chrom_start", "exon_chrom_end")]
 write.table(exonLocus, file=paste0(bedFile, ".exon"), row.names=F, col.names = F, sep="\t", quote=F)

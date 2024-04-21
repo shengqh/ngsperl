@@ -31,7 +31,8 @@ if(datasetName %in% names(datasets)){
     getBM(attributes = c("chromosome_name", "start_position", "end_position", symbolColumn, "strand"),
           filters=symbolColumn,
           values = x,
-          mart=mart)})
+          mart=mart,
+          useCache=FALSE)})
   allgenepos <- do.call("rbind", allgenepos)
   rownames(allgenepos)<-allgenepos$ID
   colnames(allgenepos)<-c("chr",  "start",  "end", "gene", "strand")

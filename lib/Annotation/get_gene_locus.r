@@ -48,7 +48,8 @@ allgenepos <- lapply(genes, function(x){
   getBM(attributes = c("chromosome_name", "start_position", "end_position", biomart_symbolKey, "strand"),
         filters=biomart_symbolKey,
         values = x,
-        mart=mart)})
+        mart=mart,
+        useCache=FALSE)})
 
 gene_locus <- do.call("rbind", allgenepos)
 rownames(gene_locus)<-gene_locus$ID
