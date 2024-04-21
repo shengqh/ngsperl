@@ -1671,9 +1671,9 @@ my $mothurPipelineCodeFileOut = "$target_dir/$taskName/result/$projectName.mothu
 #softlink of
 #ln -s /scratch/cqs/zhaos/reference/mothur/silva/silva.seed_v132.pcr.align silva.v4.fasta
 #ln -s /scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/* .
-my $mothurSilvaFile = "/scratch/cqs/zhaos/reference/mothur/silva/silva.seed_v132.pcr.align";
-my $mothurTrainsetFastaFile = "/scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/trainset16_022016.pds.fasta";
-my $mothurTrainsetTaxFile = "/scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/trainset16_022016.pds.tax";
+my $mothurSilvaFile = "/data/cqs/references/mothur/silva/silva.seed_v132.pcr.align";
+my $mothurTrainsetFastaFile = "/data/cqs/references/mothur/trainset16_022016.pds/trainset16_022016.pds.fasta";
+my $mothurTrainsetTaxFile = "/data/cqs/references/mothur/trainset16_022016.pds/trainset16_022016.pds.tax";
 symlink ( $mothurSilvaFile, "$target_dir/$taskName/result/silva.v4.fasta" );
 symlink ( $mothurTrainsetFastaFile, "$target_dir/$taskName/result/trainset16_022016.pds.fasta" );
 symlink ( $mothurTrainsetTaxFile, "$target_dir/$taskName/result/trainset16_022016.pds.tax" );
