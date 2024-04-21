@@ -59,7 +59,7 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "aligner", "bwa" );
   if ( $def->{aligner} eq "bwa" ) {
-    initDefaultValue( $def, "bwa_option", "-K 100000000 -p -v 3" );
+    initDefaultValue( $def, "bwa_option", "-K 100000000 -v 3" );
   }
 
   initDefaultValue( $def, "mark_duplicates_use_tmp_folder", 0 );
