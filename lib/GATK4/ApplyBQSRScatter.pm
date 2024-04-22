@@ -82,7 +82,6 @@ fi
 gatk --java-options \"$java_option\" \\
   ApplyBQSR \\
   --add-output-sam-program-record \\
-  -AS \\
   -R ${ref_fasta} \\
   -I ${input_bam} \\
   --use-original-qualities \\
