@@ -168,7 +168,7 @@ fi
 
 if [[ -e ${unsorted_bam_file}.succeed ]]; then
   echo bwa_unmapped=`date`
-  samtools view -u  -f 4 -F264 $unsorted_bam_file  > ${sample_name}.tmps1.bam
+  samtools view -u  -f 4 -F 264 $unsorted_bam_file  > ${sample_name}.tmps1.bam
   samtools view -u -f 8 -F 260 $unsorted_bam_file  > ${sample_name}.tmps2.bam
   samtools view -u -f 12 -F 256 $unsorted_bam_file > ${sample_name}.tmps3.bam
 
