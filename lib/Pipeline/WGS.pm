@@ -256,26 +256,28 @@ sub add_bam_recalibration {
       check_program => 0,
       source_ref => "GatherSortedBamFiles",
       option => "
-echo sort bam to cram ...
+echo sort_bam_to_cram=`date`
 samtools sort -m 5G \\
   --output-fmt CRAM \\
   --reference $ref_fasta \\
   --threads 8 \\
   --write-index \\
-  -o __OUTPUT__ __FILE__
+  -o tmp.__OUTPUT__ __FILE__
 
 status=\$?
-if [[ \$status -ne 0 ]]; then
-  touch __NAME__.failed
-  rm -f __NAME__.succeed __OUTPUT__ __OUTPUT__.crai
-else
+if [[ \$status -eq 0 ]]; then
   touch __NAME__.succeed 
   rm -f __NAME__.failed 
-fi
 
+  mv tmp.__OUTPUT__ __OUTPUT__
+  mv tmp.__OUTPUT__.crai __OUTPUT__.crai
+else
+  touch __NAME__.failed
+  rm -f __NAME__.succeed tmp.__OUTPUT__ tmp.__OUTPUT__.crai
+fi
 ",
       output_file_prefix => ".cram",
-      output_ext => ".cram",
+      output_file_ext => ".cram",
       output_by_file => 0,
       use_tmp_folder => 0,
       sh_direct          => 0,
