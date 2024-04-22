@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='int_papaer_crs'
+outFile='SADIE_adipose'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_turner_lab/yangj22/20231031_integrate_a_paper_and_20230427_7114_8822_scRNA_hg38_vst2/result20231214/seurat_sct2_merge_dr0.5_3_choose/result/int_papaer_crs.final.rds'
+parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240422_composition/adipose_myeloid.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_turner_lab/yangj22/20231031_integrate_a_paper_and_20230427_7114_8822_scRNA_hg38_vst2/result20231214/seurat_sct2_merge_dr0.5_3_choose_DCATS/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240422_composition/dcats/result')
 
 ### Parameter setting end ###
 
@@ -26,20 +26,22 @@ opt=fread("fileList1.txt",header=F)
 myoptions=split(opt$V1, opt$V2)
 myoptions$by_sctransform=is_one(myoptions$by_sctransform)
 myassay=ifelse(myoptions$by_sctransform, "SCT", "RNA")
+reduction=myoptions$DCATS_reduction
+sample_column=myoptions$DCATS_sample_column
+celltype_column=myoptions$DCATS_celltype_column
+reference_celltype=myoptions$DCATS_reference_celltype
 
 obj <- readRDS(parFile1)
-obj <- FindNeighbors(obj,reduction="pca",dims=1:30,assay=myassay)
+ndim=ncol(Embeddings(obj, reduction = reduction))
 
-composition_data<-FetchData(obj, vars=c("orig.ident", myoptions$celltype_column))
-composition<-as.matrix(table(composition_data$orig.ident, composition_data[,myoptions$celltype_column]))
+obj <- FindNeighbors(obj,reduction=reduction,dims=1:ndim,assay=myassay)
+
+composition_data<-FetchData(obj, vars=c(sample_column, celltype_column))
+composition<-as.matrix(table(composition_data[,sample_column], composition_data[,celltype_column]))
 write.csv(composition, file=paste0(outFile,".ct_sample.csv"), row.names = T)
 
-reference_celltype=NULL
-if(myoptions$reference_celltype != ""){
-  if(!myoptions$reference_celltype %in% colnames(composition)){
-    stop(paste0(myoptions$reference_celltype, " must be in object column ", myoptions$celltype_column))
-  }
-  reference_celltype=myoptions$reference_celltype
+if(!reference_celltype %in% colnames(composition)){
+  stop(paste0(reference_celltype, " must be in object column ", celltype_column))
 }
 
 groups<-fread("fileList2.txt",header=F, data.table=F) %>% 
@@ -73,7 +75,7 @@ for (k in 1:length(comparisons)) {
   ## Percentage Boxplot
   box_width=7
   box_height=5
-  mtbl=melt(as.matrix(perc_mat))
+  mtbl=reshape2::melt(as.matrix(perc_mat))
   mtbl$Condition=comp_samples[mtbl$Var2,"Group"]
   mtbl=mtbl[order(mtbl$value, decreasing=TRUE),]
   mtbl$Var1=factor(mtbl$Var1, levels=rownames(perc_mat))
@@ -87,13 +89,14 @@ for (k in 1:length(comparisons)) {
   ggsave(cell_png, g, width=box_width, height=box_height, dpi=300, units="in", bg="white")
 
   design_mat <- data.frame(condition = comp_samples$Group)
-  obj_sub <- subset(obj, orig.ident %in% rownames(count_mat))
+  cells =rownames(obj@meta.data)[obj@meta.data[,sample_column] %in% rownames(count_mat)]
+  obj_sub <- subset(obj, cells=cells)
   
   print('knn_simMat')
   if(myoptions$by_sctransform){
-    knn_mat <- knn_simMat(obj_sub@graphs$SCT_snn,obj_sub@meta.data[,myoptions$celltype_column])
+    knn_mat <- knn_simMat(obj_sub@graphs$SCT_snn,obj_sub@meta.data[,celltype_column])
   }else{
-    knn_mat <- knn_simMat(obj_sub@graphs$RNA_snn,obj_sub@meta.data[,myoptions$celltype_column])
+    knn_mat <- knn_simMat(obj_sub@graphs$RNA_snn,obj_sub@meta.data[,celltype_column])
   }
   
   print('dcats_GLM')
@@ -114,3 +117,4 @@ for (k in 1:length(comparisons)) {
 saveRDS(results,file=paste0(outFile,".DCATS.rds"))
 combined=do.call(rbind, results)
 write.csv(combined, file=paste0(outFile,".DCATS.csv"), row.names = F)
+

@@ -14,7 +14,14 @@ library("kableExtra")
 library("SingleCellExperiment")
 source("reportFunctions.R")
 
-knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis', fig.width=12, fig.height = 7,tidy = TRUE, tidy.opts = list(comment = FALSE))
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=12, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
 ```
 
 ```{css, echo=FALSE}
@@ -24,8 +31,11 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 ```
 
 ```{r data, include=FALSE}
-options_table = read.table("fileList1.txt", sep="\t")
-myoptions = split(options_table$V1, options_table$V2)
+options_table = read.table("fileList1.txt", sep="\t") |>
+  dplyr::rename(Name=V2, Value=V1) |>
+  dplyr::select(Name, Value)
+
+myoptions = split(options_table$Value, options_table$Name)
 outFile=myoptions$task_name
 
 groups<-fread("fileList2.txt",header=F, data.table=F) %>% 
@@ -37,6 +47,10 @@ comparison_data<-fread("fileList3.txt", header=F, data.table=FALSE) %>%
   dplyr::rename("Group"=V1, "Comparison"=V3)
 
 comparisons <- unique(comparison_data$Comparison)
+```
+
+```{r}
+print_table(options_table, row.names=FALSE)
 ```
 
 ---

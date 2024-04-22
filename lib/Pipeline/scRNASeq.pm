@@ -662,33 +662,7 @@ sub getScRNASeqConfig {
 
             if($def->{perform_DCATS}){
               my $dcats_task = $choose_task . "_DCATS";
-              $config->{$dcats_task} = {
-                class                    => "CQS::UniqueR",
-                perform                  => 1,
-                target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $dcats_task,
-                rtemplate                => "../scRNA/scRNA_func.r,../scRNA/DCATS.r",
-                rReportTemplate          => "../scRNA/DCATS.rmd;reportFunctions.R",
-                run_rmd_independent => 1,
-                parameterFile1_ref => [$celltype_task, ".final.rds"],
-                parameterSampleFile1    => {
-                  task_name             => getValue( $def, "task_name" ),
-                  email                => getValue( $def, "email" ),
-                  by_sctransform        => getValue( $def, "by_sctransform" ),
-                  celltype_column => getValue( $def, "DCATS_celltype_column" ),
-                  reference_celltype => getValue( $def, "DCATS_reference_celltype" ),
-                },
-                parameterSampleFile2_ref => "groups",
-                parameterSampleFile3_ref => "pairs",
-                output_file_ext      => ".DCATS.rds",
-                no_docker => 1,
-                sh_direct            => 1,
-                pbs                  => {
-                  "nodes"     => "1:ppn=1",
-                  "walltime"  => "23",
-                  "mem"       => getValue($def, "seurat_mem")
-                },
-              };
-              push( @$summary, $dcats_task );
+              add_dcats($config, $def, $summary, $target_dir, $dcats_task, [$celltype_task, ".final.rds"]);
             }
 
             if(defined $def->{bubble_files}){
