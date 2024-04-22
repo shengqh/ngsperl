@@ -2969,7 +2969,7 @@ gatk --java-options \"-Dsamjdk.compression_level=2 -Xms${java_memory_size}g\" \\
   --METRICS_FILE __NAME__.duplicates_metrics.txt \\
   --VALIDATION_STRINGENCY SILENT \\
   --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500 \\
-  --SSUME_SORT_ORDER $sort_order \\
+  --ASSUME_SORT_ORDER $sort_order \\
   --CLEAR_DT false \\
   --ADD_PG_TAG_TO_READS false \\
   --CREATE_INDEX true
@@ -3897,7 +3897,7 @@ sub add_bamplot {
           biomart_dataset   => getValue($def, "biomart_dataset"),
           biomart_symbolKey => getValue($def, "biomart_symbolKey"),
           biomart_add_chr => getValue($def, "biomart_add_chr"),
-          biomart_add_prefix => getValue($def, "biomart_add_prefix"),
+          biomart_add_prefix => getValue($def, "biomart_add_prefix", ""),
 
           gene_names => getValue($def, "gene_names"),
           gene_shift => getValue($def, "gene_shift", 0),
