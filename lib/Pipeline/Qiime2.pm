@@ -29,7 +29,7 @@ sub initializeQiime2DefaultOptions {
 
   fix_task_name($def);
 
-  initDefaultValue( $def, "emailType", "ALL" );
+  initDefaultValue( $def, "emailType", "FAIL" );
   initDefaultValue( $def, "cluster",   "slurm" );
 
   initDefaultValue( $def, "perform_preprocessing", 1 );
