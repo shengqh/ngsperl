@@ -31,7 +31,7 @@ sub perform {
   my $buildver = $config->{$section}{buildver} or die "buildver is not defined in $section";
   $option = "-buildver $buildver $option";
 
-  my $clean_folder = get_option( $config, $section, "clean_folder", 0 );
+  my $clean_folder = get_option( $config, $section, "clean_folder", 1 );
   my $perform_splicing = get_option( $config, $section, "perform_splicing", 1 );
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 0 );
 
