@@ -1213,6 +1213,23 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     push @$summary, ($filter_name);
   }
 
+  if(getValue($def, "perform_no_maf_filter_annovar", 0)){
+    my $nofilter_prefix = "bwa_g4_refine_gatk4_SNV_noMAFfilter_";
+    my $nofilter_index_snv = "gatk4_SNV_noMAFfilter";
+
+    my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef, $nofilter_prefix, $def, $nofilter_index_snv );
+
+    if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+      my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $nofilter_prefix, $def, $nofilter_index_snv);
+
+      if ( defined $def->{annotation_genes} ) {
+        addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+      }
+
+      addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $nofilter_prefix, $def, $nofilter_index_snv)
+    }
+  }
+
   #print($filter_name);
 
   my $annovar_filter_geneannotation_name = undef;
