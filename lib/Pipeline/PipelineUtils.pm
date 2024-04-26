@@ -511,9 +511,9 @@ sub get_output_hash {
   $result->{usePearsonInHCA} = getValue($def, "use_pearson_in_hca", 0);
 
   if($is_DE){
-    $result->{showLabelInPCA} = getValue($def, "DE_show_label_PCA", getValue($def, "show_label_PCA", 1));
+    $result->{showLabelInPCA} = getValue($def, [ "DE_show_label_PCA", "showLabelInPCA", "show_label_PCA"], 1);
   }else{
-    $result->{showLabelInPCA} = getValue($def, "show_label_PCA", 1);
+    $result->{showLabelInPCA} = getValue($def, [ "showLabelInPCA", "show_label_PCA"], 1);
   }
 
   return ($result);
@@ -879,7 +879,7 @@ sub add_table_correlation {
     "draw_umap" => getValue($def, "draw_umap", 0),
     "use_green_red_color_in_hca" => getValue($def, "use_green_red_color_in_hca", 0),
     "top25cv_in_hca" => getValue($def, "top25cv_in_hca", 0),
-    "showLabelInPCA" => getValue($def, "show_label_PCA", 0),
+    "showLabelInPCA" => getValue($def, ["showLabelInPCA", "show_label_PCA"], 0),
     "outputPdf" => getValue($def, "outputPdf", 0),
     "outputPng" => getValue($def, "outputPng", 1),
     "outputTIFF" => getValue($def, "outputTIFF", 0),
