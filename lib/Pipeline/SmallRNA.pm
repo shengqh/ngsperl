@@ -654,13 +654,15 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
 
       if($def->{perform_host_tRNA_mismatch_vis}){
         my $mismatch_feature = getValue($def, "host_tRNA_mismatch_feature");
+        my $host_tRNA_mismatch_add_cca = getValue($def, "host_tRNA_mismatch_add_cca", 0);
+        my $host_tRNA_mismatch_add_cca_str = $host_tRNA_mismatch_add_cca ? "--add_cca" : "";
 
         my $tTask = "host_tRNA_mismatch_vis";
         $config->{$tTask} = {
           class                 => "CQS::ProgramWrapper",
           perform               => 1,
           target_dir            => $host_genome_dir . "/$tTask",
-          option                => "",
+          option                => $host_tRNA_mismatch_add_cca_str,
           interpretor           => "python3",
           program               => "../SmallRNA/extract_tRNA_read.py",
           no_prefix => 1,
@@ -692,6 +694,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             affiliation => getValue($def, "affiliation", ""),
             min_count => getValue($def, "host_tRNA_mismatch_min_count", 1),
             mismatch_feature => $mismatch_feature,
+            mismatch_add_cca => getValue($def, "host_tRNA_mismatch_add_cca", 1),
           },
           parameterSampleFile3_ref => [ "fastqc_count_vis", ".Reads.csv\$" ],
           parameterSampleFile4 => $config->{groups},
