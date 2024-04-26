@@ -3,12 +3,12 @@ outFile='SADIE_adipose'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240422_composition/adipose_myeloid.rds'
+parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240422_composition/1_prepare_data/adipose_myeloid.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240422_composition/dcats/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240422_composition/2_dcats/result')
 
 ### Parameter setting end ###
 
@@ -40,8 +40,10 @@ composition_data<-FetchData(obj, vars=c(sample_column, celltype_column))
 composition<-as.matrix(table(composition_data[,sample_column], composition_data[,celltype_column]))
 write.csv(composition, file=paste0(outFile,".ct_sample.csv"), row.names = T)
 
-if(!reference_celltype %in% colnames(composition)){
-  stop(paste0(reference_celltype, " must be in object column ", celltype_column))
+if(reference_celltype != ""){
+  if(!reference_celltype %in% colnames(composition)){
+    stop(paste0(reference_celltype, " must be in object column ", celltype_column))
+  }
 }
 
 groups<-fread("fileList2.txt",header=F, data.table=F) %>% 

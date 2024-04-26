@@ -47,7 +47,21 @@ comparison_data<-fread("fileList3.txt", header=F, data.table=FALSE) %>%
   dplyr::rename("Group"=V1, "Comparison"=V3)
 
 comparisons <- unique(comparison_data$Comparison)
+
+rfile = paste0(myoptions$task_name, ".r")
+params = fread(rfile, nrows=7, skip=1, sep="=", header=FALSE)
+myparams = split(params$V2, params$V1)
+obj_file=gsub("'", "", myparams$parFile1)
 ```
+
+# MD5 checksums
+
+```{r}
+md5_tbl=rbind(data.frame("file"=obj_file, "md5"=md5sum(obj_file)))
+print_table(md5_tbl, row.names=F)
+```
+
+# Parameters
 
 ```{r}
 print_table(options_table, row.names=FALSE)
