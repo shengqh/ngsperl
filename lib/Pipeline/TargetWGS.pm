@@ -184,15 +184,18 @@ sub getConfig {
   my $gatk_index_snv = "SNV_index";
   my $callvariants_vqsr_mode = getValue($def, "callvariants_vqsr_mode");
 
-  my $splitFastq = "bwa_00_splitFastq";
-  add_split_fastq_dynamic($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+  if(getValue($def, "perform_split_fastq", 0)){
+    my $splitFastq = "bwa_00_splitFastq";
+    add_split_fastq_dynamic($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
+    $source_ref = $splitFastq;
+  }
 
   my $bwa_option = getValue( $def, "bwa_option" );
   my $bwa_index = getValue( $def, "bwa_fasta" );
   my $rg_name_regex = "(.+)_ITER_";
 
   my $bwa_01_alignment = "bwa_01_alignment";
-  add_BWA_WGS($config, $def, $tasks, $target_dir, $bwa_01_alignment, $splitFastq, $rg_name_regex);
+  add_BWA_WGS($config, $def, $tasks, $target_dir, $bwa_01_alignment, $source_ref, $rg_name_regex);
 
   my $bwa_02_markduplicates = "bwa_02_markduplicates";
 
