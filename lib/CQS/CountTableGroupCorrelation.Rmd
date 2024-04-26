@@ -45,8 +45,12 @@ library(knitr)
 library(kableExtra)
 
 prefix_list = readLines("prefix_list.txt")
-group_tabl = fread("fileList2.txt", header=FALSE, data.table=FALSE)
-has_multiple_groups = length(unique(group_tabl$V2)) > 2
+if(file.exists("fileList2.txt")){
+  group_tabl = fread("fileList2.txt", header=FALSE, data.table=FALSE)
+  has_multiple_groups = length(unique(group_tabl$V2)) > 2
+}else{
+  has_multiple_groups = FALSE
+}
 
 result = ""
 for(prefix in prefix_list){
