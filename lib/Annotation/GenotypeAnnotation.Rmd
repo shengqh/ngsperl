@@ -1,0 +1,77 @@
+---
+title: "Genotype annotation report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+
+source("reportFunctions.R")
+
+knitr::opts_chunk$set(echo = FALSE, 
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results='hide', 
+                      fig.width=8, 
+                      fig.height=6,
+                      tidy=TRUE, 
+                      tidy.opts=list(comment=FALSE))
+```
+
+```{r}
+files=list.files(pattern="*.freq*", full.names=FALSE)
+taskname=unique(gsub(".freq.*", "", files))[1]
+cat("# Project name: ", taskname, "\n")
+```
+
+```{r}
+rmd_content = "";
+for(freq in c("0.001", "0.01", "0.1", "1.0")){
+  if(freq == "1.0"){
+    rmd_content = paste0(rmd_content, "# No filter\n\n")
+  }else{
+    rmd_content = paste0(rmd_content, "# MAF threshold: ", freq, "\n\nFilter data by maximum Minor Allele Frequency ", freq, " in any of ExAC, 1000g and gnomad\n\n")
+  }
+
+  prefix = paste0(taskname, ".freq", freq)
+  missense_file = paste0(prefix, ".filtered.missense.tsv")
+  if(file.exists(missense_file)){
+    rmd_content = paste0(rmd_content, "## missense\n\n")
+    fdata = fread(missense_file)
+    if(nrow(fdata) < 10000){
+      rmd_content = paste0(rmd_content, getPagedTable(missense_file, row.names=0))
+    }else{
+      rmd_content = paste0(rmd_content, "Too many records, you can look at file ", missense_file, " directly.\n\n")
+    }
+    top10_png = paste0(prefix, ".snv.missense.oncoprint.top10.tsv.png")
+    if(file.exists(top10_png)){
+      rmd_content = paste0(rmd_content, "\nTop 10 genes\n\n", getFigure(top10_png))
+    }
+  }
+
+  missense_gene_file = paste0(prefix, ".filtered.missense.geneFilter.txt")
+  if(file.exists(missense_file)){
+    rmd_content = paste0(rmd_content, "\n## missense of our genes\n\n", getPagedTable(missense_gene_file, row.names=0))
+    gene_png = paste0(prefix, ".snv.missense.oncoprint.tsv.png")
+    if(file.exists(gene_png)){
+      rmd_content = paste0(rmd_content, getFigure(gene_png))
+    }
+  }
+}
+rmd_file="freq.rmd"
+writeLines(rmd_content, rmd_file)
+```
+
+```{r child=rmd_file}
+```
+

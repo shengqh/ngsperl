@@ -4,6 +4,7 @@ package Annotation::GenotypeAnnotation;
 use strict;
 use warnings;
 use File::Basename;
+use File::Copy;
 use Hash::Merge qw( merge );
 use CQS::PBS;
 use CQS::ConfigUtils;
@@ -69,6 +70,17 @@ sub perform {
     die "File not found : " . $gene_filter_script;
   }
 
+  my $func_r = dirname(__FILE__) . "/../CQS/reportFunctions.R";
+  copy($func_r, $result_dir . "/" . basename($func_r)) or die "Copy failed: $!";
+
+  my $rmd = dirname(__FILE__) . "/GenotypeAnnotation.Rmd";
+  if ( !-e $rmd ) {
+    die "File not found : " . $rmd;
+  }
+
+  my $target_rmd = $result_dir . "/" . $task_name . ".missense.Rmd";
+  copy($rmd, $target_rmd) or die "Copy failed: $!";
+
   my $onco_options = get_option($config, $section, "onco_options");
   my $optionFileName = "onco_options.txt";
   my $optionFile = $result_dir . "/$optionFileName";
@@ -126,6 +138,12 @@ python3 $gene_filter_script -i $inputFile -o $geneFile -g $genes
 ";
     }
   }
+
+  my $target_base_rmd=basename($target_rmd);
+  print $pbs "
+R --vanilla -e \"library('rmarkdown');rmarkdown::render('$target_base_rmd')\"
+";
+
   $self->close_pbs( $pbs, $pbs_file );
 }
 
