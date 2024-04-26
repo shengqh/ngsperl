@@ -8,6 +8,13 @@ outputPrefix = args[2]
 sampleNamePattern=args[3]
 genelist=args[4:length(args)]
 
+if(!all(is.na(genelist))){
+  if(any(grepl(",", genelist))){
+    genelist = gsub(" ", "", genelist)
+    genelist = sort(unlist(strsplit(genelist, ",")))
+  }
+}
+
 #setwd("/scratch/cqs/shengq1/dnaseq/20161013_liuqi_gene_panel/bwa_refine_hc_gvcf_vqsr_annovar_filter/result/")
 #inputFile = "Adenoma.exac0.001.tsv"
 #outputPrefix = "Adenoma.exac0.001"

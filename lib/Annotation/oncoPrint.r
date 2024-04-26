@@ -5,12 +5,13 @@ library(ComplexHeatmap)
 args = commandArgs(trailingOnly=TRUE)
 
 if(length(args) == 0){
-  setwd('/scratch/cqs/fanr1/202111_ICARE_BEST/DNA/20211207_DNAseq_Analysis/bwa_g4_refine_gatk4_SNV_05_filter/result')
-  inputFile = "human_exomeseq.freq0.001.snv.missense.tsv"
-  outputFile = "human_exomeseq.freq0.001.snv.missense.top10.oncoprint.tsv"
+  setwd('/nobackup/h_cqs/shengq2/h_vivian_weiss/20240423_wes_11395/bwa_g4_refine_gatk4_SNV_05_filter/result/')
+  inputFile = "wes_11395_hg38.freq0.001.snv.missense.tsv"
   optionFile = "onco_options.txt"
-  #genelist = c("BRAF","RAS", "NTRK2", "CDKN2A", "CDKN2B", "NF1", "KMT2D", "RB1", "MMR", "ARID2", "ATM")
+  outputFile = "wes_11395_hg38.freq0.001.snv.missense.oncoprint.top10.tsv"
   genelist = NA
+  # outputFile = "wes_11395_hg38.freq0.001.snv.missense.oncoprint.tsv"
+  # genelist = "KRAS,TP53,SMAD4,CDKN2A,GNAS,PIK3CA,PTEN,CTNNB1,DAXX,ATRX"
 }else{
   inputFile = args[1]
   outputFile = args[2]
@@ -18,9 +19,17 @@ if(length(args) == 0){
   genelist = ifelse(length(args) >= 4, args[4:length(args)], NA)
 }
 
+if(!all(is.na(genelist))){
+  if(any(grepl(",", genelist))){
+    genelist = gsub(" ", "", genelist)
+    genelist = sort(unlist(strsplit(genelist, ",")))
+  }
+}
+
 cat("inputFile=", inputFile, "\n")
 cat("outputFile=", outputFile, "\n")
 cat("optionFile=", optionFile, "\n")
+cat("genelist=", genelist, "\n")
 
 options <- read.table(optionFile, sep="\t", stringsAsFactors = F, header=F)
 rownames(options)<-options$V2
@@ -67,7 +76,7 @@ if(length(samples) == 0){
   stop(paste0("No sample matches the pattern ", sampleNamePattern))
 }
 
-if(is.na(genelist)){
+if(all(is.na(genelist))){
   mdata<-mutdata[,c('Gene.refGene', cnames)]
   library(dplyr)
   mdata2 <- aggregate(. ~ Gene.refGene, data = mdata, max)
@@ -83,6 +92,7 @@ if(is.na(genelist)){
   }
   cat("top genes: ", genelist, "\n")
 }
+print(genelist)
 
 geneind<-mutdata$Gene.refGene %in% genelist
 
@@ -129,6 +139,8 @@ for (gene in genelist){
     oncoprint<-rbind(oncoprint,c(gene,value))
   }
 }
+
+print(oncoprint)
 colnames(oncoprint)<-c("Gene",colnames(mutdata_gene_samples)[sample_start:sample_end])
 write.table(oncoprint,file=outputFile,quote=F,row.names=F,sep="\t")
 
@@ -155,3 +167,4 @@ ht=oncoPrint(oncoprint, get_type = function(x) strsplit(x, ";")[[1]],
                                          labels = c("Missense  ", "Truncating  ")))
 draw(ht)
 dev.off()
+
