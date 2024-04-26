@@ -11,7 +11,7 @@ def accept_func(feature_name:str):
 # assert(not accept_func("miRNA:hsa-let-7a-5p"))
 # assert(accept_func("tRNA:hsa-let-7a-5p"))
 
-def extract(logger, input_list_file, output_file):
+def extract(logger, input_list_file, output_file, add_cca):
   xml_files = readFileMap(input_list_file)
   sample_names = sorted(xml_files.keys())
 
@@ -81,7 +81,9 @@ def extract(logger, input_list_file, output_file):
         fmap = feature_map[feature_name]
 
         short_feature_name = feature_name.replace("tRNA:","")
-        fseq_cca = fmap['sequence'] + "CCA"
+        fseq_cca = fmap['sequence']
+        if add_cca:
+          fseq_cca = fseq_cca + "CCA"
         fout.write(f"{sample_name}\tparent\t{short_feature_name}\t\t{fmap['sequence']}\t{len(fmap['sequence'])}\t{fseq_cca}\t{len(fseq_cca)}\t0\t0\n")
         for query_name in fmap['queries'].keys():
           qmap = fmap['queries'][query_name]
@@ -96,12 +98,14 @@ parser = argparse.ArgumentParser(description="Extract tRNA read from Xml",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 parser.add_argument('-i', '--input', action='store', nargs='?', help='Input count xml list file', required=NOT_DEBUG)
+parser.add_argument('--add_cca', action='store_true', help='Add CCA to parent sequence')
 parser.add_argument('-o', '--output', action='store', nargs='?', help="Output tRNA file", required=NOT_DEBUG)
 
 args = parser.parse_args()
 
 if DEBUG:
   args.input="/nobackup/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/intermediate_data/host_tRNA_mismatch_vis/result/9074_ES__fileList1.list"
+  args.add_cca=True
   args.output="/nobackup/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/intermediate_data/host_tRNA_mismatch_vis/result/9074_ES.tRNA.txt"
 print(args)
   
@@ -109,6 +113,6 @@ logger = logging.getLogger('extract_tRNA')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 if not os.path.exists(args.output):
-  extract(logger, args.input, args.output)
+  extract(logger, args.input, args.output, args.add_cca)
 
 logger.info("done.")
