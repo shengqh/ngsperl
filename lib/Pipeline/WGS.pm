@@ -16,7 +16,9 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performWGS 
+our %EXPORT_TAGS = ( 'all' => [qw(
+  initializeWGSDefaultOptions
+  performWGS 
   performWGSTask 
   add_bam_recalibration
   add_recalibrated_bam_to_gvcf
@@ -31,7 +33,7 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
-sub initializeDefaultOptions {
+sub initializeWGSDefaultOptions {
   my $def = shift;
 
   #check files
@@ -547,7 +549,7 @@ sub getConfig {
   my $target_dir = $def->{target_dir};
   create_directory_or_die($target_dir);
 
-  $def = initializeDefaultOptions($def);
+  $def = initializeWGSDefaultOptions($def);
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
   #merge summary and individual 
