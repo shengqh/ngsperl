@@ -144,10 +144,16 @@ sub result {
     my @result_files  = ();
     for my $sampleFile (@sample_files) {
       my $name = basename($sampleFile);
-      if ( $name =~ /gz$/ ) {
+      if($name =~ /\.gz$/ ) {
         $name = change_extension( $name, "" );
       }
-      $name = change_extension( $name, "_fastqc" );
+      if($name =~ /\.fq$/){
+        $name = change_extension( $name, "" );
+      }
+      if($name =~ /\.fastq$/){
+        $name = change_extension( $name, "" );
+      }
+      $name = $name . "_fastqc";
       push( @result_files, "${result_dir}/${sample_name}/${name}/fastqc_data.txt" );
     }
     push( @result_files, "${result_dir}/${sample_name}/fastqc.version" );
