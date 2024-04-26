@@ -17,7 +17,7 @@ our %EXPORT_TAGS = ( 'all' => [qw( start_variant_filter_pbs add_indel_snv_recali
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 sub start_variant_filter_pbs {
-  my ($classobj, $task_name, $pbs_dir, $pbs_desc, $log_dir, $thread, $cluster, $path_file, $result_dir, $init_command, $java_option, $faFile, $vcfFiles, $dbsnp_resource_vcf, $excess_het_threshold, $chr) = @_;
+  my ($classobj, $task_name, $pbs_dir, $pbs_desc, $log_dir, $thread, $cluster, $path_file, $result_dir, $init_command, $java_option, $faFile, $vcfFiles, $dbsnp_resource_vcf, $excess_het_threshold, $chr, $global_final_file) = @_;
 
   my $chrTaskName = (defined $chr) ? get_key_name($task_name, $chr) : $task_name;
   my $chrOption = (defined $chr) ? " -L $chr " : "";
@@ -34,7 +34,9 @@ sub start_variant_filter_pbs {
 
   my $log_desc = $cluster->get_log_description($log);
 
-  my $pbs = $classobj->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
+  my $check_final_file = defined $global_final_file? $global_final_file: $final_file;
+
+  my $pbs = $classobj->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $check_final_file, $init_command );
   print $pbs "  
 if [ ! -s $mergedFile ]; then
   echo CombineGVCFs=`date` 

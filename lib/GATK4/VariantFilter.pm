@@ -94,7 +94,7 @@ sub perform {
   my $fix_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf";
   my $final_file = $task_name . ".indels.snp.recal.pass.norm.nospan.vcf.gz";
 
-  my ($pbs_file, $pbs, $variant_filtered_vcf, $sites_only_variant_filtered_vcf, $rmlist) = start_variant_filter_pbs($self, $task_name, $pbs_dir, $pbs_desc, $log_dir, $thread, $cluster, $path_file, $result_dir, $init_command, $java_option, $faFile, $vcfFiles, $dbsnp_resource_vcf, $excess_het_threshold);
+  my ($pbs_file, $pbs, $variant_filtered_vcf, $sites_only_variant_filtered_vcf, $rmlist) = start_variant_filter_pbs($self, $task_name, $pbs_dir, $pbs_desc, $log_dir, $thread, $cluster, $path_file, $result_dir, $init_command, $java_option, $faFile, $vcfFiles, $dbsnp_resource_vcf, $excess_het_threshold, undef, $final_file);
 
   my ($indels_recalibration, $indels_tranches, $snps_recalibration, $snps_tranches, $recal_rmlist) = add_indel_snv_recalibrator_pbs($self, $config, $section, $pbs, $task_name, $sites_only_variant_filtered_vcf, $memory);
 
