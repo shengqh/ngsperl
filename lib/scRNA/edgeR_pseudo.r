@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P10940'
+outFile='adiopose_macrophages'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.final.rds'
-parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.meta.rds'
+parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240428_DE/1_prepare_data/adipose_macrophages.v4.rds'
+parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_bySample/result')
+setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240428_DE/2_DE_fold1.2/files_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -20,6 +20,7 @@ library(Seurat)
 library(testit)
 library(data.table)
 library(matrixStats)
+library(ggrepel)
 
 options_table<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
@@ -226,12 +227,31 @@ for(idx in c(1:nrow(designMatrix))){
 
     cat("  plotMDS", "\n")
     mds <- plotMDS(dge)
-    toplot <- data.frame(Dim1 = mds$x, Dim2 = mds$y, Group = design_data$DisplayGroup)
-    g<-ggplot(toplot, aes(Dim1, Dim2, colour = Group)) + geom_point() + theme_bw3() + theme(aspect.ratio=1) +
+    toplot <- data.frame(Dim1 = mds$x, Dim2 = mds$y, Sample = design_data$Sample, Group = design_data$DisplayGroup)
+    g<-ggplot(toplot, aes(Dim1, Dim2)) + 
+      geom_point(aes(colour = Group)) + 
+      geom_text_repel(aes(label=Sample), hjust=0, vjust=0) +
+      theme_bw3() + 
+      theme(aspect.ratio=1) +
       xlab(paste0("Leading logFC dim 1 (", round(mds$var.explained[1] * 10000)/100, "%)")) + 
       ylab(paste0("Leading logFC dim 2 (", round(mds$var.explained[2] * 10000)/100, "%)")) +
       scale_color_manual(values=group_colors)
-    ggsave(paste0(prefix, ".mds.png"), g, width=4, height=3, units="in", dpi=300, bg="white")
+    ggsave(paste0(prefix, ".mds.png"), g, width=6, height=5, units="in", dpi=300, bg="white")
+
+    #https://support.bioconductor.org/p/133907/#133920
+    # To make a PCA plot, simply use
+    # plotMDS(x, gene.selection="common")
+    pca <- plotMDS(dge, gene.selection="common")
+    toplot <- data.frame(Dim1 = mds$x, Dim2 = mds$y, Sample = design_data$Sample, Group = design_data$DisplayGroup)
+    g<-ggplot(toplot, aes(Dim1, Dim2)) + 
+      geom_point(aes(colour = Group)) + 
+      geom_text_repel(aes(label=Sample), hjust=0, vjust=0) +
+      theme_bw3() + 
+      theme(aspect.ratio=1) +
+      xlab(paste0("PC1 (", round(mds$var.explained[1] * 10000)/100, "%)")) + 
+      ylab(paste0("PC2 (", round(mds$var.explained[2] * 10000)/100, "%)")) +
+      scale_color_manual(values=group_colors)
+    ggsave(paste0(prefix, ".pca.png"), g, width=6, height=5, units="in", dpi=300, bg="white")
 
     cat("  estimateDisp", "\n")
     dge<-estimateDisp(dge,design=design)
