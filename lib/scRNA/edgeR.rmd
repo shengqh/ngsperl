@@ -38,9 +38,10 @@ myoptions<-read_file_map("fileList3.txt", do_unlist=FALSE)
 is_between_cluster = is_one(myoptions$bBetweenCluster)
 
 outFile<-myoptions$task_name
-file_prefix=ifelse( is_one(myoptions$DE_by_cell), 
-                    paste0(outFile, ".edgeR_by_cell/", outFile, "."), 
-                    paste0(outFile, ".edgeR_by_sample/", outFile, "."))
+folder_prefix = ifelse( is_one(myoptions$DE_by_cell), 
+                    paste0(outFile, ".edgeR_by_cell/"), 
+                    paste0(outFile, ".edgeR_by_sample/"))
+file_prefix= paste0(folder_prefix, outFile, ".")
 
 group_def<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
 group_def <- group_def %>% 
@@ -72,7 +73,7 @@ if(has_category){
 edgeR_files<-read.csv(paste0(outFile, ".edgeR.files.csv"))
 comparisons<-unique(edgeR_files$comparison)
 
-num_cell_file = paste0(file_prefix, ".num_cell.csv")
+num_cell_file = paste0(file_prefix, "num_cell.csv")
 if(file.exists(num_cell_file)){
   num_cell<-read.csv(num_cell_file)
 }else{
@@ -86,9 +87,15 @@ author:
   affiliation: `r myoptions$affiliation`
 ---
 
+# Group definition
+
 ```{r, echo=FALSE}
-print(kable_styling(kable(group_def, caption = "Group definition")))
-print(kable_styling(kable(comp_def, caption = "Comparison definition")))
+print_table(group_def, row.names=FALSE)
+```
+
+# Comparison definition
+```{r}
+print_table(comp_def, row.names=FALSE)
 ```
 
 
@@ -155,13 +162,13 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
       result<-paste0(result,"\n### Design table\n\n")
       result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
 
-      mds_png<-paste0(file_prefix, ct_comp_name, ".mds.png")
+      mds_png<-paste0(folder_prefix, ct_comp_name, ".mds.png")
       if(file.exists(mds_png)){
         result<-paste0(result,"\n### MDS\n\n")
         result<-paste0(result, getFigure(mds_png))
       }
 
-      heatmap_png<-paste0(file_prefix, ct_comp_name, ".log_cpm.heatmap.png")
+      heatmap_png<-paste0(folder_prefix, ct_comp_name, ".log_cpm.heatmap.png")
       if(file.exists(heatmap_png)){
         result<-paste0(result,"\n### heatmap\n\n")
         result<-paste0(result, getFigure(heatmap_png))
@@ -175,12 +182,12 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
         result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
         result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
 
-        top_gene_png<-paste0(file_prefix, ct_comp_name, ".top_1_gene.png")
+        top_gene_png<-paste0(folder_prefix, ct_comp_name, ".top_1_gene.png")
         if(file.exists(top_gene_png)){
           result<-paste0(result, getFigure(top_gene_png))
         }
 
-        volcano_png<-paste0(file_prefix, ct_comp_name, ".volcano.png")
+        volcano_png<-paste0(folder_prefix, ct_comp_name, ".volcano.png")
         if(file.exists(volcano_png)){
           result<-paste0(result, getFigure(volcano_png))
         }
