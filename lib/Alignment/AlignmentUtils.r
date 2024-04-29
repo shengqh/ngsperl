@@ -103,8 +103,6 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
   names(colors)=c("FALSE","TRUE")
 
   draw_figure<-function(final, filename){
-    height=max(1000, 60 * length(unique(final$Sample)))
-
     if(any(final$NoRead)){
       g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
         geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
@@ -117,7 +115,10 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
         theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
               axis.title = element_blank())
     }
-    ggsave(filename, g, width=3000, height=height, units="px", dpi=300, bg="white")
+
+    fontsize_inch = GeomLabel$default_aes$size * 0.0393701
+    height=max(4, fontsize_inch * length(unique(final$Sample)) + 1)
+    ggsave(filename, g, width=10, height=height, units="in", dpi=300, bg="white", limitsize = FALSE)
   }
 
   if(!is.na(rg_name_regex)){
