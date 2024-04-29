@@ -1052,7 +1052,7 @@ sub addEnhancer {
     perform                  => 1,
     suffix                   => "_corr",
     target_dir               => $config->{$enhancerVis}->{target_dir},
-    rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.R",
+    rtemplate                => "countTableVisFunctions.R,countTableGroupCorrelation.v2.R",
     output_file              => "parameterSampleFile1",
     output_file_ext          => ".Correlation.png",
     parameterSampleFile1_ref => [ $enhancerVis, ".tsv\$" ],
@@ -1659,39 +1659,32 @@ sub addApePhylogeneticTree {
 
 
 sub AddMothurPipeline {
-  my ( $config, $def, $summary,$target_dir,$files ) = @_;
+  my ( $config, $def, $summary,$target_dir, $source_def ) = @_;
 
 my $taskName="mothur_pipeline";
-my $projectName=$config->{general}{task_name};
 
-my $mothurPipelineCodeFile = "/home/zhaos/source/ngsperl/lib/Microbiome/mothurPipeline.code";
+my $projectName=getValue($def, "task_name");
+my $mothurPipelineCodeFile = getValue($def, "mothurPipelineCodeFile");
 #copy mothur code to current folder and add $batch file name to the beginning 
 my $mothurPipelineCodeFileOut = "$target_dir/$taskName/result/$projectName.mothurPipeline.code";
 
 #softlink of
 #ln -s /scratch/cqs/zhaos/reference/mothur/silva/silva.seed_v132.pcr.align silva.v4.fasta
 #ln -s /scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/* .
-my $mothurSilvaFile = "/data/cqs/references/mothur/silva/silva.seed_v132.pcr.align";
-my $mothurTrainsetFastaFile = "/data/cqs/references/mothur/trainset16_022016.pds/trainset16_022016.pds.fasta";
-my $mothurTrainsetTaxFile = "/data/cqs/references/mothur/trainset16_022016.pds/trainset16_022016.pds.tax";
+my $mothurSilvaFile = getValue($def, "mothurSilvaFile");
+my $mothurTrainsetFastaFile = getValue($def, "mothurTrainsetFastaFile");
+my $mothurTrainsetTaxFile = getValue($def, "mothurTrainsetTaxFile");
+
 symlink ( $mothurSilvaFile, "$target_dir/$taskName/result/silva.v4.fasta" );
 symlink ( $mothurTrainsetFastaFile, "$target_dir/$taskName/result/trainset16_022016.pds.fasta" );
 symlink ( $mothurTrainsetTaxFile, "$target_dir/$taskName/result/trainset16_022016.pds.tax" );
 
 #my $stability_batch = "$target_dir/$taskName/result/stability.files";
-my $sampleToFiles = "$target_dir/$taskName/result/$projectName.files";
-
-#make a sample to file table
-open FILES,">$sampleToFiles";
-for my $sample_name ( sort keys %{$config->{$files}} ) {
-  my @sample_files = @{ $config->{$files}->{$sample_name} };
-  print FILES $sample_name."\t".$sample_files[0]."\t".$sample_files[1]."\n";
-}
-close(FILES);
+my $sampleToFiles = "$target_dir/$taskName/result/${projectName}__fileList1.list";
 
 open CODESIN,"<$mothurPipelineCodeFile";
 open CODESOUT,">$mothurPipelineCodeFileOut";
-print CODESOUT "make.contigs(file=$sampleToFiles, processors=8) #make .trim.contigs";
+print CODESOUT "make.contigs(file='$sampleToFiles', processors=8) #make .trim.contigs";
 while(<CODESIN>) {
   print CODESOUT $_;
 }
@@ -1703,22 +1696,24 @@ $config->{$taskName} = {
     perform               => 1,
     target_dir            => "$target_dir/$taskName",
     #init_command          => "",
-    option                => "$mothurPipelineCodeFileOut
+    option                => "
+mothur $mothurPipelineCodeFileOut
+
 #__FILE__           
 #__OUTPUT__
 ",
     interpretor           => "",
     check_program         => 0,
     program               => "mothur",
-    source_ref            => 'files',
+    source_ref            => $source_def,
+    source_fileFirst => 0,
+    source_join_delimiter => "\t",
     source_arg            => "",
-#    output_to_same_folder => 0,
     output_arg            => "",
     output_to_folder      => 1,
     output_file_prefix    => "",
-    output_file_ext       => 
-    ".trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.shared;.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.0.03.cons.taxonomy",
-    output_other_ext      => "",
+    output_file_ext       => ".trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.shared",
+    output_other_ext      => ".trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.0.03.cons.taxonomy",
     sh_direct             => 0,
     pbs                   => {
       "nodes"     => "1:ppn=8",
@@ -1730,7 +1725,10 @@ $config->{$taskName} = {
 }
 
 sub AddMothurPipelineVis {
-  my ( $config, $def, $summary,$target_dir,$mothurPipelineTask,$groups ,$fastqQC_summary ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $mothurPipelineTask, $groups, $fastqQC_summary ) = @_;
+
+  die "mothurPipelineTask is required." if not defined $mothurPipelineTask;
+  die "fastqQC_summary is required." if not defined $fastqQC_summary;
 
   my $task = "${mothurPipelineTask}_vis";
   $config->{$task} = {
@@ -1752,7 +1750,7 @@ sub AddMothurPipelineVis {
         'walltime' => '10'
       },
   };
-  push @$summary, $task;
+  push @$tasks, $task;
   return($task);
 }
 
