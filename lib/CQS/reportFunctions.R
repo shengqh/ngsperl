@@ -173,9 +173,9 @@ output_paged_table<-function(tbl, rownames=TRUE, escape=TRUE, digits=0, nsmall=0
 
 printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
   if(row.names > 0){
-    tbl<-data.frame(fread(filepath, check.names=F), row.names=row.names)
+    tbl<-data.frame(fread(filepath, check.names=F), check.names=FALSE, row.names=row.names)
   }else{
-    tbl<-data.frame(fread(filepath, check.names=F))
+    tbl<-data.frame(fread(filepath, check.names=F), check.names=FALSE)
   }
 
   output_paged_table( tbl=tbl,
