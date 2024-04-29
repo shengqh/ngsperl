@@ -996,25 +996,41 @@ draw_heatmap_png<-function( filepath,
                             show_column_names,
                             save_rds=TRUE,
                             ...){
+  library(grid)
+
   if(save_rds){
     saveRDS(htdata, file=paste0(filepath, ".rds"))
   }  
 
   heatmap_size = init_heatmap_param(htdata, show_row_names=show_row_names, show_column_names=show_column_names)
+
   #print(paste0("heatmap_size=", heatmap_size, "\n"))
+
+  #by default, the font size of row names is 13.2
+  if(as.numeric(heatmap_size$heatmap_width) > 50){
+    fontsize=13.2 / ((as.numeric(heatmap_size$heatmap_width) - 2) / (50-2))
+    width=unit(50, "inch")
+  }else{
+    fontsize=13.2
+    width=heatmap_size$heatmap_width
+  }
+
+  column_names_gp = gpar(fontsize = fontsize)
 
   ht<-Heatmap(htdata,
               show_row_names=show_row_names,
               show_column_names=show_column_names,
               name=name,
               use_raster=FALSE,
-              heatmap_width=heatmap_size$heatmap_width,
-              heatmap_height=heatmap_size$heatmap_height,...)
+              heatmap_width=width,
+              heatmap_height=heatmap_size$heatmap_height,
+              column_names_gp = column_names_gp,
+              ...)
 
   ss = calc_ht_size(ht, merge_legends=TRUE )
   #print(paste0("calc_ht_size=", ss, "\n"))
 
-  png(filepath, width=ss[1], height=ss[2], units="in", res=300)
+  png(filepath, width=min(50, ss[1]), height=ss[2], units="in", res=300)
   draw(ht, merge_legends=TRUE)
   ignored=dev.off()
 }
@@ -1023,7 +1039,7 @@ save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, 
   for(format in outputFormat){  
     fileName<-paste0(file_prefix, ".", tolower(format))
     cat("saving", fileName, "\n")
-    ggsave(fileName, plot=plot, width=width_inch, height=height_inch, units="in", dpi=300, bg="white")
+    ggsave(fileName, plot=plot, width=width_inch, height=height_inch, units="in", dpi=300, bg="white", limitsize=FALSE)
   }
 }
 
