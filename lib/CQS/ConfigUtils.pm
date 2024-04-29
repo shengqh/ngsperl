@@ -1303,6 +1303,7 @@ sub save_parameter_sample_file {
 
     my $fileOnly = get_option( $config, $section, $key . "_fileonly", 0 );
     my $fileFirst = get_option( $config, $section, $key . "_fileFirst", 1 );
+    my $join_delimiter = get_option( $config, $section, $key . "_join_delimiter", "" );
 
     open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
     foreach my $sample_name (@orderedSampleNames) {
@@ -1325,14 +1326,27 @@ sub save_parameter_sample_file {
         }
       }
       elsif ( $refstr eq 'ARRAY' ) {
-        foreach my $subSampleFile (@$subSampleFiles) {
+        if($join_delimiter ne ""){
+          my $sample_str = join($join_delimiter, @$subSampleFiles);
           if ($fileOnly){
-            print $list $subSampleFile . "\n";
+            print $list $sample_str . "\n";
           }else{
             if($fileFirst){
-              print $list "$subSampleFile\t$sample_name\n";
+              print $list "$sample_str\t$sample_name\n";
             }else{
-              print $list "$sample_name\t$subSampleFile\n";
+              print $list "$sample_name\t$sample_str\n";
+            }
+          }
+        }else{
+          foreach my $subSampleFile (@$subSampleFiles) {
+            if ($fileOnly){
+              print $list $subSampleFile . "\n";
+            }else{
+              if($fileFirst){
+                print $list "$subSampleFile\t$sample_name\n";
+              }else{
+                print $list "$sample_name\t$subSampleFile\n";
+              }
             }
           }
         }
