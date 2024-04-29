@@ -481,8 +481,8 @@ for (i in 1:nrow(countTableFileAll)) {
       countVar25<-countNumVsd[rv>=quantile(rv)[4],]
       write.csv(countVar25, paste0(cur_file_prefix,".heatmap.top25variance.csv"))
   
-      countList = list(countNumVsd, countVar25)
-      names(countList)=c("all", "top25vars")
+      countList = list(countVar25, countNumVsd)
+      names(countList)=c("top25vars", "all")
     }else{
       countList = list(countNumVsd)
       names(countList)=c("all")
@@ -505,6 +505,8 @@ for (i in 1:nrow(countTableFileAll)) {
     cur_name=names(countList)[1]
     for(cur_name in names(countList)){
       cur_counts = countList[[cur_name]]
+
+      show_col_names=ncol(cur_counts) <= 200
       
       if (ncol(cur_counts)>1 & nrow(cur_counts)>1) {
         #pca plot
@@ -519,7 +521,7 @@ for (i in 1:nrow(countTableFileAll)) {
                           htdata=mat_scaled, 
                           name="zscore", 
                           show_row_names=FALSE, 
-                          show_column_names=TRUE,
+                          show_column_names=show_col_names,
                           show_row_dend=FALSE,
                           top_annotation=ha,
                           clustering_distance_columns=clustering_distance_columns )
@@ -545,8 +547,8 @@ for (i in 1:nrow(countTableFileAll)) {
       draw_heatmap_png( filepath=paste0(cur_file_prefix, ".Correlation.png"), 
                         htdata=countNumCor, 
                         name="Spearman", 
-                        show_row_names=TRUE, 
-                        show_column_names=TRUE,
+                        show_row_names=show_col_names, 
+                        show_column_names=show_col_names,
                         top_annotation=ha )
       
       if (hasMultipleGroup) {
