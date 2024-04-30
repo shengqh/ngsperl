@@ -1,0 +1,109 @@
+---
+title: "Cut&Run Analysis Report"
+date: "`r format(Sys.time())`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
+
+```{r setup, include=FALSE}
+library(XML)
+library(rlist)
+library(stringr)
+library(kableExtra)
+options(bitmapType='cairo')
+
+knitr::opts_chunk$set(
+  echo=FALSE,  
+  message=FALSE, 
+  warning=FALSE, 
+  results = 'asis')
+
+source('reportFunctions.R')
+source('Pipeline.R')
+
+myoptions<-read.table("fileList1.txt", header=FALSE, as.is=TRUE, fill=TRUE, sep="\t")
+myoptions<-split(myoptions$V1, myoptions$V2)
+task_name = myoptions$task_name
+
+task_df<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
+task_df<-split(task_df$V1, task_df$V2)
+```
+
+```{r}
+has_fastqc_raw="fastqc_raw_summary" %in% names(task_df)
+has_fastqc_trimmed="trimmomatic_fastqc_summary" %in% names(task_df)
+has_bowtie2_summary="bowtie2_summary" %in% names(task_df)
+has_macs2_narrow_count="macs2_narrow_count" %in% names(task_df)
+has_macs2_broad_count="macs2_broad_count" %in% names(task_df)
+has_homer_03_mergePeaks_count="homer_03_mergePeaks_count" %in% names(task_df)
+has_bamplot="bamplot" %in% names(task_df)
+```
+
+ 
+```{r,echo=FALSE,results='asis', eval = has_fastqc_raw}
+cat("\n# Sequencing Quality\n\n")
+prefix = paste0(task_df$fastqc_raw_summary, "/result/", task_name)
+include_graphics(paste0(prefix, ".FastQC.baseQuality.tsv.png"))
+include_graphics(paste0(prefix, ".FastQC.sequenceGC.tsv.png"))
+include_graphics(paste0(prefix, ".FastQC.reads.tsv.png"))
+include_graphics(paste0(prefix, ".FastQC.adapter.tsv.png"))
+```
+  
+```{r,echo=FALSE,results='asis', eval = has_fastqc_trimmed}
+prefix = paste0(task_df$trimmomatic_fastqc_summary, "/result/", task_name)
+include_graphics(paste0(prefix, ".FastQC.adapter.tsv.png"))
+```
+
+```{r,echo=FALSE,results='asis', eval = has_bowtie2_summary}
+cat("\n# Mapping Quality\n\n")
+prefix = paste0(task_df$bowtie2_summary, "/result/", task_name)
+include_graphics(paste0(prefix, ".chromosome.png"))
+include_graphics(paste0(prefix, ".reads.png"))
+```
+
+```{r,echo=FALSE,results='asis', eval = has_macs2_narrow_count}
+cat("\n# macs2 narrow\n\n")
+prefix = paste0(task_df$macs2_narrow_count, "/result/", task_name)
+print_table_from_file(paste0(prefix, ".txt"))
+```
+
+```{r,echo=FALSE,results='asis', eval = has_macs2_broad_count}
+cat("\n# macs2 broad\n\n")
+prefix = paste0(task_df$macs2_broad_count, "/result/", task_name)
+print_table_from_file(paste0(prefix, ".txt"))
+```
+
+```{r,echo=FALSE,results='asis', eval = has_homer_03_mergePeaks_count}
+cat("\n# HOMER callPeaks\n\n")
+prefix = paste0(task_df$homer_03_mergePeaks_count, "/result/", task_name)
+print_table_from_file(paste0(prefix, ".txt"))
+```
+
+```{r,echo=FALSE,results='asis', eval = has_bamplot}
+rmd_file="bamplot.rmd"
+rmd_content="\n# BAM plots\n\n"
+
+prefix = paste0(task_df$bamplot, "/result/", task_name)
+gff = fread(paste0(prefix, ".gff"))
+genes = gff$V2
+for(gene in genes){
+  rmd_content = paste0(rmd_content, "\n## ", gene, "\n\n")
+  rmd_content = paste0(rmd_content, getFigure(paste0(prefix, "_", gene, ".png")), "\n\n")
+}
+writeLines(rmd_content, rmd_file)
+```
+
+```{r child='bamplot.rmd', eval=has_bamplot}
+```

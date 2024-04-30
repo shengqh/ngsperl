@@ -52,6 +52,8 @@ sub initializeDefaultOptions {
   }else{
     initDefaultValue( $def, "treatments_auto",     1 );
   }
+
+  initDefaultValue( $def, "perform_report", 0 );
   
   return $def;
 }
@@ -296,7 +298,8 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
   my $bam_ref = [$bowtie2_task, ".bam\$" ];
   push @$summary_ref, ( $bowtie2_task );
 
-  add_alignment_summary($config, $def, $summary_ref, $target_dir, "${bowtie2_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bowtie2", ".log" ], ["bowtie2", ".chromosome.count"] );
+  my $summary_task = "${bowtie2_task}_summary";
+  add_alignment_summary($config, $def, $summary_ref, $target_dir, $summary_task, "../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bowtie2", ".log" ], ["bowtie2", ".chromosome.count"] );
 
   my $bam_files = get_result_file($config, $bowtie2_task, ".bam\$");
   my $treatment_samples = do_get_group_samplefile_map(getValue($def, "treatments"), $bam_files);
@@ -695,6 +698,60 @@ fi
 
   if($def->{perform_bamplot}){
     add_bamplot($config, $def, $summary_ref, $target_dir, $bam_ref);
+  }
+
+  if ( getValue( $def, "perform_report" ) ) {
+    my $task_dic = {};
+
+    if($config->{fastqc_raw_summary}){
+      $task_dic->{fastqc_raw_summary} = $config->{fastqc_raw_summary}{target_dir};
+    }
+
+    if($config->{trimmomatic_fastqc_summary}){
+      $task_dic->{trimmomatic_fastqc_summary} = $config->{trimmomatic_fastqc_summary}{target_dir};
+    }
+
+    if($config->{bowtie2_summary}){
+      $task_dic->{bowtie2_summary} = $config->{bowtie2_summary}{target_dir};
+    }
+
+    if($config->{macs2_broad_count}){
+      $task_dic->{macs2_broad_count} = $config->{macs2_broad_count}{target_dir};
+    }
+
+    if($config->{macs2_narrow_count}){
+      $task_dic->{macs2_narrow_count} = $config->{macs2_narrow_count}{target_dir};
+    }
+
+    if($config->{homer_03_mergePeaks_count}){
+      $task_dic->{homer_03_mergePeaks_count} = $config->{homer_03_mergePeaks_count}{target_dir};
+    }
+
+    if($config->{bamplot}){
+      $task_dic->{bamplot} = $config->{bamplot}{target_dir};
+    }
+
+    $config->{report} = {
+      class                      => "CQS::BuildReport",
+      perform                    => 1,
+      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
+      report_rmd_file            => "../Pipeline/Cutrun.rmd",
+      additional_rmd_files       => "reportFunctions.R;../Pipeline/Pipeline.R",
+      docker_prefix              => "report_",
+      parameterSampleFile1 => {
+        task_name => getValue($def, "task_name"),
+        email => getValue($def, "email"),
+        affiliation => getValue($def, "affiliation", ""),
+      },
+      parameterSampleFile2       => $task_dic,
+      sh_direct                  => 1,
+      pbs                        => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "1",
+        "mem"       => "10gb"
+      },
+    };
+    push( @$summary_ref, "report" );
   }
 
   $config->{"sequencetask"} = {
