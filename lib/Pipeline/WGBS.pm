@@ -225,7 +225,6 @@ sub getConfig {
       parameterSampleFile3_ref => "pairs",
       parameterSampleFile4_ref => "groups",
       parameterFile1_ref => [ "MethylKitCorr", ".filtered.cpg.meth.rds\$" ],
-      output_file_ext          => ".dmcpgs.txt",
       pbs                      => {
         "nodes"     => "1:ppn=" . $ncore,
         "walltime"  => getValue($def, "MethylKitDiff_walltime", "24"),
@@ -272,7 +271,7 @@ sub getConfig {
       perform_splicing => 0,
       remove_empty_source => 1,
       isBed      => 1,
-      source_ref => [ "MethylKitDiff", ".dmcpgs.txt\$" ],
+      source_ref => [ "MethylKitDiff", ".dmcpgs\$" ],
       pbs        => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "2",
@@ -343,7 +342,7 @@ sub getConfig {
     push( @copy_files, $methylkitcorr_task, ".pdf\$|.png\$|.rds\$" );
   }
   if (( defined $methylkitdiff_task ) && ( defined $config->{$methylkitdiff_task} )) {
-    push( @copy_files, $methylkitdiff_task, ".dmcpgs.txt\$" );
+    push( @copy_files, $methylkitdiff_task, ".dmcpgs\$" );
   }
   if (( defined $methylkitdiffannovar_task ) && ( defined $config->{$methylkitdiffannovar_task} )) {
     push( @copy_files, $methylkitdiffannovar_task, ".annovar.final.tsv\$" );
