@@ -470,7 +470,17 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
       program => "",
       check_program => 0,
       option     => "
+rm -f __NAME__.failed __NAME__.makeTagDirectory.failed __NAME__.makeTagDirectory.succeed
+
 makeTagDirectory __NAME__ $homer_makeTagDirectory_option __FILE__
+
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.makeTagDirectory.succeed
+else
+  echo \$status > __NAME__.makeTagDirectory.failed
+  mv __NAME__ __NAME__.failed
+fi
 ",
       source_ref => $bam_ref,
       sh_direct  => 0,
@@ -511,7 +521,16 @@ makeTagDirectory __NAME__ $homer_makeTagDirectory_option __FILE__
       program => "",
       check_program => 0,
       option => "
-findPeaks __FILE__ $homer_findPeaks_option $control_option -o __NAME__.peaks.txt
+findPeaks __FILE__ $homer_findPeaks_option $control_option -o tmp.__NAME__.peaks.txt
+
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch __NAME__.findPeaks.succeed
+  mv tmp.__NAME__.peaks.txt __NAME__.peaks.txt
+else
+  echo \$status > __NAME__.findPeaks.failed
+  rm -f tmp.__NAME__.peaks.txt
+fi
 ",
       source_ref => "tag_treatments",
       parameterSampleFile2_ref => $control_def,
@@ -601,23 +620,40 @@ findPeaks __FILE__ $homer_findPeaks_option $control_option -o __NAME__.peaks.txt
 echo mergePeaks=`date`
 mergePeaks $homer_mergePeaks_option \\
   __FILE__ \\
-  -matrix __NAME__ -venn __NAME__.venn.txt > __NAME__.all_dGiven.peaks.txt
+  -matrix __NAME__ \\
+  -venn __NAME__.venn.txt > tmp.__NAME__.all_dGiven.peaks.txt
 
-echo rename_names=`date`
-python $rename_1_py __NAME__.all_dGiven.peaks.txt __NAME__.venn.txt __NAME__.count.matrix.txt __NAME__.logPvalue.matrix.txt __NAME__.logRatio.matrix.txt
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \$status > __NAME__.mergePeaks.failed
+  rm -f tmp.__NAME__.all_dGiven.peaks.txt __NAME__.mergePeaks.succeed
+else
+  touch __NAME__.mergePeaks.succeed
+  rm -f __NAME__.mergePeaks.failed
+  mv tmp.__NAME__.all_dGiven.peaks.txt __NAME__.all_dGiven.peaks.txt
 
-awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}' __NAME__.all_dGiven.peaks.txt > __NAME__.all_dGiven.peaks.bed
+  echo rename_names=`date`
+  python $rename_1_py \\
+    __NAME__.all_dGiven.peaks.txt \\
+    __NAME__.venn.txt \\
+    __NAME__.count.matrix.txt \\
+    __NAME__.logPvalue.matrix.txt \\
+    __NAME__.logRatio.matrix.txt
 
-echo annotatePeaks_raw=`date`
-annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -raw -d \\
-  __FILE2__ > __NAME__.all_dGiven.peaks.raw.txt
+  awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}' __NAME__.all_dGiven.peaks.txt > __NAME__.all_dGiven.peaks.bed
 
-echo annotatePeaks_rpkm=`date`
-annotatePeaks.pl __NAME__.all_dGiven.peaks.txt $homer_genome -fpkm -d \\
-  __FILE2__ > __NAME__.all_dGiven.peaks.fpkm.txt
+  echo annotatePeaks_raw=`date`
+  annotatePeaks.pl __NAME__.all_dGiven.peaks.txt \\
+    $homer_genome -raw -d \\
+    __FILE2__ > __NAME__.all_dGiven.peaks.raw.txt
 
-python $rename_2_py __NAME__.all_dGiven.peaks.raw.txt __NAME__.all_dGiven.peaks.fpkm.txt
+  echo annotatePeaks_rpkm=`date`
+  annotatePeaks.pl __NAME__.all_dGiven.peaks.txt \\
+    $homer_genome -fpkm -d \\
+    __FILE2__ > __NAME__.all_dGiven.peaks.fpkm.txt
 
+  python $rename_2_py __NAME__.all_dGiven.peaks.raw.txt __NAME__.all_dGiven.peaks.fpkm.txt  
+fi
 ",
       source_ref => "homer_merge_groups",
       source_join_delimiter => " \\\n  ",
@@ -626,7 +662,8 @@ python $rename_2_py __NAME__.all_dGiven.peaks.raw.txt __NAME__.all_dGiven.peaks.
       parameterSampleFile2_join_delimiter => " \\\n  ",
       parameterSampleFile2_type => "array",
       output_arg => "",
-      output_file_ext => ".all_dGiven.peaks.txt,.all_dGiven.peaks.bed,.all_dGiven.peaks.fpkm.txt",
+      output_file_ext => ".all_dGiven.peaks.txt",
+      output_other_ext => ".all_dGiven.peaks.bed,.all_dGiven.peaks.fpkm.txt",
       output_to_same_folder => 1,
       can_result_be_empty_file => 0,
       no_output => 1,
