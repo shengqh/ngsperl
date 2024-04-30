@@ -83,17 +83,21 @@ sub perform {
   my $raw_file_list = get_raw_file_list( $config, $section, "parameterSampleFile1", 1 );
   my $raw_file_names = $config->{$section}{parameterSampleFile1_names};
 
-  if ( scalar(@$raw_file_list) != scalar(@$raw_file_names) ) {
-    print( "\nRaw file list = \n" . join( "\n", @$raw_file_list ) );
-    print( "\nRaw file names = \n" . join( "\n", @$raw_file_names ) );
-    die "File lists (" . scalar(@$raw_file_list) . ") is not equals to file names (" . scalar(@$raw_file_names) . ")";
-  }
+  if(defined($raw_file_names)){
+    if ( scalar(@$raw_file_list) != scalar(@$raw_file_names) ) {
+      print( "\nRaw file list = \n" . join( "\n", @$raw_file_list ) );
+      print( "\nRaw file names = \n" . join( "\n", @$raw_file_names ) );
+      die "File lists (" . scalar(@$raw_file_list) . ") is not equals to file names (" . scalar(@$raw_file_names) . ")";
+    }
 
-  open( my $list, ">$result_dir/fileList1.txt" ) or die "Cannot create $result_dir/fileList1.txt";
-  while ( my ( $index, $element ) = each(@$raw_file_list) ) {
-    print $list "$element\t" . $raw_file_names->[$index] . "\n";
+    open( my $list, ">$result_dir/fileList1.txt" ) or die "Cannot create $result_dir/fileList1.txt";
+    while ( my ( $index, $element ) = each(@$raw_file_list) ) {
+      print $list "$element\t" . $raw_file_names->[$index] . "\n";
+    }
+    close($list);
+  }else{
+    writeParameterSampleFile( $config, $section, $result_dir, 1 );
   }
-  close($list);
 
   writeParameterSampleFile( $config, $section, $result_dir, 2 );
   writeParameterSampleFile( $config, $section, $result_dir, 4, 1 );
@@ -106,29 +110,31 @@ sub perform {
   my $final_file = "${task_name}.html";
   my $final = $self->open_pbs( $final_pbs, $pbs_desc, $final_log_desp, $path_file, $result_dir );
 
-  my $copy_file_list = get_raw_file_list( $config, $section, "parameterSampleFile3" );
-  if ( scalar(@$copy_file_list) > 0 ) {
-    my $report_folder = create_directory_or_die("$result_dir/$task_name");
+  if(has_raw_files($config, $section, "parameterSampleFile3")){
+    my $copy_file_list = get_raw_file_list( $config, $section, "parameterSampleFile3" );
+    if ( scalar(@$copy_file_list) > 0 ) {
+      my $report_folder = create_directory_or_die("$result_dir/$task_name");
 
-    for my $copy_file ( sort @$copy_file_list ) {
-      my $to_folder = $task_name;
-      #print($copy_file . "\n");
-      if ( $copy_file =~ /.txt.html/ ) {
-        $to_folder = $task_name;
-        #print("  " . $to_folder . "\n");
-      } elsif ( $copy_file =~ /_WebGestalt/ ) {
-        create_directory_or_die("$report_folder/webGestalt");
-        $to_folder = "$task_name/webGestalt";
-      } elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk$/ ) {
-        create_directory_or_die("$report_folder/gsea");
-        $to_folder = ("$task_name/gsea");
-      } elsif ( $copy_file =~ /_homer/ ) {
-        my $treatment=basename(dirname($copy_file));
-        create_directory_or_die("$report_folder/homer");
-        create_directory_or_die("$report_folder/homer/$treatment");
-        $to_folder = ("$task_name/homer/$treatment");
+      for my $copy_file ( sort @$copy_file_list ) {
+        my $to_folder = $task_name;
+        #print($copy_file . "\n");
+        if ( $copy_file =~ /.txt.html/ ) {
+          $to_folder = $task_name;
+          #print("  " . $to_folder . "\n");
+        } elsif ( $copy_file =~ /_WebGestalt/ ) {
+          create_directory_or_die("$report_folder/webGestalt");
+          $to_folder = "$task_name/webGestalt";
+        } elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk$/ ) {
+          create_directory_or_die("$report_folder/gsea");
+          $to_folder = ("$task_name/gsea");
+        } elsif ( $copy_file =~ /_homer/ ) {
+          my $treatment=basename(dirname($copy_file));
+          create_directory_or_die("$report_folder/homer");
+          create_directory_or_die("$report_folder/homer/$treatment");
+          $to_folder = ("$task_name/homer/$treatment");
+        }
+        print $final "cp -r -u $copy_file $to_folder \n";
       }
-      print $final "cp -r -u $copy_file $to_folder \n";
     }
   }
   print $final "
