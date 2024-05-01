@@ -1295,7 +1295,7 @@ fi
       if ( !defined $suffix ) {
         $suffix = "";
       }
-      my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : "";
+      my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : ".count";
 
       my $titles = { "all" => "" };
       if ( is_not_array($count_file_ref) ) {    #count file directly
@@ -1318,7 +1318,7 @@ fi
       for my $title ( keys %$titles ) {
         push( @report_files,
           "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".density.png", 
-          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".count.heatmap.png",
+          "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".heatmap.png",
           "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".PCA.png" );
         push( @report_names, 
           $title . "_correlation_density", 
