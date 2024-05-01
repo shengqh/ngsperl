@@ -583,6 +583,7 @@ sub addDEseq2 {
     cluster                      => $def->{cluster},
     export_significant_gene_name => $def->{DE_export_significant_gene_name},
     cooksCutoff                  => $def->{DE_cooksCutoff},
+    covariance_file => $def->{covariance_file},
     independentFiltering => $def->{DE_independentFiltering},
     covariance_name_index        => getValue($def, "covariance_name_index", 0),
     $libraryFileKey              => $libraryFile,
@@ -615,7 +616,6 @@ sub addDEseq2 {
       $config->{$taskName}{class} = "Comparison::DESeq2contrast";
     }elsif(defined $def->{covariance_file}){
       $config->{$taskName}{class} = "Comparison::DESeq2covariance";
-      $config->{$taskName}{covariance_file} = $def->{covariance_file};
     }else{
       $config->{$taskName}{class} = "Comparison::DESeq2";
     }

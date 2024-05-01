@@ -143,10 +143,17 @@ sub perform {
     }
   }
 
+  my $cov_table = undef;
+  my $cov_names = undef;
+  my $covariate_file = $config->{$section}{"covariance_file"};
+  if(defined $covariate_file){
+    ($cov_table, $cov_names) = read_table($covariate_file, get_option($config, $section, "covariance_name_index", 0));
+  }
+
   my $designfilename = "${task_name}.define";
   my $designfile     = "$result_dir/$designfilename";
   open( my $df, ">$designfile" ) or die "Cannot create $designfile";
-  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tpairOnlyCovariant\tcontrast\n";
+  print $df "ComparisonName\tCountFile\tConditionFile\tReferenceGroupName\tSampleGroupName\tComparisonTitle\tpairOnlyCovariant\tdesignFormula\tcontrast\n";
 
   for my $comparisonIndex ( 0 .. $#comparison_names ) {
     my $comparison_name = $comparison_names[$comparisonIndex];
@@ -166,17 +173,57 @@ sub perform {
     if ( !defined $contrast ) {
       die "Definition of " . $comparison_name . " should have contrast defined!";
     }
+    if(is_array($contrast)) {
+      die "contrast should be string, current is array for comparison " . $comparison_name;
+    }
+
+    my $designFormula = "";
+    if(defined $gNames->{"designFormula"}){
+      $designFormula = $gNames->{"designFormula"};
+      if(is_array($designFormula)){
+        die "designFormula should be string, current is array for comparison " . $comparison_name;
+      }
+    }
 
     for my $key ( sort keys %$gNames ) {
       next if ( $key eq "groups" );
       next if ( $key eq "contrast" );
       next if ( $key eq "pairOnlyCovariant" );
+      next if ( $key eq "designFormula" );
+      next if ( $key eq "covariances" );
+      
       $covariances->{$key} = $gNames->{$key};
+    }
+
+    my @all_samples = ();
+    for my $gname (@group_names){
+      if(!defined($groups->{$gname})){
+        die "Cannot find group $gname in groups definition!";
+      }
+      my @samples = @{ $groups->{$gname} };
+      push(@all_samples, @samples);
+    }
+
+    if(defined $gNames->{covariances}){
+      die "no covariance_file defined, but having covariances in comparison definition." if !defined $covariate_file;
+      my $covariance_names = $gNames->{covariances};
+      for my $cov_name (@$covariance_names){
+        if(!defined $cov_table->{$all_samples[0]}{$cov_name}){
+          die "Cannot find covariance column $cov_name in $covariate_file!";
+        }
+        my $cov_values = [];
+        for my $sample (@all_samples){
+          push(@$cov_values, $cov_table->{$sample}{$cov_name});
+        }
+
+        $covariances->{$cov_name} = $cov_values;
+      }
     }
 
     if (defined $gNames->{"pairOnlyCovariant"}) {
       $pairOnlyCovariant = $gNames->{pairOnlyCovariant};
     }
+
     my @covariances_keys = sort keys %$covariances;
 
     #print( Dumper(@group_names) );
@@ -212,21 +259,23 @@ sub perform {
     else {
       print $cd "Sample\tCondition\n";
     }
+
+    my $cov_index = 0;
     for my $gname (@group_names){
       if(!defined($groups->{$gname})){
         die "Cannot find group $gname in groups definition!";
       }
       my @samples = @{ $groups->{$gname} };
 
-      for my $i ( 0 .. $#samples ) {
-        my $sname = $samples[$i];
+      for my $sname ( @samples ) {
         print $cd "${sname}\t${gname}";
         if ( scalar(@covariances_keys) > 0 ) {
           for my $key (@covariances_keys) {
-            print $cd "\t" . $covariances->{$key}[$i];
+            print $cd "\t" . $covariances->{$key}[$cov_index];
           }
         }
         print $cd "\n";
+        $cov_index = $cov_index + 1;
       }
     }
     close $cd;
@@ -245,7 +294,7 @@ sub perform {
     #print(@gsamples, "\n");
     my $gsamples_str = join(",", @gsamples);
 
-    print $df "$comparison_name\t$curcountfile\t$cdfile\t$gcontrol\t$gsamples_str\t$comparisonTitle\t$pairOnlyCovariant\t$contrast\n";
+    print $df "$comparison_name\t$curcountfile\t$cdfile\t$gcontrol\t$gsamples_str\t$comparisonTitle\t$pairOnlyCovariant\t$designFormula\t$contrast\n";
   }
   close($df);
 
