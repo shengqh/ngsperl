@@ -16,7 +16,7 @@ def extract(logger, input_list_file, output_file, add_cca):
   sample_names = sorted(xml_files.keys())
 
   with gzip.open(output_file, "wt") as fout:
-    fout.write("sample\tcategory\tfeature_name\tquery_name\tmapped_sequence\tmapped_length\toriginal_sequence\toriginal_length\tmap_offset\tquery_count\n")
+    fout.write("sample\tcategory\tfeature_name\tquery_name\tmapped_sequence\tmapped_length\toriginal_sequence\toriginal_length\tmap_offset\tquery_count\tnum_mismatch\n")
 
     icount = 0
     for sample_name in sample_names:
@@ -69,6 +69,7 @@ def extract(logger, input_list_file, output_file, add_cca):
                 "sample": sample_name,
                 "offset": query_node.get('offset'),
                 "query_count": query_node.get('query_count'),
+                "num_mismatch": query_node.get('nmi'),
                 "sequence": qseq
               }
 
@@ -84,12 +85,12 @@ def extract(logger, input_list_file, output_file, add_cca):
         fseq_cca = fmap['sequence']
         if add_cca:
           fseq_cca = fseq_cca + "CCA"
-        fout.write(f"{sample_name}\tparent\t{short_feature_name}\t\t{fmap['sequence']}\t{len(fmap['sequence'])}\t{fseq_cca}\t{len(fseq_cca)}\t0\t0\n")
+        fout.write(f"{sample_name}\tparent\t{short_feature_name}\t\t{fmap['sequence']}\t{len(fmap['sequence'])}\t{fseq_cca}\t{len(fseq_cca)}\t0\t0\t0\n")
         for query_name in fmap['queries'].keys():
           qmap = fmap['queries'][query_name]
           trimmed_sequence = query_name.split("CLIP_")[1]
           original_sequence = qmap['sequence'] + trimmed_sequence
-          fout.write(f"{sample_name}\tread\t{short_feature_name}\t{query_name}\t{qmap['sequence']}\t{len(qmap['sequence'])}\t{original_sequence}\t{len(original_sequence)}\t{qmap['offset']}\t{qmap['query_count']}\n")
+          fout.write(f"{sample_name}\tread\t{short_feature_name}\t{query_name}\t{qmap['sequence']}\t{len(qmap['sequence'])}\t{original_sequence}\t{len(original_sequence)}\t{qmap['offset']}\t{qmap['query_count']}\t{qmap['num_mismatch']}\n")
 
 DEBUG = False
 NOT_DEBUG= not DEBUG
