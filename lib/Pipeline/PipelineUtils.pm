@@ -1680,7 +1680,7 @@ symlink ( $mothurTrainsetFastaFile, "$target_dir/$taskName/result/trainset16_022
 symlink ( $mothurTrainsetTaxFile, "$target_dir/$taskName/result/trainset16_022016.pds.tax" );
 
 #my $stability_batch = "$target_dir/$taskName/result/stability.files";
-my $sampleToFiles = "$target_dir/$taskName/result/${projectName}__fileList1.list";
+my $sampleToFiles = "$target_dir/$taskName/result/${projectName}.files";
 
 open CODESIN,"<$mothurPipelineCodeFile";
 open CODESOUT,">$mothurPipelineCodeFileOut";
@@ -1697,6 +1697,9 @@ $config->{$taskName} = {
     target_dir            => "$target_dir/$taskName",
     #init_command          => "",
     option                => "
+rm -f ${projectName}.files
+ln -s ${projectName}__fileList1.list ${projectName}.files
+
 mothur $mothurPipelineCodeFileOut
 
 #__FILE__           
@@ -1704,7 +1707,7 @@ mothur $mothurPipelineCodeFileOut
 ",
     interpretor           => "",
     check_program         => 0,
-    program               => "mothur",
+    program               => "",
     source_ref            => $source_def,
     source_fileFirst => 0,
     source_join_delimiter => "\t",
