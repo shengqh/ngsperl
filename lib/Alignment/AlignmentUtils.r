@@ -2,7 +2,7 @@ require("ggplot2")
 require("data.table")
 require("stringr")
 
-draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
+draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA, remove_chrM_genes=FALSE) {
   filelist = read.table(listFile, sep="\t", header=F, stringsAsFactors = F)
 
   missing = c()
@@ -60,6 +60,10 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA) {
     final=rbind(final, subdata)
   }
   all_chroms<-sort(unique(all_chroms))
+  if(remove_chrM_genes){
+    all_chroms=all_chroms[all_chroms != "chrM"]
+  }
+
   final=final[final$Chrom %in% all_chroms,]
 
   if(length(missing) > 0){

@@ -61,6 +61,8 @@ sub perform {
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
+  my $remove_chrM_genes = get_option( $config, $section, "remove_chrM_genes", 0 );
+
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
   my $filelist = $self->get_file( $pbs_dir, $task_name, ".filelist" );
@@ -73,6 +75,7 @@ sub perform {
   close(FL);
 
   my $result_file = $self->get_file( ".", $task_name, ".count", 0 );
+  my $protein_coding_file = $self->get_file( ".", $task_name, ".proteincoding.count", 0 );
 
   my $pbs_file = $self->get_pbs_filename( $pbs_dir, $task_name );
   my $pbs_name = basename($pbs_file);
@@ -82,7 +85,7 @@ sub perform {
 
   my $final_file = $result_file;  
   if ($output_proteincoding_gene) {
-    $final_file = $self->get_file( ".", $task_name, ".proteincoding.count", 0 );
+    $final_file = $protein_coding_file;
   }
 
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
@@ -90,13 +93,13 @@ sub perform {
   print $pbs "
 cqstools data_table $option -o $result_file -l $filelist $mapoption 
 
-R --vanilla -f $cpm_r --args $result_file $result_file
+R --vanilla -f $cpm_r --args $result_file $result_file $remove_chrM_genes
+
+if [[ -e $protein_coding_file ]]; then
+  R --vanilla -f $cpm_r --args $protein_coding_file $protein_coding_file $remove_chrM_genes
+fi
+
 ";
-  if ($output_proteincoding_gene) {
-  print $pbs "
-R --vanilla -f $cpm_r --args $final_file $final_file
-";
-  }
 
   $self->close_pbs( $pbs, $pbs_file );
 }

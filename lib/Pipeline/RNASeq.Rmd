@@ -230,6 +230,15 @@ print(kable(table, caption=tabRef("geneSummary", paste0("The summary of ", reads
 include_graphics(file_map$feature_chromosome_png)
 ```
 
+```{r, eval=has_feature_chromosome_png, , fig.align="center", fig.align="center", fig.cap=figRef("feature_no_chrM_chromosome_png", "The reads mapped to genes in each chromosome (no chrM) in each sample")}
+remove_chrM_genes<-as.numeric(rnaseqOptions["remove_chrM_genes", 1])
+if(remove_chrM_genes){
+  cat("\n\n<mark>Genes on mitochondrial chromosome (chrM) were removed from the down-stream analysis.</mark>\n\n")
+  no_chrM_png = gsub(".chromosome.png", ".no_chrM.chromosome.png", file_map$feature_chromosome_png)
+  include_graphics(no_chrM_png)
+}
+```
+
 ## Expression density of samples
 
 ```{r correlation_density,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("correlation_density", "Expression density distribution of each sample", trunk.eval=is_file_exists(file_map$all_correlation_density))}

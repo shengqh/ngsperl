@@ -1,15 +1,16 @@
 rm(list=ls()) 
-outFile='Tempus'
+outFile='AHA_Obesity_EV'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile5='fileList5.txt'
+parSampleFile6='fileList6.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/jennifer_pietenpol_projects/20240425_brian_rnaseq_hg38/star_featurecount_summary/result')
+setwd('/nobackup/shah_lab/shengq2/20240508_AHA_Emeli_obesity_EV/20240508_rnaseq_hg38/star_featurecount_summary/result')
 
 ### Parameter setting end ###
 
@@ -21,6 +22,13 @@ library(ggplot2)
 
 if (parSampleFile3 != '') {
   draw_chromosome_count(parSampleFile3, outFile)
+  if(exists('parSampleFile6')){
+    opt = read.table(parSampleFile6, sep="\t", header=F, stringsAsFactors = F)
+    remove_chrM_genes = opt$V1[1] == "1"
+    if(remove_chrM_genes){
+      draw_chromosome_count(parSampleFile3, paste0(outFile, ".no_chrM"), remove_chrM_genes=TRUE)
+    }
+  }
 }
 
 if (parSampleFile1 != '') {
@@ -120,4 +128,11 @@ if (parSampleFile2 != ''){
 
 if(exists('parSampleFile5')){
   draw_chromosome_count(parSampleFile5, paste0(outFile, ".gene"))
+  if(exists('parSampleFile6')){
+    opt = read.table(parSampleFile6, sep="\t", header=F, stringsAsFactors = F)
+    remove_chrM_genes = opt$V1[1] == "1"
+    if(remove_chrM_genes){
+      draw_chromosome_count(parSampleFile5, paste0(outFile, ".gene.no_chrM"), remove_chrM_genes=TRUE)
+    }
+  }
 }

@@ -512,6 +512,7 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
       target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "genetable",
       option                    => "-k 0 -v $count_table_column -e --fillMissingWithZero",
       source_ref                => $count_table_ref,
+      remove_chrM_genes => getValue($def, "remove_chrM_genes", 0),
       output_proteincoding_gene => $def->{perform_proteincoding_gene},
       name_map_file             => $name_map_file,
       sh_direct                 => 1,
@@ -1428,6 +1429,7 @@ fi
       "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ],
       "task_name" => $taskName,
       "out.width" => getValue($def, "report.out.width", "80%"),
+      "remove_chrM_genes" => getValue( $def, "remove_chrM_genes", 0 ),
     };
 
     if($def->{introduction_rmd}){
