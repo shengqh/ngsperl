@@ -105,6 +105,7 @@ if (visLayoutFileList!="") {
 } else {
   allPositionByGroup$Group<-factor(allPositionByGroup$Group,levels=groups)
 }
+
 featureNumber<-length(unique(allPositionByGroup$Feature))
 
 if (visLayoutFileList!="") {
@@ -197,6 +198,8 @@ if (visLayoutFileList!="") {
   groupCount=length(unique(allPositionByGroup$Group))
   width=max(groupCount*2000, height) + 3000
 }
+
+write.csv(allPositionByGroup, file=paste0(outFile,".allPositionBar.png.csv"),row.names=F)
 
 ncols<-ifelse(length(unique(allPositionByGroup$Feature))>=5, 2, 1)
 maxPos<-max(allPositionByGroup$Position)
