@@ -1385,7 +1385,9 @@ sub addEdgeRTask {
 
     $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
 
-    $groups = getValue( $def, "groups" );
+    if(!defined $def->{group_column}){
+      $groups = getValue( $def, "groups" );
+    }
     $pairs  = getValue( $def, "pairs" );
   }
   $rCodeDic->{"cluster_name"} = $curClusterName;
