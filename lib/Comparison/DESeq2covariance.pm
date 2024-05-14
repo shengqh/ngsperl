@@ -30,6 +30,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
+  copy(dirname(__FILE__) . "/../CQS/countTableVisFunctions.R",  "$result_dir/countTableVisFunctions.R");
+
   #print("writeParameterSampleFile in DESeq2\n");
   writeParameterSampleFile( $config, $section, $result_dir, 1 );
 
