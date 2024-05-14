@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='adiopose_macrophages'
+outFile='coronary'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240428_DE/1_prepare_data/adipose_macrophages.v4.rds'
+parFile1='/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/T01_prepare_data/coronary.DE.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240428_DE/2_DE_fold1.2/files_edgeR_inCluster_bySample/result')
+setwd('/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/T02_DE_fold1.2_coronary/bulk_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -30,6 +30,8 @@ foldChange<-as.numeric(myoptions$foldChange)
 useRawPvalue<-is_one(myoptions$useRawPvalue)
 cluster_name=myoptions$cluster_name
 min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
+
+group_column=myoptions$group_column
 
 comparisons<-read.table(parSampleFile2, stringsAsFactors = F, fill=TRUE, header=F)
 if(ncol(comparisons) == 3){
@@ -98,8 +100,22 @@ if(1){
     comp_options = split(comp_groups$Value, comp_groups$Key)
     
     if("groups" %in% names(comp_options)){
-      sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
-      colnames(sampleGroups)<-c("Sample","Group")
+      if(!is.null(myoptions$group_column)){
+        if(myoptions$group_column != ""){
+          if(!myoptions$group_column %in% colnames(obj@meta.data)){
+            stop(paste0("group_column ", myoptions$group_column, " not found in meta.data of ", parFile1))
+          }
+        }
+
+        sampleGroups = unique(obj@meta.data[,c("orig.ident", myoptions$group_column)]) %>%
+          dplyr::rename(Sample=orig.ident, Group=!!myoptions$group_column) %>%
+          tibble::remove_rownames() %>%
+          dplyr::arrange(Group, Sample)
+        write.table(sampleGroups, file="fileList1.txt", sep="\t", row.names=F, col.names=F, quote=F)
+      }else{
+        sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
+        colnames(sampleGroups)<-c("Sample","Group")
+      }
       groups<-comp_options$groups
       controlGroup<-groups[1]
       sampleGroup<-groups[2]
