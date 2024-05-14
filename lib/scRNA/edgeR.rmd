@@ -33,6 +33,10 @@ library(knitr)
 source('scRNA_func.r')
 source('reportFunctions.R')
 
+myoptiontbl = fread("fileList3.txt", header = FALSE) %>%
+  dplyr::rename(Value=V1, Parameter=V2) %>%
+  dplyr::select(Parameter, Value) %>% as.data.frame()
+
 myoptions<-read_file_map("fileList3.txt", do_unlist=FALSE)
 
 is_between_cluster = is_one(myoptions$bBetweenCluster)
@@ -87,6 +91,12 @@ author:
   affiliation: `r myoptions$affiliation`
 ---
 
+# Parameters
+
+```{r, echo=FALSE}
+print_table(myoptiontbl, row.names=FALSE)
+```
+
 # Group definition
 
 ```{r, echo=FALSE}
@@ -94,6 +104,7 @@ print_table(group_def, row.names=FALSE)
 ```
 
 # Comparison definition
+
 ```{r}
 print_table(comp_def, row.names=FALSE)
 ```
