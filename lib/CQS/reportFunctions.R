@@ -228,7 +228,7 @@ getFigure_width_height<-function(filepath, in_details=FALSE, fig.width=NULL, fig
 }
 
 get_figure_description<-function(category, filepath, description){
-  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists(files['", category, "',1]))}\n",
+  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists('", filepath, "'))}\n",
 "  check_and_include_graphics('", filepath, "')\n```\n"))
 }
 
