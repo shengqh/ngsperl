@@ -3523,6 +3523,10 @@ sub add_alignment_summary {
     parameterSampleFile3_ref => $read_3_ref,
     parameterSampleFile4_ref => $read_4_ref,
     parameterSampleFile5_ref => $read_5_ref,
+    parameterSampleFile6 => {
+      "task_name" => getValue( $def, "task_name"),
+      "remove_chrM_genes" => getValue( $def, "remove_chrM_genes", 0 ),
+    },
     rtemplate                => $rtemplate,
     output_file              => "",
     output_file_ext          => $output_file_ext,
