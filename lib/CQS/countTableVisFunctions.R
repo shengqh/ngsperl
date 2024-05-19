@@ -650,7 +650,7 @@ myggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
   }
   textBold<-element_text(face= "bold", color = "black", size=textSize)
   
-  p = ggplot(datForFigure, aes_string(x=factor(1), y=y, fill=fill)) +
+  p = ggplot(datForFigure, aes(x=factor(1), y=!!sym(y), fill=!!sym(fill))) +
       geom_bar(width=1, stat='identity', color='black') +
       guides(fill=guide_legend(keywidth = 1.5, keyheight = 1.5,override.aes=list(colour=NA))) + # removes black borders from legend
       coord_polar(theta='y') +
@@ -1030,9 +1030,12 @@ draw_heatmap_png<-function( filepath,
   ss = calc_ht_size(ht, merge_legends=TRUE )
   #print(paste0("calc_ht_size=", ss, "\n"))
 
-  png(filepath, width=min(50, ss[1]), height=ss[2], units="in", res=300)
+  width=min(50, ss[1])
+  height=min(50, ss[2])
+  png(filepath, width=width, height=height, units="in", res=300)
   draw(ht, merge_legends=TRUE)
   ignored=dev.off()
+  return(c(width, height))
 }
 
 save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, plot){
