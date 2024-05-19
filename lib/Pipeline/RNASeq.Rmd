@@ -69,6 +69,7 @@ hasEnrichmentAnalysis<-hasWebGestaltAnalysis | hasGseaAnalysis
 
 corNames<-gsub("_correlation_density", "", rownames(files)[grepl("_correlation_density", rownames(files))])
 corNames<-sort(corNames)
+corNames=c("all", corNames[corNames != "all"])
 
 getFigure<-function(category, description){
   return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists(files['", category, "',1]))}\n",
@@ -255,11 +256,23 @@ figureRmd<-function(file_map, corNames, section, hca_gene_used){
     name=corNames[i]
     heatmap<-paste0(name, "_correlation_heatmap")
     pca<-paste0(name, "_correlation_PCA")
-    corr_heatmap<-paste0(name, "_correlation_cluster")
+
     lines<-paste0("\n\n", section, " ", name, " samples\n\n", 
                   get_figure_description(heatmap, file_map[heatmap], paste0(heatmap, hca_gene_used)), 
-                  get_figure_description(pca, file_map[pca], pca), 
-                  get_figure_description(corr_heatmap, file_map[corr_heatmap], corr_heatmap) )
+                  get_figure_description(pca, file_map[pca], pca) )
+
+    heatmap_png = file_map[heatmap]
+
+    corr_heatmap<-gsub(".heatmap.png", ".Correlation.png", heatmap_png)
+    if(file.exists(corr_heatmap)){
+      lines<-paste0(lines, get_figure_description(basename(corr_heatmap), corr_heatmap, paste(name, "sample correlation")))
+    }
+
+    biotype_png = gsub(".heatmap.png", ".biotype_perc.png", heatmap_png)
+    if(file.exists(biotype_png)){
+      lines<-paste0(lines, get_figure_description(basename(biotype_png), biotype_png, paste(name, "sample biotype distribution")))
+    }
+
     result<-paste0(result, lines)
   }
   return(result)
