@@ -1,12 +1,9 @@
 #### Functions for my section ####
 #exp is the expression matrix with gene names as rownames and sample names as colnames
-calc_z_scores<-function(exp){
-  require(matrixStats)
-  require(SparseArray)
-
+calc_z_scores<-function(exp_mat){
   # Calculate Z-scores for each gene (row-wise)
-  t_heatmap=as.matrix(t(exp))
-  z_scores <- data.frame(t(scale(t_heatmap, center = colMeans(t_heatmap), scale = colSds(t_heatmap))), check.names=FALSE)
+  t_heatmap=as.matrix(t(exp_mat))
+  z_scores <- data.frame(t(base::scale(t_heatmap, center = TRUE, scale = TRUE)), check.names=FALSE)
   return(z_scores)
 }
 

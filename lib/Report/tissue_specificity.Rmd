@@ -51,13 +51,19 @@ if (!exists("horizontalHeatmap")) {
 if (!exists("selectedTissues")){
   selectedTissues=NULL
 }
+if (!exists("show_row_names")){
+  show_row_names=TRUE
+}
 
 load_protein_atlas_file<-function(proteinAtlasDatabaseFile, target_genes, background_genes, selectedProteinsLabels){
   cat("\n\n### Check target/background genes\n\n")
 
   stopifnot(exists("proteinAtlasDatabaseFile"))
-  if(!file.exists(proteinAtlasDatabaseFile)) stop(paste0("proteinAtlasDatabaseFile does not exist: ", proteinAtlasDatabaseFile))
-  proteinDatabaseAll = read_delim(proteinAtlasDatabaseFile)
+  if(!file.exists(proteinAtlasDatabaseFile)) {
+    stop(paste0("proteinAtlasDatabaseFile does not exist: ", proteinAtlasDatabaseFile))
+  }
+
+  proteinDatabaseAll = fread(proteinAtlasDatabaseFile, data.table=FALSE)
   proteinDatabaseAll = proteinDatabaseAll[!duplicated(proteinDatabaseAll$Gene), ]
 
   if(basename(proteinAtlasDatabaseFile) == "proteinatlas.tsv.zip"){
@@ -68,9 +74,15 @@ load_protein_atlas_file<-function(proteinAtlasDatabaseFile, target_genes, backgr
   temp = findProteinInDatabase_fast(proteinDatabaseAll, target_genes, selectedProteinsLabels, showUnmappedGenes=FALSE)
   proteinDatabaseSelectedProteins = temp[[1]]
   notFoundGenes = temp[[2]]
-  notFoundGenes_file=paste0(prefix, "_notFoundGenes_in_proteinAtlasDatabaseFile.txt")
-  writeLines(notFoundGenes, notFoundGenes_file)
-  cat("\n\nThere are ", length(notFoundGenes), " target genes not found in the database. See <mark>[", notFoundGenes_file, "](", notFoundGenes_file, "){target='_blank'}</mark> for details.\n\n")
+  notFoundGenes_file=paste0(prefix, ".notFoundGenes_in_proteinAtlasDatabaseFile.txt")
+  if(length(notFoundGenes) > 0){
+    writeLines(notFoundGenes, notFoundGenes_file)
+    cat("\n\nThere are ", length(notFoundGenes), " target genes not found in the database. See <mark>[", notFoundGenes_file, "](", notFoundGenes_file, "){target='_blank'}</mark> for details.\n\n")
+  }else{
+    if(file.exists(notFoundGenes_file)){
+      file.remove(notFoundGenes_file, showWarnings=FALSE)
+    }
+  }
   rm(temp)
 
   if (!all(is.null(background_genes))) {
@@ -78,7 +90,9 @@ load_protein_atlas_file<-function(proteinAtlasDatabaseFile, target_genes, backgr
     temp = findProteinInDatabase_fast(proteinDatabaseAll, background_genes)
     proteinDatabaseUniverse = temp[[1]]
     notFoundGenesUniverse = temp[[2]]
-    cat("\n\nThere are ", length(notFoundGenesUniverse), " background genes not found in the database.\n\n")
+    if(length(notFoundGenesUniverse) > 0){
+      cat("\n\nThere are ", length(notFoundGenesUniverse), " target genes not found in the database. \n\n")
+    }
     rm(temp)
   }else{
     proteinDatabaseUniverse = NULL
@@ -111,6 +125,12 @@ allColumnNames = c(
   "Single.cell.expression.cluster"
 )
 
+gene_df = proteinDatabaseSelectedProteins |>
+  dplyr::select(all_of(c("GeneSymbol", allColumnNames)))
+
+print_table(gene_df, byDT=TRUE, row.names=FALSE)
+
+all_df = NULL
 rmd=""  
 maxCategory=10
 columnName="Tissue.expression.cluster"
@@ -147,27 +167,19 @@ for (columnName in allColumnNames) {
     category_height=category_height * 8 / 5
   }
 
-  category_png = paste0(prefix, "_", columnName, ".png")
+  category_png = paste0(prefix, ".", columnName, ".png")
   ggsave(category_png, g, width = category_width, height = category_height, units = "in", dpi = 300, bg = "white")
   rmd=paste0(rmd, getFigure_width_height(category_png, fig.width=category_width, fig.height=category_height))
 }
 
-writeLines(rmd, paste0(prefix,"_tissue_specificity.rmd"))
+tissue_specificity_rmd=paste0(prefix, ".tissue_specificity.rmd")
+writeLines(rmd, tissue_specificity_rmd)
 ```
 
-```{r child=paste0(prefix,"_tissue_specificity.rmd")}
+```{r child=tissue_specificity_rmd}
 ```
 
-```{r}
-if (!all(is.null(selectedTissues))) {
-  tissue_heatmap_width=8
-} else {
-  tissue_heatmap_width=12
-}
-tissue_heatmap_height=10
-```
-
-```{r, error=FALSE, warning=FALSE, fig.width=tissue_heatmap_width, fig.height=tissue_heatmap_height}
+```{r, error=FALSE, warning=FALSE}
 cat("\n\n### Expression of selected proteins in tissues from Protein Atlas by TissueEnrich\n\n")
 cat("https://pubmed.ncbi.nlm.nih.gov/30346488/\n\n")
 
@@ -193,6 +205,13 @@ if (!all(is.null(selectedTissues))) {
 }
 
 dataForPlot=teExpressionDataSelectedProteins
+data_sd=apply(dataForPlot,1,sd)
+if(any(data_sd==0)){
+  zero_sd_genes = row.names(dataForPlot)[which(data_sd==0)]
+  cat("Remove genes with identical expression in all tissues:", paste(zero_sd_genes, collapse=",")  ,"\n")
+  dataForPlot=dataForPlot[-which(data_sd==0),]
+}
+
 annotationCol=RColorBrewer::brewer.pal("Set1",n=3)
 
 selectedProteinsCategory=split(proteinDatabaseSelectedProteins[["Secreted.Category"]], proteinDatabaseSelectedProteins[["GeneSymbol"]])
@@ -207,41 +226,42 @@ if (horizontalHeatmap) { #make horizontal heatmap and NOT show trees
   ha = rowAnnotation(Secretome= targetGeneSecretome,col=col)
 }
 
-# geneNamesInFigure=unique(data.frame(GeneSymbol = row.names(dataForPlot)) %>% 
-#   left_join(proteinDatabaseSelectedProteins,by="GeneSymbol") %>%
-#   pull("GeneLabelForFigure"))
-
 tdf=as.matrix(log2(dataForPlot+1))
-tdf=calc_z_scores(tdf)
+tdf=calc_z_scores(exp_mat=tdf)
 
 col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
 
-if (horizontalHeatmap) { #make horizontal heatmap and NOT show trees
-  p=Heatmap(tdf,
-            name="z score of\nLog2(TPM+1)",
-            col = col_fun,
-            column_names_rot = 45,
-            cluster_rows=TRUE,
-            cluster_columns =TRUE,
-            show_column_dend =FALSE,
-            show_row_dend =FALSE,
-            top_annotation = ha,
-            show_column_names=FALSE)
-} else {
-  p=Heatmap(tdf,
-            name="z score of\nLog2(TPM+1)",
-            col = col_fun,
-            cluster_rows=TRUE,
-            cluster_columns =TRUE,
-            right_annotation = ha,
-            show_row_names=FALSE)
-}
+tissue_heatmap_png=paste0(prefix, ".tissue_heatmap.png")
 
-tissue_heatmap_png=paste0(prefix, "_tissue_heatmap.png")
-png(tissue_heatmap_png, width = tissue_heatmap_width, height = tissue_heatmap_height, units="in", res = 300)
-plot(p)
-ignored=dev.off()
-rm(p)
+if (exists("horizontalHeatmap") & horizontalHeatmap) { #make horizontal heatmap and NOT show trees
+  ht_size = draw_heatmap_png( filepath=tissue_heatmap_png, 
+                              htdata=as.matrix(tdf), 
+                              name="z score of\nLog2(TPM+1)", 
+                              show_row_names=show_row_names, 
+                              show_column_names=TRUE,
+                              save_rds=TRUE,
+                              col = col_fun,
+                              column_names_rot = 45,
+                              cluster_rows=TRUE,
+                              cluster_columns =TRUE,
+                              show_column_dend =FALSE,
+                              show_row_dend =FALSE,
+                              top_annotation = ha)
+} else {
+  ht_size = draw_heatmap_png( filepath=tissue_heatmap_png, 
+                              htdata=as.matrix(tdf), 
+                              name="z score of\nLog2(TPM+1)", 
+                              show_row_names=show_row_names, 
+                              show_column_names=TRUE,
+                              save_rds=TRUE,
+                              col = col_fun,
+                              cluster_rows=TRUE,
+                              cluster_columns =TRUE,
+                              right_annotation = ha)
+}
+```
+
+```{r fig.width=ht_size[1], fig.height=ht_size[2]}
 include_graphics(tissue_heatmap_png)
 ```
   
@@ -266,25 +286,30 @@ enrichmentOutput<-setNames(data.frame(assay(seEnrichmentOutput),
                             colData(seEnrichmentOutput)[,1])
 enrichmentOutput$Tissue<-row.names(enrichmentOutput)
 
-p=ggplot(enrichmentOutput[which(enrichmentOutput$Log10PValue>0),],
-        aes(x=reorder(Tissue,-Log10PValue),
-            y=Log10PValue,
-            label = Tissue.Specific.Genes,
-            fill = Tissue))+
-  geom_bar(stat = 'identity')+
-  labs(x='', y = '-log10(adjP)')+
-  theme_bw()+
-  theme(legend.position="none")+
-  theme(plot.title = element_text(hjust = 0.5,size = 20),
-        axis.title = element_text(size=15))+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-        panel.grid.major= element_blank(),
-        panel.grid.minor = element_blank())
+enriched = enrichmentOutput |>
+  dplyr::filter(Log10PValue > 0)
 
-teEnrichment_png=paste0(prefix, "_teEnrichment.png")
-ggsave(teEnrichment_png, p, width = 6, height = 4, units = "in", dpi = 300, bg = "white")
-rm(p)
-include_graphics(teEnrichment_png)
+if(nrow(enriched) > 0){
+  p=ggplot(enrichmentOutput[which(enrichmentOutput$Log10PValue>0),],
+          aes(x=reorder(Tissue,-Log10PValue),
+              y=Log10PValue,
+              label = Tissue.Specific.Genes,
+              fill = Tissue))+
+    geom_bar(stat = 'identity')+
+    labs(x='', y = '-log10(adjP)')+
+    theme_bw()+
+    theme(legend.position="none")+
+    theme(plot.title = element_text(hjust = 0.5,size = 20),
+          axis.title = element_text(size=15))+
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+          panel.grid.major= element_blank(),
+          panel.grid.minor = element_blank())
+
+  teEnrichment_png=paste0(prefix, ".teEnrichment.png")
+  ggsave(teEnrichment_png, p, width = 6, height = 4, units = "in", dpi = 300, bg = "white")
+  rm(p)
+  include_graphics(teEnrichment_png)
+}
 ```
 
 ```{r}
@@ -318,7 +343,7 @@ knitr::kable(unique(TissueEnrichProteinsAll[,c("Gene","Group")]) %>% group_by(Gr
 #define colors of categical data in ComplexHeatmap
 col_fun = structure( RColorBrewer::brewer.pal(3,"Set1"), 
                       names=c("Tissue-Enriched","Tissue-Enhanced", "Group-Enriched" ))
-te_type_png=paste0(prefix, "_te_type.png")
+te_type_png=paste0(prefix, ".te_type.png")
 png(te_type_png, width = type_width, height = type_height, units="in", res = 300)
 Heatmap(dataForPlot,col=col_fun,name = "Tissue Enrichment Type")
 ignored=dev.off()

@@ -112,10 +112,10 @@ findProteinInDatabase_fast = function(proteinDatabaseAll, selectedProteins, sele
 summarizeCategoricalData<-function(df, category, maxCategory = 10, columnName = "RNA.tissue.specificity"){
   #use variable name as column name in group_by
   dataSelected = df %>% 
-    group_by(!!sym(columnName)) %>% 
-    summarise(n = n()) %>% 
-    mutate(Category = category) %>% 
-    arrange(desc(n))
+    dplyr::group_by(!!sym(columnName)) %>% 
+    dplyr::summarise(n = n()) %>% 
+    dplyr::mutate(Category = category) %>% 
+    dplyr::arrange(desc(n))
   dataSelected[which(is.na(dataSelected[, 1])), 1] = "Not Available"
   
   #keep top 10 rows (by n) in dataSelected
@@ -137,7 +137,11 @@ summarizeCategoricalDataFromProteinDatabase = function( proteinDatabaseSelectedP
                                                         maxCategory = 10,
                                                         columnName = "RNA.tissue.specificity") {
   #use variable name as column name in group_by
-  temp = summarizeCategoricalData(proteinDatabaseSelectedProteins, "Selected", maxCategory, columnName)
+  temp = summarizeCategoricalData(
+    df=proteinDatabaseSelectedProteins, 
+    category="Selected", 
+    maxCategory, 
+    columnName)
   dataSelected = temp[[1]]
   dataSelectedSub = temp[[2]]
   rm(temp)

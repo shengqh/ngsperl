@@ -49,6 +49,10 @@ if(!exists("draw_gene_exp_heatmap_5perc_global")){
   draw_gene_exp_heatmap_5perc_global=FALSE
 }
 
+if (!exists("show_row_names")){
+  show_row_names=TRUE
+}
+
 draw_gene_exp_heatmap_5perc_global = perform_gene_exp_5perc & draw_gene_exp_heatmap_5perc_global & has_background_genes
 ```
 
@@ -60,6 +64,18 @@ Read gene expression data from `r gene_exp_file` and filter out genes that are n
 geneExprTab<-read.delim(gene_exp_file, sep = "\t", header = T, as.is = T, stringsAsFactors = F, row.names = 1)
 the_sums<-apply(geneExprTab, 1 ,sum)
 geneExprTabR<-geneExprTab[which(the_sums>0),]
+
+# mgeneexp=reshape2::melt(geneExprTabR) |>
+#   dplyr::rename(Tissue=variable, Exp=value) |>
+#   dplyr::mutate(logExp=log2(Exp+1)) |>
+#   dplyr::select(-Exp)
+
+# g=ggplot(mgeneexp, aes(x=Tissue, y=logExp)) + 
+#   geom_boxplot() +
+#   ggtitle("Boxplot of gene expression values") + 
+#   theme_bw3()
+
+# ggsave(paste0(prefix, ".geneExpression_boxplot.png"), g, width = 12, height = 6, units = "in", dpi = 300, bg="white")
 
 if(has_background_genes){
   stopifnot(all(target_genes %in% background_genes))
@@ -106,34 +122,36 @@ There are `r nrow(eg)` target genes found in gene expression table.
 cat("And there are", nrow(bg), "background genes found in gene expression table.\n")
 ```
 
-```{r}
-heatmap_width=14
-heatmap_height=10
-```
-
 ### Heatmap of targeted genes
 
 Heatmap of gene expression of all of the significant genes in target set. 
 Plotted Z-score is calculated for each gene (row) in the heatmap.
 
-```{r echo = T, fig.height=heatmap_width, fig.width=heatmap_height}
-tdf<-geneExprTabR[which(row.names(geneExprTabR) %in% eg$TO),]
-tdf=calc_z_scores(tdf)
+```{r}
+tdf = merge(eg, geneExprTabR, by.x="TO", by.y="row.names") |> 
+  dplyr::select(-TO)
+
+tdf = stats::aggregate(tdf %>% dplyr::select(-FROM), by=list(Gene=tdf$FROM), FUN=sum) |> 
+  column_to_rownames("Gene") |>
+  calc_z_scores()
 
 col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
-p=Heatmap(tdf,
-          name="z score of logNorm\ngene expression",
-          col = col_fun,
-          cluster_rows=TRUE,
-          cluster_columns=TRUE,
-          show_row_names=FALSE)
-rm(tdf)
 
-heatmap_png=paste0(prefix, "_geneExpression_heatmap.png")
-png(heatmap_png, width = heatmap_width, height = heatmap_height, units = "in", res = 300)
-plot(p)
-ignored=dev.off()
-rm(p)
+heatmap_png=paste0(prefix, ".geneExpression_heatmap.png")
+ht_size = draw_heatmap_png( filepath=heatmap_png, 
+                            htdata=as.matrix(tdf), 
+                            name="z score of logNorm\ngene expression", 
+                            show_row_names=show_row_names, 
+                            show_column_names=TRUE,
+                            save_rds=TRUE,
+                            col = col_fun,
+                            cluster_rows=TRUE,
+                            cluster_columns =TRUE,
+                            show_column_dend =FALSE,
+                            show_row_dend =FALSE)
+```
+
+```{r fig.width=ht_size[1], fig.height=ht_size[2]}
 include_graphics(heatmap_png)
 ```
 
@@ -158,29 +176,31 @@ cat("\nPlotted Z-score is calculated for each gene (row) in the heatmap. Row sid
 ```
 
 ```{r, eval=draw_gene_exp_heatmap_5perc_global}
-tdf<-geneExprTabR[which(row.names(geneExprTabR) %in% top5perc_genes),]
-tdf=calc_z_scores(tdf)
+tdf<-geneExprTabR[which(row.names(geneExprTabR) %in% top5perc_genes),] |>
+  calc_z_scores()
 
 is_target=ifelse(row.names(tdf) %in% eg$TO, "Target", "Background")
 col = list(Gene = c( "Target" = "red", "Background" = "darkgrey"))
-ha = rowAnnotation(Gene= is_target,col=col)
+ha = rowAnnotation(Gene=is_target,col=col)
 
 col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
-p=Heatmap(tdf,
-          name="z score of logNorm\ngene expression",
-          col = col_fun,
-          cluster_rows=TRUE,
-          cluster_columns=TRUE,
-          show_row_names=FALSE,
-          show_row_dend=FALSE,
-          right_annotation=ha)
-rm(tdf)
 
-global_perc5_heatmap_png=paste0(prefix, "_geneExpression_5perc_heatmap_global.png")
-png(global_perc5_heatmap_png, width = heatmap_width, height = heatmap_height, units = "in", res = 300)
-plot(p)
-ignored=dev.off()
-rm(p)
+global_perc5_heatmap_png=paste0(prefix, ".geneExpression_5perc_heatmap_global.png")
+ht_size = draw_heatmap_png( filepath=global_perc5_heatmap_png, 
+                            htdata=as.matrix(tdf), 
+                            name="z score of logNorm\ngene expression", 
+                            show_row_names=FALSE, 
+                            show_column_names=TRUE,
+                            save_rds=FALSE,
+                            col = col_fun,
+                            cluster_rows=TRUE,
+                            cluster_columns =TRUE,
+                            show_column_dend =FALSE,
+                            show_row_dend =FALSE,
+                            right_annotation=ha)
+```
+
+```{r, eval=draw_gene_exp_heatmap_5perc_global, fig.width=ht_size[1], fig.height=ht_size[2]}
 include_graphics(global_perc5_heatmap_png)
 ```
 
@@ -198,7 +218,7 @@ cou_rat_tab<-counts_and_ratio_top5perc(top5perc = top5perc, sig_proteins = eg$TO
 cou_rat_tab<-cou_rat_tab[order(cou_rat_tab$Count_sig_proteins_in_top5perc, decreasing = F),]
 cou_rat_tab$Tabula_group<-factor(cou_rat_tab$Tabula_group, levels = unique(cou_rat_tab$Tabula_group))
   
-write.table(cou_rat_tab, paste0(prefix, "_geneExpression_5perc_counts_ratio.tsv"), sep = "\t", col.names = T, row.names = F, quote = F)
+write.table(cou_rat_tab, paste0(prefix, ".geneExpression_5perc_counts_ratio.tsv"), sep = "\t", col.names = T, row.names = F, quote = F)
 print_table(cou_rat_tab, byDT=TRUE, row.names=FALSE)
 
 ## Plot counts
@@ -221,7 +241,7 @@ bar_plot_onlygenesExprGT0_R<- ggplot(cou_rat_tab, aes(x = Tabula_group, y = Rati
                               ggtitle("Ratio of significant genes in top 5% genes divided\n by number of top 5% genes")
 
 g<-ggarrange(bar_plot_onlygenesExprGT0, bar_plot_onlygenesExprGT0_R, nrow = 1, ncol = 2,heights = c(5,5), widths = c(6,6))
-top5perc_ratio_png=paste0(prefix, "_geneExpression_5perc_counts_ratio.png")
+top5perc_ratio_png=paste0(prefix, ".geneExpression_5perc_counts_ratio.png")
 ggsave(top5perc_ratio_png, g, width = ratio_width, height = ratio_height, units = "in", dpi = 300, bg="white")
 include_graphics(top5perc_ratio_png)
 cat("\nPlot on the left is the direct counts of overlap between the significant genes and the top 5% expressed genes per tissue, plot on right is the number of direct overlaps divided by the total number of top 5% expressed genes for that tabula tissue.\n")
@@ -252,32 +272,29 @@ print_table(gene_counts_print, byDT=TRUE, row.names=FALSE)
 What tissues have the most representation in the genes that only have high expression in one tissue (z score > 1 in only one tissue)
 
 ```{r}
-heatmap_width=12
-heatmap_height=10
-```
+ones_df<-gene_counts_plot |>
+  dplyr::filter(counts == 1)
 
-```{r, fig.height=heatmap_width, fig.width=heatmap_height}
-ones_df<-gene_counts_plot %>% dplyr::filter(counts == 1)
 ones_tdf<-tdf[which(row.names(tdf) %in% ones_df$Ensembl),]
 row.names(ones_tdf)<-genes$GENE[match(row.names(ones_tdf),genes$ensemblID)]
 
 col_fun = colorRamp2(c(min(ones_tdf), 0, max(ones_tdf)), c("blue", "white", "red"))
-p=Heatmap(ones_tdf,
-          name="z score of logNorm\ngene expression",
-          col = col_fun,
-          cluster_rows=TRUE,
-          cluster_columns=TRUE,
-          show_row_names=TRUE,
-          show_row_dend=FALSE,
-          show_column_dend=FALSE,
-          column_title = "Gene expression with z-score > 1 in only 1 tissue"
-)
-rm(ones_df, ones_tdf)
 
-zscore_one_png<-paste0(prefix, "_geneExpression_zscore_one_heatmap.png")
-png(zscore_one_png, width = heatmap_width, height = heatmap_height, units = "in", res = 300)
-plot(p)
-ignored=dev.off()
-rm(p)
+zscore_one_png<-paste0(prefix, ".geneExpression_zscore_one_heatmap.png")
+ht_size = draw_heatmap_png( filepath=zscore_one_png, 
+                            htdata=as.matrix(ones_tdf), 
+                            name="z score of logNorm\ngene expression", 
+                            show_row_names=show_row_names, 
+                            show_column_names=TRUE,
+                            save_rds=FALSE,
+                            col = col_fun,
+                            cluster_rows=TRUE,
+                            cluster_columns =TRUE,
+                            show_column_dend =FALSE,
+                            show_row_dend =FALSE,
+                            column_title = "Gene expression with z-score > 1 in only 1 tissue")
+```
+
+```{r, fig.width=ht_size[1], fig.height=ht_size[2]}
 include_graphics(zscore_one_png)
 ```
