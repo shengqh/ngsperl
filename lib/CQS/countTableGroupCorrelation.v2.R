@@ -5,11 +5,11 @@ parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2='/nobackup/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/9074_ES.Category.Table.csv'
-parFile3='/nobackup/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/preprocessing/fastqc_post_trim_summary/result/9074_ES.countInFastQcVis.Result.Reads.csv'
+parFile2=''
+parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20221122_9074_ES_ARMseq_human_byMars/data_visualization/count_table_correlation_TotalReads/result')
+setwd('/nobackup/shah_lab/shengq2/20240508_Emeli_obesity_EV_AHA/20240508_rnaseq_hg38/genetable/result')
 
 ### Parameter setting end ###
 
@@ -244,7 +244,7 @@ for (i in 1:nrow(countTableFileAll)) {
   countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
   #remove samples with total reads 0
   countNum<-countNum[,which(colSums(countNum,na.rm=T)>0)]
-  
+
   if (groupFileList!="") {
     sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), useLeastGroups,onlySamplesInGroup=onlySamplesInGroup)
     if (onlySamplesInGroup) {
@@ -311,6 +311,40 @@ for (i in 1:nrow(countTableFileAll)) {
     
     #filter reads/genes by parameter
     validCountNum<-filterCountTable(countNum,validSampleToGroup,minMedian=minMedian,minMedianInGroup=minMedianInGroup)
+
+    if("Feature_gene_biotype" %in% colnames(count)){
+      if(length(unique(count$Feature_gene_biotype)) > 1){
+        bcounts = count %>% 
+          dplyr::select(c("Feature_gene_biotype", colnames(validCountNum))) %>% 
+          aggregate(. ~ Feature_gene_biotype, data=., FUN=sum) %>%
+          tibble::column_to_rownames("Feature_gene_biotype")
+        write.csv(bcounts, paste0(cur_file_prefix, ".biotype_counts.csv"))
+
+        #convert bcounts to percentage table by column
+        bperc = t(t(bcounts) / colSums(bcounts) * 100)
+        bperc_max = apply(bperc, 1, max)
+        cats = bperc_max[bperc_max > 1]
+        cats = cats[order(cats, decreasing = T)]
+        cat_perc = bperc[names(cats),]
+        other_perc = colSums(bperc[!rownames(bperc) %in% names(cats),])
+        tperc = rbind(cat_perc, "other"=other_perc)
+        write.csv(tperc, paste0(cur_file_prefix, ".biotype_perc.csv"))
+
+        mperc = reshape2::melt(tperc) %>%
+          dplyr::rename("Biotype" = "Var1", "Sample"="Var2", "Percentage" = "value")
+        mperc$Biotype = factor(mperc$Biotype, levels=rownames(tperc))
+        mperc$Sample = factor(mperc$Sample, levels=colnames(validCountNum))
+
+        g=ggplot(mperc, aes(x=Sample, y=Percentage, fill=Biotype)) + 
+          geom_bar(stat="identity") + 
+          theme_bw3() + 
+          theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+                axis.title.x=element_blank())
+
+        width=min(max(7, 0.1 * ncol(validCountNum)) + 3, 50)
+        ggsave(paste0(cur_file_prefix, ".biotype_perc.png"), g, width=width, height=6, dpi=300)
+      }
+    }
     
     #normlize by total reads or VSD
     bNormalizeByCount=FALSE
@@ -608,4 +642,3 @@ if(length(missed_count_tables) == 0){
 }
 
 writeLines(prefix_list, "prefix_list.txt")
-
