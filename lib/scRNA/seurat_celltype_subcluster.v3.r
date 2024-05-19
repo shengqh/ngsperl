@@ -6,12 +6,12 @@ parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/essential_genes/result/iSGS_cell_atlas.txt'
+parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
+parFile3='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/essential_genes/result/iSGS_cell_atlas.txt'
 
 
-setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
+setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -163,6 +163,7 @@ draw_dim_plot<-function(obj, previous_layer, file_path){
   rm(g)
 }
 
+meta = obj@meta.data
 if(!is_file_empty(parSampleFile3)){
   draw_dim_plot(obj, previous_layer, paste0(outFile, ".pre_rename.umap.png"))
 
@@ -174,6 +175,7 @@ if(!is_file_empty(parSampleFile3)){
   if("from" %in% rename_map$V2){
     rname = keys[1]
     for(rname in keys){
+      cat("renaming", rname, "\n")
       rmap = rename_map[rename_map$V3 == rname,]
       from = rmap$V1[rmap$V2=="from"]
       if(!(from %in% unlist(meta[,previous_layer]))){
@@ -183,7 +185,11 @@ if(!is_file_empty(parSampleFile3)){
 
       cluster = rmap$V1[rmap$V2=="cluster"]
       to = rmap$V1[rmap$V2=="to"]
+      
       cluster_column = ifelse('column' %in% rmap$V2, rmap$V1[rmap$V2=="column"], previous_cluster)
+      if(!(cluster_column %in% colnames(submeta))){
+        stop(paste0("Cannot find column ", cluster_column, " in rename configuration key=", rname))
+      }
 
       if(all(cluster == "-1")){
         cells<-rownames(submeta)
@@ -197,6 +203,7 @@ if(!is_file_empty(parSampleFile3)){
         cells<-rownames(submeta)[submeta[,cluster_column] %in% cluster]
       }
       meta[cells,previous_layer]<-to
+      cat("renaming", rname, "done\n")
     }
   }else{
     rname = keys[1]
@@ -213,6 +220,8 @@ if(!is_file_empty(parSampleFile3)){
       meta[cells,previous_layer]<-to
     }
   }
+
+  cat("renaming done\n")
 
   obj@meta.data<-meta
   
