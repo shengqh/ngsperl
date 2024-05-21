@@ -142,7 +142,7 @@ fi
     my $final_prefix = $output_to_folder ? "." : $sample_name . $output_file_prefix;
 
     my $localized_files = [];
-    $parameterSampleFile1->{$sample_name} = $self->localize_files_in_tmp_folder($pbs, $parameterSampleFile1->{$sample_name}, $localized_files, $other_localization_ext_array);
+    $parameterSampleFile1->{$sample_name} = $self->localize_files_in_tmp_folder($pbs, $parameterSampleFile1->{$sample_name}, $localized_files, $other_localization_ext_array, get_option($config,$section,"no_bai", 0));
 
     #print Dumper($parameterSampleFile1->{$sample_name});
 

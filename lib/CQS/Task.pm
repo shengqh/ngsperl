@@ -431,14 +431,19 @@ sub get_docker_value {
 }
 
 sub localize_files {
-  my ($self, $pbs, $sample_files, $localized_files, $other_exts) = @_;
+  my ($self, $pbs, $sample_files, $localized_files, $other_exts, $no_bai) = @_;
   if($self->{_use_tmp_folder} || $self->{_localize_to_local_folder} ){
     my $target_dir = $self->{_use_tmp_folder} ? '$res_dir/':'';
     if($sample_files->[0] =~ /.bam$/){
-      if(defined $other_exts){
-        push(@$other_exts, ".bai");
-      }else{
-        $other_exts = [".bai"];
+      if(!defined $no_bai){
+        $no_bai = 0;
+      }
+      if(!$no_bai){
+        if(defined $other_exts){
+          push(@$other_exts, ".bai");
+        }else{
+          $other_exts = [".bai"];
+        }
       }
       my @unique_words = uniq @$other_exts;
       $other_exts = \@unique_words;
