@@ -1,0 +1,390 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
+
+```{r setup, include=FALSE}
+library(kableExtra)
+library(formatR)
+
+source("reportFunctions.R")
+source("Pipeline.R")
+
+myoptions=read_file_map('fileList1.txt', do_unlist=FALSE)
+
+task_name=myoptions$task_name
+email=myoptions$email
+affiliation=myoptions$affiliation
+
+has_group = file.exists("fileList2.txt")
+
+knitr::opts_chunk$set(
+  echo=FALSE,  
+  message=FALSE, 
+  warning=FALSE, 
+  results = 'asis', 
+  fig.width=7, 
+  fig.height = 7,
+  tidy = TRUE, 
+  tidy.opts = list(comment = FALSE, width.cutoff = 120))
+options(knitr.graphics.rel_path = FALSE)
+```
+
+---
+title: SLAMseq Sequencing Data Analysis Report `r task_name`
+author:
+- name: `r email`
+  affiliation: `r affiliation`
+---
+
+```{r, include=FALSE, eval=has_group}
+file_group_tbl<-fread("fileList2.txt", header=FALSE, data.table=FALSE) |>
+  dplyr::rename("Sample"="V1", "Group"="V2")
+print_table(file_group_tbl, byDT=TRUE, row.names=0)
+```
+
+```{r}
+has_introduction="introduction_rmd" %in% names(myoptions)
+introduction_rmd=myoptions$introduction_rmd
+```
+
+```{r, child=introduction_rmd, eval=has_introduction}
+```
+
+# Overall Quality Control
+
+```{r}
+summary_files=fread('fileList4.txt', data.table=FALSE, header=FALSE, stringsAsFactors=FALSE)
+summary_file=summary_files$V1[which(grepl("summary.txt", summary_files$V1))]
+summary_PCA_file=summary_files$V1[which(grepl("summary_PCA.txt", summary_files$V1))]
+```
+
+## Summary of samples
+
+```{r}
+summary_tbl=fread(summary_file, header=TRUE, stringsAsFactors=FALSE, data.table=FALSE) |>
+  dplyr::select(-FileName, -SampleType, -SampleTime, -Annotation)
+
+col_s=summary_tbl |>
+  dplyr::select(which(sapply(summary_tbl, is.numeric))) |>
+  dplyr::summarise_all(sum)
+col_s_zeros=names(col_s)[col_s == 0]
+
+summary_tbl=summary_tbl[,-which(names(summary_tbl) %in% col_s_zeros)]
+print_table(summary_tbl, byDT=TRUE, row.names=0)
+```
+
+```{r}
+bar_tbl=summary_tbl |>
+  dplyr::select("SampleName", "Sequenced", "Mapped", "Counted") |>
+  tidyr::pivot_longer(cols=2:4, names_to="Category", values_to="Count")
+
+g=ggplot(bar_tbl, aes(x=SampleName, y=Count, fill=Category)) +
+  geom_bar(stat="identity", position="dodge") +
+  theme_bw3() +
+  labs(title="Summary of samples", x="Sample", y="Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank())
+
+bar_png="bar_plot.png"
+ggsave(bar_png, g, width=8, height=5, units="in", dpi=300)
+include_graphics(bar_png)
+```
+
+## Principal Component Analysis
+
+```{r}
+library(ggplot2)
+library(ggrepel)
+
+summary_PCA_tbl=fread(summary_PCA_file, header=FALSE, stringsAsFactors=FALSE, data.table=FALSE) |>
+  dplyr::rename("Sample"="V1", "PC1"="V2", "PC2"="V3")
+  
+
+if(has_group){
+  summary_PCA_tbl = summary_PCA_tbl |>
+    dplyr::left_join(file_group_tbl, by="Sample")
+  g=ggplot(summary_PCA_tbl, aes(x=PC1, y=PC2))
+}else{
+  g=ggplot(summary_PCA_tbl, aes(x=PC1, y=PC2))
+}
+
+g=g +
+  geom_point(aes(color=Group), size=3) +
+  geom_text_repel(aes(label=Sample), box.padding = 0.5, point.padding = 0.5) +
+  theme_bw3() +
+  labs(title="Principal Component Analysis") +
+  theme(legend.title=element_blank(),
+        aspect.ratio=1)
+
+pca_png="PCA_plot.png"
+ggsave(pca_png, g, width=6, height=5, units="in", dpi=300)
+include_graphics(pca_png)
+```
+
+# Overall rates
+
+```{r}
+draw_rate_plot <- function(rate_files, prefix){
+  all_tbls = lapply(c(1:nrow(rate_files)), function(i){
+    filePath=rate_files$File[i]
+    fileName=rate_files$Name[i]
+    
+    curTab = read.table(filePath, header=TRUE, stringsAsFactors=FALSE)
+    
+    curTab[, c("A", "C", "G", "T")] <- curTab[, c("A", "C", "G", "T")]/rowSums(curTab[, c("A", "C", "G", "T")]) * 100
+    curTab[, c("a", "c", "g", "t")] <- curTab[, c("a", "c", "g", "t")]/rowSums(curTab[, c("a", "c", "g", "t")])  * 100
+    
+    printTab = data.frame(rates=c(rep("AT",2),rep("AC",2),rep("AG",2),
+                                  rep("TA",2),rep("TC",2),rep("TG",2),
+                                  rep("CA",2),rep("CT",2),rep("CG",2),
+                                  rep("GA",2),rep("GT",2),rep("GC",2)), strand = rep(c("+","-"),12),
+                          rate_percent = c(curTab["A","T"],curTab["A","t"],curTab["A","C"],curTab["A","c"],curTab["A","G"],curTab["A","g"],
+                                          curTab["T","A"],curTab["T","a"],curTab["T","C"],curTab["T","c"],curTab["T","G"],curTab["T","g"],
+                                          curTab["C","A"],curTab["C","a"],curTab["C","T"],curTab["C","t"],curTab["C","G"],curTab["C","g"],
+                                          curTab["G","A"],curTab["G","a"],curTab["G","T"],curTab["G","t"],curTab["G","C"],curTab["G","c"])
+    )
+    
+    printTab$y = -2.0
+
+    printTab[printTab$strand == "-", ]$y = printTab[printTab$strand == "-", ]$rate_percent + printTab[printTab$strand == "+", ]$rate_percent
+    printTab$Sample = fileName
+    return(printTab)
+  })
+
+  rate_tbl=do.call(rbind, all_tbls)
+  rate_csv=paste0(prefix, ".csv")
+  write.csv(rate_tbl, rate_csv, row.names=FALSE)
+
+  maxRatePercent = max(10, max(rate_tbl$rate_percent) * 1.1)
+  minY = min(rate_tbl$y)
+
+  g = ggplot(rate_tbl, aes(x=rates, y=rate_percent, fill=strand)) + 
+    ylim(minY,maxRatePercent) + 
+    geom_bar(stat="identity") + 
+    geom_text(aes(y = y, label = round(rate_percent, digits=2)), size = 3, hjust = 0.5, vjust = -0.50) + 
+    ylab("Rate percent %") + 
+    facet_grid(Sample~.) +
+    theme_bw3() +
+    theme(text = element_text(size=12),
+          axis.text.x = element_text(size=12),
+          axis.title.x=element_blank(),
+          strip.text.y=element_text(size=12, angle=0))
+
+  height=length(unique(rate_tbl$Sample)) + 1
+  rates_png=paste0(prefix, ".png")
+  ggsave(rates_png, g, width=8, height=height, units="in", dpi=300)
+  return(rates_png)
+}
+```
+
+```{r}
+rate_files=fread('fileList5.txt', data.table=FALSE, header=FALSE, stringsAsFactors=FALSE) |>
+  dplyr::rename("File"="V1", "Name"="V2")
+rates_png=draw_rate_plot(rate_files, "rates")
+include_graphics(rates_png)
+```
+
+# 3UTR rates
+
+https://github.com/t-neumann/slamdunk/blob/master/slamdunk/plot/globalRatePlotter.R
+
+```{r}
+rates = read.table('fileList6.txt',stringsAsFactors=FALSE,col.names = c("file", "sample"), comment.char = "")
+
+all_plotTab=NULL
+all_max_y=0
+i=1
+for (i in 1:nrow(rates)) {
+	curTab = read.delim(rates$file[i],stringsAsFactors=FALSE,comment.char='#')
+
+	plusTab = curTab[curTab$Strand == "+",]
+	minusTab = curTab[curTab$Strand == "-",]
+
+	# "Name"      "Chr"       "Start"     "End"       "Strand"    "ReadCount"
+	# "A_A"       "A_C"       "A_G"       "A_T"       "A_N"       "C_A"
+	# "C_C"       "C_G"       "C_T"       "C_N"       "G_A"       "G_C"
+	# "G_G"       "G_T"       "G_N"       "T_A"       "T_C"       "T_G"
+	# "T_T"       "T_N"       "N_A"       "N_C"       "N_G"       "N_T"
+	# "N_N"
+
+	names(minusTab) = c("Name", "Chr", "Start", "End", "Strand", "ReadCount",
+			"T_T", "T_G", "T_C", "T_A", "NNN", "G_T",
+			"G_G", "G_C", "G_A", "NNN", "C_T", "C_G",
+			"C_C", "C_A", "NNN", "A_T", "A_G", "A_C",
+			"A_A", "NNN", "NNN", "NNN", "NNN", "NNN",
+			"NNN")
+
+	plusTab = plusTab[,c(1,grep("N",names(plusTab),invert=TRUE))]
+	minusTab = minusTab[,grep("NNN",names(minusTab),invert=TRUE)]
+
+	plusTab = plusTab[,c(-1,-2,-3,-4,-5,-6)]
+	plusTab = plusTab[rowSums(plusTab) > 0,]
+
+	plusTab$Asum = plusTab$A_A + plusTab$A_C + plusTab$A_G + plusTab$A_T
+	plusTab$Csum = plusTab$C_A + plusTab$C_C + plusTab$C_G + plusTab$C_T
+	plusTab$Gsum = plusTab$G_A + plusTab$G_C + plusTab$G_G + plusTab$G_T
+	plusTab$Tsum = plusTab$T_A + plusTab$T_C + plusTab$T_G + plusTab$T_T
+
+	plusTab$A_A = plusTab$A_A / plusTab$Asum
+	plusTab$A_C = plusTab$A_C / plusTab$Asum
+	plusTab$A_G = plusTab$A_G / plusTab$Asum
+	plusTab$A_T = plusTab$A_T / plusTab$Asum
+
+	plusTab$C_A = plusTab$C_A / plusTab$Csum
+	plusTab$C_C = plusTab$C_C / plusTab$Csum
+	plusTab$C_G = plusTab$C_G / plusTab$Csum
+	plusTab$C_T = plusTab$C_T / plusTab$Csum
+
+	plusTab$G_A = plusTab$G_A / plusTab$Gsum
+	plusTab$G_C = plusTab$G_C / plusTab$Gsum
+	plusTab$G_G = plusTab$G_G / plusTab$Gsum
+	plusTab$G_T = plusTab$G_T / plusTab$Gsum
+
+	plusTab$T_A = plusTab$T_A / plusTab$Tsum
+	plusTab$T_C = plusTab$T_C / plusTab$Tsum
+	plusTab$T_G = plusTab$T_G / plusTab$Tsum
+	plusTab$T_T = plusTab$T_T / plusTab$Tsum
+
+	plusTab = plusTab[,grep("sum",names(plusTab),invert=TRUE)]
+
+	plusTab = plusTab * 100
+
+	minusTab = minusTab[,c(-1,-2,-3,-4,-5,-6)]
+	minusTab = minusTab[rowSums(minusTab) > 0,]
+
+	minusTab$Asum = minusTab$A_A + minusTab$A_C + minusTab$A_G + minusTab$A_T
+	minusTab$Csum = minusTab$C_A + minusTab$C_C + minusTab$C_G + minusTab$C_T
+	minusTab$Gsum = minusTab$G_A + minusTab$G_C + minusTab$G_G + minusTab$G_T
+	minusTab$Tsum = minusTab$T_A + minusTab$T_C + minusTab$T_G + minusTab$T_T
+
+	minusTab$A_A = minusTab$A_A / minusTab$Asum
+	minusTab$A_C = minusTab$A_C / minusTab$Asum
+	minusTab$A_G = minusTab$A_G / minusTab$Asum
+	minusTab$A_T = minusTab$A_T / minusTab$Asum
+
+	minusTab$C_A = minusTab$C_A / minusTab$Csum
+	minusTab$C_C = minusTab$C_C / minusTab$Csum
+	minusTab$C_G = minusTab$C_G / minusTab$Csum
+	minusTab$C_T = minusTab$C_T / minusTab$Csum
+
+	minusTab$G_A = minusTab$G_A / minusTab$Gsum
+	minusTab$G_C = minusTab$G_C / minusTab$Gsum
+	minusTab$G_G = minusTab$G_G / minusTab$Gsum
+	minusTab$G_T = minusTab$G_T / minusTab$Gsum
+
+	minusTab$T_A = minusTab$T_A / minusTab$Tsum
+	minusTab$T_C = minusTab$T_C / minusTab$Tsum
+	minusTab$T_G = minusTab$T_G / minusTab$Tsum
+	minusTab$T_T = minusTab$T_T / minusTab$Tsum
+
+	minusTab = minusTab[,grep("sum",names(minusTab),invert=TRUE)]
+
+	minusTab = minusTab * 100
+
+	plotTab = rbind(plusTab, minusTab)
+
+	plotTab = plotTab[,c("A_C","A_G","A_T","C_A","C_G","C_T","G_A","G_C","G_T","T_A","T_C","T_G")]
+	quantiles = lapply(plotTab, function(x) {
+				return(quantile(x, na.rm=TRUE, p=0.75) + 1.5 * IQR(x, na.rm=TRUE))
+			})
+
+  ymax = ceiling(max(unlist(quantiles)))
+  all_max_y = max(all_max_y, ymax)
+
+	plotTab = rbind(
+			data.frame(class = "A_C", values = plotTab$A_C),
+			data.frame(class = "A_G", values = plotTab$A_G),
+			data.frame(class = "A_T", values = plotTab$A_T),
+			data.frame(class = "C_A", values = plotTab$C_A),
+			data.frame(class = "C_G", values = plotTab$C_G),
+			data.frame(class = "C_T", values = plotTab$C_T),
+			data.frame(class = "G_A", values = plotTab$G_A),
+			data.frame(class = "G_C", values = plotTab$G_C),
+			data.frame(class = "G_T", values = plotTab$G_T),
+			data.frame(class = "T_A", values = plotTab$T_A),
+			data.frame(class = "T_C", values = plotTab$T_C),
+			data.frame(class = "T_G", values = plotTab$T_G)
+	)
+
+	plotTab$highlight = "no"
+	plotTab$highlight[plotTab$class == "T_C"] = "yes"
+	plotTab$class = sub("_", ">", plotTab$class)
+	plotTab$group = "A"
+	plotTab$group[plotTab$class %in% c("C>A","C>G","C>T")] = "C"
+	plotTab$group[plotTab$class %in% c("G>A","G>C","G>T")] = "G"
+	plotTab$group[plotTab$class %in% c("T>A","T>C","T>G")] = "T"
+
+	plotTab = plotTab[!is.na(plotTab$values),]
+
+  plotTab$Sample = rates$sample[i]
+
+  all_plotTab=rbind(all_plotTab,plotTab)
+}
+```
+
+## All mutation rates
+
+```{r}
+curPlot = ggplot(all_plotTab, aes(x=class,y=values,fill=highlight,col=highlight)) + 
+  stat_boxplot(geom ='errorbar') + 
+  geom_boxplot(outlier.shape = NA,lwd=0.8,fatten=2) + 
+  facet_grid(Sample~group, scales="free", space="free") + 
+  ylab("Mutation rate per UTR base [%]") +
+  scale_fill_manual(values=c("white","white")) + 
+  scale_color_manual(values=c("black", "red")) + 
+  theme_bw3() +
+  theme(axis.ticks.x = element_blank(), 
+        legend.position = "none",
+        axis.title.x=element_blank(),
+        strip.text.y=element_text(size=12, angle=0)) + 
+  coord_cartesian(ylim=c(0, all_max_y))
+
+all_rates_png="3UTR_rates_all.png"
+height=length(unique(all_plotTab$Sample)) * 1.5 + 1
+ggsave(all_rates_png, curPlot, width=8, height=height, units="in", dpi=300)
+include_graphics(all_rates_png)
+```
+
+## T>C mutation rate
+
+```{r}
+width=length(unique(all_plotTab$Sample)) * 0.4
+all_plotTab_tc = all_plotTab[all_plotTab$class == "T>C",]
+if(has_group){
+  all_plotTab_tc = all_plotTab_tc |>
+    dplyr::left_join(file_group_tbl, by="Sample")
+  curPlot = ggplot(all_plotTab_tc, aes(x=Sample,y=values,col=Group)) 
+  width = width + 2
+}else{
+  curPlot = ggplot(all_plotTab_tc, aes(x=Sample,y=values))
+}
+curPlot = curPlot + 
+  stat_boxplot(geom ='errorbar') + 
+  geom_boxplot(outlier.shape = NA,lwd=0.8,fatten=2) + 
+  ylab("Mutation rate per UTR base [%]") +
+  ggtitle("T>C mutation rate") +
+  theme_bw3() +
+  theme(axis.text.x = element_text(angle=90, hjust=1, vjust=0.5),
+        axis.title.x=element_blank(),
+        strip.text.y=element_text(size=12, angle=0),
+        plot.title = element_text(hjust = 0.5)) + 
+  coord_cartesian(ylim=c(0, all_max_y))
+
+tc_rates_png="3UTR_rates_tc.png"
+ggsave(tc_rates_png, curPlot, width=width, height=4, units="in", dpi=300)
+include_graphics(tc_rates_png)
+```
