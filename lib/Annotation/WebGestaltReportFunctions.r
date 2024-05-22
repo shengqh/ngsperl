@@ -33,6 +33,7 @@ getDiffCol=function(deseq2) {
 getGeneCol=function(deseq2) { #try to find gene column
   result=list()
   
+  result[["colName"]]=-1
   if (ncol(deseq2)==1) {
     result[["colName"]]=1
   } else if ("Feature_gene_name" %in% colnames(deseq2)) { #deseq2 result format
@@ -44,12 +45,13 @@ getGeneCol=function(deseq2) { #try to find gene column
     if (length(geneInd)>0) { #first column name with "gene"
       result[["colName"]]=geneInd[1]
     } else { 
-      #guess gene column, by contents with both number and character (so not all numeric data, can be gene IDs)
-      #also want column with many unique values (so that won't be columns like sample names)
-      geneInd=which.max(apply(geneList[-1,],2,function(x) 
-        min(length(intersect(grep("[a-zA-Z][a-zA-Z]",x),grep("[0-9]",x))),length(unique(x)))
-        ))
-      result[["colName"]]=geneInd[1]
+      colClass<-sapply(deseq2, class)
+      countNotNumIndex<-which((colClass!="numeric" & colClass!="integer"))
+      if(length(countNotNumIndex)>0) {
+        result[["colName"]]=countNotNumIndex[1]
+      }else{
+        result[["colName"]]=-1
+      }
     }
   }
   return(result)
