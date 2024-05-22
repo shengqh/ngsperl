@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='discovery_cohort'
+outFile='P11389_SLAMseq'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile3=''
 outputDirectory='.'
 
 
-setwd('/scratch/cqs/ravi_shah_projects/20221121_rnaseq_discovery_hg38/deseq2_genetable_WebGestalt_link_deseq2/result')
+setwd('/nobackup/brown_lab/projects/20240520_11389_SLAMseq_mm10/deseq2_tc_read_sizeFactor_WebGestalt_link_deseq2/result')
 
 ### Parameter setting end ###
 
@@ -43,9 +43,15 @@ for (comparison in comparisons){
     deseq2=readFilesAndFormat(compDeseq2File)
     #deseq2<-read.csv(compDeseq2File, header=T, row.names=1, stringsAsFactors = F)
     #deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
+    geneCol=getGeneCol(deseq2)[["colName"]]
+    if(geneCol == -1){
+      samples=colnames(deseq2)
+      deseq2$gene_name=rownames(deseq2)
+      deseq2=deseq2[,c("gene_name", samples)]
+      geneCol="gene_name"
+    }
     diffCol=getDiffCol(deseq2)[["colName"]]
     diffCenterValue=getDiffCol(deseq2)[["centerValue"]]
-    geneCol=getGeneCol(deseq2)[["colName"]]
     
     rowCount<-nrow(enriched)
     idx<-1
@@ -87,3 +93,4 @@ for (comparison in comparisons){
                       params = list(data = plotData))
   }
 }
+

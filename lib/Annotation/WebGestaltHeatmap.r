@@ -116,9 +116,15 @@ for (comparison in comparisons){
     #deseq2<-read.csv(compDeseq2File, header=T, row.names=1, stringsAsFactors = F)
     #deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
     deseq2=readFilesAndFormat(compDeseq2File)
+    geneCol=getGeneCol(deseq2)[["colName"]]
+    if(geneCol == -1){
+      samples=colnames(deseq2)
+      deseq2$gene_name=rownames(deseq2)
+      deseq2=deseq2[,c("gene_name", samples)]
+      geneCol="gene_name"
+    }
     diffCol=getDiffCol(deseq2)[["colName"]]
     diffCenterValue=getDiffCol(deseq2)[["centerValue"]]
-    geneCol=getGeneCol(deseq2)[["colName"]]
     
     #geneExpression<-read.csv(deseq2VsdFile, header=T, row.names=1, stringsAsFactors = F)
     geneExpression<-readFilesAndFormat(deseq2VsdFile)
