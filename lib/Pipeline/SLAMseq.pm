@@ -32,6 +32,7 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "emailType", "FAIL" );
   initDefaultValue( $def, "cluster",   "slurm" );
   initDefaultValue( $def, "perform_preprocessing",   1 );
+  initDefaultValue( $def, "DE_export_significant_gene_name",   1 );
 
   return $def;
 }
@@ -414,7 +415,7 @@ fi
     output_arg            => "",
     output_to_folder      => 0,
     output_file_prefix    => "",
-    output_file_ext       => ".txt",
+    output_file_ext       => "_filtered_tcperreadpos.csv",
     sh_direct             => 0,
     pbs                   => {
       "nodes"     => "1:ppn=$max_thread",
@@ -462,7 +463,7 @@ fi
     output_arg            => "",
     output_to_folder      => 0,
     output_file_prefix    => "",
-    output_file_ext       => ".txt",
+    output_file_ext       => "_filtered_tcperutr.csv",
     sh_direct             => 0,
     pbs                   => {
       "nodes"     => "1:ppn=$max_thread",
@@ -518,6 +519,104 @@ fi
     },
   };
   push (@$tasks, $alleyoop_summary_task);
+
+  my $count_table_task = "T11_count_table";
+  $config->{$count_table_task} = {
+    class                 => "CQS::UniqueR",
+    perform               => 1,
+    target_dir            => "$target_dir/$count_table_task",
+    init_command          => "",
+    rtemplate => "../CQS/countTableVisFunctions.R,../SLAMseq/slamseq_count_table.r",
+    parameterSampleFile1_ref => $alleyoop_collapse_task,
+    parameterFile1 => getValue($def, "transcript_gtf"),
+    output_arg            => "",
+    output_to_folder      => 0,
+    output_file_prefix    => "",
+    output_file_ext => ".tc_read.csv",
+    output_other_ext => ".all_read.csv,.sizeFactor.csv",
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
+    },
+  };
+  push (@$tasks, $count_table_task);
+
+  if(defined $def->{pairs}){
+    my $deseq2taskname = addDEseq2( $config, $def, $tasks, "tc_read", [ $count_table_task, ".tc_read.csv" ], $target_dir, 1, [$count_table_task, ".sizeFactor.csv"], "sizeFactor"  );
+
+    if ( getValue( $def, "perform_webgestalt" ) ) {
+      my $webgestaltTaskName = addWebgestalt($config, $def, $tasks, $target_dir, $deseq2taskname, [ $deseq2taskname, "sig_genename.txt\$" ]);
+
+      #if ( defined $def->{perform_link_webgestalt_deseq2} ) {
+      my $linkTaskName = $webgestaltTaskName . "_link_deseq2";
+      $config->{$linkTaskName} = {
+        class                      => "CQS::UniqueR",
+        perform                    => 1,
+        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
+        rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltDeseq2.r",
+        rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
+        output_to_result_directory => 1,
+        output_perSample_file      => "parameterSampleFile1",
+        output_perSample_file_regex => "enrichment_results_(.+).txt",
+        output_perSample_file_ext  => ".html;.html.rds",
+        parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
+        parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
+        sh_direct                  => 1,
+        rCode                      => "",
+        pbs                        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "23",
+          "mem"       => "10gb"
+        },
+      };
+      push( @$tasks, $linkTaskName );
+
+      if (getValue( $def, "perform_webgestaltHeatmap", 0 )) {
+        my $webgestaltHeatmapTaskName = $webgestaltTaskName . "_heatmap_deseq2";
+        $config->{$webgestaltHeatmapTaskName} = {
+          class                      => "CQS::UniqueR",
+          perform                    => 1,
+          target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $webgestaltHeatmapTaskName,
+          rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltHeatmap.r",
+          output_to_result_directory => 1,
+          output_perSample_file      => "parameterSampleFile1",
+          output_perSample_file_ext  => ".heatmap.png",
+          parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
+          parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
+          parameterSampleFile3_ref   => [ $deseq2taskname, "vsd.csv\$" ],
+          parameterSampleFile4_ref   => [ $deseq2taskname, ".design\$" ],
+          sh_direct                  => 1,
+          rCode                      => "",
+          pbs                        => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "23",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$tasks, $webgestaltHeatmapTaskName );
+      }
+      #}
+    }
+
+    #print(Dumper($def));
+
+    if ( getValue( $def, "perform_gsea" ) ) {
+      my $gseaTaskName = $deseq2taskname . "_GSEA";
+
+      if(getValue($def, "use_mouse_gsea_db", 0)){
+        $gseaTaskName = $gseaTaskName . "_Mm";
+      }else{
+        $gseaTaskName = $gseaTaskName . "_Hs";
+      }
+
+      my $pairs = $config->{pairs};
+      my $keys = [keys %$pairs];
+
+      add_gsea($config, $def, $tasks, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, "" );
+    }
+  }
 
   $config->{report} = {
     class                      => "CQS::BuildReport",
