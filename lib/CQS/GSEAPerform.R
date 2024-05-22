@@ -1,16 +1,15 @@
 rm(list=ls()) 
-sample_name='SD3_vs_SD2'
-outFile='SD3_vs_SD2'
+outFile='P11389_SLAMseq'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample/result/SADIE_pbmc.edgeR.files.csv'
+parFile1=''
 parFile2=''
 parFile3=''
 outputDirectory='.'
- gseaDb='/data/cqs/references/gsea/v2022.1.Hs'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v2022.1.Hs.symbols.gmt', 'c2.all.v2022.1.Hs.symbols.gmt', 'c5.all.v2022.1.Hs.symbols.gmt', 'c6.all.v2022.1.Hs.symbols.gmt', 'c7.all.v2022.1.Hs.symbols.gmt'); makeReport=0;
+gseaDb='/data/cqs/references/gsea/v2022.1.Hs'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v2022.1.Hs.symbols.gmt', 'c2.all.v2022.1.Hs.symbols.gmt', 'c5.all.v2022.1.Hs.symbols.gmt', 'c6.all.v2022.1.Hs.symbols.gmt', 'c7.all.v2022.1.Hs.symbols.gmt'); makeReport=0;gseaChip='/data/cqs/references/gsea/v2022.1.Hs/Mouse_Gene_Symbol_Remapping_Human_Orthologs_MSigDB.v2022.1.Hs.chip';
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/20240305_DE_fold1.2_pbmc/files_edgeR_inCluster_bySample_GSEA_Hs/result/SD3_vs_SD2')
+setwd('/nobackup/brown_lab/projects/20240520_11389_SLAMseq_mm10/deseq2_tc_read_sizeFactor_GSEA_Hs/result')
 
 ### Parameter setting end ###
 
@@ -48,7 +47,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
     "m5"="OntologyGeneSets",
     "m8"="CellTypeSignatureGeneSets")
   
-  gsea_name=gsub("_min5_fdr.*", "", basename(preRankedGeneFile))
+  gsea_name=gsub("_min\\d+_fdr.*", "", basename(preRankedGeneFile))
   gsea_name=gsub("_GSEA.rnk", "", gsea_name)
   if (is.null(resultDir)) {
     gesaResultDir<-paste0(preRankedGeneFile,".gsea")
