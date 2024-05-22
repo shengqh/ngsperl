@@ -1,10 +1,8 @@
 import argparse
-import sys
 import logging
 import os
 import gzip
 from shutil import copyfile
-from asyncore import read
 
 parser = argparse.ArgumentParser(description="Get length distribution in FASTQ file.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
