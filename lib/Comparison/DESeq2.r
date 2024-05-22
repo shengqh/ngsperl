@@ -1,28 +1,30 @@
 
-rootdir<-"/nobackup/vickers_lab/projects/20240206_Linton_11055_bulkRNA_human/deseq2_proteincoding_genetable/result"
-inputfile<-"RNAseq_human.define" 
+rootdir<-"/nobackup/brown_lab/projects/20240520_11389_SLAMseq_mm10/deseq2_tc_read_sizeFactor/result"
+inputfile<-"P11389_SLAMseq.define" 
 
 pvalue<-0.05
 useRawPvalue<-0
 foldChange<-2
-minMedianInGroup<-5
+minMedianInGroup<-1
   
 detectedInBothGroup<-0
-showLabelInPCA<-0
+showLabelInPCA<-1
 showDEGeneCluster<-0
 addCountOne<-0
-usePearsonInHCA<-1
+usePearsonInHCA<-0
 top25only<-0
 performWilcox<-0
-textSize<-10
+textSize<-11
 transformTable<-0
-exportSignificantGeneName<-1
+exportSignificantGeneName<-0
 thread<-8
 
 independentFiltering<-TRUE
 
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;usePearsonInHCA<-TRUE;showLabelInPCA<-FALSE;top25cvInHCA<-FALSE;
-cooksCutoff<-TRUE
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;top25cvInHCA<-FALSE;
+
+libraryFile<-"/nobackup/brown_lab/projects/20240520_11389_SLAMseq_mm10/T11_count_table/result/P11389_SLAMseq.sizeFactor.csv"
+libraryKey<-"sizeFactor"
 #predefined_condition_end
 
 options(bitmapType='cairo')
@@ -104,8 +106,13 @@ if(!exists("exportSignificantGeneName")){
 if(exists("libraryFile")){
   if (libraryKey != 'None'){
     if (grepl(".csv$", libraryFile)){
-      librarySize<-read.csv(libraryFile, row.names=1,check.names=FALSE)
-      librarySize<-unlist(librarySize[libraryKey,,drop=T])
+      librarySize_tbl<-read.csv(libraryFile, row.names=1,check.names=FALSE)
+      if(libraryKey == "sizeFactor"){
+        librarySize<-unlist(librarySize_tbl[,libraryKey,drop=T])
+        names(librarySize)<-rownames(librarySize_tbl)
+      }else{
+        librarySize<-unlist(librarySize_tbl[libraryKey,,drop=T])
+      }
       cat("Using ", libraryKey, " in " , libraryFile , " as library size. \n")
     }else{
       librarySize<-read.table(libraryFile, row.names=1,check.names=FALSE,header=T,stringsAsFactor=F)
@@ -318,8 +325,12 @@ myEstimateSizeFactors<-function(dds){
   if(exists("librarySize")){
     cat("Estimate size factor based on library size\n")
     curLibrarySize<-librarySize[colnames(dds)]
-    #based on DESeq2 introduction
-    curSizeFactor<- curLibrarySize / exp(mean(log(curLibrarySize)))
+    if(libraryKey == "sizeFactor"){
+      curSizeFactor<- curLibrarySize
+    }else{
+      #based on DESeq2 introduction
+      curSizeFactor<- curLibrarySize / exp(mean(log(curLibrarySize)))
+    }
     sizeFactors(dds)<-curSizeFactor
   }else{
     cat("Estimate size factor based on reads\n")
@@ -907,7 +918,7 @@ for(countfile_index in c(1:length(countfiles))){
     geneNameField = NULL
     
     lowColNames = tolower(colnames(tbb))
-    for(name in c("Feature_gene_name", "Gene.Symbol", "Gene_Symbol", "Gene Symbol")){
+    for(name in c("Feature_gene_name", "Gene.Symbol", "Gene_Symbol", "Gene Symbol", "gene_name")){
       lowName = tolower(name)
       if(lowName %in% lowColNames){
         geneNameField=colnames(tbb)[match(lowName, lowColNames)]
@@ -1432,5 +1443,4 @@ writeLines(capture.output(sessionInfo()), paste0(basename(inputfile),".DESeq2.Se
 deseq2version<-paste0("DESeq2,v", packageVersion("DESeq2"))
 writeLines(deseq2version, paste0(basename(inputfile),".DESeq2.version"))
 
-#save R Data
-save.image(paste0(basename(inputfile),".DESeq2.RData"))
+
