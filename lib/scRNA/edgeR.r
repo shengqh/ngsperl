@@ -62,7 +62,7 @@ write.csv(mt, paste0(detail_prefix, ".num_cell.csv"), row.names=F)
 
 clusterDf<-obj@meta.data
 
-comparisons<-read.table(parSampleFile2, stringsAsFactors = F)
+comparisons<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F, fill=TRUE, header=F)
 if(ncol(comparisons) == 3){
   colnames(comparisons)<-c("Value", "Key", "Comparison")
 }else{
