@@ -1,18 +1,20 @@
 rm(list=ls()) 
-outFile='coronary'
-parSampleFile1='fileList1.txt'
+outFile='carotid'
+parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/T01_prepare_data/coronary.DE.rds'
+parFile1='/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/T01_prepare_data/carotid.DE.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/T02_DE_fold1.2_coronary/bulk_edgeR_inCluster_bySample/result')
+setwd('/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/T03_DE_fold1.2_carotid.no_CV7209/bulk_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
+source("countTableVisFunctions.R")
+
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -33,7 +35,9 @@ min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
 
 group_column=myoptions$group_column
 
-comparisons<-read.table(parSampleFile2, stringsAsFactors = F, fill=TRUE, header=F)
+discard_samples=unlist(strsplit(myoptions$discard_samples, ','))
+
+comparisons<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F, fill=TRUE, header=F)
 if(ncol(comparisons) == 3){
   colnames(comparisons)<-c("Value", "Key", "Comparison")
 }else{
@@ -42,7 +46,6 @@ if(ncol(comparisons) == 3){
 }
 
 comparisonNames<-unique(comparisons$Comparison)
-
 
 if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
@@ -63,6 +66,12 @@ if(!exists('obj')){
       
       obj$orig.ident = obj@meta.data[,myoptions$sample_column]
     }
+  }
+
+  if(length(discard_samples) > 0){
+    cat("discard_samples: ", paste0(discard_samples, collapse=", "), "\n")
+    discard_cells = colnames(obj)[obj@meta.data$orig.ident %in% discard_samples]
+    obj<-subset(obj, cells=discard_cells, invert=TRUE)
   }
 }
 
@@ -90,7 +99,7 @@ if(1){
 
   cts<-sample_count_df$cluster
   cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
-  cts_file_map<-unlist(split(sample_count_df$pusedo_file, sample_count_df$cluster))
+  cts_file_map<-unlist(split(sample_count_df$pseudo_file, sample_count_df$cluster))
 
   designMatrix<-NULL
 
@@ -190,6 +199,30 @@ if(1){
   designMatrix=readRDS(paste0(detail_prefix, ".designMatrix.rds"))
 }
 
+drawHCA<-function(prefix, top_mat, design_data, group_colors, usePearsonInHCA=FALSE){
+  mat_scaled = t(scale(t(top_mat)))
+
+  ha=HeatmapAnnotation( Group=design_data$DisplayGroup,
+                        col=list(Group=group_colors),
+                        annotation_legend_param = list(Group = list(ncol = 1, title = "Group", title_position = "topleft")))
+
+  if(usePearsonInHCA){
+    clustering_distance_columns="pearson"
+  }else{
+    clustering_distance_columns="euclidean"
+  }
+
+  draw_heatmap_png( filepath=paste0(prefix, ".heatmap.png"), 
+                    htdata=mat_scaled, 
+                    name="zscore", 
+                    show_row_names=FALSE, 
+                    show_column_names=TRUE,
+                    save_rds=FALSE,
+                    clustering_distance_columns=clustering_distance_columns,
+                    top_annotation=ha,
+                    show_row_dend=FALSE)
+}
+
 meta<-obj@meta.data
 
 result<-NULL
@@ -242,7 +275,7 @@ for(idx in c(1:nrow(designMatrix))){
     dge<-calcNormFactors(dge,method = "TMM")
 
     cat("  plotMDS", "\n")
-    mds <- plotMDS(dge)
+    mds <- plotMDS(dge, plot=FALSE)
     toplot <- data.frame(Dim1 = mds$x, Dim2 = mds$y, Sample = design_data$Sample, Group = design_data$DisplayGroup)
     g<-ggplot(toplot, aes(Dim1, Dim2)) + 
       geom_point(aes(colour = Group)) + 
@@ -257,15 +290,15 @@ for(idx in c(1:nrow(designMatrix))){
     #https://support.bioconductor.org/p/133907/#133920
     # To make a PCA plot, simply use
     # plotMDS(x, gene.selection="common")
-    pca <- plotMDS(dge, gene.selection="common")
-    toplot <- data.frame(Dim1 = mds$x, Dim2 = mds$y, Sample = design_data$Sample, Group = design_data$DisplayGroup)
+    pca <- plotMDS(dge, gene.selection="common", plot=FALSE)
+    toplot <- data.frame(Dim1 = pca$x, Dim2 = pca$y, Sample = design_data$Sample, Group = design_data$DisplayGroup)
     g<-ggplot(toplot, aes(Dim1, Dim2)) + 
       geom_point(aes(colour = Group)) + 
       geom_text_repel(aes(label=Sample), hjust=0, vjust=0) +
       theme_bw3() + 
       theme(aspect.ratio=1) +
-      xlab(paste0("PC1 (", round(mds$var.explained[1] * 10000)/100, "%)")) + 
-      ylab(paste0("PC2 (", round(mds$var.explained[2] * 10000)/100, "%)")) +
+      xlab(paste0("PC1 (", round(pca$var.explained[1] * 10000)/100, "%)")) + 
+      ylab(paste0("PC2 (", round(pca$var.explained[2] * 10000)/100, "%)")) +
       scale_color_manual(values=group_colors)
     ggsave(paste0(prefix, ".pca.png"), g, width=6, height=5, units="in", dpi=300, bg="white")
 
@@ -307,26 +340,17 @@ for(idx in c(1:nrow(designMatrix))){
 
   cat("  cpm", "\n")
   log_cpm <- cpm(dge, log=TRUE)
-  cpm_file = paste0(prefix, ".cpm.csv")
+  cpm_file = paste0(prefix, ".log_cpm.csv")
   write.csv(log_cpm, file=cpm_file, quote=F)
 
   cat("  heatmap", "\n")
   topVarGenes <- head(order(rowVars(log_cpm), decreasing = TRUE), min(2000, nrow(log_cpm)))
   top_mat  <- log_cpm[ topVarGenes, ]
-  png(paste0(prefix, ".log_cpm.heatmap.png"), width=6, height=5, units="in", res=300, bg="white")
-  coolmap(top_mat, show.dendrogram="column", ColSideColors=sample_colors, margins=c(10, 5), labRow=FALSE)
-  legend(
-    x = -0.02,
-    y = 0.9, 
-    xpd = TRUE,    
-    legend = names(group_colors),
-    col = group_colors, 
-    lty= 1,             
-    lwd = 5,           
-    cex=.7
-    )
-  dev.off()
 
+  suppressPackageStartupMessages(library("ComplexHeatmap"))
+
+  drawHCA(paste0(prefix, ".log_cpm"), top_mat, design_data, group_colors, usePearsonInHCA=FALSE)
+  
   if(useRawPvalue){
     sigout<-out$table[(out$table$PValue<=pvalue) & (abs(out$table$logFC)>=log2(foldChange)),]
   }else{
@@ -363,3 +387,5 @@ for(idx in c(1:nrow(designMatrix))){
 }
 
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
+
+
