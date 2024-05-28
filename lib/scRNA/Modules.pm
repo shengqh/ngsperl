@@ -1340,6 +1340,7 @@ sub addEdgeRTask {
     "sample_column" => $def->{sample_column},
     "group_column" => $def->{group_column},
     "reduction" => $reduction,
+    "discard_samples" => $def->{discard_samples}
   };
 
   my $edgeRtaskname  = defined $celltype_task ? $celltype_task . "_edgeR" : $cluster_task . "_edgeR";
@@ -1397,8 +1398,8 @@ sub addEdgeRTask {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $edgeRtaskname,
-    rtemplate            => "../scRNA/scRNA_func.r,${edgeRscript}",
-    rReportTemplate      => "$edgeRmd;reportFunctions.R",
+    rtemplate            => "../CQS/countTableVisFunctions.R,../scRNA/scRNA_func.r,${edgeRscript}",
+    rReportTemplate      => "$edgeRmd,reportFunctions.R",
     rmd_ext => $rmd_ext,     
     run_rmd_independent => 1,
     parameterSampleFile1 => $groups,
