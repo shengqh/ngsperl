@@ -175,13 +175,19 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
 
       mds_png<-paste0(folder_prefix, ct_comp_name, ".mds.png")
       if(file.exists(mds_png)){
-        result<-paste0(result,"\n### MDS\n\n")
+        result<-paste0(result,"\n### Multidimensional scaling plot\n\nPlot samples on a two-dimensional scatterplot so that distances on the plot approximate the expression differences between the samples.\n\n")
         result<-paste0(result, getFigure(mds_png))
+      }
+
+      pca_png<-paste0(folder_prefix, ct_comp_name, ".pca.png")
+      if(file.exists(pca_png)){
+        result<-paste0(result,"\n### PCA plot\n\n")
+        result<-paste0(result, getFigure(pca_png))
       }
 
       heatmap_png<-paste0(folder_prefix, ct_comp_name, ".log_cpm.heatmap.png")
       if(file.exists(heatmap_png)){
-        result<-paste0(result,"\n### heatmap\n\n")
+        result<-paste0(result,"\n### heatmap plot\n\n")
         result<-paste0(result, getFigure(heatmap_png))
       }
 
