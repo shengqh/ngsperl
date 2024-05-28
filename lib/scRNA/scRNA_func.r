@@ -1,16 +1,24 @@
-library(harmony)
-library(cowplot)
-library(Seurat)
-library(tools)
-library(scales)
-library(ggplot2)
-library(patchwork)
-library(Matrix.utils)
-library(parallel)
-library(data.table)
-library(plyr)
-library(dplyr)
-library(rlang)
+
+load_install<-function(library_name, library_sources=library_name){
+  if(!require(library_name, character.only = T)){
+    BiocManager::install(library_sources, ask=FALSE)
+  }
+  library(library_name, character.only = T)
+}
+
+load_install("harmony")
+load_install("cowplot")
+load_install("Seurat")
+load_install("tools")
+load_install("scales")
+load_install("ggplot2")
+load_install("patchwork")
+load_install("Matrix.utils", "cvarrichio/Matrix.utils")
+load_install("parallel")
+load_install("data.table")
+load_install("plyr")
+load_install("dplyr")
+load_install("rlang")
 
 #https://github.com/r-lib/lobstr/blob/main/R/mem.R
 lobstr_node_size <- function() {
