@@ -28,6 +28,7 @@ load_install("ggExtra")
 #load_install("gtsummary")
 #load_install("flextable")
 load_install("dplyr")
+load_install("ComplexHeatmap")
 
 options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
 options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
