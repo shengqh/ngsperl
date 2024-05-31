@@ -1077,7 +1077,7 @@ draw_density_plot<-function(log2counts, prefix, outputFormat, width_inch=5, heig
                     plot=g)
 }
 
-drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=6, height_inch=5, scalePCs=TRUE){
+drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=4, height_inch=3, point_size=3, label_size=2, scalePCs=TRUE){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     pca<-prcomp(t(rldmatrix))
@@ -1129,26 +1129,32 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
     if(has_group){
       pcadata$group<-groups
     }
+
+    write.csv(pcadata, file=paste0(file_prefix, ".csv"), row.names=FALSE)
     
     if(showLabelInPCA){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-        geom_text(vjust=-0.6, size=4)
+        geom_text(vjust=-0.6, size=label_size)
     }else{
       g <- ggplot(pcadata, aes(x=PC1, y=PC2)) +
         theme(legend.position="top")
     }
     if(has_group){
-      g<-g+geom_point(aes(col=group), size=4) + 
+      g<-g+geom_point(aes(col=group), size=point_size) + 
         scale_colour_manual(name="",values = groupColors)
     }else{
-      g<-g+geom_point(size=4) 
+      g<-g+geom_point(size=point_size) 
     }
     g<-g+scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
       scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
       geom_hline(aes(yintercept=0), linewidth=.2) + 
       geom_vline(aes(xintercept=0), linewidth=.2) + 
       xlab(pcalabs[1]) + ylab(pcalabs[2]) +
-      theme_bw2() + theme(aspect.ratio=1)
+      theme_classic() + 
+      theme(aspect.ratio=1,
+            axis.text=element_text(face="bold"),
+            axis.title=element_text(face="bold"),
+            legend.text=element_text(size=12, face="bold"))
     
     save_ggplot2_plot(file_prefix=file_prefix,
                       outputFormat=outputFormat, 

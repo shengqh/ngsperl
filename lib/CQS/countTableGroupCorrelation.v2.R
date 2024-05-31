@@ -5,11 +5,11 @@ parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2=''
-parFile3=''
+parFile2='/nobackup/vickers_lab/projects/20221221_8612_CM_smRNA_human_Glioblastoma/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/CM_8612_Glioblastoma.Category.Table.csv'
+parFile3='/nobackup/vickers_lab/projects/20221221_8612_CM_smRNA_human_Glioblastoma/preprocessing/fastqc_post_trim_summary/result/CM_8612_Glioblastoma.countInFastQcVis.Result.Reads.csv'
 
 
-setwd('/nobackup/shah_lab/shengq2/20240508_Emeli_obesity_EV_AHA/20240508_rnaseq_hg38/genetable/result')
+setwd('/nobackup/vickers_lab/projects/20221221_8612_CM_smRNA_human_Glioblastoma/data_visualization/count_table_correlation_TotalReads/result')
 
 ### Parameter setting end ###
 
@@ -52,6 +52,10 @@ minMedianInGroup = to_numeric(myoptions$minMedianInGroup, 1)
 fixColorRange = is_one(myoptions$fixColorRange, 1)
 useLeastGroups = is_one(myoptions$useLeastGroups, 1)
 totalCountKey = to_character(myoptions$totalCountKey, "None")
+
+pca_width_inch=to_numeric(myoptions$pca_width_inch, 4)
+pca_height_inch=to_numeric(myoptions$pca_height_inch, 2.5)
+pca_point_size=to_numeric(myoptions$pca_point_size, 3)
 
 outputDirectory = to_character(myoptions$outputDirectory, "")
 output_include_folder_name = is_one(myoptions$output_include_folder_name, 1)
@@ -547,7 +551,7 @@ for (i in 1:nrow(countTableFileAll)) {
         cat("Drawing PCA for", title, "samples using", nrow(cur_counts), cur_name, "genes.\n")
         gene_suffix = ifelse(cur_name == "all", "", ".top25vars")
         
-        drawPCA(paste0(outputFilePrefix, curSuffix, gene_suffix, ".PCA"), cur_counts, showLabelInPCA, groups, colors, outputFormat, width_inch=6, height_inch=5)
+        drawPCA(paste0(outputFilePrefix, curSuffix, gene_suffix, ".PCA"), cur_counts, showLabelInPCA, groups, colors, outputFormat, width_inch=pca_width_inch, height_inch=pca_height_inch, point_size=pca_point_size)
 
         mat_scaled = t(scale(t(cur_counts)))
 

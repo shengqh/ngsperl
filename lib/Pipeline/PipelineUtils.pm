@@ -890,6 +890,9 @@ sub add_table_correlation {
     "minMedian" => getValue($def, "minMedian", 0),
     "minMedianInGroup" => getValue($def, "minMedianInGroup", 1),
     "totalCountKey" => getValue($def, "totalCountKey", "None"),
+    "pca_width_inch" => getValue($def, "pca_width_inch", 4),
+    "pca_height_inch" => getValue($def, "pca_height_inch", 2.5),
+    "pca_point_size" => getValue($def, "pca_point_size", 3),
   };
 
   my $corr_output_file_ext = ".density.png;.density.individual.png.Correlation.png;.heatmap.png;.PCA.png;";
