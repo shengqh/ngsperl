@@ -126,9 +126,7 @@ sub perform {
     my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${filelist_name}" );
     if ( $listfile ne "" ) {
       $listfile = basename($listfile);
-      if ( $option =~ /$listfile/ ) {
-        $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
-      }
+      $option = $option . " " . $parameterSampleFilearg . " " . $listfile;
     }
   }
 
