@@ -1226,7 +1226,9 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
       }
 
-      addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $nofilter_prefix, $def, $nofilter_index_snv)
+      if(getValue($def, "perform_maf_report", 1)){
+        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $nofilter_prefix, $def, $nofilter_index_snv)
+      }
     }
   }
 
@@ -1250,7 +1252,9 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
         }
 
-        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $gatk_index, $gatk_index_snv)
+        if(getValue($def, "perform_maf_report", 1)){
+          addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $gatk_index, $gatk_index_snv)
+        }
       }
     }
 
@@ -1428,8 +1432,9 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         if ( defined $def->{annotation_genes} ) {
           $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
         }
-
-        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
+        if(getValue($def, "perform_maf_report", 1)){
+          addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
+        }
       }
     }
   }
