@@ -1492,6 +1492,7 @@ read_object_from_file_list<-function(file_list_path, meta_rds=NULL, columns=NULL
   df=fread(file_list_path, header=F)
   sample_name=df$V2[1]
   obj_file=df$V1[1]
+  cat("read object from ", obj_file, "\n")
   obj=read_object(obj_file, meta_rds=meta_rds, columns=columns, sample_name=sample_name)
   return(obj)
 }
