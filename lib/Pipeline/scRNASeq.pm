@@ -496,41 +496,53 @@ sub getScRNASeqConfig {
     my $seurat_rawdata;
     my $is_preprocessed;
     if ( getValue( $def, "perform_seurat" ) ) {
-      if(getValue($def, "rawdata_from_qc", 0)){
-        if(!defined $raw_individual_qc_task){
-          die("trying to build rawdata from qc, please set perform_individual_qc => 1 in your configuration file");
-        }
-        my $sct_str = get_sct_str($def);
-        $seurat_rawdata = "${prefix}seurat_rawdata_postqc${sct_str}";
-        add_seurat_rawdata($config, $def, $tasks, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task, $decontX_ref );
-        $is_preprocessed = 1;
+      my $seurat_task = undef;
+      my $reduction = undef;
+      my $obj_ref = undef;
+      my $localization_ref = undef;
+
+      if(getValue($def, "rawdata_from_object", 0)){
+        $seurat_task = "files";
+        $reduction = "pca";
+        $obj_ref = $seurat_task;
+        $localization_ref = $seurat_task;
       }else{
-        $seurat_rawdata = "${prefix}seurat_rawdata";
-
-        if (getValue($def, "merge_seurat_object", 0)){
-          add_seurat_merge_object($config, $def, $tasks, $target_dir, $seurat_rawdata, $files_def, undef, undef, 0, {});
+        if(getValue($def, "rawdata_from_qc", 0)){
+          if(!defined $raw_individual_qc_task){
+            die("trying to build rawdata from qc, please set perform_individual_qc => 1 in your configuration file");
+          }
+          my $sct_str = get_sct_str($def);
+          $seurat_rawdata = "${prefix}seurat_rawdata_postqc${sct_str}";
+          add_seurat_rawdata($config, $def, $tasks, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task, $decontX_ref );
+          $is_preprocessed = 1;
         }else{
-          add_seurat_rawdata($config, $def, $tasks, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef );
+          $seurat_rawdata = "${prefix}seurat_rawdata";
+
+          if (getValue($def, "merge_seurat_object", 0)){
+            add_seurat_merge_object($config, $def, $tasks, $target_dir, $seurat_rawdata, $files_def, undef, undef, 0, {});
+          }else{
+            add_seurat_rawdata($config, $def, $tasks, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef );
+          }
+          $is_preprocessed = 0;
         }
-        $is_preprocessed = 0;
+
+        push (@report_files, ($seurat_rawdata, "rawobj.rds"));
+        push (@report_names, "raw_obj");
+
+        ($seurat_task, $reduction) = add_seurat($config, $def, $tasks, $target_dir, $seurat_rawdata, $essential_gene_task, 0, $is_preprocessed, $prefix, $filter_config_file);
+        $obj_ref = [$seurat_task, ".final.rds"];
+
+        push (@report_files, ($seurat_task, ".final.png", 
+          $seurat_task, ".qc.1.png", 
+          $seurat_task, ".qc.2.png", 
+          $seurat_task, ".qc.3.png", 
+          $seurat_task, ".qc.4.png", 
+          $seurat_task, ".sample_cell.csv"));
+        push (@report_names, ("seurat_merge_png", "seurat_qc_1_png", "seurat_qc_2_png", "seurat_qc_3_png", "seurat_qc_4_png", 
+          "sample_cell_csv"));
+
+        $localization_ref = [ $seurat_task, ".final.rds" ];
       }
-
-      push (@report_files, ($seurat_rawdata, "rawobj.rds"));
-      push (@report_names, "raw_obj");
-
-      my ($seurat_task, $reduction) = add_seurat($config, $def, $tasks, $target_dir, $seurat_rawdata, $essential_gene_task, 0, $is_preprocessed, $prefix, $filter_config_file);
-      my $obj_ref = [$seurat_task, ".final.rds"];
-
-      push (@report_files, ($seurat_task, ".final.png", 
-        $seurat_task, ".qc.1.png", 
-        $seurat_task, ".qc.2.png", 
-        $seurat_task, ".qc.3.png", 
-        $seurat_task, ".qc.4.png", 
-        $seurat_task, ".sample_cell.csv"));
-      push (@report_names, ("seurat_merge_png", "seurat_qc_1_png", "seurat_qc_2_png", "seurat_qc_3_png", "seurat_qc_4_png", 
-        "sample_cell_csv"));
-
-      my $localization_ref = [ $seurat_task, ".final.rds" ];
 
       if(!defined $signacX_ref) {
         if (getValue( $def, "perform_SignacX", 0 ) ) {
@@ -549,6 +561,18 @@ sub getScRNASeqConfig {
           };
           add_singleR_cell( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $cur_options );
           $singleR_ref = [$singleR_task, ".meta.rds"];
+        }
+      }
+
+      if(!defined $azimuth_ref){
+        if (getValue( $def, "perform_Azimuth", 0 ) ) {
+          my $azimuth_task = $seurat_task . "_Azimuth";
+          my $cur_options = {
+            task_name => $def->{task_name},
+            reduction => $reduction, 
+          };
+          add_azimuth( $config, $def, $tasks, $target_dir, $azimuth_task, $obj_ref, $cur_options);
+          $azimuth_ref = [ $azimuth_task, ".meta.rds" ];
         }
       }
 
