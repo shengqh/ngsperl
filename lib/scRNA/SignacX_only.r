@@ -1,6 +1,5 @@
 rm(list=ls()) 
-sample_name='DB_1'
-outFile='DB_1'
+outFile='coronary'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20231202_scRNA_5798_human_liver_redo_cellbender/raw_qc_sct2_SignacX/result/DB_1')
+setwd('/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/20240601_T02_subcluster/SignacX/result')
 
 ### Parameter setting end ###
 
@@ -28,7 +27,13 @@ myoptions<-split(options_table$V1, options_table$V2)
 pca_dims=1:as.numeric(myoptions$pca_dims)
 reduction=myoptions$reduction
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
-assay=ifelse(by_sctransform, "SCT", "RNA")
+
+find_neighbors <- is_one(myoptions$find_neighbors)
+
+assay=myoptions$assay
+if(assay == "RNA"){
+  assay=ifelse(by_sctransform, "SCT", "RNA")  
+}
 
 SignacX_reference_file=myoptions$SignacX_reference_file
 if(is.null(SignacX_reference_file)){
@@ -45,6 +50,8 @@ if(!exists("obj")){
   obj=read_object_from_file_list(parSampleFile1)
 }
 
+DefaultAssay(obj) <- assay
+
 if(DefaultAssay(obj) == "integrated"){
   if(nrow(obj@assays$integrated@counts) == 0){
     if ("SCT" %in% names(obj@assays)){
@@ -55,7 +62,9 @@ if(DefaultAssay(obj) == "integrated"){
   }
 }
 
-obj<-FindNeighbors(object = obj, reduction=reduction, dims=pca_dims, verbose=FALSE)
+if(find_neighbors){
+  obj<-FindNeighbors(object = obj, reduction=reduction, dims=pca_dims, verbose=FALSE)
+}
 
 labels <- Signac(E=obj, R=R)
 
@@ -90,3 +99,4 @@ ct_tbl<-table(ct$SignacX,ct$Sample)
 write.csv(ct_tbl, paste0(outFile, ".SignacX_Sample.csv"))
 
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
+
