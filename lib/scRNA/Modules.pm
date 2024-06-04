@@ -706,6 +706,8 @@ sub add_signacx {
       nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
       nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
       by_individual_sample => $by_individual_sample,
+      find_neighbors => getValue( $def, "SignacX_find_neighbors", 1 ),
+      assay => getValue( $def, "SignacX_assay", "RNA" ),
     },
     output_file_ext => ".SignacX.png;.SignacX.rds;.meta.rds",
     sh_direct       => 0,
@@ -920,7 +922,8 @@ sub add_celltype_validation {
 
   #print("is_choose=" . $is_choose . "\n");
 
-  my $rmd_file = $is_choose ? "../scRNA/seurat_choose_validation.rmd" : "../scRNA/seurat_scDynamic_validation.rmd";
+  #my $rmd_file = $is_choose ? "../scRNA/seurat_choose_validation.rmd" : "../scRNA/seurat_scDynamic_validation.rmd";
+  my $rmd_file = "../scRNA/seurat_scDynamic_validation.rmd";
   $config->{$task_name} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -941,6 +944,7 @@ sub add_celltype_validation {
       rmd_ext => $rmd_ext,
       bubblemap_file => getValue($def, "bubblemap_file"),
       species => getValue( $def, "species" ),
+      create_clusters => getValue($def, "validation_create_clusters", 0),
     },
     parameterSampleFile2 => $def->{pool_sample_groups},
     parameterSampleFile3_ref => $sctk_ref,
