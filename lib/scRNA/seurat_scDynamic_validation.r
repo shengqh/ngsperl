@@ -1,17 +1,16 @@
 rm(list=ls()) 
-outFile='iSGS_cell_atlas'
+outFile='coronary'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parSampleFile7='fileList7.txt'
-parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.iter_png.csv'
+parFile1='/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/20240531_T01_prepare_data_coronary/coronary.DE.rds'
+parFile2='/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/20240531_T01_prepare_data_coronary/coronary.meta.rds'
+parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_1_call_validation/result')
+setwd('/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/20240601_T02_subcluster/celltype_validation/result')
 
 ### Parameter setting end ###
 
@@ -26,19 +25,25 @@ celltype_column = myoptions$celltype_column
 bubblemap_file = myoptions$bubblemap_file
 cur_assay = ifelse(is_one(myoptions$by_sctransform), "SCT", "RNA")
 species = myoptions$species
+create_clusters = is_one(myoptions$create_clusters)
 
 file_dir=paste0(outFile, gsub(".html", "", myoptions$rmd_ext))
 dir.create(file_dir, showWarnings=FALSE)
 file_prefix=file.path(file_dir, outFile)
 
 meta<-readRDS(parFile2)
-
-if(celltype_column == "seurat_cell_type"){
-  celltype_cluster_column = "seurat_clusters"
-}else if (paste0("seurat_", celltype_column) %in% colnames(meta)){
-  celltype_cluster_column = "seurat_clusters"
-}else{
+if(create_clusters){
   celltype_cluster_column = paste0(celltype_column, "_clusters")
+  meta[,celltype_column]=factor_by_count(meta[,celltype_column])
+  meta[,celltype_cluster_column]=as.numeric(meta[,celltype_column])-1
+}else{
+  if(celltype_column == "seurat_cell_type"){
+    celltype_cluster_column = "seurat_clusters"
+  }else if (paste0("seurat_", celltype_column) %in% colnames(meta)){
+    celltype_cluster_column = "seurat_clusters"
+  }else{
+    celltype_cluster_column = paste0(celltype_column, "_clusters")
+  }
 }
 
 stopifnot(celltype_cluster_column %in% colnames(meta))
@@ -172,3 +177,4 @@ writeLines(validation_columns, "validation_columns.txt")
 if(file.exists(parFile3)){
   writeLines(parFile3, "iter_png.txt")
 }
+
