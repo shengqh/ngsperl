@@ -85,6 +85,25 @@ choose_figure_rmd<-function(detail_prefix, cts){
     ct_png = paste0(detail_prefix, ".", ct_name, ".png")
     result<-paste0(result, paste0("\n\n# ", ct, "\n\n"))
     result<-paste0(result, getFigure(ct_png))
+
+    tool = "SingleR"
+    for(tool in c("SingleR", "SignacX", "Azimuth")){
+      tool_png = paste0(detail_prefix, ".", ct_name, ".", tool, ".png")
+      if(file.exists(tool_png)){
+        result<-paste0(result, paste0("\n\n## ", tool, "\n\n"))
+        tool_csv = paste0(detail_prefix, ".", ct_name, ".", tool, ".csv")
+        result<-paste0(result, getTable(tool_csv))
+
+        result<-paste0(result, paste0("\n\n### UMAP\n\n"))
+        result<-paste0(result, getFigure(tool_png))
+
+        tool_bubble_file = paste0(detail_prefix, ".", ct_name, ".", tool, ".bubble.png")
+        if(file.exists(tool_bubble_file)){
+          result<-paste0(result, paste0("\n\n### Curated marker genes\n\n"))
+          result<-paste0(result, getFigure(tool_bubble_file))
+        }
+      }
+    }
   }
   return(result)
 }
