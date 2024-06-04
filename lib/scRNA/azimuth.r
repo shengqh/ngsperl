@@ -76,10 +76,10 @@ if(has_bubblemap){
     species=myoptions$species)
   layout <- "ABB"
   g<-g1+g2+plot_layout(design=layout)
-  width=6300
+  width=10000
 }else{
   g<-g1
-  width=2300
+  width=4300
 }
 height=2000
 
