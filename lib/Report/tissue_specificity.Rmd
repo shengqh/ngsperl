@@ -23,6 +23,26 @@ source(paste0(lib_folder, "/CQS/reportFunctions.R"))
 ```
 
 ```{r}
+if (exists("reportParametersList") && "tissue_specificity_parameter_list" %in% names(reportParametersList)) {
+  for (varName in names(reportParametersList$tissue_specificity_parameter_list)) {
+    assign(varName,reportParametersList$tissue_specificity_parameter_list[[varName]])
+  }
+  
+  background_genes=reportParametersList$background_genes
+  target_genes=reportParametersList$target_genes
+  prefix=reportParametersList$prefix
+}
+
+# if (is.data.frame(proteins)) {
+#   proteinsTable=proteins
+#   proteinsColumn=colnames(proteins)[1]
+# } else {
+#   proteinsTable=data.frame(proteins=proteins)
+#   proteinsColumn="proteins"
+# }
+```
+
+```{r}
 #make sure all required variables are defined
 stopifnot(exists("prefix"))
 

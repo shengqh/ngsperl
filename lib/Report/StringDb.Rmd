@@ -85,8 +85,8 @@ proteins_interactions_HC = proteins_interactions[which(proteins_interactions$com
 proteins_interactions_HC = proteins_interactions_HC[which(!duplicated(paste0(proteins_interactions_HC$from,proteins_interactions_HC$to, proteins_interactions_HC$combined_score))),]
 
 #add in the original protein identifiers
-proteins_interactions_HC$from_original_ident = proteins_mapped$proteins[match(proteins_interactions_HC$from, proteins_mapped$STRING_id)]
-proteins_interactions_HC$to_original_ident = proteins_mapped$proteins[match(proteins_interactions_HC$to, proteins_mapped$STRING_id)]
+proteins_interactions_HC$from_original_ident = proteins_mapped[,proteinsColumn][match(proteins_interactions_HC$from, proteins_mapped$STRING_id)]
+proteins_interactions_HC$to_original_ident = proteins_mapped[,proteinsColumn][match(proteins_interactions_HC$to, proteins_mapped$STRING_id)]
 
 
 DT::datatable(proteins_interactions_HC)
@@ -176,6 +176,11 @@ df <- data.frame (
   Connection=inter_counts$"Number of interactions within protein list",
   row.names = inter_counts$Original_ident,
   stringsAsFactors = FALSE)       # important when loading strings!
+if (is.data.frame(proteins)) {
+  temp=proteins
+  row.names(temp)=proteins[,proteinsColumn]
+  df=cbind(df,temp[row.names(df),])
+}
 loadTableData (df)
 
 column <- 'Connection'
