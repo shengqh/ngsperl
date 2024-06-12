@@ -63,7 +63,7 @@ library(deTS)
 
 ## Protein Annotation based on Protein Atlas
 
-Datafile downloaded from https://www.proteinatlas.org/about/download, "proteinatlas.tsv.zip"
+Data file downloaded from https://www.proteinatlas.org/about/download, "proteinatlas.tsv.zip"
 
 ```{r}
 #proteinAtlasDatabaseFile="https://www.proteinatlas.org/download/proteinatlas.tsv.zip"

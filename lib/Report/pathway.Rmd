@@ -51,7 +51,7 @@ stopifnot(exists("pathway_toType"))
 has_background_genes = !all(is.null(background_genes))
 ```
 
-```{r, error=FALSE, warning=FALSE}
+```{r, error=FALSE, warning=FALSE, message=FALSE, results='asis'}
 if(!exists("pathway_width")){
   pathway_width=6
 }
@@ -81,7 +81,7 @@ for(pname in pathway_analysis_sets){
     pathway_width=pathway_width, 
     pathway_height=pathway_height)
 
-  rmd=paste0(rmd, "\n\n### ", pname, "\n\n")
+  rmd=paste0(rmd, "\n\n#### ", pname, "\n\n")
   if(nrow(lst$res_tbl) == 0){
     rmd=paste0(rmd, "No enriched pathways found.\n\n")
   }else{
