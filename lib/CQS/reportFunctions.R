@@ -314,6 +314,8 @@ factor_by_count<-function(vec){
 }
 
 get_log_cpm<-function(counts, prefix=NULL, filterCPM=TRUE, transform=TRUE){
+  library(edgeR)
+  
   dge <- DGEList(counts)
   dge <- calcNormFactors(dge)
 
