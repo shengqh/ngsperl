@@ -1,20 +1,19 @@
 rm(list=ls()) 
-outFile='carotid'
-parSampleFile1=''
+outFile='iSGS_cell_atlas'
+parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/T01_prepare_data/carotid.DE.rds'
-parFile2=''
+parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge_dr0.2_3_choose/result/iSGS_cell_atlas.final.rds'
+parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge_dr0.2_3_choose/result/iSGS_cell_atlas.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/T03_DE_fold1.2_carotid.no_CV7209/bulk_edgeR_inCluster_bySample/result')
+setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 source("countTableVisFunctions.R")
-
+source("scRNA_func.r")
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -92,6 +91,7 @@ if(1){
   colnames(mt)<-c("cell_type", "sample", "num_cell")
   write.csv(mt, paste0(detail_prefix, ".num_cell.csv"), row.names=F)
 
+  cat("get count table ...\n")
   sample_count_df<-get_seurat_sum_count(obj = obj, 
                                         cluster_name = cluster_name, 
                                         min_cell_per_sample = min_cell_per_sample,
@@ -101,6 +101,7 @@ if(1){
   cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
   cts_file_map<-unlist(split(sample_count_df$pseudo_file, sample_count_df$cluster))
 
+  cat("get design matrix ...\n")
   designMatrix<-NULL
 
   comp <-comparisonNames[1]
@@ -109,11 +110,9 @@ if(1){
     comp_options = split(comp_groups$Value, comp_groups$Key)
     
     if("groups" %in% names(comp_options)){
-      if(!is.null(myoptions$group_column)){
-        if(myoptions$group_column != ""){
-          if(!myoptions$group_column %in% colnames(obj@meta.data)){
-            stop(paste0("group_column ", myoptions$group_column, " not found in meta.data of ", parFile1))
-          }
+      if(!is.null(myoptions$group_column) & (myoptions$group_column != "")){
+        if(!myoptions$group_column %in% colnames(obj@meta.data)){
+          stop(paste0("group_column ", myoptions$group_column, " not found in meta.data of ", parFile1))
         }
 
         sampleGroups = unique(obj@meta.data[,c("orig.ident", myoptions$group_column)]) %>%
@@ -387,5 +386,3 @@ for(idx in c(1:nrow(designMatrix))){
 }
 
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
-
-
