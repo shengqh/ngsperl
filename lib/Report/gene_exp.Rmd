@@ -1,3 +1,17 @@
+
+```{r}
+#varaables defined from list
+if (exists("reportParametersList") && "gene_exp_parameter_list" %in% names(reportParametersList)) {
+  for (varName in names(reportParametersList$gene_exp_parameter_list)) {
+    assign(varName,reportParametersList$gene_exp_parameter_list[[varName]])
+  }
+  
+  background_genes=reportParametersList$background_genes
+  target_genes=reportParametersList$target_genes
+  prefix=reportParametersList$prefix
+}
+```
+
 ```{r}
 load_install<-function(library_name, library_sources=library_name){
   if(!require(library_name, character.only = T)){
@@ -14,6 +28,8 @@ load_install("viridis")
 load_install("circlize")
 load_install("ggplot2")
 load_install("ggpubr")
+load_install("dplyr")
+load_install("tibble")
 
 if(!exists("lib_folder")){
   lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
@@ -50,7 +66,7 @@ if(!exists("draw_gene_exp_heatmap_5perc_global")){
 }
 
 if (!exists("show_row_names")){
-  show_row_names=TRUE
+  show_row_names=length(target_genes) < 100
 }
 
 draw_gene_exp_heatmap_5perc_global = perform_gene_exp_5perc & draw_gene_exp_heatmap_5perc_global & has_background_genes
@@ -64,18 +80,6 @@ Read gene expression data from `r gene_exp_file` and filter out genes that are n
 geneExprTab<-read.delim(gene_exp_file, sep = "\t", header = T, as.is = T, stringsAsFactors = F, row.names = 1)
 the_sums<-apply(geneExprTab, 1 ,sum)
 geneExprTabR<-geneExprTab[which(the_sums>0),]
-
-# mgeneexp=reshape2::melt(geneExprTabR) |>
-#   dplyr::rename(Tissue=variable, Exp=value) |>
-#   dplyr::mutate(logExp=log2(Exp+1)) |>
-#   dplyr::select(-Exp)
-
-# g=ggplot(mgeneexp, aes(x=Tissue, y=logExp)) + 
-#   geom_boxplot() +
-#   ggtitle("Boxplot of gene expression values") + 
-#   theme_bw3()
-
-# ggsave(paste0(prefix, ".geneExpression_boxplot.png"), g, width = 12, height = 6, units = "in", dpi = 300, bg="white")
 
 if(has_background_genes){
   stopifnot(all(target_genes %in% background_genes))
@@ -132,19 +136,20 @@ tdf = merge(eg, geneExprTabR, by.x="TO", by.y="row.names") |>
   dplyr::select(-TO)
 
 tdf = stats::aggregate(tdf %>% dplyr::select(-FROM), by=list(Gene=tdf$FROM), FUN=sum) |> 
-  column_to_rownames("Gene") |>
+  tibble::column_to_rownames("Gene") |>
   calc_z_scores()
 
-col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
+#somehow using col_fun will throw error, we have to ignore it right now.
+#col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
 
 heatmap_png=paste0(prefix, ".geneExpression_heatmap.png")
 ht_size = draw_heatmap_png( filepath=heatmap_png, 
                             htdata=as.matrix(tdf), 
+                            #col = col_fun,
                             name="z score of logNorm\ngene expression", 
                             show_row_names=show_row_names, 
                             show_column_names=TRUE,
                             save_rds=TRUE,
-                            col = col_fun,
                             cluster_rows=TRUE,
                             cluster_columns =TRUE,
                             show_column_dend =FALSE,
@@ -192,7 +197,7 @@ ht_size = draw_heatmap_png( filepath=global_perc5_heatmap_png,
                             show_row_names=FALSE, 
                             show_column_names=TRUE,
                             save_rds=FALSE,
-                            col = col_fun,
+                            #col = col_fun,
                             cluster_rows=TRUE,
                             cluster_columns =TRUE,
                             show_column_dend =FALSE,
@@ -287,7 +292,7 @@ ht_size = draw_heatmap_png( filepath=zscore_one_png,
                             show_row_names=show_row_names, 
                             show_column_names=TRUE,
                             save_rds=FALSE,
-                            col = col_fun,
+                            #col = col_fun,
                             cluster_rows=TRUE,
                             cluster_columns =TRUE,
                             show_column_dend =FALSE,

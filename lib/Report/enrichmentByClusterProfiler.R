@@ -234,6 +234,93 @@ enrichmentByClusterProfiler = function(selectedProteins,
   return(listEnrichments)
 }
 
+
+makeDotPlotClusterProfilerEnrichment=function(dp,
+                                              minCount=5,
+                                              top=10,
+                                              valueCut=NULL,
+                                              y="Coverage",
+                                              returnTable=FALSE,
+                                              showProgress=TRUE) {
+  topBy="pvalue"
+  colorBy="NegLog10pAdj"
+  colorTitle="-log10(FDR)"
+
+  if(showProgress){
+    print(paste0("Pathways were filtered based on Count >= ",minCount, ifelse(is.null(valueCut), "", paste0(" and ", topBy, "<=", valueCut))))
+  }
+  if (class(dp)=="list") { #list as input, make into data.frame
+    dataForPlotFrame=NULL
+    for (i in 1:length(dp)) {
+      temp=data.frame(dp[[i]],Module=names(dp)[i])
+      dataForPlotFrame=rbind(dataForPlotFrame,temp)
+    }
+  } else { #data frame, extract needed columns
+    if ("Module" %in% colnames(dp)) {
+      dataForPlotFrame=dp[,unique(c("Description","Count","CountRatio",topBy,colorBy,y,"Module"))]
+    } else {
+      dataForPlotFrame=data.frame(dp[,unique(c("Description","Count","CountRatio",topBy,colorBy,y))],Module="1")
+    }
+  }
+  #browser()
+  temp=apply(dataForPlotFrame,2,function(x) all(is.na(x)))
+  if (any(temp)) {
+    warning(paste0("All NA values in ",names(which(temp)),". Skip making figure"))
+    return(NULL)
+  }
+
+  if(!is.null(valueCut)){
+    dataForPlotFrameP=dataForPlotFrame %>% 
+      dplyr::group_by(Module) %>% 
+      dplyr::filter(Count>=minCount & !!sym((topBy))<=valueCut)
+  }else{
+    dataForPlotFrameP=dataForPlotFrame %>% 
+      dplyr::group_by(Module) %>% 
+      dplyr::filter(Count>=minCount)
+  }
+  if (nrow(dataForPlotFrameP) == 0) {
+    warning(paste0("No valid pathway. Skip making figure"))
+    return(NULL)
+  }
+  
+  dataForPlotFrameP = dataForPlotFrameP %>% 
+    dplyr::group_by(Module) %>%
+    dplyr::top_n(-top,wt=get(topBy)) %>%
+    dplyr::arrange(desc(!!sym(y))) %>%
+    as.data.frame()
+
+  dataForPlotFrameP$Description = factor(dataForPlotFrameP$Description, levels=rev(dataForPlotFrameP$Description))
+
+  max_value=max(dataForPlotFrameP[[colorBy]],na.rm=TRUE)
+
+  p=dataForPlotFrameP %>%
+    ggplot(aes(x=Description,y=Coverage,colour=!!sym(colorBy)))+
+    geom_point(aes(size=Count)) +
+    coord_flip() + 
+    xlab("") +
+    scale_colour_continuous(limits=c(0,max_value), low='blue', high='red',guide=guide_colorbar(reverse=FALSE))+
+    guides(colour=guide_legend(title=colorTitle)) +
+    facet_wrap(~Module,scales = "free")+
+    theme_bw()+
+    theme(
+      #panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      legend.title = element_text(face = "bold"),
+      axis.text = element_text(face = "bold"),
+      axis.title = element_text(face = "bold")
+    )
+  if (returnTable) {
+    dataForPlotFrameP$Description=gsub("_+[a-z0-9 \\.A-Z\\(\\)-]+$","",dataForPlotFrameP$Description)
+    return(list(
+      figure=p,
+      result=dataForPlotFrameP
+    ))
+  } else {
+    return(p)
+  }
+}
+
 makeBarPlotClusterProfilerEnrichment=function(dp,minCount=5,top=10,valueCut=NULL,
                                               topBy="pvalue",fill="p.adjust",y="Coverage",
                                               returnTable=FALSE,
@@ -623,12 +710,16 @@ get_pathway_table<-function(pathway_res, csv_file=NULL,qvalueCut=0.05){
   return(list(res_tbl=res_tbl, csv_file=csv_file))
 }
 
-get_pathway_figure<-function(dp, png_file, fig_width, fig_height, pname=NULL, y="Coverage", ylab="Geneset coverage (%)"){
+get_pathway_figure<-function(dp, png_file, fig_width, fig_height, pname=NULL, y="Coverage", ylab="Geneset coverage (%)", plot_type="bar"){
   if(!is.null(pname)){
     dp = list(dp[[pname]])
     names(dp) = pname
   }
-  g = makeBarPlotClusterProfilerEnrichment(dp, top=20, valueCut=NULL, y=y, showProgress=FALSE)
+  if(plot_type == "dot"){
+    g = makeDotPlotClusterProfilerEnrichment(dp, top=20, valueCut=NULL, y=y, showProgress=FALSE)
+  }else{
+    g = makeBarPlotClusterProfilerEnrichment(dp, top=20, valueCut=NULL, y=y, showProgress=FALSE)
+  }
   if(is.null(g)){
     return(NULL)
   }
@@ -647,7 +738,8 @@ show_pathway<-function( dataForPlotList,
                         pathway_width=6, 
                         pathway_height=6, 
                         y="Coverage", 
-                        ylab="Geneset coverage (%)"){
+                        ylab="Geneset coverage (%)",
+                        plot_type="bar"){
   prefix_name = paste0(prefix, ".", pname)
 
   dp=dataForPlotList[[pname]]@result
@@ -664,7 +756,8 @@ show_pathway<-function( dataForPlotList,
     fig_height=pathway_height, 
     pname=pname,
     y=y, 
-    ylab=ylab)
+    ylab=ylab,
+    plot_type=plot_type)
   
   if(is.null(fig)){
     return(list(res_tbl=tbl$res_tbl, png=NULL, csv=tbl$csv_file))

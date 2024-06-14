@@ -1,0 +1,101 @@
+
+## Activity score
+
+```{r}
+#varaables defined from list
+if (exists("reportParametersList") && "activity_score_parameter_list" %in% names(reportParametersList)) {
+  for (varName in names(reportParametersList$activity_score_parameter_list)) {
+    assign(varName,reportParametersList$activity_score_parameter_list[[varName]])
+  }
+
+  prefix=reportParametersList$prefix
+}
+```
+
+Activity score is calculated based on expression data of `r length(target_genes)` `r target_genes_description` using singscore package. 
+
+```{r}
+load_install<-function(library_name, library_sources=library_name){
+  if(!require(library_name, character.only = T)){
+    BiocManager::install(library_sources, ask=FALSE)
+  }
+  library(library_name, character.only = T)
+}
+
+load_install("singscore")
+
+if(!exists("lib_folder")){
+  lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
+}
+source(paste0(lib_folder, "/CQS/reportFunctions.R"))
+```
+
+```{r}
+#make sure all required variables are defined
+stopifnot(exists("prefix"))
+
+#target_genes is a list of genes that will be the testing set that we will look at where the background_genes is the full list of genes that were tested to get the target genes.
+stopifnot(exists("target_genes"))
+
+#gene_exp_file should be the database to compare to (rows = genes, columns = celltypes/tissues/samples) WILL NOT BE USED IF ALL gene_exp OPTIONS ARE 'F'
+#gene_exp_file = "/nobackup/h_cqs/references/tissue_specific/20230627_tabula_logNorm_averageExpression_matrix_by_tissueOnly.txt.gz"
+stopifnot(exists("gene_exp_file"))
+if(!file.exists(gene_exp_file)) stop(paste0("gene_exp_file does not exist: ", gene_exp_file))
+
+#those variables will be used in ID conversion by clusterProfiler::bitr if fromType != gene_exp_toType
+stopifnot(exists("fromType"))
+stopifnot(exists("gene_exp_toType"))
+stopifnot(exists("OrgDb"))
+load_install(OrgDb)
+```
+
+Read gene expression data from `r gene_exp_file` and filter out genes that are not expressed in any of the samples.
+
+```{r}
+geneExprTab<-data.frame(fread(gene_exp_file, stringsAsFactors = F), check.names=FALSE, row.names = 1)
+the_sums<-apply(geneExprTab, 1 ,sum)
+geneExprTabR<-geneExprTab[which(the_sums>0),]
+
+if(fromType != gene_exp_toType){
+  eg = clusterProfiler::bitr(
+    target_genes,
+    fromType = fromType,
+    toType = gene_exp_toType,
+    OrgDb = OrgDb
+  )
+  colnames(eg)<-c("FROM","TO")
+  eg<-eg[eg$TO %in% row.names(geneExprTabR),]
+  eg<-eg[!duplicated(eg$FROM),]
+}else{
+  cur_target_genes<-cur_target_genes[which(cur_target_genes %in% row.names(geneExprTabR))]
+  eg=data.frame(FROM=cur_target_genes, TO=cur_target_genes)
+}
+```
+
+There are `r nrow(eg)` target genes found in gene expression table.
+
+```{r}
+score_width=6
+score_height=4
+```
+
+```{r fig.width=score_width, fig.height=score_height}
+tabula_rankData <- rankGenes(geneExprTab)
+
+scoredf <- simpleScore(tabula_rankData, upSet = eg$TO) |>
+  dplyr::arrange(desc(TotalScore)) |>
+  tibble::rownames_to_column(var="Tissue") |>
+  dplyr::mutate(Tissue=factor(Tissue, levels=Tissue))
+
+g<-ggplot(scoredf, aes(Tissue, TotalScore)) + 
+  geom_bar(stat="identity", width=0.5) + 
+  theme_classic() + 
+  theme(axis.text.x = element_text(face="bold", angle = 90, hjust = 1, vjust=0.5),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(face="bold")) +
+  ylab("Activity score")
+
+score_png=paste0(prefix,"_singscore.png")
+ggsave(score_png, g, width=score_width, height=score_height, units="in", dpi=300, bg="white")
+include_graphics(score_png)
+```

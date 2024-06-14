@@ -72,7 +72,7 @@ if (!exists("selectedTissues")){
   selectedTissues=NULL
 }
 if (!exists("show_row_names")){
-  show_row_names=TRUE
+  show_row_names=length(target_genes) < 100
 }
 
 load_protein_atlas_file<-function(proteinAtlasDatabaseFile, target_genes, background_genes, selectedProteinsLabels){
@@ -249,7 +249,7 @@ if (horizontalHeatmap) { #make horizontal heatmap and NOT show trees
 tdf=as.matrix(log2(dataForPlot+1))
 tdf=calc_z_scores(exp_mat=tdf)
 
-col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
+#col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
 
 tissue_heatmap_png=paste0(prefix, ".tissue_heatmap.png")
 
@@ -260,7 +260,7 @@ if (exists("horizontalHeatmap") & horizontalHeatmap) { #make horizontal heatmap 
                               show_row_names=show_row_names, 
                               show_column_names=TRUE,
                               save_rds=TRUE,
-                              col = col_fun,
+                              #col = col_fun,
                               column_names_rot = 45,
                               cluster_rows=TRUE,
                               cluster_columns =TRUE,
@@ -274,7 +274,7 @@ if (exists("horizontalHeatmap") & horizontalHeatmap) { #make horizontal heatmap 
                               show_row_names=show_row_names, 
                               show_column_names=TRUE,
                               save_rds=TRUE,
-                              col = col_fun,
+                              #col = col_fun,
                               cluster_rows=TRUE,
                               cluster_columns =TRUE,
                               right_annotation = ha)

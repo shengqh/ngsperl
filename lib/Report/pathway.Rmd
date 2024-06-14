@@ -31,8 +31,6 @@ if (exists("reportParametersList") && "pathway_parameter_list" %in% names(report
 }
 ```
 
-
-
 ```{r}
 #make sure all required variables are defined
 stopifnot(exists("prefix"))
@@ -79,13 +77,14 @@ for(pname in pathway_analysis_sets){
     pname=pname,
     prefix=prefix, 
     pathway_width=pathway_width, 
-    pathway_height=pathway_height)
+    pathway_height=pathway_height,
+    plot_type="dot")
 
-  rmd=paste0(rmd, "\n\n#### ", pname, "\n\n")
+  rmd=paste0(rmd, "\n\n### ", pname, "\n\n")
   if(nrow(lst$res_tbl) == 0){
     rmd=paste0(rmd, "No enriched pathways found.\n\n")
   }else{
-    rmd=paste0(rmd, getTable(lst$csv))
+    rmd=paste0(rmd, getPagedTable(lst$csv))
   }
 
   if(is.null(lst$png)){
