@@ -16,7 +16,7 @@ genes=args[5:length(args)]
 #genes=c("KDR")
 
 datasets=c("hsapiens_gene_ensembl")
-names(datasets)=c(datasetName)
+names(datasets)=c("hg38")
 
 symbolColumns=c("hgnc_symbol")
 names(symbolColumns)=names(datasets)
