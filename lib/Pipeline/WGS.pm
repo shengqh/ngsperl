@@ -736,7 +736,7 @@ fi
     if($def->{perform_extract_bam}){
       my $extract_bam_locus = getValue($def, "extract_bam_locus");
       my $extract_bam_task = "extract_bam_locus" . getValue($def, "extract_bam_locus_suffix", "");
-      add_extract_bam_locus($config, $def, $individual, $target_dir, $extract_bam_task, $extract_bam_locus, [ $bam_recalibration_section, ".bam\$" ] );
+      add_extract_bam_locus($config, $def, $individual, $target_dir, $extract_bam_task, $extract_bam_locus, $bam_recalibration_section );
     }
 
     #my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
