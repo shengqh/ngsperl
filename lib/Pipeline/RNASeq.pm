@@ -481,7 +481,7 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
     $config->{annotation_genes} = \%gene_map;
     #print(Dumper($config->{annotation_genes}));
 
-    my $geneLocus = addGeneLocus($config, $def, $tasks, $target_dir);
+    my $geneLocus = addGeneLocus($config, $def, $tasks, $target_dir, "annotation_genes");
 
     if($def->{perform_bamsnap}){
       my $bamsnap_task = "annotation_genes_bamsnap";
@@ -849,65 +849,7 @@ export NUMEXPR_MAX_THREADS=12
   }
 
   if ( $def->{perform_bamplot} ) {
-    if ( not defined $def->{bamplot_gff} ) {
-      $config->{gene_pos} = {
-        class        => "Annotation::PrepareGenePosition",
-        perform      => 1,
-        target_dir   => $target_dir . "/" . getNextFolderIndex($def) . "gene_pos",
-        option       => "",
-        dataset_name => $def->{dataset_name},
-        gene_names   => $def->{gene_names},
-        add_chr      => $def->{add_chr},
-        output_gff   => 1,
-        pbs          => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "2",
-          "mem"       => "10gb"
-        },
-      };
-      $config->{bamplot} = {
-        class              => "Visualization::Bamplot",
-        perform            => 1,
-        target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
-        option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
-        source_ref         => $source_ref,
-        gff_file_ref       => "gene_pos",
-        is_rainbow_color   => 0,
-        is_single_pdf      => 0,
-        is_draw_individual => 0,
-        groups             => $def->{"plotgroups"},
-        colors             => $def->{"colormaps"},
-        sh_direct          => 1,
-        pbs                => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "23",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$tasks, "gene_pos", "bamplot" );
-    }
-    else {
-      $config->{bamplot} = {
-        class              => "Visualization::Bamplot",
-        perform            => 1,
-        target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
-        option             => "-g " . $def->{dataset_name} . " -y uniform -r --save-temp",
-        source_ref         => $source_ref,
-        gff_file           => $def->{bamplot_gff},
-        is_rainbow_color   => 0,
-        is_single_pdf      => 0,
-        is_draw_individual => 0,
-        groups             => $def->{"plotgroups"},
-        colors             => $def->{"colormaps"},
-        sh_direct          => 1,
-        pbs                => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "23",
-          "mem"       => "10gb"
-        },
-      };
-      push( @$tasks, "bamplot" );
-    }
+    add_bamplot($config, $def, $tasks, $target_dir, $source_ref);
   }
 
   if ( $def->{perform_call_variants} ) {
