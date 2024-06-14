@@ -16,7 +16,6 @@ source("countTableVisFunctions.R")
 options(bitmapType='cairo')
 
 library(biomaRt)
-library(gtools)
 library(stringr)
 
 
