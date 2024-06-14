@@ -30,6 +30,7 @@ library(ggplot2)
 library(tibble)
 library(cowplot)
 library(EnhancedVolcano)
+
 suppressPackageStartupMessages(library("ComplexHeatmap"))
 
 myoptions=read_file_map(parSampleFile4, do_unlist=FALSE)
@@ -57,6 +58,15 @@ pca_width_inch=to_numeric(myoptions$pca_width_inch, 4)
 pca_height_inch=to_numeric(myoptions$pca_height_inch, 2.5)
 pca_point_size=to_numeric(myoptions$pca_point_size, 3)
 
+heatmap_add_width_inch=to_numeric(myoptions$heatmap_add_width_inch, 2)
+heatmap_add_height_inch=to_numeric(myoptions$heatmap_add_height_inch, 0)
+
+heatmap_legend_label_fontsize=to_numeric(myoptions$heatmap_legend_label_fontsize, 18)
+heatmap_column_name_fontsize=to_numeric(myoptions$heatmap_column_name_fontsize, 18)
+
+legend_label_gp = gpar(fontsize = heatmap_legend_label_fontsize, fontface = "bold")
+column_names_gp = gpar(fontsize = heatmap_column_name_fontsize, fontface = "bold")
+
 outputDirectory = to_character(myoptions$outputDirectory, "")
 output_include_folder_name = is_one(myoptions$output_include_folder_name, 1)
 
@@ -77,6 +87,8 @@ if(outputTIFF){
 if(length(outputFormat) == 0){
   outputFormat<-c("PDF")
 }
+
+num_top_genes_heatmap=to_numeric(myoptions$num_top_genes_heatmap, 0)
 
 task_suffix<-suffix
 
@@ -513,6 +525,78 @@ for (i in 1:nrow(countTableFileAll)) {
         dev.off()
       }
     }
+
+    if(hasMultipleGroup){
+      ha=HeatmapAnnotation( Group=groups,
+                            col=list(Group=colors),
+                            annotation_legend_param = list(Group = list(ncol = 1, 
+                                                                        title = "Group", 
+                                                                        title_position = "topleft",
+                                                                        title_gp=legend_label_gp, 
+                                                                        labels_gp=legend_label_gp)))
+    }else{
+      ha=NULL
+    }
+
+    if(num_top_genes_heatmap > 0){
+      cur_num = min(num_top_genes_heatmap, nrow(countNumVsd))
+      #cur_name=ifelse(bNormalizeByCount, "log(RPM)", "VSD")
+      cur_name="Z-Score"
+
+      prefix = paste0(cur_file_prefix, ".top", num_top_genes_heatmap, ".heatmap")
+
+      if(hasMultipleGroup){
+        group_levels=levels(groups)
+        gname = unique(groups)[1]
+        all_genes=c()
+        for(gname in group_levels){
+          cur_group_vsd<-countNum[, groups == gname]
+          cur_group_genes<-rownames(cur_group_vsd)[order(rowMedians(cur_group_vsd),decreasing=T)[1:cur_num]]
+          all_genes<-c(all_genes, cur_group_genes)
+        }
+        all_genes = unique(all_genes)
+        cur_vsd<-countNumVsd[all_genes,]
+        rownames(cur_vsd)<-gsub(";.+","",rownames(cur_vsd))
+
+        mat_scaled = t(scale(t(cur_vsd)))
+
+        ht_size = draw_heatmap_png( filepath=paste0(prefix, ".png"), 
+                                    htdata=mat_scaled, 
+                                    name=cur_name, 
+                                    save_rds=TRUE,
+                                    save_pdf=outputPdf,
+                                    add_width_inch=heatmap_add_width_inch,
+                                    add_height_inch=heatmap_add_height_inch,
+                                    show_row_names=TRUE, 
+                                    show_column_names=TRUE,
+                                    show_row_dend=TRUE,
+                                    column_split = groups,
+                                    top_annotation = ha,
+                                    column_title=NULL,
+                                    column_names_gp = column_names_gp,
+                                    legend_gp = legend_label_gp
+                                    )
+      }else{
+        cur_vsd<-countNumVsd[order(rowMedians(countNumVsd),decreasing=T)[1:cur_num],]
+        rownames(cur_vsd)<-gsub(";.+","",rownames(cur_vsd))
+
+        mat_scaled = t(scale(t(cur_vsd)))
+
+        ht_size = draw_heatmap_png( filepath=paste0(prefix, ".png"), 
+                                    htdata=mat_scaled, 
+                                    name=cur_name, 
+                                    save_rds=TRUE,
+                                    save_pdf=outputPdf,
+                                    add_width_inch=heatmap_add_width_inch,
+                                    add_height_inch=heatmap_add_height_inch,
+                                    show_row_names=TRUE, 
+                                    show_column_names=TRUE,
+                                    show_row_dend=TRUE,
+                                    column_names_gp = column_names_gp,
+                                    legend_gp = legend_label_gp
+                                    )
+      }
+    }
    
     if(top25cvInHCA){
       rv<-rowVars(countNumVsd)
@@ -526,14 +610,6 @@ for (i in 1:nrow(countTableFileAll)) {
       names(countList)=c("all")
     }
     
-    if(hasMultipleGroup){
-      ha=HeatmapAnnotation( Group=groups,
-                            col=list(Group=colors),
-                            annotation_legend_param = list(Group = list(ncol = 1, title = "Group", title_position = "topleft")))
-    }else{
-      ha=NULL
-    }
-
     if(usePearsonInHCA){
       clustering_distance_columns="pearson"
     }else{
@@ -557,12 +633,19 @@ for (i in 1:nrow(countTableFileAll)) {
 
         draw_heatmap_png( filepath=paste0(outputFilePrefix, curSuffix, gene_suffix, ".heatmap.png"), 
                           htdata=mat_scaled, 
-                          name="zscore", 
+                          name="Z-Score", 
+                          save_rds=TRUE,
+                          save_pdf=outputPdf,
+                          add_width_inch=heatmap_add_width_inch,
+                          add_height_inch=heatmap_add_height_inch,
                           show_row_names=FALSE, 
                           show_column_names=show_col_names,
                           show_row_dend=FALSE,
                           top_annotation=ha,
-                          clustering_distance_columns=clustering_distance_columns )
+                          clustering_distance_columns=clustering_distance_columns,
+                          column_names_gp = column_names_gp,
+                          legend_gp = legend_label_gp
+                          )
       } else {
         cat("Not enough samples or genes. Can't Draw heatmap for", title, "samples.\n")
       }
@@ -585,10 +668,17 @@ for (i in 1:nrow(countTableFileAll)) {
       draw_heatmap_png( filepath=paste0(cur_file_prefix, ".Correlation.png"), 
                         htdata=countNumCor, 
                         name="Spearman", 
+                        save_rds=TRUE,
+                        save_pdf=outputPdf,
+                        add_width_inch=heatmap_add_width_inch,
+                        add_height_inch=heatmap_add_height_inch,
                         show_row_names=show_col_names, 
                         show_column_names=show_col_names,
-                        top_annotation=ha )
-      
+                        top_annotation=ha,
+                        column_names_gp = column_names_gp,
+                        legend_gp = legend_label_gp
+                        )
+     
       if (hasMultipleGroup) {
         if(length(unique(validSampleToGroup$V2)) < 3){
           saveInError(paste0("Less than 3 groups. Can't do correlation analysis for group table for ", countTableFile),fileSuffix = error_prefix)
@@ -600,10 +690,17 @@ for (i in 1:nrow(countTableFileAll)) {
 
         draw_heatmap_png( filepath=paste0(cur_file_prefix, ".Group.heatmap.png"), 
                           htdata=mat_scaled, 
-                          name="zscore", 
+                          name="Z-Score", 
+                          save_rds=TRUE,
+                          save_pdf=outputPdf,
+                          add_width_inch=heatmap_add_width_inch,
+                          add_height_inch=heatmap_add_height_inch,
                           show_row_names=FALSE, 
                           show_column_names=TRUE,
-                          show_row_dend=FALSE)
+                          show_row_dend=FALSE,
+                          column_names_gp = column_names_gp,
+                          legend_gp = legend_label_gp
+                          )
 
         cat("Doing correlation analysis of groups ...\n")
         
@@ -627,8 +724,15 @@ for (i in 1:nrow(countTableFileAll)) {
         draw_heatmap_png( filepath=paste0(cur_file_prefix, ".Group.Correlation.png"), 
                           htdata=countNumCor, 
                           name="Spearman", 
+                          save_rds=TRUE,
+                          save_pdf=outputPdf,
+                          add_width_inch=heatmap_add_width_inch,
+                          add_height_inch=heatmap_add_height_inch,
                           show_row_names=TRUE, 
-                          show_column_names=TRUE )
+                          show_column_names=TRUE,
+                          column_names_gp = column_names_gp,
+                          legend_gp = legend_label_gp
+                          )
       }
     } else {
       cat("Not enough samples or genes. Can't do correlation analysis.\n")

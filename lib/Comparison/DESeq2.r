@@ -258,7 +258,7 @@ drawPlot<-function(filePrefix, outputFormat, width_inch, height_inch, p, figureN
   }
 }
 
-drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat){
+drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat, legend_label_gp, column_names_gp){
   mat_scaled = t(scale(t(rldselect)))
 
   cc = designData |> dplyr::mutate(Color=as.character(conditionColors)) |>
@@ -267,7 +267,11 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
   colors=unlist(split(cc$Color, cc$Condition))
   ha=HeatmapAnnotation( Group=designData$Condition,
                         col=list(Group=colors),
-                        annotation_legend_param = list(Group = list(ncol = 1, title = "Group", title_position = "topleft")))
+                        annotation_legend_param = list(Group = list(ncol = 1, 
+                                                                    title = "Group", 
+                                                                    title_position = "topleft"),
+                                                                    title_gp=legend_label_gp, 
+                                                                    labels_gp=legend_label_gp))
 
   if(usePearsonInHCA){
     clustering_distance_columns="pearson"
@@ -277,13 +281,15 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
 
   draw_heatmap_png( filepath=paste0(prefix, "_DESeq2-vsd-heatmap.png"), 
                     htdata=mat_scaled, 
-                    name="zscore", 
+                    name="Z-Score", 
                     show_row_names=FALSE, 
                     show_column_names=TRUE,
                     save_rds=FALSE,
                     clustering_distance_columns=clustering_distance_columns,
                     top_annotation=ha,
-                    show_row_dend=FALSE)
+                    show_row_dend=FALSE,
+                    column_names_gp = column_names_gp,
+                    legend_gp = legend_label_gp)
 }
 
 drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat,scalePCs=TRUE, width_inch=3.5){
@@ -390,6 +396,13 @@ n_first=-1
 enhanced_volcano_red_blue_only=FALSE
 title_in_volcano=TRUE
 caption_in_volcano=TRUE
+
+heatmap_add_width_inch=2
+heatmap_add_height_inch=0
+
+heatmap_legend_label_fontsize=18
+heatmap_column_name_fontsize=18
+
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
   myoptions = split(options_table$V1, options_table$V2)
@@ -401,7 +414,15 @@ if(file.exists("fileList1.txt")){
   if("n_first" %in% names(myoptions)){
     n_first = as.numeric(myoptions$n_first)
   }
+
+  heatmap_add_width_inch=to_numeric(myoptions$heatmap_add_width_inch, heatmap_add_width_inch)
+  heatmap_add_height_inch=to_numeric(myoptions$heatmap_add_height_inch, heatmap_add_height_inch)
+
+  heatmap_legend_label_fontsize=to_numeric(myoptions$heatmap_legend_label_fontsize, heatmap_legend_label_fontsize)
+  heatmap_column_name_fontsize=to_numeric(myoptions$heatmap_column_name_fontsize, heatmap_column_name_fontsize)
 }
+legend_label_gp = gpar(fontsize = heatmap_legend_label_fontsize, fontface = "bold")
+column_names_gp = gpar(fontsize = heatmap_column_name_fontsize, fontface = "bold")
 
 countfile_index = 1
 titles<-NULL
@@ -805,7 +826,9 @@ for(countfile_index in c(1:length(countfiles))){
                 designData=designData, 
                 conditionColors=conditionColors, 
                 gnames=ganems, 
-                outputFormat=outputFormat)
+                outputFormat=outputFormat,
+                legend_label_gp=legend_label_gp,
+                column_names_gp=column_names_gp)
       }else{
         drawHCA(prefix=paste0(prefix,"_geneAll"), 
                 rldselect=rldmatrix, 
@@ -813,7 +836,9 @@ for(countfile_index in c(1:length(countfiles))){
                 designData=designData, 
                 conditionColors=conditionColors, 
                 gnames=ganems, 
-                outputFormat=outputFormat)
+                outputFormat=outputFormat,
+                legend_label_gp=legend_label_gp,
+                column_names_gp=column_names_gp)
       }
     }
     
@@ -945,10 +970,14 @@ for(countfile_index in c(1:length(countfiles))){
       DEmatrix<-rldmatrix[siggenes,,drop=F]
       
       drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors, outputFormat)
-      drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputFormat)
+      drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputFormat,
+                legend_label_gp=legend_label_gp,
+                column_names_gp=column_names_gp)
       
       drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors, outputFormat)
-      drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputFormat)
+      drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputFormat,
+                legend_label_gp=legend_label_gp,
+                column_names_gp=column_names_gp)
     }
     
     #Top 25 Significant genes barplot

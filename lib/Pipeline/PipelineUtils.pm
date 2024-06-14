@@ -596,6 +596,10 @@ sub addDEseq2 {
       enhanced_volcano_red_blue_only => getValue($def, "DE_enhanced_volcano_red_blue_only", 0),
       title_in_volcano => getValue($def, "DE_title_in_volcano", 1),
       caption_in_volcano => getValue($def, "DE_caption_in_volcano", 1),
+      "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
+      "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
+      "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
+      "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18),
       n_first => $n_first,
     },
     pbs                          => {
@@ -893,6 +897,11 @@ sub add_table_correlation {
     "pca_width_inch" => getValue($def, "pca_width_inch", 4),
     "pca_height_inch" => getValue($def, "pca_height_inch", 2.5),
     "pca_point_size" => getValue($def, "pca_point_size", 3),
+    "num_top_genes_heatmap" => getValue($def, "num_top_genes_heatmap", 25),
+    "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
+    "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
+    "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
+    "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18)
   };
 
   my $corr_output_file_ext = ".density.png;.density.individual.png.Correlation.png;.heatmap.png;.PCA.png;";
@@ -2266,13 +2275,17 @@ sub do_add_gene_locus {
 }
 
 sub addGeneLocus {
-  my ($config, $def, $summary, $target_dir) = @_;
+  my ($config, $def, $summary, $target_dir, $gene_key) = @_;
+  if(not defined $gene_key){
+    $gene_key = "annotation_genes";
+  }
   my $geneLocus = undef;
-  if ( defined $def->{annotation_genes} ) {
-    $geneLocus = "annotation_genes_locus";
-    my $genesStr = getValue( $def, "annotation_genes" );
+  if ( defined $def->{$gene_key} ) {
+    $geneLocus = "genes_locus";
+    my $genesStr = getValue( $def, $gene_key );
     do_add_gene_locus($config, $def, $summary, $target_dir, $geneLocus, $genesStr);
   }
+  
   return ($geneLocus);
 }
 
@@ -3759,13 +3772,15 @@ bowtie-build $fasta __NAME__
 sub add_extract_bam_locus {
   my ($config, $def, $tasks, $target_dir, $task_name, $locus, $bam_ref) = @_;
 
+  my $ref_fasta = getValue($def, "ref_fasta");
+
   $config->{$task_name} = {
     class => "CQS::ProgramWrapperOneToOne",
     target_dir => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
     interpretor => "",
     check_program => 0,
     option => "
-samtools view -b -o __OUTPUT__ __FILE__ $locus
+samtools view -b -T $ref_fasta -o __OUTPUT__ __FILE__ $locus
 samtools index __OUTPUT__
 ",
     program => "",

@@ -992,9 +992,14 @@ calc_ht_size = function(ht, unit = "inch", merge_legends = FALSE) {
 draw_heatmap_png<-function( filepath, 
                             htdata, 
                             name, 
+                            save_rds=TRUE,
+                            save_pdf=FALSE,
+                            add_width_inch=0,
+                            add_height_inch=0,
+                            column_names_gp=gpar(fontface = "bold"),
+                            legend_gp=gpar(fontface = "bold"),
                             show_row_names, 
                             show_column_names,
-                            save_rds=TRUE,
                             ...){
   library(grid)
 
@@ -1002,40 +1007,49 @@ draw_heatmap_png<-function( filepath,
     saveRDS(htdata, file=paste0(filepath, ".rds"))
   }  
 
-  heatmap_size = init_heatmap_param(htdata, show_row_names=show_row_names, show_column_names=show_column_names)
+  init_size = init_heatmap_param(htdata, show_row_names=show_row_names, show_column_names=show_column_names)
 
-  #print(paste0("heatmap_size=", heatmap_size, "\n"))
+  #print(paste0("init_size=", init_size, "\n"))
 
   #by default, the font size of row names is 13.2
-  if(as.numeric(heatmap_size$heatmap_width) > 50){
-    fontsize=13.2 / ((as.numeric(heatmap_size$heatmap_width) - 2) / (50-2))
-    width=unit(50, "inch")
+  if(as.numeric(init_size$heatmap_width) > 50){
+    fontsize=13.2 / ((as.numeric(init_size$heatmap_width) - 2) / (50-2))
+    possible_width=unit(50, "inch")
   }else{
     fontsize=13.2
-    width=heatmap_size$heatmap_width
+    possible_width=unit(as.numeric(init_size$heatmap_width) + add_width_inch, "inch")
   }
 
-  column_names_gp = gpar(fontsize = fontsize)
+  possible_height = unit(as.numeric(init_size$heatmap_height) + add_height_inch, "inch")
 
   ht<-Heatmap(htdata,
               show_row_names=show_row_names,
               show_column_names=show_column_names,
               name=name,
               use_raster=FALSE,
-              heatmap_width=width,
-              heatmap_height=heatmap_size$heatmap_height,
+              heatmap_width=possible_width,
+              heatmap_height=possible_height,
               column_names_gp = column_names_gp,
+              heatmap_legend_param = list(title_gp = legend_gp),
               ...)
 
   ss = calc_ht_size(ht, merge_legends=TRUE )
   #print(paste0("calc_ht_size=", ss, "\n"))
 
-  width=min(50, ss[1])
-  height=min(50, ss[2])
-  png(filepath, width=width, height=height, units="in", res=300)
+  final_width=min(50, ss[1]) 
+  final_height=min(50, ss[2])
+  png(filepath, width=final_width, height=final_height, units="in", res=300)
   draw(ht, merge_legends=TRUE)
   ignored=dev.off()
-  return(c(width, height))
+
+  if(save_pdf){
+    pdf_file=gsub(".png$", ".pdf", filepath)
+    pdf(pdf_file, width=final_width, height=final_height)
+    draw(ht, merge_legends=TRUE)
+    ignored=dev.off()
+  }
+
+  return(c(final_width, final_height))
 }
 
 save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, plot){
