@@ -1318,27 +1318,11 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
 
   if ($def->{perform_bamplot}){
     defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
-    defined $def->{bamplot_gff} or die "Define bamplot_gff for bamplot first!";
-    $config->{bamplot} = {
-      class              => "Visualization::Bamplot",
-      perform            => 1,
-      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
-      option             => "-g " . getValue($def, "dataset_name") . " -y uniform -r --save-temp",
-      source_ref         => $source_ref,
-      gff_file           => getValue($def, "bamplot_gff"),
-      is_rainbow_color   => 0,
-      is_single_pdf      => 0,
-      is_draw_individual => 0,
-      groups             => $def->{"plotgroups"},
-      colors             => $def->{"colormaps"},
-      sh_direct          => 1,
-      pbs                => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "23",
-        "mem"       => "10gb"
-      },
-    };
-    push( @$summary, "bamplot" );
+    if ( not defined $def->{bamplot_gff} ) {
+      defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
+      defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
+    }
+    add_bamplot($config, $def, $summary, $target_dir, [ $bam_input, ".bam\$" ]);
   }
 
   if ( $def->{"perform_muTect"} ) {

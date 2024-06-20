@@ -181,14 +181,6 @@ sub getRNASeqConfig {
     ( -e $def->{qc3_perl} )  or die "qc3_perl not exists " . $def->{qc3_perl};
   }
 
-  if ( $def->{perform_bamplot} ) {
-    defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
-    if ( not defined $def->{bamplot_gff} ) {
-      defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
-      defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
-    }
-  }
-
   if ( $def->{perform_call_variants} ) {
     defined $def->{fasta_file}       or die "Define fasta_file for calling variants";
     defined $def->{dbsnp}            or die "Define dbsnp for calling variants";
@@ -849,6 +841,11 @@ export NUMEXPR_MAX_THREADS=12
   }
 
   if ( $def->{perform_bamplot} ) {
+    defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
+    if ( not defined $def->{bamplot_gff} ) {
+      defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
+      defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
+    }
     add_bamplot($config, $def, $tasks, $target_dir, $source_ref);
   }
 

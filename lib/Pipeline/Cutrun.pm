@@ -696,7 +696,13 @@ fi
     }
   }
 
-  if($def->{perform_bamplot}){
+
+  if ($def->{perform_bamplot}){
+    defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
+    if ( not defined $def->{bamplot_gff} ) {
+      defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
+      defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
+    }
     add_bamplot($config, $def, $summary_ref, $target_dir, $bam_ref);
   }
 

@@ -151,8 +151,13 @@ rm -rf __NAME__/trimmed __NAME__/aligned/__NAME__.bam __NAME__/aligned/dedup __N
   };
   push @$tasks, ($cutruntools2);
 
-  if ( $def->{perform_bamplot} ) {
-    add_bamplot($config, $def, $tasks, $target_dir, [$cutruntools2, ".bam"]);
+  if ($def->{perform_bamplot}){
+    defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
+    if ( not defined $def->{bamplot_gff} ) {
+      defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
+      defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
+    }
+    add_bamplot($config, $def, $tasks, $target_dir,  [$cutruntools2, ".bam"]);
   }
 
   if($def->{perform_fastqc}){
