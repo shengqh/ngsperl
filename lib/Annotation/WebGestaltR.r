@@ -61,6 +61,8 @@ options(bitmapType='cairo')
 
 library(WebGestaltR)
 
+httr::set_config(httr::config(ssl_verifypeer = FALSE))
+
 args = commandArgs(trailingOnly=TRUE)
 organism = args[1] #hsapiens
 sampleName=args[2]
