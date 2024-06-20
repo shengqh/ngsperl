@@ -102,8 +102,10 @@ if(is.na(height)){
   plotHeight=height
 }
 if(plotStyle == 'MULTIPLE'){
-  plotHeight = max(plotHeight, (nrow(plotTable) * 0.5 +1))
+  plotHeight = min(50, max(plotHeight, (nrow(plotTable) * 0.5 +1)))
 }
+
+#print(plotHeight)
 
 #now open up the pdf if this is a multipage pdf
 if(multiPage == 'SINGLE_PAGE'){
