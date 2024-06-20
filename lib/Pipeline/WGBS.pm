@@ -31,7 +31,8 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "emailType", "FAIL" );
   initDefaultValue( $def, "cluster",   "slurm" );
-  initDefaultValue( $def, "perform_preprocessing",   1 );
+  initDefaultValue( $def, "perform_preprocessing", 1 );
+  initDefaultValue( $def, "perform_age_estimation", 0 );
 
   return $def;
 }
@@ -202,6 +203,39 @@ sub getConfig {
   };
   push(@$tasks, $methylkitcorr_task);
 
+  if(defined $def->{perform_age_estimation}){
+
+
+    my $methy_age_task = "MethylKit_age";
+    $config->{$methy_age_task} = {
+      class              => "CQS::UniqueRmd",
+      perform            => 1,
+      target_dir         => $targetDir . "/" . getNextFolderIndex($def) . "$methy_age_task",
+      report_rmd_file => "../Methylation/methylation_age.rmd",
+      additional_rmd_files => "../CQS/reportFunctions.R",
+      option => "",
+      parameterSampleFile1_ref => [ $methylkitcorr_task, 'meth.rds$' ],
+      parameterSampleFile2 => {
+        task_name => getValue($def, "task_name"),
+        email => getValue($def, "email"),
+        affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
+        probe_locus_file => getValue($def, "probe_locus_file"),
+      },
+      parameterSampleFile3 => $def->{"age_dict"},
+      suffix => ".age",
+      output_file_ext => ".age.html",
+      can_result_be_empty_file => 0,
+      sh_direct   => 1,
+      no_docker => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "40gb"
+      },
+    };
+    push( @$tasks, "bamplot_html" );
+  }
+
   my $methylkitdiff_task=undef;
   my $methylkitdiffannovar_task=undef;
   my $MethylKitDiffAnnovarGenes_task=undef;
@@ -370,7 +404,7 @@ sub getConfig {
       abismal_path  => $config->{abismal}{target_dir} . "/result/",
       dnmtools_path => $config->{DNMTools}{target_dir} . "/result/",
       MethylKitCorr_path => $config->{MethylKitCorr}{target_dir} . "/result/",
-      MethylKitDiff_path => $config->{MethylKitDiff}{target_dir} . "/result/",
+      MethylKitDiff_path => defined $config->{MethylKitDiff} ? $config->{MethylKitDiff}{target_dir} . "/result/" : undef,
     },
     parameterSampleFile3_ref   => \@copy_files,
     parameterSampleFile4_ref   => $webgestalt_task,
