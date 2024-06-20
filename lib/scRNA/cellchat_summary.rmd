@@ -1,0 +1,89 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: yes
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(Hmisc)
+require(arsenal)
+library(gtsummary)
+library(flextable)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+date_str = format(Sys.time(), "%Y%m%d")
+
+#devtools::install_github("jinworks/CellChat")
+library(CellChat)
+
+source('reportFunctions.R')
+source('scRNA_func.r')
+```
+
+```{r}
+myoptions=read_file_map('fileList1.cellchat_summary.txt', do_unlist=FALSE)
+```
+
+---
+title: "`r myoptions$task_name` - CellChat"
+author: 
+- email: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r}
+draw_circle<-function(cur_mat, cur_png, groupSize){
+  png(cur_png, width=circle_width, height=circle_height, units="in", res=300, bg="white")
+  netVisual_circle(cur_mat, 
+    vertex.weight = groupSize, 
+    weight.scale = T, 
+    label.edge= F, 
+    title.name = "Interaction weights/strength",
+    margin=c(0.2, 0, 0.5, 0))
+  ignored=dev.off()
+}
+```
+
+```{r}
+rds_files=read_file_map('fileList2.cellchat_summary.txt', do_unlist=FALSE)
+```
+
+```{r}
+group_content=""
+for(cur_group in names(rds_files)){
+  group_content=paste0(group_content, "```{r}\n")
+  group_content=paste0(group_content, "cur_group='", cur_group, "'\n")
+  group_content=paste0(group_content, "cur_rds='", rds_files[[cur_group]], "'\n")
+  group_content=paste0(group_content, "```\n\n")
+  group_content=paste0(group_content, "```{r child='cellchat_summary_sub.rmd'}\n")
+  group_content=paste0(group_content, "```\n\n")
+}
+group_rmd="group.rmd"
+writeLines(group_content, group_rmd)
+```
+
+```{r child=group_rmd}
+```
+
+# Save the session information
+
+```{r}
+writeLines(capture.output(sessionInfo()), paste0(date_str, '.sessionInfo.txt'))
+```

@@ -1,0 +1,68 @@
+# `r cur_group`
+
+```{r}
+cellchat=readRDS(cur_rds)
+if(!dir.exists("figures")){
+  dir.create("figures")
+}
+prefix=paste0("figures/", cur_group)
+```
+
+```{r}
+circle_width=5
+circle_height=6
+groupSize <- as.numeric(table(cellchat@idents))
+```
+
+## Global network
+
+```{r}
+circle_png = paste0(prefix, ".circle_weight.png")
+draw_circle(cellchat@net$weight, circle_png, groupSize)
+include_graphics(circle_png)
+```
+
+## Individual cell type network
+
+```{r}
+mat <- cellchat@net$weight
+cts = rownames(mat)
+
+circle_content=""
+for(ct in cts){
+  circle_content = paste0(circle_content, "### ", ct, "\n\n")
+  mat2 <- matrix(0, nrow = nrow(mat), ncol = ncol(mat), dimnames = dimnames(mat))
+  mat2[ct, ] <- mat[ct, ]
+  each_circle_png = paste0(prefix, ".", celltype_to_filename(ct), ".circle_weight.png")
+  draw_circle(mat2, each_circle_png, groupSize)
+  circle_content = paste0(circle_content, getFigure_width_height(each_circle_png, FALSE, circle_width, circle_height))
+}
+cur_rmd = paste0(cur_group, ".circle_weight.rmd")
+writeLines(circle_content, cur_rmd)
+```
+
+```{r child=cur_rmd}
+```
+
+## Pathways
+
+```{r}
+pathways <- cellchat@netP$pathways
+
+pathway_content=""
+for(pathways.show in pathways){
+  pathway_content = paste0(pathway_content, "### ", pathways.show, "\n\n")
+
+  each_circle_png = paste0(prefix, ".pathway.", celltype_to_filename(pathways.show), ".chord.png")
+  png(each_circle_png, width=circle_width, height=circle_height, units="in", res=300, bg="white")
+  g=netVisual_aggregate(cellchat, signaling = pathways.show, layout = "chord")
+  ignored=dev.off()
+
+  pathway_content = paste0(pathway_content, getFigure_width_height(each_circle_png, FALSE, circle_width, circle_height))
+}
+cur_rmd = paste0(cur_group, ".pathway.rmd")
+writeLines(pathway_content, cur_rmd)
+```
+
+```{r child=cur_rmd}
+```

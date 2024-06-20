@@ -109,6 +109,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_cellbender_with_expected_cells  
 
   add_dcats
+
+  add_cell_chat
 )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -3590,6 +3592,61 @@ sub add_dcats {
     },
   };
   push( @$tasks, $dcats_task );
+}
+
+sub add_cell_chat {
+  my ($config, $def, $tasks, $target_dir, $cellchat_task, $obj_ref) = @_;
+
+  $config->{$cellchat_task} = {
+    class => "CQS::IndividualR",
+    perform => 1,
+    target_dir => "$target_dir/$cellchat_task",
+    rtemplate => "../scRNA/scRNA_func.r,../scRNA/cellchat.r",
+    parameterSampleFile1 => getValue($def, "cellchat_group_dict"),
+    parameterSampleFile2 => {
+      prefix => getValue($def, "task_name"),
+      sample_column => getValue($def, "cellchat_sample_column"),
+      group_column => getValue($def, "cellchat_group_column"),
+      celltype_column => getValue($def, "cellchat_celltype_column"),
+      CellChatDB => getValue($def, "cellchat_CellChatDB"),
+      thread => 4,
+    },
+    parameterFile1_ref => $obj_ref,
+    output_ext => ".cellchat.rds",
+    output_to_result => 1,
+    pbs => {
+      "nodes"    => "4",
+      "walltime" => "24",
+      "mem"      => "100gb"
+    },
+  };
+  push( @$tasks, $cellchat_task );
+
+  my $summary_task = $cellchat_task . "_summary";
+  $config->{$summary_task} = {
+    class => "CQS::UniqueRmd",
+    target_dir           => $target_dir . "/" . $summary_task,
+    report_rmd_file => "../scRNA/cellchat_summary.rmd",
+    additional_rmd_files => "../scRNA/cellchat_summary_sub.rmd;../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
+    option => "",
+    parameterSampleFile1 => {
+      task_name => getValue($def, "task_name"),
+      email => getValue($def, "email"),
+      affiliation => getValue($def, "affiliation"),
+    },
+    parameterSampleFile2_ref => $cellchat_task,
+    suffix => ".cellchat_summary",
+    output_file_ext => ".cellchat_summary.html",
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+
+  push( @$tasks, $summary_task );
 }
 
 1;
