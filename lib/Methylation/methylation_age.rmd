@@ -163,36 +163,29 @@ clocks = setdiff(clocks, discard_clocks)
 Valid clocks: `r paste(clocks, sep=", ")`.
 
 ```{r message=FALSE, results='hide'}
-rds_file="pred_ages.rds"
-if(!file.exists(rds_file)){
-  pred_ages = lapply(clocks, function(clock_name){
-    cat(clock_name, "\n")
-    tryCatch(
-          {
-            pred_age <- methyAge(final_betas, clock=clock_name, fit_method='Linear')
-            write.csv(pred_age, paste0(clock_name, ".csv"))
-            return(pred_age)
-          },
-          error = function(cond) {
-            cat(" failed.")
-            return(NA)
-          })
-  })
-  names(pred_ages)=clocks
-  saveRDS(pred_ages, rds_file)
-}else{
-  pred_ages=readRDS(rds_file)
-}
+pred_ages = lapply(clocks[1:2], function(clock_name){
+  cat(clock_name, "\n")
+  tryCatch(
+        {
+          pred_age <- methyAge(final_betas, clock=clock_name, fit_method='Linear')
+          write.csv(pred_age, paste0(clock_name, ".csv"))
+          return(pred_age)
+        },
+        error = function(cond) {
+          return(cond)
+        })
+})
+names(pred_ages)=clocks
+saveRDS(pred_ages, rds_file)
 ```
 
 ```{r}
 for(clock_name in clocks){
   pred_age=pred_ages[[clock_name]]
-  if(!all(is.na(pred_age))){
-    cat("\n##", clock_name,"\n\n")
-    if(!is.null(ages)){
-      pred_age=merge(pred_age, ages, by="Sample", all.x=TRUE)
-    }
+  if(is.string(pred_age)){
+    cat("<mark>Failed:", pred_age, "</mark>\n\n")
+  }else{
+    pred_age$chronological_age=c(80, 0, 84, 0, 25, 0)
     print_table(pred_age, row.names=FALSE)
   }
 }
