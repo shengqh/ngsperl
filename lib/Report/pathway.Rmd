@@ -1,3 +1,11 @@
+```{r}
+if(!exists('title_prefix')){
+  title_prefix=""
+}
+```
+
+## `r title_prefix` Pathway Analysis
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
 load_install<-function(library_name, library_sources=library_name){
   if(!require(library_name, character.only = T)){
@@ -57,7 +65,6 @@ if(!exists("pathway_height")){
   pathway_height=4
 }
 
-cat("\n\n## Pathway Analysis \n\n")
 res<-do_pathway(genes=target_genes,
                 universe=background_genes,
                 modules=pathway_analysis_sets,
@@ -85,12 +92,12 @@ for(pname in pathway_analysis_sets){
     rmd=paste0(rmd, "No enriched pathways found.\n\n")
   }else{
     rmd=paste0(rmd, getPagedTable(lst$csv))
-  }
 
-  if(is.null(lst$png)){
-    rmd=paste0(rmd, "No valid pathways found.\n\n")
-  }else{
-    rmd=paste0(rmd, getFigure_width_height(lst$png, fig.width=pathway_width, fig.height=pathway_height))
+    if(is.null(lst$png)){
+      rmd=paste0(rmd, "No valid pathways found.\n\n")
+    }else{
+      rmd=paste0(rmd, getFigure_width_height(lst$png, fig.width=pathway_width, fig.height=pathway_height))
+    }
   }
 }
 writeLines(rmd, paste0(prefix,"_pathway.rmd"))
