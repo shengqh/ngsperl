@@ -3,7 +3,7 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 3
-    number_sections: false
+    number_sections: true
 ---
 
 ```{css, echo=FALSE}
@@ -83,6 +83,7 @@ categoryRmd<-function(dfCategory, fileName, header){
     pca<-paste0("correlation_", category, "_pca")
     group_heatmap<-paste0("correlation_", category, "_group_heatmap")
     corr_heatmap<-paste0("correlation_", category, "_corr_cluster")
+    barplot<-paste0(category, "_barplot")
 
     if(has_file(files, heatmap)){
       hasFile<-TRUE
@@ -99,6 +100,10 @@ categoryRmd<-function(dfCategory, fileName, header){
         volcano<-paste0("deseq2_", category, "_volcano_", comparison)
         result<-paste0(result, getCategory(volcano, paste0("Volcano plot of comparison ", comparison, "of ", name)))
       }
+    }
+
+    if(has_file(files, barplot)){
+      result<-paste0(result, getCategory(barplot, paste0("Barplot of ", name)))
     }
   }
 

@@ -64,9 +64,9 @@ sub getSmallRNAConfig {
   my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" ) && $notMicroRNAOnly;
   my $search_nonhost_library = getValue( $def, "search_nonhost_library" ) && $notMicroRNAOnly;
 
-  my $search_refseq_genome     = getValue( $def, "search_refseq_genome", 0 ) && $notMicroRNAOnly;
+  my $search_refseq_bacteria     = getValue( $def, "search_refseq_bacteria", 0 ) && $notMicroRNAOnly;
 
-  my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library || $search_refseq_genome;
+  my $search_nonhost_database = $search_nonhost_genome || $search_nonhost_library || $search_refseq_bacteria;
 
   my $search_custom_group_by_gene  = getValue($def, "search_custom_group_by_gene", 0);
 
@@ -144,7 +144,7 @@ sub getSmallRNAConfig {
   my $perform_host_tRH_analysis = getValue( $def, "perform_host_tRH_analysis", 0 ) && $notMicroRNAOnly;
   my $perform_host_tRnaFragmentHalves_analysis = getValue( $def, "perform_host_tRnaFragmentHalves_analysis", 0 ) && $notMicroRNAOnly;
 
-  my $R_font_size = 'textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
+  my $R_font_size = 'textSize=12;groupTextSize=' . $def->{table_vis_group_text_size} . ';';
 
   my $notReadCountPattern = "^.*\/(?!.*?read).*\.count\$";
   my @table_for_correlation = ();
@@ -1668,6 +1668,23 @@ fi
 
     push( @$tasks, $refseq_bacteria_table );  
 
+    for my $cat (@$categories){
+      my $count_ext = ".${cat}.estimated.count\$";
+      addNonhostVis(
+        $config, $def,
+        $tasks,
+        "refseq_bacteria_${cat}_vis",
+        $data_visualization_dir,
+        {
+          rtemplate          => "countTableVisFunctions.R,countTableVis.R",
+          output_file        => ".refseq_bacteria.${cat}.Result",
+          output_file_ext    => ".Barplot.png",
+          parameterFile1_ref => [ "$refseq_bacteria_table", $count_ext ],
+          rCode => 'maxCategory=4',
+        }
+      );
+    }
+
     if ($refseq_bacteria_count eq "both"){
       push @table_for_correlation, ( $refseq_bacteria_table, ".estimated.count\$" );
       push @table_for_correlation, ( $refseq_bacteria_table, ".aggregated.count\$" );
@@ -3110,6 +3127,12 @@ fi
                 push( @report_files, "deseq2_refseq_bacteria_${level}_estimated_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
                 push( @report_names, "deseq2_refseq_bacteria_${level}_est_volcano_${comparison}" );
               }
+            }
+
+            my $level_vis= "refseq_bacteria_${level}_vis";
+            if(defined $config->{$level_vis}){
+              push( @report_files, $level_vis, "${task_name}.refseq_bacteria.${level}.Result.Barplot.png" );
+              push( @report_names, "refseq_bacteria_${level}_est_barplot" );
             }
           }
         }
