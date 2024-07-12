@@ -141,7 +141,7 @@ sub initializeSmallRNADefaultOptions {
   initDefaultValue( $def, "remove_sequences",          "'CCACGTTCCCGTGG;ACAGTCCGACGATC'" );
   initDefaultValue( $def, "fastq_remove_random",       0 );
   initDefaultValue( $def, "mirbase_count_option",      "-p hsa" );
-  initDefaultValue( $def, "table_vis_group_text_size", 10 );
+  initDefaultValue( $def, "table_vis_group_text_size", 12 );
   initDefaultValue( $def, "sequencetask_run_time",     12 );
 
   initDefaultValue( $def, "top25cv_in_hca",     0 );
@@ -424,11 +424,15 @@ sub addNonhostVis {
       parameterSampleFile1 => $def->{groups},
       parameterSampleFile2 => $def->{groups_vis_layout},
       parameterFile3_ref   => [ "fastqc_count_vis", ".Reads.csv\$" ],
-      rCode                => 'maxCategory=NA;textSize=9;groupTextSize=' . $def->{table_vis_group_text_size} . ';',
+      parameterSampleFile3 => {
+        barplot_width_px => getValue($def, "barplot_width_px", 2000),
+        barplot_height_px => getValue($def, "barplot_height_px", 1500),
+        textSize => getValue($def, "table_vis_text_size", 12),
+        groupTextSize => getValue($def, "table_vis_group_text_size", 12),
+      },
+      rCode                => 'maxCategory=NA;',
       sh_direct            => 1,
       pbs                  => {
-        "email"     => $def->{email},
-        "emailType" => $def->{emailType},
         "nodes"     => "1:ppn=1",
         "walltime"  => "1",
         "mem"       => "10gb"
