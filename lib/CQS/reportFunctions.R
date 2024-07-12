@@ -29,6 +29,7 @@ load_install("ggExtra")
 #load_install("flextable")
 load_install("dplyr")
 load_install("ComplexHeatmap")
+load_install("grid")
 
 options(figcap.prefix = "Figure", figcap.sep = ":", figcap.prefix.highlight = "**")
 options(tabcap.prefix = "Table", tabcap.sep = ":", tabcap.prefix.highlight = "**")
@@ -351,6 +352,27 @@ read_file_map<-function(file_list_path, sep="\t", header=F, do_unlist=TRUE){
     result<-unlist(result)
   }
   return(result)
+}
+
+get_legend_width <- function(g, by="max") {
+  gg <- ggplotGrob(g)
+  
+  # Find the legend element and extract its width
+  legend_grob <- gg$grobs[[which(sapply(gg$grobs, function(x) {x$name}) == "guide-box")]]
+  if(by=="max"){
+    legend_width <- ceiling(convertWidth(max(legend_grob$width), "in", valueOnly = TRUE))
+  }else{
+    legend_width <- ceiling(convertWidth(sum(legend_grob$width), "in", valueOnly = TRUE))
+  }
+
+  return(legend_width)
+}
+
+get_freq_table<-function(df, column){
+df |> 
+  dplyr::count(!!sym(column)) |> 
+  dplyr::arrange(desc(n)) |>
+  dplyr::rename("count"="n")
 }
 
 ###################################
