@@ -912,6 +912,9 @@ for(countfile_index in c(1:length(countfiles))){
     }
     
     tbbselect<-tbb[select,,drop=F]
+    tbbselect$DE_status=ifelse(tbbselect$log2FoldChange > 0, "UP", "DOWN")
+    tbb$DE_status="NS"
+    tbb[rownames(tbbselect),"DE_status"]<-tbbselect$DE_status
 
     tbbAllOut<-as.data.frame(tbb[,resultAllOutVar,drop=F])
     tbbAllOut$Significant<-select
@@ -1079,7 +1082,7 @@ for(countfile_index in c(1:length(countfiles))){
       }
 
       if(title_in_volcano){
-        title=comparisonTitle
+        title=gsub("_vs_", " vs ", comparisonTitle)
       }else{
         title=NULL
       }
@@ -1111,7 +1114,7 @@ for(countfile_index in c(1:length(countfiles))){
             colAlpha = 1,
             title = title,
             subtitle = NULL,
-            caption = caption) + ylab(yname) + xlab(xname)
+            caption = caption)
       }else{
         if(useRawPvalue == 1){
           pCutoffCol="pvalue"
@@ -1131,8 +1134,12 @@ for(countfile_index in c(1:length(countfiles))){
             colAlpha = 1,
             title = title,
             subtitle = NULL,
-            caption = caption) + ylab(yname) + xlab(xname)
+            caption = caption) 
       }
+      p=p + 
+        ylab(yname) + 
+        xlab(xname) +
+        theme(plot.title = element_text(hjust = 0.5))
       filePrefix<-paste0(prefix,"_DESeq2_volcanoEnhanced")
       drawPlot(filePrefix, outputFormat, 7, 7, p, "Volcano")
     }
