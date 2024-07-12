@@ -128,7 +128,7 @@ sub result {
       push( @result_files, $self->get_file( $result_dir, $task_name, ".fpkm.proteincoding.tsv", 0 ) );
     }
   }
-  push( @result_files, $self->get_file( $result_dir, $task_name, ".cpm.csv", 0 ) );
+  push( @result_files, $self->get_file( $result_dir, $task_name, ".count.cpm.csv", 0 ) );
   if ($output_proteincoding_gene) {
     push( @result_files, $self->get_file( $result_dir, $task_name, ".proteincoding.count", 0 ) );
     push( @result_files, $self->get_file( $result_dir, $task_name, ".proteincoding.count.cpm.csv", 0 ) );
