@@ -493,14 +493,18 @@ makeColors<-function(n,colorNames="Set1") {
 	return(colors)
 }
 
-tableMaxCategory<-function(dat,maxCategory=NA,viewCategory=15) {
+tableMaxCategory<-function(dat,maxCategory=NA,viewCategory=10) {
 	if (!is.na(maxCategory) & nrow(dat)>maxCategory) {
-		temp<-apply(dat,2,function(x) rev(order(x))[1:maxCategory])
+    temp_dat=dat[rownames(dat) != "Unclassified",]
+		temp<-apply(temp_dat,2,function(x) rev(order(x))[1:maxCategory])
 		categoryKeptInd<-sort(unique(as.vector(temp)))
 		if(length(categoryKeptInd) > viewCategory){
-			categoryKeptInd<-categoryKeptInd[1:viewCategory]
+      freq_tbl = sort(table(unlist(temp)), decreasing = TRUE)
+      min_freq = freq_tbl[viewCategory]
+      valid_names=names(freq_tbl[freq_tbl >= min_freq])
+			categoryKeptInd<-as.numeric(valid_names)
 		}
-		datForFigure<-dat[categoryKeptInd,]
+		datForFigure<-temp_dat[categoryKeptInd,]
 		if (length(categoryKeptInd)<nrow(dat)) {
 			datForFigure<-rbind(datForFigure,Other=colSums(dat[-categoryKeptInd,,drop=FALSE]))
 		}
@@ -510,7 +514,7 @@ tableMaxCategory<-function(dat,maxCategory=NA,viewCategory=15) {
 	return(datForFigure)
 }
 
-tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,ylab=y,colorNames="Set1",barwidth=0.5,viewCategory=15) {
+tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",facet=NA,varName=if (is.na(facet)) c(fill,x,y) else c(facet,x,y),transformTable=TRUE,textSize=20,xlab=x,ylab=y,colorNames="Set1",barwidth=0.5,viewCategory=10) {
 	if (transformTable) {
 		datForFigure<-tableMaxCategory(dat,maxCategory=maxCategory,viewCategory=viewCategory)
 		
@@ -521,33 +525,35 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 		datForFigure<-dat
 	}
 	if (!is.na(fill)) {
-		p<-ggplot(datForFigure,aes_string(x=x,y=y,fill=fill)) + theme_bw3()
-		if (length(unique(datForFigure[,fill]))<=7 & sum(nchar(as.character(unique(datForFigure[,fill]))))<70) {
-			p<-p+theme(legend.position = "top")+
-					guides(fill = guide_legend(nrow = 1,keywidth = 2, keyheight = 2))
-		} else {
+		p<-ggplot(datForFigure,aes(x=!!sym(x),y=!!sym(y),fill=!!sym(fill))) + theme_bw3()
+		# if (length(unique(datForFigure[,fill]))<=7 & sum(nchar(as.character(unique(datForFigure[,fill]))))<70) {
+		# 	p<-p+theme(legend.position = "top")+
+		# 			guides(fill = guide_legend(nrow = 1,keywidth = 2, keyheight = 2))
+		# } else {
 			p<-p+	guides(fill = guide_legend(ncol = 1,keywidth = 1, keyheight = 1))
-		}
+		# }
 		if (colorNames!="") {
 			colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
 			p<-p+scale_fill_manual(values=colors)
 		}
 	} else if (!is.na(facet)) {
-		p<-ggplot(datForFigure,aes_string(x=x,y=y))+facet_wrap(c(facet)) + theme_bw3()
+		p<-ggplot(datForFigure,aes(x=!!sym(x),y=!!sym(y)))+facet_wrap(c(facet)) + theme_bw3()
 	} else {
-		p<-ggplot(datForFigure,aes_string(x=x,y=y)) + theme_bw3()
+		p<-ggplot(datForFigure,aes(x=!!sym(x),y=!!sym(y))) + theme_bw3()
 	}
 	p<-p+geom_bar(stat="identity", width=barwidth)+
 #			guides(fill= guide_legend(title = groupName))+
-			theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5),
-			      axis.text = element_text(size=textSize),legend.text=element_text(size=textSize),
-					  axis.title = element_text(size=textSize),legend.title= element_text(size=textSize))+
-			ylab(ylab)
+			theme(axis.text.x=element_text(face="bold", angle=90,hjust=1,vjust=0.5),
+			      axis.text = element_text(size=textSize),
+            legend.text=element_text(size=textSize),
+					  axis.title = element_text(size=textSize),
+            legend.title= element_text(face="bold", size=textSize))+
+			ylab(ylab) + xlab(xlab)
 
 	return(p)
 }
 
-tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",outFileName="",maxCategory=5,textSize=9,transformTable=T,height=2000,proportionBar=TRUE,...) {
+tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",outFileName="",maxCategory=5,viewCategory=10,textSize=9,transformTable=T,height=2000,proportionBar=TRUE,width=0,...) {
 	if (totalCountFile!="") { #normlize with total count *10^6
 		totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
 		totalCount<-unlist(totalCount["Reads for Mapping",])
@@ -568,10 +574,12 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 	
 	write.csv(dat, file=paste0(fileName, ".csv"), quote=F)
 	
-	width<-max(3000,75*ncol(dat))
+  if(width == 0){
+	  width<-max(3000,60*ncol(dat) + 200)
+  }
 	height<-height
 	png(fileName,width=width,height=height,res=300)
-	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,viewCategory=15,...)
+	p<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,viewCategory=viewCategory,...)
 	print(p)
 	dev.off()
 	if (proportionBar) {
