@@ -81,7 +81,7 @@ for ( i in 1:ncol(mappingResult)) {
 
 maxCategoryForSpecies12<-min(c(maxCategory,3),na.rm=T)
 
-bacteriaSpecies12 = trnaCountTableExpandBySpecies12[species12$Domain=="Bacteria",]
+bacteriaSpecies12 = trnaCountTableExpandBySpecies12[species12$Domain %in% c("Bacteria","bacteria"),]
 bacteriaResultFile = paste0(resultFile, ".Bacteria")
 
 #Pie chart for tables
