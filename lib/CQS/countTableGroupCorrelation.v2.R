@@ -550,7 +550,7 @@ for (i in 1:nrow(countTableFileAll)) {
         gname = unique(groups)[1]
         all_genes=c()
         for(gname in group_levels){
-          cur_group_vsd<-countNum[, groups == gname]
+          cur_group_vsd<-countNumVsd[, groups == gname, drop=FALSE]
           cur_group_genes<-rownames(cur_group_vsd)[order(rowMedians(cur_group_vsd),decreasing=T)[1:cur_num]]
           all_genes<-c(all_genes, cur_group_genes)
         }
