@@ -1,0 +1,131 @@
+```{r eval=FALSE}
+comparison='Estrogen_vs_Ctrl'
+category='geneontology Biological Process'
+show_webgestalt_detail=TRUE
+exists('comp_list')
+```
+
+```{r}
+plotData=comp_list[[comparison]][[category]]
+if((!exists('show_webgestalt_detail'))){
+  show_webgestalt_detail=TRUE
+}
+if(!exists('webgestalt_intent')){
+  webgestalt_intent="##"
+}
+```
+
+```{r}
+enriched<-plotData$enriched
+deseq2<-plotData$deseq2
+
+cat(paste0(webgestalt_intent, "# Overview table\n\n"))
+
+if(all(enriched$FDR >= 0.05)){
+	cat('\n\n<mark>WARNING: no geneset is significantly enriched, display top 10.</mark>\n\n')
+}else{
+	cat('\n\n<mark>Total', nrow(enriched), 'genesets are significantly enriched.</mark>\n\n')
+}
+
+if(show_webgestalt_detail){
+  enriched<-updateEnrichedTable(enriched)
+
+  curTable=enriched |>
+    dplyr::select(geneSetLink, everything()) |>
+    dplyr::select(-geneSet)
+
+  if (("geneUp" %in% colnames(curTable)) & ("geneDown" %in% colnames(curTable)) ) {
+    curTable<-enriched[,c(1:9, 12,13)]
+  } else {
+    curTable<-enriched[,c(1:9)]
+  }
+
+  print(kable(curTable, row.names=F))
+}else{
+  if (("geneUp" %in% colnames(enriched)) & ("geneDown" %in% colnames(enriched)) ) {
+    curTable<-enriched[,c(1:9, 12,13)]
+  } else {
+    curTable<-enriched[,c(1:9)]
+  }
+
+  curTable<-curTable |> dplyr::select(-link)
+  print_table(curTable, row.names=FALSE, byDT=TRUE)
+}
+```
+
+<hr>
+
+```{r, echo=FALSE, fig.width=8, fig.height=4}
+dataForPlotFrameP = head(enriched, 20) |>
+  dplyr::mutate(coverage=overlap / size,
+                NegLog10pAdj=-log10(FDR))
+
+top=10
+topBy="pValue"
+colorBy="NegLog10pAdj"
+colorTitle="-log10(FDR)"
+y="coverage"
+
+max_value=max(dataForPlotFrameP[[colorBy]],na.rm=TRUE)
+
+dataForPlotFrameP = dataForPlotFrameP %>% 
+  dplyr::top_n(-top,wt=get(topBy)) %>%
+  dplyr::arrange(desc(coverage)) %>%
+  as.data.frame()
+
+dataForPlotFrameP$description=factor(dataForPlotFrameP$description, levels=rev(dataForPlotFrameP$description))
+
+p=dataForPlotFrameP %>%
+  ggplot(aes(x=description,y=coverage,colour=!!sym(colorBy)))+
+  geom_point(aes(size=size)) +
+  coord_flip() + 
+  xlab("") +
+  ylab("Geneset coverage") +
+  scale_colour_continuous(limits=c(0,max_value), low='blue', high='red',guide=guide_colorbar(reverse=FALSE))+
+  guides(colour=guide_legend(title=colorTitle)) +
+  theme_bw()+
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.title = element_text(face = "bold"),
+    axis.text = element_text(face = "bold"),
+    axis.title = element_text(face = "bold")
+  )
+
+pathway_png=paste0(plotData$prefix, ".png")
+
+width=ifelse(category == "pathway KEGG", 6, 8)
+ggsave(pathway_png, p, width=width, height=3.5, units="in", dpi=300, limitsize=FALSE, bg="white")
+
+cat(paste0(webgestalt_intent, "# Top 10 genesets\n\n"))
+include_graphics(pathway_png)
+```
+
+```{r, echo=FALSE, results="asis", eval=show_webgestalt_detail}
+cat(paste0("\n", webgestalt_intent, "# Significantly differential expressed genes\n\n" ))
+idx<-1
+for(idx in c(1:rowCount)){
+	entry<-enriched[idx,]
+	userIds<-unlist(strsplit( entry$userId[1], ';'))
+	#entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	entryTable<-deseq2[deseq2[,geneCol] %in% userIds,]
+	cat(paste0("\n", webgestalt_intent, "## ", entry$description, " {#", entry$tblLink, '}\n\n<span style="background-color:#ffe4c4">RED: up-regulated</span>, <span style="background-color:#f0fff0">GREEN: down-regulated</span>\n\n' ))
+	# print(kable(entryTable) %>% 
+	# 	kable_styling() %>%
+	# 	row_spec(which(entryTable[,diffCol] > diffCenterValue), color = "black", background = "bisque") %>% 
+	# 	row_spec(which(entryTable[,diffCol] < diffCenterValue), color = "black", background = "honeydew") %>%
+	# 	htmltools::HTML())
+	temp=kable(entryTable, row.names=F) %>%	kable_styling()
+	if (!is.null(diffCol)) {
+		temp=temp %>% 
+			row_spec(which(entryTable[,diffCol] > diffCenterValue), color = "black", background = "bisque") %>% 
+			row_spec(which(entryTable[,diffCol] < diffCenterValue), color = "black", background = "honeydew")
+	}
+	print(temp %>% htmltools::HTML())
+	cat("\n\n<hr>")
+}
+
+```
+
+
+

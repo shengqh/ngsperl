@@ -1,4 +1,19 @@
 
+updateEnrichedTable<-function(enriched){
+	rowCount<-nrow(enriched)
+
+	enriched$tblShortCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x["geneSet"]))})
+	enriched$tblLongCaption<-apply(enriched, 1, function(x){tabRef(paste0("enriched ",x["geneSet"]), paste0("Significantly differential expressed genes in ",x["description"]))})
+	enriched$tblLink<-tolower(gsub(' ','', enriched$tblShortCaption))
+
+	for(idx in c(1:rowCount)){
+		entry<-enriched[idx,]
+		enriched$link[idx]<-paste0("[", entry$tblShortCaption, "](#", entry$tblLink, ")")
+	}
+
+	return(enriched)
+}
+
 readFilesAndFormat=function(compDeseq2File) {
   library(data.table)
   library(dplyr)

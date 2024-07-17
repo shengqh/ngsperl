@@ -1,0 +1,142 @@
+---
+title: "WebGestalt Deseq2 Report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: yes
+---
+
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r,eval=FALSE,echo=FALSE}
+library(xfun)
+root_dir = '/data/h_gelbard_lab/projects/20240715_9686_AG_RNAseq_iSGS_estrogen/deseq2_proteincoding_genetable_WebGestalt_link_deseq2/result'
+setwd(root_dir)
+
+xfun::Rscript_call(
+  rmarkdown::render,
+  list(input="RNAseq_human.rmd",
+       output_file="RNAseq_human.html")
+)
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  include=TRUE, 
+  echo=FALSE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+source('reportFunctions.R')
+source("WebGestaltReportFunctions.r")
+```
+
+```{r}
+myoptions=read_file_map("fileList3.txt", do_unlist=FALSE)
+task_name=myoptions$task_name
+
+annoFiles<-read.table("fileList1.txt", header=F, sep="\t", stringsAsFactors = F)
+deseq2Files<-read.table("fileList2.txt", header=F, sep="\t", stringsAsFactors = F)
+
+comparisons<-unique(annoFiles$V2)
+comparison<-comparisons[1]
+
+comp_list=list()
+for (comparison in comparisons){
+  compAnnoFiles<-annoFiles$V1[annoFiles$V2 == comparison]
+  compDeseq2File<-deseq2Files[deseq2Files$V2 == comparison,1]
+  
+  category_list=list()
+
+  compAnnoFile<-compAnnoFiles[1]
+  for(compAnnoFile in compAnnoFiles){
+    if (!file.exists(compAnnoFile)) {
+      warning(paste0(compAnnoFile," doesn't exist, Skip!"))
+      next;
+    }
+    category <- gsub(paste0(".*?", comparison,"_"), "", basename(compAnnoFile) )
+    category <- gsub(".txt", "", category )
+    category <- gsub("_", " ", category )
+
+    enriched<-read.table(compAnnoFile, sep="\t", header=T, stringsAsFactors = F)
+    deseq2=readFilesAndFormat(compDeseq2File)
+    #deseq2<-read.csv(compDeseq2File, header=T, row.names=1, stringsAsFactors = F)
+    #deseq2<-deseq2[,c("Feature_gene_name", "baseMean", "pvalue", "padj", "FoldChange") ]
+    geneCol=getGeneCol(deseq2)[["colName"]]
+    if(geneCol == -1){
+      samples=colnames(deseq2)
+      deseq2$gene_name=rownames(deseq2)
+      deseq2=deseq2[,c("gene_name", samples)]
+      geneCol="gene_name"
+    }
+    diffCol=getDiffCol(deseq2)[["colName"]]
+    diffCenterValue=getDiffCol(deseq2)[["centerValue"]]
+    
+    rowCount<-nrow(enriched)
+    idx<-1
+    for(idx in c(1:rowCount)){
+	    entry<-enriched[idx,]
+	    userIds<-unlist(strsplit( entry$userId[1], ';'))
+	    #entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
+	    #geneUp<-sum(entryTable$FoldChange > 1)
+	    #geneDown<-sum(entryTable$FoldChange < 1)
+	    entryTable<-deseq2[deseq2[,geneCol] %in% userIds,]
+	    if (!is.null(diffCol)) {
+	      geneUp<-sum(entryTable[,diffCol] > diffCenterValue)
+	      geneDown<-sum(entryTable[,diffCol] < diffCenterValue)
+	      enriched$geneUp[idx]<-geneUp
+	      enriched$geneDown[idx]<-geneDown
+	    }
+  		enriched$geneSetLink[idx]<-paste0("[", entry$geneSet, "](", entry$link, "){target='_blank'}")
+  		enriched$link[idx]<-""
+    }
+
+    fname<-gsub("^enrichment_results_", "",  basename(compAnnoFile))
+    fname<-gsub('.txt$', '', fname)
+    output_path <- paste0(normalizePath("."), "/", fname, ".html")
+
+    plotData <- list(enriched = enriched,
+                     deseq2 = deseq2,
+                     category = category,
+                     prefix = fname)
+
+    category_list[[category]] <- plotData
+  }
+  comp_list[[comparison]] <- category_list
+}
+
+saveRDS(comp_list, paste0(task_name, ".webgestalt.rds"))
+
+comp_content=""
+for (comparison in names(comp_list)){
+  comp_content=paste0(comp_content, "\n# ", comparison, "\n\n")
+
+  category_list=comp_list[[comparison]]
+
+  for(category in names(category_list)){
+    comp_content=paste0(comp_content, "\n## ", category, "\n\n")
+
+    comp_content=paste0(comp_content, "```{r}\ncomparison='", comparison,"'\ncategory='", category,"'\n```\n\n")
+    comp_content=paste0(comp_content, "```{r child='WebGestaltDeseq2.v2.sub.rmd'}\n```\n")
+  }
+}
+comp_rmd=paste0("comp.rmd")
+writeLines(comp_content, comp_rmd)
+```
+
+```{r child=comp_rmd}
+```
+
+```{r}
+writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
+```

@@ -165,6 +165,8 @@ sub getRNASeqConfig {
 
   $def = initializeRNASeqDefaultOptions($def);
 
+  $def->{"perform_link_webgestalt_deseq2_v2"} = 1;
+
   my $taskName = $def->{task_name};
 
   my $email = $def->{email};
@@ -639,28 +641,55 @@ export NUMEXPR_MAX_THREADS=12
     if ( getValue( $def, "perform_webgestalt" ) ) {
       $webgestaltTaskName = addWebgestalt($config, $def, $tasks, $target_dir, $deseq2taskname, [ $deseq2taskname, "sig_genename.txt\$" ]);
 
-      #if ( defined $def->{perform_link_webgestalt_deseq2} ) {
       $linkTaskName = $webgestaltTaskName . "_link_deseq2";
-      $config->{$linkTaskName} = {
-        class                      => "CQS::UniqueR",
-        perform                    => 1,
-        target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
-        rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltDeseq2.r",
-        rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
-        output_to_result_directory => 1,
-        output_perSample_file      => "parameterSampleFile1",
-        output_perSample_file_regex => "enrichment_results_(.+).txt",
-        output_perSample_file_ext  => ".html;.html.rds",
-        parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
-        parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
-        sh_direct                  => 1,
-        rCode                      => "",
-        pbs                        => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "23",
-          "mem"       => "10gb"
-        },
-      };
+      if(getValue($def, "perform_link_webgestalt_deseq2_v2")){
+        $config->{$linkTaskName} = {
+          class                      => "CQS::UniqueRmd",
+          perform                    => 1,
+          target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
+          report_rmd_file => "../Annotation/WebGestaltDeseq2.v2.rmd",
+          additional_rmd_files => "../CQS/reportFunctions.R;../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltDeseq2.v2.sub.rmd",
+          option => "",
+          parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
+          parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
+          parameterSampleFile3   => {
+            task_name => getValue($def, "task_name"),
+            email => getValue($def, "email"),
+            affiliation => $def->{"affiliation"},
+          },
+          output_file_ext => ".webgestalt.html",
+          output_other_ext => ".webgestalt.rds",
+          can_result_be_empty_file => 0,
+          sh_direct   => 1,
+          pbs => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "2",
+            "mem"       => "10gb"
+          },
+        };
+      }else{
+        $config->{$linkTaskName} = {
+          class                      => "CQS::UniqueR",
+          perform                    => 1,
+          target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $linkTaskName,
+          rtemplate                  => "../Annotation/WebGestaltReportFunctions.r;../Annotation/WebGestaltDeseq2.r",
+          rReportTemplate            => "../Annotation/WebGestaltDeseq2.rmd",
+          output_to_result_directory => 1,
+          output_perSample_file      => "parameterSampleFile1",
+          output_perSample_file_regex => "enrichment_results_(.+).txt",
+          output_perSample_file_ext  => ".html;.html.rds",
+          parameterSampleFile1_ref   => [ $webgestaltTaskName, ".txt\$" ],
+          parameterSampleFile2_ref   => [ $deseq2taskname, "sig.csv\$" ],
+          sh_direct                  => 1,
+          rCode                      => "",
+          pbs                        => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "23",
+            "mem"       => "10gb"
+          },
+        };
+      }
+      #if ( defined $def->{perform_link_webgestalt_deseq2} ) {
       push( @$tasks, $linkTaskName );
 
       if (getValue( $def, "perform_webgestaltHeatmap" )) {
@@ -1316,26 +1345,22 @@ fi
 
       if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
         push( @copy_files,   $linkTaskName, ".html\$" );
-      }
 
-      my $pairs = $config->{pairs};
-      for my $key ( keys %$pairs ) {
-        if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
-          push( @report_files, $linkTaskName, "/" . $key . "_geneontology_Biological_Process.html.rds" );
-          push( @report_files, $linkTaskName, "/" . $key . "_geneontology_Cellular_Component.html.rds" );
-          push( @report_files, $linkTaskName, "/" . $key . "_geneontology_Molecular_Function.html.rds" );
-          push( @report_files, $linkTaskName, "/" . $key . "_pathway_KEGG.html.rds" );
-        }
-        else {
+        push( @report_files, $linkTaskName, ".rds" );
+        push( @report_names, "WebGestalt_deseq2" );
+      }else{
+        my $pairs = $config->{pairs};
+        for my $key ( keys %$pairs ) {
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Biological_Process.txt" );
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Cellular_Component.txt" );
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_geneontology_Molecular_Function.txt" );
           push( @report_files, $webgestaltTaskName, "enrichment_results_" . $key . "_pathway_KEGG.txt" );
+
+          push( @report_names, "WebGestalt_GO_BP_" . $key );
+          push( @report_names, "WebGestalt_GO_CC_" . $key );
+          push( @report_names, "WebGestalt_GO_MF_" . $key );
+          push( @report_names, "WebGestalt_KEGG_" . $key );
         }
-        push( @report_names, "WebGestalt_GO_BP_" . $key );
-        push( @report_names, "WebGestalt_GO_CC_" . $key );
-        push( @report_names, "WebGestalt_GO_MF_" . $key );
-        push( @report_names, "WebGestalt_KEGG_" . $key );
       }
       $hasFunctionalEnrichment = 1;
     }
@@ -1380,7 +1405,7 @@ fi
       perform                    => 1,
       target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . "report",
       report_rmd_file            => "../Pipeline/RNASeq.Rmd",
-      additional_rmd_files       => "../Pipeline/Pipeline.R;reportFunctions.R",
+      additional_rmd_files       => "../Pipeline/Pipeline.R;reportFunctions.R;../Annotation/WebGestaltDeseq2.v2.sub.rmd",
       parameterSampleFile1_ref   => \@report_files,
       parameterSampleFile1_names => \@report_names,
       parameterSampleFile2       => $options,

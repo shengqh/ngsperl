@@ -63,18 +63,16 @@ if(has_star_chromosome_png){
 }
 
 hasDEseq2<-any(grepl("deseq2_", rownames(files)))
+
 hasWebGestaltAnalysis<-any(grepl("WebGestalt_", rownames(files)))
+webgestalt_rmd="webgestalt.rmd"
+
 hasGseaAnalysis<-any(grepl("gsea_", rownames(files)))
 hasEnrichmentAnalysis<-hasWebGestaltAnalysis | hasGseaAnalysis
 
 corNames<-gsub("_correlation_density", "", rownames(files)[grepl("_correlation_density", rownames(files))])
 corNames<-sort(corNames)
 corNames=c("all", corNames[corNames != "all"])
-
-getFigure<-function(category, description){
-  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists(files['", category, "',1]))}\n",
-"  check_and_include_graphics(files['", category, "',1])\n```\n"))
-}
 
 if(rnaseqOptions["top25cv_in_hca", 1] == "FALSE"){
   hca_gene_used<-" using top 25% variant genes"
@@ -365,10 +363,36 @@ cat("# Functional enrichment analysis\n\n")
 ```
   
 ```{r webgestalt, results="asis", echo=FALSE, warning=FALSE, eval=hasWebGestaltAnalysis} 
-cat("List of the top five significantly enriched elements\n")
-display_webgestalt(files)
+if("WebGestalt_deseq2" %in% files$V2){
+  show_webgestalt_detail=FALSE
+  webgestalt_intent="####"
+
+  webgestalt_rds = files$V1[files$V2 == "WebGestalt_deseq2"]
+  comp_list = readRDS(webgestalt_rds)
+
+  comp_content="\n## WebGestlat\n\n"
+  for (comparison in names(comp_list)){
+    comp_content=paste0(comp_content, "\n### ", comparison, "\n\n")
+
+    category_list=comp_list[[comparison]]
+
+    for(category in names(category_list)){
+      comp_content=paste0(comp_content, "\n#### ", category, "\n\n")
+
+      comp_content=paste0(comp_content, "```{r}\ncomparison='", comparison,"'\ncategory='", category,"'\n```\n\n")
+      comp_content=paste0(comp_content, "```{r child='WebGestaltDeseq2.v2.sub.rmd'}\n```\n")
+    }
+  }
+  writeLines(comp_content, webgestalt_rmd)
+}else{
+  cat("List of the top five significantly enriched elements\n")
+  display_webgestalt(files)
+}
 ```
-  
+
+```{r child=webgestalt_rmd, eval=file.exists(webgestalt_rmd) }
+```
+
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE, eval=hasGseaAnalysis} 
 cat("## GSEA\n\n")
 gsea_file_list = files$V1[files$V2 == "report_gsea"]
