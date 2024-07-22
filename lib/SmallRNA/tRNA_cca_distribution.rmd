@@ -1,0 +1,222 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+source("reportFunctions.R")
+
+load_install("knitr")
+load_install("tibble")
+load_install("dplyr")
+load_install("data.table")
+load_install("ggplot2")
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+source("countTableVisFunctions.R")
+
+myoptions = read_file_map("fileList2.txt", do_unlist=FALSE)
+
+bar_figure_width=to_numeric(myoptions$bar_figure_width, 10)
+
+files_folder="files/"
+dir.create(files_folder, showWarnings=FALSE, recursive=TRUE)
+```
+
+---
+title: "`r myoptions$task_name` - tRNA CCA status distribution"
+author: 
+  email: "`r myoptions$email`"
+  affiliation: "`r myoptions$affiliation`"
+---
+
+```{r}
+totalCountFile=fread('fileList3.txt', header=FALSE)$V1[1]
+totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
+totalCount<-unlist(totalCount["Reads for Mapping",])
+```
+
+```{r}
+sample_group_tbl = fread("fileList4.txt", header=FALSE, data.table=FALSE) |>
+  dplyr::rename("Sample"=V1, "Group"=V2)
+
+if(myoptions$group_pattern != ""){
+  sample_group_tbl = sample_group_tbl[grepl(myoptions$group_pattern, sample_group_tbl$Group),,drop=FALSE]
+}
+
+if(file.exists("fileList6.txt")){
+  new_group_names = read_file_map("fileList6.txt")
+  for(old_group_name in names(new_group_names)){
+    new_group_name=new_group_names[[old_group_name]][1]
+    sample_group_tbl$Group[sample_group_tbl$Group == old_group_name] = new_group_name
+  }
+}
+
+sample_group_map = unlist(split(sample_group_tbl$Group, sample_group_tbl$Sample))
+
+group_count_tbl = table(sample_group_tbl$Group) |> as.data.frame()
+group_count_map = unlist(split(group_count_tbl$Freq, group_count_tbl$Var1))
+```
+
+# Sample/group
+
+```{r}
+print_table(sample_group_tbl, row.names=F, byDT=TRUE)
+```
+
+# Read tRNA mapping
+
+```{r}
+result_file=read_file_map("fileList5.txt", do_unlist=TRUE)[1]
+```
+
+Read tRNA mapping data from `r result_file`.
+
+```{r}
+rds_file=paste0(myoptions$task_name, ".trna_cca.rds")
+if(!file.exists(rds_file)){
+  all_dat=fread(result_file, data.table=FALSE)
+
+  all_dat$last_position = all_dat$map_offset + all_dat$original_length - 1
+  all_dat$last_position = ifelse(all_dat$category=="parent", all_dat$last_position - 3, all_dat$last_position)
+
+  all_trna = unique(all_dat$feature_name)
+
+  all_trna_cca = NULL
+
+  cur_trna = all_trna[1]
+  for(cur_trna in all_trna){
+    trna_dat = all_dat |> 
+      dplyr::filter(feature_name==cur_trna)
+
+    last_position_no_cca = trna_dat |>
+      dplyr::filter(category == "parent") |>
+      dplyr::filter(row_number()==1) |>
+      dplyr::pull(last_position)
+
+    cur_trna_dat = trna_dat |> 
+      dplyr::filter(category != "parent") |>
+      dplyr::filter(last_position >= last_position_no_cca) |>
+      dplyr::mutate(CCA_pos = last_position - last_position_no_cca,
+                    CCA_status = case_when( CCA_pos == 0 ~ "NoCCA",
+                                            CCA_pos == 1 ~ "C",
+                                            CCA_pos == 2 ~ "CC",
+                                            CCA_pos == 3 ~ "CCA",
+                                            .default = "Unknown")) |>
+      dplyr::filter(CCA_status != "Unknown")
+
+    cur_trna_cca = cur_trna_dat |> 
+      dplyr::group_by(sample, CCA_status) |>
+      dplyr::summarize(query_count = sum(query_count), .groups="drop") |>
+      dplyr::mutate(feature_name=cur_trna)
+
+    all_trna_cca = rbind(all_trna_cca, cur_trna_cca)
+  }
+  saveRDS(all_trna_cca, rds_file)
+}else{
+  all_trna_cca = readRDS(rds_file)
+}
+```
+
+```{r}
+all_trna_cca$Anticodon=gsub("tRNA-", "", all_trna_cca$feature_name)
+all_trna_cca$Anticodon=gsub(".\\d+.\\d+", "", all_trna_cca$Anticodon)
+
+anticodon_cca = all_trna_cca |> 
+  dplyr::filter(sample %in% sample_group_tbl$Sample) |>
+  dplyr::group_by(sample, Anticodon, CCA_status) |>
+  dplyr::summarize(query_count = sum(query_count), .groups="drop") 
+
+anticodon_cca$CCA_status=factor(anticodon_cca$CCA_status, levels=c("NoCCA", "C", "CC", "CCA"))
+
+anticodon_rds_file=paste0(myoptions$task_name, ".anticodon_cca.rds")
+saveRDS(anticodon_cca, anticodon_rds_file)
+```
+
+# CCA status distribution
+
+```{r}
+cca_content=""
+
+all_anticodon = unique(anticodon_cca$Anticodon)
+anticodon = all_anticodon[1]
+
+# ## assign colors to CCA status, 
+# NoCCA: Magenta RGB:106;0;96
+# C: Teal RGB:72;139;140
+# CC: Dark Blue RGB:17;40;81
+# CCA: Purple RGB:156;93;164
+
+cca_colors = c("NoCCA"=rgb(106,0,96,maxColorValue=255), "C"=rgb(72,139,140,maxColorValue=255), "CC"=rgb(17,40,81,maxColorValue=255), "CCA"=rgb(156,93,164,maxColorValue=255))
+
+anticodon=all_anticodon[1]
+for(anticodon in all_anticodon){
+  cca_content = paste(cca_content, "\n##", anticodon, "\n\n")
+
+  anticodon_cca_dat = anticodon_cca |> 
+    dplyr::filter(Anticodon==anticodon) |>
+    dplyr::mutate(RPM = unname(10^6*(query_count /totalCount[sample])),
+                  condition = unname(sample_group_map[sample]))
+
+  g=ggplot(anticodon_cca_dat, aes(x=sample, y=RPM, fill=CCA_status)) + 
+    geom_bar(stat="identity") + 
+    ggtitle(anticodon) + 
+    facet_grid(~condition, scales="free_x") +
+    scale_fill_manual(values=cca_colors) +
+    theme_bw3() + 
+    theme(plot.title = element_text(hjust = 0.5, face="bold", size=18),
+          strip.text.x = element_text(size=14, face="bold"),
+          axis.title.y = element_text(size=14, face="bold"),
+          legend.title = element_text(size=14, face="bold"),
+          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+          axis.title.x=element_blank())
+
+  png_file=paste0(files_folder, anticodon, "_cca_status_rpm.png")
+  ggsave(png_file, g, width=bar_figure_width, height=4, units="in", dpi=300, limitsize=FALSE, bg="white")
+
+  cca_content = paste(cca_content, "\n### By RPM\n\n")
+  cca_content = paste(cca_content, getFigure(png_file))
+
+  g=ggplot(anticodon_cca_dat, aes(x=sample, y=RPM, fill=CCA_status)) + 
+    geom_bar(stat="identity", position="fill") + 
+    ggtitle(anticodon) + 
+    facet_grid(~condition, scales="free_x") +
+    scale_fill_manual(values=cca_colors) +
+    ylab("Percentage") +
+    theme_bw3() + 
+    theme(plot.title = element_text(hjust = 0.5, face="bold", size=18),
+          strip.text.x = element_text(size=14, face="bold"),
+          axis.title.y = element_text(size=14, face="bold"),
+          legend.title = element_text(size=14, face="bold"),
+          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+          axis.title.x=element_blank())
+
+  png_file=paste0(files_folder, anticodon, "_cca_status_perc.png")
+  ggsave(png_file, g, width=bar_figure_width, height=4, units="in", dpi=300, limitsize=FALSE, bg="white")
+
+  cca_content = paste(cca_content, "\n### By Percentage\n\n")
+  cca_content = paste(cca_content, getFigure(png_file))
+}
+cca_rmd="cca_status.rmd"
+writeLines(cca_content, cca_rmd)
+```
+
+```{r child=cca_rmd}
+```

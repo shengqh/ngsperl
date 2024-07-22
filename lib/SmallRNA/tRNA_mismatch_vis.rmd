@@ -1,9 +1,4 @@
 ---
-title: "tRNA read figure"
-author: 
-  name: 'Quanhu Sheng'
-  email: "quanhu.sheng.1@vumc.org"
-  affiliation: "CQS/Biostatistics, VUMC"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   rmdformats::readthedown:
@@ -19,12 +14,14 @@ output:
 ```
 
 ```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
-library(knitr)
-library(tibble)
-library(dplyr)
-library(data.table)
-library(ggplot2)
-library(splitstackshape)
+source("reportFunctions.R")
+
+load_install("knitr")
+load_install("tibble")
+load_install("dplyr")
+load_install("data.table")
+load_install("ggplot2")
+load_install("splitstackshape")
 
 knitr::opts_chunk$set(
   echo=TRUE, 
@@ -34,9 +31,21 @@ knitr::opts_chunk$set(
   results="asis"
 )
 
-source("reportFunctions.R")
 source("countTableVisFunctions.R")
+
+myoptions = read_file_map("fileList2.txt", do_unlist=FALSE)
+min_count=to_numeric(myoptions$min_count, 1)
+
+detail_folder = "files/"
+dir.create(detail_folder, showWarnings = FALSE)
 ```
+
+---
+title: "`r myoptions$task_name` - tRNA mismatch figure"
+author: 
+  email: "`r myoptions$email`"
+  affiliation: "`r myoptions$affiliation`"
+---
 
 ```{r}
 totalCountFile=fread('fileList3.txt', header=FALSE)$V1[1]
@@ -44,13 +53,15 @@ totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FAL
 totalCount<-unlist(totalCount["Reads for Mapping",])
 ```
 
-```{r, fig.width=8}
-myoptions = read_file_map("fileList2.txt", do_unlist=FALSE)
+# Read tRNA mapping
 
-min_count=to_numeric(myoptions$min_count, 1)
+```{r}
+result_file=read_file_map("fileList5.txt", do_unlist=TRUE)[1]
+```
 
-result_file=paste0(myoptions$task_name, ".tRNA.txt.gz")
+Read tRNA mapping data from `r result_file`.
 
+```{r}
 all_dat=fread(result_file, data.table=FALSE)
 
 all_dat$original_sequence = toupper(all_dat$original_sequence)
@@ -67,16 +78,15 @@ samples = sort(unique(all_dat$sample))
 #trna = 'tRNA:tRNA-Ala-AGC-1-1'
 #trna = 'tRNA:tRNA-Arg-ACG-1-1'
 trna = myoptions$mismatch_feature
+```
 
-cat("#", trna, "\n\n")
+# `r trna`
 
+```{r}
 trna_name=gsub("tRNA:", "", trna) 
 
 sample="AlkB_enzymes_Buffers"
 #sample="CAC_10_007DE_AlkB"
-
-detail_folder = "details/"
-dir.create(detail_folder, showWarnings = FALSE)
 
 rmd_content = ""
 for(sample in samples){
@@ -144,7 +154,7 @@ for(sample in samples){
 
   maxy = max(4, all_data$y) + 1
   fontsize_inch = GeomLabel$default_aes$size * 0.0393701
-  height=fontsize_inch * maxy + 1
+  height=fontsize_inch * maxy + 1.5
   png_file = paste0(detail_folder, sample, ".", trna_name, ".png")
 
   minx = min(all_data$x_loc) - 1
@@ -159,9 +169,10 @@ for(sample in samples){
                                   "red" = "red",
                                   "brown" = "brown",
                                   "blue"="blue")) + 
-    xlab("") + ylab("") +
+    ggtitle(paste0(sample, " : ", trna_name)) +
     scale_y_continuous(limits=c(0, maxy), expand = c(0, 0), breaks=seq(0, maxy, 1)) + 
-    theme(axis.title.y = element_blank(),
+    theme(plot.title = element_text(hjust = 0.5, size=18, face="bold"),
+          axis.title = element_blank(),
           axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.line.y = element_blank())
