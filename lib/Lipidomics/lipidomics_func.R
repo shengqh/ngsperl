@@ -16,6 +16,8 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
   header<-data.frame(t(fread(filename, nrows=5, data.table=FALSE)))
 
   nameCol=min(which("Metabolite name"==header$X5))
+  rtCol=which("Average Rt(min)"==header$X5)
+  mzCol=which("Average Mz"==header$X5)
   ontologyCol=which("Ontology"==header$X5)
   classCol=which("Class"==header$X1)
   aveCols=which("Average"==header$X4)
@@ -49,11 +51,13 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
   }
 
   colnames(df)[nameCol]<-"Metabolite.name"
+  colnames(df)[rtCol]<-"RT"
+  colnames(df)[mzCol]<-"mz"
 
   #remove "POS_" or "NEG_" prefix from sample names to make sure the final sample names in both POS and NEG file would be idetical
   colnames(df)[sampleCols]<-gsub(modePrefix,"",colnames(df)[sampleCols])
 
-  res=df[,c(nameCol, ontologyCol, which(colnames(df) %in% sample_meta$Sample))]
+  res=df[,c(nameCol, ontologyCol, rtCol, mzCol, which(colnames(df) %in% sample_meta$Sample))]
 
   qc_samples=meta[meta[,"Class"]==qc_group, "Sample"]
   if(length(qc_samples)==0){
