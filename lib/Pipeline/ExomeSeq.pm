@@ -1951,6 +1951,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
       option      => "",
       source_ref  => $tumor_bam,
       bedfile     => $covered_bed,
+      refnames    => $def->{cnMops_refnames},
       isbamsorted => 1,
       sh_direct   => 1,
       pbs         => {
