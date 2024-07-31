@@ -1836,7 +1836,7 @@ fi
         {
           rtemplate          => "countTableVisFunctions.R,countTableVis.R",
           output_file        => ".${nonhostGroup}Mapping.Result",
-          output_file_ext    => ".Group.Piechart.png",
+          output_file_ext    => ".Piechart.png",
           parameterFile1_ref => [ "bowtie1_${nonhostGroup}_pm_table", ".Species.count\$" ],
           rCode              => 'maxCategory=4;' . $R_font_size,
         }
