@@ -96,7 +96,7 @@ if(length(refnames) > 0){
       load(segfile)
     }else{
       x <- getSegmentReadCountsFromBAM(bam_files, GR=gr, sampleNames=sample_names, parallel=parallel)
-      save(refx, samx, file=segfile)
+      save(x, file=segfile)
     }
     resCNMOPS<-exomecn.mops(x, upperThreshold=0.5, lowerThreshold=-0.5)
     resCNMOPS<-calcIntegerCopyNumbers(resCNMOPS)
