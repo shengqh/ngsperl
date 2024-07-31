@@ -1,11 +1,8 @@
 import pysam
 import argparse
-import sys
 import logging
 import os
-import re
 import errno
-from asyncore import read
 
 def check_file_exists(file):
   if not os.path.exists(file):
