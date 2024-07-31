@@ -43,6 +43,30 @@ if (max(nchar(row.names(mappingResult2Species)))>stringLengthCut) {
 	row.names(mappingResult2Species)=make.unique(stringr::str_trunc(row.names(mappingResult2Species), stringLengthCut))
 }
 
+group_map=read_file_map(groupFileList, do_unlist=FALSE)
+if(length(group_map) > 1) {
+
+  #Barplot for Group samples
+  tableBarplotToFile( dat=mappingResult2Species,
+                      fileName=paste0(resultFile,".Group.Barplot.png"),
+                      groupFileList=groupFileList,
+                      outFileName=paste0(resultFile,".ReadsPerMillionGroups.csv"),
+                      totalCountFile=totalCountFile,
+                      maxCategory=maxCategory,
+                      textSize=textSize,
+                      xlab="",
+                      height=barplot_height_px)
+
+  #Group Pie chart
+  ggpieGroupToFile( dat=mappingResult2Species,
+                    fileName=paste0(resultFile,".Group.Piechart.png"),
+                    groupFileList=groupFileList,
+                    outFileName=paste0(resultFile,".PercentGroups.csv"),
+                    maxCategory=maxCategory,
+                    textSize=groupTextSize,
+                    visLayoutFileList=groupVisLayoutFileList)
+}
+
 #Pie chart for all samples
 ggpieToFile(mappingResult2Species,
             fileName=paste0(resultFile,".Piechart.png"),
@@ -60,24 +84,5 @@ tableBarplotToFile( dat=mappingResult2Species,
                     width=barplot_width_px, 
                     height=barplot_height_px)
 
-#Barplot for Group samples
-tableBarplotToFile( dat=mappingResult2Species,
-                    fileName=paste0(resultFile,".Group.Barplot.png"),
-                    groupFileList=groupFileList,
-                    outFileName=paste0(resultFile,".ReadsPerMillionGroups.csv"),
-                    totalCountFile=totalCountFile,
-                    maxCategory=maxCategory,
-                    textSize=textSize,
-                    xlab="",
-                    height=barplot_height_px)
-
-#Group Pie chart
-ggpieGroupToFile( dat=mappingResult2Species,
-                  fileName=paste0(resultFile,".Group.Piechart.png"),
-                  groupFileList=groupFileList,
-		              outFileName=paste0(resultFile,".PercentGroups.csv"),
-                  maxCategory=maxCategory,
-                  textSize=groupTextSize,
-                  visLayoutFileList=groupVisLayoutFileList)
 
 writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
