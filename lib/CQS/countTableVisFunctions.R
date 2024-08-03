@@ -1060,10 +1060,12 @@ draw_heatmap_png<-function( filepath,
   return(c(final_width, final_height))
 }
 
-save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, plot){
+save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, plot, show_info=TRUE){
   for(format in outputFormat){  
     fileName<-paste0(file_prefix, ".", tolower(format))
-    cat("saving", fileName, "\n")
+    if(show_info){
+      cat("saving", fileName, "\n")
+    }
     ggsave(fileName, plot=plot, width=width_inch, height=height_inch, units="in", dpi=300, bg="white", limitsize=FALSE)
   }
 }
@@ -1099,7 +1101,7 @@ draw_density_plot<-function(log2counts, prefix, outputFormat, width_inch=5, heig
                     plot=g)
 }
 
-drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=4, height_inch=3, point_size=3, label_size=2, scalePCs=TRUE){
+drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=4, height_inch=3, point_size=3, label_size=2, scalePCs=TRUE, show_info=TRUE){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     pca<-prcomp(t(rldmatrix))
@@ -1137,7 +1139,8 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
                       outputFormat=outputFormat, 
                       width_inch=8, 
                       height_inch=8, 
-                      plot=g)
+                      plot=g,
+                      show_info=show_info)
 
     pcadata<-data.frame(pca$x)
     if (scalePCs) {
@@ -1182,7 +1185,8 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
                       outputFormat=outputFormat, 
                       width_inch=width_inch, 
                       height_inch=height_inch, 
-                      plot=g)
+                      plot=g,
+                      show_info=show_info)
   }
 }
 
