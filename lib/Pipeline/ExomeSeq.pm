@@ -1944,16 +1944,37 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
 
   if ( $def->{perform_cnv_cnMOPS} ) {
     my $cnmopsName = "${bam_input}_cnMOPS";
+    # $config->{$cnmopsName} = {
+    #   class       => "CNV::cnMops",
+    #   perform     => 1,
+    #   target_dir  => "${target_dir}/$cnmopsName",
+    #   option      => "",
+    #   source_ref  => $tumor_bam,
+    #   bedfile     => $covered_bed,
+    #   refnames    => $def->{cnMops_refnames},
+    #   isbamsorted => 1,
+    #   sh_direct   => 1,
+    #   pbs         => {
+    #     "nodes"    => "1:ppn=" . $max_thread,
+    #     "walltime" => "24",
+    #     "mem"      => "40gb"
+    #   }
+    # };
     $config->{$cnmopsName} = {
-      class       => "CNV::cnMops",
-      perform     => 1,
-      target_dir  => "${target_dir}/$cnmopsName",
-      option      => "",
-      source_ref  => $tumor_bam,
-      bedfile     => $covered_bed,
-      refnames    => $def->{cnMops_refnames},
-      isbamsorted => 1,
-      sh_direct   => 1,
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . '/' . $cnmopsName,
+      rtemplate                  => "../CNV/cnMops.exome.r",
+      parameterSampleFile1_ref   => $tumor_bam,
+      parameterSampleFile2       => {
+        "thread" => $max_thread,
+      },
+      parameterSampleFile3       => {
+        "refnames" => $def->{cnMops_refnames},
+      },
+      parameterFile1            => getValue($def, "cnMops_bed", $covered_bed),
+      output_file_ext            => ".call.txt",
+      sh_direct                  => 1,
       pbs         => {
         "nodes"    => "1:ppn=" . $max_thread,
         "walltime" => "24",
