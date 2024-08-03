@@ -38,8 +38,8 @@ parser.add_argument('-o', '--output', action='store', nargs='?', help="Output su
 args = parser.parse_args()
 
 if DEBUG:
-  args.input = "/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/preprocessing/fastqc_raw_summary/result/fileList1.txt"
-  args.output = "/nobackup/vickers_lab/projects/20230502_9880_smallRNA_rice_hg38_byTiger/preprocessing/fastqc_raw_summary/result/P9880.FastQC"
+  args.input = "/nobackup/brown_lab/projects/20240802_11943_cutrun_hg38/trimmomatic_fastqc_summary/result/fileList1.txt"
+  args.output = "/nobackup/brown_lab/projects/20240802_11943_cutrun_hg38/trimmomatic_fastqc_summary/result/P11943_cutrun_hg38.FastQC"
 
 logger = initialize_logger(args.output + ".log", 'fastQCSummary', False)
 
@@ -72,7 +72,7 @@ with open(args.input, "r") as flistin:
     
     datafile = parts[0]
     datafolder, datafilename = os.path.split(datafile)
-    datafilePrefix = os.path.splitext(os.path.basename(datafolder))[0]
+    datafilePrefix = os.path.basename(datafolder)
     if datafilePrefix.endswith("_fastqc"):
       datafilePrefix = datafilePrefix[0:-7]
     
