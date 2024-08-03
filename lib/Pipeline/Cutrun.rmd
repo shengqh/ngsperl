@@ -53,47 +53,68 @@ has_bamplot="bamplot" %in% names(task_df)
 
  
 ```{r,echo=FALSE,results='asis', eval = has_fastqc_raw}
-cat("\n# Sequencing Quality\n\n")
+cat("\n\n# Sequencing Quality\n\n")
 prefix = paste0(task_df$fastqc_raw_summary, "/result/", task_name)
+cat("\n\n## Base Quality\n\n")
 include_graphics(paste0(prefix, ".FastQC.baseQuality.tsv.png"))
+cat("\n\n## Sequence QC\n\n")
 include_graphics(paste0(prefix, ".FastQC.sequenceGC.tsv.png"))
+cat("\n\n## Read Count\n\n")
 include_graphics(paste0(prefix, ".FastQC.reads.tsv.png"))
+cat("\n\n## Adapter in Raw Data\n\n")
 include_graphics(paste0(prefix, ".FastQC.adapter.tsv.png"))
 ```
   
 ```{r,echo=FALSE,results='asis', eval = has_fastqc_trimmed}
 prefix = paste0(task_df$trimmomatic_fastqc_summary, "/result/", task_name)
+cat("\n\n## Adapter after Trimming\n\n")
 include_graphics(paste0(prefix, ".FastQC.adapter.tsv.png"))
 ```
 
 ```{r,echo=FALSE,results='asis', eval = has_bowtie2_summary}
-cat("\n# Mapping Quality\n\n")
+cat("\n\n# Mapping Quality\n\n")
 prefix = paste0(task_df$bowtie2_summary, "/result/", task_name)
+cat("\n\n## Read in Chromosomes\n\n")
 include_graphics(paste0(prefix, ".chromosome.png"))
+cat("\n\n## Read in Samples\n\n")
 include_graphics(paste0(prefix, ".reads.png"))
 ```
 
-```{r,echo=FALSE,results='asis', eval = has_macs2_narrow_count}
-cat("\n# macs2 narrow\n\n")
-prefix = paste0(task_df$macs2_narrow_count, "/result/", task_name)
-print_table_from_file(paste0(prefix, ".txt"))
-```
+```{r}
+add_peak_count<-function(peak_count, task_name, call_folder, call_name){
+  count_file = paste0(call_folder, "/result/", task_name, ".txt")
+  count_tbl = fread(count_file)
+  colnames(count_tbl)[2] = call_name
+  if(is.null(peak_count)){
+    peak_count = count_tbl
+  }else{
+    peak_count = merge(peak_count, count_tbl, by="Sample", all=TRUE)
+  }
+  return(peak_count)
+}
 
-```{r,echo=FALSE,results='asis', eval = has_macs2_broad_count}
-cat("\n# macs2 broad\n\n")
-prefix = paste0(task_df$macs2_broad_count, "/result/", task_name)
-print_table_from_file(paste0(prefix, ".txt"))
-```
+peak_count=NULL
+if(has_macs2_narrow_count){
+  peak_count = add_peak_count(peak_count, task_name, task_df$macs2_narrow_count, "macs2 narrow")
+}
 
-```{r,echo=FALSE,results='asis', eval = has_homer_03_mergePeaks_count}
-cat("\n# HOMER callPeaks\n\n")
-prefix = paste0(task_df$homer_03_mergePeaks_count, "/result/", task_name)
-print_table_from_file(paste0(prefix, ".txt"))
+if(has_macs2_broad_count){
+  peak_count = add_peak_count(peak_count, task_name, task_df$macs2_broad_count, "macs2 broad")
+}
+
+if(has_homer_03_mergePeaks_count){
+  peak_count = add_peak_count(peak_count, task_name, task_df$homer_03_mergePeaks_count, "homer callPeaks")
+}
+
+if(!is.null(peak_count)){
+  cat("\n\n# Peak Counts\n\n")
+  print_table(peak_count, round_value=0, byDT=FALSE, row.names=FALSE)
+}
 ```
 
 ```{r,echo=FALSE,results='asis', eval = has_bamplot}
 rmd_file="bamplot.rmd"
-rmd_content="\n# BAM plots\n\n"
+rmd_content="\n\n# BAM plots\n\n"
 
 prefix = paste0(task_df$bamplot, "/result/", task_name)
 gff = fread(paste0(prefix, ".gff"))
