@@ -156,7 +156,7 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_by_cell_filter_minTPM",         1 );
   initDefaultValue( $def, "DE_by_cell_filter_cellPercentage", 0.25 );
 
-  initDefaultValue( $def, "DE_by_sample_min_cell_per_sample", 5 );
+  initDefaultValue( $def, "DE_by_sample_min_cell_per_sample", 10 );
   
   initDefaultValue( $def, "perform_webgestalt", 0 );
 
