@@ -60,7 +60,7 @@ dataForPlotFrameP = head(enriched, 20) |>
   dplyr::mutate(coverage=overlap / size,
                 NegLog10pAdj=-log10(FDR))
 
-top=10
+top=min(10, nrow(dataForPlotFrameP))
 topBy="pValue"
 colorBy="NegLog10pAdj"
 colorTitle="-log10(FDR)"
@@ -73,6 +73,9 @@ dataForPlotFrameP = dataForPlotFrameP %>%
   dplyr::arrange(desc(coverage)) %>%
   as.data.frame()
 
+if(any(duplicated(dataForPlotFrameP$description))){
+  dataForPlotFrameP$description=paste0(dataForPlotFrameP$description, " (", dataForPlotFrameP$geneSet, ")")
+}
 dataForPlotFrameP$description=factor(dataForPlotFrameP$description, levels=rev(dataForPlotFrameP$description))
 
 p=dataForPlotFrameP %>%
@@ -95,16 +98,20 @@ p=dataForPlotFrameP %>%
 pathway_png=paste0(plotData$prefix, ".png")
 
 width=ifelse(category == "pathway KEGG", 6, 8)
+if(any(grepl("\\(", as.character(dataForPlotFrameP$description)))){
+  width=width+2
+}
+
 ggsave(pathway_png, p, width=width, height=3.5, units="in", dpi=300, limitsize=FALSE, bg="white")
 
-cat(paste0(webgestalt_intent, "# Top 10 genesets\n\n"))
+cat(paste0(webgestalt_intent, "# Top ", top, " genesets\n\n"))
 include_graphics(pathway_png)
 ```
 
 ```{r, echo=FALSE, results="asis", eval=show_webgestalt_detail}
 cat(paste0("\n", webgestalt_intent, "# Significantly differential expressed genes\n\n" ))
 idx<-1
-for(idx in c(1:rowCount)){
+for(idx in c(1:nrow(enriched))){
 	entry<-enriched[idx,]
 	userIds<-unlist(strsplit( entry$userId[1], ';'))
 	#entryTable<-deseq2[deseq2$Feature_gene_name %in% userIds,]
@@ -126,6 +133,3 @@ for(idx in c(1:rowCount)){
 }
 
 ```
-
-
-
