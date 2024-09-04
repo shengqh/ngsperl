@@ -621,8 +621,12 @@ draw_dimplot<-function(mt, filename, split.by) {
   return(g1)
 }
 
+is_seurat_5_plus<-function(obj){
+  return(Version(obj) > '5')
+}
+
 has_data<-function(obj, assay, slot){
-  if(Version(obj) > '5'){
+  if(is_seurat_5_plus(obj)){
     return(slot %in% names(obj@assays[[assay]]@layers))
   }else{
     return(slot %in% names(obj@assays[[assay]]))
@@ -630,8 +634,9 @@ has_data<-function(obj, assay, slot){
 }
 
 MyGetAssayData<-function(obj, assay, slot){
-  if(Version(obj) > '5'){
-    return(GetAssayData(obj, assay=assay, layer=slot))
+  if(is_seurat_5_plus(obj)){
+    cur_assay=obj[[assay]]
+    return(LayerData(cur_assay, layer=slot))
   }else{
     return(GetAssayData(obj, assay=assay, slot=slot))
   }
@@ -673,20 +678,20 @@ do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FAL
   if(nsamples > 1){
     mc.cores = check_mc_cores(mc.cores)
 
-    print("  split objects ...")
+    print("  SplitObject ...")
     objs<-SplitObject(object = rawobj, split.by = "orig.ident")
     rm(rawobj)
 
     print("  perform sctransform ...")
     if(mc.cores > 1){
       objs<-mclapply(objs, function(x){
-        print(paste0("    sctransform ", unique(x$orig.ident), " ..."))
+        print(paste0("    SCTransform ", unique(x$orig.ident), " ..."))
         x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
         return(x)
       }, mc.cores=mc.cores)  
     }else{
       objs<-lapply(objs, function(x){
-        print(paste0("    sctransform ", unique(x$orig.ident), " ..."))
+        print(paste0("    SCTransform ", unique(x$orig.ident), " ..."))
         x <- SCTransform(x, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
         return(x)
       })  
@@ -694,7 +699,12 @@ do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FAL
     print("  sctransform done")
 
     print("  merge samples ...")
+    #collapse: If ‘TRUE’, merge layers of the same name together; if ‘FALSE’, appends ‘labels’ to the layer name
+    #collapse layers is not supported yet
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
+
+    print("  JoinLayers ...")
+    obj[["RNA"]] <- JoinLayers(obj[["RNA"]])
     #https://github.com/satijalab/seurat/issues/2814
     VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
     rm(objs)
@@ -3088,4 +3098,28 @@ get_filtered_obj<-function(subobj, filter_column, ct_meta=subobj@meta.data){
 
   ct_obj@meta.data[,filter_column] = factor_by_count(ct_obj@meta.data[,filter_column])
   return(ct_obj)
+}
+
+get_scale_color_gradient2<-function(gdata, score_name, cols) {
+  if(length(cols) == 3){
+    midpoint=(max(gdata[,score_name]) + min(gdata[,score_name])) /2
+    result = scale_color_gradient2(low=cols[1], mid=cols[2], high=cols[3], midpoint=midpoint)
+  }else{
+    result = scale_color_gradient(low=cols[1], high=cols[3])
+  }
+  return(result)
+}
+
+get_feature_plot<-function(cur_obj, cur_feature, cols, order=FALSE) {
+  g=FeaturePlot(cur_obj, 
+                features = cur_feature, 
+                pt.size = 0.01, 
+                raster=FALSE,
+                order=order) + 
+    xlab("UMAP_1") + ylab("UMAP_2") + 
+    theme(aspect.ratio=1,
+          plot.title = element_text(hjust = 0.5))
+
+  g=g+get_scale_color_gradient2(g$data, cur_feature, cols)
+  return(g)
 }
