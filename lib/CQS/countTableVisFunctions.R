@@ -74,6 +74,9 @@ getSampleInGroup<-function(groupDefineFile, samples, useLeastGroups=FALSE,onlySa
   }
   
   result<-NULL
+
+  titles = unique(allGroupData$V3)
+  title = titles[1]
   for(title in unique(allGroupData$V3)){
     groupData<-allGroupData[allGroupData$V3 == title,]
     
