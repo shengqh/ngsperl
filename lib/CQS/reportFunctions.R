@@ -375,6 +375,18 @@ df |>
   dplyr::rename("count"="n")
 }
 
+cluster_dotplot<-function(gdata, column1="features.plot", column2="id", value_column="avg.exp.scaled", dim="both"){
+  load_install("textshape")
+
+  mdata=acast(gdata, as.formula(paste0(column1, "~", column2)), value.var=value_column)
+
+  mdata=cluster_matrix(mdata, dim=dim, method="ward.D2")
+  gdata[,column1]=factor(gdata[,column1], levels=rownames(mdata))
+  gdata[,column2]=factor(gdata[,column2], levels=colnames(mdata))
+
+  return(gdata)
+}
+
 ###################################
 #report functions end
 ###################################
