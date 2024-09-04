@@ -297,6 +297,28 @@ sub getMixRNASeqConfig {
 
   push @$summary, ("star", "star_summary", "filterMixBam", "filterMixBam_summary", "featureCount", "featurecount_summary", "gene_table" );
 
+  my $bar_vis_task="mix_genome_barplot";
+  $config->{$bar_vis_task} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $bar_vis_task,
+    option                   => "",
+    rtemplate                => "countTableVisFunctions.R,mixGenomeVis.r",
+    output_file_ext          => ".Reads.csv;.bar.png",
+    parameterFile1_ref => [ "gene_table", ".count" ],
+    parameterSampleFile1 => {
+      host_prefix => getValue($def, "host_prefix")
+    },
+    parameterSampleFile2_ref => $groups_ref,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+  push @$summary, $bar_vis_task;
+
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,
