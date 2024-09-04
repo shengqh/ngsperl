@@ -5,11 +5,12 @@ parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
 parFile1=''
-parFile2='/nobackup/vickers_lab/projects/20221221_8612_CM_smRNA_human_Glioblastoma/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/CM_8612_Glioblastoma.Category.Table.csv'
-parFile3='/nobackup/vickers_lab/projects/20221221_8612_CM_smRNA_human_Glioblastoma/preprocessing/fastqc_post_trim_summary/result/CM_8612_Glioblastoma.countInFastQcVis.Result.Reads.csv'
+parFile2=''
+parFile3=''
+parFile4='/data/wanjalla_lab/projects/20240808_11830_RNAseq_mm10/covariance.txt'
 
 
-setwd('/nobackup/vickers_lab/projects/20221221_8612_CM_smRNA_human_Glioblastoma/data_visualization/count_table_correlation_TotalReads/result')
+setwd('/data/wanjalla_lab/projects/20240808_11830_RNAseq_mm10/genetable/result')
 
 ### Parameter setting end ###
 
@@ -60,6 +61,8 @@ pca_point_size=to_numeric(myoptions$pca_point_size, 3)
 
 heatmap_add_width_inch=to_numeric(myoptions$heatmap_add_width_inch, 2)
 heatmap_add_height_inch=to_numeric(myoptions$heatmap_add_height_inch, 0)
+heatmap_column_names_max_height_cm=to_numeric(myoptions$heatmap_column_names_max_height_cm, 4)
+column_names_max_height=unit(heatmap_column_names_max_height_cm, "cm")
 
 heatmap_legend_label_fontsize=to_numeric(myoptions$heatmap_legend_label_fontsize, 18)
 heatmap_column_name_fontsize=to_numeric(myoptions$heatmap_column_name_fontsize, 18)
@@ -543,7 +546,7 @@ for (i in 1:nrow(countTableFileAll)) {
       #cur_name=ifelse(bNormalizeByCount, "log(RPM)", "VSD")
       cur_name="Z-Score"
 
-      prefix = paste0(cur_file_prefix, ".top", num_top_genes_heatmap, ".heatmap")
+      prefix = paste0(cur_file_prefix, ".top", num_top_genes_heatmap, "genes_in_eachgroup.heatmap")
 
       if(hasMultipleGroup){
         group_levels=levels(groups)
@@ -570,11 +573,29 @@ for (i in 1:nrow(countTableFileAll)) {
                                     show_row_names=TRUE, 
                                     show_column_names=TRUE,
                                     show_row_dend=TRUE,
+                                    top_annotation = ha,
+                                    column_title=NULL,
+                                    column_names_gp = column_names_gp,
+                                    legend_gp = legend_label_gp,
+                                    column_names_max_height = column_names_max_height
+                                    )
+
+        ht_size = draw_heatmap_png( filepath=paste0(prefix, ".bygroup.png"), 
+                                    htdata=mat_scaled, 
+                                    name=cur_name, 
+                                    save_rds=TRUE,
+                                    save_pdf=outputPdf,
+                                    add_width_inch=heatmap_add_width_inch,
+                                    add_height_inch=heatmap_add_height_inch,
+                                    show_row_names=TRUE, 
+                                    show_column_names=TRUE,
+                                    show_row_dend=TRUE,
                                     column_split = groups,
                                     top_annotation = ha,
                                     column_title=NULL,
                                     column_names_gp = column_names_gp,
-                                    legend_gp = legend_label_gp
+                                    legend_gp = legend_label_gp,
+                                    column_names_max_height = column_names_max_height
                                     )
       }else{
         cur_vsd<-countNumVsd[order(rowMedians(countNumVsd),decreasing=T)[1:cur_num],]
@@ -593,7 +614,8 @@ for (i in 1:nrow(countTableFileAll)) {
                                     show_column_names=TRUE,
                                     show_row_dend=TRUE,
                                     column_names_gp = column_names_gp,
-                                    legend_gp = legend_label_gp
+                                    legend_gp = legend_label_gp,
+                                    column_names_max_height = column_names_max_height
                                     )
       }
     }
@@ -644,7 +666,8 @@ for (i in 1:nrow(countTableFileAll)) {
                           top_annotation=ha,
                           clustering_distance_columns=clustering_distance_columns,
                           column_names_gp = column_names_gp,
-                          legend_gp = legend_label_gp
+                          legend_gp = legend_label_gp,
+                          column_names_max_height = column_names_max_height
                           )
       } else {
         cat("Not enough samples or genes. Can't Draw heatmap for", title, "samples.\n")
@@ -676,7 +699,8 @@ for (i in 1:nrow(countTableFileAll)) {
                         show_column_names=show_col_names,
                         top_annotation=ha,
                         column_names_gp = column_names_gp,
-                        legend_gp = legend_label_gp
+                        legend_gp = legend_label_gp,
+                        column_names_max_height = column_names_max_height
                         )
      
       if (hasMultipleGroup) {
