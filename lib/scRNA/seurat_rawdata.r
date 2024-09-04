@@ -440,6 +440,10 @@ if(length(raw_objs) == 1){
 }
 rm(raw_objs)
 
+if(is_seurat_5_plus(rawobj)){
+  rawobj<-JoinLayers(rawobj)
+}
+
 cat("outputing result ... \n")
 
 saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
