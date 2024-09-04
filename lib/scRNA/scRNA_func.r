@@ -703,8 +703,11 @@ do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FAL
     #collapse layers is not supported yet
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
 
-    print("  JoinLayers ...")
-    obj[["RNA"]] <- JoinLayers(obj[["RNA"]])
+    if(is_seurat_5_plus(obj)){
+      print("  JoinLayers ...")
+      obj[["RNA"]] <- JoinLayers(obj[["RNA"]])
+    }
+
     #https://github.com/satijalab/seurat/issues/2814
     VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
     rm(objs)
