@@ -75,9 +75,9 @@ corNames<-sort(corNames)
 corNames=c("all", corNames[corNames != "all"])
 
 if(rnaseqOptions["top25cv_in_hca", 1] == "FALSE"){
-  hca_gene_used<-" using top 25% variant genes"
-}else{
   hca_gene_used<-" using all genes"
+}else{
+  hca_gene_used<-" using top 25% variant genes"
 }
 
 has_introduction="introduction_rmd" %in% rnaseqOptions$V2
@@ -115,7 +115,7 @@ if (any(table$Mean<=QualityMin)) { #use this as cutoff to show the quality table
 }
 ```
 
-```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(file_map$fastqc_raw_per_sequence_gc_content))}
+```{r fastqc_raw_per_sequence_gc_content,echo=FALSE,results='asis', eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of raw sequencing reads", trunk.eval=file.exists(file_map$fastqc_raw_per_sequence_gc_content))}
 check_and_include_graphics(file_map$fastqc_raw_per_sequence_gc_content)
 ```
 
@@ -150,6 +150,10 @@ check_and_include_graphics(file_map$fastqc_raw_adapter_content)
   
 ```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', eval = hasFastqcPosttrim, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(file_map$fastqc_post_trim_adapter_content))}
 check_and_include_graphics(file_map$fastqc_post_trim_adapter_content)
+```
+  
+```{r fastqc_post_trim_per_sequence_gc_content,echo=FALSE,results='asis', eval = hasFastqcPosttrim, fig.align="center", fig.cap=figRef("fastqc_post_trim_per_sequence_gc_content", "The average GC content of sequencing reads after cutadapt", trunk.eval=file.exists(file_map$fastqc_post_trim_per_sequence_gc_content))}
+check_and_include_graphics(file_map$fastqc_post_trim_per_sequence_gc_content)
 ```
   
 ```{r STAR_summary,echo=FALSE,results='asis', eval = hasSTAR, fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
