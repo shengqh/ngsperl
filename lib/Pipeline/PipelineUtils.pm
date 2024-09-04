@@ -598,6 +598,7 @@ sub addDEseq2 {
       caption_in_volcano => getValue($def, "DE_caption_in_volcano", 1),
       "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
       "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
+      "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 4),
       "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
       "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18),
       n_first => $n_first,
@@ -875,6 +876,8 @@ sub add_table_correlation {
   my $rCode = getValue( $def, "correlation_rcode", "" );
   my $project_name = getValue($def, "task_name");
 
+  my $default_onlySamplesInGroup = defined $def->{correlation_groups_dic} ? 1 : 0;
+
   my $options = {     
     "task_name" => $project_name,
     "email" => getValue($def, "email"),
@@ -889,7 +892,7 @@ sub add_table_correlation {
     "outputTIFF" => getValue($def, "outputTIFF", 0),
     "usePearsonInHCA" => getValue($def, "use_pearson_in_hca", 0),
     "n_first" => getValue($def, "correlation_n_first", -1),
-    "onlySamplesInGroup" => getValue($def, "correlation_onlySamplesInGroup", 0),
+    "onlySamplesInGroup" => getValue($def, "correlation_onlySamplesInGroup", $default_onlySamplesInGroup),
     "useLeastGroups" => getValue($def, "useLeastGroups", 0),
     "minMedian" => getValue($def, "minMedian", 0),
     "minMedianInGroup" => getValue($def, "minMedianInGroup", 1),
@@ -900,6 +903,7 @@ sub add_table_correlation {
     "num_top_genes_heatmap" => getValue($def, "num_top_genes_heatmap", 25),
     "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
     "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
+    "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 4),
     "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
     "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18)
   };
