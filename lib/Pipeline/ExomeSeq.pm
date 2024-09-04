@@ -249,7 +249,7 @@ sub init_muTect2_groups {
 }
 
 sub add_muTect2_PON {
-  my ($config, $def, $individual, $summary, $target_dir, $bam_input, $task_prefix) = @_;
+  my ($config, $def, $tasks, $target_dir, $bam_input, $task_prefix) = @_;
     
   my $mutect2_pon_normal_files="mutect2_pon_normal_files";
 
@@ -287,11 +287,11 @@ sub add_muTect2_PON {
   my $pon_mutect2call_ref;
   my $pon_mutect2_option = getValue($def, "pon_mutect2_option", "--max-mnp-distance 0");
   if($perform_mutect2_by_wdl){
-    my $pon_mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $task_prefix, $pon_mutect2_option, 1, 1, $mutect2_pon_normal_files, undef, undef);
+    my $pon_mutect2call = addMutect2Wdl($config, $def, $tasks, $target_dir, $task_prefix, $pon_mutect2_option, 1, 1, $mutect2_pon_normal_files, undef, undef);
     $pon_mutect2call_ref = [ $pon_mutect2call, '.vcf$' ];
   }else{
     my $pon_mutect2call = $task_prefix . "01_call";
-    addMutect2($config, $def, $individual, $target_dir, $mutect2_pon_normal_files, $pon_mutect2call, $pon_mutect2_option, 0, undef);
+    addMutect2($config, $def, $tasks, $target_dir, $mutect2_pon_normal_files, $pon_mutect2call, $pon_mutect2_option, 0, undef);
     $pon_mutect2call_ref = [ $pon_mutect2call, '.pass.vcf.gz$' ];
   }
 
@@ -311,7 +311,7 @@ sub add_muTect2_PON {
       "mem"      => getValue($def, "pon_memory", "40gb"),
     },
   };
-  push (@$summary, $pon_task);
+  push (@$tasks, $pon_task);
   return($pon_task);
 }
 
@@ -385,16 +385,16 @@ sub getConfig {
 
   $def = initializeDefaultOptions($def);
 
-  my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+  my ( $config, $tasks, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+
+   #merge summary and individual 
+  push @$tasks, @$summary;
+  $summary=undef;
+
 
   if ($def->{perform_preprocessing_only}) {
     return $config;
   }
-
-  my $step3 = [];
-  my $step4 = [];
-  my $step5 = [];
-  my $step6 = [];
 
   my $email      = getValue( $def, "email" );
   my $max_thread = getValue( $def, "max_thread" );
@@ -405,7 +405,7 @@ sub getConfig {
   my $species = getValue($def, "species");
 
   if(defined $def->{annotation_genes}){
-    addGeneLocus($config, $def, $summary, $target_dir);
+    addGeneLocus($config, $def, $tasks, $target_dir);
   }
 
   my $bam_ref;
@@ -428,7 +428,7 @@ sub getConfig {
     $fasta = getValue($def, "fasta_file");
   }else{
     if ($def->{perform_gatk4_pairedfastq2bam}){
-      $bam_input = addPairedFastqToProcessedBam($config, $def, $individual, $target_dir, $alignment_source_ref);
+      $bam_input = addPairedFastqToProcessedBam($config, $def, $tasks, $target_dir, $alignment_source_ref);
       $bam_ref = [$bam_input, ".bam\$"];
       $fasta = getValue( $def, "bwa_fasta" );
 
@@ -481,7 +481,7 @@ sub getConfig {
         };
         $rg_name_regex = "(.+)_ITER_";
         $alignment_source_ref = $splitFastq;
-        push @$individual, $splitFastq;
+        push @$tasks, $splitFastq;
       }
 
       #based on paper https://bmcbioinformatics.biomedcentral.com/articles/10.1186/s12859-016-1097-3, we don't do markduplicate anymore
@@ -508,13 +508,13 @@ sub getConfig {
         };
         $bam_ref = [ $bwa, ".bam\$" ];
         $bam_input = $bwa;
-        push @$individual, ( $bwa );
+        push @$tasks, ( $bwa );
 
         my $bwa_summary = $def->{aligner_scatter_count}?"bwa_04_summary":"bwa_summary";
         if ($def->{aligner_scatter_count}) {
-          add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+          add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
         }else{
-          add_BWA_summary($config, $def, $summary, $target_dir, $bwa_summary, $bwa);
+          add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa);
         }
       }
       else {
@@ -547,11 +547,11 @@ sub getConfig {
         };
         $bam_input = $mergeBam;
         $bam_ref = [ $mergeBam, ".bam\$" ];
-        push @$individual, (  $mergeBam );
+        push @$tasks, (  $mergeBam );
       }
 
       if(getValue($def, "perform_bam_validation", 0)){
-        add_bam_validation($config, $def, $individual, $target_dir, $bam_input . "_bam_validation", $bam_ref );
+        add_bam_validation($config, $def, $tasks, $target_dir, $bam_input . "_bam_validation", $bam_ref );
       }
     }
 
@@ -610,15 +610,15 @@ sub getConfig {
         "mem"      => $refine_memory
       },
     };
-    push @$individual, ($refine_name);
+    push @$tasks, ($refine_name);
 
     $bam_input = $refine_name;
     $bam_ref = [ $refine_name, ".bam\$" ];
 
-    add_alignment_summary($config, $def, $summary, $target_dir, "${refine_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$refine_name, ".chromosome.count"] );
+    add_alignment_summary($config, $def, $tasks, $target_dir, "${refine_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$refine_name, ".chromosome.count"] );
 
     if(getValue($def, "perform_bam_validation", 0)){
-      add_bam_validation($config, $def, $individual, $target_dir, $refine_name . "_bam_validation", $bam_ref );
+      add_bam_validation($config, $def, $tasks, $target_dir, $refine_name . "_bam_validation", $bam_ref );
     }
   }
 
@@ -650,11 +650,11 @@ samtools idxstats __NAME__.nosoftclip.bam > __NAME__.nosoftclip.bam.chromosome.c
         "mem"       => "10gb"
       },
     };
-    push @$individual, ($soft_clip_name);
+    push @$tasks, ($soft_clip_name);
     $bam_input = $soft_clip_name;
     $bam_ref = [$bam_input, ".bam\$"];
 
-    add_alignment_summary($config, $def, $summary, $target_dir, "${soft_clip_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$soft_clip_name, ".chromosome.count"] );
+    add_alignment_summary($config, $def, $tasks, $target_dir, "${soft_clip_name}_summary", "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r", ".chromosome.csv;.chromosome.png", undef, [$soft_clip_name, ".chromosome.count"] );
   }
 
   my $tumor_bam = $bam_ref;
@@ -700,7 +700,7 @@ samtools idxstats __NAME__.nosoftclip.bam > __NAME__.nosoftclip.bam.chromosome.c
         'walltime' => '10'
       },
     };
-    push @$summary, ("TEQC");
+    push @$tasks, ("TEQC");
   }
 
   if ($def->{perform_CrosscheckFingerprints}){
@@ -771,7 +771,7 @@ fi
           "mem"       => "40gb"
         },
       };
-      push @$summary, $CrosscheckFingerprints_name;
+      push @$tasks, $CrosscheckFingerprints_name;
   }
 
   if ($def->{perform_target_coverage}){
@@ -817,18 +817,18 @@ rm __OUTPUT__.tmp
         "mem"      => "40gb"
       },
     };
-    push @$individual, ($target_coverage_task);
+    push @$tasks, ($target_coverage_task);
   }
 
   if($def->{perform_bamsnap} && $def->{"bamsnap_locus"}){
-    addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", $bam_ref);
-    #addBamsnapLocus($config, $def, $summary, $target_dir, "bamsnap_locus", ['bwa', '.bam$']);
+    addBamsnapLocus($config, $def, $tasks, $target_dir, "bamsnap_locus", $bam_ref);
+    #addBamsnapLocus($config, $def, $tasks, $target_dir, "bamsnap_locus", ['bwa', '.bam$']);
   }
 
   if($def->{perform_extract_bam}){
     my $extract_bam_locus = getValue($def, "extract_bam_locus");
     my $extract_bam_task = "extract_bam_locus";
-    add_extract_bam_locus($config, $def, $individual, $target_dir, $extract_bam_task, $extract_bam_locus, [ $bam_input, ".bam\$" ] );
+    add_extract_bam_locus($config, $def, $tasks, $target_dir, $extract_bam_task, $extract_bam_locus, [ $bam_input, ".bam\$" ] );
   }
 
   if($def->{perform_featureCounts}){
@@ -851,7 +851,7 @@ rm __OUTPUT__.tmp
         "mem"       => "40gb"
       },
     };
-    push @$individual, ($featureCounts);
+    push @$tasks, ($featureCounts);
 
     my $featureCountsSummary = $featureCounts . "_summary";
     $config->{$featureCountsSummary} = {
@@ -871,7 +871,7 @@ rm __OUTPUT__.tmp
       },
     };
 
-    push @$summary, $featureCountsSummary;
+    push @$tasks, $featureCountsSummary;
 
     my $name_map_file = $def->{name_map_file};
     my $countTable = $featureCounts . "_table";
@@ -891,7 +891,7 @@ rm __OUTPUT__.tmp
       },
     };
 
-    push @$summary, $countTable;
+    push @$tasks, $countTable;
   }
 
   if($def->{perform_CNV_Radar}){
@@ -928,7 +928,7 @@ rm __NAME__.bam __NAME__.bam.bai
       },
     };
 
-    push(@$individual, "$CNV_Radar_roi_task");
+    push(@$tasks, "$CNV_Radar_roi_task");
   }
 
   my $gatk_index = $def;
@@ -1005,17 +1005,17 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         "mem"      => "40gb"
       },
     };
-    push @$individual, ($gvcf_name);
+    push @$tasks, ($gvcf_name);
 
     if(not getValue($def, "callvariants_vqsr_mode")){
       my $genotypeGVCFs_section;
       
       if ($perform_gatk4_by_scatter) {
-        $genotypeGVCFs_section = add_gvcf_to_genotype_scatter($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_name, "covered_bed");
+        $genotypeGVCFs_section = add_gvcf_to_genotype_scatter($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_name, "covered_bed");
       }else{
-        $genotypeGVCFs_section = add_gvcf_to_genotype($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_name, "covered_bed");
+        $genotypeGVCFs_section = add_gvcf_to_genotype($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_name, "covered_bed");
       }
-      $filter_name = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
+      $filter_name = add_hard_filter_and_merge($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
     }
     elsif(getValue($def, "gatk4_variant_filter_by_chromosome", 0)){
       my $vqsr_prefix = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) ;
@@ -1039,7 +1039,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           "mem"      => "40gb"
         },
       };
-      push @$summary, ($filter_name_chr);
+      push @$tasks, ($filter_name_chr);
 
       my $filter_name_chr_recalibrator = $vqsr_prefix . "_vqsr_2_recalibrator";
       $config->{$filter_name_chr_recalibrator} = {
@@ -1065,7 +1065,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           "mem"      => "10gb"
         },
       };
-      push @$summary, ($filter_name_chr_recalibrator);
+      push @$tasks, ($filter_name_chr_recalibrator);
 
       my $filter_name_chr_recalibrator_apply = $vqsr_prefix . "_vqsr_3_applyVQSR";
       $config->{$filter_name_chr_recalibrator_apply} = {
@@ -1088,7 +1088,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           "mem"      => "10gb"
         },
       };
-      push @$summary, ($filter_name_chr_recalibrator_apply);
+      push @$tasks, ($filter_name_chr_recalibrator_apply);
 
       my $filter_name_chr_recalibrator_apply_gather = $vqsr_prefix . "_vqsr_4_gather";
       $config->{$filter_name_chr_recalibrator_apply_gather} = {
@@ -1107,7 +1107,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           "mem"      => "10gb"
         },
       };
-      push @$summary, ($filter_name_chr_recalibrator_apply_gather);
+      push @$tasks, ($filter_name_chr_recalibrator_apply_gather);
 
       $filter_name = $filter_name_chr_recalibrator_apply_gather;
     }else{
@@ -1135,7 +1135,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           "mem"      => "40gb"
         },
       };
-      push @$summary, ($filter_name);
+      push @$tasks, ($filter_name);
     }
   }
   elsif ( $def->{perform_gatk_callvariants} ) {
@@ -1161,7 +1161,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         "mem"      => "40gb"
       },
     };
-    push @$individual, ($gvcf_name);
+    push @$tasks, ($gvcf_name);
 
     if ( $def->{callvariants_vqsr_mode} ) {
       $filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_vqsr";
@@ -1210,24 +1210,24 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         },
       };
     }
-    push @$summary, ($filter_name);
+    push @$tasks, ($filter_name);
   }
 
   if(getValue($def, "perform_no_maf_filter_annovar", 0)){
     my $nofilter_prefix = "bwa_g4_refine_gatk4_SNV_noMAFfilter_";
     my $nofilter_index_snv = "gatk4_SNV_noMAFfilter";
 
-    my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef, $nofilter_prefix, $def, $nofilter_index_snv );
+    my $annovar_name = addAnnovar( $config, $def, $tasks, $target_dir, $filter_name, undef, $nofilter_prefix, $def, $nofilter_index_snv );
 
     if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-      my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $nofilter_prefix, $def, $nofilter_index_snv);
+      my $annovar_filter_name = addAnnovarFilter( $config, $def, $tasks, $target_dir, $annovar_name, $nofilter_prefix, $def, $nofilter_index_snv);
 
       if ( defined $def->{annotation_genes} ) {
-        addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+        addAnnovarFilterGeneannotation( $config, $def, $tasks, $target_dir, $annovar_filter_name );
       }
 
       if(getValue($def, "perform_maf_report", 1)){
-        addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $nofilter_prefix, $def, $nofilter_index_snv)
+        addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_name, $nofilter_prefix, $def, $nofilter_index_snv)
       }
     }
   }
@@ -1238,22 +1238,22 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
   if ( $def->{perform_gatk4_callvariants} or $def->{perform_gatk_callvariants} ) {
     if ( $def->{filter_variants_by_allele_frequency} ) {
       my $maf_filter_name = $gatk_prefix . getNextIndex($gatk_index, $gatk_index_snv) . "_filterMAF";
-      add_maf_filter($config, $def, $summary, $target_dir, $maf_filter_name, $filter_name);
+      add_maf_filter($config, $def, $tasks, $target_dir, $maf_filter_name, $filter_name);
       $filter_name = $maf_filter_name;
     }
 
     if ( $def->{perform_annovar} ) {
-      my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filter_name, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
+      my $annovar_name = addAnnovar( $config, $def, $tasks, $target_dir, $filter_name, undef, $gatk_prefix, $gatk_index, $gatk_index_snv );
 
       if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-        my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $gatk_index, $gatk_index_snv);
+        my $annovar_filter_name = addAnnovarFilter( $config, $def, $tasks, $target_dir, $annovar_name, $gatk_prefix, $gatk_index, $gatk_index_snv);
 
         if ( defined $def->{annotation_genes} ) {
-          $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+          $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $tasks, $target_dir, $annovar_filter_name );
         }
 
         if(getValue($def, "perform_maf_report", 1)){
-          addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $gatk_index, $gatk_index_snv)
+          addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_name, $gatk_prefix, $gatk_index, $gatk_index_snv)
         }
       }
     }
@@ -1286,7 +1286,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
             "mem"       => "10gb"
           },
         };
-        push @$summary, $ibs_name;
+        push @$tasks, $ibs_name;
       }
     }
 
@@ -1312,7 +1312,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
           "mem"      => "40gb"
         },
       };
-      push @$summary, $vep_name;
+      push @$tasks, $vep_name;
     }
   }
 
@@ -1322,7 +1322,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
       defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
     }
-    add_bamplot($config, $def, $summary, $target_dir, [ $bam_input, ".bam\$" ]);
+    add_bamplot($config, $def, $tasks, $target_dir, [ $bam_input, ".bam\$" ]);
   }
 
   if ( $def->{"perform_muTect"} ) {
@@ -1357,9 +1357,9 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         "mem"      => getValue($def, "mutect_memory", "40gb"),
       },
     };
-    push @$summary, "${mutectName}";
+    push @$tasks, "${mutectName}";
 
-    add_unique_r($config, $def, $summary, $target_dir, $mutectName . "_qc", "../QC/QCUtils.r,../QC/VcfChromosome.r", ".chromosome.png", [[$mutectName, ".pass.vcf.chromosome.count"]] );
+    add_unique_r($config, $def, $tasks, $target_dir, $mutectName . "_qc", "../QC/QCUtils.r,../QC/VcfChromosome.r", ".chromosome.png", [[$mutectName, ".pass.vcf.chromosome.count"]] );
 
     my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
     $config->{$combineVariantsName} = {
@@ -1383,7 +1383,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         "mem"       => "10gb"
       },
     };
-    push @$summary, $combineVariantsName;
+    push @$tasks, $combineVariantsName;
 
     my $filterVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filterDepth";
     $config->{$filterVariantsName} = {
@@ -1406,18 +1406,18 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
         "mem"       => "10gb"
       },
     };
-    push @$summary, $filterVariantsName;
+    push @$tasks, $filterVariantsName;
 
     if ( $def->{perform_annovar} ) {
-      my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $filterVariantsName, ".vcf\$", $mutect_prefix, $mutect_index_dic, $mutect_index_key );
+      my $annovar_name = addAnnovar( $config, $def, $tasks, $target_dir, $filterVariantsName, ".vcf\$", $mutect_prefix, $mutect_index_dic, $mutect_index_key );
       if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-        my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
+        my $annovar_filter_name = addAnnovarFilter( $config, $def, $tasks, $target_dir, $annovar_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
 
         if ( defined $def->{annotation_genes} ) {
-          $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
+          $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $tasks, $target_dir, $annovar_filter_name );
         }
         if(getValue($def, "perform_maf_report", 1)){
-          addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
+          addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key)
         }
       }
     }
@@ -1429,7 +1429,7 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
 
     my $pon = getValue($def, "panel_of_normals", "");
     if($def->{"perform_mutect2_pon"}){
-      $pon = add_muTect2_PON($config, $def, $individual, $summary, $target_dir, $bam_input, "PON_muTect2_");
+      $pon = add_muTect2_PON($config, $def, $tasks, $target_dir, $bam_input, "PON_muTect2_");
     }
 
     my $mutect_index_key = "mutect2_key";
@@ -1452,49 +1452,49 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       my $is_pon_file = (index($pon, '/') != -1) || (index($pon, '/') != -1);
 
       if ($pon eq ""){
-        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, undef, undef);
+        my $mutect2call = addMutect2Wdl($config, $def, $tasks, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, undef, undef);
         $mutect_ref = [ $mutect2call, '.vcf$' ];
       }elsif($is_pon_file){
         die "file not exists: $pon "if (! -e $pon);
         my $suffix = ($pon =~ /vcf.gz/) ? ".tbi" : ".idx";
-        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, $pon, $pon . $suffix);
+        my $mutect2call = addMutect2Wdl($config, $def, $tasks, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, $pon, $pon . $suffix);
         $mutect_ref = [ $mutect2call, '.vcf$' ];
       }else{
-        my $mutect2call = addMutect2Wdl($config, $def, $individual, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, [$pon, 'vcf.gz$'], [$pon, 'vcf.gz.tbi$']);
+        my $mutect2call = addMutect2Wdl($config, $def, $tasks, $target_dir, $mutect_prefix, $mutect2_option, 0, $is_tumor_only, $tumor_files, $normal_files, [$pon, 'vcf.gz$'], [$pon, 'vcf.gz.tbi$']);
         $mutect_ref = [ $mutect2call, '.vcf$' ];
       }
     }else{
       my $mutect2call = $mutect_prefix . "01_call";
-      addMutect2($config, $def, $individual, $target_dir, $bam_input, $mutect2call, $mutect2_option, 1, $pon);
+      addMutect2($config, $def, $tasks, $target_dir, $bam_input, $mutect2call, $mutect2_option, 1, $pon);
       $mutect_ref = [ $mutect2call, '\.filtered.vcf.gz$' ];
     }
 
-    my ($annovarMaf,$annovarMafReport) = add_post_mutect($config, $def, $target_dir, $summary, $mutect_prefix, $mutect_index_dic, $mutect_index_key, $mutect_ref);
+    my ($annovarMaf,$annovarMafReport) = add_post_mutect($config, $def, $target_dir, $tasks, $mutect_prefix, $mutect_index_dic, $mutect_index_key, $mutect_ref);
     #my $mutect2merge = "${bam_input}_muTect2_02_merge";
-    #add_combine_mutect($config, $def, $summary, $target_dir, $mutect2merge, [$mutect2call, ".vcf\$"]);
+    #add_combine_mutect($config, $def, $tasks, $target_dir, $mutect2merge, [$mutect2call, ".vcf\$"]);
     
     if ($def->{ncbi_build} eq "GRCh38" && $def->{'perform_mutect2_by_wdl'}) {
-      my $mutect2callReport = addFilterMafAndReport($config, $def, $summary, $target_dir, $mutect_ref);
-      push @$summary, $mutect2callReport;
+      my $mutect2callReport = addFilterMafAndReport($config, $def, $tasks, $target_dir, $mutect_ref);
+      push @$tasks, $mutect2callReport;
    
       if (defined($def->{family_info_file}) & defined($def->{patient_info_feature}) ) { #both family_info_file and patient_info_feature defined. Can run Clonevol analysis and ape PhylogeneticTree 
         #make maf of all patients as common_sites and in GATK Intervals format
-        my $common_sites=addMafToIntervals( $config, $def, $target_dir, $summary,$mutect_prefix, $mutect_index_dic, $mutect_index_key ,$annovarMaf);
-        my $addCollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $summary, $target_dir, $bam_input,$common_sites);
+        my $common_sites=addMafToIntervals( $config, $def, $target_dir, $tasks,$mutect_prefix, $mutect_index_dic, $mutect_index_key ,$annovarMaf);
+        my $addCollectAllelicCountsCall = addCollectAllelicCounts($config, $def, $tasks, $target_dir, $bam_input,$common_sites);
 
-        my $addPrepareClonalAnalysisTask = addAllelicCountsForClonalAnalysis($config, $def, $summary, $target_dir,$addCollectAllelicCountsCall,$mutect2callReport,"cnv_summaryTable");
-        my $addSciCloneAndClonevolTask = addSciCloneAndClonevol($config, $def, $summary, $target_dir,$addPrepareClonalAnalysisTask);
-        my $addPyCloneVIAndClonevolTask = addPyCloneVIAndClonevol($config, $def, $summary, $target_dir,$addPrepareClonalAnalysisTask);
+        my $addPrepareClonalAnalysisTask = addAllelicCountsForClonalAnalysis($config, $def, $tasks, $target_dir,$addCollectAllelicCountsCall,$mutect2callReport,"cnv_summaryTable");
+        my $addSciCloneAndClonevolTask = addSciCloneAndClonevol($config, $def, $tasks, $target_dir,$addPrepareClonalAnalysisTask);
+        my $addPyCloneVIAndClonevolTask = addPyCloneVIAndClonevol($config, $def, $tasks, $target_dir,$addPrepareClonalAnalysisTask);
 
-        my $addApePhylogeneticTreeTask = addApePhylogeneticTree($config, $def, $summary, $target_dir,$mutect2callReport);
+        my $addApePhylogeneticTreeTask = addApePhylogeneticTree($config, $def, $tasks, $target_dir,$mutect2callReport);
 
-        push @$summary, $common_sites,$addCollectAllelicCountsCall,$addPrepareClonalAnalysisTask,$addSciCloneAndClonevolTask,$addPyCloneVIAndClonevolTask,$addApePhylogeneticTreeTask;
+        push @$tasks, $common_sites,$addCollectAllelicCountsCall,$addPrepareClonalAnalysisTask,$addSciCloneAndClonevolTask,$addPyCloneVIAndClonevolTask,$addApePhylogeneticTreeTask;
       }
     }
   }
 
   if ( $def->{"perform_cnv_gatk4_somatic"}) {
-    my $somaticCNVtask = addSomaticCNV($config, $def, $summary, $target_dir, $bam_input);
+    my $somaticCNVtask = addSomaticCNV($config, $def, $tasks, $target_dir, $bam_input);
   }
   
   if ( $def->{"perform_cra_gatk4_somatic"}) {
@@ -1541,7 +1541,7 @@ gatk PreprocessIntervals \\
         "mem"      => "10gb"
       },
     };
-    push @$summary, $cra_PreprocessIntervals;
+    push @$tasks, $cra_PreprocessIntervals;
 
     my $CollectReadCounts_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_CollectReadCounts";
     $config->{$CollectReadCounts_task} = {
@@ -1576,7 +1576,7 @@ gatk --java-options \"-Xmx40g\" CollectReadCounts  \\
       },
     };
 
-    push(@$summary, $CollectReadCounts_task);
+    push(@$tasks, $CollectReadCounts_task);
 
     #https://gatk.broadinstitute.org/hc/en-us/articles/360035531132
     $config->{cra_pon_normal_files} = {     
@@ -1624,7 +1624,7 @@ gatk --java-options \"-Xmx40g\" CreateReadCountPanelOfNormals \\
       },
     };
 
-    push(@$summary, $CreateReadCountPanelOfNormals_task);
+    push(@$tasks, $CreateReadCountPanelOfNormals_task);
 
     my $DenoiseReadCounts_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_DenoiseReadCounts";
     $config->{$DenoiseReadCounts_task} = {
@@ -1659,7 +1659,7 @@ gatk --java-options \"-Xmx40g\" DenoiseReadCounts \\
       },
     };
 
-    push(@$summary, $DenoiseReadCounts_task);
+    push(@$tasks, $DenoiseReadCounts_task);
 
     my $PlotDenoisedCopyRatios_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_PlotDenoisedCopyRatios";
     my $ref_fasta_dict = getValue($def, "ref_fasta_main_dict");
@@ -1698,7 +1698,7 @@ gatk --java-options \"-Xmx40g\" PlotDenoisedCopyRatios \\
       },
     };
 
-    push(@$summary, $PlotDenoisedCopyRatios_task);
+    push(@$tasks, $PlotDenoisedCopyRatios_task);
 
     $config->{cra_tumor_bams} = {     
       "class" => "CQS::SamplePickTask",
@@ -1739,7 +1739,7 @@ gatk --java-options \"-Xmx40g\" CollectAllelicCounts \\
       },
     };
 
-    push(@$summary, $CollectAllelicCounts_task);
+    push(@$tasks, $CollectAllelicCounts_task);
 
     my $ModelSegments_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_ModelSegments";
     $config->{$ModelSegments_task} = {
@@ -1772,7 +1772,7 @@ gatk --java-options \"-Xmx40g\" ModelSegments \\
       },
     };
 
-    push(@$summary, $ModelSegments_task);
+    push(@$tasks, $ModelSegments_task);
 
     my $CallCopyRatioSegments_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_CallCopyRatioSegments";
     $config->{$CallCopyRatioSegments_task} = {
@@ -1804,7 +1804,7 @@ gatk --java-options \"-Xmx10g\" CallCopyRatioSegments \\
       },
     };
 
-    push(@$summary, $CallCopyRatioSegments_task);
+    push(@$tasks, $CallCopyRatioSegments_task);
 
     my $PlotModeledSegments_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_PlotModeledSegments";
     $config->{$PlotModeledSegments_task} = {
@@ -1842,7 +1842,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
       },
     };
 
-    push(@$summary, $PlotModeledSegments_task);
+    push(@$tasks, $PlotModeledSegments_task);
 
   #   my $mergeModelSegments_task = "gatk4_cra_". getNextIndex($index_dic, $index_key) . "_MergeModelSegments";
   #   $config->{$mergeModelSegments_task} = {
@@ -1870,7 +1870,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
   #     },
   #   };
 
-  #   push(@$summary, $mergeModelSegments_task);
+  #   push(@$tasks, $mergeModelSegments_task);
   }
   
   if ( $def->{"perform_muTect2indel"} ) {
@@ -1900,9 +1900,9 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
         "mem"      => getValue($def, "mutect2_memory", "40gb"),
       },
     };
-    push @$summary, $mutect2indel;
+    push @$tasks, $mutect2indel;
 
-    add_unique_r($config, $def, $summary, $target_dir, $mutect2indel . "_summary", "../QC/QCUtils.r,../QC/VcfChromosome.r", ".chromosome.png", [[$mutect2indel, ".chromosome.count"]] );
+    add_unique_r($config, $def, $tasks, $target_dir, $mutect2indel . "_summary", "../QC/QCUtils.r,../QC/VcfChromosome.r", ".chromosome.png", [[$mutect2indel, ".chromosome.count"]] );
 
     my $mutect2indel_merge = $mutect2indel . "_merge";
     $config->{$mutect2indel_merge} = {
@@ -1935,10 +1935,10 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
         "mem"      => "40gb"
       },
     };
-    push @$summary, $mutect2indel_merge;
+    push @$tasks, $mutect2indel_merge;
 
     if ( $def->{perform_annovar} ) {
-      my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $mutect2indel_merge, ".vcf.gz\$" );
+      my $annovar_name = addAnnovar( $config, $def, $tasks, $target_dir, $mutect2indel_merge, ".vcf.gz\$" );
     }
   }
 
@@ -1981,12 +1981,12 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
         "mem"      => "40gb"
       }
     };
-    push @$summary, $cnmopsName;
+    push @$tasks, $cnmopsName;
   }
 
   my $cnvMap = undef;
   if ( $def->{perform_cnv_gatk4_cohort} ) {
-    $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, "", $individual, $summary, $step3, $step4, $step5, $step6 );
+    $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $tumor_bam, "", $tasks, $tasks, $tasks, $tasks, $tasks, $tasks );
     if(defined $annovar_filter_geneannotation_name ) {
       my $combineTask = $cnvMap->{CombineGCNV};
       my $snvTop10cnvOncoPlotTask = "${bam_input}_SNV_top10_CNV_Oncoplot";
@@ -2011,7 +2011,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
           'walltime' => '10'
         },
       };
-      push @$step6, $snvTop10cnvOncoPlotTask;
+      push @$tasks, $snvTop10cnvOncoPlotTask;
 
       if(defined $cnvMap->{annotationGenesPlot}){
         my $cnvAnnotationGenesPlot =  $cnvMap->{annotationGenesPlot};
@@ -2038,18 +2038,130 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
             'walltime' => '10'
           },
         };
-        push @$step6, $snvcnvAnnotationGenesOncoPlot;
+        push @$tasks, $snvcnvAnnotationGenesOncoPlot;
       }
     }
   }
 
   if ( $def->{perform_cnv_xhmm} ) {
-    addXHMM( $config, $def, $target_dir, $bam_ref, $individual, $summary, $summary, $summary, $summary, $summary );
+    addXHMM( $config, $def, $target_dir, $bam_ref, $tasks, $tasks, $tasks, $tasks, $tasks, $tasks );
+  }
+
+  if ($def->{perform_deepvariant}){
+
+    # https://github.com/google/deepvariant/blob/r1.6.1/docs/trio-merge-case-study.md
+    # It is recommended to use BAM files with original quality scores.
+    #  --make_examples_extra_args='parse_sam_aux_fields=true,use_original_quality_scores=true' \\
+    # However, the original quality scores are not available in the BAM files generated by GATK4.
+
+    my $deepvariant_index_key = "deepvariant_Index";
+    my $deepvariant_index_dic = {
+      $deepvariant_index_key => 3,
+    };
+    my $deepvariant_prefix = "${bam_input}_deepvariant_";
+
+    my $deepvariant_task =  $deepvariant_prefix . "01_call";
+    $config->{$deepvariant_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${deepvariant_task}",
+      option                => "
+/opt/deepvariant/bin/run_deepvariant \\
+  --model_type=WES \\
+  --ref='$fasta' \\
+  --reads='__FILE__' \\
+  --sample_name='__NAME__' \\
+  --regions='$covered_bed' \\
+  --output_vcf='__NAME__.vcf.gz' \\
+  --output_gvcf='__NAME__.gvcf.gz' \\
+  --num_shards=8
+",
+      interpretor           => "",
+      docker_prefix         => "deepvariant_",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "",
+      source_ref            => $bam_ref,
+      output_to_same_folder => 0,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".vcf.gz",
+      output_other_ext => ".gvcf.gz",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=8",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$tasks, $deepvariant_task);
+
+    my $glnexus_task = $deepvariant_prefix . "02_glnexus";
+    $config->{$glnexus_task} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${glnexus_task}",
+      option                => "
+status=\$?
+/usr/local/bin/glnexus_cli \\
+  --config DeepVariantWES \\
+  --bed '$covered_bed' \\
+  --threads 8 \\
+  --list __FILE__ | bcftools view - | bgzip -c > __NAME__.deepvariant.tmp.vcf.gz
+
+if [ \$status -eq 0 ]; then
+  rm -f __NAME__.deepvariant.vcf.gz.failed
+  touch __NAME__.deepvariant.vcf.gz.succeed
+  mv __NAME__.deepvariant.tmp.vcf.gz __NAME__.deepvariant.vcf.gz
+  tabix -p vcf __NAME__.deepvariant.vcf.gz
+else
+  rm -rf __NAME__.deepvariant.tmp.vcf.gz __NAME__.deepvariant.vcf.gz.succeed
+  touch __NAME__.deepvariant.vcf.gz.failed
+fi
+
+rm -rf GLnexus.DB
+",
+      interpretor           => "",
+      docker_prefix         => "glnexus_",
+      program               => "",
+      check_program         => 0,
+      source_ref            => [$deepvariant_task, ".gvcf.gz"],
+      source_fileonly => 1,
+      no_prefix => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".deepvariant.vcf.gz",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=8",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$tasks, $deepvariant_task);
+
+    if ( $def->{perform_annovar} ) {
+      my $annovar_name = addAnnovar( $config, $def, $tasks, $target_dir, $glnexus_task, ".vcf.gz\$", $deepvariant_prefix, $deepvariant_index_dic, $deepvariant_index_key );
+      if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
+        my $annovar_filter_name = addAnnovarFilter( $config, $def, $tasks, $target_dir, $annovar_name, $deepvariant_prefix, $deepvariant_index_dic, $deepvariant_index_key);
+
+        if ( defined $def->{annotation_genes} ) {
+          $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $tasks, $target_dir, $annovar_filter_name );
+        }
+        if(getValue($def, "perform_maf_report", 1)){
+          addAnnovarMafReport($config, $def, $tasks, $target_dir, $annovar_filter_name, $deepvariant_prefix, $deepvariant_index_dic, $deepvariant_index_key)
+        }
+      }
+    }
   }
   
   #qc
   if ( getValue( $def, "perform_multiqc" ) ) {
-    addMultiQC( $config, $def, $summary, $target_dir, $target_dir );
+    addMultiQC( $config, $def, $tasks, $target_dir, $target_dir );
   }
 
   if ( getValue( $def, "perform_report" ) ) {
@@ -2120,7 +2232,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
         "mem"       => "10gb"
       },
     };
-    push( @$summary, "report" );
+    push( @$tasks, "report" );
   }
 
   #pileup
@@ -2130,8 +2242,7 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
     target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
-      step_1 => $individual,
-      step_2 => $summary,
+      tasks => $tasks,
     },
     sh_direct => 0,
     pbs       => {
@@ -2141,22 +2252,6 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
       "mem"      => "40gb"
     },
   };
-
-  if ( scalar(@$step3) > 0 ) {
-    $config->{"sequencetask"}{"source"}{step_3} = $step3;
-  }
-
-  if ( scalar(@$step4) > 0 ) {
-    $config->{"sequencetask"}{"source"}{step_4} = $step4;
-  }
-
-  if ( scalar(@$step5) > 0 ) {
-    $config->{"sequencetask"}{"source"}{step_5} = $step5;
-  }
-
-  if ( scalar(@$step6) > 0 ) {
-    $config->{"sequencetask"}{"source"}{step_6} = $step6;
-  }
 
   return ($config);
 }
