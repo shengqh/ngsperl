@@ -64,6 +64,7 @@ sub performTaskByPattern {
     if ($section =~ /$section_pattern/){
       if (ref $config->{$section} eq ref {}){
         if (defined $config->{$section}{class}){
+          print("Performing $section\n");
           performTask($config, $section, $runImmediately);
         }
       }
