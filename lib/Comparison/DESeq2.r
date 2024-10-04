@@ -1,11 +1,10 @@
-
-rootdir<-"/nobackup/brown_lab/projects/20240520_11389_SLAMseq_mm10/deseq2_tc_read_sizeFactor/result"
-inputfile<-"P11389_SLAMseq.define" 
+rootdir<-"/nobackup/h_cqs/shengq2/bugfix/deseq2/"
+inputfile<-"JS_5995_6762_smRNA_human.define" 
 
 pvalue<-0.05
 useRawPvalue<-0
-foldChange<-2
-minMedianInGroup<-1
+foldChange<-1.5
+minMedianInGroup<-5
   
 detectedInBothGroup<-0
 showLabelInPCA<-1
@@ -22,9 +21,10 @@ thread<-8
 independentFiltering<-TRUE
 
 outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;top25cvInHCA<-FALSE;
+cooksCutoff<-FALSE
 
-libraryFile<-"/nobackup/brown_lab/projects/20240520_11389_SLAMseq_mm10/T11_count_table/result/P11389_SLAMseq.sizeFactor.csv"
-libraryKey<-"sizeFactor"
+libraryFile<-"/data/stein_lab/mjo_sRNA_data/20230615_5995_6762_smRNA_human_Holers_hg38/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/JS_5995_6762_smRNA_human.Category.Table.csv"
+libraryKey<-"TotalReads"
 #predefined_condition_end
 
 options(bitmapType='cairo')
@@ -919,8 +919,29 @@ for(countfile_index in c(1:length(countfiles))){
     tbbAllOut<-as.data.frame(tbb[,resultAllOutVar,drop=F])
     tbbAllOut$Significant<-select
     colnames(tbbAllOut)<-paste0(colnames(tbbAllOut)," (",comparisonName,")")
-    resultAllOut<-cbind(as.data.frame(resultAllOut)[row.names(dataAllOut),],as.matrix(tbbAllOut[row.names(dataAllOut),]))
-    row.names(resultAllOut)<-row.names(dataAllOut)
+
+    if(0){
+      dl = list(resultAllOut=resultAllOut, dataAllOut=dataAllOut, tbbAllOut=tbbAllOut)
+      saveRDS(dl, paste0(prefix, ".debug.rds"))
+
+      d1=readRDS('AtRisk1_2_vs_AtRisk0_min5_fdr0.05.debug.rds')
+      dl=readRDS("AtRisk1_vs_AtRisk0_min5_fdr0.05.debug.rds")
+      resultAllOut<-dl$resultAllOut
+      dataAllOut<-dl$dataAllOut
+      tbbAllOut<-dl$tbbAllOut
+    }
+    
+    if(is.null(resultAllOut)){
+      resultAllOut<-merge(dataAllOut |> tibble::rownames_to_column("Feature"),
+                          tbbAllOut |> tibble::rownames_to_column("Feature"),
+                          by="Feature", 
+                          all=TRUE)
+    }else{
+      resultAllOut<-merge(resultAllOut, 
+                          tbbAllOut |> tibble::rownames_to_column("Feature"), 
+                          by="Feature", 
+                          all=TRUE)
+    }
     
     tbb<-tbb[order(tbb$pvalue),,drop=F]
     write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
@@ -1391,7 +1412,7 @@ if(!is.null(sigTableAll)){
 
 if (! is.null(resultAllOut)) {
   #write a file with all information
-  resultAllOut<-cbind(dataAllOut,resultAllOut[row.names(dataAllOut),])
+  resultAllOut<-resultAllOut |> tibble::column_to_rownames("Feature")
   write.csv(resultAllOut,paste0(allprefix, "_DESeq2.csv"))
   
   if(length(validComparisons) > 1 ){
@@ -1455,14 +1476,14 @@ if (! is.null(resultAllOut)) {
     #output a summary table with numbers of gisnificant changed genes
     sigGeneSummaryTable<-t(table(diffResult[,"Significant"],diffResult[,"Comparison"]))
     
-    notSigIndex<-match("0", colnames(sigGeneSummaryTable))
+    notSigIndex<-match("FALSE", colnames(sigGeneSummaryTable))
     if(is.na(notSigIndex)){
       notSignificant=0
     }else{
       notSignificant=sigGeneSummaryTable[,notSigIndex]
     }
     
-    sigIndex<-match("1", colnames(sigGeneSummaryTable))
+    sigIndex<-match("TRUE", colnames(sigGeneSummaryTable))
     if(is.na(sigIndex)){
       significant=0
     }else{
@@ -1478,5 +1499,3 @@ if (! is.null(resultAllOut)) {
 writeLines(capture.output(sessionInfo()), paste0(basename(inputfile),".DESeq2.SessionInfo.txt"))
 deseq2version<-paste0("DESeq2,v", packageVersion("DESeq2"))
 writeLines(deseq2version, paste0(basename(inputfile),".DESeq2.version"))
-
-
