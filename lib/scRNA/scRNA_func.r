@@ -1623,7 +1623,12 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
 }
 
 myScaleData<-function(object, features, assay, ...){
-  scaled.genes<-rownames(object[[assay]]@scale.data)
+  if(is_seurat_5_plus(object)){
+    scaled.genes<-rownames(object[[assay]]@layers$scale.data)
+  }else{
+    scaled.genes<-rownames(object[[assay]]@scale.data)
+  }
+
   if(!all(features %in% scaled.genes)){
     new.genes<-unique(features, scaled.genes)
     object=ScaleData(object, features=new.genes, assay=assay, ... )
@@ -2137,7 +2142,7 @@ output_celltype_figures<-function(obj,
   dev.off()
 }
 
-save_umap<-function(file_prefix, obj, umap_names=c("UMAP_1", "UMAP_2") ){
+save_umap<-function(file_prefix, obj, umap_names=names(obj@reductions$umap) ){
   umap<-FetchData(obj, umap_names)
   saveRDS(umap, paste0(file_prefix, ".rds"))
   write.csv(umap, paste0(file_prefix, ".csv"))
@@ -3125,4 +3130,37 @@ get_feature_plot<-function(cur_obj, cur_feature, cols, order=FALSE) {
 
   g=g+get_scale_color_gradient2(g$data, cur_feature, cols)
   return(g)
+}
+
+get_clustered_dotplot<-function(cur_obj, features, group.by, clustered_by_gene=TRUE, clustered_by_sample=FALSE){
+  g<-DotPlot(cur_obj, features = features, group.by=group.by) + 
+    geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          axis.title = element_blank()) +
+    scale_colour_gradient2(low = "lightgray", high = "red")
+
+  gdata = g$data 
+  na_genes = unique(as.character(gdata$features.plot[is.na(gdata$avg.exp.scaled)]))
+  gdata = gdata[!(gdata$features.plot %in% na_genes),]
+  gmat = acast(data=gdata, formula = id ~ features.plot, value.var="avg.exp.scaled")
+
+  result = list()
+  if(clustered_by_gene){
+    rc = hclust(as.dist(1 - cor(gmat, use = "pa")))
+    ordered_genes = c(rc$labels[rc$order], na_genes)
+    g$data$features.plot = factor(g$data$features.plot, levels=ordered_genes)
+
+    result$ordered_genes = ordered_genes
+  }
+
+  if(clustered_by_sample){
+    cc = hclust(as.dist(1 - cor(t(gmat), use = "pa")))
+    ordered_samples = cc$labels[cc$order]
+    g$data$id = factor(g$data$id, levels=ordered_samples)
+
+    result$ordered_samples = ordered_samples
+  }
+
+  result$g = g
+  return(result)
 }
