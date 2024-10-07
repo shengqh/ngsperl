@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='P6487'
+outFile='P9061'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge/result/P6487.final.rds'
-parFile2='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result/P6487.meta.rds'
-parFile3='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/essential_genes/result/P6487.txt'
-parFile4='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result/P6487.files.csv'
+parFile1='/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge/result/P9061.final.rds'
+parFile2='/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result/P9061.meta.rds'
+parFile3='/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/essential_genes/result/P9061.txt'
+parFile4='/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result/P9061.files.csv'
 
 
-setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_3_choose/result')
+setwd('/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_3_choose/result')
 
 ### Parameter setting end ###
 
@@ -46,9 +46,9 @@ assay=ifelse(by_sctransform, "SCT", "RNA")
 pca_dims=as.numeric(myoptions$pca_dims)
 
 previous_layer<-myoptions$celltype_layer
-cur_layer<-myoptions$output_layer
+output_layer<-myoptions$output_layer
 seurat_clusters = "seurat_clusters"
-seurat_cur_layer=paste0("seurat_", cur_layer)
+seurat_output_layer=paste0("seurat_", output_layer)
 resolution_col = "resolution"
 
 essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
@@ -100,8 +100,8 @@ if(file.exists(post_rename_umap)){
   obj$old_clusters_label<-NULL
 }
 
-obj<-AddMetaData(obj, obj[[previous_layer]], col.name = cur_layer)
-obj<-unfactorize_layer(obj, cur_layer)
+obj<-AddMetaData(obj, obj[[previous_layer]], col.name = output_layer)
+obj<-unfactorize_layer(obj, output_layer)
 obj<-AddMetaData(obj, -1, col.name = seurat_clusters)
 obj<-AddMetaData(obj, -1, col.name = resolution_col)
 obj<-AddMetaData(obj, 0, col.name = "sub_clusters")
@@ -112,7 +112,7 @@ subumap<-Embeddings(obj, reduction = "umap")
 colnames(subumap)<-c("SUBUMAP_1", "SUBUMAP_2")
 obj[["subumap"]] <- CreateDimReducObject(embeddings = subumap, key = "SUBUMAP_", assay = DefaultAssay(obj))
 
-clcounts<-table(obj[[cur_layer]])
+clcounts<-table(obj[[output_layer]])
 
 if(has_bubblemap){
   allgenes<-rownames(obj)
@@ -157,7 +157,7 @@ if(!all(names(clcounts) %in% best_res_tbl$V3)){
 #remove cell type first
 remove_cts<-best_res_tbl$V3[best_res_tbl$V2=="resolution" & best_res_tbl$V1 == "-1"]
 if(length(remove_cts) > 0){
-  cells<-colnames(obj)[!(unlist(obj[[cur_layer]]) %in% remove_cts)]
+  cells<-colnames(obj)[!(unlist(obj[[output_layer]]) %in% remove_cts)]
   obj<-subset(obj, cells=cells)
 }
 
@@ -172,7 +172,7 @@ if(output_heatmap){
 }
 
 meta = obj@meta.data
-meta[, cur_layer] = as.character(meta[, cur_layer])
+meta[, output_layer] = as.character(meta[, output_layer])
 
 curprefix = prefix
 
@@ -204,7 +204,7 @@ setwd(tmp_folder)
 
 meta$seurat_clusters=-1
 cluster_index=0
-pct<-previous_celltypes[2]
+pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   cat(pct, "\n")
 
@@ -257,7 +257,7 @@ for(pct in previous_celltypes){
     if(nrow(best_res_row) > 0){
       rename_row = best_res_row[best_res_row$V2 == 0,]
       if(nrow(rename_row) > 0){
-        meta[cells, cur_layer] = rename_row$V1[1]
+        meta[cells, output_layer] = rename_row$V1[1]
       }
     }
     
@@ -265,7 +265,7 @@ for(pct in previous_celltypes){
       allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
     }
     
-    print(table(meta[,cur_layer], meta$seurat_clusters))
+    print(table(meta[,output_layer], meta$seurat_clusters))
 
     next
   }
@@ -297,7 +297,7 @@ for(pct in previous_celltypes){
       }else{
         cur_cells=rownames(cur_meta)[cur_meta[,best_res] %in% source_ct]
       }
-      cur_meta[cur_cells, cur_layer] = target_ct
+      cur_meta[cur_cells, "cur_layer"] = target_ct
     }
     cur_meta$seurat_clusters[cur_meta$cur_layer == "DELETE"] = -10000
 
@@ -317,14 +317,14 @@ for(pct in previous_celltypes){
     
     meta[rownames(cur_meta), resolution_col] = best_res
     meta[rownames(cur_meta), seurat_clusters] = cur_meta$seurat_clusters
-    meta[rownames(cur_meta), cur_layer] = cur_meta$cur_layer
+    meta[rownames(cur_meta), output_layer] = cur_meta$cur_layer
     meta[rownames(cur_meta), "sub_clusters"] = cur_meta$sub_clusters
 
     if(output_heatmap){
       allmarkers=c(allmarkers, unlist(ct_top10_map[pct]))
     }
     
-    print(table(meta[,cur_layer], meta$seurat_clusters))
+    print(table(meta[,output_layer], meta$seurat_clusters))
 
     next
   }
@@ -341,6 +341,8 @@ for(pct in previous_celltypes){
   all_meta<-readRDS(meta_rds)
   all_meta$seurat_clusters_str<-as.character(all_meta$seurat_clusters)
   ncluster=length(unique(all_meta$seurat_clusters))
+
+  #Assigned cell type is saved in "cur_layer" column of the meta data table
   
   cat("  best resolution", best_res, "with", ncluster, "clusters\n")
   
@@ -365,7 +367,7 @@ for(pct in previous_celltypes){
       for(idx in c(1:nrow(rename_tbl))){
         sc=rename_tbl$V2[idx]
         scname=rename_tbl$V1[idx]
-        cur_meta[cur_meta$seurat_clusters_str==sc, cur_layer] = scname
+        cur_meta[cur_meta$seurat_clusters_str==sc, "cur_layer"] = scname
       }
     }
     
@@ -376,7 +378,7 @@ for(pct in previous_celltypes){
       mname=unique(merge_tbl$V2)[1]
       for (mname in unique(merge_tbl$V2)){
         mcts=merge_tbl$V1[merge_tbl$V2==mname]
-        cur_meta[cur_meta$seurat_clusters_str %in% mcts, cur_layer] = mname
+        cur_meta[cur_meta$seurat_clusters_str %in% mcts, "cur_layer"] = mname
         if (mname == "DELETE"){
           cur_meta[cur_meta$seurat_clusters_str %in% mcts, "seurat_clusters"] = -10000
         }else{
@@ -400,7 +402,7 @@ for(pct in previous_celltypes){
   
   meta[rownames(cur_meta), resolution_col] = best_res
   meta[rownames(cur_meta), seurat_clusters] = cur_meta$seurat_clusters
-  meta[rownames(cur_meta), cur_layer] = cur_meta$cur_layer
+  meta[rownames(cur_meta), output_layer] = cur_meta$cur_layer
   meta[rownames(cur_meta), "sub_clusters"] = cur_meta$sub_clusters
   
   if(output_heatmap){
@@ -410,7 +412,7 @@ for(pct in previous_celltypes){
     allmarkers=c(allmarkers, cur_top19$gene)
   }
 
-  print(table(meta[,cur_layer], meta$seurat_clusters))
+  print(table(meta[,output_layer], meta$seurat_clusters))
 }
 
 setwd(cur_folder)
@@ -424,12 +426,12 @@ if(any(obj$seurat_clusters<0)){
 }
 
 meta = obj@meta.data
-meta[,seurat_cur_layer] = paste0(meta$seurat_clusters, ": ", meta[,cur_layer])
+meta[,seurat_output_layer] = paste0(meta$seurat_clusters, ": ", meta[,output_layer])
 ct<-meta[!duplicated(meta$seurat_cluster),]
 ct<-ct[order(ct$seurat_cluster),]
 
-meta[,cur_layer] =factor(meta[,cur_layer], levels=unique(ct[,cur_layer]))
-meta[,seurat_cur_layer] =factor(meta[,seurat_cur_layer], levels=ct[,seurat_cur_layer])
+meta[,output_layer] =factor(meta[,output_layer], levels=unique(ct[,output_layer]))
+meta[,seurat_output_layer] =factor(meta[,seurat_output_layer], levels=ct[,seurat_output_layer])
 
 obj@meta.data<-meta
 
@@ -460,7 +462,7 @@ cat("output figures ...\n")
 
 setwd(tmp_folder)
 
-obj$display_layer<-paste0(obj$sub_clusters, ": ", unlist(obj[[cur_layer]]))
+obj$display_layer<-paste0(obj$sub_clusters, ": ", unlist(obj[[output_layer]]))
 gdot=get_bubble_plot(obj, 
   NULL, 
   NULL, 
@@ -468,7 +470,7 @@ gdot=get_bubble_plot(obj,
   assay="RNA", 
   orderby_cluster=TRUE, 
   rotate.title=TRUE, 
-  group.by=seurat_cur_layer,
+  group.by=seurat_output_layer,
   species=myoptions$species)
 galldata<-gdot$data
 
@@ -495,7 +497,7 @@ for(pct in pcts){
   print(g)
   dev.off()
   
-  g_data<-galldata[galldata$id %in% unlist(subobj[[seurat_cur_layer]]),]
+  g_data<-galldata[galldata$id %in% unlist(subobj[[seurat_output_layer]]),]
   gdot$data<-g_data
   png(paste0(outFile, ".", celltype_to_filename(pct), ".dot.png"), width=get_dot_width(gdot, min_width=bubble_width), height=get_dot_height_vec(g_data$id),res=300)
   print(gdot)
@@ -504,7 +506,7 @@ for(pct in pcts){
 
 output_celltype_figures(
   obj = obj,
-  cell_identity = cur_layer,
+  cell_identity = output_layer,
   prefix = prefix,
   bubblemap_file = bubblemap_file,
   cell_activity_database = NULL,
@@ -520,7 +522,7 @@ output_celltype_figures(
 
 output_celltype_figures(
   obj = obj, 
-  cell_identity = seurat_cur_layer, 
+  cell_identity = seurat_output_layer, 
   prefix = prefix, 
   bubblemap_file = bubblemap_file,
   cell_activity_database = NULL,
@@ -542,7 +544,7 @@ write.csv(obj[["subumap"]]@cell.embeddings, paste0(outFile, ".subumap.csv"))
 nclusters<-length(unique(obj$seurat_clusters))
 
 if(output_heatmap){
-  g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = allmarkers, group.by = seurat_cur_layer, angle = 90) + NoLegend()
+  g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = allmarkers, group.by = seurat_output_layer, angle = 90) + NoLegend()
   png(paste0(prefix, ".top10.heatmap.png"), 
       width=get_heatmap_width(nclusters), 
       height=get_heatmap_height(length(allmarkers)), 
@@ -551,13 +553,13 @@ if(output_heatmap){
   dev.off()
 }
 
-g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_cur_layer, label.size = 8, legend.title="") + 
+g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_output_layer, label.size = 8, legend.title="") + 
   theme(legend.text = element_text(size = 20)) + ggtitle("") 
 png(paste0(prefix, ".umap.png"), width=4000, height=2000, res=300)
 print(g)
 dev.off()
 
-data_norm=get_seurat_average_expression(obj, seurat_cur_layer)
+data_norm=get_seurat_average_expression(obj, seurat_output_layer)
 predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
 saveRDS(predict_celltype, paste0(outFile, ".cta.rds"))
 Plot_predictcelltype_ggplot2( predict_celltype, 
@@ -567,7 +569,7 @@ Plot_predictcelltype_ggplot2( predict_celltype,
 if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
   g<-get_bubble_plot(obj, 
     "seurat_clusters", 
-    cur_layer, 
+    output_layer, 
     bubblemap_file, 
     assay="RNA", 
     orderby_cluster=TRUE,
