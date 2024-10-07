@@ -50,6 +50,8 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_report",        1 );
   initDefaultValue( $def, "perform_deconvolution", 0 );
 
+  initDefaultValue( $def, "perform_transposable_element", 0 );
+
   if ( not $def->{"perform_gsea"} ) {
     $def->{"perform_gsea"} = 0;
   }
@@ -194,6 +196,8 @@ sub getRNASeqConfig {
   }
 
   my ( $config, $tasks, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+
+  my $fastq_source_ref = $source_ref;
 
   #merge summary and individual 
   push @$tasks, @$summary;
@@ -392,6 +396,76 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
         $multiqc_depedents = "featurecount";
       }
     }
+  }
+
+  if(getValue($def, "perform_transposable_element", 0)){
+    $config->{"te_star"} = {
+      class                     => "Alignment::STAR",
+      perform                   => 1,
+      target_dir                => $target_dir . "/" . getNextFolderIndex($def) . "te_star",
+      option                    => $star_option . " --winAnchorMultimapNmax 100 --outFilterMultimapNmax 100 ",
+      source_ref                => $fastq_source_ref,
+      genome_dir                => $def->{star_index},
+      output_sort_by_coordinate => 1,
+      output_to_same_folder     => $def->{output_bam_to_same_folder},
+      sh_direct                 => 0,
+      star_location             => $def->{star_location},
+      pbs                       => {
+        "nodes"     => "1:ppn=" . $def->{max_thread},
+        "walltime"  => "23",
+        "mem"       => "40gb"
+      },
+    };
+    $config->{"te_star_summary"} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "te_star_summary",
+      option                   => "",
+      rtemplate                => "../Alignment/AlignmentUtils.r,../Alignment/STARFeatureCount.r",
+      output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
+      parameterSampleFile1_ref => [ "te_star", "_Log.final.out" ],
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+
+    my $te_source_ref = [ "te_star", "_Aligned.sortedByCoord.out.bam\$" ];
+    push @$tasks, ("te_star", "te_star_summary");
+
+    my $transcript_gtf = $def->{"transcript_gtf"} or die "Define transcript_gtf at definition first";
+    my $te_rmsk_gtf = $def->{"transposable_element_rmsk_gtf"} or die "Define transposable_element_rmsk_gtf at definition first";
+    $config->{"te_star_count"} = {
+      class         => "CQS::ProgramWrapperOneToOne",
+      perform       => 1,
+      target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "te_star_count",
+      interpretor   => "",
+      program       => "",
+      check_program => 0,
+      option        => "
+TEcount --version | cut -d ' ' -f 2 > __NAME__.version
+
+TEcount \\
+  --bam __FILE__ \\
+  --rmsk $te_rmsk_gtf \\
+  --prefix __NAME__ \\
+  --threads 8
+",
+      source_arg    => "-i",
+      source_ref    => $te_source_ref,
+      no_output     => 1,
+      output_file_ext => ".count",
+      sh_direct     => 1,
+      no_docker     => 1,
+      pbs           => {
+        "nodes"    => "1:ppn=8",
+        "walltime" => "10",
+        "mem"      => "20gb"
+      },
+    };
+    push @$tasks, "te_star_count";
   }
 
   if(getValue($def, "perform_dexseq", 0)){
