@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='iSGS_cell_atlas'
+outFile='P6487'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_2_subcluster_rh/result/iSGS_cell_atlas.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/essential_genes/result/iSGS_cell_atlas.txt'
-parFile4='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_2_subcluster_rh/result/iSGS_cell_atlas.files.csv'
+parFile1='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge/result/P6487.final.rds'
+parFile2='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result/P6487.meta.rds'
+parFile3='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/essential_genes/result/P6487.txt'
+parFile4='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result/P6487.files.csv'
 
 
-setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA/seurat_sct2_merge_dr0.2_3_choose/result')
+setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_3_choose/result')
 
 ### Parameter setting end ###
 
@@ -73,6 +73,12 @@ prefix<-outFile
 
 if(!exists("obj")){
   obj<-read_object(parFile1, parFile2)
+
+  renamed_layer=paste0(previous_layer, "_renamed")
+  if(renamed_layer %in% colnames(obj@meta.data)){
+    previous_layer = renamed_layer
+  }
+
   obj<-factorize_layer(obj, previous_layer)
   Idents(obj)<-previous_layer
 }
@@ -291,7 +297,7 @@ for(pct in previous_celltypes){
       }else{
         cur_cells=rownames(cur_meta)[cur_meta[,best_res] %in% source_ct]
       }
-      cur_meta[cur_cells, "cur_layer"] = target_ct
+      cur_meta[cur_cells, cur_layer] = target_ct
     }
     cur_meta$seurat_clusters[cur_meta$cur_layer == "DELETE"] = -10000
 
@@ -359,7 +365,7 @@ for(pct in previous_celltypes){
       for(idx in c(1:nrow(rename_tbl))){
         sc=rename_tbl$V2[idx]
         scname=rename_tbl$V1[idx]
-        cur_meta[cur_meta$seurat_clusters_str==sc, "cur_layer"] = scname
+        cur_meta[cur_meta$seurat_clusters_str==sc, cur_layer] = scname
       }
     }
     
