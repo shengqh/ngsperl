@@ -648,8 +648,8 @@ sub getScRNASeqConfig {
           
           my $cur_options = {
             reduction => $reduction, 
-            celltype_layer => "layer4",
-            celltype_cluster => "layer4_clusters"
+            celltype_layer => getValue($def, "dynamic_subcluster_init_celltype_layer", "layer4"),
+            celltype_cluster => getValue($def, "dynamic_subcluster_init_celltype_cluster", "layer4_clusters")
           };
 
           my $rename_map = $def->{"dynamic_rename_map"};
