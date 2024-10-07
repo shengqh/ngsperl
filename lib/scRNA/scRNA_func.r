@@ -1401,7 +1401,7 @@ get_celltype_marker_bubble_plot<-function(obj, group.by, cellType, weight, n_mar
   
   while(TRUE){
     gene_groups<-lapply(markers, function(x){
-      names(x[1:n_markers])
+      names(x[1:min(length(x), n_markers)])
     })
 
     gc=table(unlist(gene_groups))
