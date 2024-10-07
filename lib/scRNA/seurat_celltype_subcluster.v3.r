@@ -1,17 +1,15 @@
 rm(list=ls()) 
-outFile='iSGS_cell_atlas'
+outFile='P6487'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parSampleFile7='fileList7.txt'
-parFile1='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge/result/iSGS_cell_atlas.final.rds'
-parFile2='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge_dr0.2_1_call/result/iSGS_cell_atlas.scDynamic.meta.rds'
-parFile3='/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/essential_genes/result/iSGS_cell_atlas.txt'
+parFile1='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge/result/P6487.final.rds'
+parFile2='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_1_call/result/P6487.scDynamic.meta.rds'
+parFile3='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/essential_genes/result/P6487.txt'
 
 
-setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/08_scRNA_iSGS/seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
+setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -169,7 +167,13 @@ if(!is_file_empty(parSampleFile3)){
 
   rename_map = read.table(parSampleFile3, sep="\t", header=F)
 
-  meta[,previous_layer]<-as.character(meta[,previous_layer])
+  old_layer = previous_layer
+  previous_layer=paste0(old_layer, "_renamed")
+
+  meta[,previous_layer]<-as.character(meta[,old_layer])
+  if(any(is.na(meta[,previous_layer]))){
+    meta[is.na(meta[,previous_layer]),previous_layer] = "DELETE"
+  }
 
   keys = unique(rename_map$V3)
   if("from" %in% rename_map$V2){
@@ -178,7 +182,7 @@ if(!is_file_empty(parSampleFile3)){
       cat("renaming", rname, "\n")
       rmap = rename_map[rename_map$V3 == rname,]
       from = rmap$V1[rmap$V2=="from"]
-      if(!(from %in% unlist(meta[,previous_layer]))){
+      if(!(from %in% unique(unlist(meta[,previous_layer])))){
         stop(paste0("Cannot find ", from, " in obj cell type layer ", previous_layer))
       }
       submeta<-meta[meta[,previous_layer] == from,]
@@ -186,14 +190,14 @@ if(!is_file_empty(parSampleFile3)){
       cluster = rmap$V1[rmap$V2=="cluster"]
       to = rmap$V1[rmap$V2=="to"]
       
-      cluster_column = ifelse('column' %in% rmap$V2, rmap$V1[rmap$V2=="column"], previous_cluster)
-      if(!(cluster_column %in% colnames(submeta))){
-        stop(paste0("Cannot find column ", cluster_column, " in rename configuration key=", rname))
-      }
-
       if(all(cluster == "-1")){
         cells<-rownames(submeta)
       }else{
+        cluster_column = ifelse('column' %in% rmap$V2, rmap$V1[rmap$V2=="column"], previous_cluster)
+        if(!(cluster_column %in% colnames(submeta))){
+          stop(paste0("Cannot find column ", cluster_column, " in rename configuration key=", rname))
+        }
+
         cur_custers = unique(submeta[,cluster_column])
         missed_clusters = setdiff(cluster, cur_custers)
         if(length(missed_clusters) > 0){
