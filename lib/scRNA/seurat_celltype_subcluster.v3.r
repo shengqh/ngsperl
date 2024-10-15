@@ -1,15 +1,18 @@
 rm(list=ls()) 
-outFile='P6487'
+outFile='P11565'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge/result/P6487.final.rds'
-parFile2='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_1_call/result/P6487.scDynamic.meta.rds'
-parFile3='/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/essential_genes/result/P6487.txt'
+parSampleFile6='fileList6.txt'
+parSampleFile7='fileList7.txt'
+parFile1='/data/wanjalla_lab/projects/20240819_11565_scRNA_hg38/cellbender_seurat_sct2_merge/result/P11565.final.rds'
+parFile2='/data/wanjalla_lab/projects/20240819_11565_scRNA_hg38/cellbender_seurat_sct2_merge_dr0.5_1_call/result/P11565.scDynamic.meta.rds'
+parFile3='/data/wanjalla_lab/projects/20240819_11565_scRNA_hg38/essential_genes/result/P11565.txt'
 
 
-setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result')
+setwd('/data/wanjalla_lab/projects/20240819_11565_scRNA_hg38/cellbender_seurat_sct2_merge_dr0.5_2_subcluster_rh/result')
 
 ### Parameter setting end ###
 
@@ -427,8 +430,9 @@ for(pct in previous_celltypes){
     markers=FindAllMarkers(subobj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
     markers=markers[markers$p_val_adj < 0.05,]
     
-    if(nrow(markers) == 0){
-      cat("    no DE gene, pass\n")
+    if(nrow(markers) < 2){
+      #with less than 2 DE genes, we cannot draw heatmap.
+      cat("    less than 2 DE gene, pass\n")
       next
     }
     
