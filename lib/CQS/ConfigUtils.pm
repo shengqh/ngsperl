@@ -104,6 +104,7 @@ our %EXPORT_TAGS = (
       merge_hash_right_precedent
       get_groups_by_pattern_dic      
       get_groups_by_pattern
+      get_groups_by_file
       get_covariances_by_pattern
       create_covariance_file_by_pattern
       create_covariance_file_by_file_pattern
@@ -2167,6 +2168,35 @@ sub get_groups_by_pattern {
   }else{
     return(get_groups_by_pattern_value($def, $gpattern));
   }
+}
+
+sub get_groups_by_file {
+  my ($group_file) = @_;
+
+  my $result = {};
+  tie %$result, 'Tie::IxHash';
+
+  open(my $fh, '<', $group_file) or die $!;
+  
+  while(<$fh>){
+    my $line = $_;
+    chomp($line);
+    #print($line);
+    my @parts = split('\t', $line);
+    #print(Dumper(@parts));
+    my $value = $parts[0];
+    my $key = $parts[1];
+
+    if (not defined $result->{$key}){
+      $result->{$key} = [$value];
+    }else{
+      my $values = $result->{$key};
+      push(@$values, $value);
+      $result->{$key} = $values;
+    }
+  }
+  
+  return($result);
 }
 
 sub get_unique_groups {
