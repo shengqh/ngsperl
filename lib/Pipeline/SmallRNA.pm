@@ -2556,7 +2556,7 @@ fi
     };
     push @$tasks, ( "reads_in_tasks_pie", "reads_in_tasks_all" );
 
-    if($perform_nonhost_genome_count){  
+    if($search_nonhost_genome && $perform_nonhost_genome_count){  
       my $rCode = get_unique_groups_str($def);
       $config->{host_microbial_vis} = {
         class                     => "CQS::UniqueR",
