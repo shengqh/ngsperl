@@ -20,6 +20,18 @@ library(ggplot2)
 library(patchwork)
 library(celldex)
 
+cp = as.character(packageVersion("celldex"))
+
+major_minor <- function(x, split = "."){
+  s <- strsplit(x, split = split, fixed = TRUE)
+  y <- do.call(rbind.data.frame, s)
+  setNames(y, c("major", "minor"))
+}
+cpv=major_minor(cp)
+if(cpv[1,1] == "1" && as.numeric(cpv[1,2]) < 13){
+  stop("Please install celldex version 1.13.0 or later")
+}
+
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
