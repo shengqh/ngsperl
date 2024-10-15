@@ -232,6 +232,10 @@ sub getPreprocessionConfig {
     $def->{groups} = get_groups_by_pattern($def);
   }
 
+  if (defined $def->{groups_file}) {
+    $def->{groups} = get_groups_by_file($def);
+  }
+
   if(defined $def->{covariance_file}){
     if(!defined $def->{groups} && defined $def->{sample_column} && defined $def->{group_column}){
       $def->{groups} = get_groups_from_covariance_file($def->{covariance_file}, $def->{sample_column}, $def->{group_column});
@@ -877,6 +881,27 @@ umi_tools extract $umitools_extract_option -I __FILE__ -S __OUTPUT__ --read2-out
       );
       push @$summary, ("fastqc_count_vis");
     }
+  }
+
+  if(getValue($def, "scRNA_matrix_to_folder", 0)){
+    my $scRNA_matrix_to_folder_task = "matrix_to_folder";
+    $config->{$scRNA_matrix_to_folder_task} = {
+      class => "CQS::IndividualR",
+      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . $scRNA_matrix_to_folder_task,
+      option => "",
+      rtemplate => "../scRNA/matrix_to_folder.r",
+      source_ref => $source_ref,
+      output_file_prefix => "",
+      output_file_ext => ".csv",
+      output_to_same_folder => 0,
+      sh_direct   => 0,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      }
+    };
+    push @$individual, $scRNA_matrix_to_folder_task;
   }
 
   $config->{def} = $def;
