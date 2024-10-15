@@ -1,0 +1,267 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: yes
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+source('reportFunctions.R')
+source('scRNA_func.r')
+```
+
+```{r}
+load_install('SparseArray', 'Bioconductor/SparseArray')
+load_install("miloR")
+load_install("miloDE")
+load_install("viridis")
+
+pairs = fread("fileList1.txt", header=FALSE, data.table=FALSE)
+comparison = unique(pairs$V3)
+
+myoptions = fread("fileList2.txt", header=FALSE, data.table=FALSE)
+myoptions = split(myoptions$V1, myoptions$V2)
+ct = myoptions$celltype
+cluster_id = myoptions$cluster_id
+reduction = myoptions$reduction
+optimized_neighbor_cells = as.numeric(myoptions$optimized_neighbor_cells)
+
+file_prefix=paste0(comparison, ".", celltype_to_filename(ct))
+```
+
+---
+title: "miloDE of `r ct` of comparison `r comparison`"
+---
+
+```{r}
+sce_milo=readRDS(paste0(file_prefix, '.neightbourhoods.rds'))
+de_stat=readRDS(paste0(file_prefix, '.miloDE.rds'))
+esimate_png=paste0(file_prefix, '.estimate_sizes.png')
+best_k=as.numeric(readLines(paste0(file_prefix, ".best_k.txt")))
+group_cell_csv=paste0(file_prefix, ".group_cell.csv")
+```
+
+# Group cell assignment
+
+```{r}
+group_cell = read.csv(group_cell_csv)
+print_table(group_cell, row.names=FALSE)
+```
+
+# Estimate neighbourhood sizes
+
+```{r}
+include_graphics(esimate_png)
+```
+
+K=`r best_k` was picked for an average neighbourhood size closing to `r optimized_neighbor_cells` cells. 
+
+# Neighbourhoods plot
+
+A neighbourhood assignment can be visualised using Milo plots, in which each circle corresponds to a neighbourhood, and edges between them represent shared cells. The center of each neighbourhood are coordinated in 2D latent space (e.g. UMAP) for the center cell of the neighbourhood. We can also colour each neighbourhood by provided metric. In this plot, we will annotate each neighbourhood with its enriched cell type, and colour neighbourhoods by assigned cell types.
+
+```{r}
+nhoods_width=14
+nhoods_height=10
+```
+
+```{r, fig.width=nhoods_width, fig.height=nhoods_height}
+nhoods_sce = nhoods(sce_milo)
+# assign cell types for nhoods 
+nhood_stat_ct = data.frame(Nhood = 1:ncol(nhoods_sce) , Nhood_center = colnames(nhoods_sce))
+nhood_stat_ct = miloR::annotateNhoods(sce_milo , nhood_stat_ct , coldata_col = cluster_id)
+write.csv(nhood_stat_ct, paste0(file_prefix, ".miloDE.nhoods.csv"), row.names=FALSE)
+
+#> Converting DE_celltype to factor...
+p = plot_milo_by_single_metric( sce_milo, 
+                                nhood_stat_ct, 
+                                colour_by = cluster_id , 
+                                layout = reduction , 
+                                size_range = c(1.5,3) , 
+                                edge_width = c(0.2,0.5)) +
+    theme(aspect.ratio=1)
+nhoods_png=paste0(file_prefix, ".miloDE.nhoods.png")
+ggsave(nhoods_png, p, width = nhoods_width, height = nhoods_height, units = "in", dpi = 300, bg="white")
+include_graphics(nhoods_png)
+```
+
+# Analysis of miloDE results
+
+## DE table
+
+```{r}
+logFC_criteria=log2(1.5)
+
+valid_de = de_stat |>
+  dplyr::filter(!is.na(pval))
+
+sig_de = valid_de |>
+  dplyr::filter(pval_corrected_across_genes < 0.05) |>
+  dplyr::filter(abs(logFC) > logFC_criteria) |>
+  dplyr::select(-Nhood_center, -test_performed) |>
+  dplyr::arrange(Nhood, pval)
+
+sig_de_df = merge(sig_de, 
+                  nhood_stat_ct |> dplyr::select(-Nhood_center), 
+                  by="Nhood") 
+write.csv(sig_de_df, paste0(file_prefix, ".miloDE.significant.csv"), row.names=FALSE)
+
+sig_genes = sig_de |> 
+  dplyr::distinct(gene) |>
+  dplyr::pull(gene) |>
+  sort()
+
+writeLines(sig_genes, paste0(file_prefix, ".miloDE.significant_genes.txt"))
+
+print_table(sig_de_df, round_value=0, byDT=TRUE, row.names=FALSE)
+```
+
+## DE genes in each cell type
+
+For each cell type, the gene will be counted only once even it is DE in multiple neighbourhoods.
+
+```{r}
+tbl = sig_de_df |> 
+  dplyr::distinct(gene, !!sym(cluster_id)) |>
+  dplyr::group_by(!!sym(cluster_id)) |>
+  dplyr::summarise(n_DE_genes = n()) |>
+  dplyr::arrange(desc(n_DE_genes))
+
+print_table(tbl, byDT=FALSE, row.names=FALSE)
+```
+
+## Volcano plot with all genes 
+
+There might be genes with multiple hits.
+
+```{r}
+volcano_width=7
+volcano_height=7
+```
+
+```{r fig.width=volcano_width, fig.height=volcano_height}
+library(EnhancedVolcano)
+
+p<-EnhancedVolcano(valid_de,
+  lab = valid_de$gene,
+  x = 'logFC',
+  y = 'pval',
+  title = comparison,
+  pCutoff = 0.05,
+  pCutoffCol = 'pval_corrected_across_genes',
+  FCcutoff = logFC_criteria,
+  pointSize = 3.0,
+  labSize = 6.0,
+  colAlpha = 1,
+  subtitle = NULL)
+
+volcano_all_png = paste0(file_prefix, ".miloDE.volcano_all.png")
+ggsave(volcano_all_png, p, width = volcano_width, height = volcano_height, units = "in", dpi = 300, bg="white")
+include_graphics(volcano_all_png)
+```
+
+## DE genes in multiple neightbourhoods
+
+```{r}
+dup_sig_de_df = sig_de_df |> 
+  dplyr::filter(gene %in% sig_de_df$gene[duplicated(sig_de_df$gene)]) |>
+  dplyr::arrange(gene, !!sym(cluster_id), pval)
+
+print_table(dup_sig_de_df, round_value=0, byDT=TRUE, row.names=FALSE)
+```
+
+## Volcano plot of unique DE genes 
+
+for each gene, only the one with lowest pvalue in neighbourhood will be kept.
+
+```{r}
+unique_valid_de = valid_de |>
+  dplyr::arrange(gene, pval) |>
+  dplyr::distinct(gene, .keep_all=TRUE)
+
+p<-EnhancedVolcano(unique_valid_de,
+  lab = unique_valid_de$gene,
+  x = 'logFC',
+  y = 'pval',
+  title = comparison,
+  pCutoff = 0.05,
+  pCutoffCol = 'pval_corrected_across_genes',
+  FCcutoff = logFC_criteria,
+  pointSize = 3.0,
+  labSize = 6.0,
+  colAlpha = 1,
+  subtitle = NULL)
+
+volcano_unique_png = paste0(file_prefix, ".miloDE.volcano_unique.png")
+ggsave(volcano_unique_png, p, width = volcano_width, height = volcano_height, units = "in", dpi = 300, bg="white")
+include_graphics(volcano_unique_png)
+```
+
+## Get neighbourhood ranking by the extent of DE
+
+One explanatory question a user might have is an overall scan of which transcriptional regions show noteworthy signs of DE. To do so on a neighbourhood level, we provide the function rank_neighbourhoods_by_DE_magnitude. Within this function, we calculate two metrics:
+
+- n_DE_genes - for each neighbourhood, we calculate how many genes are assigned as DE. Since we are doing it within each neighbourhood, we use pval_corrected_across_genes and we use default pval.thresh=0.1 (can be changed). Note that there is no comparison between neighbourhoods here.
+- n_specific_DE_genes. We also might be interested which neighbourhoods differ from others more so than we would expect. To assess this, we are interested in which neighbourhoods contain genes, that are DE ‘specifically’ in those neighbourhoods. To calculate this, for each gene we now use z-transformation of pval_corrected_across_nhoods, and we identify the neighbourhoods in which z-normalised p-values are lower than a threshold (default z.thresh=-3). This would tell us that the gene is signifciantly DE in the neighbourhood compared to most other neighbourhoods. We do so for each gene, and then for each neighbourhood we calculate how mane genes have z-normalised p-values are lower than a threshold.
+
+Note that for gene/neighbourhood combinations for which p-values are returned as NaNs (e.g. genes are not tested), for this function we set pvalues = 1. In other words, if a gene is only tested in few neighbourhoods to begin with, z-normalised p-value corrected across neighbourhoods is likely to be small for these neighbourhoods.
+
+```{r}
+stat_de_magnitude = rank_neighbourhoods_by_DE_magnitude(de_stat)
+```
+
+```{r}
+p1 = plot_milo_by_single_metric(sce_milo, 
+                                stat_de_magnitude, 
+                                colour_by = "n_DE_genes" , 
+                                layout = reduction , 
+                                size_range = c(1.5,3) , 
+                                edge_width = c(0.2,0.5)) + 
+  scale_fill_viridis(name = "# DE genes") +
+  theme(aspect.ratio=1)
+#> Warning in plot_milo_by_single_metric(sce_milo, stat_de_magnitude, colour_by =
+#> "n_DE_genes", : Coercing layout to matrix format
+#> Scale for fill is already present.
+#> Adding another scale for fill, which will replace the existing scale.
+p2 = plot_milo_by_single_metric(sce_milo, 
+                                stat_de_magnitude, 
+                                colour_by = "n_specific_DE_genes" , 
+                                layout = reduction , 
+                                size_range = c(1.5,3) , 
+                                edge_width = c(0.2,0.5)) + 
+  scale_fill_viridis(name = "# specific\nDE genes" , option = "inferno")+
+  theme(aspect.ratio=1)
+#> Warning in plot_milo_by_single_metric(sce_milo, stat_de_magnitude, colour_by =
+#> "n_specific_DE_genes", : Coercing layout to matrix format
+#> Scale for fill is already present.
+#> Adding another scale for fill, which will replace the existing scale.
+p = ggarrange(p1,p2)
+
+num_gene_png=paste0(file_prefix, ".miloDE.num_gene.png")
+ggsave(num_gene_png, p, width = 12, height = 5, units = "in", dpi = 300, bg="white")
+include_graphics(num_gene_png)
+```
+
+# Save the session information
+
+```{r}
+writeLines(capture.output(sessionInfo()), paste0(file_prefix, '.sessionInfo.txt'))
+```
