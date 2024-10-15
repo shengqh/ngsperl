@@ -536,7 +536,7 @@ sub has_contrast {
 }
 
 sub addDEseq2 {
-  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey, $feature_name_regex, $n_first ) = @_;
+  my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey, $feature_name_regex, $n_first, $de_biotype ) = @_;
 
   my $taskName = getDEseq2TaskName( $taskKey, $libraryKey, $def );
 
@@ -561,6 +561,10 @@ sub addDEseq2 {
 
   if(not defined $n_first){
     $n_first = getValue($def, "DE_n_first", -1);
+  }
+
+  if(not defined $de_biotype){
+    $de_biotype = "";
   }
 
   $config->{$taskName} = {
@@ -591,19 +595,20 @@ sub addDEseq2 {
     rCode                        => $rCode,
     docker_prefix => "deseq2_",
     parameterSampleFile1 => {
-      feature_name_regex => $feature_name_regex,
-      feature_name_filter => getValue($def, "DE_feature_name_filter", ""),
-      enhanced_volcano_red_blue_only => getValue($def, "DE_enhanced_volcano_red_blue_only", 0),
-      title_in_volcano => getValue($def, "DE_title_in_volcano", 1),
-      caption_in_volcano => getValue($def, "DE_caption_in_volcano", 1),
+      "feature_name_regex" => $feature_name_regex,
+      "feature_name_filter" => getValue($def, "DE_feature_name_filter", ""),
+      "enhanced_volcano_red_blue_only" => getValue($def, "DE_enhanced_volcano_red_blue_only", 0),
+      "title_in_volcano" => getValue($def, "DE_title_in_volcano", 1),
+      "caption_in_volcano" => getValue($def, "DE_caption_in_volcano", 1),
       "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
       "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
       "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 4),
       "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
       "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18),
-      n_first => $n_first,
+      "n_first" => $n_first,
+      "de_biotype" => $de_biotype,
     },
-    pbs                          => {
+    pbs => {
       "nodes"     => "1:ppn=" . $def->{max_thread},
       "walltime"  => getValue($def, "DESeq2_walltime", "23"),
       "mem"       => getValue($def, "DESeq2_mem", "40gb"),
