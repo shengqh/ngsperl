@@ -26,6 +26,8 @@ library(data.table)
 source("scRNA_func.r")
 source("markerCode_filter.R")
 
+options(future.globals.maxSize= 10779361280)
+
 myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
 myoptions$mt_cutoff=as.numeric(myoptions$mt_cutoff)
 myoptions$nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
