@@ -1,30 +1,28 @@
-rootdir<-"/nobackup/h_cqs/shengq2/bugfix/deseq2/"
-inputfile<-"JS_5995_6762_smRNA_human.define" 
+
+rootdir<-"/nobackup/brown_lab/projects/2021/20211008_rnaseq_6999_PP_mouse_aorta_lmna/deseq2_te_genetable/result"
+inputfile<-"PP_6999_mouse_aorta_lmna.define" 
 
 pvalue<-0.05
 useRawPvalue<-0
-foldChange<-1.5
+foldChange<-2
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
 showLabelInPCA<-1
 showDEGeneCluster<-0
 addCountOne<-0
-usePearsonInHCA<-0
+usePearsonInHCA<-1
 top25only<-0
 performWilcox<-0
-textSize<-11
+textSize<-10
 transformTable<-0
-exportSignificantGeneName<-0
+exportSignificantGeneName<-1
 thread<-8
 
 independentFiltering<-TRUE
 
-outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;top25cvInHCA<-FALSE;
-cooksCutoff<-FALSE
-
-libraryFile<-"/data/stein_lab/mjo_sRNA_data/20230615_5995_6762_smRNA_human_Holers_hg38/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result/JS_5995_6762_smRNA_human.Category.Table.csv"
-libraryKey<-"TotalReads"
+outputPdf<-TRUE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;top25cvInHCA<-FALSE;
+cooksCutoff<-TRUE
 #predefined_condition_end
 
 options(bitmapType='cairo')
@@ -403,6 +401,7 @@ heatmap_add_height_inch=0
 heatmap_legend_label_fontsize=18
 heatmap_column_name_fontsize=18
 
+de_biotype=NA
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
   myoptions = split(options_table$V1, options_table$V2)
@@ -420,6 +419,18 @@ if(file.exists("fileList1.txt")){
 
   heatmap_legend_label_fontsize=to_numeric(myoptions$heatmap_legend_label_fontsize, heatmap_legend_label_fontsize)
   heatmap_column_name_fontsize=to_numeric(myoptions$heatmap_column_name_fontsize, heatmap_column_name_fontsize)
+
+  de_biotype = myoptions$de_biotype
+  if(!is.na(de_biotype)){
+    if(de_biotype == ""){
+      de_biotype = NA
+    }
+  }
+}
+
+if(!is.na(de_biotype)){
+  de_biotype_name=gsub(" ", "_", de_biotype)
+  cat("DE biotype: ", de_biotype, "\n")
 }
 legend_label_gp = gpar(fontsize = heatmap_legend_label_fontsize, fontface = "bold")
 column_names_gp = gpar(fontsize = heatmap_column_name_fontsize, fontface = "bold")
@@ -464,6 +475,12 @@ for(countfile_index in c(1:length(countfiles))){
         rownames(data) = str_match(rownames(data), feature_name_regex)[,2]
       }
     }
+  }
+
+  if(is.na(de_biotype)){
+    de_features=c()
+  }else{
+    de_features=rownames(data)[data$Feature_gene_biotype == de_biotype]
   }
 
   data<-data[,colnames(data) != "Feature_length"]
@@ -761,7 +778,13 @@ for(countfile_index in c(1:length(countfiles))){
 
     #draw density graph
     log2counts<-as.matrix(log2(counts(dds,normalized=FALSE) + 1))
-    draw_density_plot(log2counts, paste0(prefix, "_DESeq2-log2-density"), outputFormat)
+
+    if(is.na(de_biotype)){
+      draw_density_plot(log2counts, paste0(prefix, "_DESeq2-log2-density"), outputFormat)
+    }else{
+      biotype_log2counts=log2counts[rownames(log2counts) %in% de_features,]
+      draw_density_plot(biotype_log2counts, paste0(prefix, "_", de_biotype_name, "_DESeq2-log2-density"), outputFormat)
+    }
 
     fitType<-"parametric"
     if(nrow(comparisonData) < 5){
@@ -809,29 +832,50 @@ for(countfile_index in c(1:length(countfiles))){
 
     if(nrow(comparisonData) > 1){
       #draw pca graph
-      drawPCA(prefix=paste0(prefix,"_geneAll"), 
-              rldmatrix=rldmatrix, 
-              showLabelInPCA=showLabelInPCA, 
-              designData=designData, 
-              condition=designData$Condition, 
-              outputFormat=outputFormat,
-              scalePCs=TRUE)
-      
-      if(exists("top25cvInHCA") && top25cvInHCA){
-        rv<-rowVars(rldmatrix)
-        countHT<-rldmatrix[rv>=quantile(rv)[4],]
-        drawHCA(prefix=paste0(prefix,"_geneTop25variance"), 
-                rldselect=countHT, 
-                ispaired=ispaired, 
+      if(is.na(de_biotype)){
+        drawPCA(prefix=paste0(prefix,"_geneAll"), 
+                rldmatrix=rldmatrix, 
+                showLabelInPCA=showLabelInPCA, 
                 designData=designData, 
-                conditionColors=conditionColors, 
-                gnames=ganems, 
+                condition=designData$Condition, 
                 outputFormat=outputFormat,
-                legend_label_gp=legend_label_gp,
-                column_names_gp=column_names_gp)
+                scalePCs=TRUE)
+
+        if(exists("top25cvInHCA") && top25cvInHCA){
+          rv<-rowVars(rldmatrix)
+          countHT<-rldmatrix[rv>=quantile(rv)[4],]
+          drawHCA(prefix=paste0(prefix,"_geneTop25variance"), 
+                  rldselect=countHT, 
+                  ispaired=ispaired, 
+                  designData=designData, 
+                  conditionColors=conditionColors, 
+                  gnames=ganems, 
+                  outputFormat=outputFormat,
+                  legend_label_gp=legend_label_gp,
+                  column_names_gp=column_names_gp)
+        }else{
+          drawHCA(prefix=paste0(prefix,"_geneAll"), 
+                  rldselect=rldmatrix, 
+                  ispaired=ispaired, 
+                  designData=designData, 
+                  conditionColors=conditionColors, 
+                  gnames=ganems, 
+                  outputFormat=outputFormat,
+                  legend_label_gp=legend_label_gp,
+                  column_names_gp=column_names_gp)
+        }
       }else{
-        drawHCA(prefix=paste0(prefix,"_geneAll"), 
-                rldselect=rldmatrix, 
+        biotype_rldmatrix=rldmatrix[rownames(rldmatrix) %in% de_features,]
+        drawPCA(prefix=paste0(prefix,"_", de_biotype_name), 
+                rldmatrix=biotype_rldmatrix, 
+                showLabelInPCA=showLabelInPCA, 
+                designData=designData, 
+                condition=designData$Condition, 
+                outputFormat=outputFormat,
+                scalePCs=TRUE)
+
+        drawHCA(prefix=paste0(prefix,"_", de_biotype_name), 
+                rldselect=biotype_rldmatrix, 
                 ispaired=ispaired, 
                 designData=designData, 
                 conditionColors=conditionColors, 
@@ -841,7 +885,7 @@ for(countfile_index in c(1:length(countfiles))){
                 column_names_gp=column_names_gp)
       }
     }
-    
+
     #different expression analysis
     if (is.null(designFormula)) {
       designFormula=as.formula(paste0("~",paste0(c(colnames(designData)[-c(1:2)],"Condition"),collapse="+")))
@@ -854,6 +898,15 @@ for(countfile_index in c(1:length(countfiles))){
                                design = designFormula)
     
     dds<-myEstimateSizeFactors(dds)
+
+    if(!is.na(de_biotype)){
+      #we need to use all genes for size factor estimation but only care about certain biotype
+      dds = dds[rownames(dds) %in% de_features,]
+      de_prefix = paste0(prefix, "_", de_biotype_name)
+      cat("Only use", nrow(dds), de_biotype, "genes for DE analysis\n")
+    }else{
+      de_prefix = prefix
+    }
 
     bpparam<-MulticoreParam(thread)
 #    parallel<-ifelse(thread <= 1, FALSE, TRUE)
@@ -905,10 +958,10 @@ for(countfile_index in c(1:length(countfiles))){
     }
     
     if(length(indecies) > 0){
-      inddata<-data[rownames(comparisonData),indecies,drop=F]
-      tbb<-cbind(inddata, as.data.frame(comparisonData), res)
+      inddata<-data[rownames(res),indecies,drop=F]
+      tbb<-cbind(inddata, as.data.frame(comparisonData[rownames(res),,drop=FALSE]), res)
     }else{
-      tbb<-cbind(as.data.frame(comparisonData), res)
+      tbb<-cbind(as.data.frame(comparisonData[rownames(res),,drop=FALSE]), res)
     }
     
     tbbselect<-tbb[select,,drop=F]
@@ -944,10 +997,10 @@ for(countfile_index in c(1:length(countfiles))){
     }
     
     tbb<-tbb[order(tbb$pvalue),,drop=F]
-    write.csv(as.data.frame(tbb),paste0(prefix, "_DESeq2.csv"))
+    write.csv(as.data.frame(tbb),paste0(de_prefix, "_DESeq2.csv"))
     
     tbbselect<-tbbselect[order(tbbselect$pvalue),,drop=F]
-    sigFile=paste0(prefix, "_DESeq2_sig.csv")
+    sigFile=paste0(de_prefix, "_DESeq2_sig.csv")
     sigTable<-as.data.frame(tbbselect)
     write.csv(sigTable,sigFile)
     
@@ -976,14 +1029,14 @@ for(countfile_index in c(1:length(countfiles))){
     }
     
     if(!is.null(geneNameField)){
-      write.table(tbb[,c(geneNameField, "stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
+      write.table(tbb[,c(geneNameField, "stat"),drop=F],paste0(de_prefix, "_DESeq2_GSEA.rnk"),row.names=F,col.names=F,sep="\t", quote=F)
       if(exportSignificantGeneName){
-        write.table(tbbselect[,c(geneNameField),drop=F], paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
+        write.table(tbbselect[,c(geneNameField),drop=F], paste0(de_prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
       }
     }else{
-      write.table(tbb[,c("stat"),drop=F],paste0(prefix, "_DESeq2_GSEA.rnk"),row.names=T,col.names=F,sep="\t", quote=F)
+      write.table(tbb[,c("stat"),drop=F],paste0(de_prefix, "_DESeq2_GSEA.rnk"),row.names=T,col.names=F,sep="\t", quote=F)
       if(exportSignificantGeneName){
-        write.table(data.frame(name=rownames(tbbselect)), paste0(prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
+        write.table(data.frame(name=rownames(tbbselect)), paste0(de_prefix, "_DESeq2_sig_genename.txt"),row.names=F,col.names=F,sep="\t", quote=F)
       }
     }    
     
@@ -993,13 +1046,13 @@ for(countfile_index in c(1:length(countfiles))){
       nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
       DEmatrix<-rldmatrix[siggenes,,drop=F]
       
-      drawPCA(paste0(prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors, outputFormat)
-      drawHCA(paste0(prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputFormat,
+      drawPCA(paste0(de_prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors, outputFormat)
+      drawHCA(paste0(de_prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputFormat,
                 legend_label_gp=legend_label_gp,
                 column_names_gp=column_names_gp)
       
-      drawPCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors, outputFormat)
-      drawHCA(paste0(prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputFormat,
+      drawPCA(paste0(de_prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors, outputFormat)
+      drawHCA(paste0(de_prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputFormat,
                 legend_label_gp=legend_label_gp,
                 column_names_gp=column_names_gp)
     }
@@ -1025,14 +1078,16 @@ for(countfile_index in c(1:length(countfiles))){
       diffResultSig$Name <- factor(diffResultSig$Name, levels=diffResultSig$Name[order(diffResultSig$log2FoldChange)])
       diffResultSig<-as.data.frame(diffResultSig)
       
-      p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+geom_bar(stat="identity")+
+      p<-ggplot(diffResultSig,aes(x=Name,y=log2FoldChange,order=log2FoldChange))+
+        geom_bar(stat="identity")+
         coord_flip()+
         #     geom_abline(slope=0,intercept=1,colour="red",linetype = 2)+
         scale_y_continuous(name=bquote(log[2](fold~change)))+
         theme_bw3() +
-        theme(axis.text = element_text(colour = "black"))
+        theme(axis.text = element_text(colour = "black"),
+              axis.title.x = element_blank())
       
-      filePrefix<-paste0(prefix,"_DESeq2_sig_barplot")
+      filePrefix<-paste0(de_prefix,"_DESeq2_sig_barplot")
       drawPlot(filePrefix, outputFormat, 6, 6, p, "PCA")
     } else {
       print(paste0("No gene with adjusted p value less than ",pvalue," and fold change larger than ",foldChange))
@@ -1058,7 +1113,7 @@ for(countfile_index in c(1:length(countfiles))){
     diffResult<-diffResult[order(diffResult$colour),]
     diffResult$colour<-as.character(diffResult$colour)
 
-    write.csv(diffResult, file=paste0(prefix, "_DESeq2_volcanoPlot.csv"))
+    write.csv(diffResult, file=paste0(de_prefix, "_DESeq2_volcanoPlot.csv"))
     
     xname=bquote(log[2](fold~change))
     yname=bquote(-log[10](p~value))
@@ -1085,7 +1140,7 @@ for(countfile_index in c(1:length(countfiles))){
       width_inch=10
     }
     
-    filePrefix<-paste0(prefix,"_DESeq2_volcanoPlot")
+    filePrefix<-paste0(de_prefix,"_DESeq2_volcanoPlot")
     drawPlot(filePrefix, outputFormat, width_inch, 7, p, "Volcano")
 
     if(require("EnhancedVolcano", quietly=TRUE)){
@@ -1161,13 +1216,13 @@ for(countfile_index in c(1:length(countfiles))){
         ylab(yname) + 
         xlab(xname) +
         theme(plot.title = element_text(hjust = 0.5))
-      filePrefix<-paste0(prefix,"_DESeq2_volcanoEnhanced")
+      filePrefix<-paste0(de_prefix,"_DESeq2_volcanoEnhanced")
       drawPlot(filePrefix, outputFormat, 7, 7, p, "Volcano")
     }
   }
   
   if(length(pairedspearman) > 0){
-    filePrefix<-paste0(prefix, "_", ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup), "spearman"))
+    filePrefix<-paste0(de_prefix, "_", ifelse(minMedianInGroup > 0, paste0("spearman_min", minMedianInGroup), "spearman"))
     fwidth<-max(6, 1 * length(pairedspearman))
     for(format in outputFormat){
       openPlot(filePrefix, format, fwidth, 6, "Spearman correlation")
@@ -1178,6 +1233,10 @@ for(countfile_index in c(1:length(countfiles))){
 }
 
 allprefix=paste0(basename(inputfile), suffix)
+if(!is.na(de_biotype)){
+  allprefix=paste0(allprefix, "_", de_biotype_name)
+  resultAllOut=resultAllOut |> dplyr::filter(Feature_gene_biotype == de_biotype)
+}
 
 #Venn for all significant genes
 #Output all significant genes table
