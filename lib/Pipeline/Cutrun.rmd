@@ -45,12 +45,18 @@ task_df<-split(task_df$V1, task_df$V2)
 has_fastqc_raw="fastqc_raw_summary" %in% names(task_df)
 has_fastqc_trimmed="trimmomatic_fastqc_summary" %in% names(task_df)
 has_bowtie2_summary="bowtie2_summary" %in% names(task_df)
+
 has_macs2_narrow_count="macs2_narrow_count" %in% names(task_df)
+has_macs2_narrow_homer_annotation="has_macs2_narrow_homer_annotation" %in% names(task_df)
+
 has_macs2_broad_count="macs2_broad_count" %in% names(task_df)
+has_macs2_broad_homer_annotation="macs2_broad_homer_annotation" %in% names(task_df)
+
 has_homer_03_mergePeaks_count="homer_03_mergePeaks_count" %in% names(task_df)
+has_homer_04_motif="homer_04_motif" %in% names(task_df)
+
 has_bamplot="bamplot" %in% names(task_df)
 ```
-
  
 ```{r,echo=FALSE,results='asis', eval = has_fastqc_raw}
 cat("\n\n# Sequencing Quality\n\n")
@@ -128,3 +134,64 @@ writeLines(rmd_content, rmd_file)
 
 ```{r child='bamplot.rmd', eval=has_bamplot}
 ```
+
+```{r}
+show_homer<-function(task_df, homer_task, homer_name) {
+  homer_folder = task_df[[homer_task]]
+
+  cat("#", homer_name, "\n")
+  dirs <- paste0(list.dirs(paste0(homer_folder, "/result"), full.names=T, recursive=F), "/knownResults")
+
+  res_table <- data.frame()
+  i=1
+  for (i in 1:length(dirs)){
+    curdir = dirs[i]
+    knownRes_file <- paste0(curdir, ".txt")
+    res_txt <- fread(knownRes_file, header=T, nrows=5, data.table=F)
+    sample=basename(dirname(curdir))
+    res_txt$Sample=sample
+    res_txt$Motif=""
+
+    for (j in 1:nrow(res_txt)) {
+      svgfile = paste0(curdir, "/known", j, ".logo.svg")
+      pngfile = paste0(curdir, "/known", j, ".logo.png")
+      if (file.exists(svgfile)){
+        if(!file.exists(pngfile)){
+          x <- paste0("convert -density 1200 -resize 200x200 ", svgfile, " ", pngfile) 
+        #cat(x, "\n")
+          system(x)
+        }
+        res_txt$Motif[j]=paste0("<img src= ", pngfile, " >")
+      }
+    }
+
+    res_table <- rbind(res_table, res_txt[,c("Motif Name", "P-value", "q-value (Benjamini)", "Sample", "Motif")])
+  }
+
+  tab <- tibble::tibble(Sample = res_table$Sample,
+                        Name = gsub("/Homer","",res_table[,1]),
+                        Motif = noquote(res_table$Motif),
+                        Pvalue= res_table[,2], FDR = res_table[,3])
+  print(kable(tab, caption= tabRef(homer_task, "Homer annotation for peaks"), escape = F) %>%
+      kable_styling() %>%
+      htmltools::HTML())
+}
+```
+
+```{r,echo=FALSE,results='asis', eval = has_macs2_broad_homer_annotation}
+homer_task = "macs2_broad_homer_annotation"
+homer_name = "MACS2 Broad Peaks - Homer Motif Enrichment"
+show_homer(task_df, homer_task, homer_name)
+```
+
+```{r,echo=FALSE,results='asis', eval = has_macs2_narrow_homer_annotation}
+homer_task = "macs2_narrow_homer_annotation"
+homer_name = "MACS2 Narrow Peaks - Homer Motif Enrichment"
+show_homer(task_df, homer_task, homer_name)
+```
+
+```{r,echo=FALSE,results='asis', eval = has_homer_04_motif}
+homer_task = "homer_04_motif"
+homer_name = "Homer Peaks - Homer Motif Enrichment"
+show_homer(task_df, homer_task, homer_name)
+``` 

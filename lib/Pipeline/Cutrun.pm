@@ -725,12 +725,24 @@ fi
       $task_dic->{macs2_broad_count} = $config->{macs2_broad_count}{target_dir};
     }
 
+    if($config->{macs2_broad_homer_annotation}){
+      $task_dic->{macs2_broad_homer_annotation} = $config->{macs2_broad_homer_annotation}{target_dir};
+    }
+
     if($config->{macs2_narrow_count}){
       $task_dic->{macs2_narrow_count} = $config->{macs2_narrow_count}{target_dir};
     }
 
+    if($config->{macs2_narrow_homer_annotation}){
+      $task_dic->{macs2_narrow_homer_annotation} = $config->{macs2_narrow_homer_annotation}{target_dir};
+    }
+
     if($config->{homer_03_mergePeaks_count}){
       $task_dic->{homer_03_mergePeaks_count} = $config->{homer_03_mergePeaks_count}{target_dir};
+    }
+
+    if($config->{homer_04_motif}){
+      $task_dic->{homer_04_motif} = $config->{homer_04_motif}{target_dir};
     }
 
     if($config->{bamplot}){
