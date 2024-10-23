@@ -26,6 +26,7 @@ sub new {
     _use_tmp_folder => 0,
     _localize_to_local_folder => 0,
     _final_file_in_last => 1,
+    _docker_shell => "bash",
   };
   bless $self, $class;
   return $self;
@@ -401,6 +402,10 @@ sub get_docker_value {
 
       if (defined $self->{_config}{ $self->{_section} }{docker_prefix}) {
         $self->{_docker_prefix} = $self->{_config}{ $self->{_section} }{docker_prefix};
+      }
+
+      if (defined $self->{_config}{ $self->{_section} }{docker_shell}) {
+        $self->{_docker_shell} = $self->{_config}{ $self->{_section} }{docker_shell};
       }
     }
   }
