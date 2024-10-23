@@ -484,30 +484,86 @@ sub getPreprocessionConfig {
   }
 
   if ( $def->{sra_to_fastq} ) {
-    my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" : $is_pairend?"SRA::FastqDumpPaired":"SRA::FastqDump";
-    my $docker_prefix = getValue($def, "sra_to_fastq_wget", 0)? undef :"sratools_";
-    #my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FasterqDump";
-    $config->{sra2fastq} = {
-      class      => $class,
-      perform    => 1,
-      is_paired_end   => $is_pairend,
-      target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "sra2fastq",
-      option     => getValue($def, "fastq-dump_option", "--split-3 --defline-qual '+' --gzip --origfmt"),
-      source_ref => $source_ref,
-      sra_table  => $def->{sra_table},
-      sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 0),
-      cluster    => $def->{cluster},
-      not_clean  => getValue( $def, "sra_not_clean", 1 ),
-      is_restricted_data => getValue($def, "is_restricted_data"),
-      single_cell_data_type => getValue($def, "single_cell_data_type", 0),
-      docker_prefix => $docker_prefix,
-      no_docker => $def->{"no_docker"},
-      pbs        => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
-        "mem"       => "10gb"
-      },
-    };
+    if($def->{sra_to_fastq_no_prefetch}){
+      my $sra_option = getValue($def, "fastq-dump_option", "--split-3 --defline-qual '+' --gzip --origfmt");
+      my $sratoolkit_setting_file = getValue($def, "sratoolkit_setting_file");
+
+      $config->{sra2fastq} = {
+        class      => "CQS::ProgramWrapperOneToOne",
+        perform    => 1,
+        target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "sra2fastq",
+        program => "",
+        check_program => 0,
+        option     => "
+
+set -o pipefail
+
+if [[ ! -s \${HOME}/.ncbi ]]; then
+  echo mkdir \${HOME}/.ncbi
+  mkdir \${HOME}/.ncbi
+fi
+
+if [[ ! -s \${HOME}/.ncbi/user-settings.mkfg ]]; then
+  echo cp user-settings.mkfg
+  cp $sratoolkit_setting_file \${HOME}/.ncbi
+fi
+
+rm -f __NAME__.failed __NAME__.succeed
+
+fastq-dump --split-3 --defline-qual '+' --gzip --origfmt __FILE__
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  touch __NAME__.failed
+  rm -f __NAME___1.fastq.gz __NAME___2.fastq.gz __NAME__.fastq.gz
+else
+  touch __NAME__.succeed
+  if [[ __FILE__ != __NAME__ ]]; then
+    mv __FILE___1.fastq.gz __NAME___1.fastq.gz
+    mv __FILE___2.fastq.gz __NAME___2.fastq.gz
+  fi
+fi
+
+",
+        source_ref => $source_ref,
+        sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 0),
+        cluster    => $def->{cluster},
+        no_docker => 1,
+        output_ext => "_1.fastq.gz,_2.fastq.gz",
+        output_to_same_folder => 0,
+        no_output => 1,
+        pbs        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
+          "mem"       => "10gb"
+        },
+      };
+    }else{
+      my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" : $is_pairend?"SRA::FastqDumpPaired":"SRA::FastqDump";
+      my $docker_prefix = getValue($def, "sra_to_fastq_wget", 0)? undef :"sratools_";
+      #my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FasterqDump";
+      $config->{sra2fastq} = {
+        class      => $class,
+        perform    => 1,
+        is_paired_end   => $is_pairend,
+        target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "sra2fastq",
+        option     => getValue($def, "fastq-dump_option", "--split-3 --defline-qual '+' --gzip --origfmt"),
+        source_ref => $source_ref,
+        sra_table  => $def->{sra_table},
+        sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 0),
+        cluster    => $def->{cluster},
+        not_clean  => getValue( $def, "sra_not_clean", 1 ),
+        is_restricted_data => getValue($def, "is_restricted_data"),
+        single_cell_data_type => getValue($def, "single_cell_data_type", 0),
+        docker_prefix => $docker_prefix,
+        no_docker => $def->{"no_docker"},
+        pbs        => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
+          "mem"       => "10gb"
+        },
+      };
+    }
     $source_ref = "sra2fastq";
     push @$individual, ("sra2fastq");
   }
