@@ -53,7 +53,7 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "treatments_auto",     1 );
   }
 
-  initDefaultValue( $def, "perform_report", 0 );
+  initDefaultValue( $def, "perform_report", 1 );
   
   return $def;
 }
