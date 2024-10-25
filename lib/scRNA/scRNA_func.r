@@ -175,7 +175,11 @@ MyDimPlot<-function(...){
   #set raster=FALSE 
   #When number of cells larger than 100000, it might throw error: 
   #Problem while converting geom to grob, Error occurred in the 1st layer.
-  g<-DimPlot(raster=FALSE, repel=TRUE, ...) + theme(aspect.ratio=1)
+  if(hasArg(raster)){
+    g<-DimPlot(...) + theme(aspect.ratio=1)
+  }else{
+    g<-DimPlot(raster=FALSE, ...) + theme(aspect.ratio=1)
+  }
   return(g)
 }
 
