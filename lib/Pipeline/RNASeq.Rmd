@@ -270,7 +270,7 @@ figureRmd<-function(file_map, corNames, section, hca_gene_used){
       lines<-paste0(lines, get_figure_description(basename(corr_heatmap), corr_heatmap, paste(name, "sample correlation")))
     }
 
-    biotype_png = gsub(".heatmap.png", ".biotype_perc.png", heatmap_png)
+    biotype_png = gsub(".heatmap.png", ".biotype_perc.png", gsub(".proteincoding.count", ".count", heatmap_png))
     if(file.exists(biotype_png)){
       lines<-paste0(lines, get_figure_description(basename(biotype_png), biotype_png, paste(name, "sample biotype distribution")))
     }
