@@ -874,6 +874,11 @@ umi_tools extract $umitools_extract_option -I __FILE__ -S __OUTPUT__ --read2-out
       addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, [$cutadapt_task, ".gz"], $cluster );
     }
   }
+  elsif($def->{perform_trimmomatic}){
+    my $trimmomatic_task = "trimmomatic";
+    add_trimmomatic($config, $def, $summary, $preprocessing_dir, $trimmomatic_task, "${trimmomatic_task}_fastqc", $untrimed_ref);
+    $source_ref = [$trimmomatic_task, ".gz"];
+  }
   elsif ($def->{perform_fastq_len} ) {
     addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, $source_ref, $cluster );
   }

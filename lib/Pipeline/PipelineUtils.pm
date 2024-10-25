@@ -112,6 +112,7 @@ our %EXPORT_TAGS = (
     writeAnnotationLocus_bed
     writeAnnotationLocus_gff
     add_split_fastq_dynamic
+    add_trimmomatic
     )
   ]
 );
@@ -4040,6 +4041,70 @@ fastq_screen $conf --outdir . --threads 8 __FILE__
     }
   };
   push(@$tasks, $task_name);
+}
+
+sub add_trimmomatic {
+  my ($config, $def, $tasks, $target_dir, $trimmomatic_task, $fastqcName, $untrimed_ref) = @_;
+
+  my $cutruntools2_path = getValue($def, "cutruntools2_path");
+  my $extratoolsbin = $cutruntools2_path . "/install";
+  my $adapterpath = $cutruntools2_path . "/adapters";
+
+  my $trimmomaticjarfile = "$extratoolsbin/trimmomatic-0.36.jar";
+  my $adapter_type = getValue($def, "adaptor_type");
+
+  my $adapter_file = $adapter_type eq "Nextera" ? "NexteraPE-PE.fa": "Truseq3.PE.fa";
+
+  my $trimmomatic_option = getValue($def, "trimmomatic_option", ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50");
+
+  $config->{ $trimmomatic_task } = {
+    class                 => "CQS::ProgramWrapperOneToOne",
+    perform               => 1,
+    target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$trimmomatic_task",
+    interpretor => "",
+    program => "",
+    check_program => 0,
+    option => "
+rm -f *.failed *.succeed
+
+echo trimmomatic=`date`
+java -jar $trimmomaticjarfile PE -threads 8 -phred33 \\
+  __FILE__ \\
+  __NAME__.clipped.1.fastq.gz __NAME__.1.unpaired.fastq.gz \\
+  __NAME__.clipped.2.fastq.gz __NAME__.2.unpaired.fastq.gz \\
+  ILLUMINACLIP:$adapterpath/${adapter_file}${trimmomatic_option} > __NAME__.trimmomatic.log 2>&1    
+
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  rm -f __NAME__.1.unpaired.fastq.gz __NAME__.2.unpaired.fastq.gz
+  touch __NAME__.trimmomatic.succeed
+else
+  rm -f __NAME__.1.unpaired.fastq.gz __NAME__.2.unpaired.fastq.gz __NAME__.clipped.1.fastq.gz __NAME__.clipped.2.fastq.gz
+  echo \$status > __NAME__.trimmomatic.failed
+  exit \$status
+fi
+
+echo v0.36 > __NAME__.trimmomatic.version
+",
+    source_ref            => $untrimed_ref,
+    source_join_delimiter => " ",
+    output_to_same_folder => 0,
+    output_file_ext => ".clipped.1.fastq.gz,.clipped.2.fastq.gz,.trimmomatic.version",
+    sh_direct             => 0,
+    no_output             => 1,
+    docker_prefix => "cutruntools2_",
+    pbs                   => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => getValue($def, "trimmomatic_walltime", "24"),
+      "mem"      => getValue($def, "trimmomatic_mem", "40gb")
+    },
+  };
+  push @$tasks, ( $trimmomatic_task );
+
+  if ( $def->{perform_fastqc} ) {
+    addFastQC( $config, $def, $tasks, $tasks, $fastqcName, [ $trimmomatic_task, ".fastq.gz" ], $target_dir );
+  }
+
 }
 
 1;

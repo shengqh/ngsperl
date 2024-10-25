@@ -52,6 +52,9 @@ sub initializeRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_transposable_element", 0 );
 
+  initDefaultValue( $def, "perform_trimmomatic", 0);
+  initDefaultValue( $def, "trimmomatic_option", ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50");
+
   if ( not $def->{"perform_gsea"} ) {
     $def->{"perform_gsea"} = 0;
   }

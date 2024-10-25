@@ -47,6 +47,9 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "annotate_nearest_gene", 1 );
   initDefaultValue( $def, "perform_homer", 1 );
 
+  initDefaultValue( $def, "perform_trimmomatic", 1);
+  initDefaultValue( $def, "trimmomatic_option", ":2:15:4:4:true LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:25");
+
   if(defined $def->{treatments}){
     $def->{treatments_auto} = 0;
   }else{
@@ -76,74 +79,18 @@ sub getConfig {
 
   my $genome_sequence = getValue($def, "fasta_file");
 
-  my $cutruntools2_path = getValue($def, "cutruntools2_path");
-  my $extratoolsbin = $cutruntools2_path . "/install";
-  my $adapterpath = $cutruntools2_path . "/adapters";
-
-  my $trimmomaticjarfile = "$extratoolsbin/trimmomatic-0.36.jar";
-  my $kseq_test = "$extratoolsbin/kseq_test";
-  my $len = getValue($def, "fastq_sequence_length");
-  my $adapter_type = getValue($def, "adaptor_type");
-
-  my $adapter_file = $adapter_type eq "Nextera" ? "NexteraPE-PE.fa": "Truseq3.PE.fa";
-
   my $trimmomatic_task = "trimmomatic";
-  $config->{ $trimmomatic_task } = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$trimmomatic_task",
-    interpretor => "",
-    program => "",
-    check_program => 0,
-    option => "
-rm -f *.failed *.succeed
+  add_trimmomatic($config, $def, $summary_ref, $preprocessing_dir, $trimmomatic_task, "${trimmomatic_task}_fastqc", $untrimed_ref);
 
-echo trimmomatic=`date`
-java -jar $trimmomaticjarfile PE -threads 8 -phred33 \\
-  __FILE__ \\
-  __NAME__.clipped.1.fastq.gz __NAME__.1.unpaired.fastq.gz \\
-  __NAME__.clipped.2.fastq.gz __NAME__.2.unpaired.fastq.gz \\
-  ILLUMINACLIP:$adapterpath/$adapter_file:2:15:4:4:true LEADING:20 TRAILING:20 SLIDINGWINDOW:4:15 MINLEN:25 > __NAME__.trimmomatic.log 2>&1    
-
-status=\$?
-if [[ \$status -eq 0 ]]; then
-  rm -f __NAME__.1.unpaired.fastq.gz __NAME__.2.unpaired.fastq.gz
-  touch __NAME__.trimmomatic.succeed
-else
-  rm -f __NAME__.1.unpaired.fastq.gz __NAME__.2.unpaired.fastq.gz __NAME__.clipped.1.fastq.gz __NAME__.clipped.2.fastq.gz
-  echo \$status > __NAME__.trimmomatic.failed
-  exit \$status
-fi
-
-# echo kseq_test=`date`
-# It doesn't make sense to use kseq_test to trim the reads after trimmomatic
-# $kseq_test __NAME__.1.paired.fastq.gz $len __NAME__.clipped.1.fastq.gz
-# $kseq_test __NAME__.2.paired.fastq.gz $len __NAME__.clipped.2.fastq.gz
-# rm -f __NAME__.1.paired.fastq.gz __NAME__.2.paired.fastq.gz
-
-echo v0.36 > __NAME__.trimmomatic.version
-",
-    source_ref            => $untrimed_ref,
-    source_join_delimiter => " ",
-    output_to_same_folder => 0,
-    output_file_ext => ".clipped.1.fastq.gz,.clipped.2.fastq.gz,.trimmomatic.version",
-    sh_direct             => 0,
-    no_output             => 1,
-    docker_prefix => "cutruntools2_",
-    pbs                   => {
-      "nodes"    => "1:ppn=8",
-      "walltime" => getValue($def, "trimmomatic_walltime", "24"),
-      "mem"      => getValue($def, "trimmomatic_mem", "40gb")
-    },
-  };
-  push @$summary_ref, ( $trimmomatic_task );
-
-  if ( $def->{perform_fastqc} ) {
-    addFastQC( $config, $def, $summary_ref, $summary_ref, "${trimmomatic_task}_fastqc", [ $trimmomatic_task, ".fastq.gz" ], $preprocessing_dir );
-  }
+  # if ( $def->{perform_fastqc} ) {
+  #   addFastQC( $config, $def, $summary_ref, $summary_ref, "${trimmomatic_task}_fastqc", [ $trimmomatic_task, ".fastq.gz" ], $preprocessing_dir );
+  # }
 
   my $bowtie2_option = getValue( $def, "bowtie2_option" );
   my $bowtie2_index = getValue( $def, "bowtie2_index" );
+
+  my $cutruntools2_path = getValue($def, "cutruntools2_path");
+  my $extratoolsbin = $cutruntools2_path . "/install";
   my $awk1 = "$extratoolsbin/filter_below.awk";
   my $picard_jar = "$extratoolsbin/picard-2.8.0.jar";
 
