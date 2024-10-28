@@ -709,6 +709,7 @@ fi
         affiliation => getValue($def, "affiliation", ""),
       },
       parameterSampleFile2       => $task_dic,
+      parameterSampleFile4_ref   => [keys %$task_dic],
       sh_direct                  => 1,
       pbs                        => {
         "nodes"     => "1:ppn=1",
