@@ -37,6 +37,10 @@ for (i in c(1:nrow(files))){
   file = files[i,1]
   name = files[i,2]
 
+  if(file.size(file) == 0L){
+    next
+  }
+
   macsOutput <- toGRanges(file, format="BED", skip=1)
   annotated <- annotatePeakInBatch(macsOutput, AnnotationData=gene2)
   
