@@ -37,8 +37,19 @@ sub initializeDefaultOptions {
 
   initDefaultValue( $def, "bowtie2_option", "--dovetail --phred33" );
 
-  initDefaultValue( $def, "perform_macs2_broad", 0 );
-  initDefaultValue( $def, "perform_macs2_narrow", 1 );
+  my $cutrun_type = $def->{cutrun_type};
+  if(!defined $cutrun_type){
+    die "cutrun_type is not defined. It should be either TF or histone.";
+  }else{
+    if($cutrun_type ne "TF" && $cutrun_type ne "histone"){
+      die "cutrun_type should be either TF or histone.";
+    }
+  }
+
+  initDefaultValue( $def, "frag_120bp", $cutrun_type eq "TF" ? 1 : 0 );
+
+  initDefaultValue( $def, "perform_macs2_broad", $cutrun_type eq "TF" ? 0 : 1 );
+  initDefaultValue( $def, "perform_macs2_narrow", $cutrun_type eq "TF" ? 1 : 0 );
   initDefaultValue( $def, "perform_seacr", 0 );
 
   initDefaultValue( $def, "macs2_broad_option", "-f BAMPE --broad --broad-cutoff 0.1 -B --SPMR --keep-dup all");
@@ -71,18 +82,7 @@ sub getConfig {
   $def = initializeDefaultOptions($def);
 
   my $cutrun_type = $def->{cutrun_type};
-  if(!defined $cutrun_type){
-    die "cutrun_type is not defined. It should be either TF or histone.";
-  }else{
-    if($cutrun_type ne "TF" && $cutrun_type ne "histone"){
-      die "cutrun_type should be either TF or histone.";
-    }
-  }
-
   my $frag_120bp = $def->{frag_120bp};
-  if(!defined $frag_120bp){
-    $frag_120bp = $cutrun_type eq "TF" ? 1 : 0;
-  }
 
   my ( $config, $individual_ref, $summary_ref, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
   #merge summary and individual 
@@ -496,7 +496,8 @@ fi
     }
 
     my $homer_findPeaks = "homer_02_findPeaks";
-    my $homer_findPeaks_option = getValue($def, "homer_findPeaks_option", "-style factor -center -size 200 -tbp 0");
+    my $default_findPeaks_option = $cutrun_type eq "TF" ? "-style factor -center -size 200 -tbp 0" : "-style histone -tbp 0 -F 2 -P 0.01";
+    my $homer_findPeaks_option = getValue($def, "homer_findPeaks_option", $default_findPeaks_option);
     $config->{$homer_findPeaks} = {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => "${target_dir}/$homer_findPeaks",
