@@ -266,7 +266,7 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
     source_join_delimiter => " -2 ",
     output_to_same_folder => 0,
     no_output => 1,
-    output_file_ext => "$filtered_suffix.clean.bam,$filtered_suffix.clean.bam.chromosome.count,$filtered_suffix.clean.bam.stat,.$filtered_suffix.clean.tlen.txt,.log,.bowtie2.version",
+    output_file_ext => "$filtered_suffix.clean.bam,$filtered_suffix.clean.bam.chromosome.count,$filtered_suffix.clean.bam.stat,$filtered_suffix.clean.tlen.txt,$filtered_suffix.clean.tlen.txt.png,.log,.bowtie2.version",
     sh_direct             => 0,
     docker_prefix => "cutruntools2_",
     pbs                   => {
@@ -741,10 +741,12 @@ fi
         task_name => getValue($def, "task_name"),
         email => getValue($def, "email"),
         affiliation => getValue($def, "affiliation", ""),
+        cutrun_type => $cutrun_type,
+        frag_120bp => $frag_120bp,
       },
       parameterSampleFile2       => $task_dic,
       parameterSampleFile4_ref   => [keys %$task_dic],
-      parameterSampleFile5_ref   => [keys %$task_dic],
+      parameterSampleFile5_ref   => ["bowtie2", '.png$'],
       sh_direct                  => 1,
       pbs                        => {
         "nodes"     => "1:ppn=1",

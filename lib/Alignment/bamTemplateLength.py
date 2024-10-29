@@ -1,6 +1,7 @@
 import pysam
 import argparse
 import logging
+import matplotlib.pyplot as plt
 
 DEBUG = False
 NOT_DEBUG= not DEBUG
@@ -46,9 +47,18 @@ with pysam.Samfile(args.input, "rb", check_sq=False) as sam:
     else:
       length_dic[template_length] += 1
 
+sorted_lens = sorted(length_dic.keys())
+sorted_values = [length_dic[l] for l in sorted_lens]
+
 with open(args.output, "wt") as fout:
   fout.write("TLEN\tCount\n")
-  for tlen in sorted(length_dic.keys()):
+  for tlen in sorted_lens:
     fout.write(f"{tlen}\t{length_dic[tlen]}\n")
+
+plt.bar(sorted_lens, sorted_values)
+plt.xlabel('Template length')
+plt.ylabel('Read count')
+plt.title('Template length distribution')
+plt.savefig(args.output + '.png')
 
 logger.info("done")

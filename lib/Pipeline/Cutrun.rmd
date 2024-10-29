@@ -33,9 +33,16 @@ knitr::opts_chunk$set(
 source('reportFunctions.R')
 source('Pipeline.R')
 
-myoptions<-read.table("fileList1.txt", header=FALSE, as.is=TRUE, fill=TRUE, sep="\t")
-myoptions<-split(myoptions$V1, myoptions$V2)
+myoptions_tbl<-read.table("fileList1.txt", header=FALSE, as.is=TRUE, fill=TRUE, sep="\t") |>
+  dplyr::rename("Value"=V1, "Variable"=V2) |>
+  dplyr::select(Variable, Value)
+
+myoptions<-split(myoptions_tbl$Value, myoptions_tbl$Variable)
 task_name = myoptions$task_name
+cutrun_type = myoptions$cutrun_type
+frag_120bp = myoptions$frag_120bp
+
+print_table(myoptions_tbl, round_value=0, byDT=FALSE, row.names=FALSE)
 
 task_df<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
 task_df<-split(task_df$V1, task_df$V2)
@@ -84,6 +91,22 @@ cat("\n\n## Read in Chromosomes\n\n")
 include_graphics(paste0(prefix, ".chromosome.png"))
 cat("\n\n## Read in Samples\n\n")
 include_graphics(paste0(prefix, ".reads.png"))
+
+tlen_df<-read.table("fileList5.txt", sep="\t", header=FALSE, as.is=TRUE)
+tlen_rmd="tlen.rmd"
+tlen_content="\n\n# Template length\n\n"
+tlen_content = paste0(tlen_content, "\n\ncutrun for ", cutrun_type, ", frag_120bp=", frag_120bp, "\n\n")
+
+for (i in 1:nrow(tlen_df)){
+  sample = tlen_df$V2[i]
+  tlen = tlen_df$V1[i]
+  tlen_content = paste0(tlen_content, "\n## ", sample, "\n\n")
+  tlen_content = paste0(tlen_content, getFigure(tlen))
+}
+writeLines(tlen_content, tlen_rmd)
+```
+
+```{r child='tlen.rmd', eval=has_bowtie2_summary}
 ```
 
 ```{r}
