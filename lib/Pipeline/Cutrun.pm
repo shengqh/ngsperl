@@ -70,6 +70,20 @@ sub getConfig {
 
   $def = initializeDefaultOptions($def);
 
+  my $cutrun_type = $def->{cutrun_type};
+  if(!defined $cutrun_type){
+    die "cutrun_type is not defined. It should be either TF or histone.";
+  }else{
+    if($cutrun_type ne "TF" && $cutrun_type ne "histone"){
+      die "cutrun_type should be either TF or histone.";
+    }
+  }
+
+  my $frag_120bp = $def->{frag_120bp};
+  if(!defined $frag_120bp){
+    $frag_120bp = $cutrun_type eq "TF" ? 1 : 0;
+  }
+
   my ( $config, $individual_ref, $summary_ref, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
   #merge summary and individual 
   push @$individual_ref, @$summary_ref;
@@ -86,6 +100,8 @@ sub getConfig {
   #   addFastQC( $config, $def, $summary_ref, $summary_ref, "${trimmomatic_task}_fastqc", [ $trimmomatic_task, ".fastq.gz" ], $preprocessing_dir );
   # }
 
+  my $bamTLEN_script = dirname(__FILE__) . "/../Alignment/bamTemplateLength.py";
+
   my $bowtie2_option = getValue( $def, "bowtie2_option" );
   my $bowtie2_index = getValue( $def, "bowtie2_index" );
 
@@ -96,8 +112,7 @@ sub getConfig {
 
   my $remove_duplicates = getValue( $def, "remove_duplicates", 1 );
   my $sorted_bam = $remove_duplicates ? "__NAME__.rmdup.bam" : "__NAME__.sorted.bam";
-  my $filtered_suffix = $remove_duplicates ? ".rmdup.120bp" : ".120bp";
-  my $filtered_name = "__NAME__" . $filtered_suffix;
+
   my $rmdup_pbs;
   if($remove_duplicates){
     $rmdup_pbs = "
@@ -119,9 +134,38 @@ else
   rm -f __NAME__.rmdup.bam
   exit \$status
 fi
+
+echo index=`date`
+samtools index __NAME__.rmdup.bam
 ";
   }else{
     $rmdup_pbs = "";
+  }
+
+  my $filtered_suffix = $remove_duplicates ? ".rmdup" : "";
+  my $filtered_name = "__NAME__" . $filtered_suffix;
+  my $frag_120bp_pbs = "";
+
+  if($frag_120bp){
+    $filtered_suffix = $remove_duplicates ? ".rmdup.120bp" : ".120bp";
+    $filtered_name = "__NAME__" . $filtered_suffix;
+    $frag_120bp_pbs = "
+echo filter_120bp=`date`
+samtools view -h $sorted_bam | LC_ALL=C awk -f $awk1 | samtools view -Sb - > $filtered_name.bam
+
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  touch $filtered_name.succeed
+  rm $sorted_bam
+else
+  echo \$status > $filtered_name.failed
+  rm -f $filtered_name.bam
+  exit \$status
+fi
+
+echo index=`date`
+samtools index $filtered_name.bam
+";  
   }
 
   my $remove_chromosome = getValue( $def, "remove_chromosome", "chrM" );
@@ -188,21 +232,7 @@ samtools index __NAME__.sorted.bam
 
 $rmdup_pbs
 
-echo filter_120bp=`date`
-samtools view -h $sorted_bam | LC_ALL=C awk -f $awk1 | samtools view -Sb - > $filtered_name.bam
-
-status=\$?
-if [[ \$status -eq 0 ]]; then
-  touch $filtered_name.succeed
-  rm $sorted_bam
-else
-  echo \$status > $filtered_name.failed
-  rm -f $filtered_name.bam
-  exit \$status
-fi
-
-echo index=`date`
-samtools index $filtered_name.bam
+$frag_120bp_pbs
 
 echo clean_chromosome=`date`
 samtools idxstats $filtered_name.bam | cut -f 1 $remove_chromosome $keep_chromosome | xargs samtools view -b -o $filtered_name.clean.bam $filtered_name.bam
@@ -226,6 +256,9 @@ samtools idxstats $filtered_name.clean.bam $remove_chromosome $keep_chromosome >
 echo flagstat=`date`
 samtools flagstat $filtered_name.clean.bam > $filtered_name.clean.bam.stat 
 
+echo tlen=`date`
+python $bamTLEN_script -i $filtered_name.clean.bam -o $filtered_name.clean.tlen.txt
+
 bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{print \"bowtie2,v\"\$1}' > __NAME__.bowtie2.version
 
 ",
@@ -233,7 +266,7 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
     source_join_delimiter => " -2 ",
     output_to_same_folder => 0,
     no_output => 1,
-    output_file_ext => "$filtered_suffix.clean.bam,$filtered_suffix.clean.bam.chromosome.count,$filtered_suffix.clean.bam.stat,.log,.bowtie2.version",
+    output_file_ext => "$filtered_suffix.clean.bam,$filtered_suffix.clean.bam.chromosome.count,$filtered_suffix.clean.bam.stat,.$filtered_suffix.clean.tlen.txt,.log,.bowtie2.version",
     sh_direct             => 0,
     docker_prefix => "cutruntools2_",
     pbs                   => {
@@ -710,6 +743,7 @@ fi
       },
       parameterSampleFile2       => $task_dic,
       parameterSampleFile4_ref   => [keys %$task_dic],
+      parameterSampleFile5_ref   => [keys %$task_dic],
       sh_direct                  => 1,
       pbs                        => {
         "nodes"     => "1:ppn=1",
