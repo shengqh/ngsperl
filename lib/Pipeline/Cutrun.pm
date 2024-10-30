@@ -266,7 +266,7 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
     source_join_delimiter => " -2 ",
     output_to_same_folder => 0,
     no_output => 1,
-    output_file_ext => "$filtered_suffix.clean.bam,$filtered_suffix.clean.bam.chromosome.count,$filtered_suffix.clean.bam.stat,$filtered_suffix.clean.tlen.txt,$filtered_suffix.clean.tlen.txt.png,.log,.bowtie2.version",
+    output_file_ext => "$filtered_suffix.clean.bam,$filtered_suffix.clean.bam.chromosome.count,$filtered_suffix.clean.bam.stat,.log,.bowtie2.version,$filtered_suffix.clean.tlen.txt,$filtered_suffix.clean.tlen.txt.png",
     sh_direct             => 0,
     docker_prefix => "cutruntools2_",
     pbs                   => {
@@ -453,7 +453,7 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
       program => "",
       check_program => 0,
       option     => "
-rm -f __NAME__.failed __NAME__.makeTagDirectory.failed __NAME__.makeTagDirectory.succeed
+rm -rf __NAME__.failed __NAME__.makeTagDirectory.failed __NAME__.makeTagDirectory.succeed
 
 makeTagDirectory __NAME__ $homer_makeTagDirectory_option __FILE__
 
