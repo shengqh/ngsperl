@@ -458,7 +458,7 @@ rm -f __NAME__.failed __NAME__.makeTagDirectory.failed __NAME__.makeTagDirectory
 makeTagDirectory __NAME__ $homer_makeTagDirectory_option __FILE__
 
 status=\$?
-if [[ \$status -eq 0 ]]; then
+if [[ \$status -eq 0 && -s __NAME__/tagAutocorrelation.txt ]]; then
   touch __NAME__.makeTagDirectory.succeed
 else
   echo \$status > __NAME__.makeTagDirectory.failed
@@ -505,15 +505,22 @@ fi
       program => "",
       check_program => 0,
       option => "
+if [[ ! -s __FILE__ ]]; then
+  touch __NAME__.findPeaks.failed
+  rm -f __NAME__.findPeaks.succeed
+  exit 1
+fi
+
 findPeaks __FILE__ $homer_findPeaks_option $control_option -o tmp.__NAME__.peaks.txt
 
 status=\$?
 if [[ \$status -eq 0 ]]; then
+  rm -f __NAME__.findPeaks.failed
   touch __NAME__.findPeaks.succeed
   mv tmp.__NAME__.peaks.txt __NAME__.peaks.txt
 else
   echo \$status > __NAME__.findPeaks.failed
-  rm -f tmp.__NAME__.peaks.txt
+  rm -f tmp.__NAME__.peaks.txt __NAME__.findPeaks.succeed
 fi
 ",
       source_ref => "tag_treatments",
@@ -607,7 +614,12 @@ mergePeaks $homer_mergePeaks_option \\
   -matrix __NAME__ \\
   -venn __NAME__.venn.txt > tmp.__NAME__.all_dGiven.peaks.txt
 
-status=\$?
+if [[ \$(wc -l <tmp.__NAME__.all_dGiven.peaks.txt) -ge 2 ]]; then
+  export status=0
+else
+  export status=1
+fi
+
 if [[ \$status -ne 0 ]]; then
   echo \$status > __NAME__.mergePeaks.failed
   rm -f tmp.__NAME__.all_dGiven.peaks.txt __NAME__.mergePeaks.succeed
