@@ -55,10 +55,10 @@ with open(args.output, "wt") as fout:
   for tlen in sorted_lens:
     fout.write(f"{tlen}\t{length_dic[tlen]}\n")
 
+plt.rcParams["figure.figsize"] = (7, 4)
 plt.bar(sorted_lens, sorted_values)
-plt.xlabel('Template length')
+plt.xlabel('Template length of primary mapped reads')
 plt.ylabel('Read count')
-plt.title('Template length distribution')
-plt.savefig(args.output + '.png')
+plt.savefig(args.output + '.png', dpi=300)
 
 logger.info("done")
