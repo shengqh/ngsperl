@@ -3422,10 +3422,10 @@ sub add_cellbender_v2 {
 expected_cells=`cat __FILE2__`
 echo expected_cells=\$expected_cells
 
-if [[ __FILE2__ < 1000 ]]; then
+if [[ \$expected_cells -lt 1000 ]]; then
   total_droplets_included=\$((\$expected_cells+2000))
 else
-  if [[ __FILE2__ < 5000 ]]; then
+  if [[ \$expected_cells -lt 5000 ]]; then
     total_droplets_included=\$((\$expected_cells+5000))
   else
     total_droplets_included=\$((\$expected_cells+10000))
@@ -3436,13 +3436,12 @@ echo total_droplets_included=\$total_droplets_included
 cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
 
 rm -f ckpt.tar.gz
-
-#__OUTPUT__
 ",
     docker_prefix => "cellbender_",
     parameterSampleFile1_ref => $raw_files_def,
     parameterSampleFile2_ref => $expect_cells_task,
     output_to_same_folder => 0,
+    no_output => 1,
     output_file_ext => ".cellbender_filtered.h5",
     pbs => {
       "nodes"    => "1:ppn=$cellbender_cpu",
@@ -3489,23 +3488,26 @@ sub add_cellbender {
 expected_cells=__FILE2__
 echo expected_cells=\$expected_cells
 
-if [[ __FILE2__ < 5000 ]]; then
-  total_droplets_included=\$((__FILE2__+5000))
+if [[ \$expected_cells -lt 1000 ]]; then
+  total_droplets_included=\$((\$expected_cells+2000))
 else
-  total_droplets_included=\$((__FILE2__+10000))
+  if [[ \$expected_cells -lt 5000 ]]; then
+    total_droplets_included=\$((\$expected_cells+5000))
+  else
+    total_droplets_included=\$((\$expected_cells+10000))
+  fi
 fi
 echo total_droplets_included=\$total_droplets_included
 
 cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
 
 rm -f ckpt.tar.gz
-
-#__OUTPUT__
 ",
     docker_prefix => "cellbender_",
     parameterSampleFile1_ref => $files_def,
     parameterSampleFile2 => getValue($def, "cellbender_expect_count"),
     output_to_same_folder => 0,
+    no_output => 1,
     output_file_ext => ".cellbender_filtered.h5",
     pbs => {
       "nodes"    => "1:ppn=$cellbender_cpu",
