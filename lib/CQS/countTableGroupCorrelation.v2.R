@@ -61,8 +61,12 @@ pca_point_size=to_numeric(myoptions$pca_point_size, 3)
 
 heatmap_add_width_inch=to_numeric(myoptions$heatmap_add_width_inch, 2)
 heatmap_add_height_inch=to_numeric(myoptions$heatmap_add_height_inch, 0)
+
 heatmap_column_names_max_height_cm=to_numeric(myoptions$heatmap_column_names_max_height_cm, 4)
 column_names_max_height=unit(heatmap_column_names_max_height_cm, "cm")
+
+heatmap_column_names_group_max_height_cm=to_numeric(myoptions$heatmap_column_names_group_max_height_cm, 4)
+column_names_group_max_height=unit(heatmap_column_names_group_max_height_cm, "cm")
 
 heatmap_legend_label_fontsize=to_numeric(myoptions$heatmap_legend_label_fontsize, 18)
 heatmap_column_name_fontsize=to_numeric(myoptions$heatmap_column_name_fontsize, 18)
@@ -723,7 +727,8 @@ for (i in 1:nrow(countTableFileAll)) {
                           show_column_names=TRUE,
                           show_row_dend=FALSE,
                           column_names_gp = column_names_gp,
-                          legend_gp = legend_label_gp
+                          legend_gp = legend_label_gp,
+                          column_names_max_height = column_names_group_max_height
                           )
 
         cat("Doing correlation analysis of groups ...\n")
@@ -755,7 +760,8 @@ for (i in 1:nrow(countTableFileAll)) {
                           show_row_names=TRUE, 
                           show_column_names=TRUE,
                           column_names_gp = column_names_gp,
-                          legend_gp = legend_label_gp
+                          legend_gp = legend_label_gp,
+                          column_names_max_height = column_names_group_max_height
                           )
       }
     } else {

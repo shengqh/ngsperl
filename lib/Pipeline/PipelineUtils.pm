@@ -604,6 +604,7 @@ sub addDEseq2 {
       "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
       "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
       "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 4),
+      "heatmap_column_names_group_max_height_cm" => getValue($def, "heatmap_column_names_group_max_height_cm", 4),
       "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
       "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18),
       "n_first" => $n_first,
@@ -2453,7 +2454,7 @@ sub addStarFeaturecount {
     $bam_validation_ref = $star_task . "_bam_validation";
   }
   
-  add_alignment_summary($config, $def, $summary, $target_dir, "${star_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png;.chromosome.csv;.chromosome.png", [ $star_task, "_Log.final.out" ], [ $star_task, ".count.summary" ], [$star_task, ".chromosome.count"], $bam_validation_ref, [$star_task, '^(?!.*\.chromosome\.count).*\.count$'] );
+  add_alignment_summary($config, $def, $summary, $target_dir, "${star_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png;.chromosome.csv;.chromosome.png,.gene.count.csv,.gene.count.png", [ $star_task, "_Log.final.out" ], [ $star_task, ".count.summary" ], [$star_task, ".chromosome.count"], $bam_validation_ref, [$star_task, '^(?!.*\.chromosome\.count).*\.count$'] );
 
   return($star_task);
 };
