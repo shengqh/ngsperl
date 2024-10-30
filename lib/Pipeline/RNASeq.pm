@@ -1343,6 +1343,11 @@ fi
       push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
     }
 
+    if ( defined $config->{fastqc_count_vis} ){
+      push( @report_files, "fastqc_count_vis",                   ".countInFastQcVis.Result.png" );
+      push( @report_names, "fastqc_post_trim_reads" );
+    }
+
     if ( defined $config->{star_featurecount_summary} ) {
       push( @report_files, "star_featurecount_summary", ".STARSummary.csv.png" );
       push( @report_files, "star_featurecount_summary", ".STARSummary.csv\$" );
@@ -1355,6 +1360,10 @@ fi
       push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv.png\$" );
       push( @report_files, "star_featurecount_summary", ".FeatureCountSummary.csv\$" );
       push( @report_names, "featureCounts_table_png",   "featureCounts_table" );
+
+      push( @report_files, "star_featurecount_summary", ".gene.count.png\$" );
+      push( @report_files, "star_featurecount_summary", ".gene.count.csv\$" );
+      push( @report_names, "featureCounts_gene_png",   "featureCounts_gene_table" );
     }
 
     if ( defined $config->{star_summary} ) {
