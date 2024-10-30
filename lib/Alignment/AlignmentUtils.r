@@ -136,3 +136,41 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA, remov
     draw_figure(final, paste0(chromosomeFilePrefix, ".png"))
   }
 }
+
+draw_gene_count<-function(listFile, outFilePrefix) {
+  filelist = read.table(listFile, sep="\t", header=F, stringsAsFactors = F)
+
+  filelist$size=file.info(filelist$V1)$size
+
+  missing = filelist$V1[is.na(filelist$size) | filelist$size==0]
+  filelist=filelist[!(filelist$V1 %in% missing),]
+
+  final=NULL
+  i=1
+  for(i in c(1:nrow(filelist))){
+    filename = filelist$V2[i]
+    filelocation =filelist$V1[i]
+
+    if(!file.exists(filelocation)){
+      missing = c(missing, filelocation)
+      next
+    }
+
+    cat("reading", filelocation, "\n")
+    subdata = fread(filelocation, data.table=FALSE)
+    detected_gene = sum(subdata[,ncol(subdata)] > 0)
+
+    final=rbind(final, data.frame("Sample"=filename, "GeneCount"=detected_gene))
+  }
+
+  write.csv(final, paste0(outFilePrefix, ".csv"), row.names=FALSE)
+
+  g<-ggplot(final, aes(x=Sample, y=GeneCount)) + 
+    geom_bar(stat="identity", width=0.5) + 
+    ylab("Number of gene") +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
+          axis.title.x = element_blank())
+
+  ggsave(paste0(outFilePrefix, ".png"), g, width=max(3, nrow(final)/4), height=4, units="in", dpi=300, bg="white")
+}

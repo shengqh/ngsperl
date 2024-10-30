@@ -125,9 +125,9 @@ if (parSampleFile2 != ''){
   ggsave(file=paste0(outputPrefix, ".csv.png"), height=5, width=width, dpi=300, bg="white", limitsize = FALSE)
 }
 
-
 if(exists('parSampleFile5')){
   draw_chromosome_count(parSampleFile5, paste0(outFile, ".gene"))
+  draw_gene_count(listFile=parSampleFile5, outFilePrefix=paste0(outFile, ".gene.count"))
   if(exists('parSampleFile6')){
     opt = read.table(parSampleFile6, sep="\t", header=F, stringsAsFactors = F)
     remove_chrM_genes = opt$V1[1] == "1"
