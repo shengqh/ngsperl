@@ -777,8 +777,8 @@ fi
   if ($def->{perform_target_coverage}){
     my $script = dirname(__FILE__) . "/../GATK4/fixCollectHsMetrics.py";
     my $target_coverage_task = $bam_input . "_target_coverage";
-    my $bait_intervals = getValue($def, "bait_intervals_file");
     my $target_intervals = getValue($def, "target_intervals_file");
+    my $bait_intervals = getValue($def, "bait_intervals_file", $target_intervals);
     $config->{$target_coverage_task} = {
       class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
