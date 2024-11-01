@@ -54,13 +54,24 @@ has_fastqc_trimmed="trimmomatic_fastqc_summary" %in% names(task_df)
 has_bowtie2_summary="bowtie2_summary" %in% names(task_df)
 
 has_macs2_narrow_count="macs2_narrow_count" %in% names(task_df)
-has_macs2_narrow_homer_annotation="has_macs2_narrow_homer_annotation" %in% names(task_df)
+has_macs2_narrow_homer_motif="has_macs2_narrow_homer_motif" %in% names(task_df)
 
 has_macs2_broad_count="macs2_broad_count" %in% names(task_df)
-has_macs2_broad_homer_annotation="macs2_broad_homer_annotation" %in% names(task_df)
+has_macs2_broad_homer_motif="macs2_broad_homer_motif" %in% names(task_df)
 
-has_homer_03_mergePeaks_count="homer_03_mergePeaks_count" %in% names(task_df)
-has_homer_04_motif="homer_04_motif" %in% names(task_df)
+if ("homer_02_findPeaks_count" %in% names(task_df)){
+  task_df$homer_count = task_df$homer_02_findPeaks_count
+}else if ("homer_03_mergePeaks_count" %in% names(task_df)){
+  task_df$homer_count = task_df$homer_03_mergePeaks_count
+}
+has_homer_count="homer_count" %in% names(task_df)
+
+if("homer_03_motif" %in% names(task_df)){
+  task_df$homer_motif = task_df$homer_03_motif
+}else if("homer_04_motif" %in% names(task_df)){
+  task_df$homer_motif = task_df$homer_04_motif
+}
+has_homer_motif="homer_motif" %in% names(task_df)
 
 has_bamplot="bamplot" %in% names(task_df)
 ```
@@ -131,8 +142,8 @@ if(has_macs2_broad_count){
   peak_count = add_peak_count(peak_count, task_name, task_df$macs2_broad_count, "macs2 broad")
 }
 
-if(has_homer_03_mergePeaks_count){
-  peak_count = add_peak_count(peak_count, task_name, task_df$homer_03_mergePeaks_count, "homer callPeaks")
+if(has_homer_count){
+  peak_count = add_peak_count(peak_count, task_name, task_df$homer_count, "homer callPeaks")
 }
 
 if(!is.null(peak_count)){
@@ -162,7 +173,7 @@ writeLines(rmd_content, rmd_file)
 show_homer<-function(task_df, homer_task, homer_name) {
   homer_folder = task_df[[homer_task]]
 
-  cat("#", homer_name, "\n")
+  cat("#", homer_name, " (Top 5 of each sample)\n")
   dirs <- paste0(list.dirs(paste0(homer_folder, "/result"), full.names=T, recursive=F), "/knownResults")
 
   res_table <- data.frame()
@@ -170,10 +181,15 @@ show_homer<-function(task_df, homer_task, homer_name) {
   for (i in 1:length(dirs)){
     curdir = dirs[i]
     knownRes_file <- paste0(curdir, ".txt")
+
+    if(!file.exists(knownRes_file)){
+      cat("\n\n<mark>No known motifs file found in ", basename(dirname(curdir)), ".</mark>\n\n")
+      next
+    }
     res_txt <- fread(knownRes_file, header=T, nrows=5, data.table=F)
     sample=basename(dirname(curdir))
     res_txt$Sample=sample
-    res_txt$Motif=""
+    res_txt$Motif="Not significant"
 
     for (j in 1:nrow(res_txt)) {
       svgfile = paste0(curdir, "/known", j, ".logo.svg")
@@ -198,23 +214,24 @@ show_homer<-function(task_df, homer_task, homer_name) {
   print(kable(tab, caption= tabRef(homer_task, "Homer annotation for peaks"), escape = F) %>%
       kable_styling() %>%
       htmltools::HTML())
+  #cat("\n\n**The entries without motif logo are not significant.**\n\n")
 }
 ```
 
-```{r,echo=FALSE,results='asis', eval = has_macs2_broad_homer_annotation}
-homer_task = "macs2_broad_homer_annotation"
+```{r,echo=FALSE,results='asis', eval = has_macs2_broad_homer_motif}
+homer_task = "macs2_broad_homer_motif"
 homer_name = "MACS2 Broad Peaks - Homer Motif Enrichment"
 show_homer(task_df, homer_task, homer_name)
 ```
 
-```{r,echo=FALSE,results='asis', eval = has_macs2_narrow_homer_annotation}
-homer_task = "macs2_narrow_homer_annotation"
+```{r,echo=FALSE,results='asis', eval = has_macs2_narrow_homer_motif}
+homer_task = "macs2_narrow_homer_motif"
 homer_name = "MACS2 Narrow Peaks - Homer Motif Enrichment"
 show_homer(task_df, homer_task, homer_name)
 ```
 
-```{r,echo=FALSE,results='asis', eval = has_homer_04_motif}
-homer_task = "homer_04_motif"
+```{r,echo=FALSE,results='asis', eval = has_homer_motif}
+homer_task = "homer_motif"
 homer_name = "Homer Peaks - Homer Motif Enrichment"
 show_homer(task_df, homer_task, homer_name)
 ``` 

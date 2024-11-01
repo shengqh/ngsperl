@@ -495,6 +495,9 @@ fi
       $control_def = "tag_controls";
     }
 
+    my $homer_genome = getValue($def, "homer_genome");
+    my $rename_2_py = dirname(__FILE__) . "/../Homer/rename_annotate_peaks_path.py";
+
     my $homer_findPeaks = "homer_02_findPeaks";
     my $default_findPeaks_option = $cutrun_type eq "TF" ? "-style factor -center -size 200 -tbp 0" : "-style histone -tbp 0 -F 2 -P 0.01";
     my $homer_findPeaks_option = getValue($def, "homer_findPeaks_option", $default_findPeaks_option);
@@ -518,14 +521,29 @@ if [[ \$status -eq 0 ]]; then
   rm -f __NAME__.findPeaks.failed
   touch __NAME__.findPeaks.succeed
   mv tmp.__NAME__.peaks.txt __NAME__.peaks.txt
+
+  grep -v '^#' __NAME__.peaks.txt | awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}'  > __NAME__.peaks.bed
+
+  echo annotatePeaks_raw=`date`
+  annotatePeaks.pl __NAME__.peaks.txt \\
+    $homer_genome -raw -d \\
+    __FILE2__ > __NAME__.peaks.raw.txt
+
+  echo annotatePeaks_rpkm=`date`
+  annotatePeaks.pl __NAME__.peaks.txt \\
+    $homer_genome -fpkm -d \\
+    __FILE2__ > __NAME__.peaks.fpkm.txt
+
+  python $rename_2_py __NAME__.peaks.raw.txt __NAME__.peaks.fpkm.txt  
 else
   echo \$status > __NAME__.findPeaks.failed
   rm -f tmp.__NAME__.peaks.txt __NAME__.findPeaks.succeed
 fi
+
 ",
       source_ref => "tag_treatments",
       parameterSampleFile2_ref => $control_def,
-      output_file_ext => ".peaks.txt",
+      output_file_ext => ".peaks.txt,.peaks.bed,.peaks.raw.txt,.peaks.fpkm.txt",
       output_to_same_folder => 1,
       can_result_be_empty_file => 0,
       no_output => 1,
@@ -538,149 +556,162 @@ fi
     },
     push @$summary_ref, ($homer_findPeaks);
 
-    my $homer_genome = getValue($def, "homer_genome");
-    my $rename_1_py = dirname(__FILE__) . "/../Homer/rename_find_peaks_path.py";
-    my $rename_2_py = dirname(__FILE__) . "/../Homer/rename_annotate_peaks_path.py";
-    my $homer_mergePeaks = "homer_03_mergePeaks";
-    my $homer_mergePeaks_option = getValue($def, "homer_mergePeaks_option", "-d given");
+    my $call_task;
+    my $count_task;
+    my $homer_motif;
 
-    my $homer_mergePeaks_groups;
-    if($def->{homer_mergePeaks_groups_pattern}){
-      my $gpattern = $def->{homer_mergePeaks_groups_pattern};
-      $homer_mergePeaks_groups = {};
-      my $treatments = $def->{treatments};
-      for my $samplename (keys %$treatments){
-        my $groupname = $samplename;
-        if($samplename =~ /$gpattern/){
-          $groupname = $1;
-          if(defined $2){
-            $groupname = $groupname . $2;
-          }
-          if(defined $3){
-            $groupname = $groupname . $3;
-          }
-          #print($groupname . " : " . $samplename . "\n");
-          if (not defined $homer_mergePeaks_groups->{$groupname}){
-            $homer_mergePeaks_groups->{$groupname} = [$samplename];
-          }
-          else{
-            my $samples = $homer_mergePeaks_groups->{$groupname};
-            push (@$samples, $samplename);
+    if(getValue($def, "perform_homer_mergePeaks", 1)){
+      my $rename_1_py = dirname(__FILE__) . "/../Homer/rename_find_peaks_path.py";
+      my $homer_mergePeaks = "homer_03_mergePeaks";
+      my $homer_mergePeaks_option = getValue($def, "homer_mergePeaks_option", "-d given");
+
+      my $homer_mergePeaks_groups;
+      if($def->{homer_mergePeaks_groups_pattern}){
+        my $gpattern = $def->{homer_mergePeaks_groups_pattern};
+        $homer_mergePeaks_groups = {};
+        my $treatments = $def->{treatments};
+        for my $samplename (keys %$treatments){
+          my $groupname = $samplename;
+          if($samplename =~ /$gpattern/){
+            $groupname = $1;
+            if(defined $2){
+              $groupname = $groupname . $2;
+            }
+            if(defined $3){
+              $groupname = $groupname . $3;
+            }
+            #print($groupname . " : " . $samplename . "\n");
+            if (not defined $homer_mergePeaks_groups->{$groupname}){
+              $homer_mergePeaks_groups->{$groupname} = [$samplename];
+            }
+            else{
+              my $samples = $homer_mergePeaks_groups->{$groupname};
+              push (@$samples, $samplename);
+            }
           }
         }
+      }elsif($def->{homer_mergePeaks_groups}){
+        $homer_mergePeaks_groups = $def->{homer_mergePeaks_groups};
+      }else{
+        $homer_mergePeaks_groups = {};
+        my $treatments = $def->{treatments};
+        $homer_mergePeaks_groups->{$def->{task_name}} = [sort keys %$treatments];
       }
-    }elsif($def->{homer_mergePeaks_groups}){
-      $homer_mergePeaks_groups = $def->{homer_mergePeaks_groups};
-    }else{
-      $homer_mergePeaks_groups = {};
+      $config->{homer_merge_groups} = {
+        class => "CQS::GroupPickTask",
+        source_ref => [$homer_findPeaks, ".peaks.txt"],
+        groups => $homer_mergePeaks_groups,
+        return_all => 1,
+      };
+
+      my $homer_merge_peaks_tag_groups = {};
       my $treatments = $def->{treatments};
-      $homer_mergePeaks_groups->{$def->{task_name}} = [sort keys %$treatments];
-    }
-    $config->{homer_merge_groups} = {
-      class => "CQS::GroupPickTask",
-      source_ref => $homer_findPeaks,
-      groups => $homer_mergePeaks_groups,
-      return_all => 1,
-    };
-
-    my $homer_merge_peaks_tag_groups = {};
-    my $treatments = $def->{treatments};
-    for my $group_name (keys %$homer_mergePeaks_groups){
-      my $treatment_names = $homer_mergePeaks_groups->{$group_name};
-      my $sample_names = [];
-      for my $treatment_name (@$treatment_names){
-        my $sample_name = $treatments->{$treatment_name}->[0];
-        push @$sample_names, $sample_name;
+      for my $group_name (keys %$homer_mergePeaks_groups){
+        my $treatment_names = $homer_mergePeaks_groups->{$group_name};
+        my $sample_names = [];
+        for my $treatment_name (@$treatment_names){
+          my $sample_name = $treatments->{$treatment_name}->[0];
+          push @$sample_names, $sample_name;
+        }
+        $homer_merge_peaks_tag_groups->{$group_name} = $sample_names;
       }
-      $homer_merge_peaks_tag_groups->{$group_name} = $sample_names;
-    }
-    $config->{homer_merge_tag_groups} = {
-      class => "CQS::GroupPickTask",
-      source_ref => $homer_makeTagDirectory,
-      groups => $homer_merge_peaks_tag_groups,
-      return_all => 1,
-    };
+      $config->{homer_merge_tag_groups} = {
+        class => "CQS::GroupPickTask",
+        source_ref => $homer_makeTagDirectory,
+        groups => $homer_merge_peaks_tag_groups,
+        return_all => 1,
+      };
 
-    $config->{$homer_mergePeaks} = {
-      class => "CQS::ProgramWrapperOneToOne",
-      target_dir => "${target_dir}/$homer_mergePeaks",
-      interpretor => "",
-      program => "",
-      check_program => 0,
-      option => "
-echo mergePeaks=`date`
-mergePeaks $homer_mergePeaks_option \\
-  __FILE__ \\
-  -matrix __NAME__ \\
-  -venn __NAME__.venn.txt > tmp.__NAME__.all_dGiven.peaks.txt
+      $config->{$homer_mergePeaks} = {
+        class => "CQS::ProgramWrapperOneToOne",
+        target_dir => "${target_dir}/$homer_mergePeaks",
+        interpretor => "",
+        program => "",
+        check_program => 0,
+        option => "
+  echo mergePeaks=`date`
+  mergePeaks $homer_mergePeaks_option \\
+    __FILE__ \\
+    -matrix __NAME__ \\
+    -venn __NAME__.venn.txt > tmp.__NAME__.all_dGiven.peaks.txt
 
-if [[ \$(wc -l <tmp.__NAME__.all_dGiven.peaks.txt) -ge 2 ]]; then
-  export status=0
-else
-  export status=1
-fi
+  if [[ \$(wc -l <tmp.__NAME__.all_dGiven.peaks.txt) -ge 2 ]]; then
+    export status=0
+  else
+    export status=1
+  fi
 
-if [[ \$status -ne 0 ]]; then
-  echo \$status > __NAME__.mergePeaks.failed
-  rm -f tmp.__NAME__.all_dGiven.peaks.txt __NAME__.mergePeaks.succeed
-else
-  touch __NAME__.mergePeaks.succeed
-  rm -f __NAME__.mergePeaks.failed
-  mv tmp.__NAME__.all_dGiven.peaks.txt __NAME__.all_dGiven.peaks.txt
+  if [[ \$status -ne 0 ]]; then
+    echo \$status > __NAME__.mergePeaks.failed
+    rm -f tmp.__NAME__.all_dGiven.peaks.txt __NAME__.mergePeaks.succeed
+  else
+    touch __NAME__.mergePeaks.succeed
+    rm -f __NAME__.mergePeaks.failed
+    mv tmp.__NAME__.all_dGiven.peaks.txt __NAME__.all_dGiven.peaks.txt
 
-  echo rename_names=`date`
-  python $rename_1_py \\
-    __NAME__.all_dGiven.peaks.txt \\
-    __NAME__.venn.txt \\
-    __NAME__.count.matrix.txt \\
-    __NAME__.logPvalue.matrix.txt \\
-    __NAME__.logRatio.matrix.txt
+    echo rename_names=`date`
+    python $rename_1_py \\
+      __NAME__.all_dGiven.peaks.txt \\
+      __NAME__.venn.txt \\
+      __NAME__.count.matrix.txt \\
+      __NAME__.logPvalue.matrix.txt \\
+      __NAME__.logRatio.matrix.txt
 
-  awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}' __NAME__.all_dGiven.peaks.txt > __NAME__.all_dGiven.peaks.bed
+    awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}' __NAME__.all_dGiven.peaks.txt > __NAME__.all_dGiven.peaks.bed
 
-  echo annotatePeaks_raw=`date`
-  annotatePeaks.pl __NAME__.all_dGiven.peaks.txt \\
-    $homer_genome -raw -d \\
-    __FILE2__ > __NAME__.all_dGiven.peaks.raw.txt
+    echo annotatePeaks_raw=`date`
+    annotatePeaks.pl __NAME__.all_dGiven.peaks.txt \\
+      $homer_genome -raw -d \\
+      __FILE2__ > __NAME__.all_dGiven.peaks.raw.txt
 
-  echo annotatePeaks_rpkm=`date`
-  annotatePeaks.pl __NAME__.all_dGiven.peaks.txt \\
-    $homer_genome -fpkm -d \\
-    __FILE2__ > __NAME__.all_dGiven.peaks.fpkm.txt
+    echo annotatePeaks_rpkm=`date`
+    annotatePeaks.pl __NAME__.all_dGiven.peaks.txt \\
+      $homer_genome -fpkm -d \\
+      __FILE2__ > __NAME__.all_dGiven.peaks.fpkm.txt
 
-  python $rename_2_py __NAME__.all_dGiven.peaks.raw.txt __NAME__.all_dGiven.peaks.fpkm.txt  
-fi
-",
-      source_ref => "homer_merge_groups",
-      source_join_delimiter => " \\\n  ",
-      source_type => "array",
-      parameterSampleFile2_ref => "homer_merge_tag_groups",
-      parameterSampleFile2_join_delimiter => " \\\n  ",
-      parameterSampleFile2_type => "array",
-      output_arg => "",
-      output_file_ext => ".all_dGiven.peaks.txt",
-      output_other_ext => ".all_dGiven.peaks.bed,.all_dGiven.peaks.fpkm.txt",
-      output_to_same_folder => 1,
-      can_result_be_empty_file => 0,
-      no_output => 1,
-      sh_direct => 1,
-      pbs => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
+    python $rename_2_py __NAME__.all_dGiven.peaks.raw.txt __NAME__.all_dGiven.peaks.fpkm.txt  
+  fi
+  ",
+        source_ref => "homer_merge_groups",
+        source_join_delimiter => " \\\n  ",
+        source_type => "array",
+        parameterSampleFile2_ref => "homer_merge_tag_groups",
+        parameterSampleFile2_join_delimiter => " \\\n  ",
+        parameterSampleFile2_type => "array",
+        output_arg => "",
+        output_file_ext => ".all_dGiven.peaks.txt",
+        output_other_ext => ".all_dGiven.peaks.bed,.all_dGiven.peaks.fpkm.txt",
+        output_to_same_folder => 1,
+        can_result_be_empty_file => 0,
+        no_output => 1,
+        sh_direct => 1,
+        pbs => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "1",
+          "mem"       => "10gb"
+        },
       },
-    },
-    push @$summary_ref, ($homer_mergePeaks);
+      push @$summary_ref, ($homer_mergePeaks);
 
-    add_peak_count($config, $def, $summary_ref, $target_dir, $homer_mergePeaks . "_count", $homer_mergePeaks);
+      $count_task = $homer_mergePeaks . "_count";
+      add_peak_count($config, $def, $summary_ref, $target_dir, $count_task, $homer_mergePeaks);
+      
+      $homer_motif = "homer_04_motif";
+      $call_task = $homer_mergePeaks;
+    }else{
+      $count_task = $homer_findPeaks . "_count";
+      add_peak_count($config, $def, $summary_ref, $target_dir, $count_task, $homer_findPeaks);
 
-    my $homer_motif = "homer_04_motif";
-    addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $homer_mergePeaks, ".bed", $homer_motif );
+      $homer_motif = "homer_03_motif";
+      $call_task = $homer_findPeaks;
+    }
+
+    addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $call_task, ".bed", $homer_motif );
   }
 
   if(defined $peak_calling_task){
     if ( getValue( $def, "perform_homer" ) ) {
-      my $homer = addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $peak_calling_task, ".bed" );
+      my $homer = addHomerAnnotation( $config, $def, $summary_ref, $target_dir, $peak_calling_task, ".bed", $peak_calling_task . "_homer_motif" );
     }
 
     if($def->{annotate_nearest_gene}){
@@ -688,7 +719,6 @@ fi
       add_nearest_gene($config, $def, $summary_ref, $target_dir, $peak_calling_task, ".bed", $gene_bed);
     }
   }
-
 
   if ($def->{perform_bamplot}){
     defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
@@ -718,20 +748,28 @@ fi
       $task_dic->{macs2_broad_count} = $config->{macs2_broad_count}{target_dir};
     }
 
-    if($config->{macs2_broad_homer_annotation}){
-      $task_dic->{macs2_broad_homer_annotation} = $config->{macs2_broad_homer_annotation}{target_dir};
+    if($config->{macs2_broad_homer_motif}){
+      $task_dic->{macs2_broad_homer_motif} = $config->{macs2_broad_homer_motif}{target_dir};
     }
 
     if($config->{macs2_narrow_count}){
       $task_dic->{macs2_narrow_count} = $config->{macs2_narrow_count}{target_dir};
     }
 
-    if($config->{macs2_narrow_homer_annotation}){
-      $task_dic->{macs2_narrow_homer_annotation} = $config->{macs2_narrow_homer_annotation}{target_dir};
+    if($config->{macs2_narrow_homer_motif}){
+      $task_dic->{macs2_narrow_homer_motif} = $config->{macs2_narrow_homer_motif}{target_dir};
+    }
+
+    if($config->{homer_02_findPeaks_count}){
+      $task_dic->{homer_02_findPeaks_count} = $config->{homer_02_findPeaks_count}{target_dir};
     }
 
     if($config->{homer_03_mergePeaks_count}){
       $task_dic->{homer_03_mergePeaks_count} = $config->{homer_03_mergePeaks_count}{target_dir};
+    }
+
+    if($config->{homer_03_motif}){
+      $task_dic->{homer_03_motif} = $config->{homer_03_motif}{target_dir};
     }
 
     if($config->{homer_04_motif}){
