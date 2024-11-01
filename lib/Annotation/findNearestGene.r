@@ -38,10 +38,13 @@ for (i in c(1:nrow(files))){
   name = files[i,2]
 
   if(file.size(file) == 0L){
+    cat(file, "is empty, ignored ...\n")
     next
+  }else{
+    cat("reading ", file, " ...\n")
   }
 
-  macsOutput <- toGRanges(file, format="BED", skip=1)
+  macsOutput <- toGRanges(file, format="BED", skip=0)
   annotated <- annotatePeakInBatch(macsOutput, AnnotationData=gene2)
   
   df<-mcols(annotated)
