@@ -85,6 +85,9 @@ sub getConfig {
   my $frag_120bp = $def->{frag_120bp};
 
   my ( $config, $individual_ref, $summary_ref, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
+
+  init_treatments_design_table($def);
+
   #merge summary and individual 
   push @$individual_ref, @$summary_ref;
   $summary_ref = $individual_ref;
@@ -283,7 +286,11 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
 
   my $bam_files = get_result_file($config, $bowtie2_task, ".bam\$");
   my $treatment_samples = do_get_group_samplefile_map(getValue($def, "treatments"), $bam_files);
-  my $control_samples = do_get_group_samplefile_map(getValue($def, "controls"), $bam_files);
+  
+  my $control_samples = undef;
+  if(defined $def->{controls}){
+    $control_samples = do_get_group_samplefile_map(getValue($def, "controls"), $bam_files);
+  }
 
   my $peak_calling_task = undef;
 
