@@ -96,8 +96,6 @@ sub getConfig {
 
   my $genome_sequence = getValue($def, "fasta_file");
 
-  my $trimmomatic_task = $source_ref->[0];
-
   my $bamTLEN_script = dirname(__FILE__) . "/../Alignment/bamTemplateLength.py";
 
   my $bowtie2_option = getValue( $def, "bowtie2_option" );
@@ -260,7 +258,7 @@ python $bamTLEN_script -i $filtered_name.clean.bam -o $filtered_name.clean.tlen.
 bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{print \"bowtie2,v\"\$1}' > __NAME__.bowtie2.version
 
 ",
-    source_ref            => [$trimmomatic_task, ".fastq.gz\$"],
+    source_ref            => $source_ref,
     source_join_delimiter => " -2 ",
     output_to_same_folder => 0,
     no_output => 1,
