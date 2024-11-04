@@ -4090,7 +4090,7 @@ echo v0.36 > __NAME__.trimmomatic.version
     source_ref            => $untrimed_ref,
     source_join_delimiter => " ",
     output_to_same_folder => 0,
-    output_file_ext => ".clipped.1.fastq.gz,.clipped.2.fastq.gz,.trimmomatic.version",
+    output_file_ext => ".clipped.1.fastq.gz,.trimmomatic.version,.clipped.2.fastq.gz",
     sh_direct             => 0,
     no_output             => 1,
     docker_prefix => "cutruntools2_",
