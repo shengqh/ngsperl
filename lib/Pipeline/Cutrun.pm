@@ -96,12 +96,7 @@ sub getConfig {
 
   my $genome_sequence = getValue($def, "fasta_file");
 
-  my $trimmomatic_task = "trimmomatic";
-  add_trimmomatic($config, $def, $summary_ref, $preprocessing_dir, $trimmomatic_task, "${trimmomatic_task}_fastqc", $untrimed_ref);
-
-  # if ( $def->{perform_fastqc} ) {
-  #   addFastQC( $config, $def, $summary_ref, $summary_ref, "${trimmomatic_task}_fastqc", [ $trimmomatic_task, ".fastq.gz" ], $preprocessing_dir );
-  # }
+  my $trimmomatic_task = $source_ref->[0];
 
   my $bamTLEN_script = dirname(__FILE__) . "/../Alignment/bamTemplateLength.py";
 
