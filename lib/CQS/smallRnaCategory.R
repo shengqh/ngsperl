@@ -1,4 +1,27 @@
+rm(list=ls()) 
+outFile='nextflex'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parSampleFile4='fileList4.txt'
+parFile1=''
+parFile2=''
+parFile3=''
+textSize=12;groupTextSize=12;
+
+setwd('/nobackup/vickers_lab/projects/20240201_smallRNA_nextflex_comparison_hg38_byTiger/host_genome/bowtie1_genome_1mm_NTA_smallRNA_category/result')
+
+### Parameter setting end ###
+
+source("countTableVisFunctions.R")
 options(bitmapType='cairo')
+
+option_tbl=fread(parSampleFile4, header=FALSE, data.table=FALSE) |> dplyr::rename(option=2, value=1)
+myoptions=split(option_tbl$value, option_tbl$option)
+color_theme=myoptions$color_theme
+
+host_reads_colors=get_host_reads_colors(color_theme)
+host_smallRNA_colors=get_host_smallRNA_colors(color_theme)
 
 taskName<-outFile
 categoryFileList<-parSampleFile1
@@ -66,19 +89,66 @@ if(!exists("drawInvidividual") || drawInvidividual){
 }
 
 #Pie Chart for Tables
-p1<-ggpieToFile(categoryFigure,fileName=paste0(taskName,".Category1.Piechart.png"),maxCategory=NA,textSize=textSize,y="Count",transformTable=FALSE,reOrder=FALSE,facetColCount=facetColCount)
-p2<-ggpieToFile(categoryAllTable2,fileName=paste0(taskName,".Category2.Piechart.png"),maxCategory=NA,textSize=textSize,facetColCount=facetColCount)
+p1<-ggpieToFile(categoryFigure,
+                fileName=paste0(taskName,".Category1.Piechart.png"),
+                maxCategory=NA,
+                textSize=textSize,
+                y="Count",
+                transformTable=FALSE,
+                colorNames=host_reads_colors,
+                reOrder=FALSE,
+                facetColCount=facetColCount)
+
+p2<-ggpieToFile(categoryAllTable2,
+                fileName=paste0(taskName,".Category2.Piechart.png"),
+                maxCategory=NA,
+                textSize=textSize,
+                colorNames=host_smallRNA_colors, 
+                facetColCount=facetColCount)
 
 #Barplot for Tables
-tableBarplotToFile(dat=categoryFigure,fileName=paste0(taskName,".Category1.Barplot.png"),
-    totalCountFile="",maxCategory=NA,textSize=textSize,transformTable=F,y="Count")
-tableBarplotToFile(dat=categoryAllTable2,fileName=paste0(taskName,".Category2.Barplot.png"),
-    totalCountFile="",maxCategory=NA,textSize=textSize)
+width<-max(2000,60*ncol(categoryAllTable2) + 200)
+
+tableBarplotToFile( dat=categoryFigure,
+                    fileName=paste0(taskName,".Category1.Barplot.png"),
+                    totalCountFile="",
+                    maxCategory=NA,
+                    textSize=textSize,
+                    transformTable=F,
+                    colorNames=host_reads_colors,
+                    y="Count", 
+                    height=1200, 
+                    width=width)
+
+tableBarplotToFile( dat=categoryAllTable2,
+                    fileName=paste0(taskName,".Category2.Barplot.png"),
+                    totalCountFile="",
+                    maxCategory=NA,
+                    textSize=textSize, 
+                    colorNames=host_smallRNA_colors, 
+                    height=1200, 
+                    width=width)
 
 #Group Pie Chart for Tables
-ggpieGroupToFile(dat=categoryFigure,fileName=paste0(taskName,".Category1.Group.Piechart.png"),groupFileList=groupFileList,
-    outFileName=paste0(taskName,".Category1.PercentGroup.Table.csv"),maxCategory=NA,textSize=groupTextSize,y="Count",transformTable=FALSE,
-    visLayoutFileList=groupVisLayoutFileList,visLayoutAlphabet=visLayoutAlphabet)
-ggpieGroupToFile(dat=categoryAllTable2,fileName=paste0(taskName,".Category2.Group.Piechart.png"),groupFileList=groupFileList,
-    outFileName=paste0(taskName,".Category2.PercentGroup.Table.csv"),maxCategory=NA,textSize=groupTextSize,
-    visLayoutFileList=groupVisLayoutFileList,visLayoutAlphabet=visLayoutAlphabet)
+ggpieGroupToFile( dat=categoryFigure,
+                  fileName=paste0(taskName,".Category1.Group.Piechart.png"),
+                  groupFileList=groupFileList,
+                  outFileName=paste0(taskName,".Category1.PercentGroup.Table.csv"),
+                  maxCategory=NA,
+                  textSize=groupTextSize,
+                  y="Count",
+                  transformTable=FALSE,
+                  colorNames=host_reads_colors,
+                  visLayoutFileList=groupVisLayoutFileList,
+                  visLayoutAlphabet=visLayoutAlphabet)
+
+ggpieGroupToFile( dat=categoryAllTable2,
+                  fileName=paste0(taskName,".Category2.Group.Piechart.png"),
+                  groupFileList=groupFileList,
+                  outFileName=paste0(taskName,".Category2.PercentGroup.Table.csv"),
+                  maxCategory=NA,
+                  textSize=groupTextSize,
+                  colorNames=host_smallRNA_colors, 
+                  visLayoutFileList=groupVisLayoutFileList,
+                  visLayoutAlphabet=visLayoutAlphabet)
+

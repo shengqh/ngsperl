@@ -265,6 +265,8 @@ sub initializeSmallRNADefaultOptions {
 
   initDefaultValue( $def, "perform_permanova", 1 );
 
+  initDefaultValue( $def, "color_theme", "default" );
+
   return $def;
 }
 

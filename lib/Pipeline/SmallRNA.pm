@@ -59,6 +59,8 @@ sub getSmallRNAConfig {
   my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
   my $notMicroRNAOnly = !$hasMicroRNAOnly;
 
+  my $color_theme = getValue($def, "color_theme", "default");
+
   my $search_not_identical   = getValue( $def, "search_not_identical" );
   my $search_host_genome     = getValue( $def, "search_host_genome" );
   my $search_nonhost_genome  = getValue( $def, "search_nonhost_genome" ) && $notMicroRNAOnly;
@@ -564,6 +566,9 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           parameterSampleFile2      => $groups,
           parameterSampleFile2Order => $def->{groups_order},
           parameterSampleFile3      => $def->{groups_smallRNA_vis_layout},
+          parameterSampleFile4      => {
+            color_theme => getValue($def, "color_theme"),
+          },
           rCode                     => $R_font_size,
           sh_direct                 => 1,
           pbs                       => {
@@ -1523,6 +1528,9 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         parameterSampleFile1_ref  => \@length_dist_count,
         parameterSampleFile1Names => \@length_dist_names,
         parameterSampleFile2      => $def->{groups},
+        parameterSampleFile3 => {
+          color_theme => $def->{color_theme},
+        },
         sh_direct                 => 1,
         rCode                     => '' . $R_font_size,
         pbs                       => {
@@ -2791,9 +2799,12 @@ fi
       class              => "CQS::UniqueR",
       perform            => 1,
       target_dir         => $data_visualization_dir . "/read_summary",
-      rtemplate          => "../SmallRNA/readSummary.R",
+      rtemplate          => "countTableVisFunctions.R,../SmallRNA/readSummary.R",
       #output_file_ext    => ".perc.png;.count.png",
       output_file_ext    => ".png",
+      parameterSampleFile1 => {
+        color_theme => getValue($def, "color_theme"),
+      },
       parameterFile1_ref => [ "fastqc_count_vis", ".countInFastQcVis.Result.Reads.csv\$" ],
       parameterFile2_ref => $read_in_tasks_file,
       parameterFile3_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_category", ".Category.Table.csv\$" ],

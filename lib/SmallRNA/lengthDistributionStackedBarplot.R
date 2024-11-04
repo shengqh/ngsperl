@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='CM_8643_bakeoff.length'
+outFile='nextflex.length'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
+parSampleFile3='fileList3.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-textSize=9;groupTextSize=10;
+textSize=12;groupTextSize=12;
 
-setwd('/nobackup/vickers_lab/projects/20230607_8643_CM_smRNA_human_bakeoff_v2022/data_visualization/host_length_dist_category/result')
+setwd('/nobackup/vickers_lab/projects/20240201_smallRNA_nextflex_comparison_hg38_byTiger/data_visualization/host_length_dist_category/result')
 
 ### Parameter setting end ###
 
@@ -16,6 +16,8 @@ source("countTableVisFunctions.R")
 library(ggplot2)
 library(data.table)
 library(reshape2)
+
+myoptions = read_file_map(parSampleFile3, do_unlist = FALSE)
 
 fileList1 <- read.table("fileList1.txt", header=FALSE, sep="\t", stringsAsFactors = F, row.names=2)
 RNA_class <- rownames(fileList1)[!(rownames(fileList1) %in% c("category"))]
@@ -60,10 +62,13 @@ for(rna in RNA_class){
 fastq_length<-final[final$Category=="fastq_len",]
 final<-final[! (final$Category %in% c("fastq_len", "Genome")),]
 
-RNA_class<-RNA_class[RNA_class != "fastq_len"]
-final$Category<-factor(final$Category, levels=(RNA_class))
+RNA_class<-RNA_class[!(RNA_class %in% c("fastq_len", "Genome"))]
 
-allcolors<-c("blue","green","red", "brown","purple", "yellow", "black")[1:length(unique(final$Category))]
+allcolors=get_host_smallRNA_colors(myoptions$color_theme, to_DR=TRUE)
+stopifnot(all(RNA_class %in% names(allcolors)))
+
+RNA_class<-names(allcolors)[names(allcolors) %in% RNA_class] 
+final$Category<-factor(final$Category, levels=(RNA_class))
 
 textTitle<-element_text(face= "bold", color = "black", size=22, hjust=0.5)
 text20Bold<-element_text(face= "bold", color = "black", size=20)

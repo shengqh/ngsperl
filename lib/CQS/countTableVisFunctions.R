@@ -2,6 +2,7 @@ options(bitmapType='cairo')
 
 #load Rcpp package first because of the error with reshape2 package
 library(Rcpp)
+library(data.table)
 library(ggplot2)
 library(reshape2)
 
@@ -415,8 +416,13 @@ getFacetColCount<-function(groupFileList){
 		sampleToGroup=read.delim(groupFileList,as.is=T,header=F)
 		groupCount=unique(table(sampleToGroup$V2))
 		if(length(groupCount) == 1){
-			result=ceiling(sqrt(groupCount))
-		}
+			result=groupCount
+      if(result > 10){
+        result=ceiling(sqrt(nrow(sampleToGroup)))
+      }
+		}else{
+      result=ceiling(sqrt(nrow(sampleToGroup)))
+    }
 	}
 	return(result)
 }
@@ -535,8 +541,18 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 		# } else {
 			p<-p+	guides(fill = guide_legend(ncol = 1,keywidth = 1, keyheight = 1))
 		# }
-		if (colorNames!="") {
-			colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
+		if (any(colorNames!="")) {
+      categoryNames<-unique(datForFigure[,fill])
+      ncolor=length(categoryNames)
+      if(length(colorNames) != ncolor){
+        if(length(colorNames) > 1){
+          cat("There are ", ncolor, "categoryNames:", paste0(categoryNames, collapse=","), ", but only", length(colorNames), "colors were provided. It would be ignored.\n")
+          colorNames="Set1"
+        }
+			  colors<-makeColors(ncolor,colorNames)
+      }else{
+        colors<-colorNames
+      }
 			p<-p+scale_fill_manual(values=colors)
 		}
 	} else if (!is.na(facet)) {
@@ -552,7 +568,9 @@ tableBarplot<-function(dat,maxCategory=5,x="Sample", y="Reads",fill="Category",f
 					  axis.title = element_text(size=textSize),
             legend.title= element_text(face="bold", size=textSize))+
 			ylab(ylab) + xlab(xlab)
-
+  if(x=="Sample"){
+    p<-p+theme(axis.title.x=element_blank())
+  }
 	return(p)
 }
 
@@ -578,7 +596,7 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 	write.csv(dat, file=paste0(fileName, ".csv"), quote=F)
 	
   if(width == 0){
-	  width<-max(3000,60*ncol(dat) + 200)
+	  width<-max(3000,50*ncol(dat) + 200)
   }
 	height<-height
 	png(fileName,width=width,height=height,res=300)
@@ -697,8 +715,18 @@ myggpie <- function (dat, fill="Category", y="Reads",facet="Sample",
 #   p<-p+facet_wrap(c(facet),nrow=2)+theme(legend.position="top")
   }
 
-  if (!is.na(colorNames)) {
-    colors<-makeColors(length(unique(datForFigure[,fill])),colorNames)
+  if (!any(is.na(colorNames))) {
+    categoryNames<-unique(datForFigure[,fill])
+    ncolor=length(categoryNames)
+    if(length(colorNames) != ncolor){
+      if(length(colorNames) > 1){
+        cat("There are ", ncolor, "categoryNames:", paste0(categoryNames, collapse=","), ", but only", length(colorNames), "colors were provided. It would be ignored.\n")
+        colorNames="Set1"
+      }
+      colors<-makeColors(ncolor,colorNames)
+    }else{
+      colors<-colorNames
+    }
     p<-p+scale_fill_manual(values=colors)
   }
   return(p)
@@ -1191,6 +1219,66 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
                       plot=g,
                       show_info=show_info)
   }
+}
+
+get_category_reads_colors<-function(color_theme="default"){
+  if(color_theme == "vickers"){
+    result=c("#ad07e3", "#ff0066", "#107f80", "black")
+    names(result)=c("Host","Non-host", "Unknown", "TooShort")
+  }else{
+    result="Set1"
+  }
+  return(result)
+}
+
+get_host_reads_colors<-function(color_theme="default"){
+  if(color_theme == "vickers"){
+    result=c("#ad07e3", "#ff0066", "#107f80", "black")
+  }else{
+    result=makeColors(4)
+  }
+  names(result)=c("Unmapped","Small RNA", "Genome", "Too short")
+  return(result)
+}
+
+get_host_smallRNA_name_map<-function(){
+  name_map=c("ERV"="ERV", "lncRNA"="lincDR", "miRNA"="miRNA", "misc_RNA"="osDR", "mt_tRNA"="mt_tDR", "rRNA"="rDR", "snoRNA"="snoDR", "snRNA"="snDR", "tRNA"="tDR", "yRNA"="yDR")
+  return(name_map)
+}  
+
+get_host_smallRNA_colors<-function(color_theme="default", to_DR=FALSE){
+  if(color_theme == "vickers"){
+    result=c(
+      "blue",
+      "#107f80",
+      "#ff0066",
+      "#cecece",
+      "#ad07e3",
+      "#e9c67e",
+      "#ce3e3c",
+      "#112952",
+      "#3dd6e5",
+      "#855fd7")
+  }else{
+    result=makeColors(10)
+  }
+
+  names(result)=c(
+    "ERV",
+    "lncRNA",
+    "miRNA",
+    "misc_RNA",
+    "mt_tRNA",
+    "rRNA",
+    "snoRNA",
+    "snRNA",
+    "tRNA",
+    "yRNA")
+
+  if(color_theme == "vickers" || to_DR){
+    names(result)=get_host_smallRNA_name_map()[names(result)]
+  }
+  return(result)
 }
 
 ###############################################################################

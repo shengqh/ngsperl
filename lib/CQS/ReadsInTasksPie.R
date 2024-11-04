@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='CM_8643_bakeoff'
+outFile='nextflex'
 parSampleFile1='fileList1_pie.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/host_genome/bowtie1_genome_1mm_NTA_smallRNA_table/result/smallRNA_1mm_CM_8643_bakeoff.mapped.count'
-parFile2='/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/final_unmapped/final_unmapped_reads_summary/result/CM_8643_bakeoff.count'
-parFile3='/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/nonhost_genome/nonhost_genome_count/result/CM_8643_bakeoff.nonhost_genome.tsv'
-textSize=9;groupTextSize=10; uniqueGroupNames=c('Pool1_Media','Pool1_Exomere','Pool2_Media','Pool2_Exomere','Pool3_Media','Pool3_Supermere');
+parFile1='/nobackup/vickers_lab/projects/20240201_smallRNA_nextflex_comparison_hg38_byTiger/host_genome/bowtie1_genome_1mm_NTA_smallRNA_table/result/smallRNA_1mm_nextflex.mapped.count'
+parFile2='/nobackup/vickers_lab/projects/20240201_smallRNA_nextflex_comparison_hg38_byTiger/final_unmapped/final_unmapped_reads_summary/result/nextflex.count'
+parFile3='/nobackup/vickers_lab/projects/20240201_smallRNA_nextflex_comparison_hg38_byTiger/nonhost_genome/nonhost_genome_count/result/nextflex.nonhost_genome.tsv'
+textSize=9;groupTextSize=10; 
 
-setwd('/scratch/vickers_lab/projects/20220830_8643_CM_smRNA_human_bakeoff/data_visualization/reads_in_tasks/result')
+setwd('/nobackup/vickers_lab/projects/20240201_smallRNA_nextflex_comparison_hg38_byTiger/data_visualization/reads_in_tasks/result')
 
 ### Parameter setting end ###
 
@@ -58,18 +58,65 @@ ggpieGroupToFile(tableForPieChart,fileName=paste0(resultFile,".NonParallel.TaskR
     outFileName=paste0(resultFile,".NonParallel.TaskReads.PercentGroups.csv"),textSize=groupTextSize,visLayoutFileList=groupVisLayoutFileList,
     visLayoutAlphabet=visLayoutAlphabet)
 
+readCategory2 <- rbind(colSums(tableForPieChart[1:2,]),
+                       tableForPieChart[c(4,5,3),])
+rownames(readCategory2) <- c("Host", "Non-host", "Unknown", "TooShort")
+
+doGetDatForFigure<-function(dat,percent){
+  dat[is.na(dat)]<-0
+  if(percent){
+    dat<-prop.table(as.matrix(dat), 2)
+  }
+  result<-reshape2::melt(as.matrix(dat))
+  colnames(result)<-c("Category","Sample","Reads")
+  result$Type=ifelse(percent, "Percentage", "Reads")
+  return(result)
+}
+
+getDatForFigure<-function(dat){
+  d1<-doGetDatForFigure(dat,percent=T)
+  d2<-doGetDatForFigure(dat,percent=F)
+  result<-rbind(d1,d2)
+  return(result)
+}
+
+tableBarplot<-function(dat,textSize=13,colorNames="Set1",barwidth=0.5) {
+  datForFigure<-getDatForFigure(dat)
+  colors<-colorNames#makeColors(length(unique(datForFigure[,"Category"])),colorNames)
+  p<-ggplot(datForFigure) +
+    geom_bar(aes(x=Sample,y=Reads,fill=Category), stat="identity", width=barwidth) +
+    scale_fill_manual(values=colors) +
+    theme_classic() +
+    facet_grid(Type~., scale="free_y") +
+    theme(legend.position = "top")+
+    guides(fill = guide_legend(nrow = 1)) +
+    theme(axis.text = element_text(size=textSize),legend.text=element_text(size=textSize),
+          axis.title = element_text(size=textSize),legend.title= element_text(size=textSize),
+          strip.background = element_blank()) +
+    theme(strip.text.y = element_blank(),
+          axis.text.y=element_text(face="bold", size=13, color = "black"),
+          axis.text.x=element_text(angle=90,hjust=1,vjust=0.5, face="bold", size=13, color = "black"),
+          axis.title.y = element_text(size=13, face="bold", colour = "black"),
+          legend.text = element_text(face = "bold", size = 13),
+          legend.title=element_blank()) +
+    xlab("") + ylab("Assigned Reads")
+  
+  return(p)
+}
+
+g=tableBarplot(readCategory2, colorNames = c("#ad07e3", "#ff0066", "#107f80", "black"))
+width<-max(2000,60*ncol(readCategory2) + 100) / 300
+ggsave(paste0(outFile,".NonParallel.TaskReads.bar.2.png"), g, width=width, height=6, dpi=300, units="in", bg="white")
 
 if(file.exists(parFile3) & file.exists(groupFileList)){
-  library(ggplot2)
-  library(reshape2)
   microbial<-read.delim(parFile3, header=T, row.names=1,check.names=F)
   all<-tableForPieChart
   all<-data.frame(t(all))
   all$all<-rowSums(all)
-  all$Human<-(all$Host.Small.RNA + all$Mapped.to.Host.Genome) / all$all * 100
+  all$Host<-(all$Host.Small.RNA + all$Mapped.to.Host.Genome) / all$all * 100
   all$Microbial<-(microbial[rownames(all), "Count"]) / all$all * 100
-  all$Other<-100 - all$Human - all$Microbial
-  figData<-all[,c("Human", "Microbial", "Other")]
+  all$Other<-100 - all$Host - all$Microbial
+  figData<-all[,c("Host", "Microbial", "Other")]
   if(!is.null(uniqueGroupNames)){
     group<-read.delim(groupFileList, stringsAsFactors = F, header=F,check.names=F)
     group<-group[group$V2 %in% uniqueGroupNames,]
@@ -82,8 +129,8 @@ if(file.exists(parFile3) & file.exists(groupFileList)){
 
   figData$Sample<-rownames(figData)
   figData<-figData[order(figData$Microbial, decreasing = T),]
-  mFigData<-melt(figData, id.vars=c("Sample", "Group"))
-  colnames(mFigData)<-c("Sample", "Group", "Category", "Percentage")
+  mFigData<-reshape2::melt(figData, id.vars=c("Sample", "Group")) |>
+    dplyr::rename(Category=variable, Percentage=value)
   mFigData$Sample<-factor(mFigData$Sample, levels=figData$Sample)
   mFigData$Category<-factor(mFigData$Category, levels=c("Microbial", "Host", "Other"))
   if(!is.null(uniqueGroupNames)){
@@ -91,16 +138,18 @@ if(file.exists(parFile3) & file.exists(groupFileList)){
   }else{
     mFigData$Group<-factor(mFigData$Group)
   }
-  pdf(paste0(outFile,".NonParallel.TaskReads.bar.pdf"), width=10, height=6)
   colors<-c("Microbial" = "chartreuse3", "Host" = "deepskyblue", "Other" = "gray")
-  g<-ggplot(mFigData) + geom_bar(aes(y = Percentage, x = Sample, fill = Category), stat="identity") + facet_grid(~Group, scales = "free_x") +
+  g<-ggplot(mFigData) + 
+    geom_bar(aes(y = Percentage, x = Sample, fill = Category), stat="identity") + 
+    facet_grid(~Group, scales = "free_x") +
     scale_fill_manual(values=colors) +
-    ylab("Percentage of Reads") +
+    ylab("Proportion") +
     ylim(0, 100) +
     theme(axis.title.x=element_blank(),
-          axis.text.x=element_blank(),
+          axis.text.x=element_text(face="bold", angle=90, hjust=1, vjust=0.5),
           axis.ticks.x=element_blank(),
           strip.background=element_blank())
-  print(g)
-  dev.off()
+
+  ggsave(paste0(outFile,".NonParallel.TaskReads.bar.png"), g, width=width, height=3, dpi=300, units="in", bg="white")
 }
+
