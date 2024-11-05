@@ -1,0 +1,172 @@
+---
+title: "Phenotype data prepration"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  error=FALSE,
+  results="asis"
+)
+```
+
+
+```{r}
+source('reportFunctions.R')
+
+option_tbl=fread('input_options.txt', header=FALSE)
+cur_options=split(option_tbl$V1, option_tbl$V2)
+
+phename=cur_options$phename
+phecode=as.numeric(cur_options$phecode)
+option_file=cur_options$option_file
+global_tbl=fread(option_file, header=FALSE)
+global_options=split(global_tbl$V1, global_tbl$V2)
+
+agd_file=global_options$agd_file
+phecode_data_file=global_options$phecode_data_file
+phecode_map_file=global_options$phecode_map_file
+min_occurance=as.numeric(global_options$min_occurance)
+email=global_options$email
+affiliation=global_options$affiliation
+
+if(email != ""){
+  cat("
+---
+author: 
+- name: ", email, "
+  affiliation: ", affiliation, "
+---
+")
+}
+```
+
+# Introduction
+
+This document is used to prepare phenotype data for GWAS/PheWAS analysis using AGD cohort.
+
+phecode definition file was downloaded from `https://phewascatalog.org/phewas/_w_e1b53007/data/phecode_definitions1.2.csv.zip` at Nov 1st, 2024. 
+
+# Read phecode data from AGD cohort.
+
+Read data from `r phecode_data_file`.
+
+```{r}
+phecodes=fread(phecode_data_file, data.table=FALSE)
+print_table(head(phecodes), row.names=FALSE)
+```
+
+# Read phecode definition file
+
+Read data from `r phecode_map_file`.
+
+```{r}
+phecodes_def=fread(phecode_map_file, data.table=FALSE) |>
+  dplyr::mutate(exclude_start=as.numeric(gsub("\\-.+", "", phecode_exclude_range)),
+                exclude_end=as.numeric(gsub(".+\\-", "", phecode_exclude_range)),
+                phecode_str=phenotype) |>
+  dplyr::select(phecode, phecode_str, exclude_start, exclude_end)
+print_table(head(phecodes_def), row.names=FALSE)
+```
+
+# Filter `r phename` definition
+
+We extracted `r phename` definition using phecode `r phecode`.
+
+```{r}
+cur_def=phecodes_def[phecodes_def$phecode==phecode,] |>
+  dplyr::select(phecode, phecode_str, exclude_start, exclude_end) |>
+  dplyr::distinct()
+
+exclude_start=cur_def$exclude_start[1]
+exclude_end=cur_def$exclude_end[1]
+phecode_str=cur_def$phecode_str[1]
+
+print_table(cur_def, row.names=FALSE)
+```
+
+# Find positive subjects
+
+`r phecode_str` subjects would have phecode `r phecode`.
+
+```{r}
+phecode_samples = phecodes[phecodes$phecode==phecode,] |>
+    dplyr::group_by(GRID) |>
+    dplyr::summarize(n=n())
+
+if(min_occurance > 1){
+  cat("Only subjects with at least ", min_occurance, " occurances are considered.\n")
+  pos_samples = phecode_samples |>
+    dplyr::filter(n >= min_occurance) 
+}else{
+  pos_samples = phecode_samples
+}
+print_table(pos_samples, byDT=TRUE, row.names=FALSE)
+```
+
+There are `r nrow(pos_samples)` positive subjects.
+
+# Find negative subjects
+
+Read data from `r agd_file`.
+
+```{r}
+AGD=fread(agd_file, data.table=FALSE) |>
+  dplyr::filter(PRIMARY_GRID != "-")
+```
+
+There are `r nrow(AGD)` eligible subjects in AGD cohort.
+
+Let's find possible positive subjects with phecode between `r exclude_start` and `r exclude_end`.
+
+```{r}
+possible_pos_samples = phecodes |>
+  dplyr::filter(phecode >= exclude_start) |>
+  dplyr::filter(phecode <= exclude_end) |>
+  dplyr::distinct() |>
+  dplyr::arrange(GRID)
+print_table(possible_pos_samples, byDT=TRUE, row.names=FALSE)
+```
+
+There are `r length(unique(possible_pos_samples$GRID))` possible positive subjects.
+
+Let's find negative subjects in AGD cohort.
+
+```{r}
+negative_samples = AGD |>
+  dplyr::filter(!PRIMARY_GRID %in% possible_pos_samples$GRID)
+```
+
+There are `r nrow(negative_samples)` negative subjects.
+
+# Save phenotype data
+
+```{r}
+cur_phenotype_def = data.frame( GRID=c(pos_samples$GRID, negative_samples$PRIMARY_GRID),
+                                Phenotype=rep(c("1", "0"), c(nrow(pos_samples), nrow(negative_samples))))
+
+phenotype_file = paste0(phename, '.phenotype.csv')
+write.csv(cur_phenotype_def, phenotype_file, quote=FALSE, row.names=FALSE)
+print_table(cur_phenotype_def, byDT=TRUE, row.names=FALSE)
+```
+
+We have `r nrow(pos_samples)` positive subjects and `r nrow(negative_samples)` negative subjects.
+
+Phenotype information for `r phecode_str` is saved to file [`r phenotype_file`](`r phenotype_file`).
