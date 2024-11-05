@@ -2532,8 +2532,9 @@ sub process_parameter_sample_file {
     }
   }
 
-  if (($index == 1) && ($cur_option =~ /__FILE__/)){
-    $cur_option =~ s/__FILE__/$input/g;
+  my $file_key = $index == 1 ? "__FILE__" : "__FILE${index}__";
+  if ($cur_option =~ /$file_key/){
+    $cur_option =~ s/$file_key/$input/g;
   } elsif (option_contains_arg($cur_option, $fileArg)) {
   } else{
     $cur_option = $cur_option . " " . $fileArg . " " . $input;
