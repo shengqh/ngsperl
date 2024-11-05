@@ -484,7 +484,8 @@ sub getPreprocessionConfig {
   }
 
   if ( $def->{sra_to_fastq} ) {
-    if($def->{sra_to_fastq_no_prefetch}){
+    if($def->{sra_to_fastq_no_prefetch} && $is_pairend){
+      #print("sra_to_fastq_no_prefetch\n");
       my $sra_option = getValue($def, "fastq-dump_option", "--split-3 --defline-qual '+' --gzip --origfmt");
       my $sratoolkit_setting_file = getValue($def, "sratoolkit_setting_file");
 
@@ -542,6 +543,7 @@ fi
       my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" : $is_pairend?"SRA::FastqDumpPaired":"SRA::FastqDump";
       my $docker_prefix = getValue($def, "sra_to_fastq_wget", 0)? undef :"sratools_";
       #my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FasterqDump";
+      #print($class);
       $config->{sra2fastq} = {
         class      => $class,
         perform    => 1,
