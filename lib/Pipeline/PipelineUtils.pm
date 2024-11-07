@@ -277,7 +277,7 @@ sub addFastQC {
 python3 $python_script -i fileList1.txt -o ${task_name}.FastQC      
 ",
     rtemplate => "../QC/fastQCSummary.r",
-    rReportTemplate => "../QC/fastQCSummary.Rmd;reportFunctions.R",
+    rReportTemplate => "../QC/fastQCSummary.Rmd;reportFunctions.R;countTableVisFunctions.R",
     run_rmd_independent => 1,
     rmd_ext => ".FastQC.html",
     option => "",
@@ -603,7 +603,7 @@ sub addDEseq2 {
       "caption_in_volcano" => getValue($def, "DE_caption_in_volcano", 1),
       "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
       "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
-      "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 4),
+      "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 6),
       "heatmap_column_names_group_max_height_cm" => getValue($def, "heatmap_column_names_group_max_height_cm", 4),
       "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
       "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18),
@@ -910,7 +910,7 @@ sub add_table_correlation {
     "num_top_genes_heatmap" => getValue($def, "num_top_genes_heatmap", 25),
     "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
     "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
-    "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 4),
+    "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 6),
     "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
     "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18)
   };
@@ -1010,7 +1010,7 @@ sub addHomerAnnotation {
     sh_direct    => 1,
     pbs          => {
       "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
+      "walltime"  => "10",
       "mem"       => "10gb"
     },
   };
