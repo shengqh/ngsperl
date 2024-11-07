@@ -232,11 +232,14 @@ if(has_feature_gene_png){
   table=merge(table, table2, by="Sample", all.x=TRUE)
 }
 
-box_stats<-boxplot(table$Percent_Assigned, plot=FALSE)$stats
+table=table |>
+  dplyr::rename("Assigned_Ratio"="Percent_Assigned")
+
+box_stats<-boxplot(table$Assigned_Ratio, plot=FALSE)$stats
 print(kable(table, caption=tabRef("geneSummary", paste0("The summary of ", readsUsed, " assignment to genes")), row.names=F)%>% 
           kable_styling() %>%
-          row_spec(which(table$Percent_Assigned > box_stats[5]), color = "black", background = "bisque") %>% 
-          row_spec(which(table$Percent_Assigned < box_stats[1]), color = "black", background = "honeydew") %>%
+          row_spec(which(table$Assigned_Ratio > box_stats[5]), color = "black", background = "bisque") %>% 
+          row_spec(which(table$Assigned_Ratio < box_stats[1]), color = "black", background = "honeydew") %>%
           htmltools::HTML())
 ```
 
