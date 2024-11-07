@@ -62,7 +62,7 @@ pca_point_size=to_numeric(myoptions$pca_point_size, 3)
 heatmap_add_width_inch=to_numeric(myoptions$heatmap_add_width_inch, 2)
 heatmap_add_height_inch=to_numeric(myoptions$heatmap_add_height_inch, 0)
 
-heatmap_column_names_max_height_cm=to_numeric(myoptions$heatmap_column_names_max_height_cm, 4)
+heatmap_column_names_max_height_cm=to_numeric(myoptions$heatmap_column_names_max_height_cm, 6)
 column_names_max_height=unit(heatmap_column_names_max_height_cm, "cm")
 
 heatmap_column_names_group_max_height_cm=to_numeric(myoptions$heatmap_column_names_group_max_height_cm, 4)
@@ -360,12 +360,16 @@ for (i in 1:nrow(countTableFileAll)) {
 
         g=ggplot(mperc, aes(x=Sample, y=Percentage, fill=Biotype)) + 
           geom_bar(stat="identity") + 
-          theme_bw3() + 
-          theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-                axis.title.x=element_blank())
+          theme_classic() + 
+          theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
+                axis.text.y = element_text(size=11),
+                axis.title.y = element_text(size=11, face="bold"),
+                legend.text = element_text(size=11, face="bold"),
+                legend.title = element_text(size=11, face="bold"),
+                axis.title.x = element_blank())
 
         width=min(max(7, 0.1 * ncol(validCountNum)) + 3, 50)
-        ggsave(paste0(cur_file_prefix, ".biotype_perc.png"), g, width=width, height=6, dpi=300)
+        ggsave(paste0(cur_file_prefix, ".biotype_perc.png"), g, width=width, height=5, dpi=300)
       }
     }
     
