@@ -1,3 +1,17 @@
+rm(list=ls()) 
+outFile='cutrun_11425_mm10_tf'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3=''
+parFile1=''
+parFile2=''
+parFile3=''
+
+
+setwd('/nobackup/brown_lab/projects/20240429_cutrun_11425_chalab_mm10_tf/fastqc_raw_summary/result')
+
+### Parameter setting end ###
+
 #outputdir<-"/gpfs23/scratch/cqs/shengq2/rolanda_lister/20190403_rnaseq_2499_lister_mouse_placenta_cutadapt/fastqc_raw/result"
 args = commandArgs(trailingOnly=TRUE)
 if(length(args) == 0){
@@ -27,12 +41,17 @@ library(ggplot2)
 library(reshape2)
 library(dplyr)
 
+source("countTableVisFunctions.R")
+
 #summary
 fp<-read.table(summaryfile, header=T, sep="\t", stringsAsFactor=F)
 fp$QCResult<-factor(fp$QCResult, levels=c("PASS","WARN","FAIL"))
 fp$Sample<-factor(fp$Sample, levels=sort(unique(fp$Sample)))
 fp$File<-factor(fp$File, levels=sort(unique(fp$File)))
 fp$Category<-factor(fp$Category, levels=sort(unique(fp$Category), decreasing=T))
+
+file_height=get_longest_text_width(as.character(fp$File), "", 11, "inches", 300) 
+sample_height=get_longest_text_width(as.character(fp$Sample), "", 11, "inches", 300)
 
 g<-ggplot(fp, aes(File, Category))+
   geom_tile(data=fp, aes(fill=QCResult), color="white") +
@@ -42,22 +61,24 @@ g<-ggplot(fp, aes(File, Category))+
   xlab("") + ylab("") +
   coord_equal()
 
-width=min(max(2500, 60 * length(unique(fp$File))) + 600, 10000)
-png(file=paste0(summaryfile, ".png"), height=1500, width=width, res=300)
-print(g)
-dev.off()
+width=min(max(2500, 60 * length(unique(fp$File))) + 600, 10000) / 300
+ggsave(file=paste0(summaryfile, ".png"), g, height=file_height + 5, width=width, dpi=300, units="in", bg="white")
 
 #reads
-fp<-read.table(readfile, header=T, sep="\t")
-g<-ggplot(fp, aes(x=File, y=Reads))+ geom_bar(stat="identity", width=.5)+
-  theme_bw() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
-        axis.text.y = element_text(size=11, face="bold")) + xlab("")
+fp<-read.table(readfile, header=T, sep="\t") |>
+  dplyr::select(Sample, Reads) |>
+  dplyr::distinct()
 
-width=min(max(2500, 60 * nrow(fp)), 10000)
-png(file=paste0(readfile, ".png"), height=1500, width=width, res=300)
-print(g)
-dev.off()
+g<-ggplot(fp, aes(x=Sample, y=Reads))+ 
+  geom_bar(stat="identity", width=.5)+
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
+        axis.text.y = element_text(size=11),
+        axis.title.y = element_text(size=11, face="bold"),
+        axis.title.x = element_blank())
+
+width=min(max(2500, 60 * nrow(fp)), 10000) / 300
+ggsave(file=paste0(readfile, ".png"), g, height=sample_height + 3, width=width, dpi=300, units="in", bg="white")
 
 #base quality
 fp<-read.table(baseQualityFile, header=T, sep="\t")
@@ -88,9 +109,7 @@ g<-ggplot(fp, aes(x=newBase, y=Mean)) +
         panel.grid.major.y = element_line( linewidth=.1, color="gray" ),
         panel.ontop = TRUE)
 
-png(file=paste0(baseQualityFile, ".png"), height=1000, width=2500, res=300)
-print(g)
-dev.off()
+ggsave(file=paste0(baseQualityFile, ".png"), g, height=1000, width=2500, dpi=300, units="px", bg="white")
 
 #sequence GC
 fp<-read.table(sequenceGCFile, header=T, sep="\t")
@@ -102,9 +121,7 @@ g<-ggplot(fp, aes(x=GC.Content, y=Percent, color=File, group=File)) +
   theme(legend.position = "none",
         panel.grid.major.y = element_line( linewidth=.1, color="gray" ) )
 
-png(file=paste0(sequenceGCFile, ".png"), height=1000, width=2500, res=300)
-print(g)
-dev.off()
+ggsave(file=paste0(sequenceGCFile, ".png"), g, height=1000, width=2500, dpi=300, units="px", bg="white")
 
 #adapter
 fp<-read.table(adapterFile, header=T, sep="\t", quote="", check.names = F)
@@ -131,9 +148,7 @@ g<-ggplot(fp, aes(x=newPosition, y=Adapter, color=File, group=File)) +
   theme(legend.position = "none",
         panel.grid.major.y = element_line( linewidth=.1, color="gray" ) )
 
-png(file=paste0(adapterFile, ".png"), height=1000, width=2500, res=300)
-print(g)
-dev.off()
+ggsave(file=paste0(adapterFile, ".png"), height=1000, width=2500, dpi=300, units="px", bg="white")
 
 if(length(args) > 0){
   library(knitr)
