@@ -236,7 +236,7 @@ sub getConfig {
       addCleanBAM( $config, $def, $individual, $taskName, "${target_dir}/" . getNextFolderIndex($def) . $taskName, $bam_ref);
       $bam_ref = [ $taskName, ".bam\$" ];
 
-      add_alignment_summary($config, $def, $summary, $target_dir, "${taskName}_summary", "../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".chromosome.csv;.chromosome.png", undef, [$taskName, ".chromosome.count"] );
+      add_alignment_summary($config, $def, $summary, $target_dir, "${taskName}_summary", "countTableVisFunctions.R;../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".chromosome.csv;.chromosome.png", undef, [$taskName, ".chromosome.count"] );
       add_bam_validation($config, $def, $individual, $target_dir, "${taskName}_bam_validation", [$taskName, ".bam\$"] );
     }
 

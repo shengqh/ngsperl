@@ -275,7 +275,7 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
   push @$summary_ref, ( $bowtie2_task );
 
   my $summary_task = "${bowtie2_task}_summary";
-  add_alignment_summary($config, $def, $summary_ref, $target_dir, $summary_task, "../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bowtie2", ".log" ], ["bowtie2", ".chromosome.count"] );
+  add_alignment_summary($config, $def, $summary_ref, $target_dir, $summary_task, "countTableVisFunctions.R;../Alignment/AlignmentUtils.r;../Alignment/Bowtie2Summary.r", ".reads.csv;.reads.png;.chromosome.csv;.chromosome.png", [ "bowtie2", ".log" ], ["bowtie2", ".chromosome.count"] );
 
   my $bam_files = get_result_file($config, $bowtie2_task, ".bam\$");
   my $treatment_samples = do_get_group_samplefile_map(getValue($def, "treatments"), $bam_files);
@@ -527,12 +527,12 @@ if [[ \$status -eq 0 ]]; then
   echo annotatePeaks_raw=`date`
   annotatePeaks.pl __NAME__.peaks.txt \\
     $homer_genome -raw -d \\
-    __FILE2__ > __NAME__.peaks.raw.txt
+    __FILE__ > __NAME__.peaks.raw.txt
 
   echo annotatePeaks_rpkm=`date`
   annotatePeaks.pl __NAME__.peaks.txt \\
     $homer_genome -fpkm -d \\
-    __FILE2__ > __NAME__.peaks.fpkm.txt
+    __FILE__ > __NAME__.peaks.fpkm.txt
 
   python $rename_2_py __NAME__.peaks.raw.txt __NAME__.peaks.fpkm.txt  
 else
