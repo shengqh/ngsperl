@@ -975,6 +975,13 @@ get_text_width <- function(txt, font_family, font_size = 10, units = "inches", r
   return(ret)
 }
 
+get_longest_text_width <- function(strings, font_family, font_size = 10, units = "inches", res=300) {
+  lengths <- nchar(strings)
+  longest_index <- which.max(lengths)
+  longest_text <- strings[longest_index][1]
+  return(get_text_width(longest_text, font_family, font_size, units, res))
+}
+
 get_text_height <- function(font_family, font_size = 10, units = "inches", res=300) {
   tmp_file <- tempfile(fileext = ".png")
   png(tmp_file, res=res)
@@ -1002,13 +1009,13 @@ init_heatmap_param<-function(htdata, show_row_names, show_column_names, default_
   if(show_row_names){
     heatmap_height=unit(max(nrow(htdata) * 0.2, default_heatmap_height_inch), "inch")
   }else{
-    heatmap_height=unit(default_heatmap_width_inch, "inch")
+    heatmap_height=unit(default_heatmap_height_inch, "inch")
   }
 
   if(show_column_names){
-    heatmap_width=unit(max(ncol(htdata) * 0.2, default_heatmap_height_inch), "inch")
+    heatmap_width=unit(max(ncol(htdata) * 0.2, default_heatmap_width_inch), "inch")
   }else{
-    heatmap_width=unit(default_heatmap_height_inch, "inch")
+    heatmap_width=unit(default_heatmap_width_inch, "inch")
   }
 
   list(heatmap_width=heatmap_width, heatmap_height=heatmap_height)
