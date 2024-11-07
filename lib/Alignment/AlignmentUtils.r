@@ -107,21 +107,25 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA, remov
   names(colors)=c("FALSE","TRUE")
 
   draw_figure<-function(final, filename){
+    mytheme = theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0.5, face="bold"),
+                    axis.text.y = element_text(face="bold"),
+                    legend.title = element_text(face="bold"),
+                    axis.title = element_blank())
     if(any(final$NoRead)){
-      g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
-        geom_point(aes(size=Reads, color=NoRead)) + theme_classic() + 
-        scale_color_manual(values=colors) +
-        theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
-              axis.title = element_blank())
+      g<- ggplot(final, aes(x=Chrom, y=Sample)) + 
+          geom_point(aes(size=Reads, color=NoRead)) + 
+          theme_classic() + 
+          scale_color_manual(values=colors) +
+          mytheme
     }else{
-      g<-ggplot(final, aes(x=Chrom, y=Sample)) + 
-        geom_point(aes(size=Reads)) + theme_classic() + 
-        theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
-              axis.title = element_blank())
+      g<- ggplot(final, aes(x=Chrom, y=Sample)) + 
+          geom_point(aes(size=Reads)) + 
+          theme_classic() + 
+          mytheme
     }
 
     fontsize_inch = GeomLabel$default_aes$size * 0.0393701
-    height=max(4, fontsize_inch * length(unique(final$Sample)) + 1)
+    height=max(3, fontsize_inch * length(unique(final$Sample)) + 1)
     ggsave(filename, g, width=10, height=height, units="in", dpi=300, bg="white", limitsize = FALSE)
   }
 
@@ -169,8 +173,12 @@ draw_gene_count<-function(listFile, outFilePrefix) {
     geom_bar(stat="identity", width=0.5) + 
     ylab("Number of gene") +
     theme_classic() +
-    theme(axis.text.x = element_text(angle = 90, hjust=1,vjust=0),
+    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
+          axis.text.y = element_text(size=11),
+          axis.title.y = element_text(size=11, face="bold"),
+          legend.text = element_text(size=11, face="bold"),
+          legend.title = element_text(size=11, face="bold"),
           axis.title.x = element_blank())
 
-  ggsave(paste0(outFilePrefix, ".png"), g, width=max(3, nrow(final)/4), height=4, units="in", dpi=300, bg="white")
+  ggsave(paste0(outFilePrefix, ".png"), g, width=max(3, nrow(final)/4), height=3, units="in", dpi=300, bg="white")
 }
