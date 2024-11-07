@@ -34,7 +34,6 @@ if (parSampleFile1 != ""){
     filelocation =filelist$V1[i]
     subdata = read.table(filelocation, sep=":", header=F, strip.white=T, fill=T, stringsAsFactors = F, comment='*')
     totalReads = gsub("\\s.+", "", subdata[1,1])
-    
 
     subdata = read.table(filelocation, sep=":", header=F, strip.white=T, fill=T, stringsAsFactors = F, comment='*')
     isPairedEnd <- any(grepl("concordantly", subdata$V1))
@@ -70,19 +69,23 @@ if (parSampleFile1 != ""){
   write.csv(file=paste0(outFile, ".reads.csv"), final)
 
   reads=final[,c("UniqueReads", "UnmappedReads", "MultiMappedReads")]
-  meltreads=melt(t(reads))
+  meltreads=reshape2::melt(t(reads))
   colnames(meltreads)<-c("Read", "Sample", "Count")
   meltreads$Count<-as.numeric(as.character(meltreads$Count))
   meltreads$Read<-factor(meltreads$Read, levels=c("MultiMappedReads", "UnmappedReads", "UniqueReads"))
 
-  width=max(2000, 50 * nrow(meltreads))
-  png(file=paste0(outFile, ".reads.png"), height=1200, width=width, res=300)
+  sample_height=get_longest_text_width(as.character(meltreads$Sample), "", 11, "inches", 300)
+
   g=ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) + 
     geom_bar(stat="identity", width=0.5) +
     theme_classic() +
-    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
-          axis.text.y = element_text(size=11, face="bold"),
-          axis.title.x = element_blank())
-  print(g)
-  dev.off()
+    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
+          axis.text.y = element_text(size=11),
+          axis.title.y = element_text(size=11, face="bold"),
+          axis.title.x = element_blank(),
+          legend.title = element_blank(),
+          legend.text = element_text(size=11, face="bold")) +
+    ylab("Reads")
+  width=max(2500, 50 * nrow(meltreads)) / 300
+  ggsave(file=paste0(outFile, ".reads.png"), g, height=sample_height + 3, width=width, dpi=300, units="in", bg="white")
 }
