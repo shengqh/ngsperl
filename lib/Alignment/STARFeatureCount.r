@@ -70,12 +70,16 @@ if (parSampleFile1 != '') {
   
   g=ggplot(meltreads, aes(x=Sample, y=Count, fill=Read)) +
     geom_bar(stat="identity", width=0.5) +
-    theme_classic() + xlab("") +
-    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
-          axis.text.y = element_text(size=11, face="bold"))
+    theme_classic() +
+    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
+          axis.text.y = element_text(size=11),
+          axis.title.y = element_text(size=11, face="bold"),
+          legend.text = element_text(size=11, face="bold"),
+          legend.title = element_text(size=11, face="bold"),
+          axis.title.x = element_blank())
 
   width=max(7, fontsize_inch * nrow(treads) + 1)
-  ggsave(file=paste0(outputPrefix, ".csv.png"), height=5, width=width, dpi=300, bg="white", limitsize = FALSE)
+  ggsave(file=paste0(outputPrefix, ".csv.png"), height=4, width=width, dpi=300, bg="white", limitsize = FALSE)
 }
 
 if (parSampleFile2 != ''){
@@ -118,11 +122,15 @@ if (parSampleFile2 != ''){
   g<-ggplot(mfinal, aes(x=Sample, y=Count, fill=Read)) +
     geom_bar(stat="identity", width=0.5) +
     theme_classic() +
-    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0, face="bold"),
-          axis.text.y = element_text(size=11, face="bold"))
+    theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
+          axis.text.y = element_text(size=11),
+          axis.title.y = element_text(size=11, face="bold"),
+          legend.text = element_text(size=11, face="bold"),
+          legend.title = element_text(size=11, face="bold"),
+          axis.title.x = element_blank())
 
   width=max(7, fontsize_inch * ncol(final) + 1)
-  ggsave(file=paste0(outputPrefix, ".csv.png"), height=5, width=width, dpi=300, bg="white", limitsize = FALSE)
+  ggsave(file=paste0(outputPrefix, ".csv.png"), height=4, width=width, dpi=300, bg="white", limitsize = FALSE)
 }
 
 if(exists('parSampleFile5')){
