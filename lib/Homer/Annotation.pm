@@ -56,17 +56,19 @@ sub perform {
       my $outputFolder  = scalar(@$files) == 1 ? "." : $output;
       my $annoFile      = $output . ".annotation.txt";
       my $annoStatsFile = $output . ".annotation.stats";
-      push(@lines, "");
+      push(@lines, "if [[ -s $file ]]; then");
+      push(@lines, "  rm -f $output.failed\n");
       if ($file =~ /.gz/) {
         my $unzip_file = basename($file);
         $unzip_file =~ s/.gz//g;
-        push(@lines, "gunzip -c $file > $unzip_file");
-        push(@lines, "findMotifsGenome.pl $unzip_file $genome $outputFolder $option");
+        push(@lines, "  gunzip -c $file > $unzip_file\n");
+        push(@lines, "  findMotifsGenome.pl $unzip_file $genome $outputFolder $option\n");
       }else{
-        push(@lines, "findMotifsGenome.pl $file $genome $outputFolder $option");
+        push(@lines, "  findMotifsGenome.pl $file $genome $outputFolder $option\n");
       }
-      push(@lines, "annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile");
-      push(@lines, "R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile");
+      push(@lines, "  annotatePeaks.pl $file $genome -annStats $outputFolder/$annoStatsFile > $outputFolder/$annoFile\n");
+      push(@lines, "  R --vanilla -f $rscript --args $outputFolder/$annoStatsFile $outputFolder/$annoStatsFile\n");
+      push(@lines, "else\n  echo ERROR: file not exists: $file | tee $output.failed\nfi\n\n");
       $final_file = "$outputFolder/$annoFile";
     }
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
