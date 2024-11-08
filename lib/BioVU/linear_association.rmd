@@ -1,0 +1,153 @@
+---
+title: "linear association analysis"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  error=FALSE,
+  results="asis"
+)
+```
+
+```{r}
+source('reportFunctions.R')
+library(arsenal)
+library(xtable)
+
+option_tbl=fread('input_options.txt', header=FALSE)
+cur_options=split(option_tbl$V1, option_tbl$V2)
+
+phename=cur_options$phename
+phecode=as.numeric(cur_options$phecode)
+phefile=cur_options$phefile
+
+global_tbl=fread("../fileList2.list", header=FALSE)
+global_options=split(global_tbl$V1, global_tbl$V2)
+
+agd_file=global_options$agd_file
+demographics_file=global_options$demographics_file
+genotype_file=global_options$genotype_file
+pca_file=global_options$pca_file
+phecode_map_file=global_options$phecode_map_file
+ancestry_file=global_options$ancestry_file
+
+email=global_options$email
+affiliation=global_options$affiliation
+
+if(email != ""){
+  cat("
+---
+author: 
+- name: ", email, "
+  affiliation: ", affiliation, "
+---
+")
+}
+```
+
+# Introduction
+
+This document is used to perform correlation analysis between genotype and phenotype using AGD 35K cohort.
+
+# Read phenotype data
+
+Read data from `r phefile`.
+
+```{r}
+pheno_data=fread(phefile, data.table=FALSE)
+print_table(head(pheno_data), row.names=FALSE)
+```
+
+# Read genotype data
+
+Read data from `r genotype_file`.
+
+```{r}
+geno_data=fread(genotype_file, data.table=FALSE)
+print_table(head(geno_data), row.names=FALSE)
+```
+
+# Read PCA data
+
+Read data from `r pca_file`.
+
+```{r}
+pca_data=fread(pca_file, data.table=FALSE) |>
+  dplyr::rename("GRID"="IID") |>
+  dplyr::select(-`#FID`)
+print_table(head(pca_data), row.names=FALSE)
+```
+
+# Read Race data
+
+```{r}
+ancestry_data=fread(ancestry_file, data.table=FALSE) |>
+  dplyr::mutate(Age=2023 - YEAR_OF_BIRTH,
+                Gender=GENDER_SOURCE_VALUE,
+                Race=replace(supervised_ancestry_cluster, supervised_ancestry_cluster=="Admixed (majority ancestry < 0.5)", "Admixed")) |>
+  dplyr::select(GRID, Age, Gender, Race)
+print_table(head(ancestry_data), row.names=FALSE)
+```
+
+# Combine data
+
+```{r}
+combined_data=merge(pheno_data, geno_data, by='GRID' ,all.x=TRUE) |>
+  merge(pca_data, by='GRID', all.x=TRUE) |>
+  merge(ancestry_data, by='GRID', all.x=TRUE)
+
+combined_data$Phenotype=as.factor(combined_data$Phenotype)
+combined_data$Genotype=as.factor(combined_data$Genotype)
+combined_data$Gender=as.factor(combined_data$Gender)
+combined_data$Race=as.factor(combined_data$Race)
+
+print_table(combined_data, byDT=TRUE, row.names=FALSE)  
+```
+
+# Summary of data grouping by Phenotype
+
+```{r}
+mycontrols  <- tableby.control(test=T, total=T,
+                               numeric.stats=c("Nmiss","median","q1q3","range"),
+                               cat.stats=c("Nmiss","countpct"),
+                               stats.labels=list(Nmiss='Missing', median='Median', range='Range'),
+                               digits=1, digits.p=2, digits.pct=0)
+
+table_sum1 <- tableby(Phenotype ~ Genotype + Age + Gender + Race, data = combined_data, control=mycontrols)
+summary(table_sum1, total=T, title = "", width = 3, digits=1, digits.p=2, digits.pct=0, pfootnote = TRUE)
+```
+
+# Correlation analysis
+
+```{r}
+res <- glm(Phenotype ~ Genotype + Age + Gender + Race + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10, family=binomial(link="logit"), data=combined_data)
+coef=summary(res)$coefficients |>
+  as.data.frame() 
+rownames(coef)[2]="Genotype"
+print(xtable(coef, digits=-2, caption="Logistic regression coefficients"),type='html')
+```
+
+```{r}
+coef_file=paste0(phename, ".linear_association.csv")
+write.csv(coef, coef_file, quote=FALSE, row.names=TRUE)
+```
+
+coefficients are saved to `r coef_file`.
