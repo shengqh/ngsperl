@@ -139,6 +139,9 @@ sub perform {
   }
   print $final "
 R -e \"library(knitr);rmarkdown::render('${task_name}.Rmd');\"
+
+rm -f .cache
+
 ";
 
   $self->close_pbs( $final, $final_pbs );
