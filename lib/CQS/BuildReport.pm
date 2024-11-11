@@ -140,7 +140,7 @@ sub perform {
   print $final "
 R -e \"library(knitr);rmarkdown::render('${task_name}.Rmd');\"
 
-rm -f .cache
+rm -rf .cache
 
 ";
 
