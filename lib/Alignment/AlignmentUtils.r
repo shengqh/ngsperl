@@ -141,6 +141,24 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA, remov
   }
 }
 
+get_text_width <- function(txt, font_family, font_size = 10, units = "inches", res=300) {
+  tmp_file <- tempfile(fileext = ".png")
+  png(tmp_file, res=res)
+  par(family = font_family, ps = font_size)
+  ret = strwidth(txt, units = units)
+  dev.off()
+  unlink(tmp_file)
+
+  return(ret)
+}
+
+get_longest_text_width <- function(strings, font_family, font_size = 10, units = "inches", res=300) {
+  lengths <- nchar(strings)
+  longest_index <- which.max(lengths)
+  longest_text <- strings[longest_index][1]
+  return(get_text_width(longest_text, font_family, font_size, units, res))
+}
+
 draw_gene_count<-function(listFile, outFilePrefix) {
   filelist = read.table(listFile, sep="\t", header=F, stringsAsFactors = F)
 
@@ -171,7 +189,7 @@ draw_gene_count<-function(listFile, outFilePrefix) {
 
   g<-ggplot(final, aes(x=Sample, y=GeneCount)) + 
     geom_bar(stat="identity", width=0.5) + 
-    ylab("Number of gene") +
+    ylab("No. Gene") +
     theme_classic() +
     theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
           axis.text.y = element_text(size=11),
@@ -180,5 +198,6 @@ draw_gene_count<-function(listFile, outFilePrefix) {
           legend.title = element_text(size=11, face="bold"),
           axis.title.x = element_blank())
 
-  ggsave(paste0(outFilePrefix, ".png"), g, width=max(3, nrow(final)/4), height=3, units="in", dpi=300, bg="white")
+  height=get_longest_text_width(as.character(final$Sample), "", 11, "inches", 300)
+  ggsave(paste0(outFilePrefix, ".png"), g, width=max(3, nrow(final)/4), height=height + 2, units="in", dpi=300, bg="white")
 }
