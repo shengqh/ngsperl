@@ -85,6 +85,23 @@ if(rnaseqOptions["top25cv_in_hca", 1] == "FALSE"){
 has_introduction="introduction_rmd" %in% rnaseqOptions$V2
 introduction_rmd=rnaseqOptions["introduction_rmd", 1]
 
+remove_chrM_genes<-as.numeric(rnaseqOptions["remove_chrM_genes", 1])
+if("perform_proteincoding_gene" %in% row.names(rnaseqOptions)){
+  proteincoding_gene_only = (rnaseqOptions["perform_proteincoding_gene", 1] == "TRUE")
+}else{
+  proteincoding_gene_only=FALSE
+}
+
+if(proteincoding_gene_only & remove_chrM_genes){
+  gene_filter = "Genes on mitochondrial chromosome (chrM) were removed and only protein coding genes were used in the down-stream analysis."
+}else if(proteincoding_gene_only){
+  gene_filter = "Only protein coding genes were used in the down-stream analysis."
+}else if(remove_chrM_genes){
+  gene_filter = "Genes on mitochondrial chromosome (chrM) were removed from the down-stream analysis."
+}else{
+  gene_filter = ""
+}
+
 deseq2_rmd="deseq2.rmd"
 gsea_rmd_file="gsea.rmd"
 ```
@@ -247,13 +264,10 @@ print(kable(table, caption=tabRef("geneSummary", paste0("The summary of ", reads
 include_graphics(file_map$feature_chromosome_png)
 ```
 
-```{r, eval=has_feature_chromosome_png, , fig.align="center", fig.align="center", fig.cap=figRef("feature_no_chrM_chromosome_png", "The reads mapped to genes in each chromosome (no chrM) in each sample")}
-remove_chrM_genes<-as.numeric(rnaseqOptions["remove_chrM_genes", 1])
-if(remove_chrM_genes){
-  cat("\n\n<mark>Genes on mitochondrial chromosome (chrM) were removed from the down-stream analysis.</mark>\n\n")
-  no_chrM_png = gsub(".chromosome.png", ".no_chrM.chromosome.png", file_map$feature_chromosome_png)
-  include_graphics(no_chrM_png)
-}
+```{r, eval=remove_chrM_genes, fig.align="center", fig.align="center", fig.cap=figRef("feature_no_chrM_chromosome_png", "The reads mapped to genes in each chromosome (no chrM) in each sample")}
+cat("\n\n<mark>Genes on mitochondrial chromosome (chrM) were removed from the down-stream analysis.</mark>\n\n")
+no_chrM_png = gsub(".chromosome.png", ".no_chrM.chromosome.png", file_map$feature_chromosome_png)
+include_graphics(no_chrM_png)
 ```
 
 ```{r, echo=FALSE,results='asis', eval=has_feature_gene_png, fig.align="center", fig.align="center", fig.cap=figRef("has_feature_gene_png", "The number of genes detected in each sample")}
@@ -267,6 +281,8 @@ check_and_include_graphics(file_map$all_correlation_density)
 ```
 
 ## Similarity between samples
+
+`r gene_filter`
 
 ```{r, include=FALSE}
 corrFile<-"corr.Rmd"
@@ -311,7 +327,18 @@ if ("DE_use_raw_pvalue" %in% row.names(rnaseqOptions) & rnaseqOptions["DE_use_ra
   pValueText="FDR adjusted p value"
 }
 deseq2criteria<-paste0("absolute fold change >= ", rnaseqOptions["DE_fold_change", 1], " and ", pValueText, " <= ", rnaseqOptions["DE_pvalue", 1])  
-result = paste0(result, "\nDifferential expression analysis criteria:", deseq2criteria, "\n\n")
+
+deseq2filter=""
+if("DE_min_median_read" %in% row.names(rnaseqOptions)){
+  DE_min_median_read=as.numeric(rnaseqOptions["DE_min_median_read", 1])
+}else{
+  DE_min_median_read=1
+}
+if(DE_min_median_read > 1){
+  deseq2filter<-paste0("For each differential expression comparison, low expressed genes with less than ", DE_min_median_read, " median read count in both conditions were excluded.")
+}
+
+result = paste0(result, "\nDifferential expression analysis criteria:", deseq2criteria, "\n\n", deseq2filter, "\n\n")
 result = paste0(result, "\n## Volcano plot\n\n")
 
 if(file.exists(file_map$deseq2_volcano_plot)){
@@ -482,8 +509,9 @@ has_mapping<-"STAR" %in% names(vmap)
 `r if(has_cutadapt){paste0("Reads were trimmed to remove adapter sequences using Cutadapt (", vmap['Cutadapt'], ")[1].\n")}`
 `r if(has_FastQC){paste0("Quality control on ", ifelse(has_cutadapt, "both raw reads and adaptor-trimmed reads", "reads"), " was performed using FastQC (", vmap['FastQC'], ")(www.bioinformatics.babraham.ac.uk/projects/fastqc).\n")}`
 `r if(has_mapping){paste0("Reads were aligned to the ", vmap['genome'], " genome using STAR (", vmap['STAR'], ")[2]. ", vmap['gtf'], " gene annotations were provided to STAR to improve the accuracy of mapping. featureCounts (", vmap['featureCounts'], ")[3] was used to count the number of mapped reads to each gene. ")}`
+`r gene_filter` 
 ComplexHeatmap [4] was used for cluster analysis and visualization.
-`r if(hasDEseq2){paste0("Significantly differential expressed genes with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[5].")}`
+`r if(hasDEseq2){paste0("Significantly differential expressed genes with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[5]. ", deseq2filter)}`
 `r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[6].")}`
 `r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[7] on database (", vmap['GSEA_DB'], ").")}`
 

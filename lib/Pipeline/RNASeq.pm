@@ -1515,6 +1515,8 @@ fi
     my $fcOptions = getValue( $def, "featureCount_option" );
     my $fcMultiMapping = ( $fcOptions =~ /-m/ ) ? "TRUE" : "FALSE";
     my $options = {
+      "DE_min_median_read"                 => [ getValue( $def, "DE_min_median_read") ],
+      "perform_proteincoding_gene"         => [ getValue( $def, "perform_proteincoding_gene") ? "TRUE" : "FALSE" ],
       "DE_fold_change"                     => [ getValue( $def, "DE_fold_change",    2 ) ],
       "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",         0.05 ) ],
       "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue", 0 ) ],
