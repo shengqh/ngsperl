@@ -3452,6 +3452,7 @@ rm -f ckpt.tar.gz
   push(@$tasks, $cellbender_task);
 
   my $cellbender_clean_task = $cellbender_prefix . "_03_clean";
+  my $output_other_ext = getValue($def, "has_demultiplex", 0) ? ".cellbender_filtered.clean.adt.counts.h5" : undef;
   $config->{$cellbender_clean_task} = {
     class => "CQS::IndividualR",
     perform => 1,
@@ -3464,6 +3465,7 @@ rm -f ckpt.tar.gz
     parameterSampleFile3_ref => $decontX_counts_ref,
     output_to_same_folder => 0,
     output_file_ext => ".cellbender_filtered.clean.h5",
+    output_other_ext => $output_other_ext,
     pbs => {
       "nodes"    => "1:ppn=1",
       "walltime" => "1",

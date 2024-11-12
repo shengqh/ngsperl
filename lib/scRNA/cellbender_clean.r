@@ -1,20 +1,20 @@
 rm(list=ls()) 
-sample_name='DKO_F'
-outFile='DKO_F'
+sample_name='KA_0001'
+outFile='KA_0001'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20240402_6487_DM_scRNA_mouse_cellbender/cellbender_03_clean/result/DKO_F')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20241030_T01_cellbender/cellbender_03_clean/result/KA_0001')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 source("reportFunctions.R")
+source("scRNA_func.r")
 #We want to keep the cellranger filtered cells, but with cellbender corrected counts.
 
 library(DropletUtils)
@@ -59,3 +59,14 @@ cat("final counts: ", nrow(final_counts), "genes and", ncol(final_counts), "cell
 write10xCounts( paste0(sample_name, ".cellbender_filtered.clean.h5"), final_counts)
 
 write.table(df, paste0(sample_name, ".clean_summary.txt"), row.names=FALSE, sep="\t")
+
+if(length(names(cellranger_obj)) > 1){
+  other_names = names(cellranger_obj)[!(names(cellranger_obj) %in% c("counts"))]
+  for(other_name in other_names){
+    other_counts = cellranger_obj[[other_name]]
+    cat(paste0("cellranger_", other_name), ":", nrow(other_counts), "features and", ncol(other_counts), "cells.\n")
+    new_other_counts = other_counts[,common_cells]
+    write10xCounts( paste0(sample_name, ".cellbender_filtered.clean.", other_name, ".h5"), new_other_counts)
+    cat("final", paste0("cellranger_", other_name), ":", nrow(final_counts), "genes and", ncol(final_counts), "cells.\n")
+  }
+}
