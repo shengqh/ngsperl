@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='GPA_NML'
+outFile='T02_demultiplex'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -8,12 +8,12 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20240220_scRNA_iSGS_cell_atlas/hto_samples_preparation/result')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20241111_T02_demultiplex/hto_samples_preparation/result')
 
 ### Parameter setting end ###
 
 source("split_samples_utils.r")
-source('scRNA_func.r')
+source("scRNA_func.r")
 library('Seurat')
 library('R.utils')
 library('reshape2')
@@ -43,6 +43,7 @@ for(cname in names(files)){
   htos=res_lst$htos
   exp=res_lst$exp
   rm(res_lst)
+  cat("  there are", nrow(htos), "tags and", ncol(htos), "cells\n")
 
   if(has_filtered_files){
     ffiles=filtered_files[[cname]]
@@ -50,8 +51,8 @@ for(cname in names(files)){
     exp = read_scrna_data(ffiles)$counts
     stopifnot(all(colnames(exp) %in% colnames(htos)))
     htos=htos[,colnames(exp)]
+    cat("  after filtering, there are", nrow(htos), "tags and", ncol(htos), "cells\n")
   }
-  cat("  there are", nrow(htos), "tags and", ncol(htos), "cells\n")
   write.csv(htos, paste0(cname, ".alltags_raw.csv"), row.names=T)
 
   if (!is.na(params$hto_regex) & params$hto_regex != "" ) {
@@ -64,7 +65,11 @@ for(cname in names(files)){
 
   obj <- CreateSeuratObject(counts = htos, assay="HTO")
 
-  htos <- obj@assays$HTO@counts
+  if(is_seurat_5_plus(obj)){
+    htos <- obj[["HTO"]]$counts
+  }else{
+    htos <- obj@assays$HTO@counts
+  }
 
   cat("Final tagnames:", paste0(rownames(htos), collapse = ", "), "\n")
   

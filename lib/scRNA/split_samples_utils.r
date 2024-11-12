@@ -205,18 +205,29 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
     dev.off()
   }
   
-  tmat=data.frame(t(data.frame(obj@assays$HTO@counts, check.names = F)), check.names = F)
+  if(is_seurat_5_plus(obj)){
+    counts=obj[["HTO"]]$counts
+  }else{
+    counts=obj[["HTO"]]@counts
+  }
+
+  tmat=data.frame(t(data.frame(counts, check.names = F)), check.names = F)
   rownames(tmat)=colnames(obj)
   tmat$HTO = unlist(obj$HTO_classification)
   tmat$HTO.global = unlist(obj$HTO_classification.global)
   write.csv(tmat, file=paste0(output_prefix, ".csv"))
   
   if(length(tagnames) >= 2) {
-    obj <- FindVariableFeatures(obj, selection.method = "mean.var.plot")
+    if(is_seurat_5_plus(obj)){
+      VariableFeatures(obj) = tagnames
+      cat("ScaleData...\n")
+      obj<-ScaleData(obj,  features = VariableFeatures(obj))
+    }else{
+      obj <- FindVariableFeatures(obj, selection.method = "mean.var.plot")
 
-    cat("ScaleData...\n")
-    obj<-ScaleData(obj,  features = VariableFeatures(obj))
-
+      cat("ScaleData...\n")
+      obj<-ScaleData(obj,  features = VariableFeatures(obj))
+    }
     cat("RunUMAP...\n")
     #https://jlmelville.github.io/uwot/abparams.html
     #adjust param for umap
@@ -224,7 +235,12 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
 
     saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))
 
-    umap<-FetchData(obj, c("UMAP_1", "UMAP_2"))
+    if(is_seurat_5_plus(obj)){
+      umap<-FetchData(obj, c("umap_1", "umap_2")) |>
+        dplyr::rename(UMAP_1 = umap_1, UMAP_2 = umap_2)
+    }else{
+      umap<-FetchData(obj, c("UMAP_1", "UMAP_2"))
+    }
     scaled_data<-FetchData(obj, tagnames)
     colnames(scaled_data)<-paste0("Scaled_", tagnames)
     

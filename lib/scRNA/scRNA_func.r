@@ -1014,7 +1014,7 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
       ggsave(paste0(outFile, ".", adt, ".png"), g, width=5, height=5, dpi=300, units="in", bg="white")
     }
 
-    common_genes=intersect(adt_names, rownames(obj@assays$RNA@counts))
+    common_genes=intersect(adt_names, rownames(obj[["RNA"]]))
     for(adt in common_genes){
       g1<-FeaturePlot(obj, features=paste0("adt_", adt), cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
       g2<-FeaturePlot(obj, features=paste0("rna_", adt), cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " RNA")) + theme(aspect.ratio=1)
