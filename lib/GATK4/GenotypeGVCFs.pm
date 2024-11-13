@@ -50,9 +50,10 @@ sub perform {
 
   my $log_desc = $cluster->get_log_description($log);
   my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $output_vcf_filename_index );
-    print $pbs "
+
+  print $pbs "
 gatk --java-options -Xms8g \\
-  GenotypeGVCFs \\
+  GenotypeGVCFs $option \\
   -R ${ref_fasta} \\
   -O ${tmp_file} \\
   -D ${dbsnp_vcf} \\
@@ -66,9 +67,8 @@ if [[ -s $tmp_index ]]; then
   mv $tmp_file $output_vcf_filename
   mv $tmp_index $output_vcf_filename_index
 fi
-
 ";
-    
+
   $self->close_pbs( $pbs, $pbs_file );
 }
 
