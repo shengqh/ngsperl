@@ -55,8 +55,10 @@ figureRmd<-function(samples){
     result<-paste0(result, paste0("\n\n## All raw tags, ", ncol(raw_tags) - 1, " cells \n\n"))
     result<-paste0(result, getFigure(paste0(sample, ".alltags_raw.png")))
     
-    result<-paste0(result, paste0("\n\n## Filtered tags, ", ncol(filtered_tags)- 1, " cells \n\n"))
-    result<-paste0(result, getFigure(paste0(sample, ".tag.dist.png")))
+    if(nrow(filtered_tags) != nrow(raw_tags)){
+      result<-paste0(result, paste0("\n\n## Filtered tags, ", ncol(filtered_tags)- 1, " cells \n\n"))
+      result<-paste0(result, getFigure(paste0(sample, ".tag.dist.png")))
+    }
   }
   return(result)
 }
