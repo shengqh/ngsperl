@@ -132,6 +132,20 @@ sub initializeDefaultOptions {
     $def->{onco_options} = $default_onco_options;
   }
 
+  initDefaultValue( $def, "perform_panel_analysis", 0 );
+  if($def->{perform_panel_analysis}){
+    getValue($def, "panel_interested_snv_bed");
+    getValue($def, "panel_interested_gene_file");
+    
+    initDefaultValue( $def, "panel_GenotypeGVCFs_option", "-all-sites" );
+
+    $def->{"perform_gatk4_callvariants"} = 1;
+    $def->{"perform_annovar"} = 1;
+    $def->{"perform_cnv_gatk4_cohort"} = 0;
+    $def->{"callvariants_vqsr_mode"} = 0;
+    $def->{"gatk_callvariants_vqsr_mode"} = 0;
+  }
+
   return $def;
 }
 
@@ -2162,6 +2176,49 @@ rm -rf GLnexus.DB
   #qc
   if ( getValue( $def, "perform_multiqc" ) ) {
     addMultiQC( $config, $def, $tasks, $target_dir, $target_dir );
+  }
+
+  if( getValue( $def, "perform_panel_analysis", 0)) {
+    my $panel_GenotypeGVCFs_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_panel_GenotypeGVCFs";
+    $config->{$panel_GenotypeGVCFs_task} = {
+      class             => "GATK4::GenotypeGVCFs",
+      perform           => 1,
+      target_dir        => "${target_dir}/${panel_GenotypeGVCFs_task}",
+      option            => getValue($def, "panel_GenotypeGVCFs_option", ""),
+      source_ref        => ["GenomicsDBImport"],
+      fasta_file        => $def->{ref_fasta},
+      dbsnp_vcf         => $def->{dbsnp},
+      target_intervals_file => getValue($def, "panel_interested_snv_bed"),
+      java_option       => "",
+      sh_direct         => 0,
+      pbs               => {
+        "nodes"    => "1:ppn=4",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+    push(@$tasks, $panel_GenotypeGVCFs_task);
+
+    my $panel_merge_result_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_panel_merge_result";
+    $config->{$panel_merge_result_task} = {
+      class                 => "CQS::UniqueR",
+      perform               => 1,
+      target_dir            => "${target_dir}/${panel_merge_result_task}",
+      option                => "",
+      rtemplate             => "../Panel/merge_result.R",
+      parameterFile1_ref => [ $panel_GenotypeGVCFs_task, ".vcf.gz" ],
+      parameterFile2_ref => [ "bwa_g4_refine_gatk4_SNV_08_annovar", ".annovar.final.tsv" ],
+      parameterFile3 => getValue($def, "panel_interested_snv_bed"),
+      parameterFile4 => getValue($def, "panel_interested_gene_file"),
+      output_file_ext       => ".annotation.txt",
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    };
+    push(@$tasks, $panel_merge_result_task);
   }
 
   if ( getValue( $def, "perform_report" ) ) {
