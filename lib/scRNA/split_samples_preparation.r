@@ -18,6 +18,7 @@ library('Seurat')
 library('R.utils')
 library('reshape2')
 library('Matrix')
+library("stringr")
 
 params_lines=read.table(parSampleFile2, sep="\t")
 params=split(params_lines$V1, params_lines$V2)
@@ -25,6 +26,9 @@ params$hto_non_zero_percentage=as.numeric(params$hto_non_zero_percentage)
 params$nFeature_cutoff_min=as.numeric(params$nFeature_cutoff_min)
 params$hto_filter_by_exp=is_one(params$hto_filter_by_exp)
 params$hto_min_count=as.numeric(params$hto_min_count)
+
+hto_regex = ifelse(is.null(params$hto_regex), "", params$hto_regex)
+adt_regex = ifelse(is.null(params$adt_regex), "", params$adt_regex)
 
 files_lines=read.table(parSampleFile1, sep="\t")
 files=split(files_lines$V1, files_lines$V2)
@@ -55,12 +59,17 @@ for(cname in names(files)){
   }
   write.csv(htos, paste0(cname, ".alltags_raw.csv"), row.names=T)
 
-  if (!is.na(params$hto_regex) & params$hto_regex != "" ) {
-    htos<-htos[grepl(params$hto_regex, rownames(htos)),]
+  if (hto_regex != "" ) {
+    htos<-htos[grepl(hto_regex, rownames(htos)),]
     if (nrow(htos) == 0){
-      stop(paste0("Cannot find hashtag based on regex ", params$hto_regex, " for tags ", paste(rownames(mat), collapse=",")))
+      stop(paste0("Cannot find hashtag based on regex ", hto_regex, " for tags ", paste(rownames(mat), collapse=",")))
     }
     cat("After hash tag regex filter: ", paste(rownames(htos), collapse=","), "\n")
+  }
+
+  if(adt_regex != ""){
+    rownames(htos) = rownames(htos) |> stringr::str_extract(adt_regex)
+    cat("After ADT regex renaming: ", paste(rownames(htos), collapse=","), "\n")
   }
 
   obj <- CreateSeuratObject(counts = htos, assay="HTO")
@@ -105,24 +114,17 @@ for(cname in names(files)){
   }
   
   obj$filtered<-colnames(obj) %in% colnames(htos)
-  
+
   tagnames=rownames(obj[["HTO"]])
-  
+
   cutoff_tbl<-rbind(cutoff_tbl, data.frame("cutoff"=0, "tagname"=tagnames, "filename"=cname))
 
-  n_col=ceiling(sqrt(length(tagnames)))
-  n_row=ceiling(length(tagnames) / n_col)
   if(has_filtered_files){
     identName='filtered'
   }else{
     identName='orig.ident'
   }
-
-  width=min(20000, n_col * 3000 + 200)
-  height=min(20000, n_row * 1500 * ifelse(has_filtered_files, 2, 1))
-  png(paste0(cname, ".tag.dist.png"), width=width, height=height, res=300)
-  rplot(object=obj, assay="HTO", features = tagnames, identName=identName, n_row=n_row)
-  dev.off()
+  output_tag_dist(obj, paste0(cname, ".tag.dist.png"), tagnames=tagnames, identName=identName)
 
   obj<-subset(obj, cells=colnames(htos))
 
@@ -131,11 +133,6 @@ for(cname in names(files)){
     print(FeatureScatter(object = obj, feature1 = tagnames[1], feature2 = tagnames[2], cols = "black"))
     dev.off()
   }
-  # fdata<-FetchData(obj, assay="HTO", features=tagnames)
-  # mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
-  #              UMAP_2=obj@reductions$umap@cell.embeddings[,2],
-  #              Sample=obj$orig.ident,
-  #              batch=obj$batch)
 
   saveRDS(obj, paste0(cname, ".hto.rds"))
 
