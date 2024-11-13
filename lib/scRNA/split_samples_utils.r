@@ -38,14 +38,13 @@ save_to_matrix<-function(counts, target_folder) {
   gzip(matrix_file, overwrite=T)
 }
 
-output_tag_dist<-function(obj, filename){
-  tagnames=rownames(obj[["HTO"]])
+output_tag_dist<-function(obj, filename, tagnames=rownames(obj[["HTO"]]), identName="orig.ident"){
   n_col=ceiling(sqrt(length(tagnames)))
   n_row=ceiling(length(tagnames) / n_col)
   width=min(20000, n_col * 3000 + 200)
   height=min(20000, n_row * 1500)
   png(filename, width=width, height=height, res=300)
-  rplot(object=obj, assay="HTO", features = tagnames, identName="orig.ident", n_row=n_row)
+  rplot(object=obj, assay="HTO", features = tagnames, identName=identName, n_row=n_row)
   dev.off()
 }
 
