@@ -2147,6 +2147,7 @@ sub add_hto_samples_preparation {
       task_name => getValue($def, "task_name"),
       email => getValue($def, "email"),
       hto_regex => getValue($def, "hto_regex", ""),
+      adt_regex => getValue($def, "adt_regex", ""),
       nFeature_cutoff_min => getValue($def, "nFeature_cutoff_min"),
       hto_non_zero_percentage => getValue($def, "hto_non_zero_percentage", 0.2),
       hto_filter_by_exp => getValue($def, "hto_filter_by_exp", 1),
