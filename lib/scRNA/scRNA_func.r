@@ -954,9 +954,7 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   }
   g=g+plot_layout(ncol=ncol)
 
-  png(paste0(outFile, ".genes.png"), width=width, height=2000, res=300)
-  print(g)
-  dev.off()  
+  ggsave(paste0(outFile, ".genes.png"), g, width=width, height=2000, dpi=300, units="px", bg="white")
   
   mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
                 UMAP_2=obj@reductions$umap@cell.embeddings[,2],
@@ -976,51 +974,60 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   width=nWidth * 600 + 200
   height=nHeight*600
   
-  cat("draw pictures ... ")
-  draw_feature_qc(paste0(outFile, ".Ident"), obj, "orig.ident")
+  cat("draw pictures ... \n")
+  draw_feature_qc(prefix=paste0(outFile, ".Ident"), 
+    rawobj=obj, 
+    ident_name="orig.ident")
 
   p<-draw_dimplot(mt, paste0(outFile, ".Ident.png"), "Ident")
   if(!all(mt$Sample == mt$Ident)){
-    draw_feature_qc(paste0(outFile, ".sample"), obj, "sample")
+    draw_feature_qc(prefix=paste0(outFile, ".sample"), 
+      rawobj=obj, 
+      ident_name="sample")
     p1<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
     p<-p+p1
     width=width + nWidth * 600
   }
 
   if(has_batch_file){
-    draw_feature_qc(paste0(outFile, ".batch"), obj, "batch")
+    draw_feature_qc(prefix=paste0(outFile, ".batch"), 
+      rawobj=obj, 
+      ident_name="batch")
     p2<-draw_dimplot(mt, paste0(outFile, ".batch.png"), "batch")
     p<-p+p2
     width=width+nWidth * 600
   }
   
-  png(paste0(outFile, ".final.png"), width=width, height=height, res=300)
-  print(p)
-  dev.off()
+  ggsave(paste0(outFile, ".final.png"), p, width=width, height=height, dpi=300, units="px", bg="white")
 
   if(!is.null(qc_genes) & qc_genes != ''){
     genes<-unlist(strsplit( qc_genes, ',' ))
     g<-FeaturePlot(obj, genes, split.by="orig.ident")
-    png(paste0(outFile, ".qc_genes.png"), width=3000, height=6000, res=300)
-    print(g)
-    dev.off()
+    ggsave(paste0(outFile, ".qc_genes.png"), g, width=3000, height=6000, dpi=300, units="px", bg="white")
   }
 
   if("ADT" %in% names(obj)){
+    defaultAssay=DefaultAssay(obj)
+
+    DefaultAssay(obj)="ADT"
     adt_names=rownames(obj$ADT@counts)
     writeLines(adt_names, paste0(outFile, ".ADT.txt"))
     for(adt in adt_names){
-      g<-FeaturePlot(obj, features=paste0("adt_", adt), cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
+      g<-FeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
       ggsave(paste0(outFile, ".", adt, ".png"), g, width=5, height=5, dpi=300, units="in", bg="white")
     }
 
     common_genes=intersect(adt_names, rownames(obj[["RNA"]]))
     for(adt in common_genes){
-      g1<-FeaturePlot(obj, features=paste0("adt_", adt), cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
-      g2<-FeaturePlot(obj, features=paste0("rna_", adt), cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " RNA")) + theme(aspect.ratio=1)
+      DefaultAssay(obj)="ADT"
+      g1<-FeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
+      DefaultAssay(obj)="RNA"
+      g2<-FeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " RNA")) + theme(aspect.ratio=1)
       g<-g1+g2+plot_layout(ncol=2)
       ggsave(paste0(outFile, ".", adt, ".common.png"), g, width=10, height=5, dpi=300, units="in", bg="white")
     }
+
+    DefaultAssay(obj)<-defaultAssay
   }
 }
 
@@ -1549,7 +1556,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     }
 
     cat("draw qc exp ...\n")
-    ggsave(paste0(prefix, ".qc.exp.png"), g, width=width, height=height, dpi=300, units="px", bg="white")
+    ggsave(paste0(prefix, ".qc.exp.png"), g, width=width, height=height, dpi=300, units="px", bg="white", limitsize = FALSE)
   }
 
   cat("draw qc scatter ...\n")
