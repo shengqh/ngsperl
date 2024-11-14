@@ -241,8 +241,12 @@ sub add_seurat {
 
   my $preprocessing_rscript;
   if($by_integration){
-    my $integration_by_harmony = getValue( $def, "integration_by_harmony", 1);
-    if($integration_by_harmony){
+    if(getValue($def, "integration_by_fastmnn", 0)){
+      $seurat_task = "${prefix}seurat${sct_str}_fastmnn";
+      $preprocessing_rscript = "../scRNA/seurat_fastmnn.r";
+      $reduction = "mnn";
+      $rmd_ext = $rmd_ext . ".fastmnn";
+    }elsif(getValue( $def, "integration_by_harmony", 1)){
       $seurat_task = "${prefix}seurat${sct_str}_harmony";
       $preprocessing_rscript = "../scRNA/seurat_harmony.r";
       $reduction = "harmony";
