@@ -35,9 +35,14 @@ cur_options=split(option_tbl$V1, option_tbl$V2)
 
 phename=cur_options$phename
 phecode=as.numeric(cur_options$phecode)
-option_file=cur_options$option_file
-global_tbl=fread(option_file, header=FALSE)
-global_options=split(global_tbl$V1, global_tbl$V2)
+
+if("option_file" %in% names(cur_options)){
+  option_file=cur_options$option_file
+  global_tbl=fread(option_file, header=FALSE)
+  global_options=split(global_tbl$V1, global_tbl$V2)
+}else{
+  global_options=cur_options
+}
 
 agd_file=global_options$agd_file
 phecode_data_file=global_options$phecode_data_file
