@@ -51,6 +51,7 @@ genotype_file=global_options$genotype_file
 pca_file=global_options$pca_file
 phecode_map_file=global_options$phecode_map_file
 ancestry_file=global_options$ancestry_file
+genotype_name=global_options$genotype_name
 
 email=global_options$email
 affiliation=global_options$affiliation
@@ -151,8 +152,8 @@ print(xtable(coef, digits=-2, caption="Logistic regression coefficients"),type='
 ```
 
 ```{r}
-coef_file=paste0(phename, ".linear_association.csv")
-write.csv(coef, coef_file, quote=FALSE, row.names=TRUE)
+target_file=paste0(phename, ".", genotype_name, ".glm.csv")
+write.csv(coef, target_file, quote=FALSE, row.names=TRUE)
 ```
 
-coefficients are saved to `r coef_file`.
+coefficients are saved to `r target_file`.
