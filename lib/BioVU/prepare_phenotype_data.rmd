@@ -51,7 +51,7 @@ min_occurance=as.numeric(global_options$min_occurance)
 email=global_options$email
 affiliation=global_options$affiliation
 
-if(!is.na(email)){
+if(!is.null(email)){
   if(email != ""){
     cat("
   ---
