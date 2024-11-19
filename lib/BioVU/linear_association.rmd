@@ -38,9 +38,12 @@ cur_options=split(option_tbl$V1, option_tbl$V2)
 phename=cur_options$phename
 phecode=as.numeric(cur_options$phecode)
 phefile=cur_options$phefile
-
-global_tbl=fread("../fileList2.list", header=FALSE)
-global_options=split(global_tbl$V1, global_tbl$V2)
+if (file.exists("../fileList2.list")){
+  global_tbl=fread("../fileList2.list", header=FALSE)
+  global_options=split(global_tbl$V1, global_tbl$V2)
+}else{
+  global_options=cur_options
+}
 
 agd_file=global_options$agd_file
 demographics_file=global_options$demographics_file
@@ -52,14 +55,16 @@ ancestry_file=global_options$ancestry_file
 email=global_options$email
 affiliation=global_options$affiliation
 
-if(email != ""){
-  cat("
----
-author: 
-- name: ", email, "
-  affiliation: ", affiliation, "
----
-")
+if(!is.null(email)){
+  if(email != ""){
+    cat("
+  ---
+  author: 
+  - name: ", email, "
+    affiliation: ", affiliation, "
+  ---
+  ")
+  }
 }
 ```
 
