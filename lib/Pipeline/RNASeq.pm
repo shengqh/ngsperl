@@ -200,6 +200,10 @@ sub getRNASeqConfig {
 
   my ( $config, $tasks, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  if ($def->{perform_preprocessing_only}) {
+    return $config;
+  }
+
   my $fastq_source_ref = $source_ref;
 
   #merge summary and individual 
