@@ -74,12 +74,14 @@ ascat.bc = ascat.loadData(Tumor_LogR_file = tumourLogR_file,
 
 print("ascat.plotRawData before correlation...")                          
 ascat.plotRawData(ascat.bc, img.prefix = paste0(tumourname, ".Before_correction."))
+file.rename(paste0(tumourname, ".Before_correction.", tumourname, ".tumour.png"), paste0(tumourname, ".Before_correction.tumour.png"))
 
 print("ascat.correctLogR...")
 ascat.bc = ascat.correctLogR(ascat.bc, GCcontentfile = GCcontentfile, replictimingfile = replictimingfile)
 
 print("ascat.plotRawData after correlation...")
 ascat.plotRawData(ascat.bc, img.prefix = paste0(tumourname, ".After_correction."))
+file.rename(paste0(tumourname, ".After_correction.", tumourname, ".tumour.png"), paste0(tumourname, ".After_correction.tumour.png"))
 
 print("ascat.predictGermlineGenotypes...")
 gg = ascat.predictGermlineGenotypes(ascat.bc, platform = "WGS_hg38_50X")
@@ -89,6 +91,7 @@ ascat.bc = ascat.aspcf(ascat.bc, ascat.gg=gg)
 
 print("ascat.plotSegmentedData...")
 ascat.plotSegmentedData(ascat.bc, img.prefix = paste0(tumourname, ".Segmented."))
+file.rename(paste0(tumourname, ".Segmented.", tumourname, ".ASPCF.png"), paste0(tumourname, ".Segmented.ASPCF.png"))
 
 print("ascat.runAscat...")
 ascat.output = ascat.runAscat(ascat.bc, gamma=1, write_segments=TRUE)
@@ -105,10 +108,7 @@ for(pat in c("*alleleFrequencies*", "*.PCFed.txt", "*_rawBAF*", "*segments*")){
   removed=file.remove(temp_files)
 }
 
-file.rename(paste0(tumourname, ".Before_correction.", tumourname, ".tumour.png"), paste0(tumourname, ".Before_correction.tumour.png"))
-file.rename(paste0(tumourname, ".After_correction.", tumourname, ".tumour.png"), paste0(tumourname, ".After_correction.tumour.png"))
 file.rename(paste0("tumorSep", tumourname, ".png"), paste0(tumourname, ".tumourSep.png"))
-file.rename(paste0(tumourname, ".Segmented.", tumourname, ".ASPCF.png"), paste0(tumourname, ".Segmented.ASPCF.png"))
 
 system(paste("gzip", shQuote(tumourLogR_file)))
 system(paste("gzip", shQuote(tumourBAF_file)))
