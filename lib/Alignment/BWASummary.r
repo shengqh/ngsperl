@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='batch01'
-parSampleFile1='fileList1.txt'
+outFile='human_exomeseq'
+parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
+parSampleFile6='fileList6.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-rg_name_regex='(.+)_ITER_'
 
-setwd('/scratch/cqs/breast_cancer_spore/analysis/batch01/bwa_03_summary/result')
+
+setwd('/nobackup/h_vivian_weiss_lab/shengq2/20210616_human_exomeseq/bwa_g4_refine_summary/result')
 
 ### Parameter setting end ###
 
@@ -30,7 +31,11 @@ if(!exists("rg_name_regex")){
 }
 
 if (parSampleFile2 != ""){
-  draw_chromosome_count(parSampleFile2, outFile, rg_name_regex)
+  draw_chromosome_count(listFile=parSampleFile2, 
+                        outFilePrefix=outFile,
+                        rg_name_regex=rg_name_regex, 
+                        remove_chrM_genes=FALSE,
+                        draw_read_png=parSampleFile1 == "")
 }
 
 if (parSampleFile1 != ""){
