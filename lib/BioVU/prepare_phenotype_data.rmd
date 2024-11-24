@@ -147,7 +147,8 @@ possible_pos_samples = phecodes |>
   dplyr::filter(phecode >= exclude_start) |>
   dplyr::filter(phecode <= exclude_end) |>
   dplyr::distinct() |>
-  dplyr::arrange(GRID)
+  dplyr::group_by(GRID) |>
+  dplyr::summarize(n=n()) 
 print_table(possible_pos_samples, byDT=TRUE, row.names=FALSE)
 ```
 
