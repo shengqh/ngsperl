@@ -59,12 +59,12 @@ affiliation=global_options$affiliation
 if(!is.null(email)){
   if(email != ""){
     cat("
-  ---
-  author: 
-  - name: ", email, "
-    affiliation: ", affiliation, "
-  ---
-  ")
+---
+author: 
+- name: ", email, "
+  affiliation: ", affiliation, "
+---
+")
   }
 }
 ```
@@ -144,16 +144,30 @@ summary(table_sum1, total=T, title = "", width = 3, digits=1, digits.p=2, digits
 # Correlation analysis
 
 ```{r}
-res <- glm(Phenotype ~ Genotype + Age + Gender + Race + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10, family=binomial(link="logit"), data=combined_data)
-coef=summary(res)$coefficients |>
-  as.data.frame() 
-rownames(coef)[2]="Genotype"
-print(xtable(coef, digits=-2, caption="Logistic regression coefficients"),type='html')
-```
+coef=data.frame(
+  "Variable"=c("(Intercept)", "Genotype"),
+  "Estimate" = 0,
+  "Std. Error" = 0,
+  "z value" = 0,
+  "Pr(>|z|)" = 1,
+  check.names=FALSE
+) |> tibble::column_to_rownames("Variable")
 
-```{r}
 target_file=paste0(phename, ".", genotype_name, ".glm.csv")
+
+if(length(unique(combined_data$Phenotype)) == 1){
+  cat("\n\n<mark>Only one phenotype, no correlation analysis is performed.</mark>\n\n")
+}else if(length(unique(combined_data$Genotype)) == 1){
+  cat("\n\n<mark>Only one genotype, no correlation analysis is performed.</mark>\n\n")
+}else{
+  res <- glm(Phenotype ~ Genotype + Age + Gender + Race + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + PC7 + PC8 + PC9 + PC10, family=binomial(link="logit"), data=combined_data)
+  coef=summary(res)$coefficients |>
+    as.data.frame() 
+  rownames(coef)[2]="Genotype"
+  print(xtable(coef, digits=-2, caption="Logistic regression coefficients"),type='html')
+
+  cat("\n\ncoefficients are saved to ", target_file, "\n\n")
+}
 write.csv(coef, target_file, quote=FALSE, row.names=TRUE)
 ```
 
-coefficients are saved to `r target_file`.
