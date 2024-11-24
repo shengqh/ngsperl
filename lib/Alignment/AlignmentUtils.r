@@ -143,14 +143,14 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA, remov
   if(draw_read_png){
     reads=final |> dplyr::select(Sample, Reads) |>
       dplyr::group_by(Sample) |>
-      dplyr::summarise(TotalReads = sum(Reads)) |> 
-      dplyr::arrange(TotalReads)
+      dplyr::summarise(TotalMappedReads = sum(Reads)) |> 
+      dplyr::arrange(TotalMappedReads)
 
     reads$Sample=factor(reads$Sample, levels=reads$Sample)
 
-    g<-ggplot(reads, aes(x=Sample, y=TotalReads)) + 
+    g<-ggplot(reads, aes(x=Sample, y=TotalMappedReads)) + 
       geom_bar(stat="identity", width=0.5) + 
-      ylab("No. Read") +
+      ylab("No. Mapped Read") +
       theme_classic() +
       theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
             axis.text.y = element_text(size=11),
@@ -160,6 +160,7 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA, remov
             axis.title.x = element_blank())
 
     height=get_longest_text_width(as.character(reads$Sample), "", 11, "inches", 300)
+    write.csv(reads, paste0(outFilePrefix, ".reads.csv"), row.names=FALSE)
     ggsave(paste0(outFilePrefix, ".reads.png"), g, width=max(3, nrow(reads)/4), height=height + 2, units="in", dpi=300, bg="white", limitsize = FALSE)    
   }
 }
