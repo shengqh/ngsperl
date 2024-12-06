@@ -56,6 +56,8 @@ if(show_webgestalt_detail){
 <hr>
 
 ```{r, echo=FALSE, fig.width=8, fig.height=4}
+library(scales)
+
 dataForPlotFrameP = head(enriched, 20) |>
   dplyr::mutate(coverage=overlap / size,
                 NegLog10pAdj=-log10(FDR))
@@ -82,6 +84,7 @@ p=dataForPlotFrameP %>%
   ggplot(aes(x=description,y=coverage,colour=!!sym(colorBy)))+
   geom_point(aes(size=size)) +
   coord_flip() + 
+  scale_x_discrete(labels = label_wrap(60)) +
   xlab("") +
   ylab("Geneset coverage") +
   scale_colour_continuous(limits=c(0,max_value), low='blue', high='red',guide=guide_colorbar(reverse=FALSE))+
