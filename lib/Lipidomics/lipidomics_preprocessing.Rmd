@@ -109,6 +109,7 @@ get_highest_value<-function(combined){
   #find the entry with highest value in most samples
   dupname=dupnames[1]
   for(dupname in dupnames){
+    print(dupname)
     #extract lipids with identical name
     cur_dup=combined %>% dplyr::filter(Metabolite.name==dupname) %>% dplyr::select(!c(Metabolite.name, Ontology, Mode))
     #calculate the rank of each lipid in each sample
@@ -117,6 +118,10 @@ get_highest_value<-function(combined){
     sum_rank=rowSums(cur_rank)
     #find the entry with the lowest rank sum
     min_rank=which(sum_rank==min(sum_rank))
+    if(length(min_rank)>1){
+      print("Warning: multiple entries with the same rank sum. Use the first one.")
+      min_rank=min_rank[1]
+    }
     #extract the entry with the lowest rank sum
     min_dup=cur_dup[min_rank,]
     #add the entry to the final table
@@ -131,6 +136,7 @@ get_sum_value<-function(combined){
 
   dupname=dupnames[1]
   for(dupname in dupnames){
+    #cat("Processing ", dupname, " ... \n")
     cur_dup=combined[combined$Metabolite.name==dupname,]
     # It is possible that all the duplicates are from same mode.
     # We need to check the mode instead of just assign "BOTH"
@@ -151,13 +157,12 @@ if(combine_by == "SUM"){
 }else{
   stop("Unknown combine_by: ", combine_by, ". It should be either SUM or HIGHEST.")
 }
+combined_file=paste0(result_prefix, ".combined.csv")
+write.csv(final, combined_file, row.names=FALSE)
 stopifnot(duplicated(final$Metabolite.name) %>% sum == 0)
 ```
 
 ```{r}
-
-combined_file=paste0(result_prefix, ".combined.csv")
-write.csv(final, combined_file, row.names=FALSE)
 print_table(final, row.names=FALSE, byDT=TRUE)
 ```
 
