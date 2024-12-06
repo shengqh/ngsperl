@@ -4,6 +4,7 @@ output:
   rmdformats::readthedown:
     toc_depth: 4
     code_folding: hide
+    number_sections: true
 ---
 
 ```{css, echo=FALSE}
@@ -99,20 +100,9 @@ datatable(files, rownames = F)
 Read data files, rename Sample with Class_Sample.
 
 ```{r}
-read_files<-function(files, file_column){
-  files_list <- list()
-  for (i in 1:nrow(files)){
-    df <- read.csv(files[i,file_column], row.names=1)
-    stopifnot(all(colnames(df) == meta$Sample))
-    colnames(df) <- meta$Class_Sample
-    files_list[[i]]=df
-  }
-  names(files_list) <- files$Name
-  return(files_list)
-}
 
-raw_files_list <- read_files(files, "RawFile")
-log_files_list <- read_files(files, "LogFile")
+raw_files_list <- read_data_files(files, "RawFile")
+log_files_list <- read_data_files(files, "LogFile")
 ```
 
 ```{r}
@@ -185,8 +175,15 @@ result = "\n# Boxplots\n\n"
 for (i in 1:length(log_files_list_melt)){
   category = names(log_files_list_melt)[i]
   result = paste0(result, "\n\n## ", category, "\n")
-  png_file = draw_boxplot(log_files_list_melt[[i]], category, prefix=paste0(result_prefix, ".", category))
-  result = paste0(result, getFigure_width_height(png_file, fig.width=box_width, fig.height=box_height))
+
+  result = paste0(result, "\n\n### Raw abundance\n")
+  png_file = draw_boxplot(raw_files_list_melt[[i]], category, prefix=paste0(result_prefix, ".", category, ".raw"))
+  result = paste0(result, getFigure(png_file))
+  png_files$box_file[i]=normalizePath(png_file)
+
+  result = paste0(result, "\n\n### Log transformed abundance\n")
+  png_file = draw_boxplot(log_files_list_melt[[i]], category, prefix=paste0(result_prefix, ".", category, ".log"))
+  result = paste0(result, getFigure(png_file))
   png_files$box_file[i]=normalizePath(png_file)
 }
 ```
@@ -199,14 +196,29 @@ result = paste0(result, "\n# PCA\n\n")
 for (i in 1:length(log_files_list_sel)){
   category = names(log_files_list_sel)[i]
   result = paste0(result, "\n\n## ", category, "\n")
+
+  result = paste0(result, "\n\n### Raw abundance\n")
+
+  data_df = raw_files_list_sel[[i]]
+  png_file = draw_pca(data=data_df, 
+                      groups=meta_sel$Class, 
+                      title=category, 
+                      file_prefix=paste0(result_prefix, ".", category, ".raw"), 
+                      pca_width=pca_width, 
+                      pca_height=pca_height)
+  result = paste0(result, getFigure(png_file))
+
+  result = paste0(result, "\n\n### Log transformed abundance\n")
+
   data_df = log_files_list_sel[[i]]
   png_file = draw_pca(data=data_df, 
                       groups=meta_sel$Class, 
                       title=category, 
-                      file_prefix=paste0(result_prefix, ".", category), 
+                      file_prefix=paste0(result_prefix, ".", category, ".log"), 
                       pca_width=pca_width, 
                       pca_height=pca_height)
-  result = paste0(result, getFigure_width_height(png_file, fig.width=pca_width, fig.height=pca_height))
+  result = paste0(result, getFigure(png_file))
+
   png_files$pca_file[i]=normalizePath(png_file)
 }
 ```
@@ -227,6 +239,29 @@ for (i in 1:length(log_files_list_sel)){
   category = names(log_files_list_sel)[i]
   result = paste0(result, "\n\n## ", category, "\n")
 
+  result = paste0(result, "\n\n### Raw abundance\n")
+  data_df = raw_files_list_sel[[i]]
+  show_rownames=nrow(data_df) <= 30
+  if(show_rownames){
+    cur_heatmap_width = heatmap_width + 2
+  }else{
+    cur_heatmap_width = heatmap_width
+  } 
+  heatmap_height = heatmap_heights[i]
+
+  png_file = draw_pheatmap( data_df = data_df, 
+                            groups = groups, 
+                            annotation_colors = annotation_colors, 
+                            title=category, 
+                            file_prefix=paste0(result_prefix, ".", category, ".raw"),
+                            heatmap_width=cur_heatmap_width,
+                            heatmap_height=heatmap_height,
+                            annotation_legend=TRUE,
+                            show_rownames=show_rownames)
+
+  result = paste0(result, getFigure(png_file))
+
+  result = paste0(result, "\n\n### Log transformed abundance\n")
   data_df = log_files_list_sel[[i]]
   show_rownames=nrow(data_df) <= 30
   if(show_rownames){
@@ -240,20 +275,13 @@ for (i in 1:length(log_files_list_sel)){
                             groups = groups, 
                             annotation_colors = annotation_colors, 
                             title=category, 
-                            file_prefix=paste0(result_prefix, ".", category),
+                            file_prefix=paste0(result_prefix, ".", category, ".log"),
                             heatmap_width=cur_heatmap_width,
                             heatmap_height=heatmap_height,
                             annotation_legend=TRUE,
                             show_rownames=show_rownames)
 
-  # if(category == "Species"){
-  #   result = paste0(result, "\n\nSpecies heatmap file=", png_file, "\n\n")
-  # }
-  if(is.na(heatmap_height)){
-    result = paste0(result, getFigure_width_height(png_file, fig.width=cur_heatmap_width, fig.height=NULL))
-  }else{
-    result = paste0(result, getFigure_width_height(png_file, fig.width=cur_heatmap_width, fig.height=heatmap_height))
-  }
+  result = paste0(result, getFigure(png_file))
   png_files$heatmap_file[i]=normalizePath(png_file)
 }
 ```
@@ -337,11 +365,11 @@ for (i in 1:length(raw_files_list_melt)){
   datafiles$file[i]=normalizePath(category_csv)
 
   png_file = draw_stacked(cur_data, category=category, prefix=paste0(result_prefix, ".", category))
-  result = paste0(result, getFigure_width_height(png_file, fig.width=stacked_width, fig.height=stacked_height))
+  result = paste0(result, getFigure(png_file))
   png_files$stacked_file[i]=normalizePath(png_file)
 
   png_file = draw_stacked_per(cur_data, category=category, prefix=paste0(result_prefix, ".", category))
-  result = paste0(result, getFigure_width_height(png_file, fig.width=stacked_width, fig.height=stacked_height))
+  result = paste0(result, getFigure(png_file))
 }
 write.table(datafiles, paste0(task_name, ".files.txt"), row.names=FALSE, sep="\t", quote=FALSE)
 write.table(png_files, paste0(task_name, ".png_files.txt"), row.names=FALSE, sep="\t", quote=FALSE)
