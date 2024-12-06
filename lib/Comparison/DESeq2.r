@@ -8,6 +8,7 @@ foldChange<-2
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
+showLabelInVolcano<-1
 showLabelInPCA<-1
 showDEGeneCluster<-0
 addCountOne<-0
@@ -402,6 +403,8 @@ heatmap_legend_label_fontsize=18
 heatmap_column_name_fontsize=18
 
 de_biotype=NA
+selectLab=NULL
+
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
   myoptions = split(options_table$V1, options_table$V2)
@@ -425,6 +428,10 @@ if(file.exists("fileList1.txt")){
     if(de_biotype == ""){
       de_biotype = NA
     }
+  }
+
+  if(!is_one(myoptions$showLabelInVolcano)){
+    selectLab=""
   }
 }
 
@@ -1180,6 +1187,7 @@ for(countfile_index in c(1:length(countfiles))){
 
         p<-EnhancedVolcano(diffResult,
             lab = diffResult$Short_name,
+            selectLab = selectLab,
             x = 'log2FoldChange',
             y = yvar,
             pCutoff = pvalue,
@@ -1199,6 +1207,7 @@ for(countfile_index in c(1:length(countfiles))){
         }
         p<-EnhancedVolcano(diffResult,
             lab = diffResult$Short_name,
+            selectLab = selectLab,
             x = 'log2FoldChange',
             y = 'pvalue',
             pCutoff = pvalue,
