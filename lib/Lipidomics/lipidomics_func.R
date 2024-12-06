@@ -10,7 +10,7 @@ make_valid_name<-function(old_name){
   return(new_name)
 }
 
-read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_groups=c("Solvent", "Blank"), not_sample_groups=c("AIS", "dBlank")){
+read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_groups=c("Blank", "Solvent"), not_sample_groups=c("AIS", "dBlank")){
   modePrefix=".*[POS|NEG]_"
 
   header<-data.frame(t(fread(filename, nrows=5, data.table=FALSE)))
@@ -88,7 +88,13 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
 
     res$mean_QC=aver_df[,qc_group]
     
-    blank_index=which(colnames(aver_df) %in% blank_groups)
+    for(blank_group in blank_groups){
+      blank_index=which(colnames(aver_df) %in% blank_group)
+      if(length(blank_index)>0){
+        blank_index=blank_index[1]
+        break
+      }
+    }
     res$mean_Blank=aver_df[,blank_index]
     
     res$stdev_QC=stdev_df[,qc_group]
@@ -137,15 +143,17 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
 
   res = res %>% dplyr::select(-c(mean_QC, mean_Blank, stdev_QC, RSD_QC, blank_QC_ratio))
 
+  stopifnot(sum(is.na(res$Metabolite.name)) == 0)
+
   return(list(res=res, all_meta=meta, sample_meta=sample_meta, filter_tb=filter_tb))
 }
 
 draw_pheatmap <- function(data_df, groups, annotation_colors, title, file_prefix, heatmap_width, heatmap_height, annotation_legend=FALSE, show_rownames=nrow(data_df) <= 30){
   cellheight = ifelse(show_rownames, 12, NA)
-  max_height=ifelse(show_rownames, 7, 6)
+  max_height=ifelse(show_rownames, 10, 8)
   heatmap_height = ifelse(is.na(heatmap_height), max(4, min(max_height, nrow(data_df) * 0.2 + 3)), heatmap_height)
   png_file = paste0(file_prefix, ".heatmap.png")
-  pheatmap( data_df, 
+  pheatmap::pheatmap( data_df, 
             main = title,
             scale = "row", 
             show_rownames = show_rownames, 
@@ -192,4 +200,17 @@ draw_pca <- function(data, groups, title, file_prefix, pca_width, pca_height, co
   png_file = paste0(file_prefix, ".pca.png")
   ggsave(png_file, plot = p, width = pca_width, height = pca_height, dpi = 300, units = "in", bg="white")
   return(png_file)
+}
+
+read_data_files<-function(files, file_column){
+  files_list <- list()
+  for (i in 1:nrow(files)){
+    df <- read.csv(files[i,file_column], row.names=1) |> 
+      dplyr::select(-RT, -mz)
+    stopifnot(all(colnames(df) == meta$Sample))
+    colnames(df) <- meta$Class_Sample
+    files_list[[i]]=df
+  }
+  names(files_list) <- files$Name
+  return(files_list)
 }

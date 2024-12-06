@@ -95,20 +95,8 @@ datatable(files, rownames = F)
 Read data files, rename Sample with Class_Sample.
 
 ```{r}
-read_files<-function(files, file_column){
-  files_list <- list()
-  for (i in 1:nrow(files)){
-    df <- read.csv(files[i,file_column], row.names=1)
-    stopifnot(all(colnames(df) == meta$Sample))
-    colnames(df) <- meta$Class_Sample
-    files_list[[i]]=df
-  }
-  names(files_list) <- files$Name
-  return(files_list)
-}
-
-raw_files_list <- read_files(files, "RawFile")
-log_files_list <- read_files(files, "LogFile")
+raw_files_list <- read_data_files(files, "RawFile")
+log_files_list <- read_data_files(files, "LogFile")
 ```
 
 ```{r}
@@ -163,6 +151,7 @@ print_table(comp_table, row.names=FALSE)
 ```
 
 # Differential expression analysis
+
 Fold change > `r foldchange` and FDR < `r fdr ` are considered significant   
 
 ```{r}
