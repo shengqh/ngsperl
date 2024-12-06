@@ -609,6 +609,7 @@ sub addDEseq2 {
       "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18),
       "n_first" => $n_first,
       "de_biotype" => $de_biotype,
+      "showLabelInVolcano" => getValue($def, "DE_showLabelInVolcano", 1),
     },
     pbs => {
       "nodes"     => "1:ppn=" . $def->{max_thread},
