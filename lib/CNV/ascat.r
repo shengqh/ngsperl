@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='P1809_AC_003'
-outFile='P1809_AC_003'
+sample_name='P6121_CP_35'
+outFile='P6121_CP_35'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -9,13 +9,18 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_vivian_weiss_lab/shengq2/20210616_human_exomeseq/ascat/result/P1809_AC_003')
+setwd('/nobackup/h_vivian_weiss_lab/shengq2/20210616_human_exomeseq/ascat/result/P6121_CP_35')
 
 ### Parameter setting end ###
 
 library(ASCAT)
 library(data.table)
 library(dplyr)
+
+delete_files <- function(pattern){
+  temp_files = list.files(pattern = pattern)
+  removed=file.remove(temp_files)
+}
 
 opt_tbl=fread(parSampleFile1, header=F) 
 tumor_file_map=split(opt_tbl$V1, opt_tbl$V2)
@@ -54,7 +59,7 @@ print("ascat.prepareHTS...")
 ascat.prepareHTS(
   tumourseqfile = tumourseqfile,
   tumourname = tumourname,
-  allelecounter_exe = 'alleleCounter',
+  allelecounter_exe = allelecounter_exe,
   alleles.prefix = alleles.prefix,
   loci.prefix = loci.prefix,
   BED_file = BED_file,
@@ -64,6 +69,9 @@ ascat.prepareHTS(
   tumourLogR_file = tumourLogR_file,
   tumourBAF_file = tumourBAF_file)
  
+delete_files("*.alleleFrequencies*")
+delete_files("*_BAF_rawBAF.txt")
+
 ### run ASCAT
 # gamma=1 (suggested)
 print("ascat.loadData...")
@@ -71,6 +79,10 @@ ascat.bc = ascat.loadData(Tumor_LogR_file = tumourLogR_file,
                           Tumor_BAF_file = tumourBAF_file, 
                           gender = gender, 
                           genomeVersion = genomeVersion) 
+
+print("gzip LogR and BAF files ...")
+system(paste("gzip", shQuote(tumourLogR_file)))
+system(paste("gzip", shQuote(tumourBAF_file)))
 
 print("ascat.plotRawData before correlation...")                          
 ascat.plotRawData(ascat.bc, img.prefix = paste0(tumourname, ".Before_correction."))
@@ -85,6 +97,7 @@ file.rename(paste0(tumourname, ".After_correction.", tumourname, ".tumour.png"),
 
 print("ascat.predictGermlineGenotypes...")
 gg = ascat.predictGermlineGenotypes(ascat.bc, platform = "WGS_hg38_50X")
+file.rename(paste0("tumorSep", tumourname, ".png"), paste0(tumourname, ".tumourSep.png"))
 
 print("ascat.aspcf...")
 ascat.bc = ascat.aspcf(ascat.bc, ascat.gg=gg)
@@ -93,8 +106,12 @@ print("ascat.plotSegmentedData...")
 ascat.plotSegmentedData(ascat.bc, img.prefix = paste0(tumourname, ".Segmented."))
 file.rename(paste0(tumourname, ".Segmented.", tumourname, ".ASPCF.png"), paste0(tumourname, ".Segmented.ASPCF.png"))
 
+delete_files("*segments*")
+
 print("ascat.runAscat...")
 ascat.output = ascat.runAscat(ascat.bc, gamma=1, write_segments=TRUE)
+
+delete_files("*.PCFed.txt")
 
 print("ascat.metrics...")
 QC = ascat.metrics(ascat.bc, ascat.output)
@@ -102,15 +119,5 @@ QC = ascat.metrics(ascat.bc, ascat.output)
 result=list(ascat.bc=ascat.bc, ascat.output=ascat.output, QC=QC)
 saveRDS(result, paste0(tumourname, '.ascat.rds'))
 
-#remove temporary files
-for(pat in c("*alleleFrequencies*", "*.PCFed.txt", "*_rawBAF*", "*segments*")){
-  temp_files = list.files(pattern = pat)
-  removed=file.remove(temp_files)
-}
-
-file.rename(paste0("tumorSep", tumourname, ".png"), paste0(tumourname, ".tumourSep.png"))
-
-system(paste("gzip", shQuote(tumourLogR_file)))
-system(paste("gzip", shQuote(tumourBAF_file)))
-
 unlink(".cache", recursive = TRUE, force = TRUE)
+
