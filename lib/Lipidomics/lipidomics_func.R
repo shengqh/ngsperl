@@ -10,7 +10,7 @@ make_valid_name<-function(old_name){
   return(new_name)
 }
 
-read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_groups=c("Blank", "Solvent"), not_sample_groups=c("AIS", "dBlank")){
+read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_groups=c("Blank", "Solvent"), not_sample_groups=c("AIS", "dBlank"), remove_lipids=c()){
   modePrefix=".*[POS|NEG]_"
 
   header<-data.frame(t(fread(filename, nrows=5, data.table=FALSE)))
@@ -108,8 +108,10 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
   colnames(filter_tb)=c("Filter", "Count")
   filter_tb[1,]=c("Total features", nrow(res))  
 
-  res <- res %>% filter(Metabolite.name != 'Unknown')
-  filter_tb[2,]=c('remove "Unknown"', nrow(res))  
+  discard_lipids = c("Unknown", remove_lipids)
+  discard_lipids = discard_lipids[discard_lipids != ""]
+  res <- res %>% filter(!(Metabolite.name %in% discard_lipids))
+  filter_tb[2,]=c(paste0('remove ', paste0(discard_lipids, collapse=",")), nrow(res))  
 
   res <- res %>% filter(!grepl('w/o', Metabolite.name))
   filter_tb[3,]=c('remove "w/o MS2"', nrow(res))  

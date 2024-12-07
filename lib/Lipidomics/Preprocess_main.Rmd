@@ -52,6 +52,7 @@ affiliation=myoptions$affiliation
 task_name=myoptions$task_name
 anno_file=myoptions$nomenclature_file
 combine_by=myoptions$combine_by
+remove_lipids=unlist(strsplit(myoptions$remove_lipids, ','))
 
 if(!combine_by %in% c("SUM", "HIGHEST")){
   stop(paste0("Unknown combine_by value, ", combine_by, ". It should be HIGHEST or SUM."))

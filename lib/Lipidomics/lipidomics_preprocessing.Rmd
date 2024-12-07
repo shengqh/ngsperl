@@ -1,10 +1,14 @@
 ```{r}
 library("R.utils")
+
+discard_lipids = c("Unknown", remove_lipids)
+discard_lipids = discard_lipids[discard_lipids != ""]
+discard_lipids_str = paste0(discard_lipids, collapse='" and "')
 ```
 
 # Filter criteria
 
-- Metabolite.name != 'Unknown' to remove unknown features
+- Metabolite.name != "`r discard_lipids_str`"" to remove unknown features
 - Metabolite.name doesn't contain 'w/o' to remove features without ms2
 - Ontology != 'Others' and metabolite.name doesn't contain 'RIKEN' to remove other unidentified features
 - Metabolite.name doesn't contain '(d7)' or '(d9)' to remove internal standards
@@ -15,7 +19,7 @@ library("R.utils")
 Read positive area data from `r pos_file`.
 
 ```{r}
-lst<-read_lipid_tsv_and_filter(filename=pos_file, filePrefix=paste0(result_prefix, ".pos"))
+lst<-read_lipid_tsv_and_filter(filename=pos_file, filePrefix=paste0(result_prefix, ".pos"), remove_lipids=remove_lipids)
 
 pos_df=lst$res
 pos_all_meta=lst$all_meta
@@ -52,7 +56,7 @@ print_table(head(pos_df), row.names=FALSE)
 Read negative area data from `r neg_file`.
 
 ```{r}
-lst<-read_lipid_tsv_and_filter(filename=neg_file, filePrefix=paste0(result_prefix, ".neg"))
+lst<-read_lipid_tsv_and_filter(filename=neg_file, filePrefix=paste0(result_prefix, ".neg"), remove_lipids=remove_lipids)
 
 neg_df=lst$res
 neg_all_meta=lst$all_meta
@@ -109,7 +113,7 @@ get_highest_value<-function(combined){
   #find the entry with highest value in most samples
   dupname=dupnames[1]
   for(dupname in dupnames){
-    print(dupname)
+    #print(dupname)
     #extract lipids with identical name
     cur_dup=combined %>% dplyr::filter(Metabolite.name==dupname) %>% dplyr::select(!c(Metabolite.name, Ontology, Mode))
     #calculate the rank of each lipid in each sample
@@ -119,7 +123,7 @@ get_highest_value<-function(combined){
     #find the entry with the lowest rank sum
     min_rank=which(sum_rank==min(sum_rank))
     if(length(min_rank)>1){
-      print("Warning: multiple entries with the same rank sum. Use the first one.")
+      #print("Warning: multiple entries with the same rank sum. Use the first one.")
       min_rank=min_rank[1]
     }
     #extract the entry with the lowest rank sum

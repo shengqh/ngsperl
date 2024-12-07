@@ -74,6 +74,7 @@ sub getLipidomicsConfig {
       affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
       nomenclature_file => getValue($def, "nomenclature_file"),
       combine_by => getValue($def, "combine_by"),
+      remove_lipids => getValue($def, "remove_lipids"),
     },
     parameterSampleFile2_ref => "files",
     suffix => ".preprocess",
