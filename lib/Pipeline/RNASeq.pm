@@ -259,10 +259,14 @@ if [[ -s FusionInspector-validate/finspector.fusion_inspector_web.html ]]; then
   mv FusionInspector-validate/finspector.FusionInspector.fusions.tsv FusionInspector-validate/__NAME___finspector.FusionInspector.fusions.tsv
 fi
 
+STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusion,v\"\$1}' > __NAME__.version
+
+
 ",
       parameterSampleFile1_join_delimiter => " \\\n  --right_fq ",
       parameterSampleFile1_ref => $fastq_source_ref,
       output_ext => "_star-fusion.fusion_predictions.tsv",
+      output_file_ext => "_star-fusion.fusion_predictions.tsv,.version,_star-fusion.fusion_predictions.abridged.coding_effect.tsv",
       docker_prefix => "star_fusion_",
       output_to_same_folder     => 0,
       no_output                 => 1,
@@ -274,6 +278,23 @@ fi
       },
     };
     push @$tasks, $star_fusion_task;
+
+    my $star_fusion_summary_task = "star_fusion_summary";
+    $config->{$star_fusion_summary_task} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $star_fusion_summary_task,
+      option                   => "",
+      rtemplate                => "../Fusion/star_fusion_summary.r",
+      output_file_ext          => ".fusion_count.csv,.fusion_count.png",
+      parameterSampleFile1_ref => [ $star_fusion_task, ".fusion_predictions.tsv" ],
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
   }
 
   my $count_table_column = 6;
@@ -1440,6 +1461,11 @@ fi
         push( @report_files, "genetable",    ".fpkm.tsv\$" );
       }
       push( @report_names, "genetable_fpkm" );
+    }
+
+    if( defined $config->{star_fusion_summary}){
+      push( @report_files, "star_fusion_summary", ".fusion_count.png" );
+      push( @report_names, "star_fusion_png" );
     }
 
     if ( defined $config->{genetable_correlation} ) {

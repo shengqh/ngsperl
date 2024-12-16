@@ -54,6 +54,8 @@ hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
 hasSTAR<-any(grepl("STAR_", rownames(files)))
 hasFeatureCount<-any(grepl("featureCounts_", rownames(files)))
 
+hasFusion<-any(grepl("star_fusion", rownames(files)))
+
 has_star_chromosome_png="STAR_chromosome_png" %in% names(file_map)
 if(has_star_chromosome_png){
   file_map$feature_chromosome_png=gsub(".chromosome.png", ".gene.chromosome.png", file_map$STAR_chromosome_png)
@@ -456,6 +458,12 @@ save_gsea_rmd(gsea_files, gsea_rmd_file, "##")
 
 ```{r, child=gsea_rmd_file, eval=hasGseaAnalysis} 
 ```
+
+```{r eval=hasFusion}
+cat("\n# Fusion gene detection\n\n")
+fusion_png = file_map[["star_fusion_png"]]
+check_and_include_graphics(fusion_png)
+```
   
 # Results folder structure
 
@@ -514,10 +522,12 @@ ComplexHeatmap [4] was used for cluster analysis and visualization.
 `r if(hasDEseq2){paste0("Significantly differential expressed genes with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[5]. ", deseq2filter)}`
 `r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[6].")}`
 `r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[7] on database (", vmap['GSEA_DB'], ").")}`
+`r if(hasFusion){paste0("Gene fusion was detected using STAR-Fusion package (", vmap['STAR-Fusion'], ")[8].")}`
 
-`r if(has_cutadapt){"[1]	Martin M: Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnetjournal 2011, 17:10-12."}`
-`r if(has_mapping){"[2]	Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, Batut P, Chaisson M, Gingeras TR: STAR: ultrafast universal RNA-seq aligner. Bioinformatics 2013, 29(1):15-21. \\\n[3]	Liao Y, Smyth GK, Shi W: featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics 2014, 30(7):923-930. \\\n"}`
-[4]	Gu, Z. Complex Heatmap Visualization. iMeta 2022. 1, e43. \
-`r if(hasDEseq2){"[5] Love MI, Huber W, Anders S: Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol 2014, 15(12):550."}` \
-`r if(hasWebGestaltAnalysis){"[6]	Wang J, Vasaikar S, Shi Z, Greer M, Zhang B: WebGestalt 2017: a more comprehensive, powerful, flexible and interactive gene set enrichment analysis toolkit. Nucleic Acids Res 2017, 45(W1):W130-W137.\\"}`
-`r if(hasGseaAnalysis){"[7]	Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, Paulovich A, Pomeroy SL, Golub TR, Lander ES et al: Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A 2005, 102(43):15545-15550."}` \
+`r if(has_cutadapt){"- [1]	Martin M: Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnetjournal 2011, 17:10-12.\n"}`
+`r if(has_mapping){"- [2]	Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, Batut P, Chaisson M, Gingeras TR: STAR: ultrafast universal RNA-seq aligner. Bioinformatics 2013, 29(1):15-21. \\\n- [3]	Liao Y, Smyth GK, Shi W: featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics 2014, 30(7):923-930. \n"}`
+- [4]	Gu, Z. Complex Heatmap Visualization. iMeta 2022. 1, e43. 
+`r if(hasDEseq2){"- [5] Love MI, Huber W, Anders S: Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol 2014, 15(12):550.\n"}` 
+`r if(hasWebGestaltAnalysis){"- [6]	Wang J, Vasaikar S, Shi Z, Greer M, Zhang B: WebGestalt 2017: a more comprehensive, powerful, flexible and interactive gene set enrichment analysis toolkit. Nucleic Acids Res 2017, 45(W1):W130-W137.\n"}` 
+`r if(hasGseaAnalysis){"- [7]	Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, Paulovich A, Pomeroy SL, Golub TR, Lander ES et al: Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A 2005, 102(43):15545-15550.\n"}` 
+`r if(hasFusion){"- [8] Haas, B.J., Dobin, A., Li, B. et al. Accuracy assessment of fusion transcript detection via read-mapping and de novo fusion transcript assembly-based methods. Genome Biol 2019, 20:213.\n"}`
