@@ -236,26 +236,46 @@ sub add_seurat {
   my $by_sctransform = getValue( $def, "by_sctransform" );
   my $use_sctransform_v2 = getValue( $def, "use_sctransform_v2", 1);
   my $sct_str = $by_sctransform ? ($use_sctransform_v2 ? "_sct2": "_sct"):"";
-  my $thread = getValue( $def, "sctransform_thread", 1 );
+  my $integration_thread = getValue( $def, "integration_thread", 1 );
   my $rmd_ext = $by_sctransform ? ($use_sctransform_v2 ? ".sct2": ".sct"):"";
 
   my $preprocessing_rscript;
   if($by_integration){
-    if(getValue($def, "integration_by_fastmnn", 0)){
-      $seurat_task = "${prefix}seurat${sct_str}_fastmnn";
-      $preprocessing_rscript = "../scRNA/seurat_fastmnn.r";
-      $reduction = "mnn";
-      $rmd_ext = $rmd_ext . ".fastmnn";
-    }elsif(getValue( $def, "integration_by_harmony", 1)){
-      $seurat_task = "${prefix}seurat${sct_str}_harmony";
-      $preprocessing_rscript = "../scRNA/seurat_harmony.r";
-      $reduction = "harmony";
-      $rmd_ext = $rmd_ext . ".harmony";
+    if($def->{"integration_by_method_v5"}){
+      $reduction = $def->{"integration_by_method_v5"};
+      $reduction =~ s/Integration//g;
+      $reduction = lc($reduction);
+
+      $seurat_task = "${prefix}seurat${sct_str}_" . $reduction;
+      $preprocessing_rscript = "../scRNA/seurat_integration_v5.r";
+      $rmd_ext = $rmd_ext . "." . $reduction;
     }else{
-      $seurat_task = "${prefix}seurat${sct_str}_integration";
-      $preprocessing_rscript = "../scRNA/seurat_integration.r";
-      $reduction = "pca";
-      $rmd_ext = $rmd_ext . ".integration";
+      if(!defined $def->{integration_by_method}){
+        if(getValue($def, "integration_by_fastmnn", 0)){
+          $def->{integration_by_method} = "fastmnn";
+        }elsif(getValue( $def, "integration_by_harmony", 1)){
+          $def->{integration_by_method} = "harmony";
+        }else{
+          $def->{integration_by_method} = "seurat";
+        }
+      }
+
+      if($def->{integration_by_method} eq "fastmnn"){
+        $seurat_task = "${prefix}seurat${sct_str}_fastmnn";
+        $preprocessing_rscript = "../scRNA/seurat_fastmnn.r";
+        $reduction = "fastmnn";
+        $rmd_ext = $rmd_ext . ".fastmnn";
+      }elsif($def->{integration_by_method} eq "harmony"){
+        $seurat_task = "${prefix}seurat${sct_str}_harmony";
+        $preprocessing_rscript = "../scRNA/seurat_harmony.r";
+        $reduction = "harmony";
+        $rmd_ext = $rmd_ext . ".harmony";
+      }else{
+        $seurat_task = "${prefix}seurat${sct_str}_integration";
+        $preprocessing_rscript = "../scRNA/seurat_integration.r";
+        $reduction = "pca";
+        $rmd_ext = $rmd_ext . ".integration";
+      }
     }
   }else{
     $seurat_task = "${prefix}seurat${sct_str}_merge";
@@ -294,16 +314,18 @@ sub add_seurat {
       by_integration        => $by_integration,
       by_sctransform        => getValue( $def, "by_sctransform" ),
       use_sctransform_v2 => $use_sctransform_v2,
+      integration_by_method_v5 => $def->{"integration_by_method_v5"},
+      reduction             => $reduction,
       batch_for_integration => getValue( $def, "batch_for_integration" ),
       qc_genes              => getValue( $def, "qc_genes", "" ),
       is_preprocessed => $is_preprocessed,
-      thread => $thread,
+      thread => $integration_thread,
     },
     parameterSampleFile2 =>  $def->{"batch_for_integration_groups"},
     output_file_ext      => ".final.rds",
     sh_direct            => 1,
     pbs                  => {
-      "nodes"     => "1:ppn=$thread",
+      "nodes"     => "1:ppn=$integration_thread",
       "walltime"  => getValue($def, "seurat_walltime"),
       "mem"       => getValue($def, "seurat_mem"),
     },

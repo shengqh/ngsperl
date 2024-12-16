@@ -121,10 +121,27 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "resolution",          0.5 );
   initDefaultValue( $def, "details_rmd",         "" );
 
-  initDefaultValue( $def, "by_integration",        0 );
-  initDefaultValue( $def, "by_sctransform",        1 );
+  initDefaultValue( $def, "by_sctransform", 1 );
   initDefaultValue( $def, "use_sctransform_v2", 1 );
-  
+
+  initDefaultValue( $def, "by_integration", 0 );
+  if($def->{"by_integration"}){
+    if(!defined $def->{integration_by_method}){
+      if(getValue($def, "integration_by_fastmnn", 0)){
+        $def->{integration_by_method} = "fastmnn";
+      }elsif(getValue( $def, "integration_by_harmony", 1)){
+        $def->{integration_by_method} = "harmony";
+      }else{
+        $def->{integration_by_method} = "seurat";
+      }
+    }
+
+    $def->{integration_by_fastmnn} = $def->{integration_by_method} eq "fastmnn";
+    $def->{integration_by_harmony} = $def->{integration_by_method} eq "harmony";
+  }else{
+    $def->{integration_by_fastmnn} = 0;
+    $def->{integration_by_harmony} = 0;
+  }
 
   my $pca_dims = $def->{by_sctransform}?30:20;
   #my $pca_dims = 50;
