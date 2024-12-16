@@ -250,7 +250,8 @@ obj <- do_analysis( tmp_folder = tmp_folder,
                     bubblemap_file = bubblemap_file, 
                     essential_genes = essential_genes,
                     by_individual_sample = FALSE,
-                    species = species)
+                    species = species,
+                    reduction="pca")
 
 saveRDS(obj, file=paste0(prefix, ".obj.rds"))
 
