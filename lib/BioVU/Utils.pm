@@ -42,6 +42,7 @@ R -e \"library(knitr);rmarkdown::render(input='__NAME__.phenotype.rmd');\"
       min_occurance => getValue($def, "min_occurance", 1),
       email => getValue($def, "email", ""),
       affiliation => getValue($def, "affiliation", ""),
+      show_code => getValue($def, "show_code", 1),
     },
     output_file_ext     => ".phenotype.csv",
     output_to_same_folder => 0,
@@ -54,6 +55,25 @@ R -e \"library(knitr);rmarkdown::render(input='__NAME__.phenotype.rmd');\"
       "mem"      => "20gb"
     },
   };
+
+  my $summary_task = $task_name . "_summary";
+  $config->{$summary_task} = {
+    class => "CQS::UniqueR",
+    perform => 1,
+    target_dir => $def->{target_dir} . "/" . $summary_task,
+    option => "",
+    rtemplate => "../BioVU/prepare_phenotype_data_summary.r",
+    parameterSampleFile1_ref => $task_name,
+    output_file_ext => ".phenotype_summary.csv",
+    sh_direct => 1,
+    no_output => 1,
+    pbs => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "5gb"
+    },
+  };
+
   return($config);
 }
 

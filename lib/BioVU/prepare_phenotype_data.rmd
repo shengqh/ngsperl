@@ -16,9 +16,23 @@ output:
 
 ```{r setup, include=FALSE}
 library(knitr)
+library(data.table)
+
+option_tbl=fread('input_options.txt', header=FALSE)
+cur_options=split(option_tbl$V1, option_tbl$V2)
+
+show_code=TRUE
+if("option_file" %in% names(cur_options)){
+  option_file=cur_options$option_file
+  global_tbl=fread(option_file, header=FALSE)
+  global_options=split(global_tbl$V1, global_tbl$V2)
+  if("show_code" %in% names(global_options)){
+    show_code=global_options$show_code=="1"
+  }
+}
 
 knitr::opts_chunk$set(
-  echo=TRUE, 
+  echo=show_code, 
   include=TRUE, 
   warning=FALSE, 
   message=FALSE, 
@@ -30,7 +44,7 @@ knitr::opts_chunk$set(
 ```{r}
 source('reportFunctions.R')
 
-option_tbl=fread('input_options.txt', header=FALSE)
+option_tbl=read.table('input_options.txt', header=FALSE, sep="\t")
 cur_options=split(option_tbl$V1, option_tbl$V2)
 
 phename=cur_options$phename
@@ -54,12 +68,12 @@ affiliation=global_options$affiliation
 if(!is.null(email)){
   if(email != ""){
     cat("
-  ---
-  author: 
-  - name: ", email, "
-    affiliation: ", affiliation, "
-  ---
-  ")
+---
+author: 
+- name: ", email, "
+  affiliation: ", affiliation, "
+---
+")
   }
 }
 ```
@@ -140,8 +154,6 @@ AGD=fread(agd_file, data.table=FALSE) |>
 
 There are `r nrow(AGD)` eligible subjects in AGD cohort.
 
-Let's find possible positive subjects with phecode between `r exclude_start` and `r exclude_end`.
-
 ```{r}
 possible_pos_samples = phecodes |>
   dplyr::filter(phecode >= exclude_start) |>
@@ -149,12 +161,9 @@ possible_pos_samples = phecodes |>
   dplyr::distinct() |>
   dplyr::group_by(GRID) |>
   dplyr::summarize(n=n()) 
-print_table(possible_pos_samples, byDT=TRUE, row.names=FALSE)
 ```
 
-There are `r length(unique(possible_pos_samples$GRID))` possible positive subjects.
-
-Let's find negative subjects in AGD cohort.
+There are `r length(unique(possible_pos_samples$GRID))` possible positive subjects with phecode between `r exclude_start` and `r exclude_end`.
 
 ```{r}
 negative_samples = AGD |>
@@ -171,9 +180,9 @@ cur_phenotype_def = data.frame( GRID=c(pos_samples$GRID, negative_samples$PRIMAR
 
 phenotype_file = paste0(phename, '.phenotype.csv')
 write.csv(cur_phenotype_def, phenotype_file, quote=FALSE, row.names=FALSE)
-print_table(cur_phenotype_def, byDT=TRUE, row.names=FALSE)
+
+tbl=data.frame(Phenotype=phename, Phecode=phecode, Positive=nrow(pos_samples), Negative=nrow(negative_samples))
+print_table(tbl, row.names=FALSE)
 ```
 
-We have `r nrow(pos_samples)` positive subjects and `r nrow(negative_samples)` negative subjects.
-
-Phenotype information for `r phecode_str` is saved to file [`r phenotype_file`](`r phenotype_file`).
+Phenotype data for `r phecode_str` was saved to file [`r phenotype_file`](`r phenotype_file`).
