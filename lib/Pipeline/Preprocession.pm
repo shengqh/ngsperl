@@ -511,7 +511,7 @@ fi
 
 rm -f __NAME__.failed __NAME__.succeed
 
-fastq-dump --split-3 --defline-qual '+' --gzip --origfmt __FILE__
+fastq-dump $sra_option __FILE__
 
 status=\$?
 if [[ \$status -ne 0 ]]; then
