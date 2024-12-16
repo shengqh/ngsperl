@@ -223,5 +223,5 @@ draw_gene_count<-function(listFile, outFilePrefix) {
           axis.title.x = element_blank())
 
   height=get_longest_text_width(as.character(final$Sample), "", 11, "inches", 300)
-  ggsave(paste0(outFilePrefix, ".png"), g, width=max(3, nrow(final)/4), height=height + 2, units="in", dpi=300, bg="white")
+  ggsave(paste0(outFilePrefix, ".png"), g, width=max(3, nrow(final)/4), height=height + 2, units="in", dpi=300, bg="white", limitsize = FALSE)
 }
