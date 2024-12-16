@@ -834,12 +834,13 @@ sub add_azimuth {
     parameterSampleFile2 => merge_hash_left_precedent($cur_options,  {
       species             => getValue( $def, "species" ),
       pca_dims            => getValue( $def, "pca_dims" ),
-      Azimuth_ref => getValue($def, "Azimuth_ref"),
       bubblemap_file        => $def->{bubblemap_file},
       by_sctransform        => getValue( $def, "by_sctransform" ),
       nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
       nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+      Azimuth_ref => getValue($def, "Azimuth_ref"),
     }),
+    parameterSampleFile3 => $def->{Azimuth_ref_dict},
     output_file_ext => ".azimuth.png;.azimuth.rds;.meta.rds",
     post_command => "rm -rf .cache",
     no_docker => 1,
@@ -851,7 +852,6 @@ sub add_azimuth {
     },
   };
 
-  #print(Dumper($config));
   push( @$tasks, $azimuth_task );
 }
 

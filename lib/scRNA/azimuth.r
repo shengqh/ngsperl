@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='iSGS_scar_3364_1'
-outFile='iSGS_scar_3364_1'
+sample_name='Aorta_9240'
+outFile='Aorta_9240'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
+parSampleFile3='fileList3.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20240320_scRNA_iSGS_cell_atlas/raw_qc_sct2_Azimuth/result/iSGS_scar_3364_1')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/raw_qc_Azimuth/result/Aorta_9240')
 
 ### Parameter setting end ###
 
@@ -25,7 +25,16 @@ random.seed=20200107
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-Amimuth_ref = myoptions$Azimuth_ref
+if(file.exists(parSampleFile3)) {
+  Amimuth_ref_tbl = fread(parSampleFile3, header=F, stringsAsFactors = F)
+  Amimuth_ref_map = split(Amimuth_ref_tbl$V1, Amimuth_ref_tbl$V2)
+  Amimuth_ref = Amimuth_ref_map[[sample_name]]
+}
+
+if(is.null(Amimuth_ref)){
+  Amimuth_ref=myoptions$Azimuth_ref
+}
+cat("Azimuth_ref: ", Amimuth_ref, "\n")
 
 if(!exists("obj")){
   obj=read_object_from_file_list(parSampleFile1)
@@ -89,3 +98,4 @@ rm(major_obj)
 if(dir.exists(".local")){
   unlink(".local", recursive=TRUE)
 }
+
