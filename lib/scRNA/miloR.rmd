@@ -1,0 +1,149 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: yes
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+source('reportFunctions.R')
+source('scRNA_func.r')
+```
+
+```{r}
+load_install('SparseArray', 'Bioconductor/SparseArray')
+load_install("miloR")
+load_install("miloDE")
+load_install("viridis")
+
+pairs = fread("fileList1.txt", header=FALSE, data.table=FALSE)
+comparison = unique(pairs$V3)
+```
+
+# Options
+
+```{r}
+myoptions = fread("fileList2.txt", header=FALSE, data.table=FALSE) |>
+  dplyr::rename(Value=V1, Variable=V2) |>
+  dplyr::select(Variable, Value)
+print_table(myoptions, row.names=FALSE)
+```
+
+```{r}
+myoptions = split(myoptions$Value, myoptions$Variable)
+ct = myoptions$celltype
+cluster_id = myoptions$cluster_id
+sub_cluster_id = myoptions$sub_cluster_id
+reduction = myoptions$reduction
+SpatialFDR = as.numeric(myoptions$SpatialFDR)
+
+file_prefix=paste0(comparison, ".", celltype_to_filename(ct))
+best_k=readLines(paste0(file_prefix, ".best_k.txt")) |> as.numeric()
+```
+
+---
+title: "miloR of `r ct` of comparison `r comparison`"
+---
+
+```{r}
+#comp_milo=readRDS(paste0(file_prefix, '.miloR.rds'))
+da_results=read.csv(paste0(file_prefix, '.da_results.csv'))
+group_cell_csv=paste0(file_prefix, ".group_cell.csv")
+```
+
+# Group cell assignment
+
+```{r}
+group_cell = read.csv(group_cell_csv)
+print_table(group_cell, row.names=FALSE)
+```
+
+# UMAP plot
+
+```{r}
+include_graphics(paste0(file_prefix, ".UMAP.png"))
+include_graphics(paste0(file_prefix, ".UMAP.condition.png"))
+```
+
+# Neighbourhoods plot
+
+Plot the distribution of neighbourhood sizes (i.e. how many cells form each neighbourhood) to evaluate whether the value of k=`r best_k` used for graph building was appropriate.
+
+As a rule of thumb we want to have an average neighbourhood size over 5 x N_samples.
+
+```{r}
+include_graphics(paste0(file_prefix, ".nhood.png"))
+```
+
+# Counting cells in neighbourhoods
+
+```{r}
+counts=read.csv(paste0(file_prefix, ".nhood_count.csv"), row.names=1) |>
+  tibble::rownames_to_column("Nhood")
+print_table(counts, byDT=TRUE, row.names=FALSE)
+```
+
+# DA results
+
+## Differential abundance table
+
+The numbers of cells present in each neighborhood (per experimental sample) were used for differential abundance testing among conditions. 
+
+```{r}
+print_table(da_results, byDT=TRUE, row.names=FALSE)
+```
+
+## PValue distribution
+
+We first inspect the distribution of uncorrected P values, to verify that the test was balanced.
+
+```{r}
+include_graphics(paste0(file_prefix, ".PValue.png"))
+```
+
+## Volcano plot
+
+Then we visualize the test results with a volcano plot (remember that each point here represents a neighbourhood, not a cell).
+
+```{r}
+include_graphics(paste0(file_prefix, ".volcano.png"))
+```
+
+```{r}
+has_da=any(da_results$FDR <= SpatialFDR)
+if(has_da){
+  cat("## Other figures\n\nThere are DA neighbourhoods with FDR <", SpatialFDR, "\n")
+}else{
+  cat("There are no DA neighbourhoods with FDR <", SpatialFDR, "\n")
+}
+```
+
+```{r eval=has_da}
+include_graphics(paste0(file_prefix, ".nhood_graph.png"))
+include_graphics(paste0(file_prefix, ".cluster.DA_beeswarm.png"))
+include_graphics(paste0(file_prefix, ".sub_cluster.DA_beeswarm.png"))
+```
+
+# Save the session information
+
+```{r}
+writeLines(capture.output(sessionInfo()), paste0(file_prefix, '.sessionInfo.txt'))
+```

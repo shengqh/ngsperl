@@ -90,7 +90,7 @@ if(!file.exists(neightbour_file)){
   }
 
   size_rds =  paste0(prefix, ".estimate_sizes.rds")
-  k_grid = seq(30, 200, 10)
+  k_grid = seq(20, 100, 10)
   if(file.exists(size_rds)){
     stat_k = readRDS(size_rds)
   }else{
@@ -124,6 +124,7 @@ if(!file.exists(neightbour_file)){
       labs(y = "Neighbourhood size")
   ggsave(size_png, g, width = 6, height = 4, units = "in", dpi = 300, bg="white")
 
+  #https://github.com/MarioniLab/miloDE/issues/29
   cat("assign_neighbourhoods\n")
   comp_sce = assign_neighbourhoods( comp_sce, 
                                     k = best_k,
