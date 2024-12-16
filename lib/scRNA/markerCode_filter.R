@@ -253,20 +253,6 @@ subchunkify <- local({
   }
 })
 
-myScaleData<-function(object, features, assay, ...){
-  if(is_seurat_5_plus(object)){
-    scaled.data = GetAssayData(object, assay = assay, layer="scale.data")
-    scaled.genes<-rownames(scaled.data)
-  }else{
-    scaled.genes<-rownames(object[[assay]]@scale.data)
-  }
-  if(!all(features %in% scaled.genes)){
-    new.genes<-unique(features, scaled.genes)
-    object=ScaleData(object, features=new.genes, assay=assay, ... )
-  }
-  return(object)
-}
-
 preprocess<-function( SampleInfo, 
                       Cutoff,  
                       cellType,
