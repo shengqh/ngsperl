@@ -19,6 +19,7 @@ load_install("data.table")
 load_install("plyr")
 load_install("dplyr")
 load_install("rlang")
+load_install("scCustomize")
 
 #https://github.com/r-lib/lobstr/blob/main/R/mem.R
 lobstr_node_size <- function() {
@@ -629,8 +630,13 @@ is_seurat_5_plus<-function(obj){
   return(Version(obj) > '5')
 }
 
+#sometimes, only the assay will be converted to Seurat 5, so we need to check the assay
+is_assay_5_plus<-function(obj, assay){
+  return(class(obj[[assay]]) == 'Assay5')
+}
+
 has_data<-function(obj, assay, slot){
-  if(is_seurat_5_plus(obj)){
+  if(is_assay_5_plus(obj, assay)){
     return(slot %in% names(obj@assays[[assay]]@layers))
   }else{
     return(slot %in% names(obj@assays[[assay]]))
@@ -638,7 +644,7 @@ has_data<-function(obj, assay, slot){
 }
 
 MyGetAssayData<-function(obj, assay, slot){
-  if(is_seurat_5_plus(obj)){
+  if(is_assay_5_plus(obj, assay)){
     cur_assay=obj[[assay]]
     return(LayerData(cur_assay, layer=slot))
   }else{
@@ -707,7 +713,7 @@ do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FAL
     #collapse layers is not supported yet
     obj <- merge(objs[[1]], y = unlist(objs[2:length(objs)]), project = "integrated")
 
-    if(is_seurat_5_plus(obj)){
+    if(is_assay_5_plus(obj, "RNA")){
       print("  JoinLayers ...")
       obj[["RNA"]] <- JoinLayers(obj[["RNA"]])
     }
@@ -1104,7 +1110,6 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
     writeLines(miss_genes, con="miss_gene.csv")
 
     genes<-genes[genes$gene %in% allgenes,]
-  }else{
   }
   genes$cell_type=factor(genes$cell_type, levels=unique(genes$cell_type))
   
@@ -1455,7 +1460,7 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
 }
   
 read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
-  if(file_ext(obj_file) == "rds"){
+  if(file_ext(obj_file) == "rds" | file_ext(obj_file) == "RDS"){
     obj=readRDS(obj_file)
   }else{
     counts=read_scrna_data(obj_file)$counts
@@ -1523,9 +1528,7 @@ read_object_from_file_list<-function(file_list_path, meta_rds=NULL, columns=NULL
 
 output_ElbowPlot<-function(obj, outFile, reduction){
   p<-ElbowPlot(obj, ndims = 40, reduction = reduction)
-  png(paste0(outFile, ".elbowplot.", reduction, ".png"), width=1500, height=1200, res=300)
-  print(p)
-  dev.off()
+  ggsave(paste0(outFile, ".elbowplot.", reduction, ".png"), p, width=1500, height=1200, dpi=300, units="px", bg="white")
 }
 
 draw_feature_qc<-function(prefix, rawobj, ident_name) {
@@ -1633,18 +1636,22 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
   ggsave(paste0(prefix, ".cell.bar.png"), g, width=max(3000, nrow(ct) * 100), height=2000, dpi=300, units="px", bg="white")
 }
 
-myScaleData<-function(object, features, assay, ...){
-  if(is_seurat_5_plus(object)){
-    scaled.genes<-rownames(object[[assay]]@layers$scale.data)
+myScaleData<-function(obj, features, assay, ...){
+  if(is_assay_5_plus(obj, assay)){
+    if("scale.data" %in% names(obj[[assay]]@layers)){
+      scaled.genes<-rownames(obj[[assay]]$scale.data)
+    }else{
+      scaled.genes<-c()
+    }
   }else{
-    scaled.genes<-rownames(object[[assay]]@scale.data)
+    scaled.genes<-rownames(obj[[assay]]@scale.data)
   }
 
   if(!all(features %in% scaled.genes)){
     new.genes<-unique(features, scaled.genes)
-    object=ScaleData(object, features=new.genes, assay=assay, ... )
+    obj=myScaleData(obj, features=new.genes, assay=assay, ... )
   }
-  return(object)
+  return(obj)
 }
 
 get_top10_markers<-function(markers){
@@ -1696,7 +1703,7 @@ RunMultipleUMAP<-function(subobj, nn=c(30,20,10), min.dist=c(0.3,0.1,0.05), curr
   return(list(obj=subobj, umap_names=umap_names))
 }
 
-get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, random_colors=TRUE, scolors=NULL, ...){
+get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, random_colors=TRUE, scolors=NULL, ggplot_default_colors=FALSE, color_seed=123, ...){
   labels<-obj@meta.data[,c(group.by, label.by)]
   labels<-labels[!duplicated(labels[,group.by]),]
   labels<-labels[order(labels[,group.by]),]
@@ -1704,7 +1711,10 @@ get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.
 
   ngroups<-length(unlist(unique(obj[[group.by]])))
   if(all(is.null(scolors))){
-    scolors = get_hue_colors(ngroups, random_colors)
+    scolors = scCustomize_Palette(num_groups = ngroups, 
+                                  ggplot_default_colors = ggplot_default_colors, 
+                                  color_seed = color_seed)    
+    #scolors = get_hue_colors(ngroups, random_colors)
   }
 
   g<-MyDimPlot(obj, group.by=group.by, label=label, reduction=reduction, split.by=split.by, ...)+ 
@@ -1973,18 +1983,35 @@ sub_cluster<-function(subobj,
       cat(key, "no harmony, use PCA.\n")
     }
   }else{
-    #https://github.com/satijalab/seurat/issues/5244
-    if (by_sctransform) {
-      cat(key, "use old sctransform result\n")
-      #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform at individual sample level, 
-      #so we will keep the old data structure
-      #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
-    }else{
-      cat(key, "redo normalization\n")
-      subobj<-do_normalization(subobj, selection.method="vst", nfeatures=2000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+    if(curreduction == "pca"){
+      #https://github.com/satijalab/seurat/issues/5244
+      if (by_sctransform) {
+        cat(key, "use old sctransform result\n")
+        #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform at individual sample level, 
+        #so we will keep the old data structure
+        #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
+      }else{
+        cat(key, "redo normalization\n")
+        subobj<-do_normalization(subobj, selection.method="vst", nfeatures=2000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+      }
+      cat(key, "RunPCA\n")
+      subobj<-RunPCA(subobj, npcs=cur_npcs)
     }
-    cat(key, "RunPCA\n")
-    subobj<-RunPCA(subobj, npcs=cur_npcs)
+    
+    if(curreduction == "mnn"){
+      cat(key, "redo FastMNN\n")
+      cat(key, "  NormalizeData\n")
+      subobj <- NormalizeData(subobj)
+      cat(key, "  FindVariableFeatures\n")
+      subobj <- FindVariableFeatures(subobj, nfeatures = 3000)
+      split.by="Identifier"
+      if(!split.by %in% colnames(subobj@meta.data)){
+        split.by="orig.ident"
+      }
+      cat("split.by=", split.by, "\n")
+      cat(key, "  RunFastMNN\n")
+      subobj <- RunFastMNN(object.list = SplitObject(subobj, split.by = split.by), features = 3000)
+    }
   }
   cat("curreduction =", curreduction, "\n")
 
@@ -2422,6 +2449,14 @@ fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns
   return(target_meta)
 }
 
+my_FeaturePlot_scCustom <-function(seurat_object, features, ...){
+  g=FeaturePlot_scCustom( seurat_object = seurat_object, 
+                          features = features,
+                          colors_use = viridis_plasma_dark_high, 
+                          na_color = "lightgray", ...) & theme(aspect.ratio=1)
+  return(g)
+}
+
 # The default FeaturePlot function in Seurat doesn't handle the order correctly. We need to fix it.
 my_feature_plot<-function(obj, gene, high_color="red", umap1 = "UMAP_1", umap2 = "UMAP_2", split.by=NULL, point.size=0.2, order=TRUE){
   if(!is.null(split.by)){
@@ -2478,6 +2513,8 @@ get_barplot<-function(
 
     alltbl<-rbind(alltbl, tbl)
   }
+
+  alltbl$Category=factor(alltbl$Category, levels=(valid_columns))
 
   g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + 
     geom_bar(width=0.5, stat = "identity") + 
@@ -2596,7 +2633,8 @@ iterate_celltype<-function(obj,
                            vars.to.regress,
                            bubblemap_file, 
                            essential_genes,
-                           species="Hs"){
+                           species="Hs",
+                           reduction="pca"){
   meta = obj@meta.data
   
   assay=ifelse(by_sctransform, "SCT", "RNA")
@@ -2633,10 +2671,14 @@ iterate_celltype<-function(obj,
 
     if(pct == "Unassigned") {
       #for iteration 1, all cells are unassigned, unless harmony has already been performed in integration, we will use "pca" for clustering
-      curreduction="pca"
-      if(by_harmony){
-        if("harmony" %in% names(subobj@reductions)){
-          curreduction="harmony"
+      if(reduction != "pca"){
+        curreduction=reduction
+      }else{
+        curreduction="pca"
+        if(by_harmony){
+          if("harmony" %in% names(subobj@reductions)){
+            curreduction="harmony"
+          }
         }
       }
 
@@ -2646,7 +2688,16 @@ iterate_celltype<-function(obj,
       cat(key, "FindClusters\n")
       subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolution, verbose=FALSE)
     }else{      
-      curreduction=ifelse(by_harmony, "harmony", "pca")
+      if(reduction != "pca"){
+        curreduction=reduction
+      }else{
+        curreduction="pca"
+        if(by_harmony){
+          if("harmony" %in% names(subobj@reductions)){
+            curreduction="harmony"
+          }
+        }
+      }
       subobj = sub_cluster(subobj = subobj, 
                             assay =  assay, 
                             by_sctransform = by_sctransform, 
@@ -2763,7 +2814,8 @@ layer_cluster_celltype<-function(obj,
                                  vars.to.regress,
                                  bubblemap_file,
                                  essential_genes,
-                                 species=species){
+                                 species=species,
+                                 reduction="pca"){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -2811,7 +2863,8 @@ layer_cluster_celltype<-function(obj,
                             vars.to.regress,
                             bubblemap_file, 
                             essential_genes,
-                            species=species)
+                            species=species,
+                            reduction=reduction)
 
       all_cur_cts<-lst$all_cur_cts
       cur_files<-lst$files
@@ -2893,7 +2946,8 @@ do_analysis<-function(tmp_folder,
                       by_individual_sample,
                       species="Hs",
                       init_layer="layer0",
-                      final_layer="layer4") {
+                      final_layer="layer4",
+                      reduction="pca") {
   tmp_prefix=file.path(tmp_folder, prefix)
   cur_prefix=file.path(cur_folder, prefix)
 
@@ -2910,7 +2964,8 @@ do_analysis<-function(tmp_folder,
                                     vars.to.regress = vars.to.regress,
                                     bubblemap_file = bubblemap_file,
                                     essential_genes = essential_genes,
-                                    species=species)
+                                    species=species,
+                                    reduction=reduction)
   obj=reslist1$obj
   files=reslist1$files
   rm(reslist1)
@@ -2998,7 +3053,7 @@ do_analysis<-function(tmp_folder,
   for(pct in final_celltypes){
     cells=colnames(obj)[obj@meta.data[,cur_celltype] == pct]
     subobj=subset(obj, cells=cells)
-    g<-get_dim_plot(subobj, group.by="seurat_final", label.by=final_clusters, reduction="umap", legend.title="")
+    g<-get_dim_plot(subobj, group.by=final_clusters, label.by="seurat_final", reduction="umap", legend.title="")
 
     ggsave(paste0(tmp_prefix, ".", cur_celltype, ".", celltype_to_filename(pct), ".umap.png"), g, width=2400, height=2000, units="px", dpi=300, bg="white")
   }
