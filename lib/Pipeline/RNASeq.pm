@@ -50,6 +50,8 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_report",        1 );
   initDefaultValue( $def, "perform_deconvolution", 0 );
 
+  initDefaultValue( $def, "perform_star_fusion", 0 );
+
   initDefaultValue( $def, "perform_transposable_element", 0 );
 
   initDefaultValue( $def, "perform_trimmomatic", 0);
@@ -224,6 +226,54 @@ sub getRNASeqConfig {
   if($def->{perform_fastq_screen}){
     my $fastq_screen_task = "fastq_screen";
     add_fastq_screen($config, $def, $tasks, $target_dir, $fastq_screen_task, $source_ref);
+  }
+
+  if($def->{perform_star_fusion}){
+    my $star_fusion_task = "star_fusion";
+    my $genome_lib_dir = getValue($def, "star_fusion_genome_lib_dir");
+    my $thread = $def->{max_thread};
+    $config->{$star_fusion_task} = {
+      class                     => "CQS::ProgramWrapperOneToOne",
+      perform                   => 1,
+      target_dir                => $target_dir . "/" . getNextFolderIndex($def) . $star_fusion_task,
+      program => "",
+      check_program             => 0,
+      option                    => "
+STAR-Fusion --genome_lib_dir $genome_lib_dir \\
+  --left_fq __FILE__ \\
+  --output_dir . \\
+  --CPU $thread \\
+  --FusionInspector validate \\
+  --examine_coding_effect \\
+  --STAR_SortedByCoordinate \\
+  --denovo_reconstruct
+
+rm -rf Aligned.sortedByCoord.out.bam Aligned.out.bam Chimeric.out.junction _* star-fusion.preliminary
+
+mv star-fusion.fusion_predictions.abridged.coding_effect.tsv __NAME___star-fusion.fusion_predictions.abridged.coding_effect.tsv
+mv star-fusion.fusion_predictions.abridged.tsv __NAME___star-fusion.fusion_predictions.abridged.tsv 
+mv star-fusion.fusion_predictions.tsv __NAME___star-fusion.fusion_predictions.tsv
+
+if [[ -s FusionInspector-validate/finspector.fusion_inspector_web.html ]]; then
+  mv FusionInspector-validate/finspector.fusion_inspector_web.html FusionInspector-validate/__NAME___finspector.fusion_inspector_web.html
+  mv FusionInspector-validate/finspector.FusionInspector.fusions.tsv FusionInspector-validate/__NAME___finspector.FusionInspector.fusions.tsv
+fi
+
+",
+      parameterSampleFile1_join_delimiter => " \\\n  --right_fq ",
+      parameterSampleFile1_ref => $fastq_source_ref,
+      output_ext => "_star-fusion.fusion_predictions.tsv",
+      docker_prefix => "star_fusion_",
+      output_to_same_folder     => 0,
+      no_output                 => 1,
+      sh_direct                 => 0,
+      pbs                       => {
+        "nodes"     => "1:ppn=" . $def->{max_thread},
+        "walltime"  => "23",
+        "mem"       => "40gb"
+      },
+    };
+    push @$tasks, $star_fusion_task;
   }
 
   my $count_table_column = 6;
