@@ -100,7 +100,13 @@ gg = ascat.predictGermlineGenotypes(ascat.bc, platform = "WGS_hg38_50X")
 file.rename(paste0("tumorSep", tumourname, ".png"), paste0(tumourname, ".tumourSep.png"))
 
 print("ascat.aspcf...")
-ascat.bc = ascat.aspcf(ascat.bc, ascat.gg=gg)
+if("penalty" %in% names(my_options)){
+  penalty=as.numeric(my_options$penalty)
+  cat("penalty=", penalty, "\n")
+  ascat.bc = ascat.aspcf(ascat.bc, ascat.gg=gg, penalty=penalty)
+}else{
+  ascat.bc = ascat.aspcf(ascat.bc, ascat.gg=gg)
+}
 
 print("ascat.plotSegmentedData...")
 ascat.plotSegmentedData(ascat.bc, img.prefix = paste0(tumourname, ".Segmented."))
@@ -109,7 +115,15 @@ file.rename(paste0(tumourname, ".Segmented.", tumourname, ".ASPCF.png"), paste0(
 delete_files("*segments*")
 
 print("ascat.runAscat...")
-ascat.output = ascat.runAscat(ascat.bc, gamma=1, write_segments=TRUE)
+if("min_ploidy" %in% names(my_options) && "max_ploidy" %in% names(my_options)){
+  min_ploidy=as.numeric(my_options$min_ploidy)
+  cat("min_ploidy=", min_ploidy, "\n")
+  max_ploidy=as.numeric(my_options$max_ploidy)
+  cat("max_ploidy=", max_ploidy, "\n")
+  ascat.output = ascat.runAscat(ascat.bc, gamma=1, write_segments=TRUE, min_ploidy=min_ploidy, max_ploidy=max_ploidy)
+}else{
+  ascat.output = ascat.runAscat(ascat.bc, gamma=1, write_segments=TRUE)
+}
 
 delete_files("*.PCFed.txt")
 
