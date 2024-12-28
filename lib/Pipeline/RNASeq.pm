@@ -295,6 +295,7 @@ STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusio
         "mem"       => "10gb"
       },
     };
+    push @$tasks, $star_fusion_summary_task;
   }
 
   my $count_table_column = 6;
