@@ -206,7 +206,10 @@ if ("DE_use_raw_pvalue" %in% names(option_map) & option_map$DE_use_raw_pvalue=="
 } else {
   pValueText="FDR adjusted p value"
 }
-deseq2criteria<-paste0("absolute fold change >= ", option_map$DE_fold_change, " and ", pValueText, " <= ", option_map$DE_pvalue)  
+deseq2criteria<-paste0("absolute fold change >= ", option_map$DE_fold_change, " and ", pValueText, " <= ", option_map$DE_pvalue)
+
+#the gene count table doesn't make sense. We will not put it into final report right now.
+has_custom_genome_gene<-has_file(files, "custom_group_gene_count")
 ```
 
 ---
@@ -327,7 +330,6 @@ if(hasNonhostGenome | hasNonhostLibrary){
 
 ```{r nonhostgenome, eval=hasNonhostGenome, child=nonhostGenomeFile} 
 ```
-
 
 ```{r,echo=FALSE,results='asis', fig.align="center", fig.cap=figRef("deseq2_nonhost_vis", "DESeq2 result of nonhost genomes", trunk.eval=hasNonhostDEseq2), eval=hasNonhostDEseq2}
 cat('### Non-host genome DESeq2 result\n') 
