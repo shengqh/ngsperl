@@ -106,7 +106,7 @@ figureRmd<-function(obj_map, samples_names){
     result<-paste0(result, "\n## Cell type cluster annotation\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".qc7.png"), FALSE))
 
-    decontX_png<-paste0(cur_sample, ".decontX.png")
+    decontX_png<-getFigure(file.path(detail_folder, paste0(cur_sample, ".decontX.png")), FALSE)
     if(file.exists(decontX_png)){
       result<-paste0(result, "\n## DecontX\n\n")
       result<-paste0(result, getFigure(decontX_png, FALSE))

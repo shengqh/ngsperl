@@ -1,17 +1,18 @@
 rm(list=ls()) 
-outFile='iSGS_cell_atlas'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
+parSampleFile6='fileList6.txt'
 parSampleFile8='fileList8.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20240325_scRNA_iSGS_cell_atlas/06_scRNA_nosct/raw_qc_report/result')
+setwd('/data/wanjalla_lab/projects/20241224_combined_scRNA_hg38_cellbender_fastmnn/cellbender_raw_qc_report/result')
 
 ### Parameter setting end ###
 
@@ -59,6 +60,7 @@ if(has_singler){
 has_decontX<-exists('parSampleFile6')
 if(has_decontX){
   decontX_map<-read_file_map(parSampleFile6)
+  validation_columns<-c(validation_columns, "decontX > 0.25")
 }
 
 has_doublet_finder<-exists('parSampleFile7')
@@ -179,6 +181,7 @@ for(sample_name in sample_names){
     decontX_file = decontX_map[[sample_name]]
     decontX_meta = readRDS(decontX_file)
     cur_meta = fill_meta_info(sample_name, decontX_meta, cur_meta, "decontX_contamination", "decontX_contamination", is_character = FALSE)
+    cur_meta[,"decontX > 0.25"] = cur_meta[,"decontX_contamination"] > 0.25
     obj@meta.data = cur_meta
     
     g1<-MyFeaturePlot(obj, features = "decontX_contamination") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
@@ -208,4 +211,3 @@ write.csv(stats_df, file.path(detail_folder, "sample_summary.csv"), row.names=F)
 ct_tb<-acast(ct_tb, "Sample~Var1",  value.var="Freq", fill=0)
 write.csv(ct_tb, file.path(detail_folder, "sample_celltype.csv"), row.names=TRUE)
 writeLines(validation_columns, file.path(detail_folder,"validation_columns.txt"))
-
