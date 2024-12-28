@@ -1891,6 +1891,7 @@ sub addSubCluster {
   my $by_integration;
   my $integration_by_harmony;
   my $subcluster_redo_harmony;
+  my $subcluster_redo_fastmnn = 0;
   if(defined $def->{"subcluster_by_harmony"}){
     if($def->{"subcluster_by_harmony"}){
       $by_integration = 1;
@@ -1911,9 +1912,10 @@ sub addSubCluster {
       $subcluster_redo_harmony = 0;
     }
   }else{
-      $by_integration = getValue( $def, "by_integration" );
-      $integration_by_harmony = getValue( $def, "integration_by_harmony" );
-      $subcluster_redo_harmony = getValue( $def, "subcluster_redo_harmony", 0 );
+    $by_integration = getValue( $def, "by_integration" );
+    $integration_by_harmony = getValue( $def, "integration_by_harmony" );
+    $subcluster_redo_harmony = getValue( $def, "subcluster_redo_harmony", 0 );
+    $subcluster_redo_fastmnn = getValue( $def, "subcluster_redo_fastmnn", 0 );
   }
 
   $config->{$subcluster_task} = {
@@ -1943,6 +1945,7 @@ sub addSubCluster {
       HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file", "" ),
       tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
       redo_harmony          => $subcluster_redo_harmony,
+      redo_fastmnn => $subcluster_redo_fastmnn,
       bubblemap_file => $def->{bubblemap_file},
       antibody_bubblemap_file => $def->{antibody_bubblemap_file},
       bubblemap_width => $def->{bubblemap_width},
@@ -3238,7 +3241,7 @@ sub add_bubble_plots {
 }
 
 sub add_individual_qc_tasks{
-  my ($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref, $doublet_finder_ref) = @_;
+  my ($config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, $doublet_finder_ref) = @_;
 
   my $sct_str = get_sct_str($def);
   my $raw_individual_qc_task = "${prefix}raw_qc${sct_str}";
@@ -3275,6 +3278,13 @@ sub add_individual_qc_tasks{
     add_azimuth( $config, $def, $summary, $target_dir, $azimuth_task, $raw_individual_qc_task, $cur_options, 1);
     $azimuth_ref = [ $azimuth_task, ".meta.rds" ];
     #print($config->{$azimuth_task});
+  }
+
+  my $decontX_ref = undef;
+  if( getValue( $def, "perform_decontX", 0 ) ) {
+    my $decontX_task = $raw_individual_qc_task . "_decontX";
+    add_decontX($config, $def, $summary, $target_dir, $decontX_task, $raw_individual_qc_task, $raw_files_def, {}, 1);
+    $decontX_ref = [$decontX_task, ".meta.rds"];
   }
 
   my $qc_report_task = $raw_individual_qc_task . "_report";
@@ -3469,7 +3479,7 @@ rm -f ckpt.tar.gz
     parameterSampleFile2_ref => $expect_cells_task,
     output_to_same_folder => 0,
     no_output => 1,
-    output_file_ext => ".cellbender_filtered.h5",
+    output_file_ext => ".cellbender_filtered.h5,.cellbender.h5",
     pbs => {
       "nodes"    => "1:ppn=$cellbender_cpu",
       "walltime" => "48",
@@ -3501,7 +3511,7 @@ rm -f ckpt.tar.gz
   };
   push(@$tasks, $cellbender_clean_task);
 
-  return($cellbender_clean_task);
+  return($cellbender_clean_task, [$cellbender_task, ".cellbender.h5"]);
 }
 
 sub add_cellbender {
