@@ -2011,6 +2011,12 @@ fi
         },
       };
       push(@$tasks, $gene_table_task);
+
+     if ($do_comparison) {
+        addDEseq2( $config, $def, $tasks, "${nonhostGroup}_gene", [ $gene_table_task, ".count\$" ],
+          $nonhost_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+      }
+      push @table_for_correlation, ( $gene_table_task, ".count\$" );
     }
   }
 
@@ -3093,6 +3099,18 @@ fi
         if(defined $config->{$vis_task}){
           push( @report_files, $vis_task, ".nonhost_genome.DESeq2.Matrix.png" );
           push( @report_names, "deseq2_nonhost_vis" );
+        }
+      }
+
+      if ( defined $config->{bowtie1_custom_group_pm_gene_table} ) {
+        push( @report_files, "bowtie1_custom_group_pm_gene_table",     '.count$' );
+        push( @report_names, "custom_group_gene_count" );
+
+        if(defined $pairs){
+          for my $comparison (sort keys %$pairs){
+            push( @report_files, "deseq2_custom_group_gene_${DE_library_key}", "[\/]${comparison}_.+_volcanoEnhanced.png" );
+            push( @report_names, "deseq2_custom_group_gene_volcano_${comparison}" );
+          }
         }
       }
 
