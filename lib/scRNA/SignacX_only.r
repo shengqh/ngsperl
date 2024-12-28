@@ -1,5 +1,6 @@
 rm(list=ls()) 
-outFile='coronary'
+sample_name='Aorta_9240'
+outFile='Aorta_9240'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -8,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/20240601_T02_subcluster/SignacX/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/raw_qc_SignacX/result/Aorta_9240')
 
 ### Parameter setting end ###
 
@@ -19,6 +20,7 @@ library(ggplot2)
 library(patchwork)
 library(data.table)
 
+options(Seurat.object.assay.version = 'v3')
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
@@ -52,18 +54,28 @@ if(!exists("obj")){
 
 DefaultAssay(obj) <- assay
 
-if(DefaultAssay(obj) == "integrated"){
-  if(nrow(obj@assays$integrated@counts) == 0){
-    if ("SCT" %in% names(obj@assays)){
-      obj@assays$integrated@counts = obj@assays$SCT@counts
+if(is_seurat_5_plus(obj)){
+  if(DefaultAssay(obj) == "integrated"){
+    if(nrow(obj@assays$integrated@counts) == 0){
+      if ("SCT" %in% names(obj@assays)){
+        counts = MyGetAssayData(obj, "SCT", slot="counts")
+      }else{
+        counts = MyGetAssayData(obj, "RNA", slot="counts")
+      }
     }else{
-      obj@assays$integrated@counts = obj@assays$RNA@counts
+      counts = MyGetAssayData(obj, "integrated", slot="counts")
     }
+  }else{
+    counts = MyGetAssayData(obj, assay, slot="counts")
   }
-}
+  newobj=CreateSeuratObject(counts, assay="RNA")
+  newobj@reductions <- obj@reductions
+  newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
+  newobj@meta.data=obj@meta.data
 
-if(find_neighbors){
-  obj<-FindNeighbors(object = obj, reduction=reduction, dims=pca_dims, verbose=FALSE)
+  obj = newobj
+  assay = "RNA"
+  rm(newobj)
 }
 
 labels <- Signac(E=obj, R=R)
@@ -90,13 +102,12 @@ if(has_bubblemap){
 }
 height=2000
 
-png(paste0(outFile, ".SignacX.png"), width=width, height=height, res=300)
-print(g)
-dev.off()
+ggsave(paste0(outFile, ".SignacX.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
 
 ct<-data.frame("SignacX"=obj$signacx_CellStates, "Sample"=obj$orig.ident)
 ct_tbl<-table(ct$SignacX,ct$Sample)
 write.csv(ct_tbl, paste0(outFile, ".SignacX_Sample.csv"))
 
-saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
+unlink('.cache', recursive = TRUE, force = TRUE)
 
+saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
