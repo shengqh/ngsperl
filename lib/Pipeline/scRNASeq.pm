@@ -345,7 +345,9 @@ sub getScRNASeqConfig {
 
     if($perform_cellbender){
       my $cellbender_prefix = "cellbender";
-      $files_def = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref );
+      my ($cellbender_clean_ref, $cellbender_raw_ref) = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref );
+      $files_def = $cellbender_clean_ref;
+      $raw_files_def = $cellbender_raw_ref;
 
       if($remove_decontX){
         $prefix = $prefix . "cellbender_";
@@ -384,7 +386,7 @@ sub getScRNASeqConfig {
     }
 
     if ( $perform_individual_qc ){
-      ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $decontX_ref, $sctk_ref);
+      ($raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref) = add_individual_qc_tasks($config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref);
     }
 
     if( $def->{"perform_individual_dynamic_qc"} ){
