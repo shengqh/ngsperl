@@ -66,6 +66,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
   result={}
   if use_dir_name > 0:
     for f in files:
+      f=f.replace("/panfs/accrepfs.vampire", "")
       sample_name = get_dir_name(f, use_dir_name)
       sample_name = get_sample_name(sample_name, name_pattern)
       if sample_name not in result:
@@ -74,6 +75,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
         result[sample_name].append(f)
   else:
     for f in files:
+      f=f.replace("/panfs/accrepfs.vampire", "")
       sample_name = get_sample_name(f, name_pattern)
       if sample_name not in result:
         result[sample_name] = [f]
