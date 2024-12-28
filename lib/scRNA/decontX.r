@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='DKO_F'
-outFile='DKO_F'
+sample_name='Adipose_9240'
+outFile='Adipose_9240'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -9,15 +9,15 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20240402_6487_DM_scRNA_mouse_cellbender/decontX/result/DKO_F')
+setwd('/data/wanjalla_lab/projects/20241224_combined_scRNA_hg38_cellbender_fastmnn/cellbender_raw_qc_decontX/result/Adipose_9240')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
-library("SingleCellExperiment")
-library("celda")
-library("ggplot2")
-library(patchwork)
+load_install("SingleCellExperiment")
+load_install("celda")
+load_install("ggplot2")
+load_install("patchwork")
 
 sample_map = read_file_map("fileList1.txt")
 raw_map = read_file_map("fileList2.txt")
@@ -26,10 +26,22 @@ myoptions = read_file_map("fileList3.txt", do_unlist=FALSE)
 myoptions$remove_decontX = is_one(myoptions$remove_decontX)
 myoptions$remove_decontX_by_contamination = as.numeric(myoptions$remove_decontX_by_contamination)
 
-read_sce<-function(countfile, species){
+read_sce<-function(countfile, species, is_qc_object=FALSE, sample_name=""){
   cat("  read", countfile, "\n")
-  lst = read_scrna_data(countfile)
-  counts<-lst$counts
+  if(is_qc_object){
+    obj<-readRDS(countfile)
+    if(sample_name %in% names(obj)){
+      obj=obj[[sample_name]]
+    }
+    if(is.list(obj)){
+      obj=obj$obj
+    }
+    counts = MyGetAssayData(obj, "RNA", "counts")
+  }else{
+    lst = read_scrna_data(countfile)
+    counts<-lst$counts
+  }
+
   if (species=="Mm") {
     rownames(counts)<-toMouseGeneSymbol(rownames(counts))
   }
@@ -49,7 +61,7 @@ draw_umap<-function(sce, png_file){
   df = df[colnames(sce),]
   df = df[order(df$contamination),]
 
-  g1<-ggplot(df, aes(DecontX_UMAP_1, DecontX_UMAP_2)) + geom_point(aes(color=contamination), size=0.2) + scale_color_gradient(low="lightgray", high="red", limits = c(0,1)) + theme_bw3() + theme(aspect.ratio = 1)
+  g1<-ggplot(df, aes(DecontX_UMAP_1, DecontX_UMAP_2)) + geom_point(aes(color=contamination), size=0.1) + scale_color_gradient(low="lightgray", high="red", limits = c(0,1)) + theme_bw3() + theme(aspect.ratio = 1)
   g2<-ggplot(df, aes(x = contamination)) + geom_histogram(aes(y = after_stat(density)), color="black", fill=NA, bins = 50) + geom_density() + theme_bw3() + xlim(0,1)
   g<-g1+g2+plot_layout(ncol=2)
   png(png_file, width=2300, height=1000, res=300)
@@ -63,19 +75,26 @@ countfile = sample_map[sample_name]
 raw_countfile = raw_map[sample_name]
 
 clusters = NULL
+is_qc_object=FALSE
 if(grepl(".rds$", countfile)){
   #countfile is a object file, containing cell_type/cluster information
   obj<-readRDS(countfile)
+  if(sample_name %in% names(obj)){
+    obj=obj[[sample_name]]
+    is_qc_object=TRUE
+  }
   if(is.list(obj)){
     obj=obj$obj
   }
   if("layer4" %in% colnames(obj@meta.data)){
     clusters = obj@meta.data$layer4
+  }else if("cell_type" %in% colnames(obj@meta.data)){
+    clusters = obj@meta.data$cell_type
   }
 }
 
-sce <- read_sce(countfile, myoptions$species)
-sce.raw <- read_sce(raw_countfile, myoptions$species)
+sce <- read_sce(countfile, myoptions$species, is_qc_object=is_qc_object, sample_name=sample_name)
+sce.raw <- read_sce(raw_countfile, myoptions$species, is_qc_object=FALSE, sample_name="")
 
 common_genes = intersect(row.names(sce), row.names(sce.raw))
 sce=sce[common_genes,]
