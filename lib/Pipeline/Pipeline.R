@@ -239,6 +239,9 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
         width=max(3000, ncharmax * 40 + 1000)
         ggsave(enriched_png, g, width=width, height=height, dpi=300, units="px", bg="white")
 
+        enriched_pdf=paste0(enriched_file, ".pdf")
+        ggsave(enriched_pdf, g, width=width, height=height, dpi=300, units="px", bg="white")
+
         if(print_rmd){
           cat(paste0("\n\n<img src='", enriched_png, "'>\n\n"))
         }
