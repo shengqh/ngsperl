@@ -1,18 +1,19 @@
 rm(list=ls()) 
-outFile='P9551'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/scratch/jbrown_lab/projects/20230313_pipseq_9551_flynn_hg38_liver_seurat/seurat_sct_merge/result/P9551.final.rds'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn/result/combined.final.rds'
 parFile2=''
-parFile3='/scratch/jbrown_lab/projects/20230313_pipseq_9551_flynn_hg38_liver_seurat/essential_genes/result/P9551.txt'
+parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/essential_genes/result/combined.txt'
 
 
-setwd('/scratch/jbrown_lab/projects/20230313_pipseq_9551_flynn_hg38_liver_seurat/seurat_sct_merge_dr0.2_01_call/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_1_call/result')
 
 ### Parameter setting end ###
 
+source("scRNA_func.r")
 library(plyr)
 library(dplyr)
 library(Seurat)
@@ -29,7 +30,6 @@ library(htmltools)
 library(patchwork)
 library(glmGamPoi)
 library('rmarkdown')
-source("scRNA_func.r")
 
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
@@ -56,6 +56,8 @@ redo_harmony<-is_one(myoptions$redo_harmony, 0)
 resolution=as.numeric(myoptions$dynamic_by_one_resolution)
 curated_markers_file=myoptions$curated_markers_file
 by_individual_sample=is_one(myoptions$by_individual_sample)
+
+reduction=myoptions$reduction
 
 if(by_individual_sample){
   by_harmony<-FALSE
@@ -265,7 +267,8 @@ if(by_individual_sample){
                             bubblemap_file = bubblemap_file, 
                             essential_genes = NULL,
                             by_individual_sample = 1,
-                            species = species)
+                            species = species,
+                            reduction=reduction)
 
     result_list<-c(result_list, res_list$html)
     all_ct_counts<-rbind(all_ct_counts, res_list$ct_count)
@@ -297,6 +300,6 @@ if(by_individual_sample){
                           bubblemap_file = bubblemap_file, 
                           essential_genes = NULL,
                           by_individual_sample = 0,
-                          species = species);
+                          species = species,
+                          reduction=reduction);
 }
-
