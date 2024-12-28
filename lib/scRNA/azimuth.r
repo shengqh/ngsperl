@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='Aorta_9240'
-outFile='Aorta_9240'
+sample_name='KrasnowHLCA_P3_8'
+outFile='KrasnowHLCA_P3_8'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/raw_qc_Azimuth/result/Aorta_9240')
+setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20241217_endothelial_lung/raw_qc_Azimuth/result/KrasnowHLCA_P3_8')
 
 ### Parameter setting end ###
 
@@ -26,21 +26,28 @@ options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors =
 myoptions<-split(options_table$V1, options_table$V2)
 
 if(file.exists(parSampleFile3)) {
-  Amimuth_ref_tbl = fread(parSampleFile3, header=F, stringsAsFactors = F)
-  Amimuth_ref_map = split(Amimuth_ref_tbl$V1, Amimuth_ref_tbl$V2)
-  Amimuth_ref = Amimuth_ref_map[[sample_name]]
+  Azimuth_ref_tbl = fread(parSampleFile3, header=F, stringsAsFactors = F)
+  Azimuth_ref_map = split(Azimuth_ref_tbl$V1, Azimuth_ref_tbl$V2)
+  Azimuth_ref = Azimuth_ref_map[[sample_name]]
+}else{
+  Azimuth_ref=NULL
 }
 
-if(is.null(Amimuth_ref)){
-  Amimuth_ref=myoptions$Azimuth_ref
+if(is.null(Azimuth_ref)){
+  Azimuth_ref=myoptions$Azimuth_ref
 }
-cat("Azimuth_ref: ", Amimuth_ref, "\n")
+
+if(is.null(Azimuth_ref)){
+  stop("Azimuth_ref is not defined")
+}
+
+cat("Azimuth_ref: ", Azimuth_ref, "\n")
 
 if(!exists("obj")){
   obj=read_object_from_file_list(parSampleFile1)
 }
 
-obj <- RunAzimuth(query = obj, reference = Amimuth_ref)
+obj <- RunAzimuth(query = obj, reference = Azimuth_ref)
 
 anno_columns=grep('predicted.+\\d$', colnames(obj@meta.data), value=TRUE)
 azimuth_cols = c()
@@ -98,4 +105,3 @@ rm(major_obj)
 if(dir.exists(".local")){
   unlink(".local", recursive=TRUE)
 }
-
