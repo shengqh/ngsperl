@@ -20,6 +20,8 @@ load_install("plyr")
 load_install("dplyr")
 load_install("rlang")
 load_install("scCustomize")
+load_install("SeuratData", "satijalab/seurat-data")
+load_install("SeuratWrappers", "satijalab/seurat-wrappers")
 
 #https://github.com/r-lib/lobstr/blob/main/R/mem.R
 lobstr_node_size <- function() {
@@ -102,6 +104,13 @@ is_file_empty<-function(filepath){
   }
 
   return(FALSE)
+}
+
+ggvenn_2_set<-function(venn_data){
+  g=ggvenn(venn_data, set_name_size=0) + 
+    annotate("text", x = -0.8, y = 1.15, label = names(venn_data)[1], size = 5, hjust = 0.5) +
+    annotate("text", x = 0.8, y = 1.15, label = names(venn_data)[2], size = 5, hjust = 0.5) 
+  return(g)
 }
 
 is_seurat_object<-function(obj){
@@ -941,26 +950,26 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="")
 }
 
 output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL){
-  g<-FeaturePlot(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
-  width=2500
+  g<-FeaturePlot_scCustom(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
+  width=1700
   ncol=1
   
   if("percent.hb" %in% colnames(obj@meta.data)){
-    g2<-FeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of hemoglobin genes")
+    g2<-FeaturePlot_scCustom(obj, features="percent.hb") + ggtitle("Percentage of hemoglobin genes")
     g<-g+g2
-    width=width+2200
+    width=width+1600
     ncol=ncol+1
   }
 
   if("percent.ribo" %in% colnames(obj@meta.data)){
-    g3<-FeaturePlot(obj, features="percent.ribo") + ggtitle("Percentage of ribosomal genes")
+    g3<-FeaturePlot_scCustom(obj, features="percent.ribo") + ggtitle("Percentage of ribosomal genes")
     g<-g+g3
-    width=width+2200
+    width=width+1600
     ncol=ncol+1
   }
   g=g+plot_layout(ncol=ncol)
 
-  ggsave(paste0(outFile, ".genes.png"), g, width=width, height=2000, dpi=300, units="px", bg="white")
+  ggsave(paste0(outFile, ".genes.png"), g, width=width, height=1500, dpi=300, units="px", bg="white")
   
   mt<-data.frame(UMAP_1=obj@reductions$umap@cell.embeddings[,1], 
                 UMAP_2=obj@reductions$umap@cell.embeddings[,2],
@@ -1006,10 +1015,12 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   
   ggsave(paste0(outFile, ".final.png"), p, width=width, height=height, dpi=300, units="px", bg="white")
 
-  if(!is.null(qc_genes) & qc_genes != ''){
-    genes<-unlist(strsplit( qc_genes, ',' ))
-    g<-FeaturePlot(obj, genes, split.by="orig.ident")
-    ggsave(paste0(outFile, ".qc_genes.png"), g, width=3000, height=6000, dpi=300, units="px", bg="white")
+  if(!is.null(qc_genes)){
+    if(qc_genes != ''){
+      genes<-unlist(strsplit( qc_genes, ',' ))
+      g<-FeaturePlot(obj, genes, split.by="orig.ident")
+      ggsave(paste0(outFile, ".qc_genes.png"), g, width=3000, height=6000, dpi=300, units="px", bg="white")
+    }
   }
 
   if("ADT" %in% names(obj)){
@@ -1322,7 +1333,7 @@ get_bubble_plot<-function(obj,
 get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, add_num_cell=FALSE, species=NULL, assay="RNA"){
   old_meta<-obj@meta.data
   
-  obj$fake_layer=paste0("fake_", unlist(obj@meta.data[,obj_res]))
+  obj$fake_layer=paste0("global_", unlist(obj@meta.data[,obj_res]))
 
   sr = as.character(subobj@meta.data[,subobj_res])
 
@@ -1344,7 +1355,7 @@ get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, 
 
   obj@meta.data=old_meta
   
-  g$data<-g$data[!grepl("^fake_", g$data$id),]
+  g$data<-g$data[!grepl("^global_", g$data$id),]
   if(all(!is.null(sub_levels))){
     g$data$id<-factor(g$data$id, levels=sub_levels)
   }
@@ -1541,21 +1552,31 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     feats<-c(feats, "percent.hb")
   }
 
+  if(nsample > 50){
+    ncol=1
+    height=10000
+  }else{
+    ncol=ifelse(length(feats) > 4, 3, 2)
+    height=4000
+  }
+
   cat("draw qc voilin ...\n")
-  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = 3, raster=FALSE) + NoLegend()
-  ggsave(paste0(prefix, ".qc.violin.png"), g, width=6000, height=4000, dpi=300, units="px", bg="white")
+  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = ncol, raster=FALSE) + NoLegend() & theme(axis.title.x = element_blank())
+  ggsave(paste0(prefix, ".qc.violin.png"), g, width=6000, height=height, dpi=300, units="px", bg="white")
 
   if('umap' %in% names(rawobj@reductions)){
     nfeature<-length(feats)
 
     by.col=nfeature>=nsample
-    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col, raster=FALSE)
+    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col, raster=FALSE) +
+      theme(aspect.ratio=1)
     if(by.col){
-      width = nsample * 800
+      width = min(50000, nsample * 700)
       height = nfeature * 700
     }else{
-      width = nfeature * 800
-      height = nsample * 700
+      width = nfeature * 700 + 300
+      height = min(50000, nsample * 700)
+      g = g + theme(strip.text.y=element_text(angle=0))
     }
 
     cat("draw qc exp ...\n")
@@ -1579,7 +1600,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of read)") +
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  ggsave(paste0(prefix, ".qc.read.png"), p1, width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), dpi=300, units="px", bg="white")
+  ggsave(paste0(prefix, ".qc.read.png"), p1, width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), dpi=300, units="px", bg="white", limitsize = FALSE)
 
   cat("draw qc mt and feature ...\n")  
   p2<-ggplot(mt, aes(y=mt,x=nFeature) ) +
@@ -1588,7 +1609,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     scale_y_continuous(breaks = seq(0, 100, by = 10)) +
     ylab("Percentage of mitochondrial") + xlab("log10(number of feature)") +
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
-  ggsave(paste0(prefix, ".qc.feature.png"), p2, width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), dpi=300, units="px", bg="white")
+  ggsave(paste0(prefix, ".qc.feature.png"), p2, width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), dpi=300, units="px", bg="white", limitsize = FALSE)
 
   ct<-as.data.frame(table(rawobj[[ident_name]]))
   colnames(ct)<-c("Sample","Cell")
@@ -1613,7 +1634,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
       ct$Source=unlist(smap2[ct$Sample])
     }
 
-    if(any(rawobj$project != rawobj$sample)){
+    if(any(rawobj$project != rawobj$orig.ident)){
       meta<-rawobj@meta.data
       meta$os = paste0(meta$orig.ident, ":", meta$project)
       meta<-meta[!duplicated(meta$os),,drop=F]
@@ -1623,17 +1644,32 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
       })
       ct$Project=unlist(smap2[ct$Sample])
     }
+
+    if("batch" %in% colnames(rawobj@meta.data)){
+      if(any(rawobj$batch != rawobj$orig.ident)){
+        meta<-unique(rawobj@meta.data[,c("batch","orig.ident")])
+        smap=split(as.character(meta$batch), as.character(meta$orig.ident))
+        ct$Batch=unlist(smap[ct$Sample])
+      }
+    }
   }
   write.table(ct, paste0(prefix, ".cell.txt"), sep="\t", row.names=F)
 
   cat("draw qc cell bar...\n")  
-  if("Project" %in% colnames(ct)){
+  g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Sample)) 
+  if("Batch" %in% colnames(ct)){
+    g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Batch))
+  }else if ("Project" %in% colnames(ct)){
     g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Project))
-  }else{
-    g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Sample)) + NoLegend()
+  }else if("Source" %in% colnames(ct)){
+    g<-ggplot(ct, aes(x=Sample, y=Cell, fill=Source))
   }
-  g<-g + geom_bar(stat="identity") + theme_bw3(axis.x.rotate = T)
-  ggsave(paste0(prefix, ".cell.bar.png"), g, width=max(3000, nrow(ct) * 100), height=2000, dpi=300, units="px", bg="white")
+  g<-g + geom_bar(stat="identity") + theme_bw3(axis.x.rotate = T) +
+    theme(axis.title.x=element_blank()) 
+  if(ncol(ct) == 2){
+    g<-g + NoLegend()
+  }
+  ggsave(paste0(prefix, ".cell.bar.png"), g, width=max(3000, nrow(ct) * 60), height=2000, dpi=300, units="px", bg="white")
 }
 
 myScaleData<-function(obj, features, assay, ...){
@@ -1649,7 +1685,7 @@ myScaleData<-function(obj, features, assay, ...){
 
   if(!all(features %in% scaled.genes)){
     new.genes<-unique(features, scaled.genes)
-    obj=myScaleData(obj, features=new.genes, assay=assay, ... )
+    obj=ScaleData(obj, features=new.genes, assay=assay, ... )
   }
   return(obj)
 }
@@ -1944,7 +1980,8 @@ sub_cluster<-function(subobj,
                      essential_genes, 
                      key = "",
                      do_umap = TRUE,
-                     reduction.name = "umap"
+                     reduction.name = "umap",
+                     redo_fastmnn = FALSE
 ){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
@@ -1998,19 +2035,48 @@ sub_cluster<-function(subobj,
       subobj<-RunPCA(subobj, npcs=cur_npcs)
     }
     
-    if(curreduction == "mnn"){
-      cat(key, "redo FastMNN\n")
-      cat(key, "  NormalizeData\n")
-      subobj <- NormalizeData(subobj)
-      cat(key, "  FindVariableFeatures\n")
-      subobj <- FindVariableFeatures(subobj, nfeatures = 3000)
-      split.by="Identifier"
-      if(!split.by %in% colnames(subobj@meta.data)){
-        split.by="orig.ident"
+    if(curreduction == "fastmnn"){
+      if (assay != "RNA"){
+        stop("fastmnn only support RNA assay in our pipeline")
       }
-      cat("split.by=", split.by, "\n")
-      cat(key, "  RunFastMNN\n")
-      subobj <- RunFastMNN(object.list = SplitObject(subobj, split.by = split.by), features = 3000)
+      if(redo_fastmnn){
+        cat(key, "redo FastMNN ...\n")
+        if(!("batch" %in% colnames(subobj))){
+          subobj$batch = subobj$orig.ident
+        }
+
+        #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
+        cat(key, "split RNA by batch ...\n")
+        subobj[["RNA"]] <- split(subobj[["RNA"]], f = subobj$batch)
+
+        cat(key, "NormalizeData ...\n")
+        subobj <- NormalizeData(subobj)
+
+        cat(key, "FindVariableFeatures ...\n")
+        subobj <- FindVariableFeatures(subobj)
+
+        cat(key, "ScaleData ...\n")
+        subobj <- ScaleData(subobj)
+
+        cat(key, "RunPCA ...\n")
+        subobj <- RunPCA(object = subobj, verbose=FALSE)
+
+        cat(key, "IntegrateLayers by FastMNNIntegration ...\n")
+        subobj <- IntegrateLayers(
+          object = subobj,
+          method = "FastMNNIntegration",
+          orig.reduction = "pca",
+          assay = "RNA",
+          new.reduction = curreduction,
+          verbose = T,
+          #for fastMNN
+          batch = subobj@meta.data$batch
+        )
+
+        cat(key, "JoinLayers ... \n")
+        DefaultAssay(subobj) <- "RNA"
+        subobj <- JoinLayers(subobj)
+      }
     }
   }
   cat("curreduction =", curreduction, "\n")
@@ -2020,6 +2086,10 @@ sub_cluster<-function(subobj,
 
   cat(key, "FindClusters\n")
   subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
+
+  if(redo_fastmnn){
+    saveRDS(subobj, paste0(key, ".fastmnn.rds"))
+  }
   
   if(do_umap){
     cat(key, "RunUMAP\n")
@@ -2365,15 +2435,14 @@ Plot_predictcelltype_ggplot2<-function(predict_celltype, topn=3, filename=NA, wi
 
   colors = colorRampPalette(c("blue", "white", "red"))(n=1024)
 
-  if(!is.na(filename)){
-    png(filename, width=width, height=height, res=300)
-  }
   g<-ggplot(md, aes(cluster, db_cell_type) ) +
     geom_tile(aes(fill = cta_score)) +
     scale_fill_gradientn(colours=colors) + theme_bw3(axis.x.rotate=TRUE) + xlab("") + ylab("")
-  print(g)
+
   if(!is.na(filename)){
-    dev.off()
+    ggsave(filename, g, width=width, height=height, dpi=300, units="px", bg="white")
+  }else{
+    print(g)
   }
 }
 
@@ -2980,18 +3049,24 @@ do_analysis<-function(tmp_folder,
   obj<-factorize_layer(obj, final_layer)
   Idents(obj)<-final_layer
 
+  cat("Save meta data ...\n")
   saveRDS(obj@meta.data, file.path(cur_folder, paste0(prefix, ".scDynamic.meta.rds")))
   write.csv(obj@meta.data, file.path(cur_folder, paste0(prefix, ".scDynamic.meta.csv")))
 
   save_umap(paste0(tmp_prefix, ".scDynamic.umap"), obj)
 
   if(length(celltypes) > 1){
-    #find markers for all cell types
+    cat("find markers for all cell types ...\n")
     all_markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+
+    cat("get top 10 markers ...\n")
     all_top10<-get_top10_markers(all_markers)
     all_top10<-unique(all_top10$gene)
 
-    obj<-myScaleData(obj, all_top10, "RNA")
+    cat("scale top 10 markers ...\n")
+    obj<-myScaleData(obj, features=all_top10, assay="RNA")
+
+    cat("marker gene heatmap ...\n")
     g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = all_top10, group.by = final_layer, angle = 90) + NoLegend()
 
     width<-get_heatmap_width(length(celltypes))
@@ -2999,6 +3074,7 @@ do_analysis<-function(tmp_folder,
     ggsave(paste0(tmp_prefix, ".", final_layer, ".heatmap.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
   }
   
+  cat("output_celltype_figures...\n")
   output_celltype_figures(obj, 
     final_layer, 
     tmp_prefix, 
