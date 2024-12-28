@@ -1,18 +1,14 @@
 rm(list=ls()) 
-outFile='P11565'
+outFile='endothelial_lung'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
-parSampleFile5='fileList5.txt'
-parSampleFile6='fileList6.txt'
-parSampleFile7='fileList7.txt'
-parFile1='/data/wanjalla_lab/projects/20240819_11565_scRNA_hg38/cellbender_seurat_sct2_merge/result/P11565.final.rds'
-parFile2='/data/wanjalla_lab/projects/20240819_11565_scRNA_hg38/cellbender_seurat_sct2_merge_dr0.5_1_call/result/P11565.scDynamic.meta.rds'
-parFile3='/data/wanjalla_lab/projects/20240819_11565_scRNA_hg38/essential_genes/result/P11565.txt'
+parFile1='/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20241218_integrate_endothelial_cells/EC_lung_iSGS.rds'
+parFile2=''
+parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20240819_11565_scRNA_hg38/cellbender_seurat_sct2_merge_dr0.5_2_subcluster_rh/result')
+setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20241218_T04_seurat/sub_cluster/result')
 
 ### Parameter setting end ###
 
@@ -45,7 +41,14 @@ by_integration<-is_one(myoptions$by_integration)
 reduction<-myoptions$reduction
 by_harmony<-reduction=="harmony"
 redo_harmony<-is_one(myoptions$redo_harmony, 0)
-assay=get_assay(by_sctransform, by_integration, by_harmony)
+redo_fastmnn<-is_one(myoptions$redo_fastmnn, 0)
+
+if(reduction == "fastmnn"){
+  assay="RNA"
+}else{
+  assay=get_assay(by_sctransform, by_integration, by_harmony)
+  redo_fastmnn=FALSE
+}
 
 npcs<-as.numeric(myoptions$pca_dims)
 
@@ -55,6 +58,9 @@ annotate_tcell<-is_one(myoptions$annotate_tcell)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
 regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
+
+output_individual_object<-is_one(myoptions$output_individual_object)
+save_intermediate_object<-is_one(myoptions$save_intermediate_object)
 
 min_markers<-20
 
@@ -70,7 +76,11 @@ if(regress_by_percent_mt){
   vars.to.regress=NULL
 }
 
-essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
+if(file.exists(parFile3)){
+  essential_genes=read.table(parFile3, sep="\t" ,header=F)$V1
+}else{
+  essential_genes=c()
+}
 
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is_file_empty(bubblemap_file)
@@ -96,27 +106,48 @@ cell_activity_database<-ctdef$cell_activity_database
 
 prefix<-outFile
 
-meta<-readRDS(parFile2)
+cat("Reading object", parFile1, "\n")
+obj<-read_object(parFile1)
+
+if(parFile2 != ""){
+  meta<-readRDS(parFile2)
+}else{
+  meta<-obj@meta.data
+}
 
 bHasSignacX<-FALSE
-if(exists("parSampleFile4")){
+if("SignacX_column" %in% names(myoptions)){
+  meta$SignacX = meta[[myoptions$SignacX_column]]
+  bHasSignacX<-TRUE
+}else if(exists("parSampleFile4")){
   meta = fill_meta_info_list(parSampleFile4, meta, "signacx_CellStates", "SignacX")
+  bHasSignacX<-TRUE
+}else if("SignacX" %in% colnames(obj@meta.data)){
   bHasSignacX<-TRUE
 }
 
 bHasSingleR<-FALSE
-if(exists('parSampleFile5')){
+if("SingleR_column" %in% names(myoptions)){
+  meta$SingleR = meta[[myoptions$SingleR_column]]
+  bHasSingleR<-TRUE
+}else if(exists('parSampleFile5')){
   meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
+  bHasSingleR<-TRUE
+}else if("SingleR" %in% colnames(obj@meta.data)){
   bHasSingleR<-TRUE
 }
 
 bHasAzimuth<-FALSE
-if(exists('parSampleFile7')){
+if("Azimuth_column" %in% names(myoptions)){
+  meta$Azimuth = meta[[myoptions$Azimuth_column]]
+  bHasAzimuth<-TRUE
+}else if(exists('parSampleFile7')){
   meta = fill_meta_info_list(parSampleFile7, meta, "Azimuth_finest", "Azimuth")
+  bHasAzimuth<-TRUE
+}else if("Azimuth" %in% colnames(obj@meta.data)){
   bHasAzimuth<-TRUE
 }
 
-obj<-read_object(parFile1)
 stopifnot(all(colnames(obj) == rownames(meta)))
 obj@meta.data = meta
 Idents(obj)<-previous_layer
@@ -358,10 +389,11 @@ allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
 #previous_celltypes=rev(previous_celltypes)
-pct<-previous_celltypes[10]
+pct<-previous_celltypes[1]
 cat("memory used: ", lobstr_mem_used(), "\n")
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
+  cat(key, "Start\n")
   cells<-rownames(meta)[meta[,previous_layer] == pct]
   subobj<-subset(obj, cells=cells)
   
@@ -395,21 +427,27 @@ for(pct in previous_celltypes){
                         essential_genes, 
                         key,
                         do_umap = TRUE,
-                        reduction.name = subumap)
+                        reduction.name = subumap,
+                        redo_fastmnn = redo_fastmnn)
   
+  cat("saving reductions ...\n")
   reductions_rds = paste0(curprefix, ".reductions.rds")
   saveRDS(subobj@reductions, reductions_rds)
 
+  validation_columns=c("orig.ident")
   if(bHasSignacX){
     filelist = check_cell_type(subobj, "SignacX", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
+    validation_columns = c(validation_columns, "SignacX")
   }
 
   if(bHasSingleR){
     filelist = check_cell_type(subobj, "SingleR", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
+    validation_columns = c(validation_columns, "SingleR")
   }
 
   if(bHasAzimuth){
     filelist = check_cell_type(subobj, "Azimuth", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
+    validation_columns = c(validation_columns, "Azimuth")
   }
    
   cluster = clusters[10]
@@ -487,7 +525,7 @@ for(pct in previous_celltypes){
       ct_meta=subobj@meta.data, 
       bar_file=bar_file,
       cluster_name="display_layer", 
-      validation_columns=c("orig.ident", "SignacX", "SingleR"),
+      validation_columns=validation_columns,
       calc_height_per_cluster=250, 
       calc_width_per_cell=50)
     rm(g)
@@ -569,8 +607,12 @@ for(pct in previous_celltypes){
     filelist<-rbind(filelist, cur_df)
   }
   rm(subobj2)
-  rm(subobj)
   cat("after", pct, ", memory used:", lobstr_mem_used(), "\n")
+
+  if(output_individual_object){
+    saveRDS(subobj, paste0(outFile, ".", pct, ".obj.rds"))
+  }
+  rm(subobj)
 }
 
 rm(obj)
@@ -579,3 +621,4 @@ cat("final memory used:", lobstr_mem_used(), "\n")
 setwd(cur_folder)
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+
