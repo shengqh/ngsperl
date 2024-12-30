@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='P9061'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge/result/P9061.final.rds'
-parFile2='/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result/P9061.meta.rds'
-parFile3='/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/essential_genes/result/P9061.txt'
-parFile4='/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_2_subcluster_rh/result/P9061.files.csv'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn/result/combined.final.rds'
+parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_2_subcluster/result/combined.meta.rds'
+parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/essential_genes/result/combined.txt'
+parFile4='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_2_subcluster/result/combined.files.csv'
 
 
-setwd('/nobackup/vickers_lab/projects/20230509_9061_scRNA_mouse_decontX_byTiger/decontX_nd_seurat_sct2_merge_dr0.2_3_choose/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result')
 
 ### Parameter setting end ###
 
@@ -93,9 +93,7 @@ if(file.exists(post_rename_umap)){
   obj<-build_dummy_cluster(obj, label.by=previous_layer, new_cluster_name = "old_clusters")
   g<-get_dim_plot(obj, group.by ="old_clusters", label.by="old_clusters_label", label.size = 8, legend.title="") + 
     theme(legend.text = element_text(size = 20)) + ggtitle("")
-  png(pre_choose_file, width=3200, height=2000, res=300)
-  print(g)
-  dev.off()
+  ggsave(pre_choose_file, g, width=3200, height=2000, units="px", dpi=300, bg="white")
   obj$old_clusters<-NULL
   obj$old_clusters_label<-NULL
 }
@@ -202,9 +200,57 @@ setwd(tmp_folder)
 #meta = obj@meta.data
 #meta[, cur_layer] = as.character(meta[, cur_layer])
 
+process_keep=function(ct_tbl, cur_meta){
+  keep_tbl=ct_tbl |> dplyr::filter(V2 == "KEEP")
+  if(nrow(keep_tbl) > 0){
+    keep_formula=keep_tbl$V1[1]
+    for(keep_formula in keep_tbl$V1) {
+      keep_parts=unlist(strsplit(keep_formula, ":"))
+      
+      keep_cluster=keep_parts[1]
+      keep_column=keep_parts[2]
+      keep_celltypes_str=keep_parts[3]
+      keep_celltypes=unlist(strsplit(keep_celltypes_str, ","))
+
+      cat("  keep cluster:", keep_cluster, ", column:", keep_column, ", celltypes:", keep_celltypes_str, "\n")
+      if(!keep_column %in% colnames(cur_meta)){
+        stop(paste0("column ", keep_column, " not exists"))
+      }
+
+      is_delete = cur_meta$seurat_clusters_str==keep_cluster & (!cur_meta[,keep_column] %in% keep_celltypes)
+      delete_meta=cur_meta[is_delete,,drop=F]
+      delete_cts=unique(delete_meta[,keep_column])
+
+      delete_cells=sum(is_delete)
+      cur_meta$seurat_clusters[is_delete] = -10000
+      cat("     deleted cells:", delete_cells, "of", paste0(delete_cts, collpase=","), "\n")
+    }
+  }
+  return(cur_meta)
+}
+
+process_naming=function(name_tbl, cur_meta){
+  if(nrow(name_tbl) > 0){
+    for(idx in c(1:nrow(name_tbl))){
+      sc=name_tbl$V2[idx]
+      scname=name_tbl$V1[idx]
+      cat("  name cluster:", sc, "to", scname, "\n")
+      if (scname == "DELETE") {
+        is_delete = cur_meta$seurat_clusters_str==sc
+        delete_cells=sum(is_delete)
+        cur_meta$seurat_clusters[is_delete] = -10000
+        cat("     deleted cells:", delete_cells, "of", paste0(delete_cts, collpase=","), "\n")
+      }else{
+        cur_meta[cur_meta$seurat_clusters_str==sc, "cur_layer"] = scname
+      }
+    }
+  }
+  return(cur_meta)
+}
+
 meta$seurat_clusters=-1
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[4]
 for(pct in previous_celltypes){
   cat(pct, "\n")
 
@@ -256,9 +302,18 @@ for(pct in previous_celltypes){
     
     if(nrow(best_res_row) > 0){
       rename_row = best_res_row[best_res_row$V2 == 0,]
+
+      ct_tbl=subset(best_res_row, V2 != "resolution")
+      cur_meta=meta[cells,]
+      cur_meta$seurat_clusters_str="0"
+
       if(nrow(rename_row) > 0){
         meta[cells, output_layer] = rename_row$V1[1]
       }
+
+      cur_meta=process_keep(ct_tbl, cur_meta)
+
+      meta[rownames(cur_meta), "seurat_clusters"]=cur_meta$seurat_clusters
     }
     
     if(output_heatmap){
@@ -336,7 +391,7 @@ for(pct in previous_celltypes){
   
   meta_rds = file_map$meta
   if(!file.exists(meta_rds)){
-    stop(meta_rds)
+    stop(paste0("missing meta file:", meta_rds))
   }
   all_meta<-readRDS(meta_rds)
   all_meta$seurat_clusters_str<-as.character(all_meta$seurat_clusters)
@@ -353,36 +408,134 @@ for(pct in previous_celltypes){
   if(nrow(ct_tbl) > 0){
     ct_tbl$V1<-as.character(ct_tbl$V1)
     ct_tbl$V2<-as.character(ct_tbl$V2)
+
+    name_or_merge_tbl=ct_tbl |> 
+      dplyr::filter(!(V2 %in% c("DELETE", "KEEP", "RENAME")))
     
-    valid=(ct_tbl$V1 %in% all_meta$seurat_clusters_str) | (ct_tbl$V2 %in% all_meta$seurat_clusters_str)
-    invalid=ct_tbl[!valid,,drop=F]
-    
-    if(nrow(invalid) > 0){
-      print(invalid)
-      stop("Either first column be cluster for merge, or second column be cluster for rename. ")
+    if(nrow(name_or_merge_tbl) > 0){
+      valid=name_or_merge_tbl$V2 %in% cur_meta$seurat_clusters_str | name_or_merge_tbl$V1 %in% cur_meta$seurat_clusters_str
+      invalid=name_or_merge_tbl[!valid,,drop=F]
+      
+      if(nrow(invalid) > 0){
+        print(invalid)
+        stop("Second column should be cluster id for naming and first column should be cluster id for merging. ")
+      }
     }
-    
-    rename_tbl=ct_tbl[ct_tbl$V2 %in% cur_meta$seurat_clusters_str,,drop=F]
-    if(nrow(rename_tbl) > 0){
-      for(idx in c(1:nrow(rename_tbl))){
-        sc=rename_tbl$V2[idx]
-        scname=rename_tbl$V1[idx]
-        cur_meta[cur_meta$seurat_clusters_str==sc, "cur_layer"] = scname
+
+    name_tbl=name_or_merge_tbl |> dplyr::filter(V2 %in% cur_meta$seurat_clusters_str)
+    cur_meta = process_naming(name_tbl, cur_meta)
+
+    delete_by_cluster_tbl=ct_tbl |> dplyr::filter(V2 == "DELETE") |> dplyr::filter(V1 %in% cur_meta$seurat_clusters_str)
+    if(nrow(delete_by_cluster_tbl) > 0){
+      delete_scs = delete_by_cluster_tbl$V1
+      cat("  deleting cluster", paste0(delete_scs, collapse=","), "of", pct, "\n")
+
+      id_delete = cur_meta$seurat_clusters_str %in% delete_scs
+      n_delete=sum(id_delete)
+      cur_meta$seurat_clusters[id_delete] = -10000
+      cat("     deleted cells:", delete_cells, "\n")
+    }
+
+    delete_by_formula_tbl=ct_tbl |> dplyr::filter(V2 == "DELETE") |> dplyr::filter(!(V1 %in% cur_meta$seurat_clusters_str))
+    if(nrow(delete_by_formula_tbl) > 0){
+      delete_formula=delete_by_formula_tbl$V1[1]
+      for(delete_formula in delete_by_formula_tbl$V1) {
+        delete_parts=unlist(strsplit(delete_formula, ":"))
+        
+        delete_cluster=delete_parts[1]
+        cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str==delete_cluster])
+        delete_column=delete_parts[2]
+        delete_celltypes_str=delete_parts[3]
+        delete_celltypes=unlist(strsplit(delete_celltypes_str, ","))
+
+        cat("  deleting", delete_celltypes_str, "annotated by", delete_column, "from cluster", delete_cluster, "(", cur_name, ")\n")
+        if(!delete_column %in% colnames(cur_meta)){
+          stop(paste0("column ", delete_column, " not exists"))
+        }
+
+        is_delete = cur_meta$seurat_clusters_str==delete_cluster & cur_meta[,delete_column] %in% delete_celltypes
+        delete_cells=sum(is_delete)
+        cur_meta$seurat_clusters[is_delete] = -10000
+        cat("     deleted cells:", delete_cells, "\n")
+      }
+    }
+
+    keep_tbl=ct_tbl |> dplyr::filter(V2 == "KEEP")
+    if(nrow(keep_tbl) > 0){
+      keep_formula=keep_tbl$V1[1]
+      for(keep_formula in keep_tbl$V1) {
+        keep_parts=unlist(strsplit(keep_formula, ":"))
+        
+        keep_cluster=keep_parts[1]
+        keep_column=keep_parts[2]
+        keep_celltypes_str=keep_parts[3]
+        keep_celltypes=unlist(strsplit(keep_celltypes_str, ","))
+
+        cat("  keep cluster:", keep_cluster, ", column:", keep_column, ", celltypes:", keep_celltypes_str, "\n")
+        if(!keep_column %in% colnames(cur_meta)){
+          stop(paste0("column ", keep_column, " not exists"))
+        }
+
+        is_delete = cur_meta$seurat_clusters_str==keep_cluster & (!cur_meta[,keep_column] %in% keep_celltypes)
+        delete_meta=cur_meta[is_delete,,drop=F]
+        delete_cts=unique(delete_meta[,keep_column])
+
+        delete_cells=sum(is_delete)
+        cur_meta$seurat_clusters[is_delete] = -10000
+        cat("     deleted cells:", delete_cells, "of", paste0(delete_cts, collpase=","), "\n")
       }
     }
     
-    merge_tbl=ct_tbl[ct_tbl$V1 %in% cur_meta$seurat_clusters_str,,drop=F]
+    rename_tbl=ct_tbl |> dplyr::filter(V2 == "RENAME")
+    if(nrow(rename_tbl) > 0){
+      rename_formula=rename_tbl$V1[1]
+      for(rename_formula in rename_tbl$V1) {
+        rename_parts=unlist(strsplit(rename_formula, ":"))
+
+        if(length(rename_parts) != 4){
+          stop(paste0("  rename formula should be cluster:column:source_celltypes:target_celltype, now we get", rename_formula))
+        }
+        
+        rename_cluster=rename_parts[1]
+        rename_column=rename_parts[2]
+        rename_celltypes_str=rename_parts[3]
+        rename_target_celltype=rename_parts[4]
+        rename_celltypes=unlist(strsplit(rename_celltypes_str, ","))
+
+        cat("  rename cluster:", rename_cluster, ", column:", rename_column, ", celltypes:", rename_celltypes_str, "to", rename_target_celltype, "\n")
+        if(!rename_column %in% colnames(cur_meta)){
+          stop(paste0("column ", rename_column, " not exists"))
+        }
+
+        if(rename_cluster == -1){ #apply to all clusters
+          is_rename = cur_meta[,rename_column] %in% rename_celltypes
+        }else{
+          is_rename = cur_meta$seurat_clusters_str==rename_cluster & (cur_meta[,rename_column] %in% rename_celltypes)
+        }
+        rename_cells=sum(is_rename)
+        max_seurat_clusters = max(cur_meta$seurat_clusters)
+        cur_meta[is_rename, "cur_layer"] = rename_target_celltype
+        cur_meta[is_rename, "seurat_clusters"] = max_seurat_clusters + 1
+
+        cat("     renamed cells:", rename_cells, "\n")
+      }
+    }
+
+    merge_tbl=name_or_merge_tbl |> dplyr::filter(V1 %in% cur_meta$seurat_clusters_str)
     if(nrow(merge_tbl) > 0){
       max_index = max(cur_meta$seurat_clusters) + 1
       
       mname=unique(merge_tbl$V2)[1]
       for (mname in unique(merge_tbl$V2)){
         mcts=merge_tbl$V1[merge_tbl$V2==mname]
+        n_cells = sum(cur_meta$seurat_clusters %in% mcts)
         cur_meta[cur_meta$seurat_clusters_str %in% mcts, "cur_layer"] = mname
         if (mname == "DELETE"){
           cur_meta[cur_meta$seurat_clusters_str %in% mcts, "seurat_clusters"] = -10000
+          cat("     deleted", n_cells, "cells in", paste0(mcts, collpase=","), "\n")
         }else{
           cur_meta[cur_meta$seurat_clusters_str %in% mcts, "seurat_clusters"] = max_index
+          cat("     merged", n_cells, "cells to", mname, "in", paste0(mcts, collpase=","), "\n")
           max_index = max_index + 1
         }
       }
@@ -614,3 +767,4 @@ print(g)
 dev.off()
 
 cat("done ...\n")
+
