@@ -8,7 +8,6 @@ parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seura
 parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/essential_genes/result/combined.txt'
 parFile4='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_2_subcluster/result/combined.files.csv'
 
-
 setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result')
 
 ### Parameter setting end ###
@@ -250,7 +249,7 @@ process_naming=function(name_tbl, cur_meta){
 
 meta$seurat_clusters=-1
 cluster_index=0
-pct<-previous_celltypes[4]
+pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   cat(pct, "\n")
 
@@ -409,8 +408,40 @@ for(pct in previous_celltypes){
     ct_tbl$V1<-as.character(ct_tbl$V1)
     ct_tbl$V2<-as.character(ct_tbl$V2)
 
+    move_tbl=ct_tbl |> dplyr::filter(V2 == "MOVE")
+    if(nrow(move_tbl) > 0){
+      move_formula=move_tbl$V1[1]
+      for(move_formula in move_tbl$V1) {
+        move_parts=unlist(strsplit(move_formula, ":"))
+        
+        move_cluster=move_parts[1]
+        cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str==move_cluster])
+        move_column=move_parts[2]
+        move_celltypes_str=move_parts[3]
+        move_celltypes=unlist(strsplit(move_celltypes_str, ","))
+        to_cluster=as.numeric(move_parts[4])
+
+        cat("  moving", move_celltypes_str, "annotated by", move_column, "from cluster", move_cluster, "to", to_cluster, "\n")
+        if(!move_column %in% colnames(cur_meta)){
+          stop(paste0("column ", move_column, " not exists"))
+        }
+
+        if(move_cluster == -1){
+          is_move = cur_meta[,move_column] %in% move_celltypes
+        }else{
+          is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
+        }
+
+        move_cells=sum(is_move)
+        cur_meta$seurat_clusters[is_move] = to_cluster
+        cat("     moved cells:", move_cells, "\n")
+
+        cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)        
+      }
+    }
+
     name_or_merge_tbl=ct_tbl |> 
-      dplyr::filter(!(V2 %in% c("DELETE", "KEEP", "RENAME")))
+      dplyr::filter(!(V2 %in% c("DELETE", "KEEP", "RENAME", "MOVE")))
     
     if(nrow(name_or_merge_tbl) > 0){
       valid=name_or_merge_tbl$V2 %in% cur_meta$seurat_clusters_str | name_or_merge_tbl$V1 %in% cur_meta$seurat_clusters_str
@@ -431,9 +462,9 @@ for(pct in previous_celltypes){
       cat("  deleting cluster", paste0(delete_scs, collapse=","), "of", pct, "\n")
 
       id_delete = cur_meta$seurat_clusters_str %in% delete_scs
-      n_delete=sum(id_delete)
+      delete_cells=sum(id_delete)
       cur_meta$seurat_clusters[id_delete] = -10000
-      cat("     deleted cells:", delete_cells, "\n")
+      cat("     deleted", delete_cells, "outof", nrow(cur_meta), "cells\n")
     }
 
     delete_by_formula_tbl=ct_tbl |> dplyr::filter(V2 == "DELETE") |> dplyr::filter(!(V1 %in% cur_meta$seurat_clusters_str))
@@ -578,7 +609,14 @@ if(any(obj$seurat_clusters<0)){
   obj<-subset(obj, cells=cells)
 }
 
+# fix the seurat_clusters. Since we might delete some subclusters, the index might have gap.
+# meta=readRDS(meta_rds)
 meta = obj@meta.data
+old_clusters = names(table(meta$seurat_clusters))
+new_clusters = 0:(length(old_clusters)-1)
+map_df=data.frame(old_clusters, new_clusters)
+meta$seurat_clusters = map_df$new_clusters[match(meta$seurat_clusters, map_df$old_clusters)]
+
 meta[,seurat_output_layer] = paste0(meta$seurat_clusters, ": ", meta[,output_layer])
 ct<-meta[!duplicated(meta$seurat_cluster),]
 ct<-ct[order(ct$seurat_cluster),]
@@ -588,19 +626,21 @@ meta[,seurat_output_layer] =factor(meta[,seurat_output_layer], levels=ct[,seurat
 
 obj@meta.data<-meta
 
-write.csv(obj@meta.data, paste0(outFile, ".meta.csv"))
-saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
+meta_csv = paste0(outFile, ".meta.csv")
+write.csv(obj@meta.data, meta_csv)
+meta_rds = paste0(outFile, ".meta.rds")
+saveRDS(obj@meta.data, meta_rds)
 
 if(output_heatmap){
   allmarkers<-unique(allmarkers)
   obj<-myScaleData(obj, allmarkers, "RNA")
 }
 
-cat("redo PCA ...\n")
-obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
-
-cat("redo UMAP ...\n")
-obj <- RunUMAP(object = obj, dims=c(1:pca_dims), verbose = FALSE)
+# Keep the original UMAP, don't redo PCA and UMAP since it doesn't work for integration.
+# cat("redo PCA ...\n")
+# obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
+# cat("redo UMAP ...\n")
+# obj <- RunUMAP(object = obj, dims=c(1:pca_dims), verbose = FALSE)
 
 cat("saving final object ...\n")
 final_file = paste0(outFile, ".final.rds")
@@ -646,33 +686,30 @@ for(pct in pcts){
                   random_colors=TRUE)
   
   g<-g+theme(text = element_text(size = 20))
-  png(paste0(outFile,".", celltype_to_filename(pct), ".umap.png"), width=2500, height=2000, res=300)
-  print(g)
-  dev.off()
+  ggsave( paste0(outFile,".", celltype_to_filename(pct), ".umap.png"), 
+          g,
+          width=2500, 
+          height=2000, 
+          units="px",
+          dpi=300,
+          bg="white")
   
   g_data<-galldata[galldata$id %in% unlist(subobj[[seurat_output_layer]]),]
   gdot$data<-g_data
-  png(paste0(outFile, ".", celltype_to_filename(pct), ".dot.png"), width=get_dot_width(gdot, min_width=bubble_width), height=get_dot_height_vec(g_data$id),res=300)
-  print(gdot)
-  dev.off()
+  ggsave( paste0(outFile, ".", celltype_to_filename(pct), ".dot.png"), 
+          gdot,
+          width=get_dot_width(gdot, min_width=bubble_width), 
+          height=get_dot_height_vec(g_data$id),
+          units="px",
+          dpi=300,
+          bg="white")
 }
 
-output_celltype_figures(
-  obj = obj,
-  cell_identity = output_layer,
-  prefix = prefix,
-  bubblemap_file = bubblemap_file,
-  cell_activity_database = NULL,
-  combined_ct_source = NULL,
-  group.by="orig.ident",
-  name="sample",
-  umap_width=2600,
-  dot_width = bubble_width,
-  cell_identity_order=NULL,
-  all_umap = "umap",
-  cell_identity_umap = "subumap",
-  species=myoptions$species)
-
+if(length(unique(obj@meta.data[,seurat_output_layer])) > 18){
+  width=3500
+}else{
+  width=2600
+}
 output_celltype_figures(
   obj = obj, 
   cell_identity = seurat_output_layer, 
@@ -682,12 +719,36 @@ output_celltype_figures(
   combined_ct_source = NULL, 
   group.by="orig.ident", 
   name="sample",
-  umap_width=3200,
+  umap_width=width,
   dot_width = bubble_width,
   cell_identity_order="seurat_clusters",
   all_umap = "umap",
   cell_identity_umap = "subumap",
   species=myoptions$species)
+
+#if there are multiple clusters with same cell type name, draw cell type level figures
+if(length(unlist(unique(obj@meta.data[,output_layer]))) != length(unlist(unique(obj@meta.data[,seurat_output_layer])))) {
+  if(length(unique(obj@meta.data[,output_layer])) > 18){
+    width=3500
+  }else{
+    width=2600
+  }
+  output_celltype_figures(
+    obj = obj,
+    cell_identity = output_layer,
+    prefix = prefix,
+    bubblemap_file = bubblemap_file,
+    cell_activity_database = NULL,
+    combined_ct_source = NULL,
+    group.by="orig.ident",
+    name="sample",
+    umap_width=width,
+    dot_width = bubble_width,
+    cell_identity_order=NULL,
+    all_umap = "umap",
+    cell_identity_umap = "subumap",
+    species=myoptions$species)
+}
 
 setwd(cur_folder)
 
@@ -698,19 +759,29 @@ nclusters<-length(unique(obj$seurat_clusters))
 
 if(output_heatmap){
   g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = allmarkers, group.by = seurat_output_layer, angle = 90) + NoLegend()
-  png(paste0(prefix, ".top10.heatmap.png"), 
-      width=get_heatmap_width(nclusters), 
-      height=get_heatmap_height(length(allmarkers)), 
-      res=300)
-  print(g)
-  dev.off()
+  ggsave( paste0(prefix, ".top10.heatmap.png"), 
+          g,
+          width=get_heatmap_width(nclusters), 
+          height=get_heatmap_height(length(allmarkers)),
+          units="px",
+          dpi=300,
+          bg="white")
 }
 
 g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_output_layer, label.size = 8, legend.title="") + 
   theme(legend.text = element_text(size = 20)) + ggtitle("") 
-png(paste0(prefix, ".umap.png"), width=4000, height=2000, res=300)
-print(g)
-dev.off()
+if(length(unique(obj$seurat_clusters)) > 18){
+  width=6000
+}else{
+  width=4000
+}
+ggsave( paste0(prefix, ".umap.png"), 
+        g,
+        width=width, 
+        height=2000, 
+        units="px", 
+        dpi=300, 
+        bg="white")
 
 data_norm=get_seurat_average_expression(obj, seurat_output_layer)
 predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
@@ -727,9 +798,13 @@ if(!is.null(bubblemap_file) && file.exists(bubblemap_file)){
     assay="RNA", 
     orderby_cluster=TRUE,
     species=myoptions$species)
-  png(paste0(prefix, ".dot.png"), width=get_dot_width(g, min_width=bubble_width), height=get_dot_height(obj, "seurat_clusters"), res=300)
-  print(g)
-  dev.off()
+  ggsave( paste0(prefix, ".dot.png"), 
+          g,
+          width=get_dot_width(g, min_width=bubble_width), 
+          height=get_dot_height(obj, "seurat_clusters"), 
+          units="px", 
+          dpi=300, 
+          bg="white")
 }
 
 write.csv(table(obj$cell_type, obj$orig.ident), paste0(outFile, ".ct_orig.ident.csv"))
@@ -737,34 +812,41 @@ if(!all(obj$orig.ident == obj$sample)){
   write.csv(table(obj$cell_type, obj$sample), paste0(outFile, ".ct_sample.csv"))
 }
 
-#obj<-readRDS("mouse_8363.final.rds")
+#obj<-readRDS("combined.final.rds")
 
 cat("FindAllMarkers for cell type ...\n")
 
 Idents(obj)<-"cell_type"
 markers=FindAllMarkers(obj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
 markers=markers[markers$p_val_adj < 0.05,]
-write.csv(markers, paste0(outFile, ".markers.csv"))
-top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
 
+markers_file=paste0(outFile, ".markers.csv")
+write.csv(markers, markers_file)
+
+markers<-read.csv(markers_file, header=T, row.names=1)
+top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
 top10genes=unique(top10$gene)
 obj<-myScaleData(obj, top10genes, assay="RNA")
 
 g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, group.by = "cell_type", angle = 90) + NoLegend()
-png(paste0( prefix, ".cell_type.top10.heatmap.png"), 
-    width=get_heatmap_width(length(unique(obj$cell_type))), 
-    height=get_heatmap_height(length(top10genes)), 
-    res=300)
-print(g)
-dev.off()
+ggsave( paste0( prefix, ".cell_type.top10.heatmap.png"), 
+        g,
+        width=get_heatmap_width(length(unique(obj$cell_type))), 
+        height=get_heatmap_height(length(top10genes)), 
+        units="px",
+        dpi=300,
+        bg="white",
+        limitsize=FALSE)
 
 g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, group.by = "seurat_cell_type", angle = 90) + NoLegend()
-png(paste0( prefix, ".seurat_cell_type.top10.heatmap.png"), 
-    width=get_heatmap_width(length(unique(obj$seurat_cell_type))), 
-    height=get_heatmap_height(length(top10genes)), 
-    res=300)
-print(g)
-dev.off()
+ggsave( paste0( prefix, ".seurat_cell_type.top10.heatmap.png"), 
+        g,
+        width=get_heatmap_width(length(unique(obj$seurat_cell_type))), 
+        height=get_heatmap_height(length(top10genes)), 
+        units="px",
+        dpi=300,
+        bg="white",
+        limitsize=FALSE)
 
 cat("done ...\n")
 

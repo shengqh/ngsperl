@@ -84,7 +84,12 @@ choose_figure_rmd<-function(detail_prefix, cts){
     ct_name = celltype_to_filename(ct)
     ct_png = paste0(detail_prefix, ".", ct_name, ".png")
     result<-paste0(result, paste0("\n\n# ", ct, "\n\n"))
+    result<-paste0(result, paste0("\n\n## Summary barplot\n\n"))
     result<-paste0(result, getFigure(ct_png))
+
+    result<-paste0(result, paste0("\n\n## Global UMAP\n\n"))
+    umap_png = paste0(detail_prefix, ".", ct_name, ".umap.png")
+    result<-paste0(result, getFigure(umap_png))
 
     tool = "SingleR"
     for(tool in c("SingleR", "SignacX", "Azimuth")){

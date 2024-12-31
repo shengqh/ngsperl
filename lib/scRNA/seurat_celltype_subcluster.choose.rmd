@@ -3,7 +3,7 @@ title: "Seurat optimal resolution result"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
-    toc_depth: 2
+    toc_depth: 3
     number_sections: true
 ---
 
@@ -36,6 +36,8 @@ outFile=myoptions$task_name
 detailFile=paste0("details/", outFile)
 
 cta_file=paste0(outFile, ".cta.png")
+
+has_cell_type_png=file.exists(paste0(detailFile, ".cell_type.umap.png"))
 ```
 
 # Pre selection
@@ -76,56 +78,45 @@ cat(figureRmd(cts), file=resFile)
 ```{r, child=resFile} 
 ```
 
-## Cell type level
-
-### UMAP
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=has_cell_type_png}
+cat("\n\n## Cell type level\n\n### UMAP\n\n")
 include_graphics(paste0(detailFile, ".cell_type.umap.png"))
 ```
 
-### Marker genes
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=has_cell_type_png}
+cat("\n\n### Marker genes\n\n")
 include_graphics(paste0(detailFile, ".cell_type.dot.png"))
 ```
 
-### Sample / Cell type
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=has_cell_type_png}
+cat("\n\n### ### Sample / Cell type\n\n")
 scts<-read.csv(paste0(detailFile, ".cell_type.sample_celltype.csv"), check.names=F, row.names=1)
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type of each sample"))))
 ```
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=has_cell_type_png}
 include_graphics(paste0(detailFile, ".cell_type.sample_celltype.png"))
 ```
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=has_cell_type_png}
 include_graphics(paste0(detailFile, ".cell_type.celltype_sample.png"))
 ```
 
-### Cell type individual UMAP 
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=has_cell_type_png}
+cat("\n\n### Cell type individual UMAP\n\n")
 include_graphics(paste0(detailFile, ".cell_type.cell.png"))
 ```
 
-### Cell type top 10 heatmap
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=has_cell_type_png}
+cat("\n\n### Cell type top 10 heatmap\n\n")
 include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
 ```
 
-## Sub cluster level
-
-### UMAP
-
 ```{r, echo=FALSE}
+cat("## Sub cluster level\n\n### UMAP\n\n")
 include_graphics(paste0(detailFile, ".seurat_cell_type.umap.png"))
 ```
 
-### Marker genes
-
 ```{r, echo=FALSE}
+cat("### Marker genes\n\n### UMAP\n\n")
 include_graphics(paste0(detailFile, ".seurat_cell_type.dot.png"))
 ```
 
@@ -134,9 +125,8 @@ cat("\n### Cell type annotation score\n\n")
 include_graphics(cta_file)
 ```
 
-### Sample / cell subtype
-
 ```{r, echo=FALSE}
+cat("\n### Sample / cell subtype\n\n")
 scts<-read.csv(paste0(detailFile, ".seurat_cell_type.sample_celltype.csv"), check.names=F, row.names=1)
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count_sub", "Cell count in each sub cluster of each sample"))))
 ```
@@ -147,14 +137,12 @@ include_graphics(paste0(detailFile, ".seurat_cell_type.sample_celltype.png"))
 include_graphics(paste0(detailFile, ".seurat_cell_type.celltype_sample.png"))
 ```
 
-### Cell subtype individual UMAP 
-
 ```{r, echo=FALSE}
+cat("\n### Cell subtype individual UMAP\n\n")
 include_graphics(paste0(detailFile, ".seurat_cell_type.cell.png"))
 ```
 
-### Cell subtype top 10 heatmap
-
 ```{r, echo=FALSE}
+cat("\n### Cell subtype top 10 heatmap\n\n")
 include_graphics(paste0(outFile, ".seurat_cell_type.top10.heatmap.png"))
 ```

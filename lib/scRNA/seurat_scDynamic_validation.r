@@ -1,16 +1,17 @@
 rm(list=ls()) 
-outFile='coronary'
+outFile='combined'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
-parSampleFile3=''
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parFile1='/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/20240531_T01_prepare_data_coronary/coronary.DE.rds'
-parFile2='/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/20240531_T01_prepare_data_coronary/coronary.meta.rds'
+parSampleFile7='fileList7.txt'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.final.rds'
+parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240208_CAC_proteomics_scRNA/chiara_scRNA/20240601_T02_subcluster/celltype_validation/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose_validation/result')
 
 ### Parameter setting end ###
 
@@ -20,12 +21,18 @@ library(Seurat)
 options(future.globals.maxSize= 10779361280)
 
 myoptions = read_file_map(parSampleFile1, do_unlist = FALSE)
+reduction = myoptions$reduction
 doublet_column = myoptions$doublet_column
 celltype_column = myoptions$celltype_column
 bubblemap_file = myoptions$bubblemap_file
 cur_assay = ifelse(is_one(myoptions$by_sctransform), "SCT", "RNA")
 species = myoptions$species
 create_clusters = is_one(myoptions$create_clusters)
+summary_layer=myoptions$summary_layer
+
+cat("reduction: ", reduction, "\n")
+cat("doublet_column: ", doublet_column, "\n")
+cat("celltype_column: ", celltype_column, "\n")
 
 file_dir=paste0(outFile, gsub(".html", "", myoptions$rmd_ext))
 dir.create(file_dir, showWarnings=FALSE)
@@ -73,25 +80,38 @@ if(file.exists(parSampleFile3)){
 
   if(!has_decontX){
     meta = fill_meta_info_list(parSampleFile3, meta, "decontX_contamination", "decontX", is_character=FALSE)    
+    meta[,"decontX > 0.25"] = meta[,"decontX"] > 0.25
     has_decontX = TRUE
+    validation_columns<-c(validation_columns, "decontX > 0.25")
   }
 }
 
-if(exists("parSampleFile4")){
-  meta = fill_meta_info_list(parSampleFile4, meta, "signacx_CellStates", "SignacX")
+if(!("SignacX" %in% colnames(meta))){
+  if(exists("parSampleFile4")){
+    meta = fill_meta_info_list(parSampleFile4, meta, "signacx_CellStates", "SignacX")
+    validation_columns<-c(validation_columns, "SignacX")
+  }
+}else{
   validation_columns<-c(validation_columns, "SignacX")
 }
 
-if(exists('parSampleFile5')){
-  meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
+if(!("SingleR" %in% colnames(meta))){
+  if(exists('parSampleFile5')){
+    meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
+    validation_columns<-c(validation_columns, "SingleR")
+  }
+}else{
   validation_columns<-c(validation_columns, "SingleR")
 }
 
-if(exists('parSampleFile7')){
-  meta = fill_meta_info_list(parSampleFile7, meta, "Azimuth_finest", "Azimuth")
+if(!("Azimuth" %in% colnames(meta))) {
+  if(exists('parSampleFile7')){
+    meta = fill_meta_info_list(parSampleFile7, meta, "Azimuth_finest", "Azimuth")
+    validation_columns<-c(validation_columns, "Azimuth")
+  }
+}else{
   validation_columns<-c(validation_columns, "Azimuth")
 }
-
 saveRDS(meta, paste0(file_prefix, ".meta.rds"))
 
 obj<-read_object(parFile1)
@@ -101,7 +121,7 @@ if(length(unique(meta$orig.ident)) > 1){
   validation_columns<-c("orig.ident", validation_columns)
 }
 
-do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct){
+do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct, reduction="umap", summary_layer="layer4"){
   tbl = as.data.frame(table(ct_meta[,validation_column]))
   tbl=tbl[order(tbl$Freq, decreasing=TRUE),]
   write.csv(tbl, paste0(file_prefix, ".", pct, ".", validation_column, ".csv"), row.names=FALSE)
@@ -109,24 +129,57 @@ do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct){
   ct_obj = get_filtered_obj(obj, validation_column, ct_meta)
   cur_ct=unique(ct_obj@meta.data[,validation_column])
 
-  g<-get_dim_plot_labelby(ct_obj, reduction="umap", label.by=validation_column,  title=paste0(validation_column, " in old UMAP")) + guides(fill=guide_legend(ncol =1))
+  g<-get_dim_plot_labelby(ct_obj, reduction=reduction, label.by=validation_column,  title=paste0(validation_column, " in UMAP")) + guides(fill=guide_legend(ncol =1))
   ggsave(paste0(file_prefix, ".", pct, ".", validation_column, ".png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
 
-  validation_cell=paste0(validation_column, "_Cell")
+  if(summary_layer %in% colnames(obj@meta.data)){
+    g<-get_sub_bubble_plot(
+      obj=obj, 
+      obj_res=summary_layer, 
+      subobj=ct_obj, 
+      subobj_res=validation_column, 
+      bubblemap_file=bubblemap_file, 
+      add_num_cell=TRUE, 
+      species=NULL, 
+      assay="RNA")
+  }else{
+    validation_cell=paste0(validation_column, "_Cell")
+    
+    ct_obj@meta.data = add_column_count(ct_obj@meta.data, validation_column, validation_cell)
+    g<-get_bubble_plot( ct_obj, 
+                        assay=cur_assay,
+                        group.by=validation_cell, 
+                        bubblemap_file = bubblemap_file, 
+                        species=species)
+  }
 
-  ct_obj@meta.data = add_column_count(ct_obj@meta.data, validation_column, validation_cell)
-  g<-get_bubble_plot( ct_obj, 
-                      assay=cur_assay,
-                      group.by=validation_cell, 
-                      bubblemap_file = bubblemap_file, 
-                      species=species)
   ggsave(paste0(file_prefix, ".", pct, ".", validation_column, ".bubble.png"), g, width=get_dot_width(g), height=get_dot_height(ct_obj, validation_column), units="px", dpi=300, bg="white")
 
   return(cur_ct)
 }
 
-cts = unique(meta[,celltype_column])
+if(!is.null(summary_layer)){
+  scts = unique(meta[,summary_layer])
+  sct=scts[1]
+  for(sct in scts){
+    pct=celltype_to_filename(sct)
+    sct_obj=subset(obj, cells=rownames(meta)[meta[,summary_layer]==sct])
+    g=get_dim_plot( sct_obj, 
+                    reduction=reduction, 
+                    group.by=celltype_cluster_column,
+                    label.by=celltype_column, 
+                    title=sct) + guides(fill=guide_legend(ncol =1))
+    ggsave( paste0(file_prefix, ".", pct, ".umap.png"), 
+            g, 
+            width=2000, 
+            height=1200, 
+            units="px", 
+            dpi=300, 
+            bg="white")
+  }
+}
 
+cts = levels(meta[,celltype_column])
 ct = cts[1]
 for(ct in cts){
   pct = celltype_to_filename(ct)
@@ -139,6 +192,30 @@ for(ct in cts){
                   validation_columns=validation_columns,
                   calc_height_per_cluster=200, 
                   calc_width_per_cell=50)
+
+  g = Meta_Highlight_Plot(seurat_object = obj, 
+                          meta_data_column = celltype_column,
+                          meta_data_highlight = ct, 
+                          highlight_color = c("firebrick"),
+                          background_color = "lightgray",
+                          reduction="umap") + 
+                          theme(legend.position="top")
+  if(celltype_column == "layer4"){
+    ggsave(paste0(file_prefix, ".", pct, ".umap.png"), g, width=1200, height=1300, units="px", dpi=300, bg="white")
+  }else{
+    layer4_ct=names(table(as.character(ct_meta$layer4)))[1]
+    layer4_cells=rownames(meta)[meta$layer4==layer4_ct]
+    layer4_obj=subset(obj, cells=layer4_cells)
+    g2 = Meta_Highlight_Plot(seurat_object = layer4_obj, 
+                            meta_data_column = celltype_column,
+                            meta_data_highlight = ct, 
+                            highlight_color = c("firebrick"),
+                            background_color = "lightgray",
+                            reduction="subumap") + 
+                            theme(legend.position="top")
+    g=g+g2+plot_layout(design="AB")
+    ggsave(paste0(file_prefix, ".", pct, ".umap.png"), g, width=2400, height=1300, units="px", dpi=300, bg="white")
+  }
 
   if(has_decontX){
     cells = rownames(ct_meta)
@@ -155,15 +232,33 @@ for(ct in cts){
   }
 
   if("SingleR" %in% validation_columns){
-    singleR_ct = do_validation(obj, ct_meta, "SingleR", file_prefix, pct)
+    singleR_ct = do_validation( obj, 
+                                ct_meta, 
+                                "SingleR", 
+                                file_prefix, 
+                                pct,
+                                reduction=reduction,
+                                summary_layer=summary_layer)
   }
 
   if("SignacX" %in% validation_columns){
-    signacX_ct = do_validation(obj, ct_meta, "SignacX", file_prefix, pct)
+    signacX_ct = do_validation( obj, 
+                                ct_meta, 
+                                validation_column = "SignacX", 
+                                file_prefix, 
+                                pct,
+                                reduction=reduction,
+                                summary_layer=summary_layer)
   }
 
   if("Azimuth" %in% validation_columns){
-    azimuth_ct = do_validation(obj, ct_meta, "Azimuth", file_prefix, pct)
+    azimuth_ct = do_validation( obj, 
+                                ct_meta, 
+                                "Azimuth", 
+                                file_prefix, 
+                                pct,
+                                reduction=reduction,
+                                summary_layer=summary_layer)
   }
 
   if(all(c("SignacX", "SingleR") %in% validation_columns)){
@@ -177,4 +272,3 @@ writeLines(validation_columns, "validation_columns.txt")
 if(file.exists(parFile3)){
   writeLines(parFile3, "iter_png.txt")
 }
-

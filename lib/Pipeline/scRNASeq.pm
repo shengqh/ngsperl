@@ -664,7 +664,7 @@ sub getScRNASeqConfig {
 
         if(getValue($def, "perform_dynamic_subcluster")){
           my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_subcluster" . (getValue($def, "subcluster_redo_harmony") ? "_rh" : "") ;
-          
+
           my $cur_options = {
             reduction => $reduction, 
             celltype_layer => getValue($def, "dynamic_subcluster_init_celltype_layer", "layer4"),
@@ -689,16 +689,21 @@ sub getScRNASeqConfig {
           $subcluster_task = addSubCluster($config, $def, $tasks, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, ".dynamic_subcluster.html", $signacX_ref, $singleR_ref,  $azimuth_ref);
           $meta_ref = [$subcluster_task, ".meta.rds"];
 
+          my $summary_layer = (keys %$rename_map == 0) ? $cur_options->{celltype_layer}: $cur_options->{celltype_layer} . "_renamed";
+          print("summary_layer=" . $summary_layer . "\n");
+          $cur_options->{celltype_layer} = $summary_layer;
+
           if(getValue($def, "perform_dynamic_choose")) {
             my $choose_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_choose";
             my $table = getValue($def, "dynamic_subclusters_table");
+
             addSubClusterChoose($config, $def, $tasks, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".dynamic_choose.html");
             $obj_ref = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer );
             }
 
             $celltype_task = $choose_task;
@@ -714,7 +719,7 @@ sub getScRNASeqConfig {
 
             if(defined $def->{bubble_plots}){
               my $bubble_task = $choose_task . "_bubblemap";
-              add_bubble_plots($config, $def, $tasks, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".dynamic_choose_dot.html");
+              add_bubble_plots($config, $def, $tasks, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".dynamic_choose_dot.html", $summary_layer);
             }
 
             if(defined $clonotype_convert) {
@@ -909,7 +914,7 @@ sub getScRNASeqConfig {
 
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, "seurat_cell_type", ".multires_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [$choose_task, ".final.rds"], [$choose_task, "meta.rds"], undef, "seurat_cell_type", ".multires_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, "layer4" );
             }
 
             $celltype_task = $choose_task;

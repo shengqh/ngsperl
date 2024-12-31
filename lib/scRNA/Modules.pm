@@ -944,13 +944,11 @@ sub add_celltype_validation {
     $singleR_ref, 
     $sctk_ref,
     $decontX_ref,
-    $azimuth_ref) = @_;
+    $azimuth_ref,
+    $summary_layer) = @_;
     
   my $doublet_column = getValue($def, "validation_doublet_column", getValue($def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5"));
 
-  #print("is_choose=" . $is_choose . "\n");
-
-  #my $rmd_file = $is_choose ? "../scRNA/seurat_choose_validation.rmd" : "../scRNA/seurat_scDynamic_validation.rmd";
   my $rmd_file = "../scRNA/seurat_scDynamic_validation.rmd";
   $config->{$task_name} = {
     class                    => "CQS::UniqueR",
@@ -973,6 +971,8 @@ sub add_celltype_validation {
       bubblemap_file => getValue($def, "bubblemap_file"),
       species => getValue( $def, "species" ),
       create_clusters => getValue($def, "validation_create_clusters", 0),
+      reduction => $is_choose ? "subumap": "umap",
+      summary_layer => $summary_layer,
     },
     parameterSampleFile2 => $def->{pool_sample_groups},
     parameterSampleFile3_ref => $sctk_ref,
@@ -3210,7 +3210,7 @@ sub add_bubble_files {
 }
 
 sub add_bubble_plots {
-  my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name, $rmd_ext) = @_;
+  my ($config, $def, $summary, $target_dir, $bubble_task, $choose_task, $meta_ref, $celltype_name, $cluster_name, $rmd_ext, $summary_layer) = @_;
   my $p2key = defined($meta_ref) ? ((-e $meta_ref) ? "parameterFile2" : "parameterFile2_ref") : "parameterFile2";
   $config->{$bubble_task} = {
     class                => "CQS::UniqueR",
@@ -3226,7 +3226,8 @@ sub add_bubble_plots {
     parameterSampleFile2 => {
       task_name => getValue($def, "task_name"),
       cluster_name => $cluster_name,
-      celltype_name => $celltype_name 
+      celltype_name => $celltype_name,
+      summary_layer => $summary_layer,
     },
     output_file_ext      => ".cell_type.txt",
     sh_direct            => 1,

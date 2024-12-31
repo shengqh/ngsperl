@@ -35,19 +35,6 @@ outfile<-myoptions$task_name
 samples<-readLines(paste0(outfile, ".sample.txt"))
 cts<-readLines(paste0(outfile, ".cell_type.txt"))
 
-printTable<-function(filepath){
-  tbl<-read.csv(filepath, check.names=F, row.names=1)
-  print(kable_styling(kable(tbl)))
-}
-
-getTable<-function(filepath){
-  return(paste0("```{r,echo=FALSE,results='asis'}\nprintTable('", filepath, "')\n```\n\n"))
-}
-
-getFigure<-function(filepath){
-  return(paste0("```{r,echo=FALSE,results='asis'}\ncheck_and_include_graphics('", filepath, "')\n```\n\n"))
-}
-
 resFile<-"sub.Rmd"
 figureRmd<-function(categories, samples, cts){
   result<-""
@@ -57,80 +44,68 @@ figureRmd<-function(categories, samples, cts){
   has_multi_cell_types = length(cts) > 1
   has_multi_samples = length(samples) > 1
   
-  if(has_multi_cell_types){
-    result<-paste0(result, paste0("\n\n# Celltype\n\n"))
-    for(category in categories){
-      if(has_multi_cateogries){
-        result<-paste0(result, paste0("\n\n## ", category, "\n\n"))
-      }
-      result<-paste0(result, getFigure(paste0(outfile, ".", category, ".bubblemap.ct.png")))
+  result<-paste0(result, paste0("\n\n# Overview\n\n"))
+  for(category in categories){
+    if(has_multi_cateogries){
+      result<-paste0(result, paste0("\n\n## ", category, "\n\n"))
     }
+    result<-paste0(result, getFigure(paste0("details/", outfile, ".", category, ".bubblemap.ct.png")))
   }
 
-  result<-paste0(result, paste0("\n\n# Celltype / cluster\n\n"))
-
-  if(has_multi_cell_types){
-    result<-paste0(result, paste0("\n\n## All cell types\n\n"))
-    for(category in categories){
-      if(has_multi_cateogries){
-        result<-paste0(result, paste0("\n\n### ", category, "\n\n"))
-      }
-      result<-paste0(result, getFigure(paste0(outfile, ".", category, ".bubblemap.ct_cluster.png")))
-    }
-  }
+  category_ct_cluster_png = paste0("details/", outfile, ".", categories[1], ".bubblemap.ct_cluster.png")
+  if(file.exists(category_ct_cluster_png)) {
+    result<-paste0(result, paste0("\n\n# Celltype / cluster\n\n"))
   
-  ct = cts[1]
-  for(ct in cts){
-    result<-paste0(result, paste0("\n\n## ", ct, "\n\n"))
-    ct_str = celltype_to_filename(ct)
-    for(category in categories){
-      if(has_multi_cateogries){
-        result<-paste0(result, paste0("\n\n### ", category, "\n\n"))
+    ct = cts[1]
+    for(ct in cts){
+      result<-paste0(result, paste0("\n\n## ", ct, "\n\n"))
+      ct_str = celltype_to_filename(ct)
+      for(category in categories){
+        cur_png=paste0("details/", outfile, ".", category, ".bubblemap.ct_cluster.", ct_str, ".png")
+        if(file.exists(cur_png)){
+          if(has_multi_cateogries){
+            result<-paste0(result, paste0("\n\n### ", category, "\n\n"))
+          }
+          result<-paste0(result, getFigure())
+        }
       }
-      result<-paste0(result, getFigure(paste0("details/", outfile, ".", category, ".bubblemap.ct_cluster.", ct_str, ".png")))
     }
   }
 
   if(has_multi_samples) {
     result<-paste0(result, paste0("\n\n# Celltype / sample\n\n"))
-    for(category in categories){
-      if(has_multi_cateogries){
-        result<-paste0(result, paste0("\n\n## ", category, "\n\n"))
-      }
-      result<-paste0(result, getFigure(paste0(outfile, ".", category, ".bubblemap.ct_ident.png")))
-    }
 
     ct = cts[1]
     for(ct in cts){
       result<-paste0(result, paste0("\n\n## ", ct, "\n\n"))
       ct_str = celltype_to_filename(ct)
       for(category in categories){
-        if(has_multi_cateogries){
-          result<-paste0(result, paste0("\n\n### ", category, "\n\n"))
+        cur_png=paste0("details/", outfile, ".", category, ".bubblemap.ct_ident.", ct_str, ".png")
+        if(file.exists(cur_png)){
+          if(has_multi_cateogries){
+            result<-paste0(result, paste0("\n\n### ", category, "\n\n"))
+          }
+          result<-paste0(result, getFigure(cur_png))
         }
-        result<-paste0(result, getFigure(paste0("details/", outfile, ".", category, ".bubblemap.ct_ident.", ct_str, ".png")))
       }
     }
 
-    result<-paste0(result, paste0("\n\n## Sample / celltype\n\n"))
-    for(category in categories){
-      if(has_multi_cateogries){
-        result<-paste0(result, paste0("\n\n## ", category, "\n\n"))
-      }
-      result<-paste0(result, getFigure(paste0(outfile, ".", category, ".bubblemap.ident_ct.png")))
-    }
-
+    result<-paste0(result, paste0("\n\n# Sample / celltype\n\n"))
     sample = samples[1]
     for(sample in samples){
-      result<-paste0(result, paste0("\n\n### ", sample, "\n\n"))
+      result<-paste0(result, paste0("\n\n## ", sample, "\n\n"))
       for(category in categories){
-        if(has_multi_cateogries){
-          result<-paste0(result, paste0("\n\n### ", category, "\n\n"))
+        cur_png=paste0("details/", outfile, ".", category, ".bubblemap.ident_ct.", sample, ".png")
+        if(file.exists(cur_png)){
+          if(has_multi_cateogries){
+            result<-paste0(result, paste0("\n\n### ", category, "\n\n"))
+          }
+          result<-paste0(result, getFigure(cur_png))
         }
-        result<-paste0(result, getFigure(paste0("details/", outfile, ".", category, ".bubblemap.ident_ct.", sample, ".png")))
       }
     }
   }
+
   return(result)
 }
 cat(figureRmd(categories, samples, cts), file=resFile)
