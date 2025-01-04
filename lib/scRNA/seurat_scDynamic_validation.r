@@ -114,6 +114,7 @@ if(!("Azimuth" %in% colnames(meta))) {
 }
 saveRDS(meta, paste0(file_prefix, ".meta.rds"))
 
+cat("reading object\n")
 obj<-read_object(parFile1)
 obj@meta.data = meta
 
@@ -162,6 +163,7 @@ if(!is.null(summary_layer)){
   scts = unique(meta[,summary_layer])
   sct=scts[1]
   for(sct in scts){
+    cat("dimplot of", sct, "\n")
     pct=celltype_to_filename(sct)
     sct_obj=subset(obj, cells=rownames(meta)[meta[,summary_layer]==sct])
     g=get_dim_plot( sct_obj, 
@@ -182,9 +184,11 @@ if(!is.null(summary_layer)){
 cts = levels(meta[,celltype_column])
 ct = cts[1]
 for(ct in cts){
+  cat(ct, "\n")
   pct = celltype_to_filename(ct)
   ct_meta = meta[meta[,celltype_column] == ct,]
 
+  cat("  barplot\n")
   bar_file=paste0(file_prefix, ".", pct, ".png")
   g<-get_barplot( ct_meta=ct_meta, 
                   bar_file=bar_file,
@@ -193,6 +197,7 @@ for(ct in cts){
                   calc_height_per_cluster=200, 
                   calc_width_per_cell=50)
 
+  cat("  highlight plot\n")
   g = Meta_Highlight_Plot(seurat_object = obj, 
                           meta_data_column = celltype_column,
                           meta_data_highlight = ct, 
@@ -221,6 +226,7 @@ for(ct in cts){
     cells = rownames(ct_meta)
     ct_obj = subset(obj, cells=cells)
 
+    cat("  decontX plot\n")
     g1<-MyFeaturePlot(ct_obj, features = "decontX") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
     g2<-VlnPlot(ct_obj, features = "decontX", group.by=celltype_cluster_column) + xlab("") + theme_bw3(TRUE) + ggtitle("") + NoLegend()
     if("DF" %in% colnames(ct_obj@meta.data)){
@@ -232,6 +238,7 @@ for(ct in cts){
   }
 
   if("SingleR" %in% validation_columns){
+    cat("  SingleR plot\n")
     singleR_ct = do_validation( obj, 
                                 ct_meta, 
                                 "SingleR", 
@@ -242,6 +249,7 @@ for(ct in cts){
   }
 
   if("SignacX" %in% validation_columns){
+    cat("  SignacX plot\n")
     signacX_ct = do_validation( obj, 
                                 ct_meta, 
                                 validation_column = "SignacX", 
@@ -252,6 +260,7 @@ for(ct in cts){
   }
 
   if("Azimuth" %in% validation_columns){
+    cat("  Azimuth plot\n")
     azimuth_ct = do_validation( obj, 
                                 ct_meta, 
                                 "Azimuth", 
