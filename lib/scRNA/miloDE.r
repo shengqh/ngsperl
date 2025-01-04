@@ -48,15 +48,15 @@ library(Seurat)
 library(miloDE)
 library(SingleCellExperiment)
 
-sample_groups = fread(parSampleFile3, header=FALSE, data.table=FALSE) 
-sample_group_map=split(sample_groups$V2, sample_groups$V1)
-
 pairs = fread(parSampleFile1, header=FALSE, data.table=FALSE)
-cat("comparison = ", sample_name, "\n")
-groups = pairs |> 
-  dplyr::filter(V3==sample_name, V2=="groups")
-cat("control groups = ", groups$V1[1], "\n")
-cat("sample groups = ", groups$V1[2], "\n")
+cat("comparison =", sample_name, "\n")
+groups = pairs |> dplyr::filter(V3==sample_name, V2=="groups")
+cat("control groups =", groups$V1[1], "\n")
+cat("sample groups =", groups$V1[2], "\n")
+
+sample_groups = fread(parSampleFile3, header=FALSE, data.table=FALSE) 
+sample_groups = sample_groups |> dplyr::filter(V2 %in% groups$V1)
+sample_group_map=split(sample_groups$V2, sample_groups$V1)
 
 prefix = gsub(" ", "_", paste0(sample_name, ".", ct))
 cat("Performing", prefix, "\n")
@@ -69,6 +69,7 @@ if(!file.exists(neightbour_file)){
   }else{
     cat("Reading object from file:", basename(parFile1), "\n")
     cur_obj=readRDS(parFile1)
+    cur_obj=subset(cur_obj, sample %in% sample_groups$V1)
     cur_obj@meta.data$condition_id=unlist(sample_group_map[as.character(cur_obj$sample)])
 
     # Convert to SingleCellExperiment

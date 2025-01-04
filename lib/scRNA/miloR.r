@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='HiAorta_vs_LoAorta'
-outFile='HiAorta_vs_LoAorta'
+sample_name='HiCMV_vs_LoCMV'
+outFile='HiCMV_vs_LoCMV'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct_merge_dr0.5_3_choose/result/combined.final.rds'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/20241214_miloR/CMV_Bulk/result/HiAorta_vs_LoAorta')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/20241230_miloR/CMV_Bulk/result/HiCMV_vs_LoCMV')
 
 ### Parameter setting end ###
 
@@ -62,15 +62,15 @@ if(is_unix){
   register(mcparam)
 }
 
-sample_groups = fread(parSampleFile3, header=FALSE, data.table=FALSE) 
-sample_group_map=split(sample_groups$V2, sample_groups$V1)
-
 pairs = fread(parSampleFile1, header=FALSE, data.table=FALSE)
 cat("comparison =", sample_name, "\n")
-groups = pairs |> 
-  dplyr::filter(V3==sample_name, V2=="groups")
+groups = pairs |> dplyr::filter(V3==sample_name, V2=="groups")
 cat("control groups =", groups$V1[1], "\n")
 cat("sample groups =", groups$V1[2], "\n")
+
+sample_groups = fread(parSampleFile3, header=FALSE, data.table=FALSE) 
+sample_groups = sample_groups |> dplyr::filter(V2 %in% groups$V1)
+sample_group_map=split(sample_groups$V2, sample_groups$V1)
 
 prefix = gsub(" ", "_", paste0(sample_name, ".", ct))
 cat("Performing", prefix, "\n")
@@ -79,6 +79,7 @@ sce_obj_file=paste0(prefix, ".sce.rds")
 if(!file.exists(sce_obj_file)){
   cat("Reading object from file:", basename(parFile1), "\n")
   cur_obj=readRDS(parFile1)
+  cur_obj=subset(cur_obj, sample %in% sample_groups$V1)
   cur_obj@meta.data$condition_id=unlist(sample_group_map[as.character(cur_obj$sample)])
 
   group_obj = subset(cur_obj, condition_id %in% groups$V1)
@@ -244,10 +245,10 @@ g=ggplot(da_results, aes(logFC, -log10(SpatialFDR))) +
 ggsave(paste0(prefix, ".volcano.png"), g, width = 6, height = 5, units = "in", dpi = 300, bg="white")
 
 if(any(da_results$SpatialFDR <= SpatialFDR)){
-  g=plotDAbeeswarm(da_results, group.by ="SummaryLayer", alpha=SpatialFDR) + theme(axis.text.y=element_blank())
+  g=plotDAbeeswarm(da_results, group.by ="SummaryLayer", alpha=SpatialFDR) + theme(axis.title.y=element_blank())
   ggsave(paste0(prefix, ".cluster.DA_beeswarm.png"), g, width = 10, height = 5, units = "in", dpi = 300, bg="white")
 
-  g=plotDAbeeswarm(da_results, group.by = sub_cluster_id, alpha=SpatialFDR) + theme(axis.text.y=element_blank())
+  g=plotDAbeeswarm(da_results, group.by = sub_cluster_id, alpha=SpatialFDR) + theme(axis.title.y=element_blank())
   ggsave(paste0(prefix, ".sub_cluster.DA_beeswarm.png"), g, width = 10, height = 8, units = "in", dpi = 300, bg="white")
 }
 
