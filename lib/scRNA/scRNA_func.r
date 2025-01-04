@@ -3306,3 +3306,10 @@ get_clustered_dotplot<-function(cur_obj, features, group.by, clustered_by_gene=T
   result$g = g
   return(result)
 }
+
+get_freq_table<-function(df, column){
+df |> 
+  dplyr::count(!!sym(column)) |> 
+  dplyr::arrange(desc(n)) |>
+  dplyr::rename("count"="n")
+}
