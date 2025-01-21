@@ -1007,6 +1007,8 @@ sub addCellRangerCount {
 
   my $sh_direct = $job_arg =~ /slurm/;
 
+  my $cellranger_option = getValue($def, "cellranger_option", "");
+
   my $count_fastq_folders = getValue($def, "count_fastq_folders", {});
   my $names = $config->{$count_source};
   for my $name (sort keys %$names){
@@ -1024,7 +1026,7 @@ sub addCellRangerCount {
     docker_prefix => "cellranger_",
     program => "cellranger",
     check_program => 0,
-    option => " count --disable-ui --id=__NAME__ --transcriptome=$count_reference --fastqs=__FILE2__ --sample=__FILE__ $job_arg $chemistry_arg
+    option => " count --disable-ui --id=__NAME__ --transcriptome=$count_reference --fastqs=__FILE2__ --sample=__FILE__ $job_arg $chemistry_arg $cellranger_option
 
 if [[ -s __NAME__/outs ]]; then
   rm -rf __NAME__/SC_RNA_COUNTER_CS
@@ -1153,6 +1155,8 @@ sub addCellRangerMulti {
 
     my $csv_files = writeCellRangerMultiConig($def, $files_name, $target_dir, $config_template);
 
+    my $cellranger_option = getValue($def, "cellranger_option", "");
+
     my $sh_direct = $job_arg =~ /slurm/;
     $config->{$task_name} = {
       class => "CQS::ProgramWrapperOneToOne",
@@ -1160,7 +1164,7 @@ sub addCellRangerMulti {
       docker_prefix => "cellranger_",
       program => "cellranger",
       check_program => 0,
-      option => " multi --disable-ui --id=__NAME__ --csv=__FILE__ $job_arg
+      option => " multi --disable-ui --id=__NAME__ --csv=__FILE__ $job_arg $cellranger_option
 
 if [[ -s __NAME__/outs ]]; then
   rm -rf __NAME__/SC_MULTI_CS
@@ -1621,6 +1625,7 @@ sub addEdgeRTask {
           "edgeR_suffix" => $edgeR_suffix,
           rmdformats => "readthedown",
         },
+        post_command => "\nrm -rf gsea_home\n",
         sh_direct                  => 0,
         rCode                      => "$gsea_chip_str gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=" . $gsea_makeReport . ";",
         pbs                        => {
@@ -2945,7 +2950,7 @@ sub add_group_umap {
     rtemplate                => "../scRNA/scRNA_func.r,../scRNA/seurat_group_umap.r",
     parameterFile1_ref       => $obj_ref,
     parameterSampleFile1     => $def->{groups},
-    output_file_ext      => ".all.label.umap.png",
+    output_file_ext      => ".All.label.umap.png",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",
