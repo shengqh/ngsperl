@@ -80,11 +80,12 @@ if(any(duplicated(dataForPlotFrameP$description))){
 }
 dataForPlotFrameP$description=factor(dataForPlotFrameP$description, levels=rev(dataForPlotFrameP$description))
 
+warp_len=40
 p=dataForPlotFrameP %>%
   ggplot(aes(x=description,y=coverage,colour=!!sym(colorBy)))+
   geom_point(aes(size=size)) +
   coord_flip() + 
-  scale_x_discrete(labels = label_wrap(60)) +
+  scale_x_discrete(labels = label_wrap(warp_len)) +
   xlab("") +
   ylab("Geneset coverage") +
   scale_colour_continuous(limits=c(0,max_value), low='blue', high='red',guide=guide_colorbar(reverse=FALSE))+
@@ -100,10 +101,9 @@ p=dataForPlotFrameP %>%
 
 pathway_png=paste0(plotData$prefix, ".png")
 
-width=ifelse(category == "pathway KEGG", 6, 8)
-if(any(grepl("\\(", as.character(dataForPlotFrameP$description)))){
-  width=width+2
-}
+max_len=max(nchar(as.character(dataForPlotFrameP$description)), na.rm=TRUE)
+
+width=ifelse(max_len > warp_len / 2, 8, 6)
 
 ggsave(pathway_png, p, width=width, height=3.5, units="in", dpi=300, limitsize=FALSE, bg="white")
 
