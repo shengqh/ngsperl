@@ -1,16 +1,14 @@
+rootdir<-"/nobackup/shah_lab/shengq2/20250113_APD_Wora_Project/20250113_12615_hg38/deseq2_genetable/result"
+inputfile<-"APD_Wora.define" 
 
-rootdir<-"/nobackup/brown_lab/projects/2021/20211008_rnaseq_6999_PP_mouse_aorta_lmna/deseq2_te_genetable/result"
-inputfile<-"PP_6999_mouse_aorta_lmna.define" 
-
-pvalue<-0.05
+pvalue<-0.1
 useRawPvalue<-0
-foldChange<-2
+foldChange<-1.2
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
-showLabelInVolcano<-1
-showLabelInPCA<-1
-showDEGeneCluster<-0
+showLabelInPCA<-0
+showDEGeneCluster<-1
 addCountOne<-0
 usePearsonInHCA<-1
 top25only<-0
@@ -22,7 +20,7 @@ thread<-8
 
 independentFiltering<-TRUE
 
-outputPdf<-TRUE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;top25cvInHCA<-FALSE;
+outputPdf<-FALSE;outputPng<-TRUE;outputTIFF<-FALSE;showVolcanoLegend<-FALSE;top25cvInHCA<-FALSE;
 cooksCutoff<-TRUE
 #predefined_condition_end
 
@@ -405,6 +403,8 @@ heatmap_column_name_fontsize=18
 de_biotype=NA
 selectLab=NULL
 
+DE_combatseq = 0
+
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
   myoptions = split(options_table$V1, options_table$V2)
@@ -433,6 +433,8 @@ if(file.exists("fileList1.txt")){
   if(!is_one(myoptions$showLabelInVolcano)){
     selectLab=""
   }
+
+  DE_combatseq = is_one(myoptions$DE_combatseq)
 }
 
 if(!is.na(de_biotype)){
@@ -519,7 +521,7 @@ for(countfile_index in c(1:length(countfiles))){
   }
   resultAllOutVar<-c("baseMean","log2FoldChange","pvalue","padj")
   
-  comparison_index = 1
+  comparison_index = 2
   
   for(comparison_index in c(1:nrow(comparisons))){
     comparisonName=comparisons$ComparisonName[comparison_index]
@@ -612,6 +614,23 @@ for(countfile_index in c(1:length(countfiles))){
       designData<-designData[,colnames(designData) != collapse_by]
       comparisonData<-counts(dds)[,designData$Sample]
       rm(dds)
+    }
+
+    if("batch" %in% colnames(designData) & DE_combatseq){
+      library(sva)
+      cat("CombatSeq: ", comparisonName, "\n")
+      if(ncol(designData) > 3){
+        cat("Data with covariances!\n")
+        covar_mod=designData |>
+          dplyr::select(-Sample, -Condition, -batch)
+      }else{
+        cat("Data without covariances!\n")
+        covar_mod=NULL
+      }
+      comparisonData <- ComBat_seq(comparisonData, batch=designData$batch, group=designData$Condition, covar_mod=covar_mod)
+      write.csv(comparisonData, file=paste0(comparisonName, "_combatseq.csv"))
+      cat("Remove batch from the design matrix\n")
+      designData<-designData |> dplyr::select(-batch)
     }
     
     if(ncol(designData) >= 3){
@@ -1566,4 +1585,4 @@ if (! is.null(resultAllOut)) {
 #export session information
 writeLines(capture.output(sessionInfo()), paste0(basename(inputfile),".DESeq2.SessionInfo.txt"))
 deseq2version<-paste0("DESeq2,v", packageVersion("DESeq2"))
-writeLines(deseq2version, paste0(basename(inputfile),".DESeq2.version"))
+

@@ -121,6 +121,8 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_min_median_read",              5 );
   initDefaultValue( $def, "DE_cooksCutoff",                  "TRUE" );
   initDefaultValue( $def, "DE_independentFiltering",         "TRUE" );
+
+  initDefaultValue( $def, "DE_combatseq", 0);
   
   initDefaultValue( $def, "perform_DE_proteincoding_gene",   1 );
   initDefaultValue( $def, "perform_proteincoding_gene",      getValue( $def, "perform_DE_proteincoding_gene" ) );
@@ -1630,7 +1632,7 @@ fi
       pbs                        => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "1",
-        "mem"       => "10gb"
+        "mem"       => "20gb"
       },
     };
     push( @$tasks, "report" );
