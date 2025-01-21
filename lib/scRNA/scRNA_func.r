@@ -1167,7 +1167,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE ){
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE, dot.scale=6){
   genes=unique(unlist(gene_groups))
   assaydata=MyGetAssayData(obj, assay=assay, slot="data")
   if(!all(genes %in% rownames(assaydata))){
@@ -1198,7 +1198,6 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   scale.func <- scale_radius
   scale.min = NA
   scale.max = NA
-  dot.scale = 6
   cols = c("lightgrey", "blue")
   
   plot <- ggplot(data = data.plot, mapping = aes_string(x = "features.plot", y = "id")) + 
@@ -1228,11 +1227,12 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
 }
 
 get_dot_width<-function(g, min_width=5000){
-  if(!all(c("features.plot","feature.groups") %in% colnames(g$data))){
+  group_column=if("feature.groups" %in% colnames(g$data)){"feature.groups"}else{"id"}
+  if(!all(c("features.plot",group_column) %in% colnames(g$data))){
     stop(paste0("features.plot or feature.groups is not in ", paste0(colnames(g$data), collapse = ",")))
   }
-  ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot","feature.groups")]),])
-  ngroups = length(unique(g$data$feature.groups))
+  ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot",group_column)]),])
+  ngroups = length(unique(g$data[,group_column]))
   width=ngenes * 50 + ngroups * 40 + 400
   return(max(width, min_width))
 }
@@ -1261,7 +1261,8 @@ get_bubble_plot<-function(obj,
                           rotate.title=TRUE, 
                           group.by=NULL, 
                           use_blue_yellow_red=TRUE, 
-                          species="Hs"){
+                          species="Hs",
+                          dot.scale=6){
                             
   old_assay = DefaultAssay(obj)
   DefaultAssay(obj) = assay
@@ -1325,7 +1326,7 @@ get_bubble_plot<-function(obj,
     obj@meta.data<-cell_type
   }
 
-  g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title, use_blue_yellow_red=use_blue_yellow_red)
+  g<-get_dot_plot(obj, group.by, gene_groups, assay, rotate.title=rotate.title, use_blue_yellow_red=use_blue_yellow_red, dot.scale=dot.scale)
   
   return(g)
 }
@@ -1690,10 +1691,14 @@ myScaleData<-function(obj, features, assay, ...){
   return(obj)
 }
 
-get_top10_markers<-function(markers){
+get_top_markers<-function(markers, n){
   markers=markers[markers$p_val_adj < 0.05,]
-  top10 <- markers %>% group_by(cluster) %>% top_n(n = 10, wt = .data[["avg_log2FC"]])
+  top10 <- markers %>% group_by(cluster) %>% top_n(n = n, wt = .data[["avg_log2FC"]])
   return(top10)
+}
+
+get_top10_markers<-function(markers){
+  return(get_top_markers(markers, 10))
 }
 
 factorize_layer<-function(obj, layer){
@@ -3153,13 +3158,17 @@ factor_by_count<-function(vec){
   return(res)
 }
 
-add_column_count<-function(meta, column, target_column){
+add_column_count<-function(meta, column, target_column, order_by_count=TRUE){
   tbl=table(meta[,column])
   tbl=tbl[tbl > 0]
-  tbl=tbl[order(tbl, decreasing=T)]
+  if(order_by_count){
+    tbl=tbl[order(tbl, decreasing=T)]
+  }else{
+    tbl=tbl[order(names(tbl))]
+  }
   new_tbl=paste0(names(tbl), " (", tbl, ")")
   names(new_tbl)=names(tbl)
-  meta[,target_column]=factor(new_tbl[meta[,column]], levels=new_tbl)
+  meta[,target_column]=factor(new_tbl[as.character(meta[,column])], levels=new_tbl)
   return(meta)
 }
 
