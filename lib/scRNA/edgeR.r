@@ -1,18 +1,19 @@
 rm(list=ls()) 
-outFile='P10940'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.final.rds'
-parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.meta.rds'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.final.rds'
+parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_byCell/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose_edgeR_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
+source("countTableVisFunctions.R")
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -262,15 +263,17 @@ if(nrow(designFailed) > 0){
   write.csv(designFailed, paste0(file_prefix, ".design_failed.csv"), row.names=F)
 }
 
-write.csv(designMatrix, file=paste0(file_prefix, ".design_matrix.csv"), row.names=F)
+design_matrix_file=paste0(file_prefix, ".design_matrix.csv")
+write.csv(designMatrix, file=design_matrix_file, row.names=F)
+designMatrix=read.csv(design_matrix_file, stringsAsFactors = F)
 
 result<-NULL
-idx<-2
+idx<-1
 for(idx in c(1:nrow(designMatrix))){
   prefix=designMatrix[idx, "prefix"]
   file_prefix = paste0(detail_prefix, ".", prefix)
 
-  cat(prefix, "\n")
+  cat("performing", prefix, "...\n")
 
   designfile=designMatrix[idx, "design"]
   cellType=designMatrix[idx, "cellType"]
@@ -285,7 +288,7 @@ for(idx in c(1:nrow(designMatrix))){
   groups<-designdata$Group
   
   de_obj<-subset(obj, cells=designdata$Cell)
-  cells<-as.matrix(de_obj[["RNA"]]@counts)
+  cells<-as.matrix( MyGetAssayData(de_obj, "RNA", "counts"))
 
   #filter genes with zero count
   cells<-cells[rowSums(cells)>0,]
@@ -388,3 +391,4 @@ for(idx in c(1:nrow(designMatrix))){
 }
 
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
+
