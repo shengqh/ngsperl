@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P10940'
+outFile='combined'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.final.rds'
-parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_byCell/result/P10940.edgeR.files.csv'
-parFile3='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.meta.rds'
+parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.final.rds'
+parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose_edgeR_inCluster_byCell/result/combined.edgeR.files.csv'
+parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.meta.rds'
 
 
-setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_byCell_vis/result')
+setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose_edgeR_inCluster_byCell_vis/result')
 
 ### Parameter setting end ###
 
@@ -137,7 +137,10 @@ for (comp in rownames(edgeRres)){
       }else{
         vars.to.regress=NULL
       }
-      cell_obj = ScaleData(cell_obj, features=siggenes$gene, assay="RNA", vars.to.regress=vars.to.regress)
+
+      #we have to use more than one genes for scaling
+      scale_genes=unique(c(rownames(cell_obj)[1:5], siggenes$gene))
+      cell_obj = ScaleData(cell_obj, features=scale_genes, assay="RNA", vars.to.regress=vars.to.regress)
 
       heatmap_height=min(8, max(4, 0.4*sigGene))
       if(grepl("^5", packageVersion("Seurat"))){
@@ -252,3 +255,4 @@ if(!bBetweenCluster){
 }
 
 write.csv(all_sigout, file=paste0(detail_folder, outFile, ".allsigout.csv"), quote=F)
+
