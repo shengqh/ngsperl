@@ -29,10 +29,21 @@ cur_assay = ifelse(is_one(myoptions$by_sctransform), "SCT", "RNA")
 species = myoptions$species
 create_clusters = is_one(myoptions$create_clusters)
 summary_layer=myoptions$summary_layer
+if(is.null(summary_layer)){
+  summary_layer=""
+}
+if(is.na(summary_layer)){
+  summary_layer=""
+}
 
 cat("reduction: ", reduction, "\n")
 cat("doublet_column: ", doublet_column, "\n")
 cat("celltype_column: ", celltype_column, "\n")
+cat("bubblemap_file: ", bubblemap_file, "\n")
+cat("cur_assay: ", cur_assay, "\n")
+cat("species: ", species, "\n")
+cat("create_clusters: ", create_clusters, "\n")
+cat("summary_layer: ", summary_layer, "\n")
 
 file_dir=paste0(outFile, gsub(".html", "", myoptions$rmd_ext))
 dir.create(file_dir, showWarnings=FALSE)
@@ -159,7 +170,7 @@ do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct, reduc
   return(cur_ct)
 }
 
-if(!is.null(summary_layer)){
+if(summary_layer %in% colnames(obj@meta.data)){
   scts = unique(meta[,summary_layer])
   sct=scts[1]
   for(sct in scts){
@@ -205,7 +216,7 @@ for(ct in cts){
                           background_color = "lightgray",
                           reduction="umap") + 
                           theme(legend.position="top")
-  if(celltype_column == "layer4"){
+  if(celltype_column == "layer4" | !'subumap' %in% names(obj@reductions)){
     ggsave(paste0(file_prefix, ".", pct, ".umap.png"), g, width=1200, height=1300, units="px", dpi=300, bg="white")
   }else{
     layer4_ct=names(table(as.character(ct_meta$layer4)))[1]
