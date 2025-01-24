@@ -1585,4 +1585,5 @@ if (! is.null(resultAllOut)) {
 #export session information
 writeLines(capture.output(sessionInfo()), paste0(basename(inputfile),".DESeq2.SessionInfo.txt"))
 deseq2version<-paste0("DESeq2,v", packageVersion("DESeq2"))
+writeLines(deseq2version, paste0(basename(inputfile),".DESeq2.version"))
 
