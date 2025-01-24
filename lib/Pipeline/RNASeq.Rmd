@@ -67,6 +67,7 @@ if(has_star_chromosome_png){
 has_feature_gene_png="featureCounts_gene_png" %in% names(file_map)
 
 hasDEseq2<-any(grepl("deseq2_", rownames(files)))
+hasComBatSeq=FALSE
 
 hasWebGestaltAnalysis<-any(grepl("WebGestalt_", rownames(files)))
 webgestalt_rmd="webgestalt.rmd"
@@ -352,9 +353,20 @@ result = paste0(result, "\n## Summary of differential analysis\n\n")
 DESeq2_files<-files[grep("DESeq2_sig", files[,1]),]
 DESeq2_files<-DESeq2_files[order(DESeq2_files$V2),]
 DESeq2_list<-list()
+
+has_batch=FALSE
 for (i in 1:nrow(DESeq2_files)){
-  DESeq2_list[[i]]<-read.csv(DESeq2_files[i,1], header=TRUE, row.names=1, check.names=F)
+  de_file=DESeq2_files[i,1]
+  DESeq2_list[[i]]<-read.csv(de_file, header=TRUE, row.names=1, check.names=F)
+
+  design_file=gsub("_min\\d+_fdr.*", ".design", de_file)
+  design_data=fread(design_file)
+  if("batch" %in% colnames(design_data)){
+    has_batch=TRUE
+  }
 }
+hasComBatSeq=rnaseqOptions["DE_combatseq", 1]==1 & has_batch
+
 diffGeneCount=sapply(DESeq2_list, function(x) 
   if("log2FoldChange" %in% colnames(x)) {
     return(c(nrow(x),length(which(x[,"log2FoldChange"]>=0)),length(which(x[,"log2FoldChange"]<0))))
@@ -520,14 +532,16 @@ has_mapping<-"STAR" %in% names(vmap)
 `r gene_filter` 
 ComplexHeatmap [4] was used for cluster analysis and visualization.
 `r if(hasDEseq2){paste0("Significantly differential expressed genes with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[5]. ", deseq2filter)}`
-`r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[6].")}`
-`r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[7] on database (", vmap['GSEA_DB'], ").")}`
-`r if(hasFusion){paste0("Gene fusion was detected using STAR-Fusion package (", vmap['STAR-Fusion'], ")[8].")}`
+`r if(hasComBatSeq){paste0("ComBatSeq [6] was used to remove batch effect in the differential expression analysis, where applicable.")}`
+`r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[7].")}`
+`r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[8] on database (", vmap['GSEA_DB'], ").")}`
+`r if(hasFusion){paste0("Gene fusion was detected using STAR-Fusion package (", vmap['STAR-Fusion'], ")[9].")}`
 
 `r if(has_cutadapt){"- [1]	Martin M: Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnetjournal 2011, 17:10-12.\n"}`
 `r if(has_mapping){"- [2]	Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, Batut P, Chaisson M, Gingeras TR: STAR: ultrafast universal RNA-seq aligner. Bioinformatics 2013, 29(1):15-21. \\\n- [3]	Liao Y, Smyth GK, Shi W: featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics 2014, 30(7):923-930. \n"}`
 - [4]	Gu, Z. Complex Heatmap Visualization. iMeta 2022. 1, e43. 
 `r if(hasDEseq2){"- [5] Love MI, Huber W, Anders S: Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol 2014, 15(12):550.\n"}` 
-`r if(hasWebGestaltAnalysis){"- [6]	Wang J, Vasaikar S, Shi Z, Greer M, Zhang B: WebGestalt 2017: a more comprehensive, powerful, flexible and interactive gene set enrichment analysis toolkit. Nucleic Acids Res 2017, 45(W1):W130-W137.\n"}` 
-`r if(hasGseaAnalysis){"- [7]	Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, Paulovich A, Pomeroy SL, Golub TR, Lander ES et al: Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A 2005, 102(43):15545-15550.\n"}` 
-`r if(hasFusion){"- [8] Haas, B.J., Dobin, A., Li, B. et al. Accuracy assessment of fusion transcript detection via read-mapping and de novo fusion transcript assembly-based methods. Genome Biol 2019, 20:213.\n"}`
+`r if(hasComBatSeq){"- [6] Yuqing Zhang, Giovanni Parmigiani, W Evan Johnson, ComBat-seq: batch effect adjustment for RNA-seq count data, NAR Genomics and Bioinformatics, Volume 2, Issue 3, 1 September 2020, lqaa078.\n"}` 
+`r if(hasWebGestaltAnalysis){"- [7]	Wang J, Vasaikar S, Shi Z, Greer M, Zhang B: WebGestalt 2017: a more comprehensive, powerful, flexible and interactive gene set enrichment analysis toolkit. Nucleic Acids Res 2017, 45(W1):W130-W137.\n"}` 
+`r if(hasGseaAnalysis){"- [8]	Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, Paulovich A, Pomeroy SL, Golub TR, Lander ES et al: Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A 2005, 102(43):15545-15550.\n"}` 
+`r if(hasFusion){"- [9] Haas, B.J., Dobin, A., Li, B. et al. Accuracy assessment of fusion transcript detection via read-mapping and de novo fusion transcript assembly-based methods. Genome Biol 2019, 20:213.\n"}`

@@ -1603,6 +1603,7 @@ fi
       "DE_fold_change"                     => [ getValue( $def, "DE_fold_change",    2 ) ],
       "DE_pvalue"                          => [ getValue( $def, "DE_pvalue",         0.05 ) ],
       "DE_use_raw_pvalue"                  => [ getValue( $def, "DE_use_raw_pvalue", 0 ) ],
+      "DE_combatseq" => [ getValue($def, "DE_combatseq", 0) ],
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping],
       "top25cv_in_hca" => [ getValue( $def, "top25cv_in_hca") ? "TRUE" : "FALSE" ],
       "task_name" => $taskName,
