@@ -3283,8 +3283,8 @@ get_feature_plot<-function(cur_obj, cur_feature, cols, order=FALSE) {
   return(g)
 }
 
-get_clustered_dotplot<-function(cur_obj, features, group.by, clustered_by_gene=TRUE, clustered_by_sample=FALSE){
-  g<-DotPlot(cur_obj, features = features, group.by=group.by) + 
+get_clustered_dotplot<-function(cur_obj, features, group.by, dot.scale=6, clustered_by_gene=TRUE, clustered_by_sample=FALSE, clustering_distance="euclidean"){
+  g<-DotPlot(cur_obj, features = features, group.by=group.by,dot.scale=dot.scale) + 
     geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
           axis.title = element_blank()) +
@@ -3297,7 +3297,11 @@ get_clustered_dotplot<-function(cur_obj, features, group.by, clustered_by_gene=T
 
   result = list()
   if(clustered_by_gene){
-    rc = hclust(as.dist(1 - cor(gmat, use = "pa")))
+    if(clustering_distance == "euclidean"){
+      rc = hclust(dist(gmat, method = "euclidean"))
+    }else{
+      rc = hclust(as.dist(1 - cor(gmat, method="clustering_distance")))
+    }
     ordered_genes = c(rc$labels[rc$order], na_genes)
     g$data$features.plot = factor(g$data$features.plot, levels=ordered_genes)
 
