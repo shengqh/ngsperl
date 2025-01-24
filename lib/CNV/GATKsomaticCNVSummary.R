@@ -80,7 +80,9 @@ colnames(segmentAll)=gsub("Segment_Mean","Segment_Mean_AF",colnames(segmentAll))
 colnames(segmentAll)=gsub("Num_Probes","Num_Probes_AF",colnames(segmentAll))
 
 
-segmentAllFilter=segmentAll[which(segmentAll$Num_Probes_AF>minProbNum & segmentAll$NUM_POINTS_COPY_RATIO>minProbNum & segmentAll$Chromosome %in% chrToKeep),]
+#filtering: called !="0" and NUM_POINTS_COPY_RATIO>=minProbNum
+#segmentAllFilter=segmentAll[which(segmentAll$Num_Probes_AF>minProbNum & segmentAll$NUM_POINTS_COPY_RATIO>minProbNum & segmentAll$Chromosome %in% chrToKeep),]
+segmentAllFilter=segmentAll[which(segmentAll$CALL!="0" & segmentAll$NUM_POINTS_COPY_RATIO>=minProbNum & segmentAll$Chromosome %in% chrToKeep),]
 
 write.table(segmentAll,paste0(outFile,".allCNV.seg"),row.names=FALSE,quote=FALSE,sep="\t")
 write.table(segmentAllFilter,paste0(outFile,".allCNV.filter.seg"),row.names=FALSE,quote=FALSE,sep="\t")
