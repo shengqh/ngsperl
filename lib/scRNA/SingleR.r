@@ -38,6 +38,10 @@ random.seed=20200107
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
+bubblemap_width=to_numeric(myoptions$bubblemap_width, 3000)
+bubblemap_height=to_numeric(myoptions$bubblemap_height, 1500)
+bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
+
 if(myoptions$species == "Mm"){
   ct_ref = MouseRNAseqData()
 }else if (myoptions$species == "Hs") {
@@ -76,10 +80,10 @@ major_cts=names(ct_tbl)
 labels$major_labels=labels$pruned.labels
 labels$major_labels[!(labels$major_labels %in% c(major_cts, "unclassified"))]="other"
 
+obj <- AddMetaData(obj, metadata = labels$major_labels, col.name = "SingleR_major_labels")
+
 ct_name="SingleR_labels"
 obj <- AddMetaData(obj, metadata = labels$pruned.labels, col.name = ct_name)
-ct_name="SingleR_major_labels"
-obj <- AddMetaData(obj, metadata = labels$major_labels, col.name = ct_name)
 
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
 
@@ -93,21 +97,22 @@ rm(obj)
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
-g1=MyDimPlot(major_obj, group.by = ct_name, reduction="umap", label=T)
+major_obj=get_category_with_min_percentage(major_obj, ct_name, 0.01)
+
+g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
+ggsave(paste0(outFile, ".SingleR.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
 
 if(has_bubblemap){
-  g2<-get_bubble_plot(major_obj, NA, ct_name, bubblemap_file, assay="RNA", 
-    species=myoptions$species)
-  layout <- "ABB"
-  g<-g1+g2+plot_layout(design=layout)
-  width=6300
-}else{
-  g<-g1
-  width=2300
+  g<-get_bubble_plot(
+    obj=major_obj, 
+    cur_res=NA, 
+    cur_celltype=ct_name, 
+    bubblemap_file, 
+    assay="RNA", 
+    species=myoptions$species,
+    dot.scale=4)
+  ggsave(paste0(outFile, ".SingleR.dot.png"), g, width=bubblemap_width, height=bubblemap_height, units=bubblemap_unit, dpi=300, bg="white")
 }
-height=2000
-
-ggsave(paste0(outFile, ".SingleR.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
 rm(major_obj)
 
 slim_labels=subset(labels, labels %in% major_cts)

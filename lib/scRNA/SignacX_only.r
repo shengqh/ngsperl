@@ -30,6 +30,10 @@ pca_dims=1:as.numeric(myoptions$pca_dims)
 reduction=myoptions$reduction
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 
+bubblemap_width=to_numeric(myoptions$bubblemap_width, 3000)
+bubblemap_height=to_numeric(myoptions$bubblemap_height, 1500)
+bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
+
 find_neighbors <- is_one(myoptions$find_neighbors)
 
 assay=myoptions$assay
@@ -83,30 +87,33 @@ labels <- Signac(E=obj, R=R)
 celltypes = GenerateLabels(labels, E = obj)
 saveRDS(celltypes, file=paste0(outFile, ".SignacX.rds"))
 
-obj <- AddMetaData(obj, metadata = celltypes$CellStates, col.name = "signacx_CellStates")
-
-bubblemap_file=myoptions$bubblemap_file
-has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
-
-g1=MyDimPlot(obj, group.by = "signacx_CellStates", reduction="umap", label=T)
-
-if(has_bubblemap){
-  g2<-get_bubble_plot(obj, NA, "signacx_CellStates", bubblemap_file, assay="RNA", 
-    species=myoptions$species)
-  layout <- "ABB"
-  g<-g1+g2+plot_layout(design=layout)
-  width=6300
-}else{
-  g<-g1
-  width=2300
-}
-height=2000
-
-ggsave(paste0(outFile, ".SignacX.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
+ct_name="signacx_CellStates"
+obj <- AddMetaData(obj, metadata = celltypes$CellStates, col.name = ct_name)
 
 ct<-data.frame("SignacX"=obj$signacx_CellStates, "Sample"=obj$orig.ident)
 ct_tbl<-table(ct$SignacX,ct$Sample)
 write.csv(ct_tbl, paste0(outFile, ".SignacX_Sample.csv"))
+
+bubblemap_file=myoptions$bubblemap_file
+has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
+
+major_obj=get_category_with_min_percentage(obj, ct_name, 0.01)
+
+g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
+ggsave(paste0(outFile, ".SignacX.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
+
+if(has_bubblemap){
+  g<-get_bubble_plot(
+    obj=major_obj, 
+    cur_res=NA, 
+    cur_celltype=ct_name, 
+    bubblemap_file, 
+    assay="RNA", 
+    species=myoptions$species,
+    dot.scale=4)
+  ggsave(paste0(outFile, ".SignacX.dot.png"), g, width=bubblemap_width, height=bubblemap_height, units=bubblemap_unit, dpi=300, bg="white")
+}
+rm(major_obj)
 
 unlink('.cache', recursive = TRUE, force = TRUE)
 

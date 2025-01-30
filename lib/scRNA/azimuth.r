@@ -14,6 +14,8 @@ setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20241217_endo
 ### Parameter setting end ###
 
 source("scRNA_func.r")
+source("reportFunctions.R")
+
 library(Seurat)
 library(Azimuth)
 library(SeuratData)
@@ -24,6 +26,10 @@ random.seed=20200107
 
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
+
+bubblemap_width=to_numeric(myoptions$bubblemap_width, 3000)
+bubblemap_height=to_numeric(myoptions$bubblemap_height, 1500)
+bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
 
 if(file.exists(parSampleFile3)) {
   Azimuth_ref_tbl = fread(parSampleFile3, header=F, stringsAsFactors = F)
@@ -85,21 +91,28 @@ rm(obj)
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
-g1=MyDimPlot(major_obj, group.by = ct_name, reduction="umap", label=T)
+major_obj=get_category_with_min_percentage(major_obj, ct_name, 0.01)
+
+g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="ref.umap", pt.size=0.1) + theme(plot.title=element_blank())
+ggsave(paste0(outFile, ".Azimuth.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
+
+if("umap" %in% names(major_obj@reductions)){
+  g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
+  ggsave(paste0(outFile, ".Azimuth.qc_umap.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
+}
 
 if(has_bubblemap){
-  g2<-get_bubble_plot(major_obj, NA, ct_name, bubblemap_file, assay="RNA", 
-    species=myoptions$species)
-  layout <- "ABB"
-  g<-g1+g2+plot_layout(design=layout)
-  width=10000
-}else{
-  g<-g1
-  width=4300
+  g<-get_bubble_plot(
+    obj=major_obj, 
+    cur_res=NA, 
+    cur_celltype=ct_name, 
+    bubblemap_file, 
+    assay="RNA", 
+    species=myoptions$species,
+    dot.scale=4)
+  ggsave(paste0(outFile, ".Azimuth.dot.png"), g, width=bubblemap_width, height=bubblemap_height, units=bubblemap_unit, dpi=300, bg="white")
 }
-height=2000
 
-ggsave(paste0(outFile, ".Azimuth.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
 rm(major_obj)
 
 if(dir.exists(".local")){
