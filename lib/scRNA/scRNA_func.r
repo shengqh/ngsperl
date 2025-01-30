@@ -3321,8 +3321,17 @@ get_clustered_dotplot<-function(cur_obj, features, group.by, dot.scale=6, cluste
 }
 
 get_freq_table<-function(df, column){
-df |> 
-  dplyr::count(!!sym(column)) |> 
-  dplyr::arrange(desc(n)) |>
-  dplyr::rename("count"="n")
+  df |> 
+    dplyr::count(!!sym(column)) |> 
+    dplyr::arrange(desc(n)) |>
+    dplyr::rename("count"="n")
+}
+
+get_category_with_min_percentage<-function(obj, category, min_perc){
+  tbl=get_freq_table(obj@meta.data, category)
+  min_cells=sum(tbl$count) * min_perc
+  tbl=tbl[tbl$count>min_cells,]
+  major_cells=colnames(obj)[obj@meta.data[,category] %in% tbl[,category]]
+  result_obj<-subset(obj, cells=major_cells)
+  return(result_obj)
 }
