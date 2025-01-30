@@ -45,6 +45,21 @@ print(kable(option_table))
 
 obj_map<-read_file_map('fileList2.txt')
 samples_names=names(obj_map)
+
+has_signacx<-file.exists('fileList4.txt')
+if(has_signacx){
+  signacx_map<-read_file_map('fileList4.txt')
+}
+
+has_singler<-file.exists('fileList5.txt')
+if(has_singler){
+  singler_map<-read_file_map('fileList5.txt')
+}
+
+has_azimuth<-file.exists('fileList8.txt')
+if(has_azimuth){
+  azimuth_map<-read_file_map('fileList8.txt')
+}
 ```
 
 # Sample summary
@@ -120,6 +135,24 @@ figureRmd<-function(obj_map, samples_names){
     
     result<-paste0(result, "\n## Expression of user defined marker genes\n\n")
     result<-paste0(result, getFigure(paste0(sample_prefix, ".bubble.png"), FALSE))
+
+    if(has_signacx){
+      result<-paste0(result, "\n### SignacX: Cell types > 1%\n\n")
+      signacx_png=gsub(".meta.rds", ".SignacX.dot.png", signacx_map[[cur_sample]])
+      result<-paste0(result, getFigure(signacx_png, FALSE))
+    }
+
+    if(has_singler){
+      result<-paste0(result, "\n### SingleR: Cell types > 1%\n\n")
+      singler_png=gsub(".meta.rds", ".SingleR.dot.png", singler_map[[cur_sample]])
+      result<-paste0(result, getFigure(singler_png, FALSE))
+    }
+
+    if(has_azimuth){
+      result<-paste0(result, "\n### Azimuth: Cell types > 1%\n\n")
+      azimuth_png=gsub(".meta.rds", ".Azimuth.dot.png", azimuth_map[[cur_sample]])
+      result<-paste0(result, getFigure(azimuth_png, FALSE))
+    }
 
     result<-paste0(result, "\n## Validation of ", cur_sample, "\n\n")
     result<-paste0(result, getFigure(file.path(detail_folder, paste0(cur_sample, ".validation.png")), FALSE))

@@ -39,6 +39,8 @@ sample_names=names(obj_map)
 
 validation_columns=c()
 
+cell_types=c("seurat_cell_type")
+
 has_sctk<-file.exists(parSampleFile3)
 if(has_sctk){
   sctk_map<-read_file_map(parSampleFile3)
@@ -49,12 +51,14 @@ has_signacx<-exists('parSampleFile4')
 if(has_signacx){
   signacx_map<-read_file_map(parSampleFile4)
   validation_columns<-c(validation_columns, "SignacX")
+  cell_types<-c(cell_types, "SignacX")
 }
 
 has_singler<-exists('parSampleFile5')
 if(has_singler){
   singler_map<-read_file_map(parSampleFile5)
   validation_columns<-c(validation_columns, "SingleR")
+  cell_types<-c(cell_types, "SingleR")
 }
 
 has_decontX<-exists('parSampleFile6')
@@ -72,6 +76,7 @@ has_azimuth<-exists('parSampleFile8')
 if(has_azimuth){
   azimuth_map<-read_file_map(parSampleFile8)
   validation_columns<-c(validation_columns, "Azimuth")
+  cell_types<-c(cell_types, "Azimuth")
 }
 
 draw_figure<-function(sample_prefix, cur_meta, cur_validation_columns){
