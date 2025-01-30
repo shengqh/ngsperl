@@ -829,7 +829,7 @@ sub add_azimuth {
     perform              => 1,
     target_dir           => $target_folder,
     init_command => "",
-    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/azimuth.r",
+    rtemplate            => "reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/azimuth.r",
     parameterSampleFile1_ref   => $obj_ref,
     parameterSampleFile2 => merge_hash_left_precedent($cur_options,  {
       species             => getValue( $def, "species" ),
