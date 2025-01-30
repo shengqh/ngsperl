@@ -27,10 +27,20 @@ args <- commandArgs(trailingOnly=TRUE)
 print(args)
 
 summaryFile = args[1]
+cat("summaryFile=",summaryFile,"\n")
+
 outFile = args[2]
+cat("outFile=",outFile,"\n")
+
 yScale = args[3]
+cat("yScale=",yScale,"\n")
+
 plotStyle = args[4]
+cat("plotStyle=",plotStyle,"\n")
+
 multiPage = args[5]
+cat("multiPage=",multiPage,"\n")
+
 width = args[6]
 if(!is.na(width) & width=='0'){
   width=NA
@@ -38,6 +48,8 @@ if(!is.na(width) & width=='0'){
 if(!is.na(width)){
   width = as.numeric(width)
 }
+cat("width=",width,"\n")
+
 height = args[7]
 if(!is.na(height) & height=='0'){
   height=NA
@@ -45,6 +57,8 @@ if(!is.na(height) & height=='0'){
 if(!is.na(height)){
   height = as.numeric(height)
 }
+cat("height=",height,"\n")
+
 ylim = args[8]
 if(!is.na(ylim) & ylim=='0'){
   ylim=NA
@@ -52,6 +66,16 @@ if(!is.na(ylim) & ylim=='0'){
 if(!is.na(ylim)){
   ylim = as.numeric(ylim)
 }
+cat("ylim=",ylim,"\n")
+
+minDepth = args[9]
+if(!is.na(minDepth)){
+  minDepth = as.numeric(minDepth)
+}else{
+  minDepth = 0
+}
+cat("minDepth=",minDepth,"\n")
+
 #==========================================================
 #==================DEBUG SECTION===========================
 #==========================================================
@@ -133,6 +157,20 @@ for(n in 1:nrow(summaryTable)){
   sense = as.character(summaryTable$SENSE[n])
   start = as.numeric(summaryTable$START[n])
   end = as.numeric(summaryTable$END[n])
+
+  cat("Plotting ", name, "\n")
+  value_tbl=plotTable[,(8:ncol(plotTable))]
+  #print(value_tbl)
+  if(all(is.na(value_tbl))) {
+    cat("skipping ", name, " due to all NA values\n")
+    next
+  }
+  max_count=max(plotTable[,(8:ncol(plotTable))],na.rm=TRUE)
+  cat("max_count=",max_count,"\n")
+  if(max_count < minDepth){
+    cat("skipping ", name, " due to low depth\n")
+    next
+  }
   
   #if a multipage PDF, open up the pdf
   if(multiPage == 'MULTIPLE_PAGE'){
