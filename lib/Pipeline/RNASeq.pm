@@ -726,6 +726,65 @@ TEcount \\
                                       undef, #$n_first
                                       "transposable elements" );
     }
+
+    if(getValue($def, "perform_transposable_element_bamplot", 0)){
+      my $te_rmsk_bed = $def->{transposable_element_rmsk_bed} or die "Define transposable_element_rmsk_bed at definition first";
+      my $te_names = getValue($def, "transposable_element_bamplot_names");
+      $config->{"te_bamplot_gff"} = {
+        class         => "CQS::ProgramWrapperOneToOne",
+        perform       => 1,
+        target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "te_bamplot_gff",
+        interpretor   => "python3",
+        program       => "../Format/bed2gff.py",
+        check_program => 1,
+        option        => "-b $te_rmsk_bed -n \'$te_names\' -o __NAME__.gff",
+        source_arg    => "-b",
+        source => {
+          getValue( $def, "task_name" ) => [ $te_rmsk_bed ]
+        },
+        no_output     => 1,
+        output_file_ext => ".gff",
+        sh_direct     => 0,
+        pbs           => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "1",
+          "mem"      => "10gb"
+        },
+      };
+      push @$tasks, "te_bamplot_gff";
+
+      my $plotgroups = $def->{plotgroups};
+      if ( !defined $plotgroups ) {
+        my $files         = getValue($config, "files");
+        my @sortedSamples = sort keys %$files;
+        $plotgroups = { getValue( $def, "task_name" ) => \@sortedSamples };
+      }
+      $config->{plotgroups} = $plotgroups;
+
+      $config->{"te_bamplot"} = {
+        class => "Visualization::Bamplot",
+        perform => 1,
+        target_dir => "${target_dir}/" . getNextFolderIndex($def) . "te_bamplot",
+        option => getValue( $def, "bamplot_option" ),
+        source_ref => $te_source_ref,
+        groups_ref => "plotgroups",
+        gff_file_ref => "te_bamplot_gff",
+        is_rainbow_color => 0,
+        is_draw_individual => 0,
+        is_single_pdf => 1,
+        draw_by_r => getValue($def, "bamplot_draw_by_r", 1),
+        draw_by_r_width => getValue($def, "bamplot_draw_by_r_width", 10),
+        draw_by_r_height => getValue($def, "bamplot_draw_by_r_height", 10),
+        sh_direct => 1,
+        pbs => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "2",
+          "mem"      => "10gb"
+        },
+      };
+      push @$tasks, ("te_bamplot");
+
+    }
   }
 
   if ( $def->{perform_deconvolution} ) {
