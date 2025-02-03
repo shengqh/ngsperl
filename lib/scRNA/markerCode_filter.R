@@ -322,14 +322,31 @@ preprocess<-function( SampleInfo,
     counts<-counts[, colnames(counts) %in% rownames(hto)]
   }
 
-  cat("\n\n#", sampleid, ":" , ncol(counts), "cells\n\n")
+  n_raw_cells = ncol(counts)
+  cat("\n\n#", sampleid, ":", n_raw_cells, "cells\n\n")
   #cat("\n\n## Quality Check\n\n")
   
   #counts<-counts[,sample(ncol(counts), 2000)]
 
-  n_raw_cells = ncol(counts)
+  nfeatures<-apply(counts, 2, function(x) sum(x>0))
+  counts=counts[,nfeatures>=10]
+  cat("\n\n#", sampleid, ":", ncol(counts), "cells with at least 10 genes\n\n")
 
-  obj <- CreateSeuratObject(counts = counts, min.cells = 5, min.features = 10, project=sampleid)
+  ncells<-apply(counts, 1, function(x) sum(x>0))
+  counts=counts[ncells>=5,]
+  cat("\n\n#", sampleid, ":", nrow(counts), "genes with at least 5 cells\n\n")
+
+  if(nrow(counts)==0 || ncol(counts)==0){
+    info=list()
+    filters<-as.list(Cutoff)
+    filters$raw_num_cell=n_raw_cells
+    filters$valid_num_cell=0
+    filters$sample_processed=FALSE
+    info[[sampleid]]=list("preprocess"=filters)
+    return(info)
+  }
+
+  obj <- CreateSeuratObject(counts = counts, min.cells = 0, min.features=0, project=sampleid)
   obj$orig.ident=sampleid
   obj$sample=sampleid
   if(has_hto){
@@ -347,7 +364,7 @@ preprocess<-function( SampleInfo,
   if(!dir.exists("details")){
     dir.create("details")
   }
-  setwd(file.path(cur_folder, "details"))
+  details_prefix="details/"
   
   info=list()
 
@@ -355,22 +372,20 @@ preprocess<-function( SampleInfo,
   for(cur_sample in samples){
     subobj=subset(obj, orig.ident==cur_sample)
 
+    cur_prefix=paste0(details_prefix, cur_sample)
+
     filters<-as.list(Cutoff)
     filters$raw_num_cell=n_raw_cells
   
     #cat("\n\n### Violin plot of nGene,nUMI and mtRNA distribution\n\n")
     g1<-VlnPlot(subobj, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3) & xlab("")
-    png(paste0(cur_sample, ".qc1.png"), width=3000, height=1500, res=300)
-    print(g1)
-    dev.off()
+    ggsave(paste0(cur_prefix, ".qc1.png"), width=3000, height=1500, units="px", dpi=300, bg="white")
   
     plot1 <- FeatureScatter(subobj, feature1 = "nCount_RNA", feature2 = "percent.mt")+NoLegend()
     plot2 <- FeatureScatter(subobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")+NoLegend()
     #cat("\n\n### ", "Fig.2 The scatterplot between mtRNA/nGene and nUMI \n\n")
     p<-plot1+plot2
-    png(paste0(cur_sample, ".qc2.png"), width=3000, height=1500, res=300)
-    print(p)
-    dev.off()
+    ggsave(paste0(cur_prefix, ".qc2.png"), width=3000, height=1500, units="px", dpi=300, bg="white")
   
     mt<-data.frame(mt=subobj$percent.mt, nFeature=log10(subobj$nFeature_RNA), nCount=log10(subobj$nCount_RNA))
     plot3<-ggplot(mt, aes(x=nCount,y=mt) ) +
@@ -390,19 +405,27 @@ preprocess<-function( SampleInfo,
       ylab("Percentage of mitochondrial") + xlab("log10(number of gene)") +
       theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   
-    #cat("\n\n### ", "Fig.3  nUMI distribution\n\n")
     p<-plot3+plot4
-    png(paste0(cur_sample, ".qc3.png"), width=3000, height=1200, res=300)
-    print(p)
-    dev.off()
+    ggsave(paste0(cur_prefix, ".qc3.png"), width=3000, height=1200, units="px", dpi=300, bg="white")
+    cells = colnames(subobj)[subobj$nFeature_RNA > Cutoff$nFeature_cutoff_min & subobj$nFeature_RNA<Cutoff$nFeature_cutoff_max & subobj$nCount_RNA>Cutoff$nCount_cutoff & subobj$percent.mt < Cutoff$mt_cutoff]
+    filters$valid_num_cell=length(cells)
+    filters$sample_processed=FALSE
 
-    subobj <- subset(subobj, subset = nFeature_RNA > Cutoff$nFeature_cutoff_min & nFeature_RNA<Cutoff$nFeature_cutoff_max & nCount_RNA>Cutoff$nCount_cutoff & percent.mt < Cutoff$mt_cutoff)
-    filters$valid_num_cell=ncol(subobj)
-
-    if(ncol(subobj) == 0){
-      writeLines(paste0(cur_sample, " has no cells after filter."), paste0(cur_sample, ".nocell.txt"))
+    cat("\n\n#", cur_sample, ":", filters$valid_num_cell, "valid cells\n\n")
+    if(filters$valid_num_cell == 0){
+      info[[cur_sample]]=list("preprocess"=filters)
+      writeLines(paste0(cur_sample, " has no cells after filter."), paste0(cur_prefix, ".nocell.txt"))
       next
     }
+
+    if(filters$valid_num_cell < 10){
+      info[[cur_sample]]=list("preprocess"=filters)
+      writeLines(paste(filters$valid_num_cell), paste0(cur_prefix, ".few_cell.txt"))
+      next
+    }
+
+    subobj <- subset(subobj, cells=cells)
+    filters$sample_processed=TRUE
 
     #no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
     #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
@@ -431,17 +454,19 @@ preprocess<-function( SampleInfo,
     }
 
     #find variable genes and store them in the var.genes
-    subobj <- RunPCA(subobj, assay=assay, features = var.genes)
+    ndim=min(ndim, ncol(subobj)-1)
+    npcs=min(50, ndim)
+    subobj <- RunPCA(subobj, assay=assay, features = var.genes, npcs=npcs)
     subobj <- FindNeighbors(subobj, dims = 1:ndim)
     subobj <- FindClusters(subobj, resolution = resolution)
-    subobj <- RunUMAP(subobj, dims = 1:ndim)
+
+    n.neighbors=min(30, ndim-1)
+    subobj <- RunUMAP(subobj, dims = 1:ndim, n.neighbors=n.neighbors)
     
     #cat("\n\n## Cell clusters\n\n")
     #cat("\n\n### ", "Fig.4 nGene,nUMI and mtRNA distribution in each cluster and PCA, UMAP results\n\n")
     g1<-FeaturePlot(subobj, features=c("percent.mt","nFeature_RNA","nCount_RNA","PC_1"),label=T)
-    png(paste0(cur_sample, ".qc4.png"), width=3000, height=2600, res=300)
-    print(g1)
-    dev.off()
+    ggsave(paste0(cur_prefix, ".qc4.png"), width=3000, height=2600, units="px", dpi=300, bg="white")
 
     plot1<-ggplot(data=data.frame(cluster=subobj@active.ident,nUMI=subobj@meta.data$nCount_RNA),aes(x=cluster,y=nUMI))+geom_boxplot()+scale_y_log10()    + theme_bw()
     plot2<-ggplot(data=data.frame(cluster=subobj@active.ident,ngene=subobj@meta.data$nFeature_RNA),aes(x=cluster,y=ngene))+geom_boxplot()+scale_y_log10() + theme_bw()
@@ -449,18 +474,14 @@ preprocess<-function( SampleInfo,
     plot4<-ggplot(data=data.frame(cluster=subobj@active.ident),aes(x=cluster))+geom_bar(stat="count")+theme(axis.text.x = element_text(angle = 45))+ylab("nCells")+ggtitle(paste0("total cells:",dim(subobj)[2])) + theme_bw()
 
     p<-plot1+plot2+plot3+plot4+plot_layout(ncol=4)
-    png(paste0(cur_sample, ".qc5.png"), width=4000, height=1000, res=300)
-    print(p)
-    dev.off()
+    ggsave(paste0(cur_prefix, ".qc5.png"), width=4000, height=1000, units="px", dpi=300, bg="white")
 
     plot5<-MyDimPlot(subobj, reduction = "pca",label=T,label.size=4) + NoLegend()
     plot6<-MyDimPlot(subobj, reduction = "umap",label=T,label.size=4) + NoLegend()
     
     #cat("\n\n### ", "Fig.5 Boxplot of nUMI,nGene, mtRNA and nCells distribution and PCA, UMAP results\n\n") 
     p<-plot5+plot6+plot_layout(ncol = 2)
-    png(paste0(cur_sample, ".qc6.png"), width=2000, height=1000, res=300)
-    print(p)
-    dev.off()
+    ggsave(paste0(cur_prefix, ".qc6.png"), width=2000, height=1000, units="px", dpi=300, bg="white")
 
     # In preprocessing, no cluster will be removed.
     # if (Cutoff$cluster_remove!=""){
@@ -474,10 +495,10 @@ preprocess<-function( SampleInfo,
       meanexp<-get_seurat_average_expression(subobj, "seurat_clusters")
       if (nrow(meanexp)==1) meanexp<-t(meanexp)
       predict_celltype<-ORA_celltype_qc(meanexp,cellType,method=celltype_predictmethod)
-      saveRDS(predict_celltype, paste0(cur_sample, ".ct.rds"))
+      saveRDS(predict_celltype, paste0(cur_prefix, ".ct.rds"))
       
       if(length(predict_celltype$max_cta) > 1){
-        cta_png_file=paste0(cur_sample, ".cta.png")
+        cta_png_file=paste0(cur_prefix, ".cta.png")
         Plot_predictcelltype_ggplot2( predict_celltype, 
                                       filename=cta_png_file)
       }
@@ -500,17 +521,13 @@ preprocess<-function( SampleInfo,
         theme(legend.text = element_text(size = 10)) + ggtitle("")
 
       width = 1500 + max_char * 25
-      png(paste0(cur_sample, ".qc7.png"), width=width, height=1500, res=300)
-      print(g)
-      dev.off()
+      ggsave(paste0(cur_prefix, ".qc7.png"), g, width=width, height=1500, units="px", dpi=300, bg="white")
 
       g<-get_dim_plot_labelby(subobj, label.by="cell_type", label.size = 4, legend.title="") + 
         theme(legend.text = element_text(size = 10)) + ggtitle("")
 
       width = 1500 + max_char * 25
-      png(paste0(cur_sample, ".celltype.png"), width=width, height=1500, res=300)
-      print(g)
-      dev.off()
+      ggsave(paste0(cur_prefix, ".celltype.png"), g, width=width, height=1500, units="px", dpi=300, bg="white")
 
       has_multi_clusters<-length(levels(subobj$seurat_clusters))>1
       if(has_multi_clusters) {
@@ -544,12 +561,7 @@ preprocess<-function( SampleInfo,
         #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
         #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
         g<-MyDoHeatMap(subobj, assay=cur_assay, features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
-        png(paste0(cur_sample, ".heatmap.png"), 
-            width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
-            height=get_heatmap_height(length(top10gene)), 
-            res=300)
-        print(g)
-        dev.off()
+        ggsave(paste0(cur_prefix, ".heatmap.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white")
 
         # subobj@misc$Qcluster <- EvalCluster(subobj)
         # ViewQcluster(SCLC)
@@ -573,33 +585,41 @@ preprocess<-function( SampleInfo,
           subobj<-myScaleData(subobj, ugenes, cur_assay)
 
           g<-MyDoHeatMap(subobj, assay=cur_assay,features=ugenes)
-          png(paste0(cur_sample, ".bubble_heatmap.png"), 
+          png(paste0(cur_prefix, ".bubble_heatmap.png"), 
             width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), 
             height=get_heatmap_height(length(ugenes)), 
             res=300)
           print(g)
           dev.off()
 
-          g<-get_bubble_plot(subobj, NULL, NULL, bubblemap_file, assay=cur_assay, group.by="seurat_cell_type", species=species) + theme(text = element_text(size=20))
-          #cat("\n\n### Fig.9 Cell type marker genes bubble plot\n\n")
-          png(paste0(cur_sample, ".bubble.png"), 
-              width=get_dot_width(g), 
-              height=get_dot_height_num(length(unique(subobj$seurat_cell_type))), 
-              res=300)
-          print(g)
-          dev.off()
+          subobj@meta.data = add_column_count(subobj@meta.data, "seurat_cell_type", "seurat_cell_type_count")
+
+          g<-get_bubble_plot(
+            obj=subobj, 
+            cur_res=NA, 
+            cur_celltype="seurat_cell_type_count", 
+            bubblemap_file, 
+            assay="RNA", 
+            species=species,
+            dot.scale=4)
+
+          ggsave( paste0(cur_prefix, ".bubble.png"), 
+                  g, 
+                  width=get_dot_width(g), 
+                  height=get_dot_height_num(length(unique(subobj$seurat_cell_type_count))), 
+                  units="px",
+                  dpi=300, 
+                  bg="white")
         }
       }
     }
 
     if(output_object){
-      info[[cur_sample]]=list("preprocess"=filters, meta=subobj@meta.data, "obj"=subobj)
+      info[[cur_sample]]=list("preprocess"=filters, "meta"=subobj@meta.data, "obj"=subobj)
     }else{
-      info[[cur_sample]]=list("preprocess"=filters, meta=subobj@meta.data)
+      info[[cur_sample]]=list("preprocess"=filters, "meta"=subobj@meta.data)
     }
   }
-  
-  setwd(cur_folder)
 
   return(info)
 }

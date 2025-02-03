@@ -52,11 +52,16 @@ stats_df<-data.frame(do.call(rbind, stats))
 colnames(stats_df)<-gsub("preprocess.","",colnames(stats_df))
 write.csv(stats_df, "sample_summary.csv")
 print(kable(stats_df))
+
+has_meta="meta" %in% names(object.list[[1]])
+if(!has_meta) {
+  cat("\n\n<mark>No meta data found in the object list. It might caused by very limited number of cells after filtering.</mark>")
+}
 ```
 
-# Sample/Celltype
 
-```{r echo=FALSE, results="asis"}
+```{r echo=FALSE, results="asis", eval=has_meta}
+cat("\n\n# Sample/Celltype\n\n")
 celltypes<-lapply(names(object.list), function(x){
   df<-data.frame(table(object.list[[x]]$meta$cell_type))
   df$Sample = x
@@ -95,10 +100,11 @@ resFile<-"samples.Rmd"
 figureRmd<-function(samples){
   result<-""
   for(cur_sample in samples){
+    result<-paste0(result, paste0("\n\n# ", cur_sample, "\n\n"))
     if(!file.exists(paste0("details/", cur_sample, ".qc1.png"))){
+      result = paste0(result, "<mark>No QC performed.</mark>")
       next
     }
-    result<-paste0(result, paste0("\n\n# ", cur_sample, "\n\n"))
 
     result<-paste0(result, "\n## Violin plot of nGene,nUMI and mtRNA distribution\n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc1.png"), TRUE))
@@ -106,22 +112,24 @@ figureRmd<-function(samples){
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc2.png"), TRUE))
     result<-paste0(result, "\n## The density plot between nUMI/nGene and mtRNA \n\n")
     result<-paste0(result, getFigure(paste0(cur_sample, ".qc3.png"), TRUE))
-    result<-paste0(result, "\n## nUMI, nGene, mtRNA, nGene and cell distribution in each cluster\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".qc5.png"), TRUE))
-    result<-paste0(result, "\n## mtRNA, nGene, nUMI and PC1 in UMAP\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".qc4.png"), TRUE))
-    result<-paste0(result, "\n## Cluster in PCA/UMAP\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".qc6.png"), TRUE))
-    result<-paste0(result, "\n## Cell type annotation\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".celltype.png"), TRUE))
-    result<-paste0(result, "\n## Cell type cluster annotation\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".qc7.png"), TRUE))
-    result<-paste0(result, "\n## Cell type annotation score\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".cta.png"), TRUE))
-    result<-paste0(result, "\n## Heatmap of highly expressed gene of each cluster\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".heatmap.png"), TRUE))
-    result<-paste0(result, "\n## Expression of user defined marker genes\n\n")
-    result<-paste0(result, getFigure(paste0(cur_sample, ".bubble.png"), TRUE))
+    if(has_meta){
+      result<-paste0(result, "\n## nUMI, nGene, mtRNA, nGene and cell distribution in each cluster\n\n")
+      result<-paste0(result, getFigure(paste0(cur_sample, ".qc5.png"), TRUE))
+      result<-paste0(result, "\n## mtRNA, nGene, nUMI and PC1 in UMAP\n\n")
+      result<-paste0(result, getFigure(paste0(cur_sample, ".qc4.png"), TRUE))
+      result<-paste0(result, "\n## Cluster in PCA/UMAP\n\n")
+      result<-paste0(result, getFigure(paste0(cur_sample, ".qc6.png"), TRUE))
+      result<-paste0(result, "\n## Cell type annotation\n\n")
+      result<-paste0(result, getFigure(paste0(cur_sample, ".celltype.png"), TRUE))
+      result<-paste0(result, "\n## Cell type cluster annotation\n\n")
+      result<-paste0(result, getFigure(paste0(cur_sample, ".qc7.png"), TRUE))
+      result<-paste0(result, "\n## Cell type annotation score\n\n")
+      result<-paste0(result, getFigure(paste0(cur_sample, ".cta.png"), TRUE))
+      result<-paste0(result, "\n## Heatmap of highly expressed gene of each cluster\n\n")
+      result<-paste0(result, getFigure(paste0(cur_sample, ".heatmap.png"), TRUE))
+      result<-paste0(result, "\n## Expression of user defined marker genes\n\n")
+      result<-paste0(result, getFigure(paste0(cur_sample, ".bubble.png"), TRUE))
+    }
     result<-paste0(result, "\n---\n")
   }
   return(result)

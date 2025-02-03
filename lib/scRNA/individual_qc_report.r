@@ -1,18 +1,16 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='P12629_mm10'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
-parSampleFile6='fileList6.txt'
 parSampleFile8='fileList8.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20241224_combined_scRNA_hg38_cellbender_fastmnn/cellbender_raw_qc_report/result')
+setwd('/nobackup/h_cqs/shengq2/test/20250202_12629_scRNA_mm10_for_testonly/raw_qc_report/result')
 
 ### Parameter setting end ###
 
@@ -80,30 +78,33 @@ if(has_azimuth){
 }
 
 draw_figure<-function(sample_prefix, cur_meta, cur_validation_columns){
-  alltbl=NULL
+  if(any(cur_validation_columns %in% colnames(cur_meta))){
+    alltbl=NULL
 
-  col_name="SignacX"
-  for(col_name in cur_validation_columns){
-    tbl = data.frame(table(cur_meta[,"seurat_cell_type"], cur_meta[,col_name]))
-    tbl$Category=col_name
-    alltbl<-rbind(alltbl, tbl)
+    col_name="SignacX"
+    for(col_name in cur_validation_columns){
+      if(!col_name %in% colnames(cur_meta)){
+        next;
+      }
+      tbl = data.frame(table(cur_meta[,"seurat_cell_type"], cur_meta[,col_name]))
+      tbl$Category=col_name
+      alltbl<-rbind(alltbl, tbl)
+    }
+
+    levels(alltbl$Var1)<-levels(cur_meta$seurat_cell_type)
+
+    g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + 
+      geom_bar(width=0.5, stat = "identity") + 
+      facet_grid(Var1~Category, scales = "free", space='free_x') + 
+      theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend() + 
+      theme(strip.text.y.right = element_text(angle = 0, hjust = 0),
+            strip.text.x.top = element_text(angle = 90, hjust = 0))
+
+    height = max(800, length(unique(alltbl$Var1)) * 150) + 500
+    width = max(1000, length(unique(alltbl$Var2)) * 50) + 1000
+
+    ggsave(paste0(sample_prefix, ".validation.png"), width=width, height=height, units="px", dpi=300, bg="white")
   }
-
-  levels(alltbl$Var1)<-levels(cur_meta$seurat_cell_type)
-
-  g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + 
-    geom_bar(width=0.5, stat = "identity") + 
-    facet_grid(Var1~Category, scales = "free", space='free_x') + 
-    theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend() + 
-    theme(strip.text.y.right = element_text(angle = 0, hjust = 0),
-          strip.text.x.top = element_text(angle = 90, hjust = 0))
-
-  height = max(800, length(unique(alltbl$Var1)) * 150) + 500
-  width = max(1000, length(unique(alltbl$Var2)) * 50) + 1000
-
-  png(paste0(sample_prefix, ".validation.png"), width=width, height=height, res=300)
-  print(g)
-  dev.off()
 }
 
 meta<-NULL
@@ -119,6 +120,11 @@ for(sample_name in sample_names){
   object.list<-readRDS(obj_file)
   stats_df<-rbind(stats_df, object.list[[sample_name]]$preprocess)
 
+  if(!"obj" %in% names(object.list[[sample_name]])){
+    cat("obj not found in ", sample_name, "\n")
+    next;
+  }
+
   obj = object.list[[sample_name]]$obj
   cur_meta<-obj@meta.data
 
@@ -133,70 +139,82 @@ for(sample_name in sample_names){
   
   if(has_sctk){
     sctk_file = sctk_map[[sample_name]]
-    sctk_meta = readRDS(sctk_file)
+    if(file.exists(sctk_file)){
+      sctk_meta = readRDS(sctk_file)
 
-    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "doubletFinder_doublet_label_resolution_1.5", "sctk_DF")
-    df_column = "sctk_DF"
+      cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "doubletFinder_doublet_label_resolution_1.5", "sctk_DF")
+      df_column = "sctk_DF"
 
-    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, c("scDblFinder_doublet_call", "scDblFinder_class"), "sctk_SDF")
+      cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, c("scDblFinder_doublet_call", "scDblFinder_class"), "sctk_SDF")
 
-    cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scds_hybrid_call", "sctk_scds")
+      cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scds_hybrid_call", "sctk_scds")
 
-    if(is.logical(cur_meta$scds)){
-      cur_meta$scds = ifelse(cur_meta$scds, "Doublet", "Singlet")
+      if(is.logical(cur_meta$scds)){
+        cur_meta$scds = ifelse(cur_meta$scds, "Doublet", "Singlet")
+      }
     }
   }
   
   if(has_signacx){
     signacx_file = signacx_map[[sample_name]]
-    signacx_meta = readRDS(signacx_file)
-    cur_meta = fill_meta_info(sample_name, signacx_meta, cur_meta, "signacx_CellStates", "SignacX")
+    if(file.exists(signacx_file)){
+      signacx_meta = readRDS(signacx_file)
+     cur_meta = fill_meta_info(sample_name, signacx_meta, cur_meta, "signacx_CellStates", "SignacX")
+    }
   }
   
   if(has_singler){
     singler_file = singler_map[[sample_name]]
-    singler_meta = readRDS(singler_file)
-    cur_meta = fill_meta_info(sample_name, singler_meta, cur_meta, "SingleR_labels", "SingleR")
+    if(file.exists(singler_file)){
+      singler_meta = readRDS(singler_file)
+      cur_meta = fill_meta_info(sample_name, singler_meta, cur_meta, "SingleR_labels", "SingleR")
+    }
   }
   
   if(has_azimuth){
     azimuth_file = azimuth_map[[sample_name]]
-    azimuth_meta = readRDS(azimuth_file)
-    cur_meta = fill_meta_info(sample_name, azimuth_meta, cur_meta, "Azimuth_finest", "Azimuth")
+    if(file.exists(azimuth_file)){
+      azimuth_meta = readRDS(azimuth_file)
+      cur_meta = fill_meta_info(sample_name, azimuth_meta, cur_meta, "Azimuth_finest", "Azimuth")
+    }
   }
   
   if(has_doublet_finder){
     df_file = doublet_finder_map[[sample_name]]
-    df_meta = readRDS(df_file)
+    if(file.exists(df_file)){
+      df_meta = readRDS(df_file)
 
-    df_option_file = gsub(".meta.rds", ".options.csv", df_file)
-    df_option = read.csv(df_option_file)
-    
-    idx=1
-    for(idx in c(1:nrow(df_option))){
-      df_rate = df_option$doublet_rate[idx]
-      df_label = df_option$label[idx]
-      df_column = paste0("DF_", round(df_rate, 3))
-      cur_meta = fill_meta_info(sample_name, df_meta, cur_meta, df_label, df_column)
-      cur_validation_columns = c(cur_validation_columns, df_column)
+      df_option_file = gsub(".meta.rds", ".options.csv", df_file)
+      df_option = read.csv(df_option_file)
+      
+      idx=1
+      for(idx in c(1:nrow(df_option))){
+        df_rate = df_option$doublet_rate[idx]
+        df_label = df_option$label[idx]
+        df_column = paste0("DF_", round(df_rate, 3))
+        cur_meta = fill_meta_info(sample_name, df_meta, cur_meta, df_label, df_column)
+        cur_validation_columns = c(cur_validation_columns, df_column)
+      }
     }
   }
 
   if(has_decontX){
     decontX_file = decontX_map[[sample_name]]
-    decontX_meta = readRDS(decontX_file)
-    cur_meta = fill_meta_info(sample_name, decontX_meta, cur_meta, "decontX_contamination", "decontX_contamination", is_character = FALSE)
-    cur_meta[,"decontX > 0.25"] = cur_meta[,"decontX_contamination"] > 0.25
-    obj@meta.data = cur_meta
-    
-    g1<-MyFeaturePlot(obj, features = "decontX_contamination") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
-    g2<-VlnPlot(obj, features = "decontX_contamination", group.by="seurat_cell_type") + xlab("") + theme_bw3(TRUE)  + ggtitle("") + NoLegend()
-    if(df_column != ""){
-      g2$data$DF = obj@meta.data[rownames(g2$data), df_column]
-      g2<-g2 + facet_grid(DF~.)
+    if(file.exists(decontX_file)){
+      decontX_meta = readRDS(decontX_file)
+      cur_meta = fill_meta_info(sample_name, decontX_meta, cur_meta, "decontX_contamination", "decontX_contamination", is_character = FALSE)
+      cur_meta[,"decontX > 0.25"] = cur_meta[,"decontX_contamination"] > 0.25
+      obj@meta.data = cur_meta
+      
+      g1<-MyFeaturePlot(obj, features = "decontX_contamination") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
+      g2<-VlnPlot(obj, features = "decontX_contamination", group.by="seurat_cell_type") + xlab("") + theme_bw3(TRUE)  + ggtitle("") + NoLegend()
+      if(df_column != ""){
+        g2$data$DF = obj@meta.data[rownames(g2$data), df_column]
+        g2<-g2 + facet_grid(DF~.)
+      }
+      g<-g1+g2+plot_layout(design="ABBB")
+      ggsave(paste0(sample_prefix, ".decontX.png"), width=4400, height=1600, dpi=300, units="px", bg="white")
     }
-    g<-g1+g2+plot_layout(design="ABBB")
-    ggsave(paste0(sample_prefix, ".decontX.png"), width=4400, height=1600, dpi=300, units="px", bg="white")
   }
   
   rownames(cur_meta)<-paste0(sample_name, "_", rownames(cur_meta))
