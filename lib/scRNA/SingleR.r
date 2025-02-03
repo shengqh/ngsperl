@@ -98,6 +98,8 @@ bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
 
 major_obj=get_category_with_min_percentage(major_obj, ct_name, 0.01)
+ct_name_count = paste0(ct_name, "_count")
+major_obj@meta.data = add_column_count(major_obj@meta.data, ct_name, ct_name_count)
 
 g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
 ggsave(paste0(outFile, ".SingleR.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
@@ -106,7 +108,7 @@ if(has_bubblemap){
   g<-get_bubble_plot(
     obj=major_obj, 
     cur_res=NA, 
-    cur_celltype=ct_name, 
+    cur_celltype=ct_name_count, 
     bubblemap_file, 
     assay="RNA", 
     species=myoptions$species,

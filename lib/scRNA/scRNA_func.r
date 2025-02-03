@@ -1764,8 +1764,15 @@ get_dim_plot<-function(obj, group.by, label.by, label=T, title=label.by, legend.
   return(g)
 }
 
-build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_label=paste0(new_cluster_name, "_label")){
+build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_label=paste0(new_cluster_name, "_label"), add_count=FALSE){
+  if(add_count){
+    label_by_count<-paste0(label.by, "_count")
+    obj@meta.data=add_column_count(obj@meta.data, label.by, label_by_count)
+    label.by=label_by_count
+  }
+
   groups<-as.character(obj@meta.data[,label.by])
+
   gt<-table(groups)
   gt<-gt[order(gt, decreasing=T)]
   dummy_cluster<-c(0:(length(gt)-1))
@@ -1776,11 +1783,11 @@ build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_
   return(obj)
 }
 
-get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, label_has_cluster=FALSE, ...){
+get_dim_plot_labelby<-function(obj, label.by, title=label.by, label=T, legend.title=label.by, reduction="umap", split.by=NULL, ncol=1, label_has_cluster=FALSE, add_count=FALSE, ...){
   group.by="dummy_cluster"
   group.label="dummy_label"
 
-  obj<-build_dummy_cluster(obj, label.by, group.by, group.label)
+  obj<-build_dummy_cluster(obj, label.by, group.by, group.label, add_count=add_count)
 
   group.label=ifelse(label_has_cluster, label.by, group.label)
 
