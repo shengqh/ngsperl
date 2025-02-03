@@ -328,13 +328,29 @@ preprocess<-function( SampleInfo,
   
   #counts<-counts[,sample(ncol(counts), 2000)]
 
-  nfeatures<-apply(counts, 2, function(x) sum(x>0))
-  counts=counts[,nfeatures>=10]
-  cat("\n\n#", sampleid, ":", ncol(counts), "cells with at least 10 genes\n\n")
+  while(TRUE) {
+    nfeatures<-apply(counts, 2, function(x) sum(x>0))
+    if(all(nfeatures>=10)){
+      break
+    }
+    counts=counts[,nfeatures>=10,drop=FALSE]
+    cat("\n\n#", sampleid, ":", ncol(counts), "cells with at least 10 genes\n\n")
 
-  ncells<-apply(counts, 1, function(x) sum(x>0))
-  counts=counts[ncells>=5,]
-  cat("\n\n#", sampleid, ":", nrow(counts), "genes with at least 5 cells\n\n")
+    if(ncol(counts)==0){
+      break
+    }
+
+    ncells<-apply(counts, 1, function(x) sum(x>0))
+    if(all(ncells>=5)){
+      break
+    }
+    counts=counts[ncells>=5,,drop=FALSE]
+    cat("\n\n#", sampleid, ":", nrow(counts), "genes with at least 5 cells\n\n")
+
+    if(nrow(counts)==0){
+      break
+    }
+  }
 
   if(nrow(counts)==0 || ncol(counts)==0){
     info=list()
