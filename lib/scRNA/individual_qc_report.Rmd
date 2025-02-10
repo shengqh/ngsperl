@@ -3,7 +3,7 @@ title: "QC and Cell Type Annotation"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
-    toc_depth: 2
+    toc_depth: 3
     number_sections: true
 ---
 
@@ -130,7 +130,7 @@ figureRmd<-function(obj_map, samples_names){
       result = add_figure(result, gsub(".meta.rds", ".Azimuth.dot.png", azimuth_map[[cur_sample]]), "\n### Azimuth: Cell types > 1%\n\n")
     }
 
-    result = add_figure(result, paste0(sample_prefix, ".validation.png"), paste0("\n## Validation of", cur_sample, "\n\n"))
+    result = add_figure(result, paste0(detail_folder, "/", cur_sample, ".validation.png"), paste0("\n## Validation of", cur_sample, "\n\n"))
 
     result<-paste0(result, "\n---\n")
   }
