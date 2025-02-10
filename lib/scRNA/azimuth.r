@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='KrasnowHLCA_P3_8'
-outFile='KrasnowHLCA_P3_8'
+sample_name='cvd_11a'
+outFile='cvd_11a'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,13 +9,12 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20241217_endothelial_lung/raw_qc_Azimuth/result/KrasnowHLCA_P3_8')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250211_T04_snRNA_hg38/raw_qc_Azimuth/result/cvd_11a')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 source("reportFunctions.R")
-
+source("scRNA_func.r")
 library(Seurat)
 library(Azimuth)
 library(SeuratData)
@@ -33,7 +32,11 @@ bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
 
 if(file.exists(parSampleFile3)) {
   Azimuth_ref_tbl = fread(parSampleFile3, header=F, stringsAsFactors = F)
-  Azimuth_ref_map = split(Azimuth_ref_tbl$V1, Azimuth_ref_tbl$V2)
+  if(sample_name %in% Azimuth_ref_tbl$V2){
+    Azimuth_ref_map = split(Azimuth_ref_tbl$V1, Azimuth_ref_tbl$V2)
+  }else{
+    Azimuth_ref_map = split(Azimuth_ref_tbl$V2, Azimuth_ref_tbl$V1)
+  }
   Azimuth_ref = Azimuth_ref_map[[sample_name]]
 }else{
   Azimuth_ref=NULL
@@ -81,7 +84,8 @@ obj <-AddMetaData(obj, metadata=obj@meta.data[,finest_column], col.name=ct_name)
 
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
 
-df<-obj@meta.data[,c("orig.ident", ct_name)] %>% rename(Sample=orig.ident)
+df<-obj@meta.data[,c("orig.ident", ct_name)] %>% 
+  dplyr::rename(Sample=orig.ident)
 df_tbl<-table(df[,ct_name],df$Sample)
 write.csv(df_tbl, paste0(outFile, ".Azimuth_Sample.csv"))
 
@@ -120,3 +124,4 @@ rm(major_obj)
 if(dir.exists(".local")){
   unlink(".local", recursive=TRUE)
 }
+
