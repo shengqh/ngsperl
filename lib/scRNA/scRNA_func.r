@@ -211,10 +211,14 @@ MyDoHeatMap<-function(obj, max_cell=5000, features=NULL, assay=NULL, slot = "sca
   return(g)
 }
 
-MyFeaturePlot<-function(object, assay="RNA", ...){
+MyFeaturePlot<-function(object, assay="RNA", use_scCustom=TRUE, ...){
   old_assay=DefaultAssay(object)
   DefaultAssay(object)=assay
-  g=FeaturePlot(object=object, ...) + theme(aspect.ratio=1)
+  if(use_scCustom){
+    g=FeaturePlot_scCustom(object, ...) + theme(aspect.ratio=1)
+  }else{
+    g=FeaturePlot(object, ...) + theme(aspect.ratio=1)
+  }
   DefaultAssay(object)=old_assay
   g
 }
@@ -1237,7 +1241,7 @@ get_dot_width<-function(g, min_width=5000){
   return(max(width, min_width))
 }
 
-get_dot_height_num<-function(ngroups, min_height=2000, height_per_entry=80, height_additional_space=1000){
+get_dot_height_num<-function(ngroups, min_height=1500, height_per_entry=60, height_additional_space=1000){
   result = max(min_height, ngroups * height_per_entry + height_additional_space)
   return(result)
 }
@@ -1364,7 +1368,7 @@ get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, 
   return(g)
 }
 
-draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=5500, height=3000, rotate.title=TRUE, species="Hs"){
+draw_bubble_plot<-function(obj, cur_res, cur_celltype, bubble_map_file, prefix, width=4000, height=2000, rotate.title=TRUE, species="Hs"){
   g<-get_bubble_plot( obj, 
                       cur_res, 
                       cur_celltype, 
@@ -2316,7 +2320,7 @@ get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cel
     
     p1<-MyDimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
     
-    p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T, raster=FALSE)
+    p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T, raster=FALSE, pt.size=0.5)
     p<-p0+p1+p2+plot_layout(design="AA
 BC")
     
@@ -2328,9 +2332,9 @@ BC")
       xlab("") + ylab("Gene Expression")
     
     if("subumap" %in% names(cell_obj@reductions)){
-      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="subumap", raster=FALSE) + xlab("UMAP_1") + ylab("UMAP_2")
+      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="subumap", raster=FALSE, pt.size=0.5) + xlab("UMAP_1") + ylab("UMAP_2")
     }else{
-      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="umap", raster=FALSE)
+      p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="umap", raster=FALSE, pt.size=0.5)
     }
     p1$data$Group=cell_obj@meta.data[rownames(p1$data), "DisplayGroup"]
     p1<-p1+facet_grid(~Group) + theme_bw3() + ggtitle("") + theme(aspect.ratio=1)
