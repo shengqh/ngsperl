@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='DM_1'
-outFile='DM_1'
+sample_name='cvd_9a'
+outFile='cvd_9a'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/home/shengq2/program/collaborations/kasey_vickers/20221201_scRNA_9061_mouse/20230419_filter_config.csv'
+parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20230419_scRNA_9061_mouse_byTiger/decontX_raw_qc_sct2/result/DM_1')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250211_T04_snRNA_hg38/raw_qc/result/cvd_9a')
 
 ### Parameter setting end ###
 
@@ -46,8 +46,8 @@ if(regress_by_percent_mt){
 
 Ensemblfile=myoptions$ensembl_gene_map_file
 bubblemap_file = myoptions$bubblemap_file
-bubblemap_width=to_numeric(myoptions$bubblemap_width, 6000)
-bubblemap_height=to_numeric(myoptions$bubblemap_height, 3000)
+bubblemap_width=to_numeric(myoptions$bubblemap_width, 4000)
+bubblemap_height=to_numeric(myoptions$bubblemap_height, 2000)
 
 Mtpattern=myoptions$Mtpattern
 rRNApattern=myoptions$rRNApattern
