@@ -316,6 +316,7 @@ $rmd_command
     }
 
     print $pbs "\n\n$post_command\n\n";
+    print $pbs "\n\nrm -rf .local .cache .java\n";
 
     $self->close_pbs( $pbs, $pbs_file );
   }
