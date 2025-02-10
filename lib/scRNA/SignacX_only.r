@@ -30,8 +30,8 @@ pca_dims=1:as.numeric(myoptions$pca_dims)
 reduction=myoptions$reduction
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
 
-bubblemap_width=to_numeric(myoptions$bubblemap_width, 3000)
-bubblemap_height=to_numeric(myoptions$bubblemap_height, 1500)
+bubblemap_width=to_numeric(myoptions$bubblemap_width, 4000)
+bubblemap_height=to_numeric(myoptions$bubblemap_height, 2000)
 bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
 
 find_neighbors <- is_one(myoptions$find_neighbors)
@@ -113,7 +113,14 @@ if(has_bubblemap){
     assay="RNA", 
     species=myoptions$species,
     dot.scale=4)
-  ggsave(paste0(outFile, ".SignacX.dot.png"), g, width=bubblemap_width, height=bubblemap_height, units=bubblemap_unit, dpi=300, bg="white")
+    
+  ggsave( paste0(outFile, ".SignacX.dot.png"), 
+          g, 
+          width=bubblemap_width, 
+          height=bubblemap_height, 
+          units=bubblemap_unit, 
+          dpi=300, 
+          bg="white")
 }
 rm(major_obj)
 

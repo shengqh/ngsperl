@@ -38,8 +38,8 @@ random.seed=20200107
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
-bubblemap_width=to_numeric(myoptions$bubblemap_width, 3000)
-bubblemap_height=to_numeric(myoptions$bubblemap_height, 1500)
+bubblemap_width=to_numeric(myoptions$bubblemap_width, 4000)
+bubblemap_height=to_numeric(myoptions$bubblemap_height, 2000)
 bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
 
 if(myoptions$species == "Mm"){
