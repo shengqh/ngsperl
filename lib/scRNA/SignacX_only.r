@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='Aorta_9240'
-outFile='Aorta_9240'
+sample_name='cvd_10a'
+outFile='cvd_10a'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/raw_qc_SignacX/result/Aorta_9240')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250211_T04_snRNA_hg38/raw_qc_sct2_SignacX/result/cvd_10a')
 
 ### Parameter setting end ###
 
@@ -53,34 +53,34 @@ if(is.null(SignacX_reference_file)){
 }
 
 if(!exists("obj")){
-  obj=read_object_from_file_list(parSampleFile1)
+  obj=read_object_from_file_list(file_list_path=parSampleFile1)
 }
 
 DefaultAssay(obj) <- assay
 
-if(is_seurat_5_plus(obj)){
-  if(DefaultAssay(obj) == "integrated"){
-    if(nrow(obj@assays$integrated@counts) == 0){
-      if ("SCT" %in% names(obj@assays)){
-        counts = MyGetAssayData(obj, "SCT", slot="counts")
-      }else{
-        counts = MyGetAssayData(obj, "RNA", slot="counts")
-      }
-    }else{
-      counts = MyGetAssayData(obj, "integrated", slot="counts")
-    }
-  }else{
-    counts = MyGetAssayData(obj, assay, slot="counts")
-  }
-  newobj=CreateSeuratObject(counts, assay="RNA")
-  newobj@reductions <- obj@reductions
-  newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
-  newobj@meta.data=obj@meta.data
+# if(is_seurat_5_plus(obj)){
+#   if(DefaultAssay(obj) == "integrated"){
+#     if(nrow(obj@assays$integrated@counts) == 0){
+#       if ("SCT" %in% names(obj@assays)){
+#         counts = MyGetAssayData(obj, "SCT", slot="counts")
+#       }else{
+#         counts = MyGetAssayData(obj, "RNA", slot="counts")
+#       }
+#     }else{
+#       counts = MyGetAssayData(obj, "integrated", slot="counts")
+#     }
+#   }else{
+#     counts = MyGetAssayData(obj, assay, slot="counts")
+#   }
+#   newobj=CreateSeuratObject(counts, assay="RNA")
+#   newobj@reductions <- obj@reductions
+#   newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
+#   newobj@meta.data=obj@meta.data
 
-  obj = newobj
-  assay = "RNA"
-  rm(newobj)
-}
+#   obj = newobj
+#   assay = "RNA"
+#   rm(newobj)
+# }
 
 labels <- Signac(E=obj, R=R)
 
