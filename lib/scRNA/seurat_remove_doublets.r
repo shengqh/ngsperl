@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='DKO_F'
-outFile='DKO_F'
+sample_name='cvd_10a'
+outFile='cvd_10a'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20230509_6487_DM_scRNA_mouse_decontX_byTiger/decontX_nd/result/DKO_F')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250211_T04_snRNA_hg38/nd/result/cvd_10a')
 
 ### Parameter setting end ###
 
@@ -37,7 +37,7 @@ doublet_map<-read_file_map(parSampleFile3)
 doublet_file=doublet_map[[sample_name]]
 
 cat("reading", sample_name, ":", file_path, "\n")
-lst = read_scrna_data(file_path, keep_seurat_object)
+lst = read_scrna_data(file_path)
 
 counts = lst$counts  
 cat("there are", nrow(counts), "genes and", ncol(counts), "cells\n")
