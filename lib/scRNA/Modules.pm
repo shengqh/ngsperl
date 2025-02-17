@@ -851,7 +851,7 @@ sub add_azimuth {
     parameterSampleFile3 => $def->{Azimuth_ref_dict},
     output_file_ext => ".azimuth.png;.azimuth.rds;.meta.rds",
     post_command => "rm -rf .cache",
-    no_docker => 1,
+    no_docker => 0,
     sh_direct       => 0,
     pbs             => {
       "nodes"     => "1:ppn=1",
@@ -3026,31 +3026,20 @@ sub add_doublet_check {
   push( @$summary, $doublet_check_task );
 }
 
+
 sub add_scDblFinder {
   my ($config, $def, $summary, $target_dir, $scDblFinder_task, $h5_ref ) = @_;
 
-  my $script = dirname(__FILE__) . "/scDblFinderStandalone.r";
-
   $config->{$scDblFinder_task} = {
-    class => "CQS::ProgramWrapperOneToOne",
-    target_dir => "${target_dir}/$scDblFinder_task",
-    program => "",
-    check_program => 0,
-    option => "
-R --vanilla -f $script --args __FILE__ __OUTPUT__
-
-",
-    source_arg => "",
-    source_ref => $h5_ref,
-    output_arg => "",
-    output_file_prefix => "",
-    output_file_ext => ".scDblFinder.rds",
-    output_to_same_folder => 1,
-    samplename_in_result => 0,
-    output_file_key => 0,
-    can_result_be_empty_file => 0,
-    sh_direct   => 0,
-    pbs                  => {
+    class                     => "CQS::IndividualR",
+    perform                   => 1,
+    target_dir                => $target_dir . "/" . getNextFolderIndex($def) . $scDblFinder_task,
+    rtemplate                 => "countTableVisFunctions.R,../scRNA/scRNA_func.r,../scRNA/scDblFinder.r",
+    parameterSampleFile1_ref  => $h5_ref,
+    output_file_ext           => ".scDblFinder.singlet_object.rds",
+    output_other_ext          => ".scDblFinder.meta.rds,.scDblFinder.object.rds",
+    sh_direct                 => 0,
+    pbs                       => {
       "nodes"     => "1:ppn=1",
       "walltime"  => "12",
       "mem"       => "40gb"
