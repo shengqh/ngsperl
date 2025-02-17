@@ -49,7 +49,7 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_count_table",   0 );
   initDefaultValue( $def, "perform_correlation",   0 );
   initDefaultValue( $def, "perform_webgestalt",    0 );
-  initDefaultValue( $def, "perform_report",        1 );
+  initDefaultValue( $def, "perform_report",        0 );
   initDefaultValue( $def, "perform_gsea",          0 );
 
   initDefaultValue( $def, "perform_cutadapt", 0 );
@@ -330,32 +330,32 @@ sub getScRNASeqConfig {
     my $remove_doublets = getValue($def, "remove_doublets", 0);
     my $perform_individual_qc = getValue($def, "perform_individual_qc", 1);
 
+    if($perform_cellbender){
+      my $cellbender_prefix = "cellbender";
+      my ($cellbender_clean_ref, $cellbender_raw_ref) = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, undef );
+      $files_def = $cellbender_clean_ref;
+      $raw_files_def = $cellbender_raw_ref;
+
+      $prefix = "cellbender_";
+    }
+
     my $decontX_task = undef;
     my $decontX_counts_ref = undef;
     if ($perform_decontX){
-      $decontX_task = "decontX";
+      $decontX_task = $prefix . "decontX";
       add_decontX($config, $def, $tasks, $target_dir, $decontX_task, $filtered_files_def, $raw_files_def, {}, 1);
       $decontX_ref = [$decontX_task, ".meta.rds"];
       $decontX_counts_ref = [$decontX_task, ".counts.rds"];
       if($remove_decontX){
         $files_def = $decontX_counts_ref;
-        $prefix = "decontX_";
+        $prefix = $prefix . "_decontX_";
       }
     }
 
-    if($perform_cellbender){
-      my $cellbender_prefix = "cellbender";
-      my ($cellbender_clean_ref, $cellbender_raw_ref) = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref );
-      $files_def = $cellbender_clean_ref;
-      $raw_files_def = $cellbender_raw_ref;
-
-      if($remove_decontX){
-        $prefix = $prefix . "cellbender_";
-      }else{
-        $prefix = "cellbender_";
-      }
-
-      $remove_decontX = 0;
+    if(getValue($def, "perform_scDblFinder", 0)){
+      my $scDblFinder_task = $prefix . "scDblFinder";
+      add_scDblFinder($config, $def, $tasks, $target_dir, $scDblFinder_task, $files_def );
+      $doublet_finder_ref = $scDblFinder_task;
     }
 
     if ( $perform_sctk ){
@@ -420,11 +420,6 @@ sub getScRNASeqConfig {
         $hto_raw_file_ref = "hto_raw_files";
       }
     }
-
-    # if(getValue($def, "perform_scDblFinder", 0)){
-    #   add_scDblFinder($config, $def, $tasks, $target_dir, "scDblFinder", "files" );
-    #   #$files_def = "scDblFinder";
-    # }
 
     if( $perform_split_hto_samples ) {
       my $preparation_task = add_hto_samples_preparation($config, $def, $tasks, $target_dir, $hto_file_ref, $hto_raw_file_ref);
@@ -1384,39 +1379,39 @@ sub getScRNASeqConfig {
         }
       }
 
-      if(getValue($def, "perform_report", 1)){
-        my $report_task= "report";
-        my $additional_rmd_files = "Functions.Rmd;../scRNA/scRNA_func.r";
-        my $report_options = merge({
-              prefix => $project_name,
-              summary_layer_file => $def->{summary_layer_file},
-              celltype_name => $celltype_name
-            }, merge($config->{$seurat_task}{parameterSampleFile1}, $config->{$celltype_task}{parameterSampleFile1}));
-        #print(Dumper($report_options));
+      # if(getValue($def, "perform_report", 0)){
+      #   my $report_task= "report";
+      #   my $additional_rmd_files = "Functions.Rmd;../scRNA/scRNA_func.r";
+      #   my $report_options = merge({
+      #         prefix => $project_name,
+      #         summary_layer_file => $def->{summary_layer_file},
+      #         celltype_name => $celltype_name
+      #       }, merge($config->{$seurat_task}{parameterSampleFile1}, $config->{$celltype_task}{parameterSampleFile1}));
+      #   #print(Dumper($report_options));
 
-        $config->{$report_task} = {
-          class                    => "CQS::BuildReport",
-          perform                  => 1,
-          target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $report_task,
-          report_rmd_file          => "../scRNA/report.rmd",
-          additional_rmd_files     => $additional_rmd_files,
-          parameterSampleFile1_ref => \@report_files,
-          parameterSampleFile1_names => \@report_names,
-          parameterSampleFile2 => $report_options,
-          parameterSampleFile3 => [],
-          output_file_ext      => "_ur.html",
-          sh_direct            => 1,
-          pbs                  => {
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "1",
-            "mem"       => "10gb"
-          },
-        };
-        if(defined $hto_task){
-          $config->{$report_task}{parameterSampleFile4_ref} = [$hto_task, ".HTO.class.dist.png"];
-        }
-        push( @$summary, $report_task );
-      }
+      #   $config->{$report_task} = {
+      #     class                    => "CQS::BuildReport",
+      #     perform                  => 1,
+      #     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $report_task,
+      #     report_rmd_file          => "../scRNA/report.rmd",
+      #     additional_rmd_files     => $additional_rmd_files,
+      #     parameterSampleFile1_ref => \@report_files,
+      #     parameterSampleFile1_names => \@report_names,
+      #     parameterSampleFile2 => $report_options,
+      #     parameterSampleFile3 => [],
+      #     output_file_ext      => "_ur.html",
+      #     sh_direct            => 1,
+      #     pbs                  => {
+      #       "nodes"     => "1:ppn=1",
+      #       "walltime"  => "1",
+      #       "mem"       => "10gb"
+      #     },
+      #   };
+      #   if(defined $hto_task){
+      #     $config->{$report_task}{parameterSampleFile4_ref} = [$hto_task, ".HTO.class.dist.png"];
+      #   }
+      #   push( @$summary, $report_task );
+      # }
     }
   }
 
