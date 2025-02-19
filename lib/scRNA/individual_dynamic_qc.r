@@ -254,5 +254,3 @@ obj <- do_analysis( tmp_folder = tmp_folder,
                     reduction="pca")
 
 saveRDS(obj, file=paste0(prefix, ".obj.rds"))
-
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')

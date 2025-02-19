@@ -70,11 +70,6 @@ author: "`r myoptions$email`"
 
 # QC
 
-```{r, echo=FALSE}
-lst<-readRDS(paste0(sample_name, ".obj.rds"))
-obj=lst$obj
-```
-
 ## The scatter plot of nGene,nUMI and mtRNA
 
 ```{r, echo=FALSE}
@@ -182,14 +177,16 @@ cat(figureRmd(files, outFile), file=resFile)
 ### Cell type
 
 ```{r, echo=FALSE}
-scts<-read.csv(paste0(outFile, ".layer4.sample_celltype.csv"), check.names=F, row.names=1)
+detailed_prefix=paste0("details/", sample_name)
+
+scts<-read.csv(paste0(detailed_prefix, ".layer4.sample_celltype.csv"), check.names=F, row.names=1)
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type"))))
 ```
 
 ### UMAP
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".layer4.umap.png"))
+include_graphics(paste0(detailed_prefix, ".layer4.umap.png"))
 ```
 
 ### User defined markers
@@ -197,25 +194,25 @@ include_graphics(paste0(outFile, ".layer4.umap.png"))
 #### Cell type
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".layer4.dot.png"))
+include_graphics(paste0(detailed_prefix, ".layer4.dot.png"))
 ```
 
 ### Highly expressed database markers
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".layer4.ct_markers.bubbleplot.png"))
+include_graphics(paste0(detailed_prefix, ".layer4.ct_markers.bubbleplot.png"))
 ```
 
 ### Highlighted cell type cells
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".layer4.cell.png"))
+include_graphics(paste0(detailed_prefix, ".layer4.cell.png"))
 ```
 
 ### Heatmap
 
 ```{r, echo=FALSE}
-include_graphics(paste0(outFile, ".layer4.heatmap.png"))
+include_graphics(paste0(detailed_prefix, ".layer4.heatmap.png"))
 ```
 
 ```{r, include=FALSE, echo = FALSE}
@@ -239,7 +236,7 @@ pctRmd<-function(outFile, cell_identity, pcts, files){
   }
 
   result=""
-  in_details=FALSE
+  in_details=TRUE
   result<-paste0(result, paste0("\n\n## Cell type clusters with resolution ", myoptions$dynamic_by_one_resolution, "\n\n"))
   for(pct in pcts){
     pct_name=celltype_to_filename(pct)
