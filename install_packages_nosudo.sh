@@ -1,39 +1,42 @@
 #!/bin/bash
 
-if [[ $HOSTNAME == 'cqs1.vampire' || $HOSTNAME == 'cqs3.vampire' ]]; then
-  export TARGET_FOLDER=/nobackup/h_vangard_1/shengq2/perl5_cqs13lib
-elif [[ $HOSTNAME == 'cqs4.vampire' ]]; then
-  export TARGET_FOLDER=/nobackup/h_cqs/softwares/perl5_lib_cqs4
-else
-  export TARGET_FOLDER="~/perl5"
+host=$(echo $HOSTNAME | cut -d'.' -f1)
+lib_path="/nobackup/h_cqs/perl5/perl5_lib_${host}"
+#echo $lib_path
+
+if( [ ! -d $lib_path ] ) 
+then
+  mkdir -p $lib_path
 fi
 
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Data::Dumper
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Data::Table
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER File::Basename
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER File::Copy
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER File::Slurp
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER File::Spec
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER File::Temp
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Getopt::Long
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Hash::Merge
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER HTML::Entities
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER HTML::Parser
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER IO::Uncompress::Gunzip
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER JSON
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER List::Compare
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER List::Util
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER LWP::Simple
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER LWP::UserAgent
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Net::FTP
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Scalar::Util
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Statistics::Descriptive
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER String::Util
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Test::Deep
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Test::Simple
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER WWW::Mechanize
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Algorithm::Loops
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER JSON::Streaming::Reader
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Tie::IxHash
-curl -L http://cpanmin.us | perl - -l $TARGET_FOLDER Text::CSV
+echo "Install perl modules to $lib_path"
+
+curl -L http://cpanmin.us | perl - -l $lib_path Data::Dumper
+curl -L http://cpanmin.us | perl - -l $lib_path Data::Table
+curl -L http://cpanmin.us | perl - -l $lib_path File::Basename
+curl -L http://cpanmin.us | perl - -l $lib_path File::Copy
+curl -L http://cpanmin.us | perl - -l $lib_path File::Slurp
+curl -L http://cpanmin.us | perl - -l $lib_path File::Spec
+curl -L http://cpanmin.us | perl - -l $lib_path File::Temp
+curl -L http://cpanmin.us | perl - -l $lib_path Getopt::Long
+curl -L http://cpanmin.us | perl - -l $lib_path Hash::Merge
+curl -L http://cpanmin.us | perl - -l $lib_path HTML::Entities
+curl -L http://cpanmin.us | perl - -l $lib_path HTML::Parser
+curl -L http://cpanmin.us | perl - -l $lib_path IO::Uncompress::Gunzip
+curl -L http://cpanmin.us | perl - -l $lib_path JSON
+curl -L http://cpanmin.us | perl - -l $lib_path List::Compare
+curl -L http://cpanmin.us | perl - -l $lib_path List::Util
+curl -L http://cpanmin.us | perl - -l $lib_path LWP::Simple
+curl -L http://cpanmin.us | perl - -l $lib_path LWP::UserAgent
+curl -L http://cpanmin.us | perl - -l $lib_path Net::FTP
+curl -L http://cpanmin.us | perl - -l $lib_path Scalar::Util
+curl -L http://cpanmin.us | perl - -l $lib_path Statistics::Descriptive
+curl -L http://cpanmin.us | perl - -l $lib_path String::Util
+curl -L http://cpanmin.us | perl - -l $lib_path Test::Deep
+curl -L http://cpanmin.us | perl - -l $lib_path Test::Simple
+curl -L http://cpanmin.us | perl - -l $lib_path WWW::Mechanize
+curl -L http://cpanmin.us | perl - -l $lib_path Algorithm::Loops
+curl -L http://cpanmin.us | perl - -l $lib_path JSON::Streaming::Reader
+curl -L http://cpanmin.us | perl - -l $lib_path Tie::IxHash
+curl -L http://cpanmin.us | perl - -l $lib_path Text::CSV
 
