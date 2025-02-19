@@ -2782,6 +2782,7 @@ sub add_individual_dynamic_qc {
     parameterFile1 => $qc_filter_config_file,
     parameterFile3_ref => $essential_gene_task,
     output_file_ext => ".obj.rds",
+    output_other_ext => ".scDynamic.meta.rds",
     samplename_in_result => 1,
     can_result_be_empty_file => 0,
     remove_empty_parameter => 1,
@@ -3028,7 +3029,7 @@ sub add_doublet_check {
 
 
 sub add_scDblFinder {
-  my ($config, $def, $summary, $target_dir, $scDblFinder_task, $h5_ref ) = @_;
+  my ($config, $def, $summary, $target_dir, $scDblFinder_task, $h5_ref, $ct_ref, $ct_column ) = @_;
 
   $config->{$scDblFinder_task} = {
     class                     => "CQS::IndividualR",
@@ -3036,6 +3037,10 @@ sub add_scDblFinder {
     target_dir                => $target_dir . "/" . getNextFolderIndex($def) . $scDblFinder_task,
     rtemplate                 => "countTableVisFunctions.R,../scRNA/scRNA_func.r,../scRNA/scDblFinder.r",
     parameterSampleFile1_ref  => $h5_ref,
+    parameterSampleFile2_ref  => $ct_ref,
+    parameterSampleFile3      => {
+      "ct_column" => $ct_column,
+    },
     output_file_ext           => ".scDblFinder.singlet_object.rds",
     output_other_ext          => ".scDblFinder.meta.rds,.scDblFinder.object.rds",
     sh_direct                 => 0,
