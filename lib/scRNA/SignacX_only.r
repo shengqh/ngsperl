@@ -58,29 +58,30 @@ if(!exists("obj")){
 
 DefaultAssay(obj) <- assay
 
-# if(is_seurat_5_plus(obj)){
-#   if(DefaultAssay(obj) == "integrated"){
-#     if(nrow(obj@assays$integrated@counts) == 0){
-#       if ("SCT" %in% names(obj@assays)){
-#         counts = MyGetAssayData(obj, "SCT", slot="counts")
-#       }else{
-#         counts = MyGetAssayData(obj, "RNA", slot="counts")
-#       }
-#     }else{
-#       counts = MyGetAssayData(obj, "integrated", slot="counts")
-#     }
-#   }else{
-#     counts = MyGetAssayData(obj, assay, slot="counts")
-#   }
-#   newobj=CreateSeuratObject(counts, assay="RNA")
-#   newobj@reductions <- obj@reductions
-#   newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
-#   newobj@meta.data=obj@meta.data
+#SignacX doesn't support V5 object, we have to convert it to V3
+if(is_seurat_5_plus(obj)){
+  if(DefaultAssay(obj) == "integrated"){
+    if(nrow(obj@assays$integrated@counts) == 0){
+      if ("SCT" %in% names(obj@assays)){
+        counts = MyGetAssayData(obj, "SCT", slot="counts")
+      }else{
+        counts = MyGetAssayData(obj, "RNA", slot="counts")
+      }
+    }else{
+      counts = MyGetAssayData(obj, "integrated", slot="counts")
+    }
+  }else{
+    counts = MyGetAssayData(obj, assay, slot="counts")
+  }
+  newobj=CreateSeuratObject(counts, assay="RNA")
+  newobj@reductions <- obj@reductions
+  newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
+  newobj@meta.data=obj@meta.data
 
-#   obj = newobj
-#   assay = "RNA"
-#   rm(newobj)
-# }
+  obj = newobj
+  assay = "RNA"
+  rm(newobj)
+}
 
 labels <- Signac(E=obj, R=R)
 
