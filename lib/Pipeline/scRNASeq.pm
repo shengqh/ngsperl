@@ -353,8 +353,22 @@ sub getScRNASeqConfig {
     }
 
     if(getValue($def, "perform_scDblFinder", 0)){
-      my $scDblFinder_task = $prefix . "scDblFinder";
-      add_scDblFinder($config, $def, $tasks, $target_dir, $scDblFinder_task, $files_def );
+      my $cluster_ref = undef;
+      my $cluster_column = undef;
+      my $scDblFinder_task = undef;
+
+      if(getValue($def, "scDblFinder_by_dynamic_qc", 0)) {
+        my $sct_str = get_sct_str($def);
+        my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
+        add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
+        $cluster_ref = [$raw_individual_dynamic_qc_task, ".meta.rds"];
+        $cluster_column = "layer4";
+        $scDblFinder_task = $raw_individual_dynamic_qc_task . "_scDblFinder";
+      }else{
+        $scDblFinder_task = $prefix . "scDblFinder";
+      }
+
+      add_scDblFinder($config, $def, $tasks, $target_dir, $scDblFinder_task, $files_def, $cluster_ref, $cluster_column );
       $doublet_finder_ref = $scDblFinder_task;
     }
 
@@ -392,7 +406,9 @@ sub getScRNASeqConfig {
     if( $def->{"perform_individual_dynamic_qc"} ){
       my $sct_str = get_sct_str($def);
       my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
-      add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
+      if(!defined $config->{$raw_individual_dynamic_qc_task}) {
+        add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
+      }
     }
 
     my $files = $def->{files};
