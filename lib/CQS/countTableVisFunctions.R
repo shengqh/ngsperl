@@ -5,6 +5,7 @@ library(Rcpp)
 library(data.table)
 library(ggplot2)
 library(reshape2)
+library(patchwork)
 
 ###############################################################################
 # Functions in pipeline
@@ -611,6 +612,39 @@ tableBarplotToFile<-function(dat,fileName,totalCountFile="",groupFileList="",out
 		dev.off()
 	}
 	return(p)
+}
+
+#Combined read and proportion barplot
+BarplotCombined<-function(dat,fileName,totalCountFile="",groupFileList="",maxCategory=5,viewCategory=10,textSize=9,transformTable=T,height=4000,proportionBar=TRUE,width=0,barwidth=0.5,...) {
+  if (totalCountFile!="") { #normlize with total count *10^6
+    totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
+    totalCount<-unlist(totalCount["Reads for Mapping",])
+    dat<-10^6*t(t(dat)/totalCount[colnames(dat)])
+    ylab<-"Mapped Reads per Million"
+  } else {
+    ylab<-"Reads"
+  }
+  if (groupFileList!="") {
+    sampleToGroup<-read.delim(groupFileList,as.is=T,header=F)
+    #keep the groups with samples in the count table
+    sampleToGroup<-sampleToGroup[which(sampleToGroup[,1] %in% colnames(dat)),]
+    dat<-mergeTableBySampleGroup(dat,sampleToGroup,toPercent=FALSE)
+  }
+  if(width == 0){
+    width<-max(3000,50*ncol(dat) + 300)
+  }
+
+  height<-height
+  
+  p1<-tableBarplot(dat,maxCategory=maxCategory,textSize=textSize,ylab=ylab,transformTable=transformTable,viewCategory=viewCategory)
+  p2 <- p1
+  p2$layers <- c(geom_bar(stat="identity",position="fill", width=barwidth))
+  p2 <- p2 + scale_y_continuous(labels = percent_format())+ylab("Proportion")
+  
+  png(fileName,width=width,height=height,res=300)
+  print(p1 / p2 +
+      plot_layout(guides = "collect"))
+  dev.off()
 }
 
 readLayout <-function(visLayoutFileList, visLayoutAlphabet=FALSE){
