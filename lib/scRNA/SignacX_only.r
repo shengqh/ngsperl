@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250211_T04_snRNA_hg38/raw_qc_sct2_SignacX/result/cvd_10a')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250219_T04_snRNA_hg38/raw_qc_sct2_SignacX/result/cvd_10a')
 
 ### Parameter setting end ###
 
@@ -63,29 +63,41 @@ if(is_seurat_5_plus(obj)){
   if(DefaultAssay(obj) == "integrated"){
     if(nrow(obj@assays$integrated@counts) == 0){
       if ("SCT" %in% names(obj@assays)){
-        counts = MyGetAssayData(obj, "SCT", slot="counts")
+        assay = "SCT"
       }else{
-        counts = MyGetAssayData(obj, "RNA", slot="counts")
+        assay = "RNA"
       }
-    }else{
-      counts = MyGetAssayData(obj, "integrated", slot="counts")
     }
-  }else{
-    counts = MyGetAssayData(obj, assay, slot="counts")
   }
-  newobj=CreateSeuratObject(counts, assay="RNA")
-  newobj@reductions <- obj@reductions
-  newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
-  newobj@meta.data=obj@meta.data
 
-  obj = newobj
-  assay = "RNA"
-  rm(newobj)
+  # Get count of default assay
+  counts = MyGetAssayData(obj, assay, slot="counts")
+
+  # Create a new object with default assay
+  newobj=CreateSeuratObject(counts, assay=assay)
+
+  # Copy other slots
+  newobj[[assay]]$data = MyGetAssayData(obj, assay, slot="data")
+  newobj[[assay]]$scale.data = MyGetAssayData(obj, assay, slot="scale.data")
+
+  # Copy other information
+  newobj@meta.data=obj@meta.data
+  newobj@reductions <- obj@reductions
+
+  # Copy graphs, it is required for SignacX
+  newobj@graphs <- obj@graphs
+
+  # If the original object doesn't have graphs, we need to find neighbors
+  if(length(newobj@graphs) == 0){
+    newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
+  }
+  labels <- Signac(E=newobj, R=R)
+  celltypes = GenerateLabels(labels, E = newobj)
+}else{
+  labels <- Signac(E=obj, R=R)
+  celltypes = GenerateLabels(labels, E = obj)
 }
 
-labels <- Signac(E=obj, R=R)
-
-celltypes = GenerateLabels(labels, E = obj)
 saveRDS(celltypes, file=paste0(outFile, ".SignacX.rds"))
 
 ct_name="signacx_CellStates"
@@ -128,3 +140,4 @@ rm(major_obj)
 unlink('.cache', recursive = TRUE, force = TRUE)
 
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
+
