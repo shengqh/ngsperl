@@ -657,9 +657,11 @@ has_data<-function(obj, assay, slot){
 }
 
 MyGetAssayData<-function(obj, assay, slot){
-  if(is_assay_5_plus(obj, assay)){
-    cur_assay=obj[[assay]]
-    return(LayerData(cur_assay, layer=slot))
+  if(is_seurat_5_plus(obj)){
+    return(GetAssayData(obj, assay=assay, layer=slot))
+  # if(is_assay_5_plus(obj, assay)){
+  #   cur_assay=obj[[assay]]
+  #   return(LayerData(cur_assay, layer=slot))
   }else{
     return(GetAssayData(obj, assay=assay, slot=slot))
   }
