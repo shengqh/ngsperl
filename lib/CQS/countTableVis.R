@@ -3,12 +3,12 @@ outFile='DM_7369.fungus_group4Mapping.Result'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/vickers_lab/projects/20240613_7369_DM_smRNA_human_byMars_rerun/nonhost_genome/bowtie1_fungus_group4_pm_table/result/fungus_group4_pm_DM_7369.Species.count'
+parFile1='/nobackup/vickers_lab/projects/20250219_7369_DM_smRNA_human_byMars_rerun/nonhost_genome/bowtie1_fungus_group4_pm_table/result/fungus_group4_pm_DM_7369.Species.count'
 parFile2=''
-parFile3='/nobackup/vickers_lab/projects/20240613_7369_DM_smRNA_human_byMars_rerun/preprocessing/fastqc_post_trim_summary/result/DM_7369.countInFastQcVis.Result.Reads.csv'
-maxCategory=4;
+parFile3='/nobackup/vickers_lab/projects/20250219_7369_DM_smRNA_human_byMars_rerun/preprocessing/fastqc_post_trim_summary/result/DM_7369.countInFastQcVis.Result.Reads.csv'
+maxCategory=4;textSize=12;groupTextSize=12;
 
-setwd('/nobackup/vickers_lab/projects/20240613_7369_DM_smRNA_human_byMars_rerun/data_visualization/nonhost_genome_fungus_group4_vis/result')
+setwd('/nobackup/vickers_lab/projects/20250219_7369_DM_smRNA_human_byMars_rerun/data_visualization/nonhost_genome_fungus_group4_vis/result')
 
 ### Parameter setting end ###
 
@@ -56,6 +56,16 @@ if(length(group_map) > 1) {
                       textSize=textSize,
                       xlab="",
                       height=barplot_height_px)
+                      
+    #Combined Barplot for Group samples
+    BarplotCombined( dat=mappingResult2Species,
+                      fileName=paste0(resultFile,".Group.Combined.Barplot.png"),
+                      groupFileList=groupFileList,
+                      totalCountFile=totalCountFile,
+                      maxCategory=maxCategory,
+                      textSize=textSize,
+                      xlab="",
+                      height=barplot_height_px*2)    
 
   #Group Pie chart
   ggpieGroupToFile( dat=mappingResult2Species,
@@ -84,5 +94,13 @@ tableBarplotToFile( dat=mappingResult2Species,
                     width=barplot_width_px, 
                     height=barplot_height_px)
 
+    #Combined Barplot for all samples
+    BarplotCombined( dat=mappingResult2Species,
+                      fileName=paste0(resultFile,".Combined.Barplot.png"),
+                      totalCountFile=totalCountFile,
+                      maxCategory=maxCategory,
+                      textSize=textSize,
+                      xlab="",
+                      height=barplot_height_px*2)    
 
 writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
