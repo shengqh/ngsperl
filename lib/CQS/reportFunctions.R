@@ -4,6 +4,20 @@
 #report functions start
 ###################################
 
+copy_or_download<-function(source, target=NULL){
+  if(is.null(target)){
+    target = paste0("./", basename(source))
+  }
+  if(file.exists(source)){
+    file.copy(source, target, overwrite=TRUE)
+  }else{
+    if(file.exists(target)){      
+      file.remove(target)
+    }
+    download.file(source, target, "auto")
+  }
+}
+
 load_install<-function(library_name, library_sources=library_name){
   if(!require(library_name, character.only = T)){
     BiocManager::install(library_sources, ask=FALSE)
@@ -385,6 +399,21 @@ cluster_dotplot<-function(gdata, column1="features.plot", column2="id", value_co
   gdata[,column2]=factor(gdata[,column2], levels=colnames(mdata))
 
   return(gdata)
+}
+
+summary_tableby = function(dat, formula) {
+  library(arsenal)
+  mycontrols  <- tableby.control( test=F, 
+                                  total=T,
+                                  numeric.stats=c("Nmiss","median","q1q3","range"),
+                                  cat.stats=c("Nmiss","countpct"),
+                                  stats.labels=list(Nmiss='Missing', median='Median', range='Range'),
+                                  digits=1, 
+                                  digits.p=2, 
+                                  digits.pct=0)
+
+  result = tableby(formula, data = dat, control=mycontrols)
+  summary(result, total=T, title = "", width = 3, digits=1, digits.p=2, digits.pct=0, pfootnote = TRUE)  
 }
 
 ###################################
