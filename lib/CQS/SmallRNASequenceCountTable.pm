@@ -64,7 +64,8 @@ sub get_name_files_map {
       $name_files_map->{$comparison_name} = get_sample_map( $groups, $raw_files, \@group_names );
     }
   }
-  elsif ( has_raw_files( $config, $section, "groups" ) ) {
+  
+  if ( has_raw_files( $config, $section, "groups" ) ) {
     my $groups = get_raw_files( $config, $section, "groups" );
     for my $group_name ( sort keys %{$groups} ) {
       my @group_names = ($group_name);
