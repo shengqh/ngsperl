@@ -642,7 +642,7 @@ BarplotCombined<-function(dat,fileName,totalCountFile="",groupFileList="",maxCat
   p2 <- p2 + scale_y_continuous(labels = percent_format())+ylab("Proportion")
   
   png(fileName,width=width,height=height,res=300)
-  print(p1 / p2 +
+  print(p2 / p1 +
       plot_layout(guides = "collect"))
   dev.off()
 }
