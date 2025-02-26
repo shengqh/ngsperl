@@ -118,11 +118,18 @@ arcasHLA genotype -t 8 -v $single_end_option --min_count $min_count --log __NAME
     class                 => "CQS::ProgramWrapper",
     perform               => 1,
     target_dir            => "$target_dir/merge",
-    option                => "merge -i $target_dir/genotype/result --run $task_name -o .",
+    option                => "
+arcasHLA merge -i $target_dir/genotype/result --run $task_name -o .
+
+(head -n 1 __NAME__.genotypes.tsv && tail -n +2 __NAME__.genotypes.tsv | sort) > __NAME__.genotypes.sorted.tsv
+
+mv __NAME__.genotypes.sorted.tsv __NAME__.genotypes.tsv
+
+",
     docker_prefix         => "arcashla_",
     interpretor           => "",
     check_program         => 0,
-    program               => "arcasHLA",
+    program               => "",
     source_ref            => "genotype",
     source_arg            => "-i",
     source_join_delimiter => " ",
