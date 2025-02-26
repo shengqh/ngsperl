@@ -158,6 +158,9 @@ cat("JoinLayers ... \n")
 DefaultAssay(obj) <- "RNA"
 obj <- JoinLayers(obj)
 
+# No matter scTransform or not, we need to normalize the object in order to get average expression later.
+obj <- NormalizeData(obj)
+
 finalList$obj<-obj
 
 finalListFile<-paste0(outFile, ".final.rds")
