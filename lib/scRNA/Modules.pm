@@ -320,6 +320,7 @@ sub add_seurat {
       qc_genes              => getValue( $def, "qc_genes", "" ),
       is_preprocessed => $is_preprocessed,
       thread => $integration_thread,
+      conda_env => $def->{conda_env},
     },
     parameterSampleFile2 =>  $def->{"batch_for_integration_groups"},
     output_file_ext      => ".final.rds",
@@ -1933,6 +1934,8 @@ sub addSubCluster {
     $subcluster_redo_fastmnn = getValue( $def, "subcluster_redo_fastmnn", 0 );
   }
 
+  my $subcluster_thread = $subcluster_redo_fastmnn ? 8 : 1;
+
   $config->{$subcluster_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
@@ -1971,6 +1974,7 @@ sub addSubCluster {
       output_layer          => "cell_type",
       best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
       resolutions => getValue( $def, "subcluster_resolutions", "" ),
+      thread => $subcluster_thread
     }),
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $rename_map,
@@ -1981,7 +1985,7 @@ sub addSubCluster {
     output_file_ext      => ".meta.rds,.files.csv",
     sh_direct            => 1,
     pbs                  => {
-      "nodes"     => "1:ppn=1",
+      "nodes"     => "1:ppn=${subcluster_thread}",
       "walltime"  => "24",
       "mem"       => getValue($def, "seurat_mem")
     },
