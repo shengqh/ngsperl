@@ -192,7 +192,7 @@ for (comp in comparisonNames){
       ct = cts[idx]
       cat("  ", as.character(ct), "\n")
       prefix = paste0(prefixList[idx], ".", comp)
-      file_prefix = paste0(detail_prefix, ".", prefix)
+      ct_file_prefix = paste0(detail_prefix, ".", prefix)
       
       clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
       de_obj<-subset(obj, cells=rownames(clusterCt))
@@ -246,8 +246,13 @@ for (comp in comparisonNames){
       }
       assert(all(covariances %in% colnames(designdata)))
 
-      designfile<-paste0(file_prefix, ".design")
+      designfile<-paste0(ct_file_prefix, ".design")
       write.csv(designdata, file=designfile, row.names=F, quote=F)
+
+      designdatatbl=designdata |>
+        dplyr::group_by(Group, DisplayGroup, Sample) |>
+        dplyr::summarize(num_cell=n())
+      write.csv(designdatatbl, paste0(designfile, ".num_cell.csv"), row.names=F, quote=F)
       
       curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, sampleInGroup=FALSE, design=designfile, stringsAsFactors = F)
       if (is.null(designMatrix)){
@@ -260,10 +265,10 @@ for (comp in comparisonNames){
 }
 
 if(nrow(designFailed) > 0){
-  write.csv(designFailed, paste0(file_prefix, ".design_failed.csv"), row.names=F)
+  write.csv(designFailed, paste0(detail_prefix, ".design_failed.csv"), row.names=F)
 }
 
-design_matrix_file=paste0(file_prefix, ".design_matrix.csv")
+design_matrix_file=paste0(detail_prefix, ".design_matrix.csv")
 write.csv(designMatrix, file=design_matrix_file, row.names=F)
 designMatrix=read.csv(design_matrix_file, stringsAsFactors = F)
 
