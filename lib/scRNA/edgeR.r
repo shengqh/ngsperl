@@ -12,8 +12,8 @@ setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_f
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 source("countTableVisFunctions.R")
+source("scRNA_func.r")
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -187,7 +187,7 @@ for (comp in comparisonNames){
     
     prefixList<-get_valid_path(cts)
 
-    idx<-1
+    idx<-14
     for (idx in c(1:length(cts))){
       ct = cts[idx]
       cat("  ", as.character(ct), "\n")
@@ -235,8 +235,8 @@ for (comp in comparisonNames){
       all_cells<-c(control_cells, sample_cells)
       
       de_obj<-subset(obj, cells=all_cells)
-      de_obj$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
-      de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
+      de_obj$Group<-ifelse(colnames(de_obj) %in% control_cells, "control", "sample")
+      de_obj$DisplayGroup<-ifelse(colnames(de_obj) %in% control_cells, controlGroup, sampleGroup)
       
       designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
       if(!is.null(covariances)){
@@ -391,4 +391,3 @@ for(idx in c(1:nrow(designMatrix))){
 }
 
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
-
