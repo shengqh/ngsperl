@@ -3293,8 +3293,8 @@ save_volcano_plot<-function(edgeR_out_table,
                             pvalue=0.05, 
                             foldChange=2, 
                             comparisonTitle="",
-                            width=10,
-                            height=10,
+                            width=8,
+                            height=6,
                             extensions=c("png", "pdf")){
   library(EnhancedVolcano)  
   yname=bquote(-log[10](p~value))
@@ -3314,7 +3314,7 @@ save_volcano_plot<-function(edgeR_out_table,
       pointSize = 3.0,
       labSize = 6.0,
       colAlpha = 1,
-      subtitle = NULL) + ylab(yname)
+      subtitle = NULL) + ylab(yname) + theme(plot.title = element_text(hjust = 0.5))
   for(extension in extensions){
     volcano_file=paste0(prefix, ".volcano.", extension)
     ggsave(volcano_file, p, width=width, height=height, units="in", dpi=300, bg="white")
