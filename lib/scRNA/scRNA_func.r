@@ -3293,8 +3293,8 @@ save_volcano_plot<-function(edgeR_out_table,
                             pvalue=0.05, 
                             foldChange=2, 
                             comparisonTitle="",
-                            width=8,
-                            height=6,
+                            width=7,
+                            height=7,
                             extensions=c("png", "pdf")){
   library(EnhancedVolcano)  
   yname=bquote(-log[10](p~value))
