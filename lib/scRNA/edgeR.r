@@ -382,7 +382,7 @@ for(idx in c(1:nrow(designMatrix))){
 
   if(nrow(sigout) > 0){
     sig_gene=rownames(sigout)[1]
-    g<-get_sig_gene_figure(de_obj, sigout, design_data, sig_gene, DE_by_cell=TRUE, is_between_cluster=bBetweenCluster, log_cpm=NULL)
+    g<-get_sig_gene_figure(de_obj, sigout, designdata, sig_gene, DE_by_cell=TRUE, is_between_cluster=bBetweenCluster, log_cpm=NULL)
     ggsave(paste0(file_prefix, ".top_1_gene.png"),  g, width=3000, height=2500, units="px", dpi=300)
   }
   
