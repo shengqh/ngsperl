@@ -43,6 +43,9 @@ def load_bed_file(bed_file):
             if line.startswith('#'):
                 continue
                 
+            if line.startswith('V1'):
+                continue
+
             parts = line.strip().split('\t')
             if len(parts) >= 3:
                 chrom = parts[0]
