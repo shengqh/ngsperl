@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='pbmc_rejection'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn/result/combined.final.rds'
+parFile1='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn/result/pbmc_rejection.final.rds'
 parFile2=''
-parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/essential_genes/result/combined.txt'
+parFile3='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/essential_genes/result/pbmc_rejection.txt'
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_1_call/result')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_1_call/result')
 
 ### Parameter setting end ###
 
