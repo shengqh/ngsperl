@@ -22,6 +22,7 @@ load_install("rlang")
 load_install("scCustomize")
 load_install("SeuratData", "satijalab/seurat-data")
 load_install("SeuratWrappers", "satijalab/seurat-wrappers")
+load_install("BiocParallel")
 
 #https://github.com/r-lib/lobstr/blob/main/R/mem.R
 lobstr_node_size <- function() {
@@ -1982,6 +1983,75 @@ save_session_info<-function(filename="sessionInfo.txt") {
   writeLines(capture.output(sessionInfo()), filename)
 }
 
+do_PCA_Integration<-function( subobj, 
+                              assay, 
+                              by_sctransform, 
+                              method, 
+                              new.reduction, 
+                              orig.reduction="pca",
+                              thread=1,
+                              detail_prefix=NULL) {
+  cat("RunPCA ... \n")
+  subobj <- RunPCA(object = subobj, assay=assay, verbose=FALSE)
+
+  if(!is.null(detail_prefix)){
+    output_ElbowPlot(subobj, detail_prefix, "pca")
+  }
+
+  normalization_method = ifelse(by_sctransform, "SCT", "LogNormalize")
+
+  if(method == "FastMNNIntegration"){
+    cat("IntegrateLayers by FastMNNIntegration with thread", thread, "... \n")
+
+    is_unix = .Platform$OS.type == "unix"
+    if(is_unix){
+      ncores = as.numeric(thread)
+      bpparam = MulticoreParam(workers = ncores)
+      register(bpparam)
+    }else{
+      bpparam = SerialParam()
+    }
+
+    subobj <- IntegrateLayers(
+      object = subobj,
+      method = FastMNNIntegration,
+      orig.reduction = orig.reduction,
+      assay = assay,
+      new.reduction = new.reduction,
+      verbose = T,
+      #for fastMNN
+      batch = subobj@meta.data$batch, #batch is required for integration when only one object provided
+      BPPARAM = bpparam
+    )
+  }else if (method == "CCAIntegration" | method == "RPCAIntegration"){
+    subobj <- IntegrateLayers(
+      object = subobj,
+      method = method,
+      orig.reduction = orig.reduction,
+      assay = assay,
+      new.reduction = new.reduction,
+      normalization.method = normalization_method,
+      verbose = T
+    )
+  }else{
+    subobj <- IntegrateLayers(
+      object = subobj,
+      method = method,
+      orig.reduction = orig.reduction,
+      assay = assay,
+      new.reduction = new.reduction,
+      verbose = T
+    )
+  }
+
+  #The FastMNNIntegration will create a new Seurat object with cur_array (might be SCT).
+  #The default assay of new object will be set to RNA. It will cause problem when we use FindNeighbors and FindClusters.
+  #So we need to set the default assay to cur_assay.
+  subobj[[new.reduction]]@assay.used = assay
+
+  return(subobj)  
+}
+
 sub_cluster<-function(subobj, 
                      assay, 
                      by_sctransform, 
@@ -1999,7 +2069,9 @@ sub_cluster<-function(subobj,
                      key = "",
                      do_umap = TRUE,
                      reduction.name = "umap",
-                     redo_fastmnn = FALSE
+                     redo_fastmnn = FALSE,
+                     thread=1,
+                     detail_prefix=NULL
 ){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
@@ -2054,65 +2126,73 @@ sub_cluster<-function(subobj,
     }
     
     if(curreduction == "fastmnn"){
-      if (assay != "RNA"){
-        stop("fastmnn only support RNA assay in our pipeline")
-      }
       if(redo_fastmnn){
-        cat(key, "redo FastMNN ...\n")
-        if(!("batch" %in% colnames(subobj))){
-          subobj$batch = subobj$orig.ident
+        fastmnn_rds = paste0(detail_prefix, ".fastmnn.rds")
+        if(file.exists(fastmnn_rds)){
+          cat(key, "use old fastmnn result\n")
+          subobj = readRDS(fastmnn_rds)
+        }else{
+          cat(key, "redo FastMNN ...\n")
+          if(!("batch" %in% colnames(subobj))){
+            subobj$batch = subobj$orig.ident
+          }
+
+          if(assay == "RNA") {
+            #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
+            cat(key, "split RNA by batch ...\n")
+            subobj[["RNA"]] <- split(subobj[["RNA"]], f = subobj$batch)
+
+            cat(key, "NormalizeData ...\n")
+            subobj <- NormalizeData(subobj)
+          }
+
+          subobj = do_PCA_Integration(subobj, 
+                                      assay, 
+                                      by_sctransform, 
+                                      method="FastMNNIntegration", 
+                                      new.reduction=curreduction, 
+                                      orig.reduction="pca",
+                                      thread=thread,
+                                      detail_prefix=detail_prefix)
+
+          if(assay == "RNA") {
+            cat(key, "JoinLayers ... \n")
+            DefaultAssay(subobj) <- "RNA"
+            subobj <- JoinLayers(subobj)
+          }
+
+          cat(key, "save new fastmnn result\n")
+          saveRDS(subobj, fastmnn_rds)
         }
-
-        #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
-        cat(key, "split RNA by batch ...\n")
-        subobj[["RNA"]] <- split(subobj[["RNA"]], f = subobj$batch)
-
-        cat(key, "NormalizeData ...\n")
-        subobj <- NormalizeData(subobj)
-
-        cat(key, "FindVariableFeatures ...\n")
-        subobj <- FindVariableFeatures(subobj)
-
-        cat(key, "ScaleData ...\n")
-        subobj <- ScaleData(subobj)
-
-        cat(key, "RunPCA ...\n")
-        subobj <- RunPCA(object = subobj, verbose=FALSE)
-
-        cat(key, "IntegrateLayers by FastMNNIntegration ...\n")
-        subobj <- IntegrateLayers(
-          object = subobj,
-          method = "FastMNNIntegration",
-          orig.reduction = "pca",
-          assay = "RNA",
-          new.reduction = curreduction,
-          verbose = T,
-          #for fastMNN
-          batch = subobj@meta.data$batch
-        )
-
-        cat(key, "JoinLayers ... \n")
-        DefaultAssay(subobj) <- "RNA"
-        subobj <- JoinLayers(subobj)
       }
     }
   }
   cat("curreduction =", curreduction, "\n")
 
   cat(key, "FindNeighbors by", curreduction, "\n")
-  subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
+  subobj<-FindNeighbors(object=subobj, 
+                        assay=assay,
+                        reduction=curreduction, 
+                        k.param=k_n_neighbors, 
+                        dims=cur_pca_dims, 
+                        verbose=FALSE)
 
   cat(key, "FindClusters\n")
-  subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolutions, verbose=FALSE)
+  subobj<-FindClusters( object=subobj, 
+                        random.seed=random.seed, 
+                        resolution=resolutions, 
+                        verbose=FALSE)
 
-  if(redo_fastmnn){
-    saveRDS(subobj, paste0(key, ".fastmnn.rds"))
-  }
-  
   if(do_umap){
     cat(key, "RunUMAP\n")
     cur_min_dist = 0.3
-    subobj<-RunUMAP(object = subobj, min.dist = cur_min_dist, reduction=curreduction, n.neighbors=u_n_neighbors, dims=cur_pca_dims, verbose = FALSE, reduction.name=reduction.name)
+    subobj<-RunUMAP(object = subobj, 
+                    min.dist = cur_min_dist, 
+                    reduction=curreduction, 
+                    n.neighbors=u_n_neighbors, 
+                    dims=cur_pca_dims, 
+                    verbose = FALSE, 
+                    reduction.name=reduction.name)
   }
 
   return(subobj)    
@@ -2799,8 +2879,8 @@ iterate_celltype<-function(obj,
                             cur_pca_dims = cur_pca_dims,
                             vars.to.regress = vars.to.regress,
                             essential_genes = essential_genes,
-                            key = key
-                            )
+                            key = key,
+                            detail_prefix = curprefix)
     }
     
     cat(key, "Cell type annotation\n")
@@ -3347,4 +3427,169 @@ get_category_with_min_percentage<-function(obj, category, min_perc){
   major_cells=colnames(obj)[obj@meta.data[,category] %in% tbl[,category]]
   result_obj<-subset(obj, cells=major_cells)
   return(result_obj)
+}
+
+process_move=function(move_formula, move_parts, cur_meta){
+  if(length(move_parts) != 4){
+    stop(paste0("    move formula should be MOVE:cluster:column:celltypes:to_cluster, now we get: ", move_formula))
+  }
+
+  move_cluster=move_parts[1]
+  cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str==move_cluster])
+  move_column=move_parts[2]
+  move_celltypes_str=move_parts[3]
+  move_celltypes=unlist(strsplit(move_celltypes_str, ","))
+  to_cluster=suppressWarnings(as.numeric(move_parts[4]))
+
+  if(is.na(to_cluster)){
+    to_seurat_clusters = FALSE
+    to_cluster=move_parts[4]
+  }else{
+    to_seurat_clusters = TRUE
+  }
+
+  cat("    moving", move_celltypes_str, "annotated by", move_column, "from cluster", move_cluster, "to", to_cluster, "\n")
+  if(!move_column %in% colnames(cur_meta)){
+    stop(paste0("column ", move_column, " not exists"))
+  }
+
+  if(move_cluster == -1){
+    is_move = cur_meta[,move_column] %in% move_celltypes
+  }else{
+    is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
+  }
+
+  move_cells=sum(is_move)
+
+  if(to_seurat_clusters){
+    cur_meta$seurat_clusters[is_move] = to_cluster
+    cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)        
+  }else{
+    cur_meta$cur_layer[is_move] = to_cluster
+  }
+  cat("       cells moved:", move_cells, "\n")
+
+  return(cur_meta)
+}
+
+process_filter=function(filter_action, filter_formula, filter_parts, cur_meta){
+  if(length(filter_parts) != 3){
+    stop(paste0("  filter formula should be DELETE_or_KEEP:cluster:column:celltypes, now we get: ", filter_formula))
+  }
+  
+  filter_cluster=filter_parts[1]
+  filter_column=filter_parts[2]
+  filter_celltypes_str=filter_parts[3]
+  filter_celltypes=unlist(strsplit(filter_celltypes_str, ","))
+
+  if(!filter_action %in% c("DELETE", "KEEP")){
+    stop(paste0("  filter action should be DELETE or KEEP, now we get: ", filter_action, "for", filter_formula))
+  }
+
+  if(filter_column == "*" & filter_action == "DELETE"){
+    #delete all cells in the cluster
+    cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str==filter_cluster])
+    cat("    deleting all cells in cluster", filter_cluster, "(", cur_name, ")\n")
+    is_deleted = cur_meta$seurat_clusters_str==filter_cluster
+  }else{
+    if (filter_cluster == -1){
+      cat("   ", filter_action, filter_celltypes_str, "annotated by", filter_column, "from all sub-clusters\n")
+      if(filter_action == "KEEP"){
+        is_deleted = !(cur_meta[,filter_column] %in% filter_celltypes)
+      }else{
+        is_deleted = cur_meta[,filter_column] %in% filter_celltypes
+      }
+    }else{
+      cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str==filter_cluster])
+      cat("   ", filter_action, filter_celltypes_str, "annotated by", filter_column, "from cluster", filter_cluster, "(", cur_name, ")\n")
+      if(!filter_column %in% colnames(cur_meta)){
+        stop(paste0("column ", filter_column, " not exists"))
+      }
+
+      if(filter_action == "KEEP"){
+        is_deleted = cur_meta$seurat_clusters_str==filter_cluster & !(cur_meta[,filter_column] %in% filter_celltypes)
+      }else{
+        is_deleted = cur_meta$seurat_clusters_str==filter_cluster & cur_meta[,filter_column] %in% filter_celltypes
+      }
+    }
+  }
+
+  delete_cells=sum(is_deleted)
+  cur_meta$seurat_clusters[is_deleted] = -10000
+  cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
+  cat("      cells deleted:", delete_cells, "\n")
+
+  return(cur_meta)
+}
+
+process_merge=function(merge_formula, merge_parts, cur_meta) {
+  if(length(merge_parts) != 2){
+    stop(paste0("  rename formula should be MERGE:from_clusters:to_cluster, now we get: ", merge_formula))
+  }
+  
+  from_clusters_str=merge_parts[1]
+  from_clusters=unlist(strsplit(from_clusters_str, ","))
+  to_cluster=as.numeric(merge_parts[2])
+  if(is.na(to_cluster)){
+    stop(paste0("wrong to_cluster value ", merge_parts[2]))
+  }
+
+  cat("    merge cluster:", from_clusters_str, "to", to_cluster, "\n")
+
+  is_merge = cur_meta$seurat_clusters_str %in% from_clusters
+
+  cur_meta[is_merge, "seurat_clusters"] = to_cluster
+  cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
+  cat("      cells merged:", sum(is_merge), "\n")
+
+  return(cur_meta)
+}
+
+process_rename=function(rename_formula, rename_parts, cur_meta) {
+  if(length(rename_parts) != 2){
+    stop(paste0("  rename formula should be RENAME:cluster:name, now we get", rename_formula))
+  }
+  
+  rename_cluster=rename_parts[1]
+  rename_name=rename_parts[2]
+
+  is_rename = cur_meta$seurat_clusters_str==rename_cluster
+
+  rename_cells=sum(is_rename)
+
+  cur_meta[is_rename, "cur_layer"] = rename_name
+
+  cat("   cells renamed:", rename_cells, "\n")
+
+  return(cur_meta)
+}
+
+process_actions=function(ct_tbl, cur_meta){
+  if(nrow(ct_tbl) > 0){
+    action_formula=ct_tbl$V1[1]
+    for(action_formula in ct_tbl$V1){
+      cat("  action formula:", action_formula, "\n")
+      action_parts=unlist(strsplit(action_formula, ":"))
+      action_type=action_parts[1]
+      action_parts=action_parts[2:length(action_parts)]
+
+      if(action_type == "MOVE"){
+        cur_meta=process_move(move_formula=action_formula, 
+                              move_parts=action_parts, 
+                              cur_meta=cur_meta)
+      }else if(action_type == "KEEP" | action_type == "DELETE"){
+        cur_meta=process_filter(filter_action=action_type, 
+                                filter_formula=action_formula, 
+                                filter_parts=action_parts, 
+                                cur_meta=cur_meta)
+      }else if(action_type == "MERGE"){
+        cur_meta=process_merge(action_formula, action_parts, cur_meta)
+      }else if(action_type == "RENAME"){
+        cur_meta=process_rename(action_formula, action_parts, cur_meta)
+      }else{
+        stop(paste0("wrong action type:", action_type))
+      }
+    }
+  }
+  return(cur_meta)
 }
