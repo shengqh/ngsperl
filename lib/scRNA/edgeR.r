@@ -75,6 +75,7 @@ comparisonNames<-unique(comparisons$Comparison)
 
 comp <-comparisonNames[1]
 
+cat("start to generate design files\n")
 designFailed<-data.frame("comp"=character(), "celltype"=character(), "reason"=character())
 designMatrix<-NULL
 for (comp in comparisonNames){
@@ -251,7 +252,7 @@ for (comp in comparisonNames){
 
       designdatatbl=designdata |>
         dplyr::group_by(Group, DisplayGroup, Sample) |>
-        dplyr::summarize(num_cell=n())
+        dplyr::summarize(num_cell=n(), .groups = "drop")
       write.csv(designdatatbl, paste0(designfile, ".num_cell.csv"), row.names=F, quote=F)
       
       curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, sampleInGroup=FALSE, design=designfile, stringsAsFactors = F)
@@ -272,6 +273,7 @@ design_matrix_file=paste0(detail_prefix, ".design_matrix.csv")
 write.csv(designMatrix, file=design_matrix_file, row.names=F)
 designMatrix=read.csv(design_matrix_file, stringsAsFactors = F)
 
+cat("start to perform edgeR\n")
 result<-NULL
 idx<-1
 for(idx in c(1:nrow(designMatrix))){
@@ -377,6 +379,12 @@ for(idx in c(1:nrow(designMatrix))){
   }
   sigFile<-paste0(file_prefix, ".sig.csv")
   write.csv(sigout, file=sigFile, quote=F)
+
+  if(nrow(sigout) > 0){
+    sig_gene=rownames(sigout)[1]
+    g<-get_sig_gene_figure(de_obj, sigout, design_data, sig_gene, DE_by_cell=TRUE, is_between_cluster=bBetweenCluster, log_cpm=NULL)
+    ggsave(paste0(file_prefix, ".top_1_gene.png"),  g, width=3000, height=2500, units="px", dpi=300)
+  }
   
   siggenes<-data.frame(gene=rownames(sigout), stringsAsFactors = F)
   sigGenenameFile<-paste0(file_prefix, ".sig_genename.txt")
@@ -395,4 +403,5 @@ for(idx in c(1:nrow(designMatrix))){
   cat("  done", "\n")
 }
 
+cat("all done\n")
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
