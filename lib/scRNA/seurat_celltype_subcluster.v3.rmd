@@ -145,13 +145,18 @@ include_graphics(pre_file)
 rename_tbl<-read.table("fileList3.txt", sep="\t", header=F)
 colnames(rename_tbl)<-c("Value", "Key", "Name")
 d_tbl=reshape2::dcast(rename_tbl, Name~Key, value.var="Value", fun.aggregate=function(x){paste0(x, collapse=",")})
-d_tbl<-d_tbl |> select(-Name) |> select(from, everything())
-if("column" %in% colnames(d_tbl)){
-  d_tbl$column[d_tbl$column==""]<-"seurat_clusters"
-  d_tbl<-d_tbl |> select(from, column, everything())
+cat("\n\n# Rename/delete/move sub clusters\n\n")
+
+if('from' %in% colnames(d_tbl)){
+  d_tbl<-d_tbl |> select(-Name) |> select(from, everything())
+  if("column" %in% colnames(d_tbl)){
+    d_tbl$column[d_tbl$column==""]<-"seurat_clusters"
+    d_tbl<-d_tbl |> select(from, column, everything())
+  }
+  print_table(d_tbl, row.names=F)
+}else{
+  print_table(rename_tbl, row.names=F)
 }
-cat("\n\n# Rename/delete sub clusters\n\n")
-print_table(d_tbl, row.names=F)
 ```
 
 ```{r, echo=FALSE, eval=file.exists(post_file)}
