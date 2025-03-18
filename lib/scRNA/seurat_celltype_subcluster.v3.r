@@ -1,14 +1,17 @@
 rm(list=ls()) 
-outFile='endothelial_lung'
+outFile='pbmc_rejection'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20241218_integrate_endothelial_cells/EC_lung_iSGS.rds'
-parFile2=''
-parFile3=''
+parSampleFile4='fileList4.txt'
+parSampleFile5='fileList5.txt'
+parSampleFile7='fileList7.txt'
+parFile1='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn/result/pbmc_rejection.final.rds'
+parFile2='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_1_call/result/pbmc_rejection.scDynamic.meta.rds'
+parFile3='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/essential_genes/result/pbmc_rejection.txt'
 
 
-setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20241218_T04_seurat/sub_cluster/result')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -43,14 +46,10 @@ by_harmony<-reduction=="harmony"
 redo_harmony<-is_one(myoptions$redo_harmony, 0)
 redo_fastmnn<-is_one(myoptions$redo_fastmnn, 0)
 
-if(reduction == "fastmnn"){
-  assay="RNA"
-}else{
-  assay=get_assay(by_sctransform, by_integration, by_harmony)
-  redo_fastmnn=FALSE
-}
+assay=ifelse(by_sctransform, "SCT", "RNA")
 
 npcs<-as.numeric(myoptions$pca_dims)
+thread=as.numeric(myoptions$thread)
 
 species=myoptions$species
 markerfile<-myoptions$db_markers_file
@@ -209,6 +208,29 @@ if(!is_file_empty(parSampleFile3)){
     meta[is.na(meta[,previous_layer]),previous_layer] = "DELETE"
   }
 
+  meta$cur_layer = meta[[previous_layer]]
+  meta$seurat_clusters = meta[[previous_cluster]]
+
+  all_ct_tbl=rename_map |>
+    dplyr::filter(V2 == "ACTIONS")
+  
+  if(nrow(all_ct_tbl) > 0) {
+    ct=all_ct_tbl$V3[1]
+    ct="Platelets"
+    for(ct in unique(all_ct_tbl$V3)){
+      print(ct)
+      ct_tbl=all_ct_tbl |> dplyr::filter(V3 == ct)
+      cur_meta = meta[meta$cur_layer == ct,]
+      cur_meta = process_actions(ct_tbl, cur_meta)
+      cur_meta[cur_meta$seurat_clusters < 0, "cur_layer"] = "DELETE"
+      meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+    }
+    meta = meta |> dplyr::select(-cur_layer, -seurat_clusters)
+  }
+
+  rename_map=rename_map |>
+    dplyr::filter(V2 != "ACTIONS")
+
   keys = unique(rename_map$V3)
   if("from" %in% rename_map$V2){
     rname = keys[1]
@@ -327,11 +349,10 @@ names(ctmap)<-ctnames
 obj@meta.data$dot_cluster<-unlist(ctmap[obj$dot]) + 1000
 
 cur_folder = getwd()
-tmp_folder = paste0(cur_folder, "/details")
+tmp_folder = paste0(cur_folder, "/details/")
 if(!dir.exists(tmp_folder)){
   dir.create(tmp_folder)
 }
-setwd(tmp_folder)
 
 get_bubblemap_file<-function(pct, bubble_file_map, bubblemap_file){
   if(pct %in% names(bubble_file_map)){
@@ -365,7 +386,7 @@ check_cell_type<-function(subobj, ct_column, filelist, pct, curprefix, species, 
     ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, ct_column), dpi=300, units="px", bg="white")
     rm(g)
 
-    filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), paste0(ct_column, " celltype"), "", pct))
+    filelist<-rbind(filelist, c(dot_file, paste0(ct_column, " celltype"), "", pct))
   }
 
   if(pct %in% names(bubble_file_map)){
@@ -376,7 +397,7 @@ check_cell_type<-function(subobj, ct_column, filelist, pct, curprefix, species, 
     ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(sxobj, ct_column), dpi=300, units="px", bg="white")
     rm(g)
 
-    filelist<-rbind(filelist, c(paste0(getwd(), "/", dot_file), paste0(ct_column, " sub celltype"), "", pct))
+    filelist<-rbind(filelist, c(dot_file, paste0(ct_column, " sub celltype"), "", pct))
   }
 
   rm(sxobj)
@@ -408,10 +429,10 @@ for(pct in previous_celltypes){
   k_n_neighbors<-min(cur_npcs, 20)
   u_n_neighbors<-min(cur_npcs, 30)
   
-  curprefix<-paste0(prefix, ".", celltype_to_filename(pct))
+  curprefix<-paste0(tmp_folder, prefix, ".", celltype_to_filename(pct))
 
   subumap = "subumap"
-  subobj = sub_cluster(subobj, 
+  subobj = sub_cluster( subobj, 
                         assay, 
                         by_sctransform, 
                         by_harmony, 
@@ -428,7 +449,9 @@ for(pct in previous_celltypes){
                         key,
                         do_umap = TRUE,
                         reduction.name = subumap,
-                        redo_fastmnn = redo_fastmnn)
+                        redo_fastmnn = redo_fastmnn,
+                        thread=thread,
+                        detail_prefix=curprefix)
   
   cat("saving reductions ...\n")
   reductions_rds = paste0(curprefix, ".reductions.rds")
@@ -564,7 +587,7 @@ for(pct in previous_celltypes){
     ggsave(heatmap_file, gh, width=width, height=height, dpi=300, units="px", bg="white")
     rm(gh)
     
-    cur_df = data.frame("file"=paste0(getwd(), "/", c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds)), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
+    cur_df = data.frame("file"=c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
     if(has_bubblemap){
       g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
@@ -573,7 +596,7 @@ for(pct in previous_celltypes){
       ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
       rm(g)
 
-      cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot", cur_resolution, pct))
+      cur_df<-rbind(cur_df, c(dot_file, "dot", cur_resolution, pct))
     }
 
     if(pct %in% names(bubble_file_map)){
@@ -584,7 +607,7 @@ for(pct in previous_celltypes){
       ggsave(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
       rm(g)
 
-      cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "dot_celltype_specific", cur_resolution, pct))
+      cur_df<-rbind(cur_df, c(dot_file, "dot_celltype_specific", cur_resolution, pct))
     }
 
     if(has_antibody_bubblemap){
@@ -601,7 +624,7 @@ for(pct in previous_celltypes){
       ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
       rm(g)
 
-      cur_df<-rbind(cur_df, c(paste0(getwd(), "/", dot_file), "antibody_dot", cur_resolution, pct))
+      cur_df<-rbind(cur_df, c(dot_file, "antibody_dot", cur_resolution, pct))
     }
 
     filelist<-rbind(filelist, cur_df)
@@ -610,7 +633,7 @@ for(pct in previous_celltypes){
   cat("after", pct, ", memory used:", lobstr_mem_used(), "\n")
 
   if(output_individual_object){
-    saveRDS(subobj, paste0(outFile, ".", pct, ".obj.rds"))
+    saveRDS(subobj, paste0(curprefix, ".", pct, ".obj.rds"))
   }
   rm(subobj)
 }
@@ -618,7 +641,4 @@ for(pct in previous_celltypes){
 rm(obj)
 cat("final memory used:", lobstr_mem_used(), "\n")
 
-setwd(cur_folder)
-
 write.csv(filelist, paste0(outFile, ".files.csv"))
-
