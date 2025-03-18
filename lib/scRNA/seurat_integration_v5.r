@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='pbmc_rejection'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_rawdata/result/combined.rawobj.rds'
-parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/essential_genes/result/combined.txt'
+parFile1='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_rawdata/result/pbmc_rejection.rawobj.rds'
+parFile2='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/essential_genes/result/pbmc_rejection.txt'
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38/seurat_sct2_fastmnn/result')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_rpca/result')
 
 ### Parameter setting end ###
 
@@ -57,8 +57,12 @@ if(is_unix){
 }
 
 pca_dims<-1:as.numeric(myoptions$pca_dims)
+cur_assay=ifelse(by_sctransform, "SCT", "RNA")
 
 obj<-readRDS(parFile1)
+
+# No matter scTransform or not, we need to normalize the object in order to get average expression later.
+obj <- NormalizeData(obj, assay="RNA")
 
 cat("preprocessing_rawobj ...\n")
 finalList<-preprocessing_rawobj(
@@ -69,8 +73,6 @@ finalList<-preprocessing_rawobj(
 
 obj<-finalList$rawobj
 finalList<-finalList[names(finalList) != "rawobj"]
-
-cur_assay=ifelse(by_sctransform, "SCT", "RNA")
 
 integrated_obj_file<-paste0(outFile, ".integrated.rds")
 if(!file.exists(integrated_obj_file)){
@@ -87,9 +89,17 @@ if(!file.exists(integrated_obj_file)){
     #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
     obj[["RNA"]] <- split(obj[["RNA"]], f = obj$batch)
 
+    #integration would be done on the RNA assay
+    DefaultAssay(obj) <- "RNA"
+
     if(by_sctransform){
       cat("SCTransform ...\n")
       obj <- SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
+
+      cat("JoinLayers of RNA assay ... \n")
+      obj <- JoinLayers(obj, assay="RNA")
+
+      DefaultAssay(obj) <- "SCT"
     }else{
       cat("NormalizeData/FindVariableFeatures ...\n")
       obj <- NormalizeData(obj)
@@ -108,15 +118,17 @@ if(!file.exists(integrated_obj_file)){
   }
 
   cat("RunPCA ... \n")
-  obj <- RunPCA(object = obj, verbose=FALSE)
+  obj <- RunPCA(object = obj, assay=cur_assay, verbose=FALSE)
 
   output_ElbowPlot(obj, detail_prefix, "pca")
+
+  normalization_method = ifelse(by_sctransform, "SCT", "LogNormalize")
 
   if(method == "FastMNNIntegration"){
     cat("IntegrateLayers by FastMNNIntegration with thread", myoptions$thread, "... \n")
     obj <- IntegrateLayers(
       object = obj,
-      method = method,
+      method = FastMNNIntegration,
       orig.reduction = "pca",
       assay = cur_assay,
       new.reduction = reduction,
@@ -124,6 +136,16 @@ if(!file.exists(integrated_obj_file)){
       #for fastMNN
       batch = obj@meta.data$batch, #batch is required for integration when only one object provided
       BPPARAM = bpparam
+    )
+  }else if (method == "CCAIntegration" | method == "RPCAIntegration"){
+    obj <- IntegrateLayers(
+      object = obj,
+      method = method,
+      orig.reduction = "pca",
+      assay = cur_assay,
+      new.reduction = reduction,
+      normalization.method = normalization_method,
+      verbose = T
     )
   }else{
     obj <- IntegrateLayers(
@@ -136,11 +158,22 @@ if(!file.exists(integrated_obj_file)){
     )
   }
 
+  #The FastMNNIntegration will create a new Seurat object with cur_array (might be SCT).
+  #The default assay of new object will be set to RNA. It will cause problem when we use FindNeighbors and FindClusters.
+  #So we need to set the default assay to cur_assay.
+  obj[[reduction]]@assay.used = cur_assay
+
   cat("FindNeighbors ... \n")
-  obj <- FindNeighbors(obj, dims = 1:30, reduction = reduction)
+  obj <- FindNeighbors( obj, 
+                        dims = 1:30, 
+                        assay=cur_assay, 
+                        reduction = reduction)
 
   cat("RunUMAP ... \n")
-  obj <- RunUMAP(obj, reduction = reduction, dims = 1:30)    
+  obj <- RunUMAP( obj, 
+                  assay = cur_assay,
+                  reduction = reduction, 
+                  dims = 1:30)    
 
   if("ADT" %in% names(obj)){
     obj <- NormalizeData(obj, normalization.method = "CLR", margin = 2, assay = "ADT")
@@ -154,13 +187,7 @@ if(!file.exists(integrated_obj_file)){
   obj<-readRDS(integrated_obj_file)
 }
 
-cat("JoinLayers ... \n")
-DefaultAssay(obj) <- "RNA"
-obj <- JoinLayers(obj)
-
-# No matter scTransform or not, we need to normalize the object in order to get average expression later.
-obj <- NormalizeData(obj)
-
+DefaultAssay(obj)<-cur_assay
 finalList$obj<-obj
 
 finalListFile<-paste0(outFile, ".final.rds")
