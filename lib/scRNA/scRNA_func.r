@@ -2354,29 +2354,32 @@ save_umap<-function(file_prefix, obj, umap_names=names(obj@reductions$umap) ){
   write.csv(umap, paste0(file_prefix, ".csv"))
 }
 
-get_sig_gene_figure<-function(cell_obj, sigout, design_data, sig_gene, DE_by_cell=TRUE, is_between_cluster=FALSE, log_cpm=NULL, scale_data=TRUE){
-  group_levels<-unique(design_data$Group)
-  display_group_levels<-unique(design_data$DisplayGroup)
+get_group_colors_from_designdata<-function(designdata){      
+  designUniq<-unique(designdata[,c("Group", "DisplayGroup")])
+  rownames(designUniq)<-designUniq$Group
+  
+  controlGroup<-designUniq["control","DisplayGroup"]
+  sampleGroup<-designUniq["sample","DisplayGroup"]
 
   groupColors<-c("blue", "red")
-  names(groupColors)<-display_group_levels
+  names(groupColors)<-c(controlGroup, sampleGroup)
+  return(groupColors)
+}
+
+get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell=TRUE, is_between_cluster=FALSE, log_cpm=NULL){
+  groupColors<-get_group_colors_from_designdata(designdata)
+  display_group_levels<-names(groupColors)
 
   if(!is_between_cluster){
-    ddata<-design_data[!duplicated(design_data$Sample),]
+    ddata<-designdata[!duplicated(designdata$Sample),]
 
-    gmap<-unlist(split(ddata$Group, ddata$Sample))
     gdismap<-unlist(split(ddata$DisplayGroup, ddata$Sample))
 
-    cell_obj@meta.data$Group=factor(gmap[cell_obj$orig.ident], levels=group_levels)
     cell_obj@meta.data$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
   }
 
   logFC<-sigout[sig_gene, "logFC"]
   FDR<-sigout[sig_gene,"FDR"]
-
-  if(scale_data){
-    cell_obj=ScaleData(cell_obj, features=sig_gene, assay="RNA")
-  }
 
   stopifnot(sig_gene %in% rownames(cell_obj))
 
