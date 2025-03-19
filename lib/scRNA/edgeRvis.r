@@ -101,29 +101,25 @@ for (comp in rownames(edgeRres)){
       all_sigout<-rbind(all_sigout, sigout)
 
       designFile<-paste0(edgeRfolder, "/", edgeRres[comp, "designFile"])
-      design_data<-read.csv(designFile, stringsAsFactors = F, header=T)
+      designdata<-read.csv(designFile, stringsAsFactors = F, header=T) |>
+        tibble::column_to_rownames("Cell")
       
-      designUniq<-unique(design_data[,c("Group", "DisplayGroup")])
-      rownames(designUniq)<-designUniq$Group
-      
-      controlGroup<-designUniq["control","DisplayGroup"]
-      sampleGroup<-designUniq["sample","DisplayGroup"]
-
-      groupColors<-c("blue", "red")
-      names(groupColors)<-c(controlGroup, sampleGroup)
+      groupColors<-get_group_colors_from_designdata(designdata)
 
       if(DE_by_cell){
-        cell_obj<-subset(obj, cells=design_data$Cell)
-        cell_obj$Group=design_data$Group
-        cell_obj$DisplayGroup=design_data$DisplayGroup
+        cell_obj<-subset(obj, cells=rownames(designdata))
+        # Using cells in subset cannot guarantee the order of cells in cell_obj is the same as in designdata
+        # So we must match the order when assign Group and DisplayGroup
+        cell_obj$Group=designdata[colnames(cell_obj), "Group"]
+        cell_obj$DisplayGroup=designdata[colnames(cell_obj), "DisplayGroup"]
       }else{
         #pseudo_bulk
         cells<-clusterDf[clusterDf[,cluster_name] == cellType,]
-        cells<-cells[cells$orig.ident %in% design_data$Sample,]
+        cells<-cells[cells$orig.ident %in% designdata$Sample,]
         cell_obj<-subset(obj, cells=rownames(cells))
 
-        gmap<-unlist(split(design_data$Group, design_data$Sample))
-        gdismap<-unlist(split(design_data$DisplayGroup, design_data$Sample))
+        gmap<-unlist(split(designdata$Group, designdata$Sample))
+        gdismap<-unlist(split(designdata$DisplayGroup, designdata$Sample))
 
         cell_obj@meta.data$Group=gmap[cell_obj$orig.ident]
         cell_obj@meta.data$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=names(groupColors))
@@ -140,7 +136,7 @@ for (comp in rownames(edgeRres)){
 
       #we have to use more than one genes for scaling
       scale_genes=unique(c(rownames(cell_obj)[1:5], siggenes$gene))
-      cell_obj = ScaleData(cell_obj, features=scale_genes, assay="RNA", vars.to.regress=vars.to.regress)
+      cell_obj = myScaleData(cell_obj, features=scale_genes, assay="RNA", vars.to.regress=vars.to.regress)
 
       heatmap_height=min(8, max(4, 0.4*sigGene))
       if(grepl("^5", packageVersion("Seurat"))){
@@ -191,17 +187,16 @@ for (comp in rownames(edgeRres)){
       topNgenes<-siggenes$gene[1:topN]
 
       pdf(file=visFile, onefile = T, width=width, height=10)
-      siggene<-topNgenes[1]
+      sig_gene<-topNgenes[1]
       is_first=TRUE
       for (sig_gene in topNgenes){
         p<-get_sig_gene_figure( cell_obj, 
                                 sigout, 
-                                design_data, 
+                                designdata, 
                                 sig_gene, 
                                 DE_by_cell=DE_by_cell, 
                                 is_between_cluster=bBetweenCluster, 
-                                log_cpm=log_cpm,
-                                scale_data=FALSE)
+                                log_cpm=log_cpm)
 
         print(p)
         if(is_first){
@@ -255,4 +250,3 @@ if(!bBetweenCluster){
 }
 
 write.csv(all_sigout, file=paste0(detail_folder, outFile, ".allsigout.csv"), quote=F)
-
