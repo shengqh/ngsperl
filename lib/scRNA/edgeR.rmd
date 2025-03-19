@@ -164,6 +164,8 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
       }
       design_data=design_data |> dplyr::arrange(Group, Sample)
 
+      cur_prefix = ifelse(de_by_cell, file_prefix, folder_prefix)
+
       if(!all(is.na(num_cell))){
         ct_num_cell<-subset(num_cell, cell_type == ct)
         ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
@@ -175,19 +177,19 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
       result<-paste0(result,"\n### Design table\n\n")
       result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
 
-      mds_png<-paste0(folder_prefix, ct_comp_name, ".mds.png")
+      mds_png<-paste0(cur_prefix, ct_comp_name, ".mds.png")
       if(file.exists(mds_png)){
         result<-paste0(result,"\n### Multidimensional scaling plot\n\nPlot samples on a two-dimensional scatterplot so that distances on the plot approximate the expression differences between the samples.\n\n")
         result<-paste0(result, getFigure(mds_png))
       }
 
-      pca_png<-paste0(folder_prefix, ct_comp_name, ".pca.png")
+      pca_png<-paste0(cur_prefix, ct_comp_name, ".pca.png")
       if(file.exists(pca_png)){
         result<-paste0(result,"\n### PCA plot\n\n")
         result<-paste0(result, getFigure(pca_png))
       }
 
-      heatmap_png<-paste0(folder_prefix, ct_comp_name, ".log_cpm.heatmap.png")
+      heatmap_png<-paste0(cur_prefix, ct_comp_name, ".log_cpm.heatmap.png")
       if(file.exists(heatmap_png)){
         result<-paste0(result,"\n### heatmap plot\n\n")
         result<-paste0(result, getFigure(heatmap_png))
@@ -201,19 +203,16 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
         result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
         result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
 
-        top_gene_png<-paste0(folder_prefix, ct_comp_name, ".top_1_gene.png")
+        volcano_png<-paste0(cur_prefix, ct_comp_name, ".volcano.png")
+        if(file.exists(volcano_png)){
+          result<-paste0(result,"\n#### Volcano plot\n\n")
+          result<-paste0(result, getFigure(volcano_png))
+        }
+
+        top_gene_png<-paste0(cur_prefix, ct_comp_name, ".top_1_gene.png")
         if(file.exists(top_gene_png)){
+          result<-paste0(result,"\n#### Top 1 gene plot\n\n")
           result<-paste0(result, getFigure(top_gene_png))
-        }
-
-        volcano_png<-paste0(folder_prefix, ct_comp_name, ".volcano.png")
-        if(file.exists(volcano_png)){
-          result<-paste0(result, getFigure(volcano_png))
-        }
-
-        volcano_png<-paste0(file_prefix, ct_comp_name, ".volcano.png")
-        if(file.exists(volcano_png)){
-          result<-paste0(result, getFigure(volcano_png))
         }
       }
     }
