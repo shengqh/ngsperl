@@ -188,7 +188,7 @@ for (comp in comparisonNames){
     
     prefixList<-get_valid_path(cts)
 
-    idx<-14
+    idx<-5
     for (idx in c(1:length(cts))){
       ct = cts[idx]
       cat("  ", as.character(ct), "\n")
@@ -295,6 +295,9 @@ for(idx in c(1:nrow(designMatrix))){
   groups<-designdata$Group
   
   de_obj<-subset(obj, cells=designdata$Cell)
+  #designdata is generated from corresponding de_obj, so the order of cells should be the same
+  stopifnot(colnames(de_obj) == designdata$Cell)
+
   cells<-as.matrix( MyGetAssayData(de_obj, "RNA", "counts"))
 
   #filter genes with zero count
@@ -326,6 +329,9 @@ for(idx in c(1:nrow(designMatrix))){
   
   variables = c("cdr")
   if(sampleInGroup){
+    # For comparison in each cluster, the sample would be in each group, if we put sample in the design matrix, 
+    # it will be confounded with group and failed in estimateDisp: 
+    # Design matrix not of full rank.  The following coefficients not estimable: Groupsample
     if(length(unique(designdata$Sample)) > 1){
       variables = c(variables, "Sample")
     }
