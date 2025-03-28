@@ -5,12 +5,13 @@ library(data.table)
 # targetscan_folder = folder with target scan database
 # species = mmu or hsa
 # prediction:
+# Both_conserved: conserved sites of conserved miRNA families
 # conserved: conserved and non conserved sites of conserved miRNA families
 # non conserved: conserved and non conserved sites of non conserved miRNA families
 # all: conserved and non conserved sites of conserved and non conserved miRNA families
 # project_name: name that will be used to save txt
 
-targetscan <- function(miRNA_vec, targetscan_folder, species=c("hsa","mmu"), prediction=c('Conserved','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
+targetscan <- function(miRNA_vec, targetscan_folder, species=c("hsa","mmu"), prediction=c('Both_conserved', 'Conserved','Nonconserved','All'), save_targets= FALSE, project_name=NULL) {
   species<-match.arg(species)
 
   prediction<-match.arg(prediction)
@@ -27,7 +28,11 @@ targetscan <- function(miRNA_vec, targetscan_folder, species=c("hsa","mmu"), pre
   
   family_file = paste0(targetscan_folder, "/", paste0(taxoid, "_miR_Family_Info.txt"))
   
-  data_file = paste0(targetscan_folder, "/", paste0(taxoid, "_", prediction, "_Family_Info.txt"))
+  if(prediction == "Both_conserved"){
+    data_file = paste0(targetscan_folder, "/", paste0(taxoid, "_Predicted_Targets_Info.default_predictions.txt"))
+  }else{
+    data_file = paste0(targetscan_folder, "/", paste0(taxoid, "_", prediction, "_Family_Info.txt"))
+  }
   
   family <- fread(family_file, data.table = F, select = c(1,4))
   pred <- fread(data_file, data.table = F)
