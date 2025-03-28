@@ -57,6 +57,14 @@ prefix<-outFile
 
 species=myoptions$species
 
+ignore_variable_genes=c()
+if("ignore_variable_gene_file" %in% names(myoptions)){
+  ignore_variable_gene_file = myoptions$ignore_variable_gene_file
+  if(ignore_variable_gene_file != ""){
+    ignore_variable_genes=readLines(ignore_variable_gene_file)
+  }
+}
+
 finalListFile<-paste0(prefix, ".final.rds")
 
 obj<-readRDS(parFile1)
@@ -89,6 +97,10 @@ assay=ifelse(by_sctransform, "SCT", "RNA")
 obj<-do_normalization(obj, selection.method="vst", nfeatures=2000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
 
 DefaultAssay(obj)<-assay
+
+if(length(ignore_variable_genes) > 0){
+  VariableFeatures(obj) <- setdiff(VariableFeatures(obj), ignore_variable_genes)
+}
 
 cat("RunPCA ... \n")
 obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)

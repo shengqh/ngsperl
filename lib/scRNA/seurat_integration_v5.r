@@ -59,6 +59,14 @@ if(is_unix){
 pca_dims<-1:as.numeric(myoptions$pca_dims)
 cur_assay=ifelse(by_sctransform, "SCT", "RNA")
 
+ignore_variable_genes=c()
+if("ignore_variable_gene_file" %in% names(myoptions)){
+  ignore_variable_gene_file = myoptions$ignore_variable_gene_file
+  if(ignore_variable_gene_file != ""){
+    ignore_variable_genes=readLines(ignore_variable_gene_file)
+  }
+}
+
 obj<-readRDS(parFile1)
 
 # No matter scTransform or not, we need to normalize the object in order to get average expression later.
@@ -115,6 +123,10 @@ if(!file.exists(integrated_obj_file)){
   }else{
     cat("Reading normalized object from file:", normalized_obj_file, "\n")
     obj<-readRDS(normalized_obj_file)
+  }
+
+  if(length(ignore_variable_genes) > 0){
+    VariableFeatures(obj) <- setdiff(VariableFeatures(obj), ignore_variable_genes)
   }
 
   cat("RunPCA ... \n")

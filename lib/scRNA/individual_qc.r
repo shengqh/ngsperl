@@ -60,6 +60,14 @@ output_object=is_one(myoptions$output_object)
 
 species=myoptions$species # Hs or Mm
 
+ignore_variable_genes=c()
+if("ignore_variable_gene_file" %in% names(myoptions)){
+  ignore_variable_gene_file = myoptions$ignore_variable_gene_file
+  if(ignore_variable_gene_file != ""){
+    ignore_variable_genes=readLines(ignore_variable_gene_file)
+  }
+}
+
 #raw data file locations
 SampleInfos<-read.table("fileList1.txt", stringsAsFactors = F)
 colnames(SampleInfos)<-c("countfile", "SampleId")
@@ -121,7 +129,8 @@ for (i in 1:nrow(SampleInfos)) {
                     by_sctransform = by_sctransform,
                     use_sctransform_v2 = use_sctransform_v2,
                     output_object = output_object,
-                    vars.to.regress = vars.to.regress)
+                    vars.to.regress = vars.to.regress,
+                    ignore_variable_genes = ignore_variable_genes)
   
   object.list<-c(object.list, info)
 }

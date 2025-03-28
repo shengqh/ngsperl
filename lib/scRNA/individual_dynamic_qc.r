@@ -1,16 +1,16 @@
 rm(list=ls()) 
-sample_name='Adipose_9240'
-outFile='Adipose_9240'
+sample_name='KA_0001'
+outFile='KA_0001'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/data/cqs/shengq2/program/collaborations/celestine_wanjalla/20230115_combined_scRNA_hg38/20230501_filter_config.txt'
+parFile1=''
 parFile2=''
-parFile3='/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/essential_genes/result/combined.txt'
+parFile3='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250325_T01_cellbender/essential_genes/result/T01_cellbender.txt'
 
 
-setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/raw_dynamic_qc_sct2/result/Adipose_9240')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250325_T01_cellbender/cellbender_raw_dynamic_qc_sct2/result/KA_0001')
 
 ### Parameter setting end ###
 
@@ -64,6 +64,14 @@ if("ensembl_gene_map_file" %in% names(myoptions)){
     gene_tb=gene_tb[!duplicated(gene_tb$ENSEMBL_GENE_ID),]
     gene_tb=gene_tb[gene_tb$ENSEMBL_GENE_ID != "",]
     ensembl_map = split(gene_tb$GENE_SYMBOL, gene_tb$ENSEMBL_GENE_ID)
+  }
+}
+
+ignore_variable_genes=c()
+if("ignore_variable_gene_file" %in% names(myoptions)){
+  ignore_variable_gene_file = myoptions$ignore_variable_gene_file
+  if(ignore_variable_gene_file != ""){
+    ignore_variable_genes=readLines(ignore_variable_gene_file)
   }
 }
 
@@ -251,6 +259,8 @@ obj <- do_analysis( tmp_folder = tmp_folder,
                     essential_genes = essential_genes,
                     by_individual_sample = FALSE,
                     species = species,
-                    reduction="pca")
+                    reduction="pca",
+                    ignore_variable_genes=ignore_variable_genes)
 
 saveRDS(obj, file=paste0(prefix, ".obj.rds"))
+

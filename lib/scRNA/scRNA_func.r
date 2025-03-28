@@ -108,6 +108,7 @@ is_file_empty<-function(filepath){
 }
 
 ggvenn_2_set<-function(venn_data){
+  library(ggvenn)
   g=ggvenn(venn_data, set_name_size=0) + 
     annotate("text", x = -0.8, y = 1.15, label = names(venn_data)[1], size = 5, hjust = 0.5) +
     annotate("text", x = 0.8, y = 1.15, label = names(venn_data)[2], size = 5, hjust = 0.5) 
@@ -503,22 +504,6 @@ add_celltype<-function(obj, celltype_df, celltype_column){
   return(obj)
 }
 
-run_pca<-function(object, Remove_Mt_rRNA, rRNApattern, Mtpattern, pca_dims, by_sctransform){
-  if (by_sctransform) {
-    object <- RunPCA(object = object, verbose=FALSE)
-  }else{
-    if (Remove_Mt_rRNA) {
-      rRNA.genes <- grep(pattern = rRNApattern,  rownames(object), value = TRUE)
-      Mt.genes<- grep (pattern= Mtpattern,rownames(object), value=TRUE )
-      var.genes <- dplyr::setdiff(VariableFeatures(object), c(rRNA.genes,Mt.genes))
-    } else {
-      var.genes <- VariableFeatures(object)
-    }
-    object <- RunPCA(object = object, features = var.genes, verbose=FALSE)
-  }
-  return(object)
-}
-
 run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction="pca"){
   object <- FindNeighbors(object = object, reduction=reduction, dims=pca_dims, verbose=FALSE)
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
@@ -668,7 +653,13 @@ MyGetAssayData<-function(obj, assay, slot){
   }
 }
 
-do_normalization<-function(obj, selection.method="vst", nfeatures=2000, vars.to.regress=NULL, scale.all=FALSE, essential_genes=NULL) {
+do_normalization<-function( obj, 
+                            selection.method="vst", 
+                            nfeatures=2000, 
+                            vars.to.regress=NULL, 
+                            scale.all=FALSE, 
+                            essential_genes=NULL,
+                            ignore_variable_genes=c()) {
   DefaultAssay(obj)<-"RNA"
 
   cat("NormalizeData ... \n")
@@ -677,6 +668,7 @@ do_normalization<-function(obj, selection.method="vst", nfeatures=2000, vars.to.
   
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
+  VariableFeatures(obj) <- setdiff(rownames(obj), ignore_variable_genes)
   cat("FindVariableFeatures done ... \n")
   
   if(scale.all){
@@ -696,7 +688,12 @@ do_normalization<-function(obj, selection.method="vst", nfeatures=2000, vars.to.
   return(obj)
 }
 
-do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FALSE, mc.cores=1, use_sctransform_v2=TRUE) {
+do_sctransform<-function( rawobj, 
+                          vars.to.regress=NULL, 
+                          return.only.var.genes=FALSE, 
+                          mc.cores=1, 
+                          use_sctransform_v2=TRUE,
+                          ignore_variable_genes=c()) {
   vst.flavor = ifelse(use_sctransform_v2, "v2", "v1")
 
   print(paste0("performing SCTransform by ", vst.flavor, " ..."))
@@ -735,21 +732,34 @@ do_sctransform<-function(rawobj, vars.to.regress=NULL, return.only.var.genes=FAL
     }
 
     #https://github.com/satijalab/seurat/issues/2814
-    VariableFeatures(obj[["SCT"]]) <- rownames(obj[["SCT"]]@scale.data)
+    VariableFeatures(obj[["SCT"]]) <- setdiff(rownames(obj[["SCT"]]@scale.data), ignore_variable_genes)
     rm(objs)
     return(obj)
   }else{
     print("  perform sctransform ...")
     rawobj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
     print("  sctransform done")
+    VariableFeatures(rawobj[["SCT"]]) <- setdiff(rownames(rawobj[["SCT"]]@scale.data), ignore_variable_genes)
     return(rawobj)
   }
 }
 
-do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch_file, pca_dims, essential_genes=NULL, mc.cores=1,use_sctransform_v2=TRUE){
+do_harmony<-function(obj, by_sctransform, 
+                    vars.to.regress, 
+                    has_batch_file, 
+                    batch_file, 
+                    pca_dims, 
+                    essential_genes=NULL, 
+                    mc.cores=1,
+                    use_sctransform_v2=TRUE,
+                    ignore_variable_genes=c()){
   if(by_sctransform){
     #now perform sctranform
-    obj<-do_sctransform(obj, vars.to.regress=vars.to.regress,mc.cores=mc.cores,use_sctransform_v2=use_sctransform_v2)
+    obj<-do_sctransform(obj, 
+                        vars.to.regress=vars.to.regress,
+                        mc.cores=mc.cores,
+                        use_sctransform_v2=use_sctransform_v2,
+                        ignore_variable_genes=ignore_variable_genes)
     assay="SCT"
   }else{
     assay="RNA"
@@ -758,7 +768,13 @@ do_harmony<-function(obj, by_sctransform, vars.to.regress, has_batch_file, batch
   #no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
   #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
   #we need to do sctransform first, then do RNA assay normalization and scale, otherwise, after sctransform, the scale.data slot will be discarded.
-  obj<-do_normalization(obj, selection.method="vst", nfeatures=2000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+  obj<-do_normalization(obj, 
+                        selection.method="vst", 
+                        nfeatures=2000, 
+                        vars.to.regress=vars.to.regress, 
+                        scale.all=FALSE, 
+                        essential_genes=essential_genes,
+                        ignore_variable_genes=ignore_variable_genes)
 
   DefaultAssay(obj)<-assay
 
@@ -1990,7 +2006,12 @@ do_PCA_Integration<-function( subobj,
                               new.reduction, 
                               orig.reduction="pca",
                               thread=1,
-                              detail_prefix=NULL) {
+                              detail_prefix=NULL,
+                              ignore_variable_genes=c()) {
+  if(length(ignore_variable_genes) > 0){
+    VariableFeatures(subobj) <- setdiff(VariableFeatures(subobj), ignore_variable_genes)
+  }
+
   cat("RunPCA ... \n")
   subobj <- RunPCA(object = subobj, assay=assay, verbose=FALSE)
 
@@ -2071,7 +2092,8 @@ sub_cluster<-function(subobj,
                      reduction.name = "umap",
                      redo_fastmnn = FALSE,
                      thread=1,
-                     detail_prefix=NULL
+                     detail_prefix=NULL,
+                     ignore_variable_genes=c()
 ){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
@@ -2119,8 +2141,15 @@ sub_cluster<-function(subobj,
         #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
       }else{
         cat(key, "redo normalization\n")
-        subobj<-do_normalization(subobj, selection.method="vst", nfeatures=2000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+        subobj<-do_normalization( subobj, 
+                                  selection.method="vst", 
+                                  nfeatures=2000, 
+                                  vars.to.regress=vars.to.regress, 
+                                  scale.all=FALSE, 
+                                  essential_genes=essential_genes,
+                                  ignore_variable_genes=ignore_variable_genes)
       }
+
       cat(key, "RunPCA\n")
       subobj<-RunPCA(subobj, npcs=cur_npcs)
     }
@@ -2804,7 +2833,8 @@ iterate_celltype<-function(obj,
                            bubblemap_file, 
                            essential_genes,
                            species="Hs",
-                           reduction="pca"){
+                           reduction="pca",
+                           ignore_variable_genes=c()){
   meta = obj@meta.data
   
   assay=ifelse(by_sctransform, "SCT", "RNA")
@@ -2883,7 +2913,8 @@ iterate_celltype<-function(obj,
                             vars.to.regress = vars.to.regress,
                             essential_genes = essential_genes,
                             key = key,
-                            detail_prefix = curprefix)
+                            detail_prefix = curprefix,
+                            ignore_variable_genes = ignore_variable_genes)
     }
     
     cat(key, "Cell type annotation\n")
@@ -2984,8 +3015,9 @@ layer_cluster_celltype<-function(obj,
                                  vars.to.regress,
                                  bubblemap_file,
                                  essential_genes,
-                                 species=species,
-                                 reduction="pca"){
+                                 species,
+                                 reduction="pca",
+                                 ignore_variable_genes=c()){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -3034,7 +3066,8 @@ layer_cluster_celltype<-function(obj,
                             bubblemap_file, 
                             essential_genes,
                             species=species,
-                            reduction=reduction)
+                            reduction=reduction,
+                            ignore_variable_genes=ignore_variable_genes)
 
       all_cur_cts<-lst$all_cur_cts
       cur_files<-lst$files
@@ -3117,7 +3150,8 @@ do_analysis<-function(tmp_folder,
                       species="Hs",
                       init_layer="layer0",
                       final_layer="layer4",
-                      reduction="pca") {
+                      reduction="pca",
+                      ignore_variable_genes=ignore_variable_genes) {
   tmp_prefix=file.path(tmp_folder, prefix)
   cur_prefix=file.path(cur_folder, prefix)
 
@@ -3135,7 +3169,8 @@ do_analysis<-function(tmp_folder,
                                     bubblemap_file = bubblemap_file,
                                     essential_genes = essential_genes,
                                     species=species,
-                                    reduction=reduction)
+                                    reduction=reduction,
+                                    ignore_variable_genes=ignore_variable_genes)
   obj=reslist1$obj
   files=reslist1$files
   rm(reslist1)

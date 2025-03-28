@@ -272,7 +272,8 @@ preprocess<-function( SampleInfo,
                       by_sctransform=0,
                       use_sctransform_v2=0,
                       output_object=0,
-                      vars.to.regress=c("percent.mt")) {
+                      vars.to.regress=c("percent.mt"),
+                      ignore_variable_genes=c()) {
 
   by_sctransform_v2 = by_sctransform & use_sctransform_v2
 
@@ -447,11 +448,20 @@ preprocess<-function( SampleInfo,
     #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
     subobj <- NormalizeData(subobj)
     subobj <- FindVariableFeatures(subobj, selection.method = "vst", nfeatures = 2000)
+
+    if(length(ignore_variable_genes) > 0){
+      VariableFeatures(subobj) <- setdiff(VariableFeatures(subobj), ignore_variable_genes)
+    }
+
     var.genes <- VariableFeatures(subobj)
     subobj <- ScaleData(subobj, vars.to.regress=vars.to.regress)
 
     if(by_sctransform){
-      subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress, use_sctransform_v2=use_sctransform_v2)
+      subobj<-do_sctransform( subobj, 
+                              vars.to.regress=vars.to.regress, 
+                              use_sctransform_v2=use_sctransform_v2,
+                              ignore_variable_genes=ignore_variable_genes)
+      DefaultAssay(subobj)<-"SCT"
       assay="SCT"
       var.genes <- VariableFeatures(subobj[["SCT"]])
       ndim = 30

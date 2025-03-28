@@ -60,6 +60,15 @@ if(regress_by_percent_mt){
   vars.to.regress=NULL
 }
 
+
+ignore_variable_genes=c()
+if("ignore_variable_gene_file" %in% names(myoptions)){
+  ignore_variable_gene_file = myoptions$ignore_variable_gene_file
+  if(ignore_variable_gene_file != ""){
+    ignore_variable_genes=readLines(ignore_variable_gene_file)
+  }
+}
+
 obj<-do_harmony(
   obj = obj, 
   by_sctransform = by_sctransform, 
@@ -69,7 +78,8 @@ obj<-do_harmony(
   pca_dims = pca_dims,
   essential_genes=essential_genes, 
   mc.cores=8, 
-  use_sctransform_v2=use_sctransform_v2)
+  use_sctransform_v2=use_sctransform_v2,
+  ignore_variable_genes=ignore_variable_genes)
 
 reduction="harmony"
 

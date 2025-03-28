@@ -321,6 +321,7 @@ sub add_seurat {
       is_preprocessed => $is_preprocessed,
       thread => $integration_thread,
       conda_env => $def->{conda_env},
+      ignore_variable_gene_file => $def->{ignore_variable_gene_file},
     },
     parameterSampleFile2 =>  $def->{"batch_for_integration_groups"},
     output_file_ext      => ".final.rds",
@@ -2772,7 +2773,6 @@ sub add_individual_dynamic_qc {
       dynamic_by_one_resolution => getValue( $def, "dynamic_by_one_resolution", 0.2 ),
       redo_harmony          => getValue( $def, "subcluster_redo_harmony", 0),
       layer                 => getValue( $def, "dynamic_layer", "Layer4"),
-
       Mtpattern             => getValue( $def, "Mtpattern" ),
       rRNApattern           => getValue( $def, "rRNApattern" ),
       Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
@@ -2781,6 +2781,7 @@ sub add_individual_dynamic_qc {
       nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
       nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
       mt_cutoff             => getValue( $def, "mt_cutoff" ),
+      ignore_variable_gene_file => $def->{"ignore_variable_gene_file"},
     },
     parameterSampleFile4 => getValue($def, "dynamic_combine_cell_types", {}),
     parameterFile1 => $qc_filter_config_file,
@@ -3445,6 +3446,31 @@ sub add_fragment_cells {
 
 sub add_cellbender_v2 {
   my ($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref ) = @_;
+
+  if($def->{cellbender_extract_gene_expression_h5}){
+    my $cellbender_extract_gene_expression_task = $cellbender_prefix . "_00_extract_gene_expression_h5";
+    my $suffix = ".raw_gex_feature_bc_matrix.h5";
+    $config->{$cellbender_extract_gene_expression_task} = {
+      class => "CQS::IndividualR",
+      perform => 1,
+      target_dir => "${target_dir}/$cellbender_extract_gene_expression_task",
+      rtemplate => "reportFunctions.R;../scRNA/extract_gene_expression_h5.r",
+      parameterSampleFile1_ref => $raw_files_def,
+      parameterSampleFile2 => {
+        suffix => $suffix
+      },
+      output_file_ext => ".raw_gex_feature_bc_matrix.h5",
+      sh_direct => 1,
+      pbs => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push(@$tasks, $cellbender_extract_gene_expression_task);
+    $raw_files_def = [ $cellbender_extract_gene_expression_task, ".raw_gex_feature_bc_matrix.h5" ];
+  }
+
   my $expect_cells_task = $cellbender_prefix . "_01_expect_cells";
   $config->{$expect_cells_task} = {
     class => "CQS::IndividualR",
@@ -3486,7 +3512,8 @@ echo total_droplets_included=\$total_droplets_included
 
 cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
 
-rm -f ckpt.tar.gz
+rm -f ckpt.tar.gz .cache .config .ipython .jupyter
+
 ",
     docker_prefix => "cellbender_",
     parameterSampleFile1_ref => $raw_files_def,
