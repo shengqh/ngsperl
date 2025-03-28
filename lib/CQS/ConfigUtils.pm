@@ -34,6 +34,7 @@ our %EXPORT_TAGS = (
       is_hash
       is_not_hash
       copy_files
+      getValueDefaultUndef
       getValue
       get_config_section
       has_config_section
@@ -149,6 +150,24 @@ sub is_hash {
 
 sub is_not_hash {
   return not is_hash(@_);
+}
+
+sub getValueDefaultUndef {
+  my ( $def, $name ) = @_;
+  if ( defined $def->{$name} ) {
+    return $def->{$name};
+  }
+
+  if(is_array($name)){
+    for my $n (@$name){
+      #print("check $n\n");
+      if ( defined $def->{$n} ) {
+        #print("find " . $def->{$n}. "\n");
+        return $def->{$n};
+      }
+    }
+  }
+  return undef;
 }
 
 sub getValue {
