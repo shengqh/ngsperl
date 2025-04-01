@@ -268,7 +268,7 @@ STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusio
       parameterSampleFile1_join_delimiter => " \\\n  --right_fq ",
       parameterSampleFile1_ref => $fastq_source_ref,
       output_ext => "_star-fusion.fusion_predictions.tsv",
-      output_file_ext => "_star-fusion.fusion_predictions.tsv,.version,_star-fusion.fusion_predictions.abridged.coding_effect.tsv",
+      output_file_ext => ".version,_star-fusion.fusion_predictions.abridged.coding_effect.tsv",
       docker_prefix => "star_fusion_",
       output_to_same_folder     => 0,
       no_output                 => 1,
