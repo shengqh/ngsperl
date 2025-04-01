@@ -14,11 +14,9 @@ setwd('/nobackup/h_cqs/jennifer_pietenpol_projects/20241213_CALGB40603_rnaseq_hg
 
 library(data.table)
 library(dplyr)
+library(ggplot2)
 
 filemap=read.table(parSampleFile1, header=F)
-filemap=split(filemap$V1, filemap$V2)
-
-fname=names(filemap)[1]
 
 fusion_count=unlist(lapply(filemap$V1, function(x){
   filedata=fread(x)
