@@ -116,7 +116,7 @@ valid_de = de_stat |>
 sig_de = valid_de |>
   dplyr::filter(pval_corrected_across_genes < 0.05) |>
   dplyr::filter(abs(logFC) > logFC_criteria) |>
-  dplyr::select(-Nhood_center, -test_performed) |>
+  dplyr::select(-test_performed) |>
   dplyr::arrange(Nhood, pval)
 
 sig_de_df = merge(sig_de, 
