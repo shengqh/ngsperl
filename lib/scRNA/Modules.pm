@@ -111,6 +111,8 @@ our %EXPORT_TAGS = ( 'all' => [qw(
   add_dcats
 
   add_cell_chat
+
+  add_miloR_miloDE
 )] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
@@ -3728,6 +3730,117 @@ sub add_cell_chat {
   };
 
   push( @$tasks, $summary_task );
+}
+
+sub add_miloR_miloDE {
+  my ($config, $def, $tasks, $target_dir, $obj_file) = @_;
+
+  my $ct_name= "Bulk";
+  my $condition_column = getValue($def, "milo_condition_column");
+  my $annotation_column = getValue($def, "milo_annotation_column");
+  my $visulization_reduction = getValue($def, "milo_visulization_reduction");
+  my $neighbourhood_reduction = getValue($def, "milo_neighbourhood_reduction");
+  my $optimized_neighbour_cells = getValue($def, "milo_optimized_neighbour_cells", "auto");
+  my $miloDE_filter_by_AUC = getValue($def, "miloDE_filter_by_AUC", 0);
+  my $ncores = getValue($def, "milo_ncores", 12);
+  my $memory_gb = getValue($def, "milo_memory_gb", 100);
+  my $walltime = getValue($def, "milo_walltime", 24);
+
+  my $milo_neighbourhood_task = "milo_${ct_name}_1_neighbourhood";
+  $config->{$milo_neighbourhood_task} = {
+    class      => "CQS::IndividualR",
+    perform    => 1,
+    target_dir => "${target_dir}/${milo_neighbourhood_task}",
+    rtemplate => "../scRNA/milo_neighbourhood.r",
+    rReportTemplate => "../scRNA/milo_neighbourhood.rmd;reportFunctions.R;../scRNA/scRNA_func.r",
+    run_rmd_independent => 1,
+    rmd_ext => ".milo_neighbourhood.html",
+    option     => "",
+    init_command => "echo \$SLURM_JOB_NODELIST; df /tmp; ",
+    parameterSampleFile1_ref => "pairs",
+    parameterSampleFile2 => {
+      "celltype" => $ct_name,
+      "ncores" => $ncores,
+      "optimized_neighbour_cells" => $optimized_neighbour_cells,
+      "visulization_reduction" => $visulization_reduction,
+      "neighbourhood_reduction" => $neighbourhood_reduction,
+      "annotation_column" => $annotation_column,
+      "condition_column" => $condition_column,
+    },
+    parameterFile1 => $obj_file,
+    output_ext => ".$ct_name.milo.neighbourhoods.rds,.$ct_name.nhoods_annotation.csv",
+    sh_direct => 0,
+    pbs       => {
+      "nodes"     => "1:ppn=$ncores",
+      "walltime"  => "$walltime",
+      "mem"       => "${memory_gb}gb"
+    },
+  };
+  push @$tasks, $milo_neighbourhood_task;
+
+  my $miloR_task = "milo_${ct_name}_2_miloR";
+  $config->{$miloR_task} = {
+    class      => "CQS::IndividualR",
+    perform    => 1,
+    target_dir => "${target_dir}/${miloR_task}",
+    rtemplate => "../scRNA/miloR.r",
+    rReportTemplate => "../scRNA/miloR.rmd;reportFunctions.R;../scRNA/scRNA_func.r",
+    run_rmd_independent => 1,
+    rmd_ext => ".miloR.html",
+    option     => "",
+    init_command => "echo \$SLURM_JOB_NODELIST; df /tmp; ",
+    parameterSampleFile1_ref => "pairs",
+    parameterSampleFile2 => {
+      "celltype" => $ct_name,
+      "ncores" => $ncores,
+      "SpatialFDR" => 0.1,
+      "visulization_reduction" => $visulization_reduction,
+      "neighbourhood_reduction" => $neighbourhood_reduction,
+      "annotation_column" => $annotation_column,
+      "condition_column" => $condition_column,
+    },
+    parameterSampleFile4_ref => [$milo_neighbourhood_task, "neighbourhoods.rds"],
+    output_ext => ".$ct_name.miloR_da.rds",
+    sh_direct => 0,
+    pbs       => {
+      "nodes"     => "1:ppn=$ncores",
+      "walltime"  => "$walltime",
+      "mem"       => "${memory_gb}gb"
+    },
+  };
+  push @$tasks, $miloR_task;
+
+  my $miloDE_task = "milo_${ct_name}_3_miloDE";
+  $config->{$miloDE_task} = {
+    class      => "CQS::IndividualR",
+    perform    => 1,
+    target_dir => "${target_dir}/${miloDE_task}",
+    rtemplate => "../scRNA/miloDE.r",
+    rReportTemplate => "../scRNA/miloDE.rmd;reportFunctions.R;../scRNA/scRNA_func.r",
+    run_rmd_independent => 1,
+    rmd_ext => ".miloDE.html",
+    option     => "",
+    init_command => "echo \$SLURM_JOB_NODELIST; df /tmp; ",
+    parameterSampleFile1_ref => "pairs",
+    parameterSampleFile2 => {
+      "celltype" => $ct_name,
+      "ncores" => $ncores,
+      "filter_by_AUC" => $miloDE_filter_by_AUC,
+      "visulization_reduction" => $visulization_reduction,
+      "neighbourhood_reduction" => $neighbourhood_reduction,
+      "annotation_column" => $annotation_column,
+      "condition_column" => $condition_column,
+    },
+    parameterSampleFile4_ref => [$milo_neighbourhood_task, "neighbourhoods.rds"],
+    output_ext => ".$ct_name.miloDE.rds",
+    sh_direct => 0,
+    pbs       => {
+      "nodes"     => "1:ppn=$ncores",
+      "walltime"  => "$walltime",
+      "mem"       => "${memory_gb}gb"
+    },
+  };
+  push @$tasks, $miloDE_task;
 }
 
 1;

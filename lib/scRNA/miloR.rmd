@@ -29,11 +29,6 @@ source('scRNA_func.r')
 ```
 
 ```{r}
-load_install('SparseArray', 'Bioconductor/SparseArray')
-load_install("miloR")
-load_install("miloDE")
-load_install("viridis")
-
 pairs = fread("fileList1.txt", header=FALSE, data.table=FALSE)
 comparison = unique(pairs$V3)
 ```
@@ -48,75 +43,31 @@ print_table(myoptions, row.names=FALSE)
 ```
 
 ```{r}
-myoptions = split(myoptions$Value, myoptions$Variable)
-ct = myoptions$celltype
-cluster_id = myoptions$cluster_id
-sub_cluster_id = myoptions$sub_cluster_id
-reduction = myoptions$reduction
-SpatialFDR = as.numeric(myoptions$SpatialFDR)
+ct = myoptions |> dplyr::filter(Variable=="celltype") |> dplyr::pull(Value)
+SpatialFDR = as.numeric(myoptions |> dplyr::filter(Variable=="SpatialFDR") |> dplyr::pull(Value))
 
-file_prefix=paste0(comparison, ".", celltype_to_filename(ct))
-best_k=readLines(paste0(file_prefix, ".best_k.txt")) |> as.numeric()
+prefix=paste0(comparison, ".", celltype_to_filename(ct))
 ```
 
 ---
 title: "miloR of `r ct` of comparison `r comparison`"
 ---
 
-```{r}
-#comp_milo=readRDS(paste0(file_prefix, '.miloR.rds'))
-da_results=read.csv(paste0(file_prefix, '.da_results.csv'))
-group_cell_csv=paste0(file_prefix, ".group_cell.csv")
-```
-
-# Group cell assignment
-
-```{r}
-group_cell = read.csv(group_cell_csv)
-print_table(group_cell, row.names=FALSE)
-```
-
-# UMAP plot
-
-```{r}
-include_graphics(paste0(file_prefix, ".UMAP.png"))
-include_graphics(paste0(file_prefix, ".UMAP.condition.png"))
-```
-
-# Neighbourhoods plot
-
-Plot the distribution of neighbourhood sizes (i.e. how many cells form each neighbourhood) to evaluate whether the value of k=`r best_k` used for graph building was appropriate.
-
-As a rule of thumb we want to have an average neighbourhood size over 5 x N_samples.
-
-```{r}
-include_graphics(paste0(file_prefix, ".nhood.png"))
-```
-
-# Counting cells in neighbourhoods
-
-```{r}
-counts=read.csv(paste0(file_prefix, ".nhood_count.csv"), row.names=1) |>
-  tibble::rownames_to_column("Nhood")
-print_table(counts, byDT=TRUE, row.names=FALSE)
-```
-
-# DA results
-
-## Differential abundance table
+# Differential abundance table
 
 The numbers of cells present in each neighborhood (per experimental sample) were used for differential abundance testing among conditions. 
 
 ```{r}
+da_results=read.csv(paste0(prefix, '.da_results.csv'))
 print_table(da_results, byDT=TRUE, row.names=FALSE)
 ```
 
-## PValue distribution
+# PValue distribution
 
 We first inspect the distribution of uncorrected P values, to verify that the test was balanced.
 
 ```{r}
-include_graphics(paste0(file_prefix, ".PValue.png"))
+include_graphics(paste0(prefix, ".PValue.png"))
 ```
 
 ## Volcano plot
@@ -124,7 +75,7 @@ include_graphics(paste0(file_prefix, ".PValue.png"))
 Then we visualize the test results with a volcano plot (remember that each point here represents a neighbourhood, not a cell).
 
 ```{r}
-include_graphics(paste0(file_prefix, ".volcano.png"))
+include_graphics(paste0(prefix, ".volcano.png"))
 ```
 
 ```{r}
@@ -137,13 +88,22 @@ if(has_da){
 ```
 
 ```{r eval=has_da}
-include_graphics(paste0(file_prefix, ".nhood_graph.png"))
-include_graphics(paste0(file_prefix, ".cluster.DA_beeswarm.png"))
-include_graphics(paste0(file_prefix, ".sub_cluster.DA_beeswarm.png"))
+include_graphics(paste0(prefix, ".nhood_graph.png"))
+```
+
+```{r eval=has_da}
+include_graphics(paste0(prefix, ".annotation.DA_beeswarm.png"))
+```
+
+```{r eval=has_da}
+sub_annotation_beeswarm_png = paste0(prefix, ".sub_annotation.DA_beeswarm.png")
+if(file.exists(sub_annotation_beeswarm_png)){
+  include_graphics(sub_annotation_beeswarm_png)
+}
 ```
 
 # Save the session information
 
 ```{r}
-writeLines(capture.output(sessionInfo()), paste0(file_prefix, '.sessionInfo.txt'))
+writeLines(capture.output(sessionInfo()), paste0(prefix, '.sessionInfo.txt'))
 ```

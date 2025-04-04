@@ -1,0 +1,107 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: yes
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+```
+
+```{r}
+source('reportFunctions.R')
+source('scRNA_func.r')
+
+pairs = fread("fileList1.txt", header=FALSE, data.table=FALSE)
+comparison = unique(pairs$V3)
+
+myoptions_tbl = fread("fileList2.txt", header=FALSE, data.table=FALSE) |> 
+  dplyr::rename(Value=1, Variable=2) |>
+  dplyr::select(Variable, Value)
+  
+print_table(myoptions_tbl, row.names=FALSE)
+  
+myoptions = split(myoptions_tbl$Value, myoptions_tbl$Variable)
+ct = myoptions$celltype
+cluster_id = myoptions$cluster_id
+sce_visulization_reduction = toupper(myoptions$visulization_reduction)
+optimized_neighbor_cells = as.numeric(myoptions$optimized_neighbor_cells)
+
+prefix=paste0(comparison, ".", celltype_to_filename(ct))
+```
+
+---
+title: "milo neighbourhood of `r ct` of comparison `r comparison`"
+---
+
+# Group cell assignment
+
+```{r}
+group_cell = read.csv(paste0(prefix, ".group_cell.csv"))
+print_table(group_cell, row.names=FALSE)
+```
+
+# Estimate neighbourhood sizes
+
+```{r}
+estimate_tbl=readRDS(paste0(prefix, '.estimate_sizes.rds'))
+print_table(estimate_tbl, row.names=FALSE)
+```
+
+```{r}
+include_graphics(paste0(prefix, '.estimate_sizes.png'))
+```
+
+```{r}
+best_k=as.numeric(readLines(paste0(prefix, ".best_k.txt")))
+median_size=estimate_tbl |> dplyr::filter(k==best_k) |> dplyr::pull(med)
+```
+
+K=`r best_k` was picked for a median neighbourhood size closing to `r optimized_neighbor_cells` cells. 
+
+# Neighbourhoods histogram
+
+Plot the distribution of neighbourhood sizes (i.e. how many cells form each neighbourhood) to evaluate whether the value of k=`r best_k` used for graph building was appropriate.
+
+The current median neighbourhood size is `r median_size`.
+
+```{r}
+include_graphics(paste0(prefix, ".nhood_hist.png"))
+```
+
+```{r}
+nhoods_annotation_csv=paste0(prefix, ".nhoods_annotation.csv")
+nhoods_annotation_png=paste0(prefix, ".nhoods_annotation.png")
+```
+
+```{r eval=file.exists(nhoods_annotation_png)}
+cat("# Neighbourhoods annotation\n\nA neighbourhood assignment can be visualised using Milo plots, in which each circle corresponds to a neighbourhood, and edges between them represent shared cells. The center of each neighbourhood are coordinated in 2D latent space (e.g. UMAP) for the center cell of the neighbourhood. We can also colour each neighbourhood by provided metric. In this plot, we will annotate each neighbourhood with its enriched cell type, and colour neighbourhoods by assigned cell types.\n\n")
+include_graphics(nhoods_annotation_png)
+
+cat("Annotation details.\n\n")
+nhoods_annotation=fread(nhoods_annotation_csv)
+print_table(nhoods_annotation, byDT=TRUE, row.names=FALSE)
+```
+
+# Save the session information
+
+```{r}
+writeLines(capture.output(sessionInfo()), paste0(prefix, '.sessionInfo.txt'))
+```
