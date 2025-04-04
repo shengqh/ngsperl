@@ -368,6 +368,18 @@ read_file_map<-function(file_list_path, sep="\t", header=F, do_unlist=TRUE){
   return(result)
 }
 
+get_option_value<-function(myoptions, key, required=FALSE, default=NULL){
+  if(key %in% names(myoptions)){
+    return(myoptions[[key]])
+  }
+  
+  if(required){
+    stop("Missing required option: ", key)
+  }
+
+  return(default)
+}
+
 get_legend_width <- function(g, by="max") {
   gg <- ggplotGrob(g)
   
