@@ -3631,3 +3631,13 @@ process_actions=function(ct_tbl, cur_meta){
   }
   return(cur_meta)
 }
+
+get_nhood_stat_ct <- function(comp_milo, annotation_column){
+  nhoods_sce = nhoods(comp_milo)
+  # assign cell types for nhoods 
+  nhood_stat_ct = data.frame(Nhood = 1:ncol(nhoods_sce) , Nhood_center = colnames(nhoods_sce))
+  nhood_stat_ct = miloR::annotateNhoods(comp_milo , 
+                                        nhood_stat_ct , 
+                                        coldata_col = annotation_column)
+  return(nhood_stat_ct)
+}
