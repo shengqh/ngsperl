@@ -1,0 +1,195 @@
+
+# `r comparison`
+
+```{r}
+neighbourhoods_file=neighbourhoods_files[[comparison]]
+neighbourhoods_file_prefix=gsub(".milo.neighbourhoods.rds","", neighbourhoods_file)
+miloR_file=miloR_files[[comparison]]
+miloR_file_prefix=gsub(".miloR_da.rds","", miloR_file)
+miloDE_file=miloDE_files[[comparison]]
+miloDE_file_prefix=gsub(".miloDE.rds","", miloDE_file)
+```
+
+```{r}
+umap_png=paste0(neighbourhoods_file_prefix, ".umap.png")
+if(file.exists(umap_png)){
+  cat("## UMAP plot\n\n")
+  include_graphics(umap_png)
+}
+```
+
+## Group cell assignment
+
+```{r}
+group_cell = read.csv(paste0(neighbourhoods_file_prefix, ".group_cell.csv"))
+print_table(group_cell, row.names=FALSE)
+```
+
+## Neighbourhoods assignment
+
+### Estimate neighbourhood sizes
+
+```{r}
+estimate_tbl=readRDS(paste0(neighbourhoods_file_prefix, '.estimate_sizes.rds'))
+print_table(estimate_tbl, row.names=FALSE)
+```
+
+```{r}
+include_graphics(paste0(neighbourhoods_file_prefix, '.estimate_sizes.png'))
+```
+
+```{r}
+best_k=as.numeric(readLines(paste0(neighbourhoods_file_prefix, ".best_k.txt")))
+median_size=estimate_tbl |> dplyr::filter(k==best_k) |> dplyr::pull(med)
+```
+
+K=`r best_k` was picked for a median neighbourhood size closing to `r optimized_neighbour_cells` cells. 
+
+### Neighbourhoods histogram
+
+Plot the distribution of neighbourhood sizes (i.e. how many cells form each neighbourhood) to evaluate whether the value of k=`r best_k` used for graph building was appropriate.
+
+The current median neighbourhood size is `r median_size`.
+
+```{r}
+include_graphics(paste0(neighbourhoods_file_prefix, ".nhood_hist.png"))
+```
+
+```{r}
+nhoods_annotation_csv=paste0(neighbourhoods_file_prefix, ".nhoods_annotation.csv")
+nhoods_annotation_png=paste0(neighbourhoods_file_prefix, ".nhoods_annotation.png")
+```
+
+```{r eval=file.exists(nhoods_annotation_png)}
+cat("### Neighbourhoods annotation\n\nA neighbourhood assignment can be visualised using Milo plots, in which each circle corresponds to a neighbourhood, and edges between them represent shared cells. The center of each neighbourhood are coordinated in 2D latent space (e.g. UMAP) for the center cell of the neighbourhood. We can also colour each neighbourhood by provided metric. In this plot, we will annotate each neighbourhood with its enriched cell type, and colour neighbourhoods by assigned cell types.\n\n")
+include_graphics(nhoods_annotation_png)
+
+cat("Annotation details.\n\n")
+nhoods_annotation=fread(nhoods_annotation_csv)
+print_table(nhoods_annotation, byDT=TRUE, row.names=FALSE)
+```
+
+## miloR 
+
+### Differential abundance table
+
+```{r}
+da_results=read.csv(paste0(miloR_file_prefix, '.da_results.csv'))
+print_table(da_results, byDT=TRUE, row.names=FALSE)
+```
+
+### PValue distribution
+
+We first inspect the distribution of uncorrected P values, to verify that the test was balanced.
+
+```{r}
+include_graphics(paste0(miloR_file_prefix, ".PValue.png"))
+```
+
+### Volcano plot
+
+Then we visualize the test results with a volcano plot (remember that each point here represents a neighbourhood, not a cell).
+
+```{r}
+include_graphics(paste0(miloR_file_prefix, ".volcano.png"))
+```
+
+```{r}
+num_da=sum(da_results$FDR <= SpatialFDR)
+has_da=num_da > 0
+if(has_da){
+  cat("### Other figures\n\nThere are", num_da, "DA neighbourhoods with FDR <", SpatialFDR, ".\n")
+}else{
+  cat("There are no DA neighbourhoods with FDR <", SpatialFDR, ".\n")
+}
+```
+
+```{r eval=has_da}
+include_graphics(paste0(miloR_file_prefix, ".nhood_graph.png"))
+```
+
+```{r eval=has_da}
+include_graphics(paste0(miloR_file_prefix, ".annotation.DA_beeswarm.png"))
+```
+
+```{r eval=has_da}
+sub_annotation_beeswarm_png = paste0(miloR_file_prefix, ".sub_annotation.DA_beeswarm.png")
+if(file.exists(sub_annotation_beeswarm_png)){
+  include_graphics(sub_annotation_beeswarm_png)
+}
+```
+
+## miloDE 
+
+```{r}
+auc_png=paste0(miloDE_file_prefix, ".miloDE.auc.png")
+if (file.exists(auc_png)) {
+  cat("### AUC plot\n\nAUC >= 0.5 was used for filtering neighbourhoods for DA test.\n\n")
+  include_graphics(auc_png)
+} 
+```
+
+### Differential expression table
+
+Filter result with pval_corrected_across_genes < 0.05 and abs(Fold change) > 1.5.
+
+```{r}
+sig_de_df = fread(paste0(miloDE_file_prefix, ".miloDE.significant.csv"))
+print_table(sig_de_df, round_value=0, byDT=TRUE, row.names=FALSE)
+```
+
+### DE genes by annotation
+
+For each annotation category, the gene will be counted only once even it is DE in multiple neighbourhoods.
+
+```{r}
+tbl = sig_de_df |> 
+  dplyr::distinct(gene, !!sym(annotation_column)) |>
+  dplyr::group_by(!!sym(annotation_column)) |>
+  dplyr::summarise(n_DE_genes = n()) |>
+  dplyr::arrange(desc(n_DE_genes))
+
+print_table(tbl, byDT=FALSE, row.names=FALSE)
+```
+
+### Volcano plot with all genes 
+
+There might be genes with multiple hits.
+
+```{r}
+volcano_all_png = paste0(miloDE_file_prefix, ".miloDE.volcano_all.png")
+include_graphics(volcano_all_png)
+```
+
+### DE genes in multiple neightbourhoods
+
+```{r}
+dup_sig_de_df = sig_de_df |> 
+  dplyr::filter(gene %in% sig_de_df$gene[duplicated(sig_de_df$gene)]) |>
+  dplyr::arrange(gene, !!sym(annotation_column), pval)
+
+print_table(dup_sig_de_df, round_value=0, byDT=TRUE, row.names=FALSE)
+```
+
+### Volcano plot of unique DE genes 
+
+for each gene, only the one with lowest pvalue in neighbourhood will be kept.
+
+```{r}
+volcano_unique_png=paste0(miloDE_file_prefix, ".miloDE.volcano_unique.png")
+include_graphics(volcano_unique_png)
+```
+
+### Get neighbourhood ranking by the extent of DE
+
+One explanatory question a user might have is an overall scan of which transcriptional regions show noteworthy signs of DE. To do so on a neighbourhood level, we provide the function rank_neighbourhoods_by_DE_magnitude. Within this function, we calculate two metrics:
+
+- n_DE_genes - for each neighbourhood, we calculate how many genes are assigned as DE. Since we are doing it within each neighbourhood, we use pval_corrected_across_genes and we use default pval.thresh=0.1 (can be changed). Note that there is no comparison between neighbourhoods here.
+- n_specific_DE_genes. We also might be interested which neighbourhoods differ from others more so than we would expect. To assess this, we are interested in which neighbourhoods contain genes, that are DE ‘specifically’ in those neighbourhoods. To calculate this, for each gene we now use z-transformation of pval_corrected_across_nhoods, and we identify the neighbourhoods in which z-normalised p-values are lower than a threshold (default z.thresh=-3). This would tell us that the gene is signifciantly DE in the neighbourhood compared to most other neighbourhoods. We do so for each gene, and then for each neighbourhood we calculate how mane genes have z-normalised p-values are lower than a threshold.
+
+Note that for gene/neighbourhood combinations for which p-values are returned as NaNs (e.g. genes are not tested), for this function we set pvalues = 1. In other words, if a gene is only tested in few neighbourhoods to begin with, z-normalised p-value corrected across neighbourhoods is likely to be small for these neighbourhoods.
+
+```{r}
+num_gene_png=paste0(miloDE_file_prefix, ".miloDE.num_gene.png")
+include_graphics(num_gene_png)
+```

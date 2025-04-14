@@ -48,7 +48,15 @@ prefix=paste0(comparison, ".", celltype_to_filename(ct))
 title: "miloDE of `r ct` of comparison `r comparison`"
 ---
 
-# DE table
+```{r}
+auc_png=paste0(prefix, ".miloDE.auc.png")
+if (file.exists(auc_png)) {
+  cat("# AUC plot\n\nAUC >= 0.5 was used for filtering neighbourhoods for DA test.\n\n")
+  include_graphics(auc_png)
+} 
+```
+
+# Differential expression table
 
 Filter result with pval_corrected_across_genes < 0.05 and abs(Fold change) > 1.5.
 

@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='ATC_vs_Normal'
-outFile='ATC_vs_Normal'
+sample_name='ATC_vs_PTC'
+outFile='ATC_vs_PTC'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_vivian_weiss_lab/shengq2/20250403_fibroblasts_miloR_miloDE/milo_Bulk_1_neighbourhood/result/ATC_vs_Normal')
+setwd('/nobackup/h_vivian_weiss_lab/shengq2/20250403_fibroblasts_miloR_miloDE/milo_Bulk_1_neighbourhood/result/ATC_vs_PTC')
 
 ### Parameter setting end ###
 
@@ -26,6 +26,7 @@ library(viridis)
 options(future.globals.maxSize= 10779361280)
 
 source("reportFunctions.R")
+source("scRNA_func.r")
 
 myoptions = read_file_map(parSampleFile2, do_unlist=FALSE)
 
@@ -115,6 +116,12 @@ if (file.exists(neighbour_file)){
       ct_obj=group_obj
     }
 
+    if(!is.null(annotation_column)) {
+      g = DimPlot(ct_obj, group.by=annotation_column, split.by="milo_condition", reduction=visulization_reduction) +
+        theme(plot.title=element_blank(), aspect.ratio=1)
+      ggsave(paste0(prefix, ".umap.png"), g, width = 8, height = 4, units = "in", dpi = 300, bg="white")
+    }
+
     cat("as.SingleCellExperiment\n")
     comp_sce=as.SingleCellExperiment(ct_obj)
     saveRDS(comp_sce, file=sce_rds)
@@ -196,8 +203,8 @@ if(!is.null(annotation_column)) {
                                   edge_width = c(0.2,0.5)) +
       theme(aspect.ratio=1)
 
-  nhoods_width=12
-  nhoods_height=8
+  nhoods_width=8
+  nhoods_height=6
 
   ggsave(paste0(prefix, ".nhoods_annotation.png"), p, width = nhoods_width, height = nhoods_height, units = "in", dpi = 300, bg="white")
 }

@@ -45,11 +45,17 @@ sce_visulization_reduction = toupper(myoptions$visulization_reduction)
 optimized_neighbor_cells = as.numeric(myoptions$optimized_neighbor_cells)
 
 prefix=paste0(comparison, ".", celltype_to_filename(ct))
+umap_png=paste0(prefix, ".umap.png")
 ```
 
 ---
 title: "milo neighbourhood of `r ct` of comparison `r comparison`"
 ---
+
+```{r eval=file.exists(umap_png)}
+cat("# UMAP plot\n\n")
+include_graphics(umap_png)
+```
 
 # Group cell assignment
 

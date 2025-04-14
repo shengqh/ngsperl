@@ -92,6 +92,11 @@ comp_milo <- countCells(comp_milo,
 comp_design <- distinct(data.frame(colData(comp_milo))[,c("sample", "milo_condition")])
 rownames(comp_design) <- comp_design$sample
 
+cat("calcNhoodDistance\n")
+comp_milo <- calcNhoodDistance( comp_milo, 
+                                d = 30,
+                                reduced.dim = sce_neighbourhood_reduction)
+
 cat("testNhoods\n")
 # Since we don't use contrast, we should not use design = ~ 0 + milo_condition which would cause all negative logFC
 da_results <- testNhoods( comp_milo, 
@@ -109,7 +114,7 @@ nh_graph_pl <- plotNhoodGraphDA(comp_milo,
                                 da_results, 
                                 layout=sce_visulization_reduction, 
                                 alpha=0.1) 
-ggsave(paste0(prefix, ".nhood_graph.png"), nh_graph_pl, width = 9, height = 7, units = "in", dpi = 300, bg="white")
+ggsave(paste0(prefix, ".nhood_graph.png"), nh_graph_pl, width = 8, height = 6, units = "in", dpi = 300, bg="white")
 
 
 if(!is.null(annotation_column)){
