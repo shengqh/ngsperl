@@ -162,10 +162,19 @@ if [[ \$status -eq 0 ]]; then
   echo bamSort=`date` 
   samtools sort -m $sort_memory -T ${sample_name} -t $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
   if [[ ! -e ${final_bam}.succeed ]]; then
-    rm $final_bam
+    rm -f $final_bam
   else
     samtools index $final_bam
     samtools idxstats $final_bam > ${final_bam}.chromosome.count
+";
+
+    if ( !$output_unsorted ) {
+      print $pbs "
+    rm -f $unsorted 
+";
+    }
+    
+    print $pbs "
   fi
 fi  
 ";
