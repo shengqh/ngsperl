@@ -2158,8 +2158,8 @@ sub_cluster<-function(subobj,
       if(redo_fastmnn){
         fastmnn_rds = paste0(detail_prefix, ".fastmnn.rds")
         if(file.exists(fastmnn_rds)){
-          cat(key, "use old fastmnn result\n")
-          subobj = readRDS(fastmnn_rds)
+          cat(key, "redo FastMNN - load cached FastMNN result ...\n")
+          subobj@reductions = readRDS(fastmnn_rds)
         }else{
           cat(key, "redo FastMNN ...\n")
           if(!("batch" %in% colnames(subobj))){
@@ -2191,7 +2191,7 @@ sub_cluster<-function(subobj,
           }
 
           cat(key, "save new fastmnn result\n")
-          saveRDS(subobj, fastmnn_rds)
+          saveRDS(subobj@reductions, fastmnn_rds)
         }
       }
     }
@@ -3497,15 +3497,19 @@ process_move=function(move_formula, move_parts, cur_meta){
     is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
   }
 
-  move_cells=sum(is_move)
+  # if the cells are moved, we don't move them again
+  final_move = is_move & (!cur_meta$is_moved)
+
+  move_cells=sum(final_move)
 
   if(to_seurat_clusters){
-    cur_meta$seurat_clusters[is_move] = to_cluster
+    cur_meta$seurat_clusters[final_move] = to_cluster
     cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)        
   }else{
-    cur_meta$cur_layer[is_move] = to_cluster
+    cur_meta$cur_layer[final_move] = to_cluster
   }
   cat("       cells moved:", move_cells, "\n")
+  cur_meta$is_moved[final_move] = TRUE
 
   return(cur_meta)
 }
@@ -3552,8 +3556,11 @@ process_filter=function(filter_action, filter_formula, filter_parts, cur_meta){
     }
   }
 
-  delete_cells=sum(is_deleted)
-  cur_meta$seurat_clusters[is_deleted] = -10000
+  #if the cells are moved, we don't delete them
+  final_deleted = is_deleted & (!cur_meta$is_moved)
+
+  delete_cells=sum(final_deleted)
+  cur_meta$seurat_clusters[final_deleted] = -10000
   cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
   cat("      cells deleted:", delete_cells, "\n")
 
@@ -3576,9 +3583,12 @@ process_merge=function(merge_formula, merge_parts, cur_meta) {
 
   is_merge = cur_meta$seurat_clusters_str %in% from_clusters
 
-  cur_meta[is_merge, "seurat_clusters"] = to_cluster
+  # if the cells are moved, we don't merge them
+  final_merge = is_merge & (!cur_meta$is_moved)
+
+  cur_meta[final_merge, "seurat_clusters"] = to_cluster
   cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
-  cat("      cells merged:", sum(is_merge), "\n")
+  cat("      cells merged:", sum(final_merge), "\n")
 
   return(cur_meta)
 }
@@ -3604,7 +3614,8 @@ process_rename=function(rename_formula, rename_parts, cur_meta) {
 
 process_actions=function(ct_tbl, cur_meta){
   if(nrow(ct_tbl) > 0){
-    action_formula=ct_tbl$V1[1]
+    cur_meta$is_moved=FALSE
+    action_formula=ct_tbl$V1[2]
     for(action_formula in ct_tbl$V1){
       cat("  action formula:", action_formula, "\n")
       action_parts=unlist(strsplit(action_formula, ":"))
