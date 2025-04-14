@@ -44,7 +44,7 @@ myoptions=read_file_map('fileList1.cellchat_summary.txt', do_unlist=FALSE)
 ---
 title: "`r myoptions$task_name` - CellChat"
 author: 
-- email: `r myoptions$email`
+  email: `r myoptions$email`
   affiliation: `r myoptions$affiliation`
 ---
 
