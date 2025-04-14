@@ -1,17 +1,17 @@
 rm(list=ls()) 
 outFile='pbmc_rejection'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn/result/pbmc_rejection.final.rds'
-parFile2='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_1_call/result/pbmc_rejection.scDynamic.meta.rds'
-parFile3='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/essential_genes/result/pbmc_rejection.txt'
+parFile1='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250408_T04_snRNA_hg38/seurat_sct2_fastmnn/result/pbmc_rejection.final.rds'
+parFile2='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250408_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_1_call/result/pbmc_rejection.scDynamic.meta.rds'
+parFile3='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250408_T04_snRNA_hg38/essential_genes/result/pbmc_rejection.txt'
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_2_subcluster/result')
+setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250408_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -164,10 +164,8 @@ if("ADT" %in% names(obj)){
   writeLines(colnames(obj[["ADT"]]), paste0(outFile, ".antibody_markers.txt"))
 }
 
-if(by_harmony){
-  if(!('batch' %in% colnames(obj@meta.data))){
-    obj$batch<-obj$orig.ident
-  }
+if(!('batch' %in% colnames(obj@meta.data))){
+  obj$batch<-obj$orig.ident
 }
 
 if(!is_file_empty(parSampleFile2)){
@@ -175,6 +173,10 @@ if(!is_file_empty(parSampleFile2)){
   ignore_genes=unlist(lapply(ignore_gene_files$V1, function(x){
     readLines(x)
   }))
+  cat("removing", length(ignore_genes), "genes in file", parSampleFile2, " ...\n")
+  #We want to ignore those genes in subclustering but not remove them from whole object.
+  #Since we will not save the object in subcluster task, removing those genes here would be most easy way.
+  #In subcluster choose task, it would load original object with those genes.
   obj<-obj[!(rownames(obj) %in% ignore_genes),]
 }
 
@@ -642,3 +644,4 @@ rm(obj)
 cat("final memory used:", lobstr_mem_used(), "\n")
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+
