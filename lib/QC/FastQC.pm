@@ -114,6 +114,9 @@ else
 fi
 
 $fastqc --version | cut -d ' ' -f2 | awk '{print \"FastQC,\"\$1}' > `pwd`/fastqc.version
+
+rm -rf .cache .java
+
 ";
 
     $self->clean_temp_files($pbs, $localized_files);
