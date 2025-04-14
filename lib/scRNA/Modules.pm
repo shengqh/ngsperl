@@ -253,9 +253,9 @@ sub add_seurat {
       $rmd_ext = $rmd_ext . "." . $reduction;
     }else{
       if(!defined $def->{integration_by_method}){
-        if(getValue($def, "integration_by_fastmnn", 0)){
+        if(getValue($def, "integration_by_fastmnn", 1)){
           $def->{integration_by_method} = "fastmnn";
-        }elsif(getValue( $def, "integration_by_harmony", 1)){
+        }elsif(getValue( $def, "integration_by_harmony", 0)){
           $def->{integration_by_method} = "harmony";
         }else{
           $def->{integration_by_method} = "seurat";
@@ -1955,7 +1955,6 @@ sub addSubCluster {
       pca_dims              => getValue( $def, "pca_dims" ),
       by_sctransform        => getValue( $def, "by_sctransform" ),
       by_integration        => $by_integration,
-      by_harmony            => $integration_by_harmony,
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
       species               => getValue( $def, "species" ),
       db_markers_file       => getValue( $def, "markers_file" ),
@@ -3841,6 +3840,41 @@ sub add_miloR_miloDE {
     },
   };
   push @$tasks, $miloDE_task;
+
+  my $milo_report_task = "milo_${ct_name}_4_report";
+  $config->{$milo_report_task} = {
+    class      => "CQS::UniqueRmd",
+    target_dir           => $target_dir . "/" . $milo_report_task,
+    report_rmd_file => "../scRNA/milo_report.rmd",
+    additional_rmd_files => "../scRNA/milo_report_sub.rmd;../scRNA/scRNA_func.r;reportFunctions.R",
+    option => "",
+    parameterSampleFile1_ref => "pairs",
+    parameterSampleFile2 => {
+      "task_name" => getValue($def, "task_name"),
+      "celltype" => $ct_name,
+      "SpatialFDR" => 0.1,
+      "optimized_neighbour_cells" => $optimized_neighbour_cells,
+      "filter_by_AUC" => $miloDE_filter_by_AUC,
+      "visulization_reduction" => $visulization_reduction,
+      "neighbourhood_reduction" => $neighbourhood_reduction,
+      "annotation_column" => $annotation_column,
+      "condition_column" => $condition_column,
+    },
+    parameterSampleFile3_ref => [$milo_neighbourhood_task, "neighbourhoods.rds"],
+    parameterSampleFile4_ref => [$miloR_task, "miloR_da.rds"],
+    parameterSampleFile5_ref => [$miloDE_task, "miloDE.rds"],
+    suffix => ".milo",
+    output_file_ext => ".milo.html",
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "2",
+      "mem"       => "10gb"
+    },
+  };
+
+  push( @$tasks, $milo_report_task );
 }
 
 1;
