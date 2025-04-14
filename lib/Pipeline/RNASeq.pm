@@ -204,7 +204,26 @@ sub getRNASeqConfig {
 
   my ( $config, $tasks, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  my $target_dir      = $def->{target_dir};
+
   if ($def->{perform_preprocessing_only}) {
+
+    $config->{sequencetask} = {
+      class      => getSequenceTaskClassname($cluster),
+      perform    => 1,
+      target_dir => "${target_dir}/sequencetask",
+      option     => "",
+      source     => {
+        tasks => $tasks,
+      },
+      sh_direct => 0,
+      cluster   => $cluster,
+      pbs       => {
+        "nodes"     => "1:ppn=" . $def->{max_thread},
+        "walltime"  => $def->{sequencetask_run_time},
+        "mem"       => "40gb"
+      },
+    };
     return $config;
   }
 
@@ -217,7 +236,6 @@ sub getRNASeqConfig {
   #print(Dumper($def->{groups}));
   #print(Dumper($def->{correlation_groups}));
 
-  my $target_dir      = $def->{target_dir};
   my $groups_ref      = defined $def->{groups} ? "groups" : undef;
   my $aligner         = $def->{aligner};
   my $star_option     = $def->{star_option};

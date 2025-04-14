@@ -54,6 +54,27 @@ sub getSmallRNAConfig {
   push @$tasks, @$summary_ref;
   $summary_ref=undef;
 
+  if ($def->{perform_preprocessing_only}) {
+    my $target_dir = $def->{target_dir};
+    $config->{sequencetask} = {
+      class      => getSequenceTaskClassname($cluster),
+      perform    => 1,
+      target_dir => "${target_dir}/sequencetask",
+      option     => "",
+      source     => {
+        tasks => $tasks,
+      },
+      sh_direct => 0,
+      cluster   => $cluster,
+      pbs       => {
+        "nodes"     => "1:ppn=" . $def->{max_thread},
+        "walltime"  => $def->{sequencetask_run_time},
+        "mem"       => "40gb"
+      },
+    };
+    return $config;
+  }
+
   my $task_name = $def->{task_name};
 
   my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
