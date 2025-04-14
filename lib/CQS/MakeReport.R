@@ -63,8 +63,11 @@ stepNames<-unique(resultFileList$StepName)
 figureToDisply<-data.frame(Title="Task Status",File=c(paste0(projectReportDir,"/",projectName,c(paste0("_st_expect_result.tsv_", stepNames, ".png"), paste0("_st_expect_result.tsv_", stepNames, ".RelativeFileSize.png")))),stringsAsFactors=F)
 
 resultFileList$TaskResultFolder<-gsub( "\\/result\\/.*$", "\\/result/", resultFileList$FileList)
-resultFileList$TaskResultFolder<-gsub(projectDir,"",resultFileList$TaskResultFolder)
-resultFileList$TaskResultFolder<-paste0("../../",resultFileList$TaskResultFolder)
+hasProjectDir<-grep(projectDir,resultFileList$TaskResultFolder)
+if (length(hasProjectDir)>0) {
+  resultFileList$TaskResultFolder[hasProjectDir]<-gsub(projectDir,"",resultFileList$TaskResultFolder[hasProjectDir])
+  resultFileList$TaskResultFolder[hasProjectDir]<-paste0("../../",resultFileList$TaskResultFolder[hasProjectDir])
+}
 projectResultUnique<-aggregateCountTable(resultFileList,resultFileList$TaskName,function(x) x[1])
 
 projectResultUniqueTable<-projectResultUnique[,c("StepName","TaskName","Result")]
