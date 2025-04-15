@@ -997,6 +997,29 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         };
         push( @$tasks, $visualizationTask );
       }
+
+      if ( getValue( $def, "perform_host_yRNA_coverage", 0 ) ) {
+        my $visualizationTask = "host_genome_yRNA_position_vis";
+        my $folder            = $data_visualization_dir . "/" . $visualizationTask;
+        $config->{$visualizationTask} = {
+          class                    => "CQS::ProgramWrapper",
+          perform                  => 1,
+          target_dir               => $folder,
+          interpretor              => "python3",
+          program                  => "../SmallRNA/yRNAHostCoverage.py",
+          parameterSampleFile1_arg => "-i",
+          parameterSampleFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_count", ".mapped.xml" ],
+          output_arg               => "-o",
+          output_ext               => ".position",
+          sh_direct                => 1,
+          pbs                      => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "1",
+            "mem"       => "10gb"
+          },
+        };
+        push( @$tasks, $visualizationTask );
+      }
     }
 
     if ( defined $def->{host_xml2bam} && $def->{host_xml2bam} ) {
@@ -1325,6 +1348,18 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
             {
               output_file        => ".yRNAPositionVis",
               parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".yRNA.count.position\$" ],
+            }
+          );
+        }elsif($def->{perform_yRNAPositionVis}) {
+          addPositionVis(
+            $config, $def,
+            $tasks,
+            "host_genome_yRNA_PositionVis",
+            $data_visualization_dir,
+            {
+              output_file        => ".yRNAPositionVis",
+              parameterFile1_ref => [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.count.position\$" ],
+              category => "yRNA",
             }
           );
         }
