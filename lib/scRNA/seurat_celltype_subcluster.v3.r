@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='pbmc_rejection'
+outFile='CombP12891P12795'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250408_T04_snRNA_hg38/seurat_sct2_fastmnn/result/pbmc_rejection.final.rds'
-parFile2='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250408_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_1_call/result/pbmc_rejection.scDynamic.meta.rds'
-parFile3='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250408_T04_snRNA_hg38/essential_genes/result/pbmc_rejection.txt'
+parFile1='/data/wanjalla_lab/projects/20250408_combined_12891_12795_10XFlex_hg38/seurat_fastmnn/result/CombP12891P12795.final.rds'
+parFile2='/data/wanjalla_lab/projects/20250408_combined_12891_12795_10XFlex_hg38/seurat_fastmnn_dr0.5_1_call/result/CombP12891P12795.scDynamic.meta.rds'
+parFile3='/data/wanjalla_lab/projects/20250408_combined_12891_12795_10XFlex_hg38/essential_genes/result/CombP12891P12795.txt'
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250408_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_2_subcluster/result')
+setwd('/data/wanjalla_lab/projects/20250408_combined_12891_12795_10XFlex_hg38/seurat_fastmnn_dr0.5_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -215,10 +215,16 @@ if(!is_file_empty(parSampleFile3)){
 
   all_ct_tbl=rename_map |>
     dplyr::filter(V2 == "ACTIONS")
-  
+ 
   if(nrow(all_ct_tbl) > 0) {
+    all_cts = unique(all_ct_tbl$V3)
+    missed_cts = setdiff(all_cts, unique(unlist(meta[,previous_layer])))
+    if(length(missed_cts) > 0){
+      current_cts = unique(unlist(meta[,previous_layer]))
+      stop(paste0("Cannot find cell types ", paste0(missed_cts, collapse = "/"), " in obj cell type layer ", previous_layer, ": ", paste0(current_cts, collapse = "/")))
+    }
+
     ct=all_ct_tbl$V3[1]
-    ct="Platelets"
     for(ct in unique(all_ct_tbl$V3)){
       print(ct)
       ct_tbl=all_ct_tbl |> dplyr::filter(V3 == ct)
@@ -644,4 +650,3 @@ rm(obj)
 cat("final memory used:", lobstr_mem_used(), "\n")
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
-
