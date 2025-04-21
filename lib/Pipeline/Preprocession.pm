@@ -229,6 +229,10 @@ sub getPreprocessionConfig {
     $def->{groups} = get_groups_by_pattern($def);
   }
 
+  if(defined $def->{batch_for_integration_groups_pattern}){
+    $def->{batch_for_integration_groups} = get_groups_by_pattern($def, $def->{batch_for_integration_groups_pattern});
+  }
+
   if (defined $def->{groups_file}) {
     $def->{groups} = get_groups_by_file($def);
   }
