@@ -2008,10 +2008,16 @@ do_PCA_Integration<-function( subobj,
                               thread=1,
                               detail_prefix=NULL,
                               ignore_variable_genes=c()) {
+  cat("FindVariableFeatures ... \n")
+  subobj = FindVariableFeatures(subobj, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
   if(length(ignore_variable_genes) > 0){
     VariableFeatures(subobj) <- setdiff(VariableFeatures(subobj), ignore_variable_genes)
   }
 
+  # Integration will not use the scale.data slot, so we don't need to scale the data.
+  # cat("ScaleData ... \n")
+  # subobj <- ScaleData(subobj)
+  
   cat("RunPCA ... \n")
   subobj <- RunPCA(object = subobj, assay=assay, verbose=FALSE)
 
@@ -2167,6 +2173,11 @@ sub_cluster<-function(subobj,
           }
 
           if(assay == "RNA") {
+            #Based on the following Seurat v5 integration tutorial, we need to split the RNA assay by batch first,
+            #and then run the NormalizeData, FindVariableFeatures and RunPCA before integration. 
+            #I put FindVariableFeatures and RunPCA in the do_PCA_Integration function.
+            #If we use sctranform before, we will not redo the sctranform.
+            #https://satijalab.org/seurat/articles/seurat5_integration
             #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
             cat(key, "split RNA by batch ...\n")
             subobj[["RNA"]] <- split(subobj[["RNA"]], f = subobj$batch)
@@ -3491,7 +3502,7 @@ process_move=function(move_formula, move_parts, cur_meta){
     stop(paste0("column ", move_column, " not exists"))
   }
 
-  if(move_cluster == -1){
+  if(move_cluster == "-1" | move_cluster == "*"){
     is_move = cur_meta[,move_column] %in% move_celltypes
   }else{
     is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
@@ -3556,8 +3567,8 @@ process_filter=function(filter_action, filter_formula, filter_parts, cur_meta){
     }
   }
 
-  #if the cells are moved, we don't delete them
-  final_deleted = is_deleted & (!cur_meta$is_moved)
+  #if the cells are moved, we don't delete them. If the cells are deleted, we don't count them again
+  final_deleted = is_deleted & (!cur_meta$is_moved) & cur_meta$seurat_clusters != -10000
 
   delete_cells=sum(final_deleted)
   cur_meta$seurat_clusters[final_deleted] = -10000
@@ -3613,9 +3624,10 @@ process_rename=function(rename_formula, rename_parts, cur_meta) {
 }
 
 process_actions=function(ct_tbl, cur_meta){
+  cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
   if(nrow(ct_tbl) > 0){
     cur_meta$is_moved=FALSE
-    action_formula=ct_tbl$V1[2]
+    action_formula=ct_tbl$V1[1]
     for(action_formula in ct_tbl$V1){
       cat("  action formula:", action_formula, "\n")
       action_parts=unlist(strsplit(action_formula, ":"))
