@@ -252,6 +252,8 @@ sub getRNASeqConfig {
     my $star_fusion_task = "star_fusion";
     my $genome_lib_dir = getValue($def, "star_fusion_genome_lib_dir");
     my $thread = $def->{max_thread};
+    my $memory_gb = getValue($def, "star_fusion_memory_gb", "40");
+    my $memory_sort = $memory_gb - 5;
     $config->{$star_fusion_task} = {
       class                     => "CQS::ProgramWrapperOneToOne",
       perform                   => 1,
@@ -263,6 +265,7 @@ STAR-Fusion --genome_lib_dir $genome_lib_dir \\
   --left_fq __FILE__ \\
   --output_dir . \\
   --CPU $thread \\
+  --STAR_limitBAMsortRAM ${memory_sort}G \\
   --FusionInspector validate \\
   --examine_coding_effect \\
   --STAR_SortedByCoordinate \\
@@ -294,7 +297,7 @@ STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusio
       pbs                       => {
         "nodes"     => "1:ppn=" . $def->{max_thread},
         "walltime"  => "23",
-        "mem"       => "40gb"
+        "mem"       => $memory_gb . "gb"
       },
     };
     push @$tasks, $star_fusion_task;
