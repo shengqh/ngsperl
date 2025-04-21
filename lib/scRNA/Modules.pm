@@ -3497,7 +3497,7 @@ sub add_cellbender_v2 {
     program => "",
     check_program => 0,
     option => "
-expected_cells=`cat __FILE2__`
+expected_cells=`cat __FILE__`
 echo expected_cells=\$expected_cells
 
 if [[ \$expected_cells -lt 1000 ]]; then
@@ -3511,14 +3511,14 @@ else
 fi
 echo total_droplets_included=\$total_droplets_included
 
-cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+cellbender remove-background --input __FILE2__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
 
-rm -f ckpt.tar.gz .cache .config .ipython .jupyter
+rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
 
 ",
     docker_prefix => "cellbender_",
-    parameterSampleFile1_ref => $raw_files_def,
-    parameterSampleFile2_ref => $expect_cells_task,
+    parameterSampleFile1_ref => $expect_cells_task,
+    parameterSampleFile2_ref => $raw_files_def,
     output_to_same_folder => 0,
     no_output => 1,
     output_file_ext => ".cellbender_filtered.h5,.cellbender.h5",
