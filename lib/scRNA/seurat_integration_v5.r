@@ -94,13 +94,14 @@ if(!file.exists(integrated_obj_file)){
       obj@meta.data$batch <- obj$sample
     }
 
-    #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
-    obj[["RNA"]] <- split(obj[["RNA"]], f = obj$batch)
-
     #integration would be done on the RNA assay
     DefaultAssay(obj) <- "RNA"
 
     if(by_sctransform){
+      #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
+      cat("Split RNA assay for SCTransform ...\n")
+      obj[["RNA"]] <- split(obj[["RNA"]], f = obj$batch)
+
       cat("SCTransform ...\n")
       obj <- SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
 
