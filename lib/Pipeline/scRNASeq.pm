@@ -142,6 +142,7 @@ sub initializeScRNASeqDefaultOptions {
     $def->{integration_by_fastmnn} = 0;
     $def->{integration_by_harmony} = 0;
   }
+  initDefaultValue( $def, "subcluster_redo_harmony", 0 );
 
   my $pca_dims = $def->{by_sctransform}?30:20;
   #my $pca_dims = 50;
@@ -314,6 +315,32 @@ sub getScRNASeqConfig {
     my $raw_files_def = "raw_files";
     my $files_def = "files";
     my $filtered_files_def = "files";
+
+
+    if(getValue($def, "is_spatial_data", 0)){
+      my $individual_spatial_object_task = "individual_spatial_object";
+      $config->{$individual_spatial_object_task} = {
+        class => "CQS::IndividualR",
+        target_dir => $def->{target_dir} . "/$individual_spatial_object_task",
+        perform => 1,
+        option => "",
+        output_ext => "_8um.rds",
+        rtemplate => "../scRNA/scRNA_func.r,../scRNA/spatial_prepare_object.r",
+        parameterSampleFile1_ref => "files",
+        parameterSampleFile2 => {
+          "bin.size" => 8,
+        },
+        sh_direct => 1,
+        no_docker => 1,
+        pbs => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        }
+      };
+      push (@$tasks, $individual_spatial_object_task);
+      $files_def = $individual_spatial_object_task;
+    }
 
     my $perform_cellbender = getValue($def, "perform_cellbender", 0);
 
