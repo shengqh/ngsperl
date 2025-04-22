@@ -47,10 +47,10 @@ has_batch_file<-file.exists(parSampleFile2)
 method=myoptions$integration_by_method_v5
 reduction=myoptions$reduction
 
+thread=as.numeric(myoptions$thread)
 is_unix = .Platform$OS.type == "unix"
 if(is_unix){
-  ncores = as.numeric(myoptions$thread)
-  bpparam = MulticoreParam(workers = ncores)
+  bpparam = MulticoreParam(workers = thread)
   register(bpparam)
 }else{
   bpparam = SerialParam()
@@ -97,18 +97,18 @@ if(!file.exists(integrated_obj_file)){
     #integration would be done on the RNA assay
     DefaultAssay(obj) <- "RNA"
 
-    if(by_sctransform){
-      #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
-      cat("Split RNA assay for SCTransform ...\n")
-      obj[["RNA"]] <- split(obj[["RNA"]], f = obj$batch)
+    # In order to perform integration, we need to split the object by batch, no matter through SCTransform or not.
+    # When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
+    cat("Split RNA assay ...\n")
+    obj[["RNA"]] <- split(obj[["RNA"]], f = obj$batch)
 
+    if(by_sctransform){
       cat("SCTransform ...\n")
       obj <- SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
+      DefaultAssay(obj) <- "SCT"
 
       cat("JoinLayers of RNA assay ... \n")
       obj <- JoinLayers(obj, assay="RNA")
-
-      DefaultAssay(obj) <- "SCT"
     }else{
       cat("NormalizeData/FindVariableFeatures ...\n")
       obj <- NormalizeData(obj)
@@ -119,6 +119,7 @@ if(!file.exists(integrated_obj_file)){
       cat("ScaleData ... \n")
       obj <- ScaleData(obj, verbose = FALSE)
     }
+
     cat("Saving normalized object to file:", normalized_obj_file, "\n")
     saveRDS(obj, normalized_obj_file)
   }else{
@@ -130,52 +131,20 @@ if(!file.exists(integrated_obj_file)){
     VariableFeatures(obj) <- setdiff(VariableFeatures(obj), ignore_variable_genes)
   }
 
-  cat("RunPCA ... \n")
-  obj <- RunPCA(object = obj, assay=cur_assay, verbose=FALSE)
+  obj = do_PCA_Integration( obj, 
+                            cur_assay, 
+                            by_sctransform, 
+                            method=method, 
+                            new.reduction=reduction, 
+                            orig.reduction="pca",
+                            thread=thread,
+                            detail_prefix=detail_prefix)
 
-  output_ElbowPlot(obj, detail_prefix, "pca")
-
-  normalization_method = ifelse(by_sctransform, "SCT", "LogNormalize")
-
-  if(method == "FastMNNIntegration"){
-    cat("IntegrateLayers by FastMNNIntegration with thread", myoptions$thread, "... \n")
-    obj <- IntegrateLayers(
-      object = obj,
-      method = FastMNNIntegration,
-      orig.reduction = "pca",
-      assay = cur_assay,
-      new.reduction = reduction,
-      verbose = T,
-      #for fastMNN
-      batch = obj@meta.data$batch, #batch is required for integration when only one object provided
-      BPPARAM = bpparam
-    )
-  }else if (method == "CCAIntegration" | method == "RPCAIntegration"){
-    obj <- IntegrateLayers(
-      object = obj,
-      method = method,
-      orig.reduction = "pca",
-      assay = cur_assay,
-      new.reduction = reduction,
-      normalization.method = normalization_method,
-      verbose = T
-    )
-  }else{
-    obj <- IntegrateLayers(
-      object = obj,
-      method = method,
-      orig.reduction = "pca",
-      assay = cur_assay,
-      new.reduction = reduction,
-      verbose = T
-    )
+  if(!by_sctransform){
+    cat("JoinLayers of", cur_assay, "assay ... \n")
+    obj <- JoinLayers(obj, assay=cur_assay)
   }
-
-  #The FastMNNIntegration will create a new Seurat object with cur_array (might be SCT).
-  #The default assay of new object will be set to RNA. It will cause problem when we use FindNeighbors and FindClusters.
-  #So we need to set the default assay to cur_assay.
-  obj[[reduction]]@assay.used = cur_assay
-
+  
   cat("FindNeighbors ... \n")
   obj <- FindNeighbors( obj, 
                         dims = 1:30, 
