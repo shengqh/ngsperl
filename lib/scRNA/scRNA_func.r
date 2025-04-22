@@ -2008,16 +2008,10 @@ do_PCA_Integration<-function( subobj,
                               thread=1,
                               detail_prefix=NULL,
                               ignore_variable_genes=c()) {
-  cat("FindVariableFeatures ... \n")
-  subobj = FindVariableFeatures(subobj, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
   if(length(ignore_variable_genes) > 0){
     VariableFeatures(subobj) <- setdiff(VariableFeatures(subobj), ignore_variable_genes)
   }
 
-  # Integration will not use the scale.data slot, so we don't need to scale the data.
-  # cat("ScaleData ... \n")
-  # subobj <- ScaleData(subobj)
-  
   cat("RunPCA ... \n")
   subobj <- RunPCA(object = subobj, assay=assay, verbose=FALSE)
 
@@ -2042,7 +2036,7 @@ do_PCA_Integration<-function( subobj,
     subobj <- IntegrateLayers(
       object = subobj,
       method = FastMNNIntegration,
-      orig.reduction = orig.reduction,
+      orig.reduction = NULL,
       assay = assay,
       new.reduction = new.reduction,
       verbose = T,
@@ -2175,7 +2169,6 @@ sub_cluster<-function(subobj,
           if(assay == "RNA") {
             #Based on the following Seurat v5 integration tutorial, we need to split the RNA assay by batch first,
             #and then run the NormalizeData, FindVariableFeatures and RunPCA before integration. 
-            #I put FindVariableFeatures and RunPCA in the do_PCA_Integration function.
             #If we use sctranform before, we will not redo the sctranform.
             #https://satijalab.org/seurat/articles/seurat5_integration
             #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
@@ -2184,6 +2177,9 @@ sub_cluster<-function(subobj,
 
             cat(key, "NormalizeData ...\n")
             subobj <- NormalizeData(subobj)
+
+            cat(key, "FindVariableFeatures ... \n")
+            subobj = FindVariableFeatures(subobj, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
           }
 
           subobj = do_PCA_Integration(subobj, 
