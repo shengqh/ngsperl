@@ -1,17 +1,19 @@
 rm(list=ls()) 
-sample_name='Day1'
-outFile='Day1'
+sample_name='ATC'
+outFile='ATC'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/data/adipose_2.rds'
+parFile1='/data/h_vivian_weiss/Thyroid_scRNA_seq_atlas_files/24-0819_Atlas/24-1114_Atlas_Files/24-0819_Merged_SOs_scRNA_AFTER_FastMNN_3000.RDS'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20240304_mona_scRNA_SADIE/202404510_cellchat/result/Day1')
+setwd('/nobackup/h_vivian_weiss_lab/shengq2/20250403_matt_fibroblasts/20250416_cellchat_atlas/cellchat/result/ATC')
 
 ### Parameter setting end ###
+
+source("scRNA_func.r")
 #devtools::install_github("LTLA/BiocNeighbors")
 #devtools::install_github("jinworks/CellChat")
 
@@ -37,53 +39,51 @@ myoptions = read_file_map(parSampleFile2)
 
 future::plan("multisession", workers = as.numeric(myoptions$thread)) # do parallel
 
-cellchat_file=paste0(outFile, ".cellchat.rds")
-if(file.exists(cellchat_file)){
-  cellchat = readRDS(cellchat_file)
-}else{
-  obj = readRDS(parFile1)
-  cells = rownames(obj@meta.data)[obj@meta.data[, myoptions$group_column] == group_value]
-  obj = subset(obj, cells=cells)
-  obj = NormalizeData(obj)
+obj = readRDS(parFile1)
+cells = rownames(obj@meta.data)[obj@meta.data[, myoptions$group_column] == group_value]
+obj = subset(obj, cells=cells)
+obj = NormalizeData(obj)
 
-  data.input = GetAssayData(obj, assay = "RNA", layer = "data")
+data.input = GetAssayData(obj, assay = "RNA", layer = "data")
 
-  meta = obj@meta.data |>
-    dplyr::rename(
-      "labels"=myoptions$celltype_column,
-      "samples"=myoptions$sample_column) |>
-    dplyr::select(labels, samples)
+meta = obj@meta.data |>
+  dplyr::rename(
+    "labels"=myoptions$celltype_column,
+    "samples"=myoptions$sample_column) |>
+  dplyr::select(labels, samples) |>
+  dplyr::mutate(
+    labels = as.factor(as.character(labels)),
+    samples = as.factor(as.character(samples))
+ )
 
-  cellchat <- createCellChat(object = data.input, meta = meta, group.by = "labels")
+cellchat <- createCellChat(object = data.input, meta = meta, group.by = "labels")
 
-  if(myoptions$CellChatDB == "mouse"){
-    cellchat@DB <- CellChatDB.mouse
-  } else {
-    cellchat@DB <- CellChatDB.human
-  }
-
-  # subset the expression data of signaling genes for saving computation cost
-  cellchat <- subsetData(cellchat) # This step is necessary even if using the whole database
-
-  cat("identifyOverExpressedGenes ...\n")
-  cellchat <- identifyOverExpressedGenes(cellchat)
-
-  cat("identifyOverExpressedInteractions ...\n")
-  cellchat <- identifyOverExpressedInteractions(cellchat)
-
-  cat("computeCommunProb ...\n")
-  cellchat <- computeCommunProb(cellchat, type = "triMean")
-
-  cat("filterCommunication ...\n")
-  cellchat <- filterCommunication(cellchat, min.cells = 10)
-
-  cat("computeCommunProbPathway ...\n")
-  cellchat <- computeCommunProbPathway(cellchat)
-
-  cat("aggregateNet ...\n")
-  cellchat <- aggregateNet(cellchat)
-      
-  saveRDS(cellchat, file = cellchat_file)
+if(myoptions$CellChatDB == "mouse"){
+  cellchat@DB <- CellChatDB.mouse
+} else {
+  cellchat@DB <- CellChatDB.human
 }
 
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
+# subset the expression data of signaling genes for saving computation cost
+cellchat <- subsetData(cellchat) # This step is necessary even if using the whole database
+
+cat("identifyOverExpressedGenes ...\n")
+cellchat <- identifyOverExpressedGenes(cellchat)
+
+cat("identifyOverExpressedInteractions ...\n")
+cellchat <- identifyOverExpressedInteractions(cellchat)
+
+cat("computeCommunProb ...\n")
+cellchat <- computeCommunProb(cellchat, type = "triMean")
+
+cat("filterCommunication ...\n")
+cellchat <- filterCommunication(cellchat, min.cells = 10)
+
+cat("computeCommunProbPathway ...\n")
+cellchat <- computeCommunProbPathway(cellchat)
+
+cat("aggregateNet ...\n")
+cellchat <- aggregateNet(cellchat)
+    
+cellchat_file=paste0(outFile, ".cellchat.rds")
+saveRDS(cellchat, file = cellchat_file)
