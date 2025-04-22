@@ -1,0 +1,51 @@
+---
+title: "Spatial multi umap"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+source("scRNA_func.r")
+```
+
+```{r}
+df=fread("umap_png.csv", header=T)
+rmd_content=""
+i=1
+for(i in 1:nrow(df)){
+  n.neighbors=df$n.neighbors[i]
+  min.dist=df$min.dist[i]
+  umap_png=df$umap_png[i]
+  rmd_content=paste0(rmd_content, "# n.neighbors=", n.neighbors, ", min.dist=", min.dist, "\n")
+  rmd_content=paste0(rmd_content, getFigure(umap_png), "\n")
+}
+rmd_file="umap.rmd"
+writeLines(rmd_content, rmd_file)
+```
+
+```{r child=rmd_file, echo=FALSE}
+```
