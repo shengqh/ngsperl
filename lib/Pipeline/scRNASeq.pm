@@ -250,8 +250,10 @@ sub getScRNASeqConfig {
   } 
 
   my $perform_comparison = getValue( $def, "perform_comparison", 0 );
+  my $DE_method = getValue( $def, "DE_method", "edgeR" );
   if(getValue( $def, "perform_edgeR" )){
     $perform_comparison = 1;
+    $DE_method = "edgeR";
   }
   my $DE_by_sample = getValue( $def, "DE_by_sample" );
   my $DE_by_cell = getValue( $def, "DE_by_cell" );
@@ -266,6 +268,7 @@ sub getScRNASeqConfig {
 
   print("perform_comparison=" . $perform_comparison , "\n");
   print("DE_by_sample=" . $DE_by_sample , "\n");
+  print("DE_method=" . $DE_method , "\n");
 
   my $perform_split_hto_samples = getValue($def, "perform_split_hto_samples", 0);
   if($perform_split_hto_samples){
@@ -319,19 +322,28 @@ sub getScRNASeqConfig {
 
     if(getValue($def, "is_spatial_data", 0)){
       my $individual_spatial_object_task = "individual_spatial_object";
+      my $binsize = getValue($def, "spatial_bin_size", 8);
       $config->{$individual_spatial_object_task} = {
         class => "CQS::IndividualR",
         target_dir => $def->{target_dir} . "/$individual_spatial_object_task",
         perform => 1,
         option => "",
-        output_ext => "_8um.rds",
         rtemplate => "../scRNA/scRNA_func.r,../scRNA/spatial_prepare_object.r",
         parameterSampleFile1_ref => "files",
         parameterSampleFile2 => {
-          "bin.size" => 8,
+          "bin.size" => $binsize,
+          nFeature_cutoff_min => getValue($def, "nFeature_cutoff_min", 20),
+          nFeature_cutoff_max => getValue($def, "nFeature_cutoff_max", 1000),
+          nCount_cutoff       => getValue($def, "nCount_cutoff", 40),
+          nCount_cutoff_max   => getValue($def, "nCount_cutoff_max", 10000),
+          mt_cutoff           => getValue($def, "mt_cutoff", 25),
+          Mtpattern           => getValue($def, "Mtpattern", "^MT-|^Mt-|^mt-"),
+          rRNApattern         => getValue($def, "rRNApattern", "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]"),
+          species             => getValue($def, "species", "Hs"),
         },
         sh_direct => 1,
         no_docker => 1,
+        output_ext => "_${binsize}um.full.rds;_${binsize}um.sketch.rds",
         pbs => {
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
@@ -339,7 +351,10 @@ sub getScRNASeqConfig {
         }
       };
       push (@$tasks, $individual_spatial_object_task);
-      $files_def = $individual_spatial_object_task;
+      $files_def = [$individual_spatial_object_task, ".sketch.rds"];
+
+      $def->{"perform_cellbender"} = 0;
+      $def->{"perform_decontX"} = 0;
     }
 
     my $perform_cellbender = getValue($def, "perform_cellbender", 0);
@@ -688,18 +703,6 @@ sub getScRNASeqConfig {
           addSubDynamicCluster($config, $def, $tasks, $target_dir, $sub_scDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, 0);
         }
 
-
-        # if (getValue( $def, "perform_SingleR", 0 ) ) {
-        #   my $singleR_task = $scDynamic_task . "_SingleR";
-        #   my $cur_options = {
-        #     task_name => $def->{task_name},
-        #     reduction => $reduction, 
-        #     celltype_layer => "layer4",
-        #     celltype_cluster => "layer4_clusters"
-        #   };
-        #   add_singleR( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $meta_ref, $cur_options );
-        # }
-
         if(getValue($def, "perform_dynamic_subcluster")){
           my $subcluster_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_subcluster" . (getValue($def, "subcluster_redo_harmony") ? "_rh" : "") ;
 
@@ -975,12 +978,20 @@ sub getScRNASeqConfig {
 
             if ( $perform_comparison ) {
               if ( defined $def->{"DE_cluster_pairs"} ) {
-                addEdgeRTask( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 1, 0, $DE_by_cell );
+                if ($DE_method eq "edgeR") {
+                  addEdgeRTask( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 1, 0, $DE_by_cell );
+                }else{
+                  die("DE_method $DE_method is not supported");
+                }
               }
 
               for my $deByOption (@deByOptions) {
                 my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-                my $edgeRtask = addEdgeRTask( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 0, $DE_by_celltype, $DE_by_cell );
+                if ($DE_method eq "edgeR") {
+                  addEdgeRTask( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, ".meta.rds", "cell_type", "seurat_cell_type", 0, $DE_by_celltype, $DE_by_cell );
+                }else{
+                  die("DE_method $DE_method is not supported");
+                }
               }
             }
           }
@@ -1412,12 +1423,20 @@ sub getScRNASeqConfig {
 
         if ( $perform_comparison ) {
           if ( defined $def->{"DE_cluster_pairs"} ) {
-            addEdgeRTask( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell );
+            if($DE_method eq "edgeR"){
+              addEdgeRTask( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell );
+            }else{
+              die("DE_method $DE_method is not supported");
+            }
           }
 
           for my $deByOption (@deByOptions) {
             my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-            addEdgeRTask( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
+            if($DE_method eq "edgeR"){
+              addEdgeRTask( $config, $def, $tasks, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell );
+            }else{
+              die("DE_method $DE_method is not supported");
+            }
           }
         }
       }
@@ -1461,7 +1480,11 @@ sub getScRNASeqConfig {
   if(defined $def->{seurat_object_file}){
     if ( $def->{perform_comparison} ) {
       if ( defined $def->{"DE_cluster_pairs"} ) {
-        addEdgeRTask( $config, $def, $tasks, $target_dir, $def->{seurat_object_file}, undef, undef, getValue($def, "DE_cluster_name"), undef, 1, 0, 1 );
+        if($DE_method eq "edgeR"){
+          addEdgeRTask( $config, $def, $tasks, $target_dir, $def->{seurat_object_file}, undef, undef, getValue($def, "DE_cluster_name"), undef, 1, 0, 1 );
+        }else{
+          die("DE_method $DE_method is not supported");
+        }
       }
     }
   }
