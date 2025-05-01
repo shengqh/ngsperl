@@ -543,6 +543,13 @@ fi
     }else{
       my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" : $is_pairend?"SRA::FastqDumpPaired":"SRA::FastqDump";
       my $docker_prefix = getValue($def, "sra_to_fastq_wget", 0)? undef :"sratools_";
+      my $no_docker = 0;
+      if(getValue($def, "sra2fastq_no_docker", 0)){
+        $no_docker = 1;
+      }
+      if(getValue($def, "no_docker", 0)){
+        $no_docker = 1;
+      }
       #my $class = getValue($def, "sra_to_fastq_wget", 0)? "SRA::Wget" :"SRA::FasterqDump";
       #print($class);
       $config->{sra2fastq} = {
@@ -551,6 +558,7 @@ fi
         is_paired_end   => $is_pairend,
         target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "sra2fastq",
         option     => getValue($def, "fastq-dump_option", "--split-3 --defline-qual '+' --gzip --origfmt"),
+        prefetch_option     => getValue($def, "prefetch_option", ""),
         source_ref => $source_ref,
         sra_table  => $def->{sra_table},
         sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 0),
@@ -559,7 +567,7 @@ fi
         is_restricted_data => getValue($def, "is_restricted_data"),
         single_cell_data_type => getValue($def, "single_cell_data_type", 0),
         docker_prefix => $docker_prefix,
-        no_docker => $def->{"no_docker"},
+        no_docker => $no_docker,
         pbs        => {
           "nodes"     => "1:ppn=1",
           "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
