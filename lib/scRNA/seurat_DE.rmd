@@ -1,0 +1,302 @@
+---
+title: "Seurat differential expression analysis"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+library(dplyr)
+library(kableExtra)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+library(knitr)
+
+source('scRNA_func.r')
+source('reportFunctions.R')
+
+myoptiontbl = fread("fileList3.txt", header = FALSE) %>%
+  dplyr::rename(Value=V1, Parameter=V2) %>%
+  dplyr::select(Parameter, Value) %>% as.data.frame()
+
+myoptions<-read_file_map("fileList3.txt", do_unlist=FALSE)
+
+is_between_cluster = is_one(myoptions$bBetweenCluster)
+
+outFile<-myoptions$task_name
+folder_prefix = paste0(outFile, ".details/")
+file_prefix= paste0(folder_prefix, outFile, ".")
+
+group_def<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
+group_def <- group_def %>% 
+     group_by(V2) %>% 
+     mutate(Samples = paste0(V1, collapse = ",")) 
+group_def<-group_def[,c("V2", "Samples")]
+group_def<-group_def[!duplicated(group_def),]
+if(is_between_cluster){
+  colnames(group_def)<-c("Group", "Cluster")
+}else{
+  colnames(group_def)<-c("Group", "Samples")
+}
+
+comp_def<-read.table("fileList2.txt", sep="\t", header=F, stringsAsFactors = F)
+has_category = ncol(comp_def) == 3
+if(has_category){
+  colnames(comp_def)<-c("Group", "Category", "Comparison")
+}else{
+  colnames(comp_def)<-c("Group", "Comparison")
+  comp_def = comp_def %>% 
+     group_by(Comparison) %>% 
+     mutate(Samples = paste0(Group, collapse = ", ")) 
+  comp_def$ControlGroup = gsub(",.+","",comp_def$Samples)
+  comp_def$SampleGroup = gsub('.+,\\s*',"",comp_def$Samples)
+  comp_def = comp_def[,c("Comparison", "ControlGroup", "SampleGroup")]
+  comp_def = comp_def[!duplicated(comp_def$Comparison),]
+}
+
+seuratDE_files <- read.csv(paste0(outFile, ".SeuratDE.files.csv")) %>% 
+  dplyr::arrange(desc(row_number()))
+comparisons<-unique(seuratDE_files$comparison)
+
+num_cell_file = paste0(file_prefix, "num_cell.csv")
+if(file.exists(num_cell_file)){
+  num_cell<-read.csv(num_cell_file)
+}else{
+  num_cell<-NA
+}
+```
+
+---
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+# Parameters
+
+```{r, echo=FALSE}
+print_table(myoptiontbl, row.names=FALSE)
+```
+
+# Group definition
+
+```{r, echo=FALSE}
+print_table(group_def, row.names=FALSE)
+```
+
+# Comparison definition
+
+```{r}
+print_table(comp_def, row.names=FALSE)
+```
+
+
+```{r, echo=FALSE}
+resFile<-"comp.Rmd"
+
+in_cluster_rmd<-function(seuratDE_files, comparisons){
+  result<-""
+
+  comp=comparisons[1]
+  for(comp in comparisons){
+    result<-paste0(result, "\n# ", comp, "\n\n")
+    comp_files<-subset(seuratDE_files, comparison == comp)
+
+    cts = as.character(comp_files$cellType)
+    ct<-cts[1]
+
+    sig_file_map=unlist(split(comp_files$sigFile, comp_files$cellType))
+
+    sig_list=list()
+    for(ct in cts){
+      sig_file=sig_file_map[ct]
+      sig_data<-read.csv(sig_file, row.names=1)
+      sig_list[[ct]] = sig_data
+    }
+
+    nums=lapply(sig_list, function(x){
+      n=nrow(x)
+      np=sum(x$logFC > 0)
+      nn=sum(x$logFC < 0)
+      return(c(n, np, nn))})
+    
+    nums_df<-do.call(rbind, nums)
+    colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
+
+    result<-paste0(result, "\n## Number of DE genes\n\n")
+    num_sig_file = paste0(file_prefix, comp, ".num_sig.csv")
+    write.csv(nums_df, num_sig_file)
+
+    result<-paste0(result, getTable(num_sig_file))
+
+    ct = cts[1]
+    for(ct in cts){
+      result<-paste0(result, "\n## ", ct, "\n\n")
+      ct_files<-subset(comp_files, cellType == ct)
+
+      ct_comp_name = paste0(celltype_to_filename(ct), ".", comp)
+      
+      design_file=ct_files$designFile[1]
+      design_data=read.csv(design_file)
+      de_by_cell = "Cell" %in% colnames(design_data)
+      if(de_by_cell){
+        design_data=design_data[!duplicated(design_data$Sample), c(1,3,4)]
+      }
+      design_data=design_data |> dplyr::arrange(Group, Sample)
+
+      cur_prefix = ifelse(de_by_cell, file_prefix, folder_prefix)
+
+      if(!all(is.na(num_cell))){
+        ct_num_cell<-subset(num_cell, cell_type == ct)
+        ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
+        if(all(design_data$Sample %in% names(ct_cell_map))){
+          design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+        }
+      }
+
+      result<-paste0(result,"\n### Design table\n\n")
+      result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
+
+      mds_png<-paste0(cur_prefix, ct_comp_name, ".mds.png")
+      if(file.exists(mds_png)){
+        result<-paste0(result,"\n### Multidimensional scaling plot\n\nPlot samples on a two-dimensional scatterplot so that distances on the plot approximate the expression differences between the samples.\n\n")
+        result<-paste0(result, getFigure(mds_png))
+      }
+
+      pca_png<-paste0(cur_prefix, ct_comp_name, ".pca.png")
+      if(file.exists(pca_png)){
+        result<-paste0(result,"\n### PCA plot\n\n")
+        result<-paste0(result, getFigure(pca_png))
+      }
+
+      heatmap_png<-paste0(cur_prefix, ct_comp_name, ".log_cpm.heatmap.png")
+      if(file.exists(heatmap_png)){
+        result<-paste0(result,"\n### heatmap plot\n\n")
+        result<-paste0(result, getFigure(heatmap_png))
+      }
+
+      sig_file=sig_file_map[[ct]]
+      sig_data=read.csv(sig_file, header=T)
+      if(nrow(sig_data) == 0){
+        result<-paste0(result,"\n### No significantly differential expressed genes\n\n")
+      }else{
+        result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
+        result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
+
+        volcano_png<-paste0(cur_prefix, ct_comp_name, ".volcano.png")
+        if(file.exists(volcano_png)){
+          result<-paste0(result,"\n#### Volcano plot\n\n")
+          result<-paste0(result, getFigure(volcano_png))
+        }
+
+        top_gene_png<-paste0(cur_prefix, ct_comp_name, ".top_1_gene.png")
+        if(file.exists(top_gene_png)){
+          result<-paste0(result,"\n#### Top 1 gene plot\n\n")
+          result<-paste0(result, getFigure(top_gene_png))
+        }
+      }
+    }
+  }
+
+  return(result)
+}
+
+between_cluster_rmd<-function(seuratDE_files, comparisons, outFile){
+  result<-""
+
+  cts = comparisons
+
+  sig_file_map=unlist(split(seuratDE_files$sigFile, seuratDE_files$comparison))
+
+  sig_list=list()
+
+  ct = cts[1]
+  for(ct in cts){
+    sig_file=sig_file_map[ct]
+    sig_data<-read.csv(sig_file, row.names=1)
+    sig_list[[ct]] = sig_data
+  }
+
+  nums=lapply(sig_list, function(x){
+    n=nrow(x)
+    np=sum(x$logFC > 0)
+    nn=sum(x$logFC < 0)
+    return(c(n, np, nn))})
+  
+  nums_df<-do.call(rbind, nums)
+  colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
+
+  result<-paste0(result, "\n# Number of DE genes\n\n")
+  num_sig_file = paste0(outFile, ".num_sig.csv")
+  write.csv(nums_df, num_sig_file)
+
+  result<-paste0(result, getTable(num_sig_file))
+
+  ct = cts[1]
+  for(ct in cts){
+    result<-paste0(result, "\n# ", ct, "\n\n")
+    ct_files<-subset(seuratDE_files, comparison == ct)
+    
+    design_file=ct_files$designFile[1]
+    design_data=read.csv(design_file)
+    de_by_cell = "Cell" %in% colnames(design_data)
+    if(de_by_cell){
+      cell_num = table(design_data$Group)
+      if(length(unique(design_data$Sample)) == 1){
+        design_data=design_data[!duplicated(design_data$Group), c(1,4)]
+      }else{
+        design_data=design_data[!duplicated(design_data$Group), c(1,3,4)]
+      }
+      design_data$Num_of_cell<-cell_num[design_data$Group]
+    }else{
+      if(!all(is.na(num_cell))){
+        ct_num_cell<-subset(num_cell, cell_type == ct)
+        ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
+        design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
+      }
+    }
+
+    result<-paste0(result,"\n## design table\n\n")
+    result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
+
+    sig_file=sig_file_map[[ct]]
+    sig_data=read.csv(sig_file, header=T)
+    if(nrow(sig_data) == 0){
+      result<-paste0(result,"\n### No significantly differential expressed genes\n\n")
+    }else{
+      result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
+      result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
+    }
+  }
+
+  return(result)
+}
+
+if(is_between_cluster){
+  cat(between_cluster_rmd(seuratDE_files, comparisons, outFile), file=resFile)
+}else{
+  cat(in_cluster_rmd(seuratDE_files, comparisons), file=resFile)
+}
+
+```
+
+```{r, child=resFile} 
+```
