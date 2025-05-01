@@ -39,6 +39,10 @@ source('scRNA_func.r')
 
 ```{r}
 myoptions=read_file_map('fileList1.cellchat_summary.txt', do_unlist=FALSE)
+circle_width=to_numeric(myoptions$circle_width, 5)
+circle_height=to_numeric(myoptions$circle_height, 6)
+chord_width=to_numeric(myoptions$chord_width, 8)
+chord_height=to_numeric(myoptions$chord_height, 8.5)
 ```
 
 ---

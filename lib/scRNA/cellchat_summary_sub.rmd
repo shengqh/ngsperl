@@ -9,8 +9,6 @@ prefix=paste0("figures/", cur_group)
 ```
 
 ```{r}
-circle_width=5
-circle_height=6
 groupSize <- as.numeric(table(cellchat@idents))
 ```
 
@@ -53,12 +51,12 @@ pathway_content=""
 for(pathways.show in pathways){
   pathway_content = paste0(pathway_content, "### ", pathways.show, "\n\n")
 
-  each_circle_png = paste0(prefix, ".pathway.", celltype_to_filename(pathways.show), ".chord.png")
-  png(each_circle_png, width=circle_width, height=circle_height, units="in", res=300, bg="white")
+  each_chord_png = paste0(prefix, ".pathway.", celltype_to_filename(pathways.show), ".chord.png")
+  png(each_chord_png, width=chord_width, height=chord_height, units="in", res=300, bg="white")
   g=netVisual_aggregate(cellchat, signaling = pathways.show, layout = "chord")
   ignored=dev.off()
 
-  pathway_content = paste0(pathway_content, getFigure_width_height(each_circle_png, FALSE, circle_width, circle_height))
+  pathway_content = paste0(pathway_content, getFigure(each_chord_png))
 }
 cur_rmd = paste0(cur_group, ".pathway.rmd")
 writeLines(pathway_content, cur_rmd)

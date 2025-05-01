@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='ATC'
-outFile='ATC'
+sample_name='CD_Met'
+outFile='CD_Met'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/data/h_vivian_weiss/Thyroid_scRNA_seq_atlas_files/24-0819_Atlas/24-1114_Atlas_Files/24-0819_Merged_SOs_scRNA_AFTER_FastMNN_3000.RDS'
-parFile2=''
+parFile1='/nobackup/h_cqs/ramirema/maureen_gannon/20240227_10940_snRNAseq_mmulatta_proteincoding_cellbender/P10940.RNA.ATAC.combined.finalnewcelltype.rds'
+parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/P10940.final.treatment.rds'
 parFile3=''
 
 
-setwd('/nobackup/h_vivian_weiss_lab/shengq2/20250403_matt_fibroblasts/20250416_cellchat_atlas/cellchat/result/ATC')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/20250428_cellchat/cellchat/result/CD_Met')
 
 ### Parameter setting end ###
 
@@ -40,6 +40,9 @@ myoptions = read_file_map(parSampleFile2)
 future::plan("multisession", workers = as.numeric(myoptions$thread)) # do parallel
 
 obj = readRDS(parFile1)
+if(parFile2 != ""){
+  obj@meta.data=readRDS(parFile2)
+}
 cells = rownames(obj@meta.data)[obj@meta.data[, myoptions$group_column] == group_value]
 obj = subset(obj, cells=cells)
 obj = NormalizeData(obj)
@@ -87,3 +90,4 @@ cellchat <- aggregateNet(cellchat)
     
 cellchat_file=paste0(outFile, ".cellchat.rds")
 saveRDS(cellchat, file = cellchat_file)
+
