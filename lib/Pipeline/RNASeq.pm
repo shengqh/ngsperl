@@ -261,6 +261,7 @@ sub getRNASeqConfig {
       program => "",
       check_program             => 0,
       option                    => "
+     
 STAR-Fusion --genome_lib_dir $genome_lib_dir \\
   --left_fq __FILE__ \\
   --output_dir . \\
@@ -271,19 +272,26 @@ STAR-Fusion --genome_lib_dir $genome_lib_dir \\
   --STAR_SortedByCoordinate \\
   --denovo_reconstruct
 
-rm -rf Aligned.sortedByCoord.out.bam Aligned.out.bam Chimeric.out.junction _* star-fusion.preliminary
+status=\$?
+if [[ \$status -eq 0 ]]; then
+  mv star-fusion.fusion_predictions.abridged.coding_effect.tsv __NAME___star-fusion.fusion_predictions.abridged.coding_effect.tsv
+  mv star-fusion.fusion_predictions.abridged.tsv __NAME___star-fusion.fusion_predictions.abridged.tsv 
+  mv star-fusion.fusion_predictions.tsv __NAME___star-fusion.fusion_predictions.tsv
+  touch __NAME__.star_fusion.succeed
+  rm -f __NAME__.star_fusion.failed
 
-mv star-fusion.fusion_predictions.abridged.coding_effect.tsv __NAME___star-fusion.fusion_predictions.abridged.coding_effect.tsv
-mv star-fusion.fusion_predictions.abridged.tsv __NAME___star-fusion.fusion_predictions.abridged.tsv 
-mv star-fusion.fusion_predictions.tsv __NAME___star-fusion.fusion_predictions.tsv
-
-if [[ -s FusionInspector-validate/finspector.fusion_inspector_web.html ]]; then
-  mv FusionInspector-validate/finspector.fusion_inspector_web.html FusionInspector-validate/__NAME___finspector.fusion_inspector_web.html
-  mv FusionInspector-validate/finspector.FusionInspector.fusions.tsv FusionInspector-validate/__NAME___finspector.FusionInspector.fusions.tsv
+  if [[ -s FusionInspector-validate/finspector.fusion_inspector_web.html ]]; then
+    mv FusionInspector-validate/finspector.fusion_inspector_web.html FusionInspector-validate/__NAME___finspector.fusion_inspector_web.html
+    mv FusionInspector-validate/finspector.FusionInspector.fusions.tsv FusionInspector-validate/__NAME___finspector.FusionInspector.fusions.tsv
+  fi
+else
+  touch __NAME__.star_fusion.failed
+  rm -f __NAME__.star_fusion.succeed
 fi
 
-STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusion,v\"\$1}' > __NAME__.version
+rm -rf Aligned.sortedByCoord.out.bam Aligned.out.bam Chimeric.out.junction _* star-fusion.preliminary
 
+STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusion,v\"\$1}' > __NAME__.version
 
 ",
       parameterSampleFile1_join_delimiter => " \\\n  --right_fq ",
