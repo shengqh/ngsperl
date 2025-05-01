@@ -1370,6 +1370,111 @@ sub addGeneTask {
   }
 }
 
+sub addSeuratDETask {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
+
+  if(!defined $reduction){
+    $reduction = "umap";
+  }
+
+  my $DE_method = getValue( $def, "DE_method", "edgeR" );
+
+  my $rCodeDic = {
+    "email" => getValue($def, "email"),
+    "affiliation" => $def->{"affiliation"},
+    "task_name" => getValue( $def, "task_name" ),
+    "pvalue" => getValue( $def, "DE_pvalue" ),
+    "useRawPvalue" => getValue( $def, "DE_use_raw_pvalue" ),
+    "foldChange" => getValue( $def, "DE_fold_change" ),
+    "bBetweenCluster" => $bBetweenCluster,
+    "DE_by_cell" => $DE_by_cell,
+    "covariance_file" => $def->{covariance_file},
+    "sample_column" => $def->{sample_column},
+    "group_column" => $def->{group_column},
+    "reduction" => $reduction,
+    "discard_samples" => $def->{discard_samples},
+    "DE_method" => $DE_method,
+  };
+
+  my $suffix = "SeuratDE_" . $DE_method . ($DE_by_cell ? "_byCell" : "_bySample");
+
+  my $groups         = undef;
+  my $pairs          = undef;
+  my $curClusterName = undef;
+  my $curClusterDisplayName = undef;
+
+  if ($bBetweenCluster) {
+    $suffix  = $suffix . "_betweenCluster";
+    $curClusterName = getValue( $def, "DE_cluster_name" );
+    $curClusterDisplayName = getValue( $def, "DE_cluster_display_name", $curClusterName );
+    $rCodeDic->{"filter_minTPM"} = getValue( $def, "DE_by_cell_filter_minTPM" );
+    $rCodeDic->{"filter_cellPercentage"}=getValue( $def, "DE_by_cell_filter_cellPercentage" );
+    $groups = getValue( $def, "DE_cluster_groups", {} );
+    $pairs  = getValue( $def, "DE_cluster_pairs" );
+  } else {
+    if ($DE_by_celltype) {
+      $curClusterName = $celltype_name;
+      $suffix  = $suffix . "_inCelltype";
+    }
+    else {
+      $curClusterName = $cluster_name;
+      $suffix  = $suffix . "_inCluster";
+    }
+
+    if ($DE_by_cell) {
+      $rCodeDic->{"filter_minTPM"}=getValue( $def, "DE_by_cell_filter_minTPM" );
+      $rCodeDic->{"filter_cellPercentage"}=getValue( $def, "DE_by_cell_filter_cellPercentage" );
+    }
+    else {
+      $rCodeDic->{"filter_min_cell_per_sample"}=getValue( $def, "DE_by_sample_min_cell_per_sample" );
+    }
+
+    $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
+
+    if(!defined $def->{group_column}){
+      $groups = getValue( $def, "groups" );
+    }
+    $pairs  = getValue( $def, "pairs" );
+  }
+  $rCodeDic->{"cluster_name"} = $curClusterName;
+  my $rmd_ext = "${suffix}.html";
+
+  my $DEtaskname  = defined $celltype_task ? "${celltype_task}_${suffix}" : "${cluster_task}_${suffix}";
+  my $seuratRscript = "../scRNA/seurat_DE.r";
+  my $seuratRmd =  "../scRNA/seurat_DE.rmd";
+
+  $config->{$DEtaskname} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $DEtaskname,
+    rtemplate            => "../CQS/countTableVisFunctions.R,../scRNA/scRNA_func.r,${seuratRscript}",
+    rReportTemplate      => "$seuratRmd,reportFunctions.R",
+    rmd_ext => $rmd_ext,     
+    run_rmd_independent => 1,
+    parameterSampleFile1 => $groups,
+    parameterSampleFile2 => $pairs,
+    parameterSampleFile3 => $rCodeDic,
+    output_file_ext      => ".SeuratDE.files.csv",
+    no_docker            => getValue($def, "no_docker", 0),
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "24",
+      "mem"       => getValue($def, "seurat_mem") 
+    },
+  };
+
+  if (!defined $config->{$cluster_task} && -e $cluster_task) {
+    $config->{$DEtaskname}{parameterFile1} = $cluster_task;
+  }else{
+    $config->{$DEtaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
+    if(defined $celltype_task){
+      $config->{$DEtaskname}{parameterFile2_ref} = [ $celltype_task, $celltype_cluster_file ];
+    }
+  }
+  push( @$summary, $DEtaskname );
+}
+
 sub addEdgeRTask {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
 
@@ -1743,31 +1848,39 @@ sub addEdgeRTask {
 sub addComparison {
   my ($config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $reduction) = @_;
   my $perform_comparison = getValue( $def, "perform_comparison", 0 );
+  my $DE_method = getValue( $def, "DE_method", "edgeR" );
   if(getValue( $def, "perform_edgeR" )){
     $perform_comparison = 1;
+    $DE_method = "edgeR";
   }
-  my $DE_by_sample = getValue( $def, "DE_by_sample" );
-  my $DE_by_cell = getValue( $def, "DE_by_cell" );
-
-  my @deByOptions = ();
-  if ( getValue( $def, "DE_by_celltype" ) ) {
-    push( @deByOptions, "DE_by_celltype" );
-  }
-  if ( getValue( $def, "DE_by_cluster" ) ) {
-    push( @deByOptions, "DE_by_cluster" );
-  }
-
-  #print("perform_comparison=" . $perform_comparison , "\n");
-  #print("DE_by_sample=" . $DE_by_sample , "\n");
   
   if ( $perform_comparison ) {
+    my $DE_by_sample = getValue( $def, "DE_by_sample" );
+    my $DE_by_cell = getValue( $def, "DE_by_cell" );
+
+    my @deByOptions = ();
+    if ( getValue( $def, "DE_by_celltype" ) ) {
+      push( @deByOptions, "DE_by_celltype" );
+    }
+    if ( getValue( $def, "DE_by_cluster" ) ) {
+      push( @deByOptions, "DE_by_cluster" );
+    }
+
     if ( defined $def->{"DE_cluster_pairs"} ) {
-      addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell, $reduction );
+      if( $DE_method eq "edgeR" ) {
+        addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell, $reduction );
+      }else{
+        addSeuratDETask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell, $reduction );
+      }
     }
 
     for my $deByOption (@deByOptions) {
       my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-      addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
+      if( $DE_method eq "edgeR" ) {
+        addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
+      }else{
+        addSeuratDETask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
+      }
     }
   }
 }
@@ -3345,15 +3458,14 @@ sub add_individual_qc_tasks{
 }
 
 sub add_multiome_qc {
-  my ($config, $def, $summary, $target_dir, $multiome_qc_task, $qc_filter_config_file, $fragment_cells_task) = @_;
+  my ($config, $def, $summary, $target_dir, $multiome_qc_task, $qc_files_ref, $fragment_files_ref) = @_;
 
-  if(!defined $qc_filter_config_file){
-    $qc_filter_config_file = "";
+  if(!defined($qc_files_ref)){
+    $qc_files_ref = "files";
   }
-  
-  my $qc_files_ref = "files";
-  $config->{atac_files} = $def->{atac_files};
-  $config->{raw_files}= $def->{raw_files};
+  if(!defined($fragment_files_ref)){
+    $fragment_files_ref = "fragment_files";
+  }
 
   $config->{$multiome_qc_task} = {
     class => "CQS::IndividualR",
@@ -3366,42 +3478,40 @@ sub add_multiome_qc {
     parameterSampleFile1_ref => $qc_files_ref,
     parameterSampleFile2 => {
       email => $def->{email},
-      pca_dims              => getValue( $def, "pca_dims" ),
-      by_sctransform        => getValue( $def, "by_sctransform" ),
-      use_sctransform_v2 => getValue( $def, "use_sctransform_v2", 0 ),
-      regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
-      species               => getValue( $def, "species" ),
-      db_markers_file       => getValue( $def, "markers_file" ),
-      curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
-      annotate_tcell        => getValue( $def, "annotate_tcell", 0),
-      HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file" ),
-      tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
-      bubblemap_file => $def->{bubblemap_file},
-      bubblemap_width => $def->{bubblemap_width},
-      bubblemap_height => $def->{bubblemap_height},
-      Mtpattern             => getValue( $def, "Mtpattern" ),
-      rRNApattern           => getValue( $def, "rRNApattern" ),
-      Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
-      Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
-      nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
-      nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
-      nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
-      mt_cutoff             => getValue( $def, "mt_cutoff" ),
-      resolution            => getValue( $def, "resolution" ),
-      pca_dims              => getValue( $def, "pca_dims" ),
-      ensembl_gene_map_file => $def->{"ensembl_gene_map_file"},
+      # pca_dims              => getValue( $def, "pca_dims" ),
+      # by_sctransform        => getValue( $def, "by_sctransform" ),
+      # use_sctransform_v2 => getValue( $def, "use_sctransform_v2", 0 ),
+      # regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+      # species               => getValue( $def, "species" ),
+      # db_markers_file       => getValue( $def, "markers_file" ),
+      # curated_markers_file  => getValue( $def, "curated_markers_file", "" ),
+      # annotate_tcell        => getValue( $def, "annotate_tcell", 0),
+      # HLA_panglao5_file     => getValue( $def, "HLA_panglao5_file" ),
+      # tcell_markers_file    => getValue( $def, "tcell_markers_file", ""),
+      # bubblemap_file => $def->{bubblemap_file},
+      # bubblemap_width => $def->{bubblemap_width},
+      # bubblemap_height => $def->{bubblemap_height},
+      # Mtpattern             => getValue( $def, "Mtpattern" ),
+      # rRNApattern           => getValue( $def, "rRNApattern" ),
+      # Remove_rRNA        => getValue( $def, "Remove_rRNA" ),
+      # Remove_MtRNA        => getValue( $def, "Remove_MtRNA" ),
+      # nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
+      # nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
+      # nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
+      # mt_cutoff             => getValue( $def, "mt_cutoff" ),
+      # resolution            => getValue( $def, "resolution" ),
+      # pca_dims              => getValue( $def, "pca_dims" ),
+      # ensembl_gene_map_file => $def->{"ensembl_gene_map_file"},
 
+      species_hub => getValue( $def, "species_hub" ),
       nCount_ATAC_min => getValue($def, "nCount_ATAC_min", 1000),
       nCount_ATAC_max => getValue($def, "nCount_ATAC_max", 100000),
       max_nucleosome_signal => getValue($def, "max_nucleosome_signal", 2),
       min_TSS_enrichment => getValue($def, "min_TSS_enrichment", 1),
-      macs_path => $def->{"macs_path"},
+      macs2_path => $def->{"macs2_path"},
     },
-    parameterSampleFile3_ref => "atac_files",
-    parameterSampleFile4_ref => "raw_files",
-    parameterSampleFile5_ref => $fragment_cells_task,
-    parameterFile1 => "",
-    parameterFile2 => getValue($def, "signac_annotation_file", ""),
+    parameterSampleFile3_ref => $fragment_files_ref,
+    parameterFile1 => getValue($def, "signac_annotation_file", ""),
     output_file_ext => ".obj.rds",
     samplename_in_result => 1,
     can_result_be_empty_file => 0,
@@ -3411,7 +3521,7 @@ sub add_multiome_qc {
     pbs => {
       "nodes" => "1:ppn=1",
       "walltime" => "10",
-      "mem" => getValue($def, "qc_mem", "80gb"),
+      "mem" => getValue($def, "multiome_qc_mem", "80gb"),
     },
   };
 }
@@ -3694,6 +3804,7 @@ sub add_cell_chat {
       thread => 4,
     },
     parameterFile1_ref => $obj_ref,
+    parameterFile2 => getValue($def, "cellchat_meta_file"),
     output_ext => ".cellchat.rds",
     output_to_result => 1,
     pbs => {
