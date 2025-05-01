@@ -76,9 +76,9 @@ sub perform {
 fi
 ";
 
-    if( -s $pbs_file ){
-      next;
-    }
+    # if( -s $pbs_file ){
+    #   next;
+    # }
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file_1, "", 0, undef, 'sh' );
 
@@ -204,10 +204,15 @@ if [[ ! -s ${sample_file}.sra ]]; then
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch $sample_name.prefetch.failed
-    #rm -f ${sample_file}.sra 
+    rm -f ${sample_file}.tmp.sra
   else
-    touch $sample_name.prefetch.succeed
-    mv ${sample_file}.tmp.sra ${sample_file}.sra
+    if [[ ! -s ${sample_file}.sra ]]; then
+      touch $sample_name.prefetch.failed
+    else
+      touch $sample_name.prefetch.succeed
+      rm -f $sample_name.prefetch.failed
+      mv ${sample_file}.tmp.sra ${sample_file}.sra
+    fi
   fi
 fi
 
@@ -216,13 +221,15 @@ if [[ -s ${sample_file}.sra ]]; then
   fastq-dump $option ${sample_file}.sra 
   status=\$?
   if [[ \$status -ne 0 ]]; then
-    touch $sample_name.fasterq.failed
+    touch $sample_name.fastq-dump.failed
     rm -f $dump_file_1 $dump_file_2 ${sample_file}.fastq.gz
   else
+    touch $sample_name.fastq-dump.succeed
     if [[ '$dump_file_1' != '$final_file_1' ]]; then
       mv $dump_file_1 $final_file_1
       mv $dump_file_2 $final_file_2
     fi
+    rm -rf ${sample_file}.sra
   fi
 fi
 ";
@@ -242,6 +249,7 @@ if [[ ! -s ${sf}.sra ]]; then
     exit 1
   else
     touch $sf.prefetch.succeed
+    rm -f $sf.prefetch.failed
     mv ${sf}.tmp.sra ${sf}.sra
   fi
 fi
