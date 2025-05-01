@@ -261,7 +261,7 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
   return(result)
 }
 
-save_gsea_rmd<-function(files, resFile, rmd_prefix=""){
+save_gsea_rmd<-function(files, resFile, rmd_prefix="", show_comparison=TRUE){
   source("reportFunctions.R")
   if(nrow(files) == 0){
     return("# No geneset with FDR < 0.05 detected")
@@ -271,7 +271,9 @@ save_gsea_rmd<-function(files, resFile, rmd_prefix=""){
   comparisons = comparisons[order(comparisons)]
   comparison<-comparisons[1]
   for(comparison in comparisons){
-    result<-paste0(result, paste0("\n\n", rmd_prefix, "# ", comparison, "\n\n"))
+    if(show_comparison){
+      result<-paste0(result, paste0("\n\n", rmd_prefix, "# ", comparison, "\n\n"))
+    }
 
     comp_files<-files[files$comparison==comparison,,drop=FALSE]
 
