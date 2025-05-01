@@ -2798,6 +2798,7 @@ sub add_individual_qc {
       pca_dims              => getValue( $def, "pca_dims" ),
       ensembl_gene_map_file => $def->{"ensembl_gene_map_file"},
       output_object => $output_object,
+      is_spatial_data => getValue($def, "is_spatial_data", 0),
     },
     parameterFile1 => $qc_filter_config_file,
     output_file_ext => "objectlist.rds",
