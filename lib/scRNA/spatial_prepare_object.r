@@ -2,19 +2,18 @@ rm(list=ls())
 sample_name='WHY_01'
 outFile='WHY_01'
 parSampleFile1='fileList1.txt'
-parSampleFile2=''
+parSampleFile2='fileList2.txt'
 parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/shengq2/temp/20250414_T01_prepare_bin_counts/prepare_spatial_object/result/WHY_01')
+setwd('/nobackup/h_cqs/shengq2/temp/20250415_spatial_scRNA_analysis/individual_spatial_object/result/WHY_01')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
-
 set.seed(20250414)
 
 library(Seurat)
@@ -29,57 +28,78 @@ data_path = file_map[[sample_name]]
 ###########################
 # Parameters
 ###########################
-bin.size=8
-DefaultAssay = "Spatial.008um"
-Cutoff<-data.frame(nFeature_cutoff_min = 20 ,nFeature_cutoff_max = 1000,nCount_cutoff=40, mt_cutoff = 25, cluster_remove=c(""),stringsAsFactors = F)
+myoptions_tbl=fread('fileList2.txt', header = F, sep = '\t')
+myoptions=split(myoptions_tbl$V1, myoptions_tbl$V2)
+bin.size=as.numeric(myoptions$bin.size)
+if(bin.size == 8){
+  binstr="008um"
+}else{
+  stop("Not implemented for bin size other than 8um")
+}
 
-###########################
-# message
-###########################
-print(paste0("Working in ",data_path))
-print(paste0("sample_name: ",sample_name,"; bin.size: ",bin.size,"; DefaultAssay: ",DefaultAssay))
+assay = paste0("Spatial.", binstr)
 
-# 1.Load and processing Objects _________________________________________
-###########################
-# Load Objects
-###########################
-object <- Load10X_Spatial(data.dir = data_path, bin.size = c(bin.size))
-object$sample <- sample_name
+nFeature_cutoff_min = as.numeric(myoptions$nFeature_cutoff_min)
+nFeature_cutoff_max = as.numeric(myoptions$nFeature_cutoff_max)
+nCount_cutoff = as.numeric(myoptions$nCount_cutoff)
+mt_cutoff = as.numeric(myoptions$mt_cutoff)
 
-###########################
-# Default Assay 8µm
-###########################
-Assays(object)
-DefaultAssay(object) <- DefaultAssay
+Cutoff<-data.frame( nFeature_cutoff_min = nFeature_cutoff_min ,
+                    nFeature_cutoff_max = nFeature_cutoff_max,
+                    nCount_cutoff=nCount_cutoff, 
+                    mt_cutoff = mt_cutoff, 
+                    cluster_remove=c(""),
+                    stringsAsFactors = F)
 
-###########################
-# Mitochondrial Percentage
-###########################
-object[['percent.mt']] <- PercentageFeatureSet(object, pattern = "^MT-")
-object <- subset(object, subset = nFeature_Spatial.008um > Cutoff$nFeature_cutoff_min & nFeature_Spatial.008um<Cutoff$nFeature_cutoff_max & nCount_Spatial.008um>Cutoff$nCount_cutoff & percent.mt < Cutoff$mt_cutoff)
+cat("Working in",data_path, "\n")
+cat("sample_name:",sample_name,"; bin.size:",bin.size,"; DefaultAssay:",assay, "\n")
 
-###########################
-# Normalize
-###########################
-object <- NormalizeData(object)
+cat("Loading data...\n")
+obj <- Load10X_Spatial(data.dir = data_path, bin.size = c(bin.size))
+obj$orig.ident <- sample_name
+obj$sample <- sample_name
 
-# 3. CLUSTERING___________________________________________
-###########################
-# Variable Feature and scaling
-###########################
-object <- FindVariableFeatures(object)
-object <- ScaleData(object)
+Assays(obj)
+DefaultAssay(obj) <- assay
 
-# we select 5,0000 cells and create a new 'sketch' assay
-object <- SketchData(
-  object = object,
+obj<-PercentageFeatureSet(object=obj, pattern=myoptions$Mtpattern, col.name = "percent.mt")
+obj<-PercentageFeatureSet(object=obj, pattern=myoptions$rRNApattern, col.name = "percent.ribo")
+
+cells=colnames(obj)[obj@meta.data[, paste0("nFeature_", assay)] > nFeature_cutoff_min & 
+                    obj@meta.data[, paste0("nFeature_", assay)] < nFeature_cutoff_max &
+                    obj@meta.data[, paste0("nCount_", assay)] > nCount_cutoff &
+                    obj@meta.data[, "percent.mt"] < mt_cutoff]
+cat("Cells before filter=", ncol(obj), "\n")
+obj <- subset(obj, cells = cells)
+cat("Cells after filter=", ncol(obj), "\n")
+
+cat("Normalizing data...\n")
+obj <- NormalizeData(obj)
+
+cat("Finding variable features...\n")
+obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000)
+
+cat("Save object...\n")
+saveRDS(obj, file = paste0(sample_name, "_", bin.size, "um.full.rds"))
+
+cat("SketchData...\n")
+#https://github.com/satijalab/seurat/issues/7171
+#without features = VariableFeatures(obj) , it will use all features and throw error: too slow.
+obj <- SketchData(
+  obj = obj,
   ncells = 50000,
   method = "LeverageScore",
-  sketched.assay = "RNA"
+  sketched.assay = "RNA",
+  features = VariableFeatures(obj) 
 )
 
-# 4. Save rds object___________________________________________
-###########################
-# save rds
-###########################
-saveRDS(object, file = paste0(sample_name, "_",bin.size,"um.rds"))
+obj[[assay]] <- NULL
+counts=GetAssayData(obj, assay = "RNA", layer = "counts")
+obj@meta.data=obj@meta.data[colnames(counts),,drop=FALSE]
+obj@commands=list()
+
+cat("Save sketch object...\n")
+saveRDS(obj, file = paste0(sample_name, "_", bin.size, "um.sketch.rds"))
+
+cat("Done.\n")
+
