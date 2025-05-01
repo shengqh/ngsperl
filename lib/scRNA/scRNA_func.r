@@ -2517,7 +2517,11 @@ read_scrna_data<-function(fileName, keep_seurat=FALSE){
     adt.counts<-counts$`Antibody Capture`
     counts<-counts$`Gene Expression` 
   }
-  return(list(counts=ceiling(counts), adt.counts=adt.counts))
+
+  if(!is_seurat_object(counts)){
+    counts=ceiling(counts)
+  }
+  return(list(counts=counts, adt.counts=adt.counts))
 }
 
 Plot_predictcelltype<-function(predict_celltype, topn=3, filename=NA, width=2000, height=2000) {
