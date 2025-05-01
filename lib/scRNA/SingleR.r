@@ -60,7 +60,9 @@ rds_file=paste0(outFile, ".SingleR.rds")
 if(file.exists(rds_file) & !force){
   labels<-readRDS(rds_file)
 }else{
+  cat("Converting to SingleCellExperiment object...\n")
   sce=as.SingleCellExperiment(DietSeurat(obj))
+  cat("Running SingleR...\n")
   labels<-SingleR(sce, ref=ct_ref, assay.type.test=1, labels=ct_ref$label.main)
   rm(sce)
 
@@ -85,6 +87,7 @@ obj <- AddMetaData(obj, metadata = labels$major_labels, col.name = "SingleR_majo
 ct_name="SingleR_labels"
 obj <- AddMetaData(obj, metadata = labels$pruned.labels, col.name = ct_name)
 
+cat("Saving meta data...\n")
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
 
 df<-data.frame("SingleR"=obj$SingleR_labels, "Sample"=obj$orig.ident)
@@ -101,6 +104,7 @@ major_obj=get_category_with_min_percentage(major_obj, ct_name, 0.01)
 ct_name_count = paste0(ct_name, "_count")
 major_obj@meta.data = add_column_count(major_obj@meta.data, ct_name, ct_name_count)
 
+cat("Visualizing...\n")
 g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
 ggsave(paste0(outFile, ".SingleR.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
 
@@ -130,3 +134,4 @@ png(paste0(outFile, ".score.png"), width=4000, height=3000, res=300)
 plotScoreHeatmap(slim_labels)
 dev.off()
 
+cat("Done.\n")
