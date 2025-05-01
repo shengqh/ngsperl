@@ -1791,6 +1791,10 @@ fi
       push @table_for_correlation, ( $refseq_bacteria_table, ".${refseq_bacteria_count}.count\$" );
     }
 
+    if ( $def->{read_correlation} ) {
+      push @table_for_correlation, ( $refseq_bacteria_table, ".read.count\$" );
+    }
+
     push @table_for_countSum,    ( $refseq_bacteria_table, ".phylum.estimated.count\$" );
 
     push @table_for_readSummary, ( $refseq_bacteria_table, '.read.count$' );
