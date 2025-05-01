@@ -3537,9 +3537,10 @@ process_filter=function(filter_action, filter_formula, filter_parts, cur_meta){
 
   if(filter_column == "*" & filter_action == "DELETE"){
     #delete all cells in the cluster
-    cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str==filter_cluster])
-    cat("    deleting all cells in cluster", filter_cluster, "(", cur_name, ")\n")
-    is_deleted = cur_meta$seurat_clusters_str==filter_cluster
+    delete_clusters=strsplit(filter_cluster, ",")[[1]]
+    cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str %in% delete_clusters])
+    cat("    deleting all cells in cluster", filter_cluster, "(", paste0(cur_name, collapse=","), ")\n")
+    is_deleted = cur_meta$seurat_clusters_str %in% delete_clusters
   }else{
     if (filter_cluster == -1){
       cat("   ", filter_action, filter_celltypes_str, "annotated by", filter_column, "from all sub-clusters\n")
@@ -3620,6 +3621,9 @@ process_rename=function(rename_formula, rename_parts, cur_meta) {
 }
 
 process_actions=function(ct_tbl, cur_meta){
+  if(nrow(cur_meta) == 0){
+    stop("cur_meta is empty")
+  }
   cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
   if(nrow(ct_tbl) > 0){
     cur_meta$is_moved=FALSE
