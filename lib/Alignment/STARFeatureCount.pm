@@ -113,17 +113,6 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    print $pbs "
-
-if [[ -e $result_dir/${sample_name}.star.failed ]]; then
-  rm $result_dir/${sample_name}.star.failed
-fi
-
-if [[ -e $result_dir/${sample_name}.featureCount.failed ]]; then
-  rm $result_dir/${sample_name}.featureCount.failed
-fi
-";
-
     my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
 
     my $localized_files = [];
@@ -133,19 +122,23 @@ fi
     my $uncompress = ( $sample_file_1 =~ /.gz$/ ) ? " --readFilesCommand zcat" : "";
 
     print $pbs "
+rm -f ${sample_name}.star.failed ${sample_name}.featureCount.failed
+
 status=1
 
 if [[ -s $sample_file_1 ]]; then
-  echo performing star ...
-  $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
-  status=\$?
-  if [[ \$status -eq 0 ]]; then
-    touch ${sample_name}.star.succeed
-  else
-    rm $unsorted
-    touch ${sample_name}.star.failed
+  if [[ ! -s $unsorted ]]; then
+    echo performing star ...
+    $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
+    status=\$?
+    if [[ \$status -eq 0 ]]; then
+      touch ${sample_name}.star.succeed
+    else
+      rm $unsorted
+      touch ${sample_name}.star.failed
+    fi
   fi
-
+  
   $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
