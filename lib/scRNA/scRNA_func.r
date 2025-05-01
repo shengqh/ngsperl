@@ -3436,12 +3436,12 @@ get_clustered_dotplot<-function(cur_obj, features, group.by, dot.scale=6, cluste
   result = list()
   if(clustered_by_gene){
     if(clustering_distance == "euclidean"){
-      rc = hclust(dist(gmat, method = "euclidean"))
+      rc = hclust(dist(t(gmat), method = "euclidean"))
     }else{
-      rc = hclust(as.dist(1 - cor(gmat, method="clustering_distance")))
+      rc = hclust(as.dist(1 - cor(gmat, use = "pa")))
     }
     ordered_genes = c(rc$labels[rc$order], na_genes)
-    g$data$features.plot = factor(g$data$features.plot, levels=ordered_genes)
+    g$data$features.plot = factor(as.character(g$data$features.plot), levels=ordered_genes)
 
     result$ordered_genes = ordered_genes
   }
