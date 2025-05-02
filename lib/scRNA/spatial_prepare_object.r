@@ -79,9 +79,6 @@ obj <- NormalizeData(obj)
 cat("Finding variable features...\n")
 obj <- FindVariableFeatures(obj, selection.method = "vst", nfeatures = 2000)
 
-cat("Save object...\n")
-saveRDS(obj, file = paste0(sample_name, "_", bin.size, "um.full.rds"))
-
 cat("SketchData...\n")
 #https://github.com/satijalab/seurat/issues/7171
 #without features = VariableFeatures(obj) , it will use all features and throw error: too slow.
@@ -93,12 +90,15 @@ obj <- SketchData(
   features = VariableFeatures(obj) 
 )
 
+cat("Save full object...\n")
+saveRDS(obj, file = paste0(sample_name, "_", bin.size, "um.full.rds"))
+
 obj[[assay]] <- NULL
 counts=GetAssayData(obj, assay = "RNA", layer = "counts")
 obj@meta.data=obj@meta.data[colnames(counts),,drop=FALSE]
 obj@commands=list()
 
-cat("Save sketch object...\n")
+cat("Save sketch object only...\n")
 saveRDS(obj, file = paste0(sample_name, "_", bin.size, "um.sketch.rds"))
 
 cat("Done.\n")
