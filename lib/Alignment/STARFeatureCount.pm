@@ -143,15 +143,23 @@ if [[ -s $sample_file_1 ]]; then
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
 fi
 
-if [[ \$status -eq 0 ]]; then
+if [[ \$status -eq 0 && -s $unsorted && ! -s $bam_stat ]]; then
   echo bamStat=`date` 
   python3 $py_script -i $unsorted -o $bam_stat
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.bamStat.succeed
+  else
+    rm -f $unsorted
+    touch ${sample_name}.bamStat.failed
+  fi
 fi
 ";
 
   if ($output_sort_by_coordinate) {
     print $pbs "
-if [[ \$status -eq 0 ]]; then
+if [[ \$status -eq 0 && -s $unsorted && ! -s $final_bam ]]; then
   echo bamSort=`date` 
   samtools sort -m $sort_memory -T ${sample_name} -t $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
   if [[ ! -e ${final_bam}.succeed ]]; then
@@ -183,7 +191,7 @@ if [[ \$status -eq 0 && -s $final_bam ]]; then
   fi
 fi
 
-if [[ \$status -eq 0 ]]; then
+if [[ \$status -eq 0 && -s $final_bam ]]; then
   echo performing featureCounts ...
   featureCounts $featureCountOption -T $thread -a $gffFile -o $final_file $final_bam
   status=\$?
@@ -201,16 +209,15 @@ fi
     if ( !$output_unsorted ) {
       print $pbs "
 if [[ -s $final_file && -s $bam_stat ]]; then
-  rm $unsorted 
+  rm -f $unsorted 
 fi
 ";
     }
 
     if ($delete_star_featureCount_bam){
       print $pbs "
-if [ -s $final_file ]; then
-  rm ${sample_name}_Aligned.out.bam ${sample_name}_Aligned.out.bam.bai
-  rm ${sample_name}_SJ.out.tab ${sample_name}.splicing.bed
+if [[ -s $final_file ]]; then
+  rm -f ${sample_name}_Aligned.out.bam ${sample_name}_Aligned.out.bam.bai ${sample_name}_SJ.out.tab ${sample_name}.splicing.bed
 fi
 ";
     }
