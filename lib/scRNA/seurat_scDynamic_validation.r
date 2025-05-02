@@ -152,7 +152,7 @@ do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct, reduc
       subobj_res=validation_column, 
       bubblemap_file=bubblemap_file, 
       add_num_cell=TRUE, 
-      species=NULL, 
+      species=species, 
       assay="RNA")
   }else{
     validation_cell=paste0(validation_column, "_Cell")
