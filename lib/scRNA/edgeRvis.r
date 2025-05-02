@@ -101,12 +101,12 @@ for (comp in rownames(edgeRres)){
       all_sigout<-rbind(all_sigout, sigout)
 
       designFile<-paste0(edgeRfolder, "/", edgeRres[comp, "designFile"])
-      designdata<-read.csv(designFile, stringsAsFactors = F, header=T) |>
-        tibble::column_to_rownames("Cell")
+      designdata<-read.csv(designFile, stringsAsFactors = F, header=T)
       
       groupColors<-get_group_colors_from_designdata(designdata)
 
       if(DE_by_cell){
+        designdata<-designdata |> tibble::column_to_rownames("Cell")
         cell_obj<-subset(obj, cells=rownames(designdata))
         # Using cells in subset cannot guarantee the order of cells in cell_obj is the same as in designdata
         # So we must match the order when assign Group and DisplayGroup
