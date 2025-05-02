@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='Q51804_liver'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.final.rds'
+parFile1='/nobackup/h_cqs/zhaos/Patterson/202504_snRNA_Q51804_liver/seurat_sct2_fastmnn_dr0.5_3_choose/result/Q51804_liver.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose_group_umap/result')
+setwd('/nobackup/h_cqs/zhaos/Patterson/202504_snRNA_Q51804_liver/seurat_sct2_fastmnn_dr0.5_3_choose_group_umap/result')
 
 ### Parameter setting end ###
 
@@ -20,7 +20,7 @@ obj<-read_object(parFile1)
 groups<-read.table(parSampleFile1, sep="\t", stringsAsFactors = F)
 groups_map<-split(groups$V1, groups$V2)
 
-group_names=unique(groups$V2)
+group_names=names(groups_map)
 ngroup=length(group_names)
 
 #g<-get_dim_plot(obj, group.by="seurat_clusters", label.by = "seurat_cell_type")
@@ -48,11 +48,13 @@ for(label in c(TRUE, FALSE)){
     xlab("UMAP_1") + ylab("UMAP_2")
   save_plot(paste0(outFile, ".All", label_str, ".umap.png"), g)
 
-  gname = names(groups_map)[1]
-  for(gname in names(groups_map)){
+  gname = group_names[2]
+  for(gname in group_names){
     if(gname == "All"){
       next
     }
+    cat("Processing group: ", gname, "\n")
+
     samples = groups_map[[gname]]
     cells<-colnames(obj)[obj$orig.ident %in% samples]
     subobj<-subset(obj, cells=cells)
@@ -63,7 +65,8 @@ for(label in c(TRUE, FALSE)){
     save_plot(paste0(outFile, ".", gname, label_str, ".umap.png"), g)
     
     if(label){
-      coord=FetchData(obj, c("UMAP_1", "UMAP_2", "orig.ident"))
+      g=DimPlot(obj, group.by="orig.ident")
+      coord=g$data |> dplyr::rename(UMAP_1=1, UMAP_2=2)
       in_group<-coord[colnames(subobj),]
       out_group<-coord[setdiff(rownames(coord), colnames(subobj)),]
       
@@ -77,18 +80,17 @@ for(label in c(TRUE, FALSE)){
 
   if(ngroup > 1){
     if(all(table(groups$V1) == 1)){ 
+      cat("Processing multiple group figure ...\n")
       #each sample belongs to one group
       cells<-colnames(obj)[obj$orig.ident %in% groups$V1]
       subobj<-subset(obj, cells=cells)
-      groups_map<-unlist(split(groups$V2, groups$V1))
-      subobj$group <- groups_map[subobj$orig.ident]
+      cur_groups_map<-unlist(split(groups$V2, groups$V1))
+      subobj@meta.data$group <- cur_groups_map[subobj$orig.ident]
 
       ngroups=length(unique(subobj$group))
       g<-get_dim_plot(subobj, group.by="seurat_clusters", label.by = "seurat_cell_type", label=label, title = "", legend.title = "Cell type", split.by="group")
       g<-add_x_y_axis(g)
-      png(paste0(outFile, ".group", label_str, ".umap.png"), width=2000 * ngroups + 500, height=2000, res=300)
-      print(g)
-      dev.off()
+      ggsave(paste0(outFile, ".group", label_str, ".umap.png"), g,  width=2000 * ngroups + 500, height=2000, units="px", dpi=300, bg="white")
     }
   }
 }
@@ -101,9 +103,8 @@ if(ngroup > 1){
   nrow=ceiling(nf/ncol)
 
   gg<-patchwork::wrap_plots(heatlist, nrow =nrow, ncol=ncol)
-  png(paste0(outFile, ".heat.png"),width=ncol * 1500, height=nrow*1300, res=300)
-  print(gg)
-  dev.off()
+  ggsave(paste0(outFile, ".heat.png"), gg, width=ncol * 1500, height=nrow*1300, units="px", dpi=300, bg="white")
 
   save_highlight_cell_plot(paste0(outFile, ".cell.png"), obj, group.by = "seurat_cell_type")
 }
+
