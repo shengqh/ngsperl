@@ -1249,14 +1249,14 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   return(g)
 }
 
-get_dot_width<-function(g, min_width=5000){
+get_dot_width<-function(g, min_width=4000){
   group_column=if("feature.groups" %in% colnames(g$data)){"feature.groups"}else{"id"}
   if(!all(c("features.plot",group_column) %in% colnames(g$data))){
     stop(paste0("features.plot or feature.groups is not in ", paste0(colnames(g$data), collapse = ",")))
   }
   ngenes = nrow(g$data[!duplicated(g$data[,c("features.plot",group_column)]),])
   ngroups = length(unique(g$data[,group_column]))
-  width=ngenes * 50 + ngroups * 40 + 400
+  width=ngenes * 40 + ngroups * 30 + 400
   return(max(width, min_width))
 }
 
@@ -3605,7 +3605,7 @@ process_merge=function(merge_formula, merge_parts, cur_meta) {
   return(cur_meta)
 }
 
-process_rename=function(rename_formula, rename_parts, cur_meta) {
+process_rename=function(rename_formula, rename_parts, cur_meta, condition_column) {
   if(length(rename_parts) != 2){
     stop(paste0("  rename formula should be RENAME:cluster:name, now we get", rename_formula))
   }
@@ -3613,7 +3613,7 @@ process_rename=function(rename_formula, rename_parts, cur_meta) {
   rename_cluster=rename_parts[1]
   rename_name=rename_parts[2]
 
-  is_rename = cur_meta$seurat_clusters_str==rename_cluster
+  is_rename = cur_meta[,condition_column]==rename_cluster
 
   rename_cells=sum(is_rename)
 
@@ -3624,14 +3624,13 @@ process_rename=function(rename_formula, rename_parts, cur_meta) {
   return(cur_meta)
 }
 
-process_actions=function(ct_tbl, cur_meta){
+process_actions=function(ct_tbl, cur_meta, condition_column="seurat_clusters_str"){
   if(nrow(cur_meta) == 0){
     stop("cur_meta is empty")
   }
   cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
   if(nrow(ct_tbl) > 0){
     cur_meta$is_moved=FALSE
-    action_formula=ct_tbl$V1[1]
     for(action_formula in ct_tbl$V1){
       cat("  action formula:", action_formula, "\n")
       action_parts=unlist(strsplit(action_formula, ":"))
@@ -3650,7 +3649,10 @@ process_actions=function(ct_tbl, cur_meta){
       }else if(action_type == "MERGE"){
         cur_meta=process_merge(action_formula, action_parts, cur_meta)
       }else if(action_type == "RENAME"){
-        cur_meta=process_rename(action_formula, action_parts, cur_meta)
+        cur_meta=process_rename(action_formula, 
+                                action_parts, 
+                                cur_meta, 
+                                condition_column)
       }else{
         stop(paste0("wrong action type:", action_type))
       }
