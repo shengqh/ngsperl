@@ -587,7 +587,8 @@ preprocess<-function( SampleInfo,
         #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
         #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
         g<-MyDoHeatMap(subobj, assay=cur_assay, features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
-        ggsave(paste0(cur_prefix, ".heatmap.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white")
+        ggsave(paste0(cur_prefix, ".heatmap.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white",
+          limitsize = FALSE)
 
         # subobj@misc$Qcluster <- EvalCluster(subobj)
         # ViewQcluster(SCLC)
@@ -634,7 +635,8 @@ preprocess<-function( SampleInfo,
                   height=get_dot_height_num(length(unique(subobj$seurat_cell_type_count))), 
                   units="px",
                   dpi=300, 
-                  bg="white")
+                  bg="white",
+                  limitsize = FALSE)
         }
       }
     }
