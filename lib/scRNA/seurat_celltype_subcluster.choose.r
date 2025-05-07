@@ -1,14 +1,15 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='CombP12891P12795'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn/result/combined.final.rds'
-parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_2_subcluster/result/combined.meta.rds'
-parFile3='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/essential_genes/result/combined.txt'
-parFile4='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_2_subcluster/result/combined.files.csv'
+parFile1='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn/result/CombP12891P12795.final.rds'
+parFile2='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_2_subcluster/result/CombP12891P12795.meta.rds'
+parFile3='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/essential_genes/result/CombP12891P12795.txt'
+parFile4='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_2_subcluster/result/CombP12891P12795.files.csv'
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result')
+
+setwd('/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_3_choose_test/result')
 
 ### Parameter setting end ###
 
@@ -66,7 +67,7 @@ cell_activity_database<-ctdef$cell_activity_database
 
 bubblemap_file=myoptions$bubblemap_file
 has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
-bubble_width <-ifelse(is.null(myoptions$bubble_width), 6000, as.numeric(myoptions$bubble_width))
+bubble_width <-ifelse(is.null(myoptions$bubble_width), 4000, as.numeric(myoptions$bubble_width))
 
 prefix<-outFile
 
@@ -306,26 +307,32 @@ for(pct in previous_celltypes){
     cur_meta$cur_layer[is.na(cur_meta$cur_layer)] = "DELETE"
 
     ct_tbl=subset(best_res_row, V2 != "resolution")
-    if(!"DELETE" %in% ct_tbl$V2){
-      #The cell types not in list will be deleted.
-      ct_tbl=rbind(ct_tbl, data.frame(V1="OTHERS", V2="DELETE", V3=pct))
-    }
+    #The cell types not in list will be defined by current value
+    if(nrow(ct_tbl) > 0){
+      no_action_ct_tbl=ct_tbl |> dplyr::filter(V2 != "ACTIONS")
 
-    source_cts=unique(ct_tbl$V1)
-    anno_cts=setdiff(source_cts, "OTHERS")
+      ct_tbl=ct_tbl |> dplyr::filter(V2 == "ACTIONS")
+      cur_meta=process_actions(ct_tbl, cur_meta, condition_column=best_res)
 
-    source_ct=source_cts[2]
-    for(source_ct in source_cts){
-      target_ct=ct_tbl$V2[ct_tbl$V1==source_ct]
-      cat("   ", source_ct, "to", target_ct, "\n")
-      if(source_ct == "OTHERS"){
-        cur_cells=rownames(cur_meta)[!cur_meta[,best_res] %in% anno_cts]
-      }else{
-        cur_cells=rownames(cur_meta)[cur_meta[,best_res] %in% source_ct]
+      if(nrow(no_action_ct_tbl) > 0) { #not actions, old definition
+        ct_tbl = no_action_ct_tbl
+        source_cts=unique(ct_tbl$V1)
+        anno_cts=setdiff(source_cts, "OTHERS")
+
+        source_ct=source_cts[2]
+        for(source_ct in source_cts){
+          target_ct=ct_tbl$V2[ct_tbl$V1==source_ct]
+          cat("   ", source_ct, "to", target_ct, "\n")
+          if(source_ct == "OTHERS"){
+            cur_cells=rownames(cur_meta)[!cur_meta[,best_res] %in% anno_cts]
+          }else{
+            cur_cells=rownames(cur_meta)[cur_meta[,best_res] %in% source_ct]
+          }
+          cur_meta[cur_cells, "cur_layer"] = target_ct
+        }
       }
-      cur_meta[cur_cells, "cur_layer"] = target_ct
+      cur_meta$seurat_clusters[cur_meta$cur_layer == "DELETE"] = -10000
     }
-    cur_meta$seurat_clusters[cur_meta$cur_layer == "DELETE"] = -10000
 
     tbl=table(cur_meta$cur_layer)
     tbl=tbl[names(tbl) != "DELETE"]
@@ -492,9 +499,9 @@ for(pct in pcts){
   g<-g+theme(text = element_text(size = 20))
   ggsave( paste0(outFile,".", celltype_to_filename(pct), ".umap.png"), 
           g,
-          width=2500, 
-          height=2000, 
-          units="px",
+          width=7, 
+          height=5, 
+          units="in",
           dpi=300,
           bg="white")
   
