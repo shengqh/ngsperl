@@ -668,7 +668,7 @@ do_normalization<-function( obj,
   
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
-  VariableFeatures(obj) <- setdiff(rownames(obj), ignore_variable_genes)
+  VariableFeatures(obj) <- setdiff(VariableFeatures(obj), ignore_variable_genes)
   cat("FindVariableFeatures done ... \n")
   
   if(scale.all){
