@@ -397,7 +397,12 @@ for(idx in c(1:nrow(designMatrix))){
   write.table(siggenes, file=sigGenenameFile, row.names=F, col.names=F, sep="\t", quote=F)
   
   gseaFile<-paste0(file_prefix, "_GSEA.rnk")
-  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
+  pValuesNoZero=out$table$PValue
+  if (any(pValuesNoZero == 0)){
+    pValuesNoZero[pValuesNoZero == 0] = min(pValuesNoZero[pValuesNoZero > 0],na.rm=TRUE)/10
+  }
+  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(pValuesNoZero)))
+  rankout<-rankout[order(rankout$sigfvalue, decreasing=TRUE),]
   write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
   
   curDF<-data.frame("prefix"=prefix, "cellType"=cellType, "comparison"=comp, "betweenCluster"=bBetweenCluster, "sampleInGroup"=sampleInGroup, "deFile"=dge_filename, "sigFile"=sigFile, "sigGenenameFile"=sigGenenameFile, "gseaFile"=gseaFile, "designFile"=designfile)

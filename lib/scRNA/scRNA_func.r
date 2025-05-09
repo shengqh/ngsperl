@@ -3330,7 +3330,12 @@ write_gsea_rnk_by_loose_criteria<-function(dge_all, groups, design, prefix){
   fitTest<-glmLRT(fit)
   out<-topTags(fitTest, n=Inf)
   gseaFile<-paste0(prefix, "_GSEA.rnk")
-  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
+  pValuesNoZero=out$table$PValue
+  if (any(pValuesNoZero == 0)){
+    pValuesNoZero[pValuesNoZero == 0] = min(pValuesNoZero[pValuesNoZero > 0],na.rm=TRUE)/10
+  }
+  rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(pValuesNoZero)))
+  #rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
   rankout<-rankout[order(rankout$sigfvalue, decreasing=TRUE),]
   write.table(rankout, file=gseaFile, row.names=F, col.names=F, sep="\t", quote=F)
 
