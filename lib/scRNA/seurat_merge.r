@@ -94,13 +94,15 @@ assay=ifelse(by_sctransform, "SCT", "RNA")
 
 #no matter if we will use sctransform, we need normalized RNA assay for visualization and cell type annotation
 #data slot for featureplot, dotplot, cell type annotation and scale.data slot for heatmap
-obj<-do_normalization(obj, selection.method="vst", nfeatures=2000, vars.to.regress=vars.to.regress, scale.all=FALSE, essential_genes=essential_genes)
+obj<-do_normalization(obj=obj, 
+                      selection.method="vst", 
+                      nfeatures=2000, 
+                      vars.to.regress=vars.to.regress, 
+                      scale.all=FALSE, 
+                      essential_genes=essential_genes,
+                      ignore_variable_genes=ignore_variable_genes)
 
 DefaultAssay(obj)<-assay
-
-if(length(ignore_variable_genes) > 0){
-  VariableFeatures(obj) <- setdiff(VariableFeatures(obj), ignore_variable_genes)
-}
 
 cat("RunPCA ... \n")
 obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
