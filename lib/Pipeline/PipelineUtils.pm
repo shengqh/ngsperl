@@ -2415,7 +2415,7 @@ sub addStarFeaturecount {
   my ($config, $def, $individual, $summary, $target_dir, $source_ref, $suffix) = @_;
   my $aligner_index              = $def->{star_index} or die "Define star_index at definition first";
   my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-  my $star_featurecount_walltime = getValue( $def, "star_featurecount_walltime", 23 );
+  my $star_featurecount_walltime = getValue( $def, "star_featurecount_walltime", 48 );
   my $star_memory = getValue( $def, "star_memory", 40 );
   my $star_option     = $def->{star_option};
 
