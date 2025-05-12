@@ -1,6 +1,6 @@
-rm(list=ls()) 
-sample_name='KA_0001'
-outFile='KA_0001'
+rm(list=ls())
+sample_name='Aorta_3019_HIVNeg'
+outFile='Aorta_3019_HIVNeg'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20241030_T01_cellbender/cellbender_03_clean/result/KA_0001')
+setwd('/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/cellbender_03_clean/result/Aorta_3019_HIVNeg')
 
 ### Parameter setting end ###
 
@@ -32,6 +32,7 @@ cellranger_counts=cellranger_obj$counts
 cat("cellranger_counts: ", nrow(cellranger_counts), "genes and", ncol(cellranger_counts), "cells.\n")
 
 common_cells=intersect(colnames(cellbender_counts), colnames(cellranger_counts))
+common_genes=intersect(rownames(cellbender_counts), rownames(cellranger_counts))
 
 if(parSampleFile3 != ""){
   decontX_rds=(fread(parSampleFile3, header=FALSE) %>% filter(V2==sample_name))$V1[1]
@@ -42,18 +43,24 @@ if(parSampleFile3 != ""){
 
   common_cells=intersect(common_cells, colnames(decontX_counts))
   df=data.frame(sample=sample_name, 
-                n_cellranger=ncol(cellranger_counts), 
-                n_cellbender=ncol(cellbender_counts),  
-                n_decontX=ncol(decontX_counts),
-                n_common=length(common_cells))
+                n_cell_cellranger=ncol(cellranger_counts), 
+                n_cell_cellbender=ncol(cellbender_counts),  
+                n_cell_decontX=ncol(decontX_counts),
+                n_cell_common=length(common_cells),
+                n_gene_cellranger=nrow(cellranger_counts),
+                n_gene_cellbender=nrow(cellbender_counts),
+                n_gene_common=length(common_genes))
 }else{
   df=data.frame(sample=sample_name, 
-                n_cellranger=ncol(cellranger_counts), 
-                n_cellbender=ncol(cellbender_counts),  
-                n_common=length(common_cells))
+                n_cell_cellranger=ncol(cellranger_counts), 
+                n_cell_cellbender=ncol(cellbender_counts),  
+                n_cell_common=length(common_cells),
+                n_gene_cellranger=nrow(cellranger_counts),
+                n_gene_cellbender=nrow(cellbender_counts),
+                n_gene_common=length(common_genes))
 }
 
-final_counts=cellbender_counts[,common_cells]
+final_counts=cellbender_counts[common_genes,common_cells]
 cat("final counts: ", nrow(final_counts), "genes and", ncol(final_counts), "cells.\n")
 
 write10xCounts( paste0(sample_name, ".cellbender_filtered.clean.h5"), final_counts)
@@ -64,9 +71,11 @@ if(length(names(cellranger_obj)) > 1){
   other_names = names(cellranger_obj)[!(names(cellranger_obj) %in% c("counts"))]
   for(other_name in other_names){
     other_counts = cellranger_obj[[other_name]]
-    cat(paste0("cellranger_", other_name), ":", nrow(other_counts), "features and", ncol(other_counts), "cells.\n")
-    new_other_counts = other_counts[,common_cells]
-    write10xCounts( paste0(sample_name, ".cellbender_filtered.clean.", other_name, ".h5"), new_other_counts)
-    cat("final", paste0("cellranger_", other_name), ":", nrow(final_counts), "genes and", ncol(final_counts), "cells.\n")
+    if(!is.null(other_counts)){
+      cat(paste0("cellranger_", other_name), ":", nrow(other_counts), "features and", ncol(other_counts), "cells.\n")
+      new_other_counts = other_counts[,common_cells]
+      write10xCounts( paste0(sample_name, ".cellbender_filtered.clean.", other_name, ".h5"), new_other_counts)
+      cat("final", paste0("cellranger_", other_name), ":", nrow(final_counts), "genes and", ncol(final_counts), "cells.\n")
+    }
   }
 }
