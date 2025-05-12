@@ -659,7 +659,7 @@ do_normalization<-function( obj,
                             vars.to.regress=NULL, 
                             scale.all=FALSE, 
                             essential_genes=NULL,
-                            ignore_variable_genes=c()) {
+                            ignore_variable_genes=NULL) {
   DefaultAssay(obj)<-"RNA"
 
   cat("NormalizeData ... \n")
@@ -668,15 +668,20 @@ do_normalization<-function( obj,
   
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
-  vgenes=VariableFeatures(obj)
-  VariableFeatures(obj) <- setdiff(vgenes, ignore_variable_genes)
   cat("FindVariableFeatures done ... \n")
+
+  if(length(ignore_variable_genes) > 0){
+    cat("Remove ignore variable genes ... \n")
+    vgenes=VariableFeatures(obj)
+    VariableFeatures(obj) <- setdiff(vgenes, ignore_variable_genes)
+    cat("Remove some variable genes done ... \n")
+  }
   
   if(scale.all){
     features = rownames(obj)
   }else{
     features=VariableFeatures(obj)
-    if (!is.null(essential_genes)){
+    if (length(essential_genes) > 0){
       features = unique(c(features, essential_genes))
     }
   }
@@ -694,7 +699,7 @@ do_sctransform<-function( rawobj,
                           return.only.var.genes=FALSE, 
                           mc.cores=1, 
                           use_sctransform_v2=TRUE,
-                          ignore_variable_genes=c()) {
+                          ignore_variable_genes=NULL) {
   vst.flavor = ifelse(use_sctransform_v2, "v2", "v1")
 
   print(paste0("performing SCTransform by ", vst.flavor, " ..."))
@@ -733,14 +738,16 @@ do_sctransform<-function( rawobj,
     }
 
     #https://github.com/satijalab/seurat/issues/2814
-    VariableFeatures(obj[["SCT"]]) <- setdiff(rownames(obj[["SCT"]]@scale.data), ignore_variable_genes)
+    sct_var_genes=rownames(obj[["SCT"]]@scale.data)
+    VariableFeatures(obj[["SCT"]]) <- setdiff(sct_var_genes, ignore_variable_genes)
     rm(objs)
     return(obj)
   }else{
     print("  perform sctransform ...")
     rawobj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
     print("  sctransform done")
-    VariableFeatures(rawobj[["SCT"]]) <- setdiff(rownames(rawobj[["SCT"]]@scale.data), ignore_variable_genes)
+    sct_var_genes=rownames(obj[["SCT"]]@scale.data)
+    VariableFeatures(rawobj[["SCT"]]) <- setdiff(sct_var_genes, ignore_variable_genes)
     return(rawobj)
   }
 }
@@ -753,7 +760,7 @@ do_harmony<-function(obj, by_sctransform,
                     essential_genes=NULL, 
                     mc.cores=1,
                     use_sctransform_v2=TRUE,
-                    ignore_variable_genes=c()){
+                    ignore_variable_genes=NULL) {
   if(by_sctransform){
     #now perform sctranform
     obj<-do_sctransform(obj, 
@@ -2008,9 +2015,10 @@ do_PCA_Integration<-function( subobj,
                               orig.reduction="pca",
                               thread=1,
                               detail_prefix=NULL,
-                              ignore_variable_genes=c()) {
+                              ignore_variable_genes=NULL) {
   if(length(ignore_variable_genes) > 0){
-    VariableFeatures(subobj) <- setdiff(VariableFeatures(subobj), ignore_variable_genes)
+    vgenes=VariableFeatures(subobj)
+    VariableFeatures(subobj) <- setdiff(vgenes, ignore_variable_genes)
   }
 
   cat("RunPCA ... \n")
@@ -2094,8 +2102,7 @@ sub_cluster<-function(subobj,
                      redo_fastmnn = FALSE,
                      thread=1,
                      detail_prefix=NULL,
-                     ignore_variable_genes=c()
-){
+                     ignore_variable_genes=NULL){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
     cur_npcs = n_half_cell
@@ -2846,7 +2853,7 @@ iterate_celltype<-function(obj,
                            essential_genes,
                            species="Hs",
                            reduction="pca",
-                           ignore_variable_genes=c()){
+                           ignore_variable_genes=NULL){
   meta = obj@meta.data
   
   assay=ifelse(by_sctransform, "SCT", "RNA")
@@ -3029,7 +3036,7 @@ layer_cluster_celltype<-function(obj,
                                  essential_genes,
                                  species,
                                  reduction="pca",
-                                 ignore_variable_genes=c()){
+                                 ignore_variable_genes=NULL){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -3044,12 +3051,29 @@ layer_cluster_celltype<-function(obj,
       
       iter_name=paste0("iter", iter)
 
-      previous_celltypes<-previous_celltypes[order(previous_celltypes)]
+      previous_celltypes<-sort(previous_celltypes)
       
       curprefix = paste0(prefix, ".iter", iter)
 
       iter_meta_file = paste0(curprefix, ".csv")
       iter_meta_rds = paste0(curprefix, ".rds")
+
+      if (0) { # if we want to use the cached data
+        if(file.exists(iter_meta_rds)){
+          cat("Found previous meta file, skip this iteration\n")
+          obj@meta.data = readRDS(iter_meta_rds)
+          pre_disagree<-obj@meta.data[obj@meta.data[, previous_layer] != obj@meta.data[, iter_name],,drop=F]
+          if(nrow(pre_disagree) > 0){
+            previous_layer = iter_name
+            previous_celltypes=unique(obj@meta.data[, previous_layer])
+            iter = iter + 1
+            next
+          }else{
+            cat("No more cell type to iterate\n")
+            break
+          }
+        }
+      }
 
       cat("  Call iterate_celltype ...\n")
 
@@ -3163,9 +3187,14 @@ do_analysis<-function(tmp_folder,
                       init_layer="layer0",
                       final_layer="layer4",
                       reduction="pca",
-                      ignore_variable_genes=ignore_variable_genes) {
+                      ignore_variable_genes=NULL) {
   tmp_prefix=file.path(tmp_folder, prefix)
   cur_prefix=file.path(cur_folder, prefix)
+
+  previous_layer = init_layer
+  cur_layer = final_layer
+  cur_layermap = layer2map
+  prefix = tmp_prefix
 
   reslist1<-layer_cluster_celltype( obj = obj,
                                     previous_layer = init_layer, 
