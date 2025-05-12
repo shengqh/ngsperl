@@ -342,7 +342,7 @@ sub getScRNASeqConfig {
           species             => getValue($def, "species", "Hs"),
         },
         sh_direct => 1,
-        no_docker => 1,
+        #no_docker => 1,
         output_ext => "_${binsize}um.full.rds;_${binsize}um.sketch.rds",
         pbs => {
           "nodes"    => "1:ppn=1",
