@@ -522,12 +522,16 @@ if [[ ! -s \${HOME}/.ncbi/user-settings.mkfg ]]; then
   cp $sratoolkit_setting_file \${HOME}/.ncbi
 fi
 
-if [[ ! -s __NAME__.sra ]]; then
+status=0
+
+if [[ -s __NAME__.sra ]]; then
+  echo __NAME__.sra exist, no need to run prefetch again
+else
   echo prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.sra
   prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.sra
   status=\$?
   if [[ \$status -ne 0 ]]; then
-    touch __NAME__.prefetch.failed
+    echo failed to prefetch: \$status | tee __NAME__.prefetch.failed
     rm -f __NAME__.sra __NAME__.prefetch.succeed
   else
     touch __NAME__.prefetch.succeed 
@@ -535,44 +539,71 @@ if [[ ! -s __NAME__.sra ]]; then
   fi
 fi
 
-if [[ -s __NAME__.sra ]]; then
-  echo vdb-validate $ngc_file_option __NAME__.sra
-  vdb-validate $ngc_file_option __NAME__.sra
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch __NAME__.vdbvalidate.failed
-    rm -f __NAME__.sra __NAME__.vdbvalidate.succeed
+if [[ \$status -eq 0 ]]; then # has __NAME__.sra
+  if [[ -f __NAME__.vdbvalidate.succeed ]]; then 
+    echo __NAME__.vdbvalidate.succeed exist, no need to run vdb-validate again
   else
-    touch __NAME__.vdbvalidate.succeed
-    rm -f __NAME__.vdbvalidate.failed
+    echo vdb-validate $ngc_file_option __NAME__.sra
+    vdb-validate $ngc_file_option __NAME__.sra
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      echo failed to vdbvalidate: \$status | tee __NAME__.vdbvalidate.failed
+      rm -f __NAME__.sra __NAME__.vdbvalidate.succeed
+    else
+      touch __NAME__.vdbvalidate.succeed
+      rm -f __NAME__.vdbvalidate.failed
+    fi
   fi
 fi
 
-if [[ -s __NAME__.sra ]]; then
-  echo fasterq-dump $fasterq_dump_option __NAME__.sra
-  fasterq-dump $fasterq_dump_option __NAME__.sra
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch __NAME__.fasterq-dump.failed
-    rm -f __NAME___1.fastq __NAME___2.fastq __NAME__.fastq __NAME__.fasterq-dump.succeed
+if [[ \$status -eq 0 ]]; then # validate succeed
+  if [[ (-s __NAME___1.fastq || -s __NAME___1.fastq.gz) && (-s __NAME___2.fastq) && -f __NAME__.fasterq-dump.succeed ]]; then
+    echo fasterq-dump succeed, no need to run again
   else
-    touch __NAME__.fasterq-dump.succeed
-    rm -f __NAME__.fasterq-dump.failed
+    echo fasterq-dump $fasterq_dump_option __NAME__.sra
+    fasterq-dump $fasterq_dump_option __NAME__.sra
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      echo failed to fasterqer: \$status | tee __NAME__.fasterq-dump.failed
+      rm -f __NAME___1.fastq __NAME___2.fastq __NAME__.fastq __NAME__.fasterq-dump.succeed
+    else
+      touch __NAME__.fasterq-dump.succeed
+      rm -f __NAME__.fasterq-dump.failed
+    fi
   fi
 fi
 
-if [[ -s __NAME___1.fastq && -s __NAME___2.fastq && -f __NAME__.fasterq-dump.succeed ]]; then
-  echo gzip __NAME___1.fastq __NAME___2.fastq
-  gzip __NAME___1.fastq __NAME___2.fastq
+rm -rf fasterq.tmp*
+
+if [[ \$status -eq 0 ]]; then # fasterq-dump succeed
+  if [[ -s __NAME___1.fastq.gz && ! -s __NAME___1.fastq ]]; then
+    echo gzip __NAME___1.fastq succeed, no need to run again
+  else
+    echo gzip __NAME___1.fastq
+    gzip __NAME___1.fastq 2>__NAME___1.fastq.err.log
+    status=\$?
+    if [[ \$status -ne 0 ]]; then
+      echo Failed to gzip fastq1: \$status | tee __NAME__.gzip.failed
+      rm -f __NAME___1.fastq.gz __NAME__.gzip.succeed
+    else
+      rm -f __NAME___1.fastq.err.log
+    fi
+  fi
+fi
+
+if [[ \$status -eq 0 ]]; then # fasterq-dump succeed and gzip fastq1 succeed
+  echo gzip __NAME___2.fastq
+  gzip __NAME___2.fastq 2>__NAME___2.fastq.err.log
   status=\$?
   if [[ \$status -ne 0 ]]; then
-    touch __NAME__.gzip.failed
-    rm -f __NAME___1.fastq.gz __NAME___2.fastq.gz __NAME__.fastq __NAME__.gzip.succeed
+    echo Failed to gzip fastq2: \$status | tee __NAME__.gzip.failed
+    rm -f __NAME___2.fastq.gz __NAME__.gzip.succeed
   else
     touch __NAME__.gzip.succeed
-    rm -f __NAME__.fastq __NAME__.gzip.failed __NAME__.sra
+    rm -f __NAME__.gzip.failed __NAME___2.fastq.err.log
   fi
 fi
+
 ",
         source_ref => $source_ref,
         sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 0),
