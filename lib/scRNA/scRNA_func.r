@@ -3191,10 +3191,12 @@ do_analysis<-function(tmp_folder,
   tmp_prefix=file.path(tmp_folder, prefix)
   cur_prefix=file.path(cur_folder, prefix)
 
-  previous_layer = init_layer
-  cur_layer = final_layer
-  cur_layermap = layer2map
-  prefix = tmp_prefix
+  if(0) {#for debug
+    previous_layer = init_layer
+    cur_layer = final_layer
+    cur_layermap = layer2map
+    prefix = tmp_prefix
+  }
 
   reslist1<-layer_cluster_celltype( obj = obj,
                                     previous_layer = init_layer, 
