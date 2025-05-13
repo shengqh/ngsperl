@@ -28,8 +28,11 @@ library(data.table)
 library(SeuratData)
 library(SeuratWrappers)
 library(BiocParallel)
+library(future)
 
 options(future.globals.maxSize= 10779361280)
+future::plan(strategy = "multisession")
+
 random.seed=20200107
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
