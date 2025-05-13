@@ -490,7 +490,7 @@ sub getPreprocessionConfig {
       my $prefetch_option = getValue($def, "prefetch_option", "--max-size u");
       my $ngc_file = getValue($def, "ngc_file", "");
       my $ngc_file_option = $ngc_file eq "" ? "" : "--ngc $ngc_file";
-      my $fasterq_dump_option = getValue($def, "fasterq-dump_option", "--split-3 --qual-defline '+' --progress");
+      my $fasterq_dump_option = getValue($def, "fasterq-dump_option", "--split-3 --qual-defline '+'");
       my $sratoolkit_setting_file = getValue($def, "sratoolkit_setting_file");
 
       my $docker_prefix = "sratools_";
@@ -503,12 +503,21 @@ sub getPreprocessionConfig {
       }
 
       $config->{sra2fastq} = {
-        class      => "CQS::ProgramWrapperOneToOne",
+        class      => "CQS::ProgramWrapperOneToOneDependent",
         perform    => 1,
         target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "sra2fastq",
         program => "",
         check_program => 0,
         option     => "
+tmp_dir=\$(mktemp -d -t ci-\$(date +\%Y-\%m-\%d-\%H-\%M-\%S)-XXXXXXXXXX)
+tmp_cleaner()
+{
+rm -rf \${tmp_dir}
+exit -1
+}
+trap 'tmp_cleaner' TERM
+
+echo using tmp_dir=\$tmp_dir
 
 set -o pipefail
 
@@ -528,7 +537,7 @@ if [[ -s __NAME__.sra ]]; then
   echo __NAME__.sra exist, no need to run prefetch again
 else
   echo prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.sra
-  prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.sra
+  prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.sra --progress
   status=\$?
   if [[ \$status -ne 0 ]]; then
     echo failed to prefetch: \$status | tee __NAME__.prefetch.failed
@@ -561,7 +570,7 @@ if [[ \$status -eq 0 ]]; then # validate succeed
     echo fasterq-dump succeed, no need to run again
   else
     echo fasterq-dump $fasterq_dump_option __NAME__.sra
-    fasterq-dump $fasterq_dump_option __NAME__.sra
+    fasterq-dump $fasterq_dump_option --temp \$tmp_dir --progress __NAME__.sra
     status=\$?
     if [[ \$status -ne 0 ]]; then
       echo failed to fasterqer: \$status | tee __NAME__.fasterq-dump.failed
@@ -572,8 +581,6 @@ if [[ \$status -eq 0 ]]; then # validate succeed
     fi
   fi
 fi
-
-rm -rf fasterq.tmp*
 
 if [[ \$status -eq 0 ]]; then # fasterq-dump succeed
   if [[ -s __NAME___1.fastq.gz && ! -s __NAME___1.fastq ]]; then
@@ -604,6 +611,8 @@ if [[ \$status -eq 0 ]]; then # fasterq-dump succeed and gzip fastq1 succeed
   fi
 fi
 
+rm -rf fasterq.tmp*
+
 ",
         source_ref => $source_ref,
         sh_direct  => getValue($def, "sra_to_fastq_sh_direct", 0),
@@ -614,6 +623,7 @@ fi
         output_to_same_folder => 0,
         no_output => 1,
         use_tmp_folder => 0,
+        max_jobs => 5,
         pbs        => {
           "nodes"     => "1:ppn=1",
           "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
