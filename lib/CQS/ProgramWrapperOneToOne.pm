@@ -47,6 +47,14 @@ sub get_pbs_key {
   die("Define source or parameterSampleFile1 for section $section first!");
 }
 
+sub print_sh_pbs {
+  my ($self, $sh, $pbs_name, $final_file, $pbs_index) = @_;
+  print $sh "if [[ ! -s $final_file ]]; then
+  \$MYCMD ./$pbs_name 
+fi
+";
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -117,7 +125,9 @@ sub perform {
 
   my $expect_result = $self->result( $config, $section );
 
+  my $pbs_index = 0;
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
+    $pbs_index = $pbs_index + 1;
     my $curOption = $option;
 
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
@@ -133,10 +143,7 @@ sub perform {
     my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     if ( $has_multi_samples ) {
-      print $sh "if [[ ! -s $final_file ]]; then
-  \$MYCMD ./$pbs_name 
-fi
-";
+      $self->print_sh_pbs( $sh, $pbs_name, $final_file, $pbs_index );
     }
 
     my $final_prefix = $output_to_folder ? "." : $sample_name . $output_file_prefix;
