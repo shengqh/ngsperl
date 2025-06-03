@@ -502,8 +502,15 @@ sub getPreprocessionConfig {
         $no_docker = 1;
       }
 
+      my $classname;
+      if(getValue($def, "sra2fastq_use_dependency", 1)){
+        $classname = "CQS::ProgramWrapperOneToOneDependent";
+      }else{
+        $classname = "CQS::ProgramWrapperOneToOne";
+      }
+
       $config->{sra2fastq} = {
-        class      => "CQS::ProgramWrapperOneToOneDependent",
+        class      => $classname,
         perform    => 1,
         target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . "sra2fastq",
         program => "",
@@ -518,6 +525,8 @@ exit -1
 trap 'tmp_cleaner' TERM
 
 echo using tmp_dir=\$tmp_dir
+echo current tmp storage of \$HOSTNAME
+df | grep /tmp
 
 set -o pipefail
 
@@ -627,7 +636,7 @@ rm -rf fasterq.tmp*
         pbs        => {
           "nodes"     => "1:ppn=1",
           "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
-          "mem"       => "10gb"
+          "mem"       => "40gb"
         },
       };
     }else{
