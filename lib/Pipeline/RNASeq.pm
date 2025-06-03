@@ -85,6 +85,13 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "use_green_red_color_in_hca", 0 );
   initDefaultValue( $def, "output_bam_to_same_folder",  1 );
 
+  my $featureCount_option = $def->{featureCount_option};
+  if( $featureCount_option =~ /--fraction/) {
+    initDefaultValue( $def, "round_count_table", 1 );
+  } else {
+    initDefaultValue( $def, "round_count_table", 0 );
+  }
+
   $def->{"totalCountKey"} = "None";
   
   if(defined $def->{files}){
@@ -623,6 +630,7 @@ STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusio
       option                    => "-k 0 -v $count_table_column -e --fillMissingWithZero",
       source_ref                => $count_table_ref,
       remove_chrM_genes => getValue($def, "remove_chrM_genes", 0),
+      round_count_table => getValue($def, "round_count_table", 0),
       output_proteincoding_gene => $def->{perform_proteincoding_gene},
       name_map_file             => $name_map_file,
       sh_direct                 => 1,
