@@ -31,7 +31,7 @@ library(testit)
 library(stringr)
 
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 min.pct=0.5
 logfc.threshold=0.6
@@ -224,15 +224,31 @@ if(!is_file_empty(parSampleFile3)){
       stop(paste0("Cannot find cell types ", paste0(missed_cts, collapse = "/"), " in obj cell type layer ", previous_layer, ": ", paste0(current_cts, collapse = "/")))
     }
 
-    ct=all_ct_tbl$V3[1]
-    for(ct in unique(all_ct_tbl$V3)){
-      print(ct)
-      ct_tbl=all_ct_tbl |> dplyr::filter(V3 == ct)
-      cur_meta = meta[meta$cur_layer == ct,]
-      cur_meta = process_actions(ct_tbl, cur_meta)
-      cur_meta[cur_meta$seurat_clusters < 0, "cur_layer"] = "DELETE"
-      meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+    move_ct_tbl=all_ct_tbl |> dplyr::filter(grepl("^MOVE", V1))
+    if(nrow(move_ct_tbl) > 0) {
+      ct=move_ct_tbl$V3[1]
+      for(ct in unique(move_ct_tbl$V3)){
+        print(ct)
+        ct_tbl=move_ct_tbl |> dplyr::filter(V3 == ct)
+        cur_meta = meta[meta$cur_layer == ct,]
+        cur_meta = process_actions(ct_tbl, cur_meta)
+        meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+      }
     }
+
+    other_ct_tbl=all_ct_tbl |> dplyr::filter(!grepl("^MOVE", V1))
+    if(nrow(other_ct_tbl) > 0){
+      ct=other_ct_tbl$V3[1]
+      for(ct in unique(other_ct_tbl$V3)){
+        print(ct)
+        ct_tbl=other_ct_tbl |> dplyr::filter(V3 == ct)
+        cur_meta = meta[meta$cur_layer == ct,]
+        cur_meta = process_actions(ct_tbl, cur_meta)
+        cur_meta[cur_meta$seurat_clusters < 0, "cur_layer"] = "DELETE"
+        meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+      }
+    }
+    
     meta = meta |> dplyr::select(-cur_layer, -seurat_clusters)
   }
 

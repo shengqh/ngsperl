@@ -31,7 +31,7 @@ library(patchwork)
 library(glmGamPoi)
 library('rmarkdown')
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 min.pct=0.5
 logfc.threshold=0.6

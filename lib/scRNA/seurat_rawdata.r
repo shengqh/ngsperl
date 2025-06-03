@@ -22,7 +22,7 @@ library(sparseMatrixStats)
 library(data.table)
 library(tidyr)
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 
 myoptions<-read_file_map(parSampleFile2, do_unlist = FALSE)
@@ -272,22 +272,10 @@ if(is_qc_data){
       }
 
       if (species=="Mm") {
-        rownames(counts)<-toMouseGeneSymbol(rownames(counts))
+        counts=update_rownames(counts, toMouseGeneSymbol)
       }
       if (species=="Hs") {
-        newnames = toupper(rownames(counts))
-        if(any(duplicated(newnames))){
-          #somehow for the data downloaded from internet, they might have duplicated gene names (lower case and upper case difference),
-          #we need to remove the one with lower reads
-          library(dplyr)
-          dup_data=counts[newnames %in% newnames[duplicated(newnames)],]
-          dup_sum=apply(dup_data,1,sum)
-          dup_df=data.frame(old_gene=rownames(dup_data), sum=dup_sum, dup_name=toupper(rownames(dup_data)))
-          max_dup=dup_df %>% group_by(dup_name) %>% filter(sum == max(sum, na.rm=TRUE))
-          remove_genes=rownames(dup_data)[!(rownames(dup_data) %in% max_dup$old_gene)]
-          counts=counts[!(rownames(counts) %in% remove_genes),,drop=FALSE]
-        }
-        rownames(counts)<-toupper(rownames(counts))
+        counts=update_rownames(counts, toupper)
       }
       sobj = CreateSeuratObject(counts = counts, project = sample_name)
       sobj$orig.ident <- sample_name

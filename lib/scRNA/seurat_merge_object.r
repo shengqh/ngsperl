@@ -20,7 +20,7 @@ library(sparseMatrixStats)
 
 source("scRNA_func.r")
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)

@@ -28,7 +28,7 @@ require(data.table)
 library(SeuratWrappers)
 library(SeuratData)
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
