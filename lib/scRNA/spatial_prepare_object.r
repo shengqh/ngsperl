@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='WHY_01'
-outFile='WHY_01'
+sample_name='VW_01'
+outFile='VW_01'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/shengq2/temp/20250415_spatial_scRNA_analysis/individual_spatial_object/result/WHY_01')
+setwd('/nobackup/h_cqs/jstolze/VWeiss/20250418_Visium_12904/individual_spatial_object/result/VW_01')
 
 ### Parameter setting end ###
 
@@ -62,8 +62,21 @@ obj$sample <- sample_name
 Assays(obj)
 DefaultAssay(obj) <- assay
 
-obj<-PercentageFeatureSet(object=obj, pattern=myoptions$Mtpattern, col.name = "percent.mt")
-obj<-PercentageFeatureSet(object=obj, pattern=myoptions$rRNApattern, col.name = "percent.ribo")
+detail_folder="details"
+dir.create(detail_folder, showWarnings = FALSE)
+detail_prefix=file.path(detail_folder, sample_name)
+
+cat("preprocessing_rawobj ...\n")
+finalList<-preprocessing_rawobj(
+  rawobj=obj, 
+  myoptions=myoptions, 
+  prefix=detail_prefix, 
+  filter_config_file='',
+  assay=assay)
+cat("preprocessing_rawobj done.\n")
+
+obj<-finalList$rawobj
+finalList<-finalList[names(finalList) != "rawobj"]
 
 cells=colnames(obj)[obj@meta.data[, paste0("nFeature_", assay)] > nFeature_cutoff_min & 
                     obj@meta.data[, paste0("nFeature_", assay)] < nFeature_cutoff_max &
