@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='CombP12891P12795'
+outFile='Aorta_Progeria'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn/result/CombP12891P12795.final.rds'
-parFile2='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_2_subcluster/result/CombP12891P12795.meta.rds'
-parFile3='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/essential_genes/result/CombP12891P12795.txt'
-parFile4='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_2_subcluster/result/CombP12891P12795.files.csv'
+parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn/result/Aorta_Progeria.final.rds'
+parFile2='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_2_subcluster/result/Aorta_Progeria.meta.rds'
+parFile3='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/essential_genes/result/Aorta_Progeria.txt'
+parFile4='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_2_subcluster/result/Aorta_Progeria.files.csv'
 
 
-setwd('/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_3_choose_test/result')
+setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_3_choose/result')
 
 ### Parameter setting end ###
 
@@ -30,7 +30,7 @@ library(htmltools)
 library(patchwork)
 library(testit)
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 min.pct=0.5
 logfc.threshold=0.6
@@ -447,6 +447,13 @@ if(output_heatmap){
   obj<-myScaleData(obj, allmarkers, "RNA")
 }
 
+if(any(is.na(obj@meta.data$seurat_cell_type))) {
+  na_meta=obj@meta.data |> dplyr::filter(is.na(seurat_cell_type))
+  na_file=paste0(outFile, ".seurat_cell_type.na.csv")
+  write.csv(na_meta, na_file)
+  stop(paste0("seurat_cell_type has NA values, please check the file: ", na_file))
+}
+
 # Keep the original UMAP, don't redo PCA and UMAP since it doesn't work for integration.
 # cat("redo PCA ...\n")
 # obj <- RunPCA(object = obj, assay=assay, verbose=FALSE)
@@ -660,4 +667,3 @@ ggsave( paste0( prefix, ".seurat_cell_type.top10.heatmap.png"),
         limitsize=FALSE)
 
 cat("done ...\n")
-
