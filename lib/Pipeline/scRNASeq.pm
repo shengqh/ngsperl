@@ -111,7 +111,7 @@ sub initializeScRNASeqDefaultOptions {
   
   initDefaultValue( $def, "Remove_rRNA",         0 );
   initDefaultValue( $def, "Remove_MtRNA",        0 );
-  initDefaultValue( $def, "regress_by_percent_mt", 1 );
+  initDefaultValue( $def, "regress_by_percent_mt", 0 ); #usually we will filter percent.mt, then we don't need to regress it most of the time.
   initDefaultValue( $def, "Remove_hemoglobin",   0 );
   
   initDefaultValue( $def, "nFeature_cutoff_min", 300 );
@@ -336,7 +336,7 @@ sub getScRNASeqConfig {
           nFeature_cutoff_max => getValue($def, "nFeature_cutoff_max", 1000),
           nCount_cutoff       => getValue($def, "nCount_cutoff", 40),
           nCount_cutoff_max   => getValue($def, "nCount_cutoff_max", 10000),
-          mt_cutoff           => getValue($def, "mt_cutoff", 25),
+          mt_cutoff           => getValue($def, "mt_cutoff", 20),
           Mtpattern           => getValue($def, "Mtpattern", "^MT-|^Mt-|^mt-"),
           rRNApattern         => getValue($def, "rRNApattern", "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]"),
           species             => getValue($def, "species", "Hs"),
