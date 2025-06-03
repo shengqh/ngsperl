@@ -4,28 +4,48 @@ library(edgeR)
 if(! exists("inputFile")){
   args <- commandArgs(TRUE)
   if(length(args) == 0){
-    inputFile<-"/nobackup/h_cqs/nadia_sutton_projects/20231122_sutton_rnaseq_mm10/genetable/result/P2530_3428.proteincoding.count"
-    outputPrefix<-'/nobackup/h_cqs/nadia_sutton_projects/20231122_sutton_rnaseq_mm10/genetable/result/P2530_3428.proteincoding'
-    remove_chrM_genes<-0
+    inputFile<-"/nobackup/shah_lab/shengq2/20250520_Serpina_rnaseq_hg38/genetable/result/Serpina.count"
+    outputPrefix<-'/nobackup/shah_lab/shengq2/20250520_Serpina_rnaseq_hg38/genetable/result/Serpina'
+    remove_chrM_genes<-1
+    round_counts<-1
   }else{
     inputFile<-args[1]
     outputPrefix<-args[2]
-    if(length(args) > 2){
-      remove_chrM_genes<-as.numeric(args[3])
-    }else{
-      remove_chrM_genes<-0
-    }
+    remove_chrM_genes<-args[3]=='1'
+    round_counts<-args[4]=='1' 
   }
 }
 
-if(remove_chrM_genes){
-  cat("Remove chrM genes...\n")
-  with_chrM_File<-gsub(".count$", ".with_chrM.count", inputFile)
-  #copy inputFile to with_chrM_File
-  system(paste("cp", inputFile, with_chrM_File))
+if(remove_chrM_genes | round_counts){
+  suffix = ""
+  if(remove_chrM_genes){
+    suffix = paste0(suffix, ".remove_chrM")
+  }
+  if(round_counts){
+    suffix = paste0(suffix, ".raw")
+  }
+  suffix = paste0(suffix, ".count")
+  raw_File<-gsub(".count$", suffix, inputFile)
 
-  counts<-fread(file=with_chrM_File, data.table=FALSE, check.names=FALSE)
-  counts<-counts[counts$Feature_chr != "chrM", ]
+  cat("Backup", raw_File, "...\n")
+  system(paste("cp", inputFile, raw_File))
+
+  counts<-fread(file=raw_File, data.table=FALSE, check.names=FALSE)
+  if(remove_chrM_genes){
+    counts<-counts[counts$Feature_chr != "chrM", ]
+  }
+  if(round_counts){
+    name_index<-which("Feature_gene_name"==colnames(counts))
+    sample_index<-name_index+1
+    nsample=ncol(counts)
+
+    counts[, sample_index:nsample]<-round(counts[, sample_index:nsample])
+    zero_counts<-rowSums(counts[, sample_index:nsample])==0
+    if(sum(zero_counts)>0){
+      cat("Remove", sum(zero_counts), "genes with all zero counts after rounding.\n")
+      counts<-counts[!zero_counts, ]
+    }
+  }
   write.table(counts, file=inputFile, quote=FALSE, sep="\t", row.names=FALSE)
 }
 
