@@ -62,6 +62,7 @@ sub perform {
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
 
   my $remove_chrM_genes = get_option( $config, $section, "remove_chrM_genes", 0 );
+  my $round_count_table = get_option( $config, $section, "round_count_table", 0 );
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
@@ -93,10 +94,10 @@ sub perform {
   print $pbs "
 cqstools data_table $option -o $result_file -l $filelist $mapoption 
 
-R --vanilla -f $cpm_r --args $result_file $result_file $remove_chrM_genes
+R --vanilla -f $cpm_r --args $result_file $result_file $remove_chrM_genes $round_count_table
 
 if [[ -e $protein_coding_file ]]; then
-  R --vanilla -f $cpm_r --args $protein_coding_file $protein_coding_file $remove_chrM_genes
+  R --vanilla -f $cpm_r --args $protein_coding_file $protein_coding_file $remove_chrM_genes $round_count_table
 fi
 
 ";
