@@ -775,7 +775,7 @@ sub getScRNASeqConfig {
 
             $localization_ref = $obj_ref;
 
-            if(defined $def->{groups}){
+            if(getValue($def, "perform_group_umap", 0) && defined $def->{groups}){
               my $group_umap_task = $choose_task . "_group_umap";
               add_group_umap($config, $def, $tasks, $target_dir, $group_umap_task, [$choose_task, ".final.rds"]);
             }
