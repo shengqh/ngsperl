@@ -3593,8 +3593,9 @@ process_move=function(move_formula, move_parts, cur_meta){
     is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
   }
 
-  # if the cells are moved, we don't move them again
-  final_move = is_move & (!cur_meta$is_moved)
+  # even the cells are moved before, we still need to move them again if it is not deleted
+  #final_move = is_move & (!cur_meta$is_moved)
+  final_move = is_move & cur_meta$seurat_clusters[is_move] >= -1
 
   move_cells=sum(final_move)
 
