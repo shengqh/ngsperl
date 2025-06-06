@@ -3850,7 +3850,7 @@ sub add_miloR_miloDE {
   my ($config, $def, $tasks, $target_dir, $obj_file) = @_;
 
   my $ct_name= "Bulk";
-  my $condition_column = getValue($def, "milo_condition_column");
+  my $condition_column = $def->{"milo_condition_column"};
   my $annotation_column = getValue($def, "milo_annotation_column");
   my $visulization_reduction = getValue($def, "milo_visulization_reduction");
   my $neighbourhood_reduction = getValue($def, "milo_neighbourhood_reduction");
@@ -3881,6 +3881,7 @@ sub add_miloR_miloDE {
       "annotation_column" => $annotation_column,
       "condition_column" => $condition_column,
     },
+    parameterSampleFile3 => $config->{groups},
     parameterFile1 => $obj_file,
     output_ext => ".$ct_name.milo.neighbourhoods.rds,.$ct_name.nhoods_annotation.csv",
     sh_direct => 0,
