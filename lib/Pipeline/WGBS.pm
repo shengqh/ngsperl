@@ -52,7 +52,28 @@ sub getConfig {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
   my $tasks = [@$individual, @$summary];
 
-  my $targetDir = $def->{target_dir};
+  my $target_dir      = $def->{target_dir};
+
+  if ($def->{perform_preprocessing_only}) {
+
+    $config->{sequencetask} = {
+      class      => getSequenceTaskClassname($cluster),
+      perform    => 1,
+      target_dir => "${target_dir}/sequencetask",
+      option     => "",
+      source     => {
+        tasks => $tasks,
+      },
+      sh_direct => 0,
+      cluster   => $cluster,
+      pbs       => {
+        "nodes"     => "1:ppn=" . $def->{max_thread},
+        "walltime"  => $def->{sequencetask_run_time},
+        "mem"       => "40gb"
+      },
+    };
+    return $config;
+  }
 
   my $thread = getValue($def, "thread", 4);
   my $abismal_index = getValue($def, "abismal_index");
@@ -70,7 +91,7 @@ sub getConfig {
   # $config->{$trimgalore_task} = {
   #   class => "Trimmer::TrimGalore",
   #   perform => 1,
-  #   target_dir => "${targetDir}/" . getNextFolderIndex($def) . "trimgalore",
+  #   target_dir => "${target_dir}/" . getNextFolderIndex($def) . "trimgalore",
   #   option => getValue($def, "trimgalore_option", ""),
   #   source_ref => $untrimed_ref,
   #   extension => "_val.fq.gz",
@@ -92,7 +113,7 @@ sub getConfig {
     perform    => 1,
     option     => "",
     thread     => $thread,
-    target_dir => "${targetDir}/" . getNextFolderIndex($def) . "abismal",
+    target_dir => "${target_dir}/" . getNextFolderIndex($def) . "abismal",
     chr_fasta    => $chr_fasta,
     picard     => $picard,
     interval_list => $interval_list,
@@ -114,7 +135,7 @@ sub getConfig {
   $config->{$dnmtools_task} = {
     class => "Methylation::DNMTools",
     perform       => 1,
-    target_dir    => "${targetDir}/" . getNextFolderIndex($def) . "dnmtools",
+    target_dir    => "${target_dir}/" . getNextFolderIndex($def) . "dnmtools",
     option        => "",
     chr_fasta       => $chr_fasta,
     chr_size_file => $chr_size_file,
@@ -133,7 +154,7 @@ sub getConfig {
   $config->{$dnmtoolsannovar_task} = {
     class      => "Annotation::Annovar",
     perform    => 1,
-    target_dir => "${targetDir}/" . getNextFolderIndex($def) . "dnmtoolsAnnovar",
+    target_dir => "${target_dir}/" . getNextFolderIndex($def) . "dnmtoolsAnnovar",
     option     => $annovar_param,
     annovar_db => $annovar_db,
     buildver   => $annovar_buildver,
@@ -153,7 +174,7 @@ sub getConfig {
   $config->{$methylkitprep_task} = {
     class                    => "CQS::IndividualR",
     perform                  => 1,
-    target_dir               => "${targetDir}/" . getNextFolderIndex($def) . "MethylKitPreparation",
+    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitPreparation",
     option                   => "",
     docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/prepare_CpG_input.R",
@@ -172,7 +193,7 @@ sub getConfig {
   $config->{$methylkitcorr_task} = {
     class                    => "CQS::UniqueR",
     perform                  => 1,
-    target_dir               => "${targetDir}/" . getNextFolderIndex($def) . "MethylKitCorr",
+    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitCorr",
     #option                   => " --args ${task_name} hg19 group 4 ",
     docker_prefix           => "wgbs_r_",
     rtemplate                => "../Methylation/methylkit_corr.R",
@@ -203,14 +224,12 @@ sub getConfig {
   };
   push(@$tasks, $methylkitcorr_task);
 
-  if(defined $def->{perform_age_estimation}){
-
-
+  if($def->{perform_age_estimation}){
     my $methy_age_task = "MethylKit_age";
     $config->{$methy_age_task} = {
       class              => "CQS::UniqueRmd",
       perform            => 1,
-      target_dir         => $targetDir . "/" . getNextFolderIndex($def) . "$methy_age_task",
+      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "$methy_age_task",
       report_rmd_file => "../Methylation/methylation_age.rmd",
       additional_rmd_files => "../CQS/reportFunctions.R",
       option => "",
@@ -246,7 +265,7 @@ sub getConfig {
     $methylkitdiff_task = "MethylKitDiff";
     $config->{$methylkitdiff_task} = {
       class                    => "Methylation::MethylKitDiff",
-      target_dir               => "${targetDir}/" . getNextFolderIndex($def) . "MethylKitDiff",
+      target_dir               => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitDiff",
       docker_prefix           => "wgbs_r_",
       rtemplate                => "../Methylation/methylkit_diff.R",
       source_ref => "pairs",
@@ -272,7 +291,7 @@ sub getConfig {
   #  $config->{$dnmtoolsdiff_task} = {
   #    class      => "Methylation::DNMToolsDiff",
   #    perform    => 1,
-  #    target_dir => "${targetDir}/DNMToolsDiff",
+  #    target_dir => "${target_dir}/DNMToolsDiff",
   #    option     => "",
   #    source_ref    => "pairs",
   #    methfile_ref  => [ "DNMTools", "^(?!.*?all).*\.meth\$" ],
@@ -297,7 +316,7 @@ sub getConfig {
     $config->{$methylkitdiffannovar_task} = {
       class      => "Annotation::Annovar",
       perform    => 1,
-      target_dir => "${targetDir}/" . getNextFolderIndex($def) . "MethylKitDiffAnnovar",
+      target_dir => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitDiffAnnovar",
       option     => $annovar_param,
       annovar_db => $annovar_db,
       buildver   => $annovar_buildver,
@@ -318,7 +337,7 @@ sub getConfig {
     $config->{$MethylKitDiffAnnovarGenes_task} = {
       class              => "CQS::ProgramWrapperOneToOne",
       perform            => 1,
-      target_dir         => "$targetDir/" . getNextFolderIndex($def) . "MethylKitDiffAnnovarGenes",
+      target_dir         => "$target_dir/" . getNextFolderIndex($def) . "MethylKitDiffAnnovarGenes",
       interpretor => "perl",
       program => "../Methylation/get_gene_names.pl",
       source_ref => ["MethylKitDiffAnnovar", ".dmcpgs.annovar.final.tsv\$" ],
@@ -334,13 +353,13 @@ sub getConfig {
     };
     push(@$tasks, $MethylKitDiffAnnovarGenes_task);
 
-    $webgestalt_task = addWebgestalt($config, $def, $tasks, $targetDir, $MethylKitDiffAnnovarGenes_task,  [ $MethylKitDiffAnnovarGenes_task, ".genename.txt\$" ]);
+    $webgestalt_task = addWebgestalt($config, $def, $tasks, $target_dir, $MethylKitDiffAnnovarGenes_task,  [ $MethylKitDiffAnnovarGenes_task, ".genename.txt\$" ]);
 
   #  my $homer_task = "HOMER_DMR";
   #  $config->{$homer_task} = {
   #    class        => "Homer::FindMotifs",
   #    perform      => 1,
-  #    target_dir   => "${targetDir}/HOMER_DMR",
+  #    target_dir   => "${target_dir}/HOMER_DMR",
   #    option       => "-nomotif",
   #    homer_genome => "hg19",
   #    source_ref   => [ "DNMToolsDiff", ".DMR.filtered\$" ],
@@ -391,7 +410,7 @@ sub getConfig {
   $config->{report} = {
     class                      => "CQS::BuildReport",
     perform                    => 1,
-    target_dir                 => "$targetDir/report",
+    target_dir                 => "$target_dir/report",
     #docker_command             => "singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
     docker_prefix           => "wgbs_r_",
     report_rmd_file            => "../Pipeline/WGBS.Rmd",
@@ -424,7 +443,7 @@ sub getConfig {
   $config->{"sequencetask"} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,
-    target_dir => "${targetDir}/sequencetask",
+    target_dir => "${target_dir}/sequencetask",
     option     => "",
     source     => {
       tasks => $tasks,
