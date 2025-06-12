@@ -123,7 +123,7 @@ sub perform {
     }
   }
 
-  my $expect_result = $self->result( $config, $section );
+  my $expect_result = $self->get_expect_result_for_perform( $config, $section );
 
   my $pbs_index = 0;
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
@@ -304,5 +304,12 @@ sub result {
   }
   return $result;
 }
+
+sub get_expect_result_for_perform {
+  my ($self, $config, $section) = @_;
+  my $expect_result = $self->result( $config, $section );
+  return($expect_result);
+}
+
 
 1;
