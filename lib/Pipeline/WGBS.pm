@@ -314,21 +314,31 @@ sub getConfig {
 
     $methylkitdiffannovar_task = "MethylKitDiffAnnovar";
     $config->{$methylkitdiffannovar_task} = {
-      class      => "Annotation::Annovar",
+      class      => "CQS::ProgramWrapperOneToOne",
       perform    => 1,
+      program => "",
+      check_program => 0,
       target_dir => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitDiffAnnovar",
-      option     => $annovar_param,
-      annovar_db => $annovar_db,
-      buildver   => $annovar_buildver,
+      option     => "
+perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"  \",\@F[3..(\$fileColNum-1)]);print \"\$F[0]	\$F[1]	\$F[2]	0	-	\$fileColPart\"' __FILE__ | tail -n +2 > __NAME__.avinput
+
+table_annovar.pl __NAME__.avinput $annovar_db -buildver $annovar_buildver --otherinfo -protocol refGene, -operation g --remove --thread 1 --outfile __NAME__.annovar --remove
+
+echo -e \"Chr\tStart\tEnd\tRef\tAlt\tFunc.refGene\tGene.refGene\tGeneDetail.refGene\tExonicFunc.refGene\tAAChange.refGene\tstrand\tpvalue\tqvalue\tmeth.diff\tdirection\" > __NAME__.dmcpgs.annovar.final.tsv
+tail -n +2 __NAME__.annovar.${annovar_buildver}_multianno.txt | perl -pe 's/[ ]+/\\t/g' >> __NAME__.dmcpgs.annovar.final.tsv
+
+rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt 
+
+",
       docker_prefix => "annovar_",
-      perform_splicing => 0,
-      remove_empty_source => 1,
-      isBed      => 1,
+      output_ext => ".dmcpgs.annovar.final.tsv",
       source_ref => [ "MethylKitDiff", ".dmcpgs\$" ],
+      output_to_same_folder => 1,
+      sh_direct          => 1,
       pbs        => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "2",
-        "mem"       => "40gb"
+        "mem"       => "10gb"
       },
     };
     push(@$tasks, $methylkitdiffannovar_task);
@@ -383,6 +393,14 @@ sub getConfig {
     push( @report_files, "fastqc_raw_summary",                   ".FastQC.adapter.tsv.png" );
     push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
   }
+
+  if ( defined $config->{fastqc_post_trim_summary} ) {
+    push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.baseQuality.tsv.png" );
+    push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.sequenceGC.tsv.png" );
+    push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.adapter.tsv.png" );
+    push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
+  }
+
   if(( defined $dnmtools_task ) && ( defined $config->{$dnmtools_task} )) {
     push( @copy_files, $dnmtools_task, ".amr\$" );
     push( @copy_files, $dnmtools_task, ".hmr\$" );
@@ -431,6 +449,7 @@ sub getConfig {
     parameterSampleFile6_ref   => $dnmtools_task,
     parameterSampleFile7_ref   => [ $methylkitcorr_task, ".pdf\$|.png\$" ],
     parameterSampleFile8_ref   => $methylkitdiff_task,
+    parameterSampleFile9_ref   => $methylkitdiffannovar_task,
     sh_direct                  => 1,
     pbs                        => {
       "nodes"     => "1:ppn=1",
