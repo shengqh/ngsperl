@@ -121,9 +121,11 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "resolution",          0.5 );
   initDefaultValue( $def, "details_rmd",         "" );
 
-  initDefaultValue( $def, "by_sctransform", 1 );
+  initDefaultValue( $def, "by_sctransform", 0 );
   initDefaultValue( $def, "use_sctransform_v2", 1 );
 
+  initDefaultValue( $def, "integration_by_harmony", 0 );
+  
   initDefaultValue( $def, "by_integration", 0 );
   if($def->{"by_integration"}){
     if(!defined $def->{integration_by_method}){
