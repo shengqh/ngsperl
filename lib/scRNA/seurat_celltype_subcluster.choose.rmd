@@ -89,7 +89,7 @@ include_graphics(paste0(detailFile, ".cell_type.dot.png"))
 ```
 
 ```{r, echo=FALSE, eval=has_cell_type_png}
-cat("\n\n### ### Sample / Cell type\n\n")
+cat("\n\n### Sample / Cell type\n\n")
 scts<-read.csv(paste0(detailFile, ".cell_type.sample_celltype.csv"), check.names=F, row.names=1)
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type of each sample"))))
 ```

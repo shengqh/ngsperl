@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='Aorta_Progeria'
+outFile='VK13010_mouse_kidney'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn/result/Aorta_Progeria.final.rds'
-parFile2='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_2_subcluster/result/Aorta_Progeria.meta.rds'
-parFile3='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/essential_genes/result/Aorta_Progeria.txt'
-parFile4='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_2_subcluster/result/Aorta_Progeria.files.csv'
+parFile1='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn/result/VK13010_mouse_kidney.final.rds'
+parFile2='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_2_subcluster/result/VK13010_mouse_kidney.meta.rds'
+parFile3='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/essential_genes/result/VK13010_mouse_kidney.txt'
+parFile4='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_2_subcluster/result/VK13010_mouse_kidney.files.csv'
 
 
-setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_3_choose/result')
+setwd('/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_3_choose/result')
 
 ### Parameter setting end ###
 
@@ -240,7 +240,7 @@ get_best_resolution=function(best_res_row){
 
 meta$seurat_clusters=-1
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[3]
 for(pct in previous_celltypes){
   cat(pct, "\n")
 
@@ -667,3 +667,4 @@ ggsave( paste0( prefix, ".seurat_cell_type.top10.heatmap.png"),
         limitsize=FALSE)
 
 cat("done ...\n")
+
