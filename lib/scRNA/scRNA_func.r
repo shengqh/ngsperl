@@ -2751,7 +2751,8 @@ get_barplot<-function(
   cluster_name="display_layer", 
   validation_columns=c("orig.ident","SignacX","SingleR"), 
   calc_height_per_cluster=200, 
-  calc_width_per_cell=50){
+  calc_width_per_cell=50,
+  label_height=500){
 
   valid_columns = intersect(validation_columns, colnames(ct_meta))
   if(length(valid_columns) == 0){
@@ -2781,7 +2782,7 @@ get_barplot<-function(
     theme(strip.text.y = element_text(angle = 0))
 
   if(!is.null(bar_file)){
-    height = max(1000, length(unique(alltbl$Var1)) * calc_height_per_cluster + 500)
+    height = max(1500, length(unique(alltbl$Var1)) * calc_height_per_cluster + label_height)
     width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + 400
 
     ggsave(bar_file, g, width=width, height=height, dpi=300, units="px", bg="white")
@@ -3604,9 +3605,9 @@ process_move=function(move_formula, move_parts, cur_meta){
     cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)        
   }else{
     cur_meta$cur_layer[final_move] = to_cluster
+    cur_meta$is_moved[final_move] = TRUE
   }
   cat("       cells moved:", move_cells, "\n")
-  cur_meta$is_moved[final_move] = TRUE
 
   return(cur_meta)
 }
@@ -3703,7 +3704,11 @@ process_rename=function(action_formula,
   rename_clusters=unlist(strsplit(rename_cluster, ","))
   rename_name=action_parts[2]
 
-  is_rename = cur_meta[,condition_column] %in% rename_clusters
+  if(all(rename_clusters == "-1" | rename_clusters == "*")){
+    is_rename = !cur_meta$is_moved
+  } else {
+    is_rename = (cur_meta[,condition_column] %in% rename_clusters) & !cur_meta$is_moved
+  }
 
   rename_cells=sum(is_rename)
 
@@ -3721,6 +3726,7 @@ process_actions=function(ct_tbl, cur_meta, condition_column="seurat_clusters_str
   cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
   if(nrow(ct_tbl) > 0){
     cur_meta$is_moved=FALSE
+    action_formula= ct_tbl$V1[1]
     for(action_formula in ct_tbl$V1){
       cat("  action formula:", action_formula, "\n")
       action_parts=unlist(strsplit(action_formula, ":"))
@@ -3750,6 +3756,8 @@ process_actions=function(ct_tbl, cur_meta, condition_column="seurat_clusters_str
       }
     }
   }
+
+  cur_meta$cur_layer[cur_meta$seurat_clusters < -1] = "DELETE"
   return(cur_meta)
 }
 
