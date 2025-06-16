@@ -145,6 +145,7 @@ library("BiocParallel")
 library("ggrepel")
 library("stringr")
 library("data.table")
+library("cowplot")
 suppressPackageStartupMessages(library("ComplexHeatmap"))
 
 setwd(rootdir)  
@@ -253,15 +254,11 @@ drawPlot<-function(filePrefix, outputFormat, width_inch, height_inch, p, figureN
   }
 }
 
-drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnames, outputFormat, legend_label_gp, column_names_gp){
+drawHCA<-function(prefix, rldselect, ispaired, designData, groupColors, gnames, outputFormat, legend_label_gp, column_names_gp){
   mat_scaled = t(scale(t(rldselect)))
 
-  cc = designData |> dplyr::mutate(Color=as.character(conditionColors)) |>
-    dplyr::select(Condition, Color) |>
-    unique()
-  colors=unlist(split(cc$Color, cc$Condition))
   ha=HeatmapAnnotation( Group=designData$Condition,
-                        col=list(Group=colors),
+                        col=list(Group=groupColors),
                         annotation_legend_param = list(Group = list(ncol = 1, 
                                                                     title = "Group", 
                                                                     title_position = "topleft"),
@@ -285,41 +282,6 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                     show_row_dend=FALSE,
                     column_names_gp = column_names_gp,
                     legend_gp = legend_label_gp)
-}
-
-drawPCA<-function(prefix, rldmatrix, showLabelInPCA, designData, condition, outputFormat,scalePCs=TRUE, width_inch=3.5){
-  genecount<-nrow(rldmatrix)
-  if(genecount > 2){
-    pca<-prcomp(t(rldmatrix))
-    supca<-summary(pca)$importance
-    pcadata<-data.frame(pca$x)
-    if (scalePCs) {
-      pcadata=as.data.frame(scale(pcadata))
-    }
-    pcalabs=paste0(colnames(pcadata), "(", round(supca[2,] * 100), "%)")
-    pcadata$sample<-row.names(pcadata)
-    pcadata$Group<-condition
-    
-    if(showLabelInPCA){
-      g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-        geom_text_repel(size=4)
-    }else{
-      g <- ggplot(pcadata, aes(x=PC1, y=PC2)) + 
-        labs(color = "Group")
-    }
-    g <- g + geom_point(aes(col=Group), size=4) + 
-      scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
-      scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
-      geom_hline(aes(yintercept=0), size=.2) + 
-      geom_vline(aes(xintercept=0), size=.2) + 
-      xlab(pcalabs[1]) + ylab(pcalabs[2]) +
-      scale_color_manual(values=c("red", "blue")) +
-      theme_bw3() + theme(aspect.ratio=1, legend.position="top")
-    
-    filePrefix<-paste0(prefix, "_DESeq2-vsd-pca")
-
-    save_ggplot2_plot(filePrefix, outputFormat, width_inch, width_inch * 1.1, g);
-  }
 }
 
 myEstimateSizeFactors<-function(dds){
@@ -519,7 +481,7 @@ for(countfile_index in c(1:length(countfiles))){
   }
   resultAllOutVar<-c("baseMean","log2FoldChange","pvalue","padj")
   
-  comparison_index = 2
+  comparison_index = 1
   
   for(comparison_index in c(1:nrow(comparisons))){
     comparisonName=comparisons$ComparisonName[comparison_index]
@@ -572,6 +534,8 @@ for(countfile_index in c(1:length(countfiles))){
     #comment here as has many group names
     gnames=unlist(comparisons[comparison_index, c("ReferenceGroupName", "SampleGroupName")])
     #gnames=as.character(unique(designData$Condition))
+    groupColors=c("blue", "red")
+    names(groupColors)<-gnames
     
     designData<-read.table(designFile, sep="\t", header=T)
     designData$Condition<-factor(designData$Condition, levels=gnames)
@@ -777,7 +741,6 @@ for(countfile_index in c(1:length(countfiles))){
       colnames(comparisonData)<-unlist(lapply(c(1:ncol(comparisonData)), function(i){paste0(designData$Paired[i], "_", colnames(comparisonData)[i])}))
     }
     rownames(designData)<-colnames(comparisonData)
-    conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
     
     write.csv(comparisonData, file=paste0(prefix, ".csv"))
     
@@ -844,7 +807,6 @@ for(countfile_index in c(1:length(countfiles))){
       }else if(all(is.na(assay(vsd)))){
         fitType<-"mean"
       } else{
-        conditionColors<-as.matrix(data.frame(Group=c("red", "blue")[designData$Condition]))
         break
       }
     }
@@ -857,12 +819,12 @@ for(countfile_index in c(1:length(countfiles))){
     if(nrow(comparisonData) > 1){
       #draw pca graph
       if(is.na(de_biotype)){
-        drawPCA(prefix=paste0(prefix,"_geneAll"), 
+        drawPCA(file_prefix=paste0(prefix,"_geneAll_DESeq2-vsd-pca"),
                 rldmatrix=rldmatrix, 
                 showLabelInPCA=showLabelInPCA, 
-                designData=designData, 
-                condition=designData$Condition, 
-                outputFormat=outputFormat,
+                groups=designData$Condition, 
+                groupColors=groupColors, 
+                outputFormat=outputFormat, 
                 scalePCs=TRUE)
 
         if(exists("top25cvInHCA") && top25cvInHCA){
@@ -872,7 +834,7 @@ for(countfile_index in c(1:length(countfiles))){
                   rldselect=countHT, 
                   ispaired=ispaired, 
                   designData=designData, 
-                  conditionColors=conditionColors, 
+                  groupColors=groupColors, 
                   gnames=ganems, 
                   outputFormat=outputFormat,
                   legend_label_gp=legend_label_gp,
@@ -882,7 +844,7 @@ for(countfile_index in c(1:length(countfiles))){
                   rldselect=rldmatrix, 
                   ispaired=ispaired, 
                   designData=designData, 
-                  conditionColors=conditionColors, 
+                  groupColors=groupColors, 
                   gnames=ganems, 
                   outputFormat=outputFormat,
                   legend_label_gp=legend_label_gp,
@@ -890,19 +852,19 @@ for(countfile_index in c(1:length(countfiles))){
         }
       }else{
         biotype_rldmatrix=rldmatrix[rownames(rldmatrix) %in% de_features,]
-        drawPCA(prefix=paste0(prefix,"_", de_biotype_name), 
-                rldmatrix=biotype_rldmatrix, 
+        drawPCA(file_prefix=paste0(prefix,"_", de_biotype_name, "_DESeq2-vsd-pca"),
+                rldmatrix=rldmatrix, 
                 showLabelInPCA=showLabelInPCA, 
-                designData=designData, 
-                condition=designData$Condition, 
-                outputFormat=outputFormat,
+                groups=designData$Condition, 
+                groupColors=groupColors, 
+                outputFormat=outputFormat, 
                 scalePCs=TRUE)
 
         drawHCA(prefix=paste0(prefix,"_", de_biotype_name), 
                 rldselect=biotype_rldmatrix, 
                 ispaired=ispaired, 
                 designData=designData, 
-                conditionColors=conditionColors, 
+                groupColors=groupColors, 
                 gnames=ganems, 
                 outputFormat=outputFormat,
                 legend_label_gp=legend_label_gp,
@@ -1070,15 +1032,41 @@ for(countfile_index in c(1:length(countfiles))){
       nonDEmatrix<-rldmatrix[!siggenes,,drop=F]
       DEmatrix<-rldmatrix[siggenes,,drop=F]
       
-      drawPCA(paste0(de_prefix,"_geneDE"),DEmatrix , showLabelInPCA, designData, conditionColors, outputFormat)
-      drawHCA(paste0(de_prefix,"_geneDE"),DEmatrix , ispaired, designData, conditionColors, gnames, outputFormat,
-                legend_label_gp=legend_label_gp,
-                column_names_gp=column_names_gp)
+      drawPCA(file_prefix=paste0(de_prefix,"_geneDE_DESeq2-vsd-pca"),
+              rldmatrix=DEmatrix, 
+              showLabelInPCA=showLabelInPCA, 
+              groups=designData$Condition, 
+              groupColors=groupColors, 
+              outputFormat=outputFormat, 
+              scalePCs=TRUE)
+
+      drawHCA(paste0(de_prefix,"_geneDE"),
+              DEmatrix, 
+              ispaired, 
+              designData, 
+              groupColors=groupColors, 
+              gnames, 
+              outputFormat,
+              legend_label_gp=legend_label_gp,
+              column_names_gp=column_names_gp)
       
-      drawPCA(paste0(de_prefix,"_geneNotDE"), nonDEmatrix, showLabelInPCA, designData, conditionColors, outputFormat)
-      drawHCA(paste0(de_prefix,"_geneNotDE"), nonDEmatrix, ispaired, designData, conditionColors, gnames, outputFormat,
-                legend_label_gp=legend_label_gp,
-                column_names_gp=column_names_gp)
+      drawPCA(file_prefix=paste0(de_prefix,"_geneNotDE_DESeq2-vsd-pca"),
+              rldmatrix=nonDEmatrix, 
+              showLabelInPCA=showLabelInPCA, 
+              groups=designData$Condition, 
+              groupColors=groupColors, 
+              outputFormat=outputFormat, 
+              scalePCs=TRUE)
+
+      drawHCA(paste0(de_prefix,"_geneNotDE"), 
+              nonDEmatrix, 
+              ispaired, 
+              designData, 
+              groupColors=groupColors, 
+              gnames, 
+              outputFormat,
+              legend_label_gp=legend_label_gp,
+              column_names_gp=column_names_gp)
     }
     
     #Top 25 Significant genes barplot
