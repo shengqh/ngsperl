@@ -147,9 +147,10 @@ library("stringr")
 library("data.table")
 suppressPackageStartupMessages(library("ComplexHeatmap"))
 
+setwd(rootdir)  
+
 source('countTableVisFunctions.R')
 
-setwd(rootdir)  
 comparisons_data<-read.table(inputfile, header=T, check.names=F , sep="\t", stringsAsFactors = F)
 
 ##Solving node stack overflow problem start###
@@ -195,16 +196,14 @@ theme_bw3 <- function (axis.x.rotate=F) {
 }
 
 # Convert a byte-compiled function to an interpreted-code function 
-unByteCode <- function(fun)
-{
+unByteCode <- function(fun) {
   FUN <- eval(parse(text=deparse(fun)))
   environment(FUN) <- environment(fun)
   FUN
 }
 
 # Replace function definition inside of a locked environment **HACK** 
-assignEdgewise <- function(name, env, value)
-{
+assignEdgewise <- function(name, env, value) {
   unlockBinding(name, env=env)
   assign( name, envir=env, value=value)
   lockBinding(name, env=env)
@@ -213,8 +212,7 @@ assignEdgewise <- function(name, env, value)
 
 # Replace byte-compiled function in a locked environment with an interpreted-code
 # function
-unByteCodeAssign <- function(fun)
-{
+unByteCodeAssign <- function(fun) {
   name <- gsub('^.*::+','', deparse(substitute(fun)))
   FUN <- unByteCode(fun)
   retval <- assignEdgewise(name=name,
@@ -1585,5 +1583,4 @@ if (! is.null(resultAllOut)) {
 #export session information
 writeLines(capture.output(sessionInfo()), paste0(basename(inputfile),".DESeq2.SessionInfo.txt"))
 deseq2version<-paste0("DESeq2,v", packageVersion("DESeq2"))
-writeLines(deseq2version, paste0(basename(inputfile),".DESeq2.version"))
 
