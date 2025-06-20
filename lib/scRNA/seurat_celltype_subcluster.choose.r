@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='CombP12891P12795'
+outFile='VK13010_mouse_kidney'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn/result/CombP12891P12795.final.rds'
-parFile2='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_2_subcluster/result/CombP12891P12795.meta.rds'
-parFile3='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/essential_genes/result/CombP12891P12795.txt'
-parFile4='/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_2_subcluster/result/CombP12891P12795.files.csv'
+parFile1='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn/result/VK13010_mouse_kidney.final.rds'
+parFile2='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_2_subcluster/result/VK13010_mouse_kidney.meta.rds'
+parFile3='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/essential_genes/result/VK13010_mouse_kidney.txt'
+parFile4='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_2_subcluster/result/VK13010_mouse_kidney.files.csv'
 
 
-setwd('/data/wanjalla_lab/shengq2/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_sct2_fastmnn_dr0.5_3_choose_test/result')
+setwd('/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_3_choose/result')
 
 ### Parameter setting end ###
 
@@ -30,7 +30,7 @@ library(htmltools)
 library(patchwork)
 library(testit)
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 min.pct=0.5
 logfc.threshold=0.6
@@ -240,7 +240,7 @@ get_best_resolution=function(best_res_row){
 
 meta$seurat_clusters=-1
 cluster_index=0
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[3]
 for(pct in previous_celltypes){
   cat(pct, "\n")
 
@@ -445,6 +445,13 @@ saveRDS(obj@meta.data, meta_rds)
 if(output_heatmap){
   allmarkers<-unique(allmarkers)
   obj<-myScaleData(obj, allmarkers, "RNA")
+}
+
+if(any(is.na(obj@meta.data$seurat_cell_type))) {
+  na_meta=obj@meta.data |> dplyr::filter(is.na(seurat_cell_type))
+  na_file=paste0(outFile, ".seurat_cell_type.na.csv")
+  write.csv(na_meta, na_file)
+  stop(paste0("seurat_cell_type has NA values, please check the file: ", na_file))
 }
 
 # Keep the original UMAP, don't redo PCA and UMAP since it doesn't work for integration.

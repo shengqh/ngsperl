@@ -7,10 +7,10 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-parFile4='/data/wanjalla_lab/projects/20240808_11830_RNAseq_mm10/covariance.txt'
+parFile4='/nobackup/shah_lab/shengq2/20250520_Serpina_rnaseq_hg38/covariance.txt'
 
 
-setwd('/data/wanjalla_lab/projects/20240808_11830_RNAseq_mm10/genetable/result')
+setwd('/nobackup/shah_lab/shengq2/20250520_Serpina_rnaseq_hg38/genetable/result')
 
 ### Parameter setting end ###
 
@@ -333,7 +333,9 @@ for (i in 1:nrow(countTableFileAll)) {
     write.table(validSampleToGroup, paste0(cur_file_prefix, ".correlation.groups"), col.names=F, row.names=F, quote=F, sep="\t")
     
     #filter reads/genes by parameter
+    cat("Filtering genes by median reads per group ...\n")
     validCountNum<-filterCountTable(countNum,validSampleToGroup,minMedian=minMedian,minMedianInGroup=minMedianInGroup)
+    cat("Filtering genes by median reads per group done...\n")
 
     if("Feature_gene_biotype" %in% colnames(count)){
       if(length(unique(count$Feature_gene_biotype)) > 1){
@@ -344,6 +346,7 @@ for (i in 1:nrow(countTableFileAll)) {
         write.csv(bcounts, paste0(cur_file_prefix, ".biotype_counts.csv"))
 
         #convert bcounts to percentage table by column
+        rownames(bcounts)[rownames(bcounts)==""] = "unknown"
         bperc = t(t(bcounts) / colSums(bcounts) * 100)
         bperc_max = apply(bperc, 1, max)
         cats = bperc_max[bperc_max > 1]

@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='ATC_vs_PTC'
-outFile='ATC_vs_PTC'
+sample_name='HIVposAorta_vs_HIVnegAorta'
+outFile='HIVposAorta_vs_HIVnegAorta'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3=''
-parFile1='/data/h_vivian_weiss/Thyroid_scRNA_seq_atlas_files/24-0819_Atlas/24-1114_Atlas_Files/24-0821_Fibroblast_Subclustering_FastMNN_3000.RDS'
+parSampleFile3='fileList3.txt'
+parFile1='/data/wanjalla_lab/projects/20250420_P12891-P12795_10Flex_hg38_cellbender/nd_seurat_fastmnn_dr0.5_3_choose/result/CombP12891P12795.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_vivian_weiss_lab/shengq2/20250403_fibroblasts_miloR_miloDE/milo_Bulk_1_neighbourhood/result/ATC_vs_PTC')
+setwd('/data/wanjalla_lab/projects/20250420_P12891-P12795_10Flex_hg38_cellbender/20250605_miloR_miloDE/milo_Bulk_1_neighbourhood/result/HIVposAorta_vs_HIVnegAorta')
 
 ### Parameter setting end ###
 
@@ -91,7 +91,7 @@ if (file.exists(neighbour_file)){
       cur_obj@meta.data$sample=cur_obj@meta.data$orig.ident
     }
 
-    if(is.null(myoptions$condition_column)){
+    if(is.null(myoptions$condition_column) || myoptions$condition_column == ""){
       sample_groups = fread(parSampleFile3, header=FALSE, data.table=FALSE) 
       sample_groups = sample_groups |> dplyr::filter(V2 %in% groups$V1)
     }else{
@@ -210,3 +210,4 @@ if(!is.null(annotation_column)) {
 }
 
 cat("done\n")
+

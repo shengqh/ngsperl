@@ -6,6 +6,7 @@ library(data.table)
 library(ggplot2)
 library(reshape2)
 library(patchwork)
+library(cowplot)
 
 ###############################################################################
 # Functions in pipeline

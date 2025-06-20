@@ -168,6 +168,9 @@ exit -1
 trap 'tmp_cleaner' TERM
 
 echo using tmp_dir=\$tmp_dir
+echo /tmp space:
+df | grep /tmp
+
 cd \$tmp_dir
 
 ";
@@ -531,6 +534,9 @@ fi
       print $pbs "
 ls *
 echo localize end at `date`
+
+echo /tmp space:
+df | grep /tmp
 
 ";
     return($result);

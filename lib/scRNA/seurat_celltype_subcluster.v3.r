@@ -1,17 +1,16 @@
 rm(list=ls()) 
-outFile='CombP12891P12795'
+outFile='VK13010_mouse_kidney'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/data/wanjalla_lab/projects/20250408_combined_12891_12795_10XFlex_hg38/seurat_fastmnn/result/CombP12891P12795.final.rds'
-parFile2='/data/wanjalla_lab/projects/20250408_combined_12891_12795_10XFlex_hg38/seurat_fastmnn_dr0.5_1_call/result/CombP12891P12795.scDynamic.meta.rds'
-parFile3='/data/wanjalla_lab/projects/20250408_combined_12891_12795_10XFlex_hg38/essential_genes/result/CombP12891P12795.txt'
+parFile1='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn/result/VK13010_mouse_kidney.final.rds'
+parFile2='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_1_call/result/VK13010_mouse_kidney.scDynamic.meta.rds'
+parFile3='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/essential_genes/result/VK13010_mouse_kidney.txt'
 
 
-setwd('/data/wanjalla_lab/projects/20250408_combined_12891_12795_10XFlex_hg38/seurat_fastmnn_dr0.5_2_subcluster/result')
+setwd('/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -31,7 +30,7 @@ library(testit)
 library(stringr)
 
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 min.pct=0.5
 logfc.threshold=0.6
@@ -64,10 +63,14 @@ save_intermediate_object<-is_one(myoptions$save_intermediate_object)
 min_markers<-20
 
 previous_layer<-myoptions$celltype_layer
+cat("previous_layer =", previous_layer, "\n")
 previous_cluster<-myoptions$celltype_cluster
+cat("previous_cluster =", previous_cluster, "\n")
 
 cur_layer<-myoptions$output_layer
+cat("output_layer =", cur_layer, "\n")
 seurat_cur_layer=paste0("seurat_", cur_layer)
+cat("output_layer_cluster =", seurat_cur_layer, "\n")
 
 if(regress_by_percent_mt){
   vars.to.regress="percent.mt"
@@ -149,6 +152,14 @@ if("Azimuth_column" %in% names(myoptions)){
 
 stopifnot(all(colnames(obj) == rownames(meta)))
 obj@meta.data = meta
+
+if(!previous_layer %in% colnames(obj@meta.data)){
+  stop(paste0("Cannot find cell type layer ", previous_layer, " in object meta data. Please check your parameter setting."))
+}
+
+if(!previous_cluster %in% colnames(obj@meta.data)){
+  stop(paste0("Cannot find cell type layer cluster ", previous_cluster, " in object meta data. Please check your parameter setting."))
+}
 Idents(obj)<-previous_layer
 
 antibody_bubblemap_file=myoptions$antibody_bubblemap_file
@@ -224,15 +235,33 @@ if(!is_file_empty(parSampleFile3)){
       stop(paste0("Cannot find cell types ", paste0(missed_cts, collapse = "/"), " in obj cell type layer ", previous_layer, ": ", paste0(current_cts, collapse = "/")))
     }
 
-    ct=all_ct_tbl$V3[1]
-    for(ct in unique(all_ct_tbl$V3)){
-      print(ct)
-      ct_tbl=all_ct_tbl |> dplyr::filter(V3 == ct)
-      cur_meta = meta[meta$cur_layer == ct,]
-      cur_meta = process_actions(ct_tbl, cur_meta)
-      cur_meta[cur_meta$seurat_clusters < 0, "cur_layer"] = "DELETE"
-      meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+    move_ct_tbl=all_ct_tbl |> dplyr::filter(grepl("^MOVE", V1))
+    if(nrow(move_ct_tbl) > 0) {
+      ct=move_ct_tbl$V3[1]
+      move_cts=sort(unique(move_ct_tbl$V3))
+      for(ct in move_cts){
+        print(ct)
+        ct_tbl=move_ct_tbl |> dplyr::filter(V3 == ct)
+        cur_meta = meta[meta$cur_layer == ct,]
+        cur_meta = process_actions(ct_tbl, cur_meta)
+        meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+      }
     }
+
+    other_ct_tbl=all_ct_tbl |> dplyr::filter(!grepl("^MOVE", V1))
+    if(nrow(other_ct_tbl) > 0){
+      ct=other_ct_tbl$V3[1]
+      other_cts=sort(unique(other_ct_tbl$V3))
+      for(ct in other_cts){
+        print(ct)
+        ct_tbl=other_ct_tbl |> dplyr::filter(V3 == ct)
+        cur_meta = meta[meta$cur_layer == ct,]
+        cur_meta = process_actions(ct_tbl, cur_meta)
+        cur_meta[cur_meta$seurat_clusters < 0, "cur_layer"] = "DELETE"
+        meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+      }
+    }
+    
     meta = meta |> dplyr::select(-cur_layer, -seurat_clusters)
   }
 
@@ -380,8 +409,13 @@ check_cell_type<-function(subobj, ct_column, filelist, pct, curprefix, species, 
   g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = ct_column, label=T) + ggtitle(paste0(subumap, ": ", ct_column))
   g<-g4+g5+plot_layout(ncol=2)
 
+  nlens=nchar(sxobj@meta.data[[ct_column]])
+  nlens=nlens[!is.na(nlens)]
+  max_len=max(nlens)
+  width=ifelse(max_len < 30, 3600, 4800)
+
   ct_file=paste0(curprefix, ".", ct_column, ".umap.png")
-  ggsave(ct_file, g, width=3600, height=1500, dpi=300, units="px", bg="white")
+  ggsave(ct_file, g, width=width, height=1500, dpi=300, units="px", bg="white")
   rm(g4, g5, g)
 
   cur_df = data.frame("file"=ct_file, "type"=ct_column, "resolution"="", "celltype"=pct)

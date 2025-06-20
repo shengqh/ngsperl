@@ -111,7 +111,7 @@ sub initializeScRNASeqDefaultOptions {
   
   initDefaultValue( $def, "Remove_rRNA",         0 );
   initDefaultValue( $def, "Remove_MtRNA",        0 );
-  initDefaultValue( $def, "regress_by_percent_mt", 1 );
+  initDefaultValue( $def, "regress_by_percent_mt", 0 ); #usually we will filter percent.mt, then we don't need to regress it most of the time.
   initDefaultValue( $def, "Remove_hemoglobin",   0 );
   
   initDefaultValue( $def, "nFeature_cutoff_min", 300 );
@@ -121,9 +121,11 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "resolution",          0.5 );
   initDefaultValue( $def, "details_rmd",         "" );
 
-  initDefaultValue( $def, "by_sctransform", 1 );
+  initDefaultValue( $def, "by_sctransform", 0 );
   initDefaultValue( $def, "use_sctransform_v2", 1 );
 
+  initDefaultValue( $def, "integration_by_harmony", 0 );
+  
   initDefaultValue( $def, "by_integration", 0 );
   if($def->{"by_integration"}){
     if(!defined $def->{integration_by_method}){
@@ -336,13 +338,13 @@ sub getScRNASeqConfig {
           nFeature_cutoff_max => getValue($def, "nFeature_cutoff_max", 1000),
           nCount_cutoff       => getValue($def, "nCount_cutoff", 40),
           nCount_cutoff_max   => getValue($def, "nCount_cutoff_max", 10000),
-          mt_cutoff           => getValue($def, "mt_cutoff", 25),
+          mt_cutoff           => getValue($def, "mt_cutoff", 20),
           Mtpattern           => getValue($def, "Mtpattern", "^MT-|^Mt-|^mt-"),
           rRNApattern         => getValue($def, "rRNApattern", "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]"),
           species             => getValue($def, "species", "Hs"),
         },
         sh_direct => 1,
-        no_docker => 1,
+        #no_docker => 1,
         output_ext => "_${binsize}um.full.rds;_${binsize}um.sketch.rds",
         pbs => {
           "nodes"    => "1:ppn=1",
@@ -775,7 +777,7 @@ sub getScRNASeqConfig {
 
             $localization_ref = $obj_ref;
 
-            if(defined $def->{groups}){
+            if(getValue($def, "perform_group_umap", 0) && defined $def->{groups}){
               my $group_umap_task = $choose_task . "_group_umap";
               add_group_umap($config, $def, $tasks, $target_dir, $group_umap_task, [$choose_task, ".final.rds"]);
             }

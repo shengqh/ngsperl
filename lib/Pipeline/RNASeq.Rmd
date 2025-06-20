@@ -453,7 +453,7 @@ if("WebGestalt_deseq2" %in% files$V2){
 }
 ```
 
-```{r child=webgestalt_rmd, eval=file.exists(webgestalt_rmd) }
+```{r child=webgestalt_rmd, eval=hasWebGestaltAnalysis & file.exists(webgestalt_rmd) }
 ```
 
 ```{r gsea, results="asis", echo=FALSE, warning=FALSE, eval=hasGseaAnalysis} 

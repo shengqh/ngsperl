@@ -46,6 +46,8 @@ sub perform {
   if ( !defined $isBed ) {
     $isBed = 0;
   }
+  my $skip_first_line = get_option( $config, $section, "skip_first_line", 0 );
+  my $skip_first_line_option = $skip_first_line ? " | tail -n +2 " : "";
 
   my $splicing_threshold;
   if($perform_splicing){
@@ -123,7 +125,7 @@ sub perform {
       }
       elsif ($isBed) {
         $passinput = $filename . ".avinput";
-        $runcmd    = "perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"\t\",\@F[3..(\$fileColNum-1)]);print \"\$F[0]\t\$F[1]\t\$F[2]\t0\t-\t\$fileColPart\"' $sampleFile > $passinput 
+        $runcmd    = "perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"\t\",\@F[3..(\$fileColNum-1)]);print \"\$F[0]\t\$F[1]\t\$F[2]\t0\t-\t\$fileColPart\"' $sampleFile $skip_first_line_option > $passinput 
   if [ -s $passinput ]; then
     table_annovar.pl $passinput $annovarDB $option --thread $thread --outfile $annovar --remove
   fi";

@@ -29,6 +29,7 @@ sub new {
 
 sub result {
   my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
+  #$pattern = ".dmcpgs";
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
@@ -36,27 +37,30 @@ sub result {
 
   my $result = {};
   for my $comparison_name ( keys %{$comparisons} ) {
-    my @result_files = ();
     my $cur_dir      = $result_dir . "/$comparison_name";
-    my $filtered;
     my @group_names = @{ $comparisons->{$comparison_name}; };
 
     my $dmcpgsFile1=${comparison_name}."_".$group_names[0].".dmcpgs";
     my $dmcpgsFile2=${comparison_name}."_".$group_names[1].".dmcpgs";
 
-    @result_files = ();
-    push( @result_files, "$cur_dir/${dmcpgsFile1}" );
-    $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
-    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-      $result->{$comparison_name . "_" . $group_names[0]} = $filtered;
+    #don't use common @result_files and $filtered in two filtering procedures. It might cause problem.
+    my @result_files1 = ();
+    push( @result_files1, "$cur_dir/${dmcpgsFile1}" );
+    my $filtered1 = filter_array( \@result_files1, $pattern, $removeEmpty );
+    if ( scalar(@$filtered1) > 0 || !$removeEmpty ) {
+      $result->{$comparison_name . "_" . $group_names[0]} = $filtered1;
     }
+    # print(Dumper($filtered1));
+    # print(Dumper($result));
     
-    @result_files = ();
-    push( @result_files, "$cur_dir/${dmcpgsFile2}" );
-    $filtered = filter_array( \@result_files, $pattern, $removeEmpty );
-    if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
-      $result->{$comparison_name . "_" . $group_names[1]} = $filtered;
+    my @result_files2 = ();
+    push( @result_files2, "$cur_dir/${dmcpgsFile2}" );
+    my $filtered2 = filter_array( \@result_files2, $pattern, $removeEmpty );
+    if ( scalar(@$filtered2) > 0 || !$removeEmpty ) {
+      $result->{$comparison_name . "_" . $group_names[1]} = $filtered2;
     }
+    # print(Dumper($filtered2));
+    # print(Dumper($result));
   }
 
   return $result;

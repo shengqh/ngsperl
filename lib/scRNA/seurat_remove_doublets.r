@@ -22,7 +22,7 @@ library(sparseMatrixStats)
 library(data.table)
 library(tidyr)
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 
 myoptions<-read_file_map(parSampleFile2, do_unlist = FALSE)

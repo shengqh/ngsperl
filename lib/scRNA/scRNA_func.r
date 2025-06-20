@@ -659,7 +659,7 @@ do_normalization<-function( obj,
                             vars.to.regress=NULL, 
                             scale.all=FALSE, 
                             essential_genes=NULL,
-                            ignore_variable_genes=c()) {
+                            ignore_variable_genes=NULL) {
   DefaultAssay(obj)<-"RNA"
 
   cat("NormalizeData ... \n")
@@ -668,15 +668,20 @@ do_normalization<-function( obj,
   
   cat("FindVariableFeatures ... \n")
   obj <- FindVariableFeatures(obj, selection.method = selection.method, nfeatures = nfeatures, verbose = FALSE)
-  vgenes=VariableFeatures(obj)
-  VariableFeatures(obj) <- setdiff(vgenes, ignore_variable_genes)
   cat("FindVariableFeatures done ... \n")
+
+  if(length(ignore_variable_genes) > 0){
+    cat("Remove ignore variable genes ... \n")
+    vgenes=VariableFeatures(obj)
+    VariableFeatures(obj) <- setdiff(vgenes, ignore_variable_genes)
+    cat("Remove some variable genes done ... \n")
+  }
   
   if(scale.all){
     features = rownames(obj)
   }else{
     features=VariableFeatures(obj)
-    if (!is.null(essential_genes)){
+    if (length(essential_genes) > 0){
       features = unique(c(features, essential_genes))
     }
   }
@@ -694,7 +699,7 @@ do_sctransform<-function( rawobj,
                           return.only.var.genes=FALSE, 
                           mc.cores=1, 
                           use_sctransform_v2=TRUE,
-                          ignore_variable_genes=c()) {
+                          ignore_variable_genes=NULL) {
   vst.flavor = ifelse(use_sctransform_v2, "v2", "v1")
 
   print(paste0("performing SCTransform by ", vst.flavor, " ..."))
@@ -733,14 +738,16 @@ do_sctransform<-function( rawobj,
     }
 
     #https://github.com/satijalab/seurat/issues/2814
-    VariableFeatures(obj[["SCT"]]) <- setdiff(rownames(obj[["SCT"]]@scale.data), ignore_variable_genes)
+    sct_var_genes=rownames(obj[["SCT"]]@scale.data)
+    VariableFeatures(obj[["SCT"]]) <- setdiff(sct_var_genes, ignore_variable_genes)
     rm(objs)
     return(obj)
   }else{
     print("  perform sctransform ...")
     rawobj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
     print("  sctransform done")
-    VariableFeatures(rawobj[["SCT"]]) <- setdiff(rownames(rawobj[["SCT"]]@scale.data), ignore_variable_genes)
+    sct_var_genes=rownames(obj[["SCT"]]@scale.data)
+    VariableFeatures(rawobj[["SCT"]]) <- setdiff(sct_var_genes, ignore_variable_genes)
     return(rawobj)
   }
 }
@@ -753,7 +760,7 @@ do_harmony<-function(obj, by_sctransform,
                     essential_genes=NULL, 
                     mc.cores=1,
                     use_sctransform_v2=TRUE,
-                    ignore_variable_genes=c()){
+                    ignore_variable_genes=NULL) {
   if(by_sctransform){
     #now perform sctranform
     obj<-do_sctransform(obj, 
@@ -876,9 +883,10 @@ init_cutoffs<-function(all_samples, myoptions, filter_config_file=""){
   return(Cutoffs)
 }
 
-preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file=""){
+preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="", assay="RNA"){
   Mtpattern= myoptions$Mtpattern
   rRNApattern=myoptions$rRNApattern
+  hemoglobinPattern=myoptions$hemoglobinPattern
   
   all_samples=unique(rawobj$orig.ident)
   Cutoffs=init_cutoffs(
@@ -886,14 +894,48 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="")
     myoptions=myoptions, 
     filter_config_file=filter_config_file)
 
+  Remove_hemoglobin=is_one(myoptions$Remove_hemoglobin)
+  Remove_rRNA=is_one(myoptions$Remove_rRNA)
+  Remove_MtRNA=is_one(myoptions$Remove_MtRNA)
+
+  remove_genes = c()
+  if(Remove_MtRNA){
+    mt_genes <- rownames(rawobj)[grepl(Mtpattern, rownames(rawobj))]
+    cat("Remove mt genes: ", length(mt_genes), "\n")
+    remove_genes = c(remove_genes, mt_genes)
+  }
+  if(Remove_rRNA){
+    rRNA_genes <- rownames(rawobj)[grepl(rRNApattern, rownames(rawobj))]
+    cat("Remove rRNA genes: ", length(rRNA_genes), "\n")
+    remove_genes = c(remove_genes, rRNA_genes)
+  }
+  if(Remove_hemoglobin && !is.null(hemoglobinPattern) && hemoglobinPattern != ""){
+    hemoglobin_genes <- rownames(rawobj)[grepl(hemoglobinPattern, rownames(rawobj))]
+    cat("Remove hemoglobin genes: ", length(hemoglobin_genes), "\n")
+    remove_genes = c(remove_genes, hemoglobin_genes)
+  }
+  if(length(remove_genes) > 0){
+    cat("Remove total genes: ", length(remove_genes), "\n")
+    new_genes = setdiff(rownames(rawobj), remove_genes)
+    rawobj = subset(rawobj, features = new_genes)
+  }
+  rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt", assay=assay)
+  rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo", assay=assay)
+  if(!is.null(hemoglobinPattern) && hemoglobinPattern != ""){
+    rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb", assay=assay)    
+  }
+
   rawCells<-data.frame(table(rawobj$orig.ident))
   
-  plot1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt") + 
+  readCol = paste0("nCount_", assay)
+  featureCol = paste0("nFeature_", assay)
+
+  plot1 <- FeatureScatter(object = rawobj, feature1 = readCol, feature2 = "percent.mt") + 
     geom_hline(data=Cutoffs, aes(yintercept=mt_cutoff, color=sample))  + 
     geom_vline(data=Cutoffs, aes(xintercept=nCount_cutoff, color=sample)) +
     scale_y_continuous(breaks = seq(0, 100, by = 10))
 
-  plot2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA") +
+  plot2 <- FeatureScatter(object = rawobj, feature1 = readCol, feature2 = featureCol) +
     geom_hline(data=Cutoffs, aes(yintercept=nFeature_cutoff_min, color=sample)) + 
     geom_hline(data=Cutoffs, aes(yintercept=nFeature_cutoff_max, color=sample)) + 
     geom_vline(data=Cutoffs, aes(xintercept=nCount_cutoff, color=sample)) 
@@ -905,7 +947,10 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="")
   }
   ggsave(paste0(prefix, ".qc.1.png"), p, width=11, height=5, dpi=300, units="in", bg="white")
 
-  mt<-data.frame(mt=rawobj$percent.mt, Sample=rawobj$orig.ident, nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
+  mt<-data.frame( mt=rawobj$percent.mt, 
+                  Sample=rawobj$orig.ident, 
+                  nFeature=log10(rawobj@meta.data[, featureCol]), 
+                  nCount=log10(rawobj@meta.data[, readCol]))
 
   nsample<-length(unique(mt$Sample))
   ncol=ceiling(sqrt(nsample))
@@ -949,9 +994,9 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="")
   cells = c()
   for(idx in c(1:nrow(Cutoffs))){
     sub_meta=meta[meta$orig.ident==Cutoffs$sample[idx],]
-    filteredsub_meta<-subset(sub_meta, nFeature_RNA >= Cutoffs$nFeature_cutoff_min[idx] & 
-                                  nFeature_RNA <= Cutoffs$nFeature_cutoff_max[idx] & 
-                                  nCount_RNA >= Cutoffs$nCount_cutoff[idx] & 
+    filteredsub_meta<-subset(sub_meta, sub_meta[,featureCol] >= Cutoffs$nFeature_cutoff_min[idx] & 
+                                  sub_meta[,featureCol] <= Cutoffs$nFeature_cutoff_max[idx] & 
+                                  sub_meta[,readCol] >= Cutoffs$nCount_cutoff[idx] & 
                                   percent.mt <= Cutoffs$mt_cutoff[idx])
     cells<-c(cells, rownames(filteredsub_meta))
   }
@@ -965,7 +1010,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="")
   qcsummary=merge(Cutoffs, qcsummary, by.x="sample", by.y="Sample")
   write.csv(qcsummary, file=paste0(prefix, ".filtered.cell.csv"), row.names=F)
   
-  g<-VlnPlot(object = rawobj, features = c("percent.mt", "nFeature_RNA", "nCount_RNA"), group.by="orig.ident")
+  g<-VlnPlot(object = rawobj, features = c("percent.mt", featureCol, readCol), group.by="orig.ident")
   ggsave(paste0(prefix, ".qc.4.png"), g, width=12, height=5, dpi=300, units="in", bg="white")
   
   finalList$filter<-qcsummary
@@ -1121,12 +1166,6 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
   genes<-data.frame(separate_rows(genes, gene, sep="[, ]+"))
   genes<-genes[genes$gene != "",]
 
-  if(!is.null(species)){
-    if(tolower(species) == "mm" | tolower(species) == "mouse"){
-      genes$gene = toMouseGeneSymbol(genes$gene)
-    }
-  }
-
   gene_names=genes$gene
   gene_names[gene_names=="PECAM"] = "PECAM1"
   gene_names[gene_names=="HGD1B"] = "HGD"
@@ -1135,10 +1174,16 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
   gene_names[gene_names=="ACTAA2"] = "ACTA2"
   gene_names[gene_names=="MTND6"] = "MT-ND6"
   gene_names[gene_names=="FOXJ!"] = "FOXJ1"
-  
   genes$gene<-gene_names
 
   genes<-genes[!duplicated(genes),]
+
+  if(!is.null(species)){
+    if(tolower(species) == "mm" | tolower(species) == "mouse"){
+      genes$gene = toMouseGeneSymbol(genes$gene)
+    }
+  }
+
 
   if(length(allgenes) > 0){
     miss_genes=setdiff(genes$gene, allgenes)
@@ -1305,6 +1350,8 @@ get_bubble_plot<-function(obj,
     }
   }
 
+  genes_df=genes_df[genes_df$gene %in% rownames(obj),,drop=FALSE]
+  
   gene_groups=split(genes_df$gene, genes_df$cell_type)
 
   if(is.null(group.by)){
@@ -2008,9 +2055,10 @@ do_PCA_Integration<-function( subobj,
                               orig.reduction="pca",
                               thread=1,
                               detail_prefix=NULL,
-                              ignore_variable_genes=c()) {
+                              ignore_variable_genes=NULL) {
   if(length(ignore_variable_genes) > 0){
-    VariableFeatures(subobj) <- setdiff(VariableFeatures(subobj), ignore_variable_genes)
+    vgenes=VariableFeatures(subobj)
+    VariableFeatures(subobj) <- setdiff(vgenes, ignore_variable_genes)
   }
 
   cat("RunPCA ... \n")
@@ -2094,8 +2142,7 @@ sub_cluster<-function(subobj,
                      redo_fastmnn = FALSE,
                      thread=1,
                      detail_prefix=NULL,
-                     ignore_variable_genes=c()
-){
+                     ignore_variable_genes=NULL){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
     cur_npcs = n_half_cell
@@ -2704,7 +2751,8 @@ get_barplot<-function(
   cluster_name="display_layer", 
   validation_columns=c("orig.ident","SignacX","SingleR"), 
   calc_height_per_cluster=200, 
-  calc_width_per_cell=50){
+  calc_width_per_cell=50,
+  label_height=500){
 
   valid_columns = intersect(validation_columns, colnames(ct_meta))
   if(length(valid_columns) == 0){
@@ -2734,7 +2782,7 @@ get_barplot<-function(
     theme(strip.text.y = element_text(angle = 0))
 
   if(!is.null(bar_file)){
-    height = max(1000, length(unique(alltbl$Var1)) * calc_height_per_cluster + 500)
+    height = max(1500, length(unique(alltbl$Var1)) * calc_height_per_cluster + label_height)
     width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + 400
 
     ggsave(bar_file, g, width=width, height=height, dpi=300, units="px", bg="white")
@@ -2775,6 +2823,14 @@ h5ad_to_h5seurat <- function(h5ad_file){
   f$close_all()
 }
 
+update_rownames<-function(counts, name_func){
+  df=data.frame(oldgenes=rownames(counts), newgenes=name_func(rownames(counts)))
+  df=df[!duplicated(df$newgenes),,drop=FALSE]
+  counts=counts[df$oldgenes,,drop=FALSE]
+  rownames(counts)<-name_func(rownames(counts))
+  return(counts)
+}
+
 read_object_from_rawfile<-function(sample_name, file_path, species, ensembl_map=NULL){
   cat("reading", sample_name, ":", file_path, "\n")
   lst = read_scrna_data(file_path, keep_seurat=TRUE)
@@ -2800,10 +2856,10 @@ read_object_from_rawfile<-function(sample_name, file_path, species, ensembl_map=
     }
 
     if (species=="Mm") {
-      rownames(counts)<-toMouseGeneSymbol(rownames(counts))
+      counts=update_rownames(counts, toMouseGeneSymbol)
     }
     if (species=="Hs") {
-      rownames(counts)<-toupper(rownames(counts))
+      counts=update_rownames(counts, toupper)
     }
     sobj = CreateSeuratObject(counts = counts, project = sample_name)
     sobj$orig.ident <- sample_name
@@ -2846,7 +2902,7 @@ iterate_celltype<-function(obj,
                            essential_genes,
                            species="Hs",
                            reduction="pca",
-                           ignore_variable_genes=c()){
+                           ignore_variable_genes=NULL){
   meta = obj@meta.data
   
   assay=ifelse(by_sctransform, "SCT", "RNA")
@@ -3029,7 +3085,7 @@ layer_cluster_celltype<-function(obj,
                                  essential_genes,
                                  species,
                                  reduction="pca",
-                                 ignore_variable_genes=c()){
+                                 ignore_variable_genes=NULL){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -3044,12 +3100,29 @@ layer_cluster_celltype<-function(obj,
       
       iter_name=paste0("iter", iter)
 
-      previous_celltypes<-previous_celltypes[order(previous_celltypes)]
+      previous_celltypes<-sort(previous_celltypes)
       
       curprefix = paste0(prefix, ".iter", iter)
 
       iter_meta_file = paste0(curprefix, ".csv")
       iter_meta_rds = paste0(curprefix, ".rds")
+
+      if (0) { # if we want to use the cached data
+        if(file.exists(iter_meta_rds)){
+          cat("Found previous meta file, skip this iteration\n")
+          obj@meta.data = readRDS(iter_meta_rds)
+          pre_disagree<-obj@meta.data[obj@meta.data[, previous_layer] != obj@meta.data[, iter_name],,drop=F]
+          if(nrow(pre_disagree) > 0){
+            previous_layer = iter_name
+            previous_celltypes=unique(obj@meta.data[, previous_layer])
+            iter = iter + 1
+            next
+          }else{
+            cat("No more cell type to iterate\n")
+            break
+          }
+        }
+      }
 
       cat("  Call iterate_celltype ...\n")
 
@@ -3163,9 +3236,16 @@ do_analysis<-function(tmp_folder,
                       init_layer="layer0",
                       final_layer="layer4",
                       reduction="pca",
-                      ignore_variable_genes=ignore_variable_genes) {
+                      ignore_variable_genes=NULL) {
   tmp_prefix=file.path(tmp_folder, prefix)
   cur_prefix=file.path(cur_folder, prefix)
+
+  if(0) {#for debug
+    previous_layer = init_layer
+    cur_layer = final_layer
+    cur_layermap = layer2map
+    prefix = tmp_prefix
+  }
 
   reslist1<-layer_cluster_celltype( obj = obj,
                                     previous_layer = init_layer, 
@@ -3515,8 +3595,9 @@ process_move=function(move_formula, move_parts, cur_meta){
     is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
   }
 
-  # if the cells are moved, we don't move them again
-  final_move = is_move & (!cur_meta$is_moved)
+  # even the cells are moved before, we still need to move them again if it is not deleted
+  #final_move = is_move & (!cur_meta$is_moved)
+  final_move = is_move & cur_meta$seurat_clusters[is_move] >= -1
 
   move_cells=sum(final_move)
 
@@ -3525,9 +3606,9 @@ process_move=function(move_formula, move_parts, cur_meta){
     cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)        
   }else{
     cur_meta$cur_layer[final_move] = to_cluster
+    cur_meta$is_moved[final_move] = TRUE
   }
   cat("       cells moved:", move_cells, "\n")
-  cur_meta$is_moved[final_move] = TRUE
 
   return(cur_meta)
 }
@@ -3586,16 +3667,16 @@ process_filter=function(filter_action, filter_formula, filter_parts, cur_meta){
   return(cur_meta)
 }
 
-process_merge=function(merge_formula, merge_parts, cur_meta) {
-  if(length(merge_parts) != 2){
-    stop(paste0("  rename formula should be MERGE:from_clusters:to_cluster, now we get: ", merge_formula))
+process_merge=function(action_formula, action_parts, cur_meta) {
+  if(length(action_parts) != 2){
+    stop(paste0("  rename formula should be MERGE:from_clusters:to_cluster, now we get: ", action_formula))
   }
   
-  from_clusters_str=merge_parts[1]
+  from_clusters_str=action_parts[1]
   from_clusters=unlist(strsplit(from_clusters_str, ","))
-  to_cluster=as.numeric(merge_parts[2])
+  to_cluster=as.numeric(action_parts[2])
   if(is.na(to_cluster)){
-    stop(paste0("wrong to_cluster value ", merge_parts[2]))
+    stop(paste0("wrong to_cluster value ", action_parts[2]))
   }
 
   cat("    merge cluster:", from_clusters_str, "to", to_cluster, "\n")
@@ -3612,15 +3693,23 @@ process_merge=function(merge_formula, merge_parts, cur_meta) {
   return(cur_meta)
 }
 
-process_rename=function(rename_formula, rename_parts, cur_meta, condition_column) {
-  if(length(rename_parts) != 2){
-    stop(paste0("  rename formula should be RENAME:cluster:name, now we get", rename_formula))
+process_rename=function(action_formula, 
+                        action_parts, 
+                        cur_meta, 
+                        condition_column) {
+  if(length(action_parts) != 2){
+    stop(paste0("  rename formula should be RENAME:cluster:name, now we get", action_formula))
   }
   
-  rename_cluster=rename_parts[1]
-  rename_name=rename_parts[2]
+  rename_cluster=action_parts[1]
+  rename_clusters=unlist(strsplit(rename_cluster, ","))
+  rename_name=action_parts[2]
 
-  is_rename = cur_meta[,condition_column]==rename_cluster
+  if(all(rename_clusters == "-1" | rename_clusters == "*")){
+    is_rename = !cur_meta$is_moved
+  } else {
+    is_rename = (cur_meta[,condition_column] %in% rename_clusters) & !cur_meta$is_moved
+  }
 
   rename_cells=sum(is_rename)
 
@@ -3638,6 +3727,7 @@ process_actions=function(ct_tbl, cur_meta, condition_column="seurat_clusters_str
   cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)
   if(nrow(ct_tbl) > 0){
     cur_meta$is_moved=FALSE
+    action_formula= ct_tbl$V1[1]
     for(action_formula in ct_tbl$V1){
       cat("  action formula:", action_formula, "\n")
       action_parts=unlist(strsplit(action_formula, ":"))
@@ -3654,7 +3744,9 @@ process_actions=function(ct_tbl, cur_meta, condition_column="seurat_clusters_str
                                 filter_parts=action_parts, 
                                 cur_meta=cur_meta)
       }else if(action_type == "MERGE"){
-        cur_meta=process_merge(action_formula, action_parts, cur_meta)
+        cur_meta=process_merge( action_formula, 
+                                action_parts, 
+                                cur_meta)
       }else if(action_type == "RENAME"){
         cur_meta=process_rename(action_formula, 
                                 action_parts, 
@@ -3665,6 +3757,8 @@ process_actions=function(ct_tbl, cur_meta, condition_column="seurat_clusters_str
       }
     }
   }
+
+  cur_meta$cur_layer[cur_meta$seurat_clusters < -1] = "DELETE"
   return(cur_meta)
 }
 

@@ -18,7 +18,7 @@ setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_f
 source("scRNA_func.r")
 library(Seurat)
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 
 myoptions = read_file_map(parSampleFile1, do_unlist = FALSE)
 reduction = myoptions$reduction

@@ -53,6 +53,7 @@ print(paste0("gender=",gender))
 
 tumourLogR_file = paste0(tumourname, '_LogR.txt')
 tumourBAF_file = paste0(tumourname, '_BAF.txt')
+tumourRawBAF_file = paste0(tumourname, '_BAF_rawBAF.txt')
 
 ### prepare HTS
 print("ascat.prepareHTS...")
@@ -70,7 +71,7 @@ ascat.prepareHTS(
   tumourBAF_file = tumourBAF_file)
  
 delete_files("*.alleleFrequencies*")
-delete_files("*_BAF_rawBAF.txt")
+system(paste("gzip", shQuote(tumourRawBAF_file)))
 
 ### run ASCAT
 # gamma=1 (suggested)

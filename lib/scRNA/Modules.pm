@@ -303,13 +303,16 @@ sub add_seurat {
       rmd_ext => $rmd_ext,
       Mtpattern             => getValue( $def, "Mtpattern" ),
       rRNApattern           => getValue( $def, "rRNApattern" ),
+      hemoglobinPattern     => getValue( $def, "hemoglobinPattern" ),
       Remove_rRNA           => getValue( $def, "Remove_rRNA" ),
       Remove_MtRNA          => getValue( $def, "Remove_MtRNA" ),
+      Remove_hemoglobin     => getValue( $def, "Remove_hemoglobin" ),
       regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
       nFeature_cutoff_min   => getValue( $def, "nFeature_cutoff_min" ),
       nFeature_cutoff_max   => getValue( $def, "nFeature_cutoff_max" ),
       nCount_cutoff         => getValue( $def, "nCount_cutoff" ),
       mt_cutoff             => getValue( $def, "mt_cutoff" ),
+      hemoglobin_cutoff     => getValue( $def, "hemoglobin_cutoff", 100 ), #nofilter
       species               => getValue( $def, "species" ),
       resolution            => getValue( $def, "resolution" ),
       pca_dims              => getValue( $def, "pca_dims" ),
@@ -3847,7 +3850,7 @@ sub add_miloR_miloDE {
   my ($config, $def, $tasks, $target_dir, $obj_file) = @_;
 
   my $ct_name= "Bulk";
-  my $condition_column = getValue($def, "milo_condition_column");
+  my $condition_column = $def->{"milo_condition_column"};
   my $annotation_column = getValue($def, "milo_annotation_column");
   my $visulization_reduction = getValue($def, "milo_visulization_reduction");
   my $neighbourhood_reduction = getValue($def, "milo_neighbourhood_reduction");
@@ -3878,6 +3881,7 @@ sub add_miloR_miloDE {
       "annotation_column" => $annotation_column,
       "condition_column" => $condition_column,
     },
+    parameterSampleFile3 => $config->{groups},
     parameterFile1 => $obj_file,
     output_ext => ".$ct_name.milo.neighbourhoods.rds,.$ct_name.nhoods_annotation.csv",
     sh_direct => 0,

@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='pbmc_rejection'
+outFile='WHY11498'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn/result/pbmc_rejection.final.rds'
+parFile1='/nobackup/h_cqs/shengq2/temp/20250415_spatial_scRNA_analysis/seurat_merge/result/WHY11498.final.rds'
 parFile2=''
-parFile3='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/essential_genes/result/pbmc_rejection.txt'
+parFile3='/nobackup/h_cqs/shengq2/temp/20250415_spatial_scRNA_analysis/essential_genes/result/WHY11498.txt'
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_fastmnn_dr0.5_1_call/result')
+setwd('/nobackup/h_cqs/shengq2/temp/20250415_spatial_scRNA_analysis/seurat_merge_dr0.5_1_call/result')
 
 ### Parameter setting end ###
 
@@ -31,7 +31,7 @@ library(patchwork)
 library(glmGamPoi)
 library('rmarkdown')
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
 random.seed=20200107
 min.pct=0.5
 logfc.threshold=0.6
@@ -286,6 +286,15 @@ if(by_individual_sample){
   if(!dir.exists(tmp_folder)){
     dir.create(tmp_folder)
   }
+
+  if(0) {
+    species="Hs"
+    init_layer="layer0"
+    final_layer="layer4"
+    reduction="pca"
+    ignore_variable_genes=NULL
+  }
+
   res_list <- do_analysis(tmp_folder = tmp_folder,
                           cur_folder = cur_folder,
                           obj = obj, 
@@ -303,3 +312,4 @@ if(by_individual_sample){
                           species = species,
                           reduction=reduction);
 }
+

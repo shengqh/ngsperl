@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='pbmc_rejection'
+outFile='Arota_Progeria'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_rawdata/result/pbmc_rejection.rawobj.rds'
-parFile2='/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/essential_genes/result/pbmc_rejection.txt'
+parFile1='/nobackup/brown_lab/projects/20250513_Arota_Progeria_scRNA_mouse/cellbender_nd_seurat_rawdata/result/Arota_Progeria.rawobj.rds'
+parFile2='/nobackup/brown_lab/projects/20250513_Arota_Progeria_scRNA_mouse/essential_genes/result/Arota_Progeria.txt'
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250226_T04_snRNA_hg38/seurat_sct2_rpca/result')
+setwd('/nobackup/brown_lab/projects/20250513_Arota_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn/result')
 
 ### Parameter setting end ###
 
@@ -28,8 +28,13 @@ library(data.table)
 library(SeuratData)
 library(SeuratWrappers)
 library(BiocParallel)
+library(future)
 
-options(future.globals.maxSize= 10779361280)
+options(future.globals.maxSize=1024^3*100) #100G
+
+#Sometimes, using multisession for parallel processing would cause unexpected error. comment it out at 202505223.
+#future::plan(strategy = "multisession")
+
 random.seed=20200107
 
 options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors = F)
@@ -69,15 +74,13 @@ if("ignore_variable_gene_file" %in% names(myoptions)){
 
 obj<-readRDS(parFile1)
 
-# No matter scTransform or not, we need to normalize the object in order to get average expression later.
-obj <- NormalizeData(obj, assay="RNA")
-
 cat("preprocessing_rawobj ...\n")
 finalList<-preprocessing_rawobj(
   rawobj=obj, 
   myoptions=myoptions, 
   prefix=detail_prefix, 
   filter_config_file=parFile3)
+cat("preprocessing_rawobj done.\n")
 
 obj<-finalList$rawobj
 finalList<-finalList[names(finalList) != "rawobj"]
@@ -144,7 +147,7 @@ if(!file.exists(integrated_obj_file)){
     cat("JoinLayers of", cur_assay, "assay ... \n")
     obj <- JoinLayers(obj, assay=cur_assay)
   }
-  
+
   cat("FindNeighbors ... \n")
   obj <- FindNeighbors( obj, 
                         dims = 1:30, 
@@ -156,6 +159,11 @@ if(!file.exists(integrated_obj_file)){
                   assay = cur_assay,
                   reduction = reduction, 
                   dims = 1:30)    
+  
+  # No matter scTransform or not, we need to normalize the object in order to get average expression later.
+  cat("Normalizing data ...\n")
+  obj <- NormalizeData(obj, assay="RNA")
+  cat("Normalizing data done.\n")
 
   if("ADT" %in% names(obj)){
     obj <- NormalizeData(obj, normalization.method = "CLR", margin = 2, assay = "ADT")

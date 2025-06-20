@@ -103,7 +103,6 @@ sub perform {
     my $rgline = "ID:$sample_name SM:$sample_name LB:$sample_name PL:ILLUMINA PU:ILLUMINA";
 
     my $unsorted = $sample_name . "_Aligned.out.bam";
-    my $bam_stat = $sample_name . ".bamstat";
 
     my $final_bam = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $unsorted;
 
@@ -124,7 +123,7 @@ sub perform {
     print $pbs "
 rm -f ${sample_name}.star.failed ${sample_name}.featureCount.failed
 
-status=1
+status=0
 
 if [[ -s $sample_file_1 ]]; then
   if [[ ! -s $unsorted ]]; then
@@ -134,26 +133,13 @@ if [[ -s $sample_file_1 ]]; then
     if [[ \$status -eq 0 ]]; then
       touch ${sample_name}.star.succeed
     else
-      rm $unsorted
-      touch ${sample_name}.star.failed
+      rm -rf $unsorted
+      echo \$status > ${sample_name}.star.failed
     fi
   fi
   
   $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
   rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
-fi
-
-if [[ \$status -eq 0 && -s $unsorted && ! -s $bam_stat ]]; then
-  echo bamStat=`date` 
-  python3 $py_script -i $unsorted -o $bam_stat
-
-  status=\$?
-  if [[ \$status -eq 0 ]]; then
-    touch ${sample_name}.bamStat.succeed
-  else
-    rm -f $unsorted
-    touch ${sample_name}.bamStat.failed
-  fi
 fi
 ";
 
@@ -163,7 +149,7 @@ if [[ \$status -eq 0 && -s $unsorted && ! -s $final_bam ]]; then
   echo bamSort=`date` 
   samtools sort -m $sort_memory -T ${sample_name} -t $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
   if [[ ! -e ${final_bam}.succeed ]]; then
-    rm -f $final_bam
+    rm -rf $final_bam
   else
     samtools index $final_bam
     samtools idxstats $final_bam > ${final_bam}.chromosome.count
@@ -171,7 +157,7 @@ if [[ \$status -eq 0 && -s $unsorted && ! -s $final_bam ]]; then
 
     if ( !$output_unsorted ) {
       print $pbs "
-    rm -f $unsorted 
+    rm -rf $unsorted 
 ";
     }
     
@@ -198,8 +184,8 @@ if [[ \$status -eq 0 && -s $final_bam ]]; then
   if [[ \$status -eq 0 ]]; then
     touch ${sample_name}.featureCount.succeed
   else
-    touch ${sample_name}.featureCount.failed
-    rm $final_file
+    echo \$status > ${sample_name}.featureCount.failed
+    rm -rf $final_file
   fi
 
   featureCounts -v 2>\&1 | grep featureCounts | cut -d ' ' -f2 | awk '{print \"featureCounts,\"\$1}' > ${final_file}.featureCounts.version
@@ -208,8 +194,8 @@ fi
 
     if ( !$output_unsorted ) {
       print $pbs "
-if [[ -s $final_file && -s $bam_stat ]]; then
-  rm -f $unsorted 
+if [[ -s $final_file ]]; then
+  rm -rf $unsorted 
 fi
 ";
     }
@@ -217,7 +203,7 @@ fi
     if ($delete_star_featureCount_bam){
       print $pbs "
 if [[ -s $final_file ]]; then
-  rm -f ${sample_name}_Aligned.out.bam ${sample_name}_Aligned.out.bam.bai ${sample_name}_SJ.out.tab ${sample_name}.splicing.bed
+  rm -rf ${sample_name}_Aligned.out.bam ${sample_name}_Aligned.out.bam.bai ${sample_name}_SJ.out.tab ${sample_name}.splicing.bed
 fi
 ";
     }
