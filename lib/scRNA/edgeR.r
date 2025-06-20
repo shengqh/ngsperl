@@ -324,6 +324,15 @@ for(idx in c(1:nrow(designMatrix))){
   }
   
   cells<-cells[keep_rows,]
+  #remove cells with too few total reads after filtering and also change designdata and group
+  cellTotalReads=colSums(cells)
+  if (any(cellTotalReads<50)) {
+    selectedCellsInd=which(cellTotalReads>=50)
+    cells=cells[,selectedCellsInd]
+    groups=groups[selectedCellsInd]
+    designdata=designdata[selectedCellsInd,]
+  }
+
   cdr <- scale(colMeans(cells > 0))
   designdata$cdr = unlist(cdr)
   
@@ -398,8 +407,9 @@ for(idx in c(1:nrow(designMatrix))){
   
   gseaFile<-paste0(file_prefix, "_GSEA.rnk")
   pValuesNoZero=out$table$PValue
-  if (any(pValuesNoZero == 0)){
-    pValuesNoZero[pValuesNoZero == 0] = min(pValuesNoZero[pValuesNoZero > 0],na.rm=TRUE)/10
+  rMinValue=.Machine$double.eps * .Machine$double.xmin
+  if (any(pValuesNoZero < rMinValue)){
+    pValuesNoZero[pValuesNoZero < rMinValue] = rMinValue
   }
   rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(pValuesNoZero)))
   rankout<-rankout[order(rankout$sigfvalue, decreasing=TRUE),]

@@ -3331,8 +3331,9 @@ write_gsea_rnk_by_loose_criteria<-function(dge_all, groups, design, prefix){
   out<-topTags(fitTest, n=Inf)
   gseaFile<-paste0(prefix, "_GSEA.rnk")
   pValuesNoZero=out$table$PValue
-  if (any(pValuesNoZero == 0)){
-    pValuesNoZero[pValuesNoZero == 0] = min(pValuesNoZero[pValuesNoZero > 0],na.rm=TRUE)/10
+  rMinValue=.Machine$double.eps * .Machine$double.xmin
+  if (any(pValuesNoZero < rMinValue)){
+    pValuesNoZero[pValuesNoZero < rMinValue] = rMinValue
   }
   rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(pValuesNoZero)))
   #rankout<-data.frame(gene=rownames(out), sigfvalue=sign(out$table$logFC) * (-log10(out$table$PValue)))
