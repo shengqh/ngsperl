@@ -1,16 +1,16 @@
 rm(list=ls()) 
-sample_name='CLTI_vs_Control'
-outFile='CLTI_vs_Control'
+sample_name='Supermere_C29_vs_Supermere'
+outFile='Supermere_C29_vs_Supermere'
 parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/brown_lab/projects/20231214_10473_Methylation_hg38/MethylKitCorr/result/P10473.filtered.cpg.meth.rds'
+parFile1='/nobackup/vickers_lab/projects/20250605_13303_DNAMethyl_mm10/MethylKitCorr/result/P13303.filtered.cpg.meth.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20231214_10473_Methylation_hg38/MethylKitDiff/result/CLTI_vs_Control')
+setwd('/nobackup/vickers_lab/projects/20250605_13303_DNAMethyl_mm10/MethylKitDiff/result/Supermere_C29_vs_Supermere')
 
 ### Parameter setting end ###
 
@@ -27,6 +27,17 @@ project <- params$task_name
 difference <- as.numeric(params$difference)
 qvalue <- as.numeric(params$qvalue)
 ncore <- as.numeric(params$ncore)
+overdispersion <- ifelse(is.null(params$overdispersion), "MN", params$overdispersion)
+test_method <- ifelse(is.null(params$test_method), "F", params$test_method)
+adjust <- ifelse(is.null(params$adjust), "BH", params$adjust)
+
+cat(" Project: ", project, "\n",
+    "Difference: ", difference, "\n",
+    "Q-value: ", qvalue, "\n",
+    "N-core: ", ncore, "\n",
+    "Overdispersion: ", overdispersion, "\n",
+    "Test method: ", test_method, "\n",
+    "Adjust method: ", adjust, "\n")
 
 #read comparison
 comparisons <- read.table(parSampleFile3, sep = "\t", header = F)
@@ -45,25 +56,30 @@ samples <- c(control_names, treatment_names)
 treatment <- rep(c(0, 1), c(length(control_names), length(treatment_names)))
 
 #read meth files
+cat("Reading methylation data from: ", parFile1, "\n")
 cpg.all <- readRDS(file = parFile1)
 
+cat("Reorganizing methylation data...\n")
 sub_obj <- reorganize(cpg.all,
                       sample.ids = samples,
                       treatment = treatment)
 rm(cpg.all)
 
+cat("Calculating differential methylation...\n")
 sub_diff <- calculateDiffMeth(sub_obj,
-                              overdispersion="MN",
-                              adjust = "BH",
-                              test = "fast.fisher",
+                              overdispersion = overdispersion,
+                              adjust = adjust,
+                              test = test_method,
                               mc.cores = ncore)
 test_rds=paste0(sample_name, "_test.rds")
+cat("Saving intermediate results to: ", test_rds, "\n")
 saveRDS(sub_diff, file = test_rds)
 rm(sub_obj)
 if(0){
   sub_diff <- readRDS(test_rds)
 }
 
+cat("Extracting all differential methylation results...\n")
 diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
 diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", control_group_name), paste0("hypo_in_", treatment_group_name))
 methyldiff_rds=paste0(sample_name, "_methyldiff.rds")
@@ -72,6 +88,7 @@ if(0){
   diff_res <- readRDS(methyldiff_rds)
 }
 
+cat("extracting differential methylation results for treatment group...\n")
 diff_res_treatment_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hypo")
 if(nrow(diff_res_treatment_high) > 0){
   diff_res_treatment_high$direction <- paste0("hypo_in_", treatment_group_name)
@@ -79,9 +96,11 @@ if(nrow(diff_res_treatment_high) > 0){
 }
 write.table(diff_res_treatment_high, file = paste0(sample_name, "_", treatment_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
 
+cat("extracting differential methylation results for control group...\n")
 diff_res_control_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hyper")
 if(nrow(diff_res_control_high) > 0){
   diff_res_control_high$direction <- paste0("hypo_in_", control_group_name)
   diff_res_control_high <- diff_res_control_high[order(diff_res_control_high$meth.diff),]
 }
 write.table(diff_res_control_high, file = paste0(sample_name, "_", control_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+
