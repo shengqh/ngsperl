@@ -54,7 +54,7 @@ sub perform {
     my $sampleFile=$sample_files[0];
     my $sampleFileBase=basename($sampleFile);
  
-    my $result_file          = "${sample_name}.cpg.meth";
+    my $result_file          = "${sample_name}.cpg.meth.gz";
     my $tag               = get_bam_tag($sample_name);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
