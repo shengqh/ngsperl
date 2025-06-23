@@ -273,7 +273,10 @@ sub getConfig {
         task_name => $task_name,
         difference => getValue($def, "methylDiff_difference", 25),
         qvalue => getValue($def, "methylDiff_qvalue", 0.01),
-        ncore => $ncore
+        ncore => $ncore,
+        overdispersion => getValue($def, "methylDiff_overdispersion", "MN"), #MN for overdispersion, Chisq-test for no overdispersion
+        test_method => getValue($def, "methylDiff_test_method", "F"), #fast.fisher for only one sample per group.
+        adjust => getValue($def, "methylDiff_adjust", "BH"), #SLIM, holm, hochberg, hommel, bonferroni, BH, BY, fdr, none, qvalue
       },
       parameterSampleFile3_ref => "pairs",
       parameterSampleFile4_ref => "groups",
