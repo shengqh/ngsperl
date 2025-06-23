@@ -37,7 +37,7 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "emailType", "FAIL" );
   initDefaultValue( $def, "cluster",   "slurm" );
 
-  initDefaultValue( $def, "perform_scRNABatchQC", 1 );
+  initDefaultValue( $def, "perform_scRNABatchQC", 0 );
 
   initDefaultValue( $def, "perform_individual_qc", 1 );
 
@@ -178,8 +178,6 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "DE_by_sample_min_cell_per_sample", 10 );
   
-  initDefaultValue( $def, "perform_webgestalt", 0 );
-
   initDefaultValue( $def, "perform_CHETAH", 0 );
 
   initDefaultValue( $def, "perform_multires", 0 );
