@@ -34,14 +34,15 @@ sub result {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $comparisons = get_raw_files( $config, $section );
+  my $test_method = $config->{$section}{parameterSampleFile2}{test_method};
 
   my $result = {};
   for my $comparison_name ( keys %{$comparisons} ) {
     my $cur_dir      = $result_dir . "/$comparison_name";
     my @group_names = @{ $comparisons->{$comparison_name}; };
 
-    my $dmcpgsFile1=${comparison_name}."_".$group_names[0].".dmcpgs";
-    my $dmcpgsFile2=${comparison_name}."_".$group_names[1].".dmcpgs";
+    my $dmcpgsFile1=${comparison_name}."_".$group_names[0]."_${test_method}.dmcpgs";
+    my $dmcpgsFile2=${comparison_name}."_".$group_names[1]."_${test_method}.dmcpgs";
 
     #don't use common @result_files and $filtered in two filtering procedures. It might cause problem.
     my @result_files1 = ();
@@ -72,12 +73,13 @@ sub get_absolute_final_file {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
   my $comparisons = get_raw_files( $config, $section );
+  my $test_method = $config->{$section}{parameterSampleFile2}{test_method};
 
   my $cur_dir      = $result_dir . "/$comparison_name";
 
   my @group_names = @{ $comparisons->{$comparison_name} };
 
-  my $dmcpgsFile1=${comparison_name}."_".$group_names[0].".dmcpgs";
+  my $dmcpgsFile1=${comparison_name}."_".$group_names[0]."_${test_method}.dmcpgs";
 
   return( "$cur_dir/${dmcpgsFile1}" );
 }

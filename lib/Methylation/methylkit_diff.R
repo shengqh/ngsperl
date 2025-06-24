@@ -65,42 +65,55 @@ sub_obj <- reorganize(cpg.all,
                       treatment = treatment)
 rm(cpg.all)
 
-cat("Calculating differential methylation...\n")
-sub_diff <- calculateDiffMeth(sub_obj,
-                              overdispersion = overdispersion,
-                              adjust = adjust,
-                              test = test_method,
-                              mc.cores = ncore)
-test_rds=paste0(sample_name, "_test.rds")
-cat("Saving intermediate results to: ", test_rds, "\n")
-saveRDS(sub_diff, file = test_rds)
-rm(sub_obj)
-if(0){
-  sub_diff <- readRDS(test_rds)
-}
+test_methods = c("F", "Chisq", "fast.fisher", "dss")
+for(test_method in test_methods){
+  if(test_method == "dss"){
+    cat("Calculating differential methylation with test method: ", test_method, " and adjust method: ", adjust, "\n")
+    sub_diff <- calculateDiffMethDSS(sub_obj,
+                                     adjust = adjust,
+                                     mc.cores = ncore)
+  }else{
+    cat("Calculating differential methylation with test method: ", test_method, " and adjust method: ", adjust, "\n")
+    sub_diff <- calculateDiffMeth(sub_obj,
+                                  overdispersion = overdispersion,
+                                  adjust = adjust,
+                                  test = test_method,
+                                  mc.cores = ncore)
+  }
 
-cat("Extracting all differential methylation results...\n")
-diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
-diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", control_group_name), paste0("hypo_in_", treatment_group_name))
-methyldiff_rds=paste0(sample_name, "_methyldiff.rds")
-saveRDS(diff_res, file = methyldiff_rds)
-if(0){
-  diff_res <- readRDS(methyldiff_rds)
-}
+  cur_prefix <- paste0(sample_name, "_", test_method)
 
-cat("extracting differential methylation results for treatment group...\n")
-diff_res_treatment_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hypo")
-if(nrow(diff_res_treatment_high) > 0){
-  diff_res_treatment_high$direction <- paste0("hypo_in_", treatment_group_name)
-  diff_res_treatment_high <- diff_res_treatment_high[order(diff_res_treatment_high$meth.diff),]
-}
-write.table(diff_res_treatment_high, file = paste0(sample_name, "_", treatment_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+  test_rds=paste0(cur_prefix, ".rds")
+  cat("Saving intermediate results to: ", test_rds, "\n")
+  saveRDS(sub_diff, file = test_rds)
 
-cat("extracting differential methylation results for control group...\n")
-diff_res_control_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hyper")
-if(nrow(diff_res_control_high) > 0){
-  diff_res_control_high$direction <- paste0("hypo_in_", control_group_name)
-  diff_res_control_high <- diff_res_control_high[order(diff_res_control_high$meth.diff),]
+  if(0){
+    sub_diff <- readRDS(test_rds)
+  }
+
+  cat("Extracting all differential methylation results for test method", test_method, "...\n")
+  diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
+  diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", control_group_name), paste0("hypo_in_", treatment_group_name))
+  methyldiff_rds=paste0(cur_prefix, ".methyldiff.rds")
+  saveRDS(diff_res, file = methyldiff_rds)
+  if(0){
+    diff_res <- readRDS(methyldiff_rds)
+  }
+
+  cat("extracting differential methylation results for treatment group of test method", test_method, "...\n")
+  diff_res_treatment_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hypo")
+  if(nrow(diff_res_treatment_high) > 0){
+    diff_res_treatment_high$direction <- paste0("hypo_in_", treatment_group_name)
+    diff_res_treatment_high <- diff_res_treatment_high[order(diff_res_treatment_high$meth.diff),]
+  }
+  write.table(diff_res_treatment_high, file = paste0(cur_prefix, "_", treatment_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
+
+  cat("extracting differential methylation results for control group of test method", test_method, "...\n")
+  diff_res_control_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hyper")
+  if(nrow(diff_res_control_high) > 0){
+    diff_res_control_high$direction <- paste0("hypo_in_", control_group_name)
+    diff_res_control_high <- diff_res_control_high[order(diff_res_control_high$meth.diff),]
+  }
+  write.table(diff_res_control_high, file = paste0(cur_prefix, "_", control_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
 }
-write.table(diff_res_control_high, file = paste0(sample_name, "_", control_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
 
