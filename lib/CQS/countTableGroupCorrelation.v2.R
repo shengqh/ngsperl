@@ -7,10 +7,10 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-parFile4='/nobackup/shah_lab/shengq2/20250520_Serpina_rnaseq_hg38/covariance.txt'
+parFile4='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/covariance.txt'
 
 
-setwd('/nobackup/shah_lab/shengq2/20250520_Serpina_rnaseq_hg38/genetable/result')
+setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_3_choose_pesudo_count_correlation/result')
 
 ### Parameter setting end ###
 
@@ -177,6 +177,11 @@ if(colorFileList != ""){
 
 #start work:
 countTableFileAll<-read.delim(countTableFileList,header=F,as.is=T,check.names=F)
+if(grepl(".list.csv", countTableFileAll$V1[1])){
+  countTableFileAll<-read.csv(countTableFileAll$V1[1],header=T,as.is=T,check.names=F) |>
+    dplyr::rename(V1=3, V2=2) |>
+    dplyr::select(V1, V2)
+}
 
 missed_count_tables = c()
 missed_count_tables_file<-"missed_count_tables.txt"
@@ -787,3 +792,4 @@ if(length(missed_count_tables) == 0){
 }
 
 writeLines(prefix_list, "prefix_list.txt")
+
