@@ -3107,7 +3107,7 @@ sub add_pseudo_count {
     parameterSampleFile1     => {
       group_by => $group_by
     },
-    output_file_ext      => ".pusedo_count.list.csv",
+    output_file_ext      => ".pseudo_count.list.csv",
     sh_direct            => 1,
     pbs                  => {
       "nodes"     => "1:ppn=1",

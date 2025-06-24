@@ -47,7 +47,6 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_mapping",       0 );
   initDefaultValue( $def, "perform_counting",      0 );
   initDefaultValue( $def, "perform_count_table",   0 );
-  initDefaultValue( $def, "perform_correlation",   0 );
   initDefaultValue( $def, "perform_webgestalt",    0 );
   initDefaultValue( $def, "perform_report",        0 );
   initDefaultValue( $def, "perform_gsea",          0 );
@@ -214,6 +213,10 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_decontX", 0);
   initDefaultValue( $def, "remove_decontX", 0);
   initDefaultValue( $def, "remove_decontX_by_contamination", 0);
+
+  initDefaultValue( $def, "perform_pesudo_count_correlation", 0 );
+  initDefaultValue( $def, "correlation_output_to_result_dir", 1 );
+
 
   return $def;
 }
@@ -745,6 +748,22 @@ sub getScRNASeqConfig {
             if (defined $sctk_ref or defined $signacX_ref or defined $singleR_ref){
               my $validation_task = $choose_task . "_validation";
               add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer );
+            }
+
+            if (getValue($def, "perform_pesudo_count_correlation", 0)) {
+              my $pseudo_task = $choose_task . "_pesudo_count";
+              add_pseudo_count($config, $def, $tasks, $target_dir, $pseudo_task, $obj_ref, "seurat_cell_type");
+
+              my $corr_task = $pseudo_task . "_correlation";
+              add_table_correlation(
+                $config, 
+                $def, 
+                $tasks, 
+                $corr_task, 
+                $def->{target_dir} . "/" . $corr_task, 
+                [ $pseudo_task, ".list.csv" ]);
+
+              push (@$tasks, $corr_task);
             }
 
             $celltype_task = $choose_task;
