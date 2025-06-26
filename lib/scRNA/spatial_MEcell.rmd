@@ -1,0 +1,40 @@
+---
+title: "MEcell Visualization"
+author: 
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  error=FALSE,
+  results="asis"
+)
+
+```
+
+```{r}
+source("reportFunctions.R")
+
+sample_name=fread("fileList1.txt", header=FALSE)$V2[1]
+
+cluster_png=paste0(sample_name, ".MEcell.clustering.png")
+
+include_graphics(cluster_png)
+```

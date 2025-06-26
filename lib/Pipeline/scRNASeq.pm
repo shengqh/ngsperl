@@ -356,6 +356,35 @@ sub getScRNASeqConfig {
       push (@$tasks, $individual_spatial_object_task);
       $files_def = [$individual_spatial_object_task, ".sketch.rds"];
 
+      if(getValue($def, "perform_MEcell", 1)){
+        my $MEcell_task = "MEcell";
+        $config->{$MEcell_task} = {
+          class => "CQS::IndividualR",
+          target_dir => $def->{target_dir} . "/$MEcell_task",
+          perform => 1,
+          option => "",
+          rtemplate => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell.r",
+          rReportTemplate => "../scRNA/spatial_MEcell.rmd;reportFunctions.R",
+          run_rmd_independent => 1,
+          rmd_ext => ".MEcell.html",
+          parameterSampleFile1_ref => [$individual_spatial_object_task, ".full.rds"],
+          parameterSampleFile2 => {
+            assay => "Spatial.008um",
+            sketch_assay => "RNA",
+          },
+          sh_direct => 0,
+          no_docker => 1,
+          output_ext => ".MEcell.html",
+          pbs => {
+            "nodes"    => "1:ppn=1",
+            "walltime" => "24",
+            "mem"      => "40gb"
+          }
+        };
+
+      }
+
+
       $def->{"perform_cellbender"} = 0;
       $def->{"perform_decontX"} = 0;
     }
