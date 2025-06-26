@@ -304,13 +304,14 @@ show_descriptive_statistics<-function(data){
   dd = data
   dd$fakevar = 1
   dd$fakevar <- factor(dd$fakevar, levels = c(1), labels = c("Subject"))
-  label(dd$fakevar) <- "Subject"
+  #label(dd$fakevar) <- "Subject"
 
   dd_formula = paste0(paste0(colnames(data), collapse=" + "), " ~ fakevar")
   print_descriptive_statistics(as.formula(dd_formula), dd, test = FALSE)
 }
 
 print_descriptive_statistics<-function(formula, data, test = TRUE, overall = FALSE, continuous = 5, ...){
+  library(Hmisc)
   output <- summaryM(formula = formula,
                       data = data, 
                       test = test, 
@@ -424,7 +425,7 @@ summary_tableby = function(dat, formula, test=F, total=T) {
                                   digits.p=2, 
                                   digits.pct=0)
 
-  result = tableby(formula, data = dat, control=mycontrols)
+  result = arsenal::tableby(formula, data = dat, control=mycontrols)
   summary(result, title = "", width = 3, pfootnote = TRUE)  
 }
 
