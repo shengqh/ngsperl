@@ -68,6 +68,8 @@ sub perform {
     $option =~ s/__MEMORY__/$memory/g;
   }
 
+  my $check_file_ext = get_option( $config, $section, "check_file_ext", "" );
+
   my $init_command = get_option( $config, $section, "init_command", "" );
   my $post_command = get_option( $config, $section, "post_command", "" );
 
@@ -139,7 +141,8 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $final_file = $expect_result->{$sample_name}[-1];
+    my $final_file = $check_file_ext ne "" ? $sample_name . $check_file_ext : $expect_result->{$sample_name}[-1];
+    #print("final file=" . $final_file . "\n");
     my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
     if ( $has_multi_samples ) {
