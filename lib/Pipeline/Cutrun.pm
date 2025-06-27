@@ -550,6 +550,7 @@ fi
       can_result_be_empty_file => 0,
       no_output => 1,
       sh_direct => 1,
+      use_tmp_folder => 0,
       pbs => {
         "nodes"     => "1:ppn=1",
         "walltime"  => "1",
