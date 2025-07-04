@@ -560,7 +560,7 @@ rm $rmstr
 }
 
 sub open_pbs {
-  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $final_file_can_empty, $input_file, $sh_command ) = @_;
+  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $can_result_be_empty_file, $input_file, $sh_command ) = @_;
 
   if ( !defined $init_command ) {
     $init_command = "";
@@ -590,7 +590,7 @@ $init_command
 
 ";
   if ( defined $final_file ) {
-    my $checkFile = $final_file_can_empty ? "-e" : "-s";
+    my $checkFile = $can_result_be_empty_file ? "-e" : "-s";
     if (is_array($final_file)){
       my @final_files = @$final_file;
       if(scalar(@final_files) > 1){
