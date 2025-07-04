@@ -510,37 +510,63 @@ fi
       program => "",
       check_program => 0,
       option => "
+rm -f __NAME__.findPeaks.failed __NAME__.findPeaks.succeed __NAME__.annotatePeaks_raw.failed __NAME__.annotatePeaks_rpkm.failed __NAME__.annotatePeaks.succeed __NAME__.rename_names.failed
+
 if [[ ! -s __FILE__ ]]; then
   touch __NAME__.findPeaks.failed
-  rm -f __NAME__.findPeaks.succeed
   exit 1
 fi
 
 findPeaks __FILE__ $homer_findPeaks_option $control_option -o tmp.__NAME__.peaks.txt
 
 status=\$?
-if [[ \$status -eq 0 ]]; then
-  rm -f __NAME__.findPeaks.failed
-  touch __NAME__.findPeaks.succeed
-  mv tmp.__NAME__.peaks.txt __NAME__.peaks.txt
-
-  grep -v '^#' __NAME__.peaks.txt | awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}'  > __NAME__.peaks.bed
-
-  echo annotatePeaks_raw=`date`
-  annotatePeaks.pl __NAME__.peaks.txt \\
-    $homer_genome -raw -d \\
-    __FILE__ > __NAME__.peaks.raw.txt
-
-  echo annotatePeaks_rpkm=`date`
-  annotatePeaks.pl __NAME__.peaks.txt \\
-    $homer_genome -fpkm -d \\
-    __FILE__ > __NAME__.peaks.fpkm.txt
-
-  python $rename_2_py __NAME__.peaks.raw.txt __NAME__.peaks.fpkm.txt  
-else
+if [[ \$status -ne 0 ]]; then
   echo \$status > __NAME__.findPeaks.failed
-  rm -f tmp.__NAME__.peaks.txt __NAME__.findPeaks.succeed
+  rm -f __NAME__.findPeaks.succeed
+  exit \$status
 fi
+
+touch __NAME__.findPeaks.succeed
+mv tmp.__NAME__.peaks.txt __NAME__.peaks.txt
+
+grep -v '^#' __NAME__.peaks.txt | awk -v OFS='\\t' -F'\\t' '{ print \$2,\$3,\$4,\$1,\$6,\$5}'  > __NAME__.peaks.bed
+
+echo annotatePeaks_raw=`date`
+annotatePeaks.pl __NAME__.peaks.txt \\
+  $homer_genome -raw -d \\
+  __FILE__ > __NAME__.peaks.raw.txt
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \$status > __NAME__.annotatePeaks_raw.failed
+  rm -f __NAME__.peaks.raw.txt __NAME__.peaks.fpkm.txt
+  exit \$status
+fi
+
+echo annotatePeaks_rpkm=`date`
+annotatePeaks.pl __NAME__.peaks.txt \\
+  $homer_genome -fpkm -d \\
+      __FILE__ > __NAME__.peaks.fpkm.txt
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \$status > __NAME__.annotatePeaks_rpkm.failed
+  rm -f __NAME__.peaks.raw.txt __NAME__.peaks.fpkm.txt
+  exit \$status
+fi
+
+echo rename_names=`date`
+python $rename_2_py __NAME__.peaks.raw.txt __NAME__.peaks.fpkm.txt
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \$status > __NAME__.rename_names.failed
+  rm -f __NAME__.peaks.raw.txt __NAME__.peaks.fpkm.txt
+  exit \$status
+fi
+
+touch __NAME__.annotatePeaks.succeed
+
+exit 0
 
 ",
       source_ref => "tag_treatments",
