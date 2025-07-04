@@ -127,6 +127,9 @@ sub perform {
 
   my $expect_result = $self->get_expect_result_for_perform( $config, $section );
 
+  my $init_command = get_option($config, $section, "init_command", "");
+  my $can_result_be_empty_file = get_option($config, $section, "can_result_be_empty_file", 0);
+
   my $pbs_index = 0;
   for my $sample_name ( sort keys %$parameterSampleFile1 ) {
     $pbs_index = $pbs_index + 1;
@@ -143,7 +146,7 @@ sub perform {
 
     my $final_file = $check_file_ext ne "" ? $sample_name . $check_file_ext : $expect_result->{$sample_name}[-1];
     #print("final file=" . $final_file . "\n");
-    my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
+    my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, $init_command, $can_result_be_empty_file );
 
     if ( $has_multi_samples ) {
       $self->print_sh_pbs( $sh, $pbs_name, $final_file, $pbs_index );
