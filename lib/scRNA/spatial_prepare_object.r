@@ -59,7 +59,15 @@ obj <- Load10X_Spatial(data.dir = data_path, bin.size = c(bin.size))
 obj$orig.ident <- sample_name
 obj$sample <- sample_name
 
-Assays(obj)
+# combine the summary and save it as a CSV file
+summary_df <- rbind(
+  summary(obj@meta.data[, paste0("nCount_", assay)]),
+  summary(obj@meta.data[, paste0("nFeature_", assay)])
+)
+rownames(summary_df) <- c("nCount_Spatial", "nFeature_Spatial")
+write.csv(summary_df, file = paste0(sample_name, "_", bin.size, "um.summary.csv"), row.names = TRUE)
+print(summary_df)
+
 DefaultAssay(obj) <- assay
 
 detail_folder="details"
