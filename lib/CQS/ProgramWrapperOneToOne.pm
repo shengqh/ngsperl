@@ -127,7 +127,6 @@ sub perform {
 
   my $expect_result = $self->get_expect_result_for_perform( $config, $section );
 
-  my $init_command = get_option($config, $section, "init_command", "");
   my $can_result_be_empty_file = get_option($config, $section, "can_result_be_empty_file", 0);
 
   my $pbs_index = 0;
