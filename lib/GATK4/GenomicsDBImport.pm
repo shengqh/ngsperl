@@ -55,10 +55,10 @@ sub perform {
   my $pbs_name = basename($pbs_file);
   my $log      = $self->get_log_filename( $log_dir, $prefix );
 
-  my $final_folder = $result_dir . "/$prefix";
+  my $final_file = $result_dir . "/$prefix/callset.json";
 
   my $log_desc = $cluster->get_log_description($log);
-  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_folder );
+  my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file );
   print $pbs "
 rm -rf $prefix
 
@@ -84,6 +84,17 @@ sub result {
   my $result = { $task_name => filter_array( ["${result_dir}/${task_name}"], $pattern ) };
 
   return $result;
+}
+
+
+sub get_absolute_final_file {
+  my ( $self, $config, $section, $sample ) = @_;
+
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
+
+  my $result = "${result_dir}/${task_name}/callset.json";
+
+  return ($result);
 }
 
 1;
