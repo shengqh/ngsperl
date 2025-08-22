@@ -484,28 +484,32 @@ check_and_include_graphics(fusion_png)
 df<-NULL
 countFile<-list.files('.',pattern=".count$",full.names=TRUE,recursive=TRUE)
 if(length(countFile) > 0){
-  df<-rbind(df, data.frame(File=addLinkTag(countFile, countFile), Description="Gene expression read count table"))
+  df<-rbind(df, data.frame(RawFile=countFile, File=addLinkTag(countFile, countFile), Description="Gene expression read count table"))
 }
 
 fpkmFile<-list.files('.',pattern="fpkm.tsv$",full.names=TRUE,recursive=TRUE)
 if(length(fpkmFile) > 0){
-  df<-rbind(df, data.frame(File=addLinkTag(fpkmFile, fpkmFile), Description="Gene expression abundance table"))
+  df<-rbind(df, data.frame(RawFile=fpkmFile, File=addLinkTag(fpkmFile, fpkmFile), Description="Gene expression abundance table"))
 }
 
 deseqAll<-list.files('.',pattern="_DESeq2.csv$",full.names=TRUE,recursive=TRUE)
 if(length(deseqAll) > 0){
-  df<-rbind(df, data.frame(File=addLinkTag(deseqAll, deseqAll), Description="Differential expression analysis table"))
+  df<-rbind(df, data.frame(RawFile=deseqAll, File=addLinkTag(deseqAll, deseqAll), Description="Differential expression analysis table"))
 }
 
 deseqSig<-list.files('.',pattern="_DESeq2_sig.csv$",full.names=TRUE,recursive=TRUE)
 if(length(deseqSig) > 0){
-  df<-rbind(df, data.frame(File=addLinkTag(deseqSig, deseqSig), Description="Significantly differential expressed genes"))
+  df<-rbind(df, data.frame(RawFile=deseqSig, File=addLinkTag(deseqSig, deseqSig), Description="Significantly differential expressed genes"))
 }
 
 webgestaltDeseq2<-list.files('.',pattern=".txt.html$",full.names=TRUE,recursive=TRUE)
 if(length(webgestaltDeseq2) > 0){
-  df<-rbind(df, data.frame(File=addLinkTag(webgestaltDeseq2, webgestaltDeseq2), Description="WebgestaltR enrichment table"))
+  df<-rbind(df, data.frame(RawFile=webgestaltDeseq2, File=addLinkTag(webgestaltDeseq2, webgestaltDeseq2), Description="WebgestaltR enrichment table"))
 }
+
+df = df |> 
+  dplyr::mutate(md5=tools::md5sum(RawFile)) |>
+  dplyr::select(-RawFile)
 
 print(kable(df, caption=tabRef("resultFiles", "Result files")) %>%
     kable_styling() %>%
