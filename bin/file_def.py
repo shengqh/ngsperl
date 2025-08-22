@@ -11,7 +11,7 @@ import csv
 from glob import glob
 
 def get_valid_sample_name(old):
-  return re.sub('[ \-*+]+', '_', old)
+  return re.sub('[ \-*+~]+', '_', old)
 
 def get_dir_name(file_name, use_dir_name):
   result = file_name
