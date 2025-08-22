@@ -23,6 +23,7 @@ def main():
   parser.add_argument('-b', '--bam_list_file', action='store', nargs='?', required=NOT_DEBUG, help="Sample bam file list")
   parser.add_argument('--width', action='store', default=3000, type=int, nargs='?', required=NOT_DEBUG, help="Figure width in pixel")
   parser.add_argument('--height', action='store', default=1500, type=int, nargs='?', required=NOT_DEBUG, help="Figure height in pixel")
+  parser.add_argument('--gtf', action='store', nargs='?', required=False, help="GTF file for exon plot (optional)")
   parser.add_argument('-o', '--output_folder', action='store', nargs='?', required=NOT_DEBUG, help="Output folder")
 
   args = parser.parse_args()
@@ -143,6 +144,12 @@ def main():
     fout.write("locus<-\"%s\"\n" % locusString)
     fout.write("width<-%d\n" % args.width)
     fout.write("height<-%d\n\n" % args.height)
+
+    if args.gtf is not None:
+      fout.write("gtf<-\"%s\"\n\n" % args.gtf)
+    else:
+      fout.write("gtf<-\"\"\n\n")
+
     with open(rPath, "r") as fin:
       for line in fin:
         line = line.rstrip()

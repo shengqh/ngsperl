@@ -3217,13 +3217,20 @@ sub addGeneCoverage {
   my $width = getValue($def, "coverage_width", 3000);
   my $height = getValue($def, "coverage_height", 1500);
 
+  my $option =  "python3 $python_script -n __NAME__ --width $width --height $height";
+
+  my $transcript_gtf = getValue($def, "gene_coverage_gtf", "");
+  if($transcript_gtf ne ""){
+    $option = $option . " --gtf $transcript_gtf";
+  }
+
   $config->{$task_name} = {
     class                 => "CQS::ProgramWrapperOneToOne",
     perform               => 1,
     target_dir            => "$target_dir/$task_name",
     docker_prefix         => "",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => "python3 $python_script -n __NAME__ --width $width --height $height",
+    option                => $option,
     interpretor           => "",
     check_program         => 0,
     program               => "",
