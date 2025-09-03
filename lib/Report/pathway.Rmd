@@ -39,6 +39,8 @@ if (exists("reportParametersList") && "pathway_parameter_list" %in% names(report
 }
 ```
 
+There are `r length(target_genes)` target genes.
+
 ```{r}
 #make sure all required variables are defined
 stopifnot(exists("prefix"))
@@ -73,7 +75,9 @@ res<-do_pathway(genes=target_genes,
                 toType=pathway_toType,
                 OrgDb=OrgDb)
 saveRDS(res, paste0(prefix,"_pathway.rds"))     
+```
 
+```{r}
 dataForPlotList=res$dataForPlot
 
 rmd=""
@@ -94,7 +98,7 @@ for(pname in pathway_analysis_sets){
     rmd=paste0(rmd, getPagedTable(lst$csv))
 
     if(is.null(lst$png)){
-      rmd=paste0(rmd, "No valid pathways found.\n\n")
+      rmd=paste0(rmd, "With only ", nrow(lst$res_tbl), " significant pathway, no figure generated.\n\n")
     }else{
       rmd=paste0(rmd, getFigure_width_height(lst$png, fig.width=pathway_width, fig.height=pathway_height))
     }
