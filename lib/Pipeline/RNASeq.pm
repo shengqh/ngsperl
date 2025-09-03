@@ -1215,9 +1215,7 @@ else
     touch __NAME__.split.failed
     rm -f __NAME__.rmdup.split.bam __NAME__.rmdup.split.bai
   else
-    gatk --java-options \"-XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -XX:+PrintFlagsFinal \\
-      -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCDetails \\
-      -Xloggc:gc_log.log -Xms4000m\" \\
+    gatk --java-options \"-XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -XX:+PrintFlagsFinal -XX:+PrintGCDetails -Xloggc:gc_log.log -Xms4000m\" \\
       BaseRecalibrator \\
       -R $fasta \\
       -I __NAME__.rmdup.split.bam \\
@@ -1230,7 +1228,7 @@ else
       touch __NAME__.recal.failed
       rm -f __NAME__.rmdup.split.recal.table
     else
-      gatk --java-options \"-XX:+PrintFlagsFinal -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps \\
+      gatk --java-options \"-XX:+PrintFlagsFinal \\
         -XX:+PrintGCDetails -Xloggc:gc_log.log \\
         -XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -Xms3000m\" \\
         ApplyBQSR \\
