@@ -1143,14 +1143,23 @@ save_ggplot2_plot<-function(file_prefix, outputFormat, width_inch, height_inch, 
   }
 }
 
-draw_density_plot<-function(log2counts, prefix, outputFormat, width_inch=5, height_inch=3){
+draw_density_plot<-function(log2counts, prefix, outputFormat, width_inch=5, height_inch=3, groups=NULL){
   rsdata<-reshape2::melt(as.matrix(log2counts))
   colnames(rsdata)<-c("Gene", "Sample", "log2Count")
-  g<-ggplot(rsdata) + 
-    geom_density(aes(x=log2Count, colour=Sample)) + 
+  if(any(!is.null(groups))){
+    names(groups)=colnames(log2counts)
+    rsdata$Group=groups[rsdata$Sample]
+    g<-ggplot(rsdata, aes(x=log2Count, group=Sample, colour=Group)) + 
+      geom_density()
+  }else{
+    g<-ggplot(rsdata, aes(x=log2Count, group=Sample, colour=Sample)) + 
+      geom_density() +
+      guides(color = FALSE)
+  }
+
+  g<-g + 
     xlab(bquote(log[2](count))) + 
-    theme_bw3() +
-    guides(color = FALSE)
+    theme_bw3() 
   save_ggplot2_plot(file_prefix=prefix, 
                     outputFormat=outputFormat, 
                     width_inch=width_inch, 
