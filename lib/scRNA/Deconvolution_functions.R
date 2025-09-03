@@ -364,7 +364,37 @@ plot_all_cell_types <- function(spatial_so){
   
 }
 
-
 t<-function(i){
   cat(colnames(Spatial_SOs[[i]]@meta.data), "\n")
+}
+
+# A function modified from ggspavis::plotCoords
+my_plotCoords<-function (df, x_coord = "x", y_coord = "y", annotate, 
+    point_size=0.2, point_shape = 15, 
+    legend_title=annotate, legend_position = "right", legend_point_size = 3,
+    numeric_feature_colors=rev(hcl.colors(9, "Rocket"))) {
+    stopifnot(legend_position %in% c("left", "right", "top", "bottom", "none"))
+    p <- ggplot(df, aes(x = get(x_coord), y = get(y_coord), color = get(annotate))) + 
+        geom_point(size = point_size, shape = point_shape) + 
+        coord_fixed() + 
+        theme_bw() + 
+        theme(legend.position = legend_position, 
+              panel.grid = element_blank(),
+              axis.title = element_blank(), 
+              axis.text = element_blank(), 
+              axis.ticks = element_blank(),
+              aspect.ratio=1)
+
+    if (is.numeric(df[[annotate]])) {
+        p <- p + scale_color_gradientn(legend_title, colours=numeric_feature_colors) + 
+          ggtitle(legend_title) + 
+          labs(color = NULL) + 
+          theme(plot.title = element_text(hjust = 0.5))
+    } else if (is.factor(df[[annotate]]) || is.character(df[[annotate]])) {
+        p <- p + 
+          guides(color = guide_legend(title=legend_title, override.aes = list(size = legend_point_size))) +
+          theme(legend.key.size=unit(0, "lines"))
+    }              
+    
+    p
 }

@@ -1,0 +1,81 @@
+---
+title: "RCTD Visium HD Visualization Report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+    self_contained: false
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  error=FALSE,
+  results="asis"
+)
+
+date_str = format(Sys.time(), "%Y%m%d")
+```
+
+# Introduction
+
+This report is to visualize Visium HD image from RCTD result.
+
+```{r}
+source('reportFunctions.R')
+
+load_install("ggplot2")
+load_install("ggspavis", "lmweber/ggspavis")
+load_install("patchwork")
+load_install("Seurat")
+load_install("SingleCellExperiment")
+load_install("htmltools")
+
+file_map=read_file_map('fileList1.txt', do_unlist=FALSE)
+
+myoptions=read_file_map('fileList2.txt', do_unlist=FALSE)
+email=myoptions$email
+affiliation=myoptions$affiliation
+
+if(!is.null(email)){
+  if(email != ""){
+    cat("
+---
+author: 
+- name: ", email, "
+  affiliation: ", affiliation, "
+---
+")
+  }
+}
+
+```
+
+# Reports
+
+```{r}
+report_content=""
+for(sample_name in names(file_map)){
+  html_file <- paste0("../../RCTD/result/", sample_name, ".Deconvolution_RCTD.html")
+  report_content <- paste0(report_content, "## [", sample_name, "](", html_file, "){target=\"_blank\"}\n\n")
+  report_content <- paste0(report_content, "<iframe src=\"", html_file, "\" width=\"100%\" height=\"800px\"></iframe>\n\n")
+}
+report_rmd="combine.rmd"
+writeLines(report_content, report_rmd)
+```
+
+```{r child=report_rmd}
+```

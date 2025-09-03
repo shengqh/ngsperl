@@ -68,15 +68,20 @@ sub getSpatialTranscriptome {
       perform => 1,
       option => "",
       rtemplate => "../scRNA/Deconvolution_functions.R,../scRNA/Deconvolution_RCTD.r",
+      rReportTemplate => "../scRNA/Deconvolution_RCTD.rmd;reportFunctions.R",
+      run_rmd_independent => 1,
+      rmd_ext => ".Deconvolution_RCTD.html",
       parameterSampleFile1_ref => "files",
       parameterSampleFile2 => {
         "bin.size" => $binsize,
-        "RCTD_thread" => $RCTD_thread
+        "RCTD_thread" => $RCTD_thread,
+        "email" => getValue($def, "email"),
+        "affiliation" => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
       },
       parameterFile1 => getValue($def, "reference"),
-      sh_direct => 1,
-      no_docker => 0,
-      output_ext => "_${binsize}um.rds",
+      sh_direct => 0,
+      no_docker => getValue($def, "no_docker", 0),
+      output_ext => ".post_RCTD.RDS",
       pbs => {
         "nodes"    => "1:ppn=${RCTD_thread}",
         "walltime" => "8",
@@ -84,6 +89,31 @@ sub getSpatialTranscriptome {
       }
     };
     push (@$tasks, $rctd_task);
+
+    my $rctd_report_task = $rctd_task . "_report";
+    $config->{$rctd_report_task} = {
+      class => "CQS::UniqueRmd",
+      target_dir => "$target_dir/$rctd_report_task",
+      perform => 1,
+      option => "",
+      report_rmd_file => "../scRNA/Deconvolution_RCTD_report.rmd",
+      additional_rmd_files => "../CQS/reportFunctions.R",
+      parameterSampleFile1_ref => [ $rctd_task, ".post_RCTD.RDS" ],
+      parameterSampleFile2 => {
+        email => getValue($def, "email"),
+        affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
+      },
+      output_file_ext => ".RCTD.html",
+      output_other_ext => ".RCTD.html",
+      sh_direct => 0,
+      no_docker => getValue($def, "no_docker", 0),
+      pbs => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "8",
+        "mem"      => "40gb"
+      }
+    };
+    push (@$tasks, $rctd_report_task);    
   }
 
   $config->{sequencetask} = {
