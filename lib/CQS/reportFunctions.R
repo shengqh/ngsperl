@@ -429,6 +429,19 @@ summary_tableby = function(dat, formula, test=F, total=T) {
   summary(result, title = "", width = 3, pfootnote = TRUE)  
 }
 
+to_numeric<-function(value, defaultValue){
+  if(is.null(value)){
+    return(defaultValue)
+  }
+  if(is.na(value)){
+    return(defaultValue)
+  }
+  if(value == ""){
+    return(defaultValue)
+  }
+  return(as.numeric(value))
+}
+
 ###################################
 #report functions end
 ###################################
