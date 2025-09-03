@@ -241,7 +241,8 @@ makeDotPlotClusterProfilerEnrichment=function(dp,
                                               valueCut=NULL,
                                               y="Coverage",
                                               returnTable=FALSE,
-                                              showProgress=TRUE) {
+                                              showProgress=TRUE,
+                                              warp_len=50) {
   topBy="pvalue"
   colorBy="NegLog10pAdj"
   colorTitle="-log10(FDR)"
@@ -289,12 +290,14 @@ makeDotPlotClusterProfilerEnrichment=function(dp,
     dplyr::arrange(desc(!!sym(y))) %>%
     as.data.frame()
 
-  dataForPlotFrameP$Description = factor(dataForPlotFrameP$Description, levels=rev(dataForPlotFrameP$Description))
+  dataForPlotFrameP$DescriptionWrap=gsub("_+[a-z0-9 \\.A-Z\\(\\)-]+$","",dataForPlotFrameP$Description)
+  dataForPlotFrameP$DescriptionWrap=str_wrap(dataForPlotFrameP$DescriptionWrap, width = warp_len)
+  dataForPlotFrameP$DescriptionWrap=factor(dataForPlotFrameP$DescriptionWrap, levels=rev(unique(dataForPlotFrameP$DescriptionWrap)))
 
   max_value=max(dataForPlotFrameP[[colorBy]],na.rm=TRUE)
 
   p=dataForPlotFrameP %>%
-    ggplot(aes(x=Description,y=Coverage,colour=!!sym(colorBy)))+
+    ggplot(aes(x=DescriptionWrap,y=Coverage,colour=!!sym(colorBy)))+
     geom_point(aes(size=Count)) +
     coord_flip() + 
     xlab("") +
@@ -308,13 +311,13 @@ makeDotPlotClusterProfilerEnrichment=function(dp,
       panel.grid.minor = element_blank(),
       legend.title = element_text(face = "bold"),
       axis.text = element_text(face = "bold"),
-      axis.title = element_text(face = "bold")
+      axis.title = element_text(face = "bold"),
+      strip.background = element_rect(fill="white")
     )
   if (returnTable) {
-    dataForPlotFrameP$Description=gsub("_+[a-z0-9 \\.A-Z\\(\\)-]+$","",dataForPlotFrameP$Description)
     return(list(
       figure=p,
-      result=dataForPlotFrameP
+      result=dataForPlotFrameP |> dplyr::select(-DescriptionWrap)
     ))
   } else {
     return(p)
@@ -324,7 +327,8 @@ makeDotPlotClusterProfilerEnrichment=function(dp,
 makeBarPlotClusterProfilerEnrichment=function(dp,minCount=5,top=10,valueCut=NULL,
                                               topBy="pvalue",fill="p.adjust",y="Coverage",
                                               returnTable=FALSE,
-                                              showProgress=TRUE) {
+                                              showProgress=TRUE,
+                                              warp_len=50) {
   if(showProgress){
     print(paste0("Pathways were filtered based on Count>=",minCount," and ",fill,"<=",ifelse(is.null(valueCut), "NULL", valueCut)))
   }
@@ -367,10 +371,12 @@ makeBarPlotClusterProfilerEnrichment=function(dp,minCount=5,top=10,valueCut=NULL
     dplyr::mutate(Description = reorder_within(x=Description,by=!!sym(y), within=Module)) %>%
     dplyr::arrange(desc(!!sym(y)))
 
+  dataForPlotFrameP$Description=gsub("_+[a-z0-9 \\.A-Z\\(\\)-]+$","",dataForPlotFrameP$Description)
+
   p=dataForPlotFrameP %>%
     ggplot(aes_string(x="Description",y=y,fill=fill))+geom_bar(stat = "identity")+
         scale_x_reordered()+
-        scale_x_discrete(labels = function(x) str_wrap(gsub("_+[a-z0-9 \\.A-Z\\(\\)-]+$","",x), width = 40))+
+        scale_x_discrete(labels = function(x) str_wrap(x, width = warp_len))+
         coord_flip() + xlab("")
   if (min(dataForPlotFrame[,fill],na.rm=TRUE)<0) { #has negative values
     p=p+scale_fill_continuous(low='blue', high='red',guide=guide_colorbar(reverse=TRUE))
@@ -385,7 +391,6 @@ makeBarPlotClusterProfilerEnrichment=function(dp,minCount=5,top=10,valueCut=NULL
       panel.grid.minor = element_blank()
     )
   if (returnTable) {
-    dataForPlotFrameP$Description=gsub("_+[a-z0-9 \\.A-Z\\(\\)-]+$","",dataForPlotFrameP$Description)
     return(list(
       figure=p,
       result=dataForPlotFrameP
@@ -742,18 +747,27 @@ show_pathway<-function( dataForPlotList,
                         plot_type="bar"){
   prefix_name = paste0(prefix, ".", pname)
 
-  dp=dataForPlotList[[pname]]@result
-
   tbl=get_pathway_table(
     pathway_res=dataForPlotList[[pname]]@result,
     qvalueCut=qvalueCut,
     csv_file=paste0(prefix_name, ".csv"))
+
+  if(nrow(tbl$res_tbl) > 0) {
+    dp_new = dataForPlotList[[pname]]
+    dp_new@result = dp_new@result |> dplyr::filter(qvalue < qvalueCut)
+    dp = list(dp_new)
+    names(dp) = pname    
+  }else{
+    dp=dataForPlotList
+  }
+
+  fig_height=ifelse(nrow(tbl$res_tbl) >= 15, pathway_height * 1.5, pathway_height)
   
   fig=get_pathway_figure(
-    dp=dataForPlotList, 
+    dp=dp, 
     png_file=paste0(prefix_name, ".png"), 
     fig_width=pathway_width, 
-    fig_height=pathway_height, 
+    fig_height=fig_height, 
     pname=pname,
     y=y, 
     ylab=ylab,
