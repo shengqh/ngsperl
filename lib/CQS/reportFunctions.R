@@ -442,6 +442,10 @@ to_numeric<-function(value, defaultValue){
   return(as.numeric(value))
 }
 
+to_filename<-function(pct){
+  return(gsub('[/:()?\ ]+', "_", pct))
+}
+
 ###################################
 #report functions end
 ###################################
