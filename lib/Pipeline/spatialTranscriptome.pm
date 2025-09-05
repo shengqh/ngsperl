@@ -60,7 +60,7 @@ sub getSpatialTranscriptome {
     my $rctd_task = "RCTD";
 
     my $binsize = "8";
-    my $RCTD_thread = getValue($def, "RCTD_thread", 8);
+    my $RCTD_thread = getValue($def, "RCTD_thread", 16);
 
     $config->{$rctd_task} = {
       class => "CQS::IndividualR",
@@ -81,10 +81,10 @@ sub getSpatialTranscriptome {
       parameterFile1 => getValue($def, "reference"),
       sh_direct => 0,
       no_docker => getValue($def, "no_docker", 0),
-      output_ext => ".post_RCTD.RDS",
+      output_ext => ".post_RCTD.RDS,.post_RCTD.valid.RDS",
       pbs => {
         "nodes"    => "1:ppn=${RCTD_thread}",
-        "walltime" => "8",
+        "walltime" => "24",
         "mem"      => "40gb"
       }
     };
