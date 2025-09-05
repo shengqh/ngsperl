@@ -1,0 +1,239 @@
+---
+title: "RCTD Visium HD Visualization Report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  error=FALSE,
+  results="asis"
+)
+
+date_str = format(Sys.time(), "%Y%m%d")
+```
+
+# Introduction
+
+This report is to visualize HD image from RCTD result.
+
+```{r}
+source('reportFunctions.R')
+source('Deconvolution_functions.R')
+
+load_install("ggplot2")
+load_install("patchwork")
+load_install("Seurat")
+
+fileList=fread('fileList1.txt', header=FALSE)
+sample_name=fileList$V2[1]
+sample_folder=fileList$V1[1]
+obj_file=paste0(sample_name, ".post_RCTD.RDS")
+
+myoptions=read_file_map('fileList2.txt', do_unlist=FALSE)
+
+email=myoptions$email
+affiliation=myoptions$affiliation
+
+if(!is.null(email)){
+  if(email != ""){
+    cat("
+---
+author: 
+- name: ", email, "
+  affiliation: ", affiliation, "
+---
+")
+  }
+}
+
+```
+
+```{r}
+obj=readRDS(obj_file)
+
+obj@meta.data$log_nCount_Spatial=log(obj$nCount_Spatial.008um+1)
+obj@meta.data$RCTD1_Label1 = factor_by_count(obj@meta.data$RCTD1_Label1)
+
+ct_tbl=get_freq_table(obj@meta.data, "RCTD1_Label1")
+
+ct_df=data.frame(celltype_col=grep("RCTD2_", colnames(obj@meta.data), value=TRUE)) |>
+  dplyr::mutate(celltype_name=gsub("RCTD2_", "", celltype_col)) |>
+  merge(ct_tbl, by.x="celltype_name", by.y="RCTD1_Label1", all.x=TRUE) |>
+  dplyr::mutate(celltype_label=paste0(celltype_name, " (", count, ")")) |>
+  dplyr::arrange(desc(count))
+
+spatialCoords <- GetTissueCoordinates(
+  obj,
+  scale = "lowres",
+  cols = c("imagecol", "imagerow")
+) |>
+  dplyr::mutate(xx=x,
+                x=y,
+                y=-xx) |> #rotate x and y, then reverse y for plot, otherwise, the tissue image will not match with plot
+  dplyr::select(x, y)
+
+obj = AddMetaData(obj, spatialCoords)
+
+feature_colors=rev(hcl.colors(9, "Rocket"))
+```
+
+# Singlet from RCTD
+
+```{r}
+singlet_cells=colnames(obj)[obj$RCTD1_Class=="singlet"]
+singlet_obj=subset(obj, cells=singlet_cells)
+
+tb=get_freq_table(singlet_obj@meta.data, "RCTD1_Label1")
+print_table(tb, byDT=FALSE, row.names=FALSE)
+
+tb1 = tb[tb$count > 0.01 * sum(tb$count), ]
+singlet_obj=subset(singlet_obj, cells=colnames(singlet_obj)[singlet_obj$RCTD1_Label1 %in% tb1$RCTD1_Label1])
+singlet_obj@meta.data$RCTD1_Label1=factor(as.character(singlet_obj$RCTD1_Label1), levels=tb1$RCTD1_Label1)
+
+all_cell_types=tb1$RCTD1_Label1
+set.seed(20250903)
+celltype_colors <- base::sample(hcl.colors(length(all_cell_types), "Spectral"))
+names(celltype_colors) = all_cell_types
+```
+
+```{r}
+g1 <- SpatialPlot(obj, image.alpha = 1, stroke = 0) + 
+  ggtitle('Tissue Image') +
+  theme(legend.position = "none", aspect.ratio=1, plot.title=element_blank())
+```
+
+```{r eval=FALSE}
+load_install("SingleCellExperiment")
+load_install("ggspavis", "lmweber/ggspavis")
+
+#code from https://lmweber.org/OSTA/pages/seq-workflow-visium-hd.html
+sce <- Seurat::as.SingleCellExperiment(obj)
+colData(sce)=cbind(colData(sce), spatialCoords)
+sce$in_tissue=1
+
+singlet_sce=subset(sce, cells=singlet_cells)
+
+g2 <- plotCoords(sce, annotate="log_nCount_Spatial", x_coord="x", y_coord="y", point_size=0.2, point_shape = 15) + 
+  scale_color_gradientn("log(nCount)", colours=feature_colors) +
+  theme(plot.title=element_blank(), aspect.ratio=1)
+
+g3 <- plotCoords(singlet_sce, annotate="RCTD1_Label1", x_coord="x", y_coord="y", point_size=0.2, point_shape = 15) + 
+  scale_color_manual('Singlet cell type', values=celltype_colors) +
+  theme(plot.title=element_blank(), aspect.ratio=1, legend.key.size=unit(0, "lines"))
+
+g = g1 + g2 + g3 + plot_layout(ncol=3)
+qc_png=paste0(sample_name, ".tissue_log_ncount_singlet.sce.png")
+ggsave(qc_png, g, width=11, height=3, dpi=300, units="in", bg="white")
+include_graphics(qc_png)
+```
+
+```{r}
+g4 = my_plotCoords(singlet_obj@meta.data, annotate="log_nCount_Spatial") +
+  scale_color_gradientn("log(nCount)", colors=feature_colors) +
+  theme(plot.title=element_blank())
+
+g5 = my_plotCoords(singlet_obj@meta.data, annotate="RCTD1_Label1", legend_title="Singlet\ncell type > 1%") +
+  scale_color_manual(values=celltype_colors) +
+  theme(plot.title=element_blank())
+
+g = g1 + g4 + g5 + plot_layout(ncol=3)
+qc_png=paste0(sample_name, ".tissue_log_ncount_RCTD_singlet.png")
+ggsave(qc_png, g, width=11, height=3, dpi=300, units="in", bg="white")
+include_graphics(qc_png)
+```
+
+# Cell type weights from RCTD
+
+```{r}
+glist = lapply(1:num_celltype, \(i) my_plotCoords( obj@meta.data, 
+                                                    annotate=ct_df$celltype_col[i], 
+                                                    point_size=0.3, 
+                                                    legend_title=ct_df$celltype_label[i],
+                                                    numeric_feature_colors=feature_colors))
+```
+
+## Overview
+
+```{r}
+num_celltype=nrow(ct_df)
+nrow=ceiling(sqrt(num_celltype))
+ncol=ceiling(num_celltype/nrow)
+
+rctd_celltype_width=to_numeric(myoptions$rctd_celltype_width, 4 * ncol)
+rctd_celltype_height=to_numeric(myoptions$rctd_celltype_height, 3 * nrow)
+                                                    
+g = glist |>
+  wrap_plots(nrow=nrow) & 
+  theme(plot.title=element_text(hjust=0.5, face="bold"), 
+        legend.title=element_blank(),
+        legend.key.width=unit(0.5, "lines"),
+        legend.key.height=unit(1, "lines")) 
+
+rctd_celltype_png=paste0(sample_name, ".RCTD_weights.png")
+ggsave(rctd_celltype_png, g, width=rctd_celltype_width, height=rctd_celltype_height, dpi=300, units="in", bg="white")
+include_graphics(rctd_celltype_png)
+```
+
+```{r}
+weights_content=""
+
+i=1
+for(i in 1:nrow(ct_df)) {
+  ct_name=ct_df$celltype_name[i]
+  weights_content=paste0("\n\n", weights_content, "## ", ct_name, "\n\n")
+
+  g1=glist[[i]] + 
+    theme(plot.title=element_blank(), 
+          legend.title=element_blank(),
+          legend.key.width=unit(0.5, "lines"),
+          legend.key.height=unit(1, "lines"))
+
+  SpatialFeaturePlot(obj, features=ct_df$celltype_col[i], image.alpha=0.2, pt.size.factor=5) +
+    scale_fill_gradientn(colours=feature_colors) +
+    coord_fixed() + 
+    theme_bw() +
+    theme(panel.grid = element_blank(),
+          axis.title = element_blank(), 
+          axis.text = element_blank(), 
+          axis.ticks = element_blank(),
+          plot.title=element_blank(), 
+          legend.title=element_blank(),
+          legend.position="right",
+          legend.key.width=unit(0.5, "lines"),
+          legend.key.height=unit(1, "lines"),          
+          aspect.ratio=1)
+
+  g <- g1 + g2 + 
+       plot_layout(ncol=2, guides = "collect")
+
+  ct_file=to_filename(ct_name)
+  ct_png=paste0(sample_name, ".weights.", ct_file, ".png")
+  ggsave(ct_png, g, width=7, height=3, dpi=300, units="in", bg="white")
+
+  weights_content=paste0("\n\n", weights_content, getFigure(ct_png))
+}
+
+weights_rmd="weights.rmd"
+writeLines(weights_content, weights_rmd)
+```
+
+```{r child=weights_rmd}
+```
+
