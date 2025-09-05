@@ -37,7 +37,12 @@ reference=readRDS(parFile1)
 
 data_dir <- fread(parSampleFile1, header=FALSE)$V1[1]
 log_msg(paste0("Loading spatial data from: ", data_dir), log_file = log_file)
-spatial_so <- Seurat::Load10X_Spatial(bin.size = 8, data.dir = data_dir, slice = 'slice1')
+
+if(grepl("\\.rds$", tolower(data_dir))) {
+  spatial_so <- readRDS(data_dir)
+} else {
+  spatial_so <- Seurat::Load10X_Spatial(bin.size = 8, data.dir = data_dir, slice = 'slice1')
+}
 
 coords <- Seurat::GetTissueCoordinates(spatial_so)
 coords <- coords[,c("x","y")] # keep x and y only
@@ -45,11 +50,11 @@ coords <- coords[,c("x","y")] # keep x and y only
 nUMI <- spatial_so$nCount_Spatial.008um
 
 spatial_counts <- GetAssayData(spatial_so, assay="Spatial.008um", layer="counts")
-spatialRNA <- spacexr::SpatialRNA(coords, spatial_counts, nUMI) # 3489
+spatialRNA <- spacexr::SpatialRNA(coords, spatial_counts, nUMI)
 
 rctd_rds = paste0(sample_name, ".RCTD.RDS")
 if(!file.exists(rctd_rds)){
-  RCTD_obj <- spacexr::create.RCTD(spatialRNA, reference, max_cores = 8)
+  RCTD_obj <- spacexr::create.RCTD(spatialRNA, reference, max_cores = myoptions$RCTD_thread)
   RCTD_obj <- run.RCTD(RCTD_obj, doublet_mode = "doublet")
   saveRDS(RCTD_obj, file = rctd_rds)
 }else{
