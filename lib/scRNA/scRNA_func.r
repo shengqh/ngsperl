@@ -1510,6 +1510,8 @@ get_celltype_marker_bubble_plot<-function(obj, group.by, cellType, weight, n_mar
       markers<-lapply(markers, function(x){
         x[!(names(x) %in% names(gc))]
       })
+      #remove no unique markers gene cell types in the loop
+      markers=markers[which(sapply(markers,length)>0)]
     }else{
       break
     }
