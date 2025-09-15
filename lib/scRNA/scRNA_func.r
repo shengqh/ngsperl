@@ -842,7 +842,7 @@ plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
   ggplot(mdata, aes(ident, value)) + 
     geom_violin(aes(fill = ident), trim=TRUE, scale="width") + 
     geom_jitter(width=0.5,size=0.5) + 
-    facet_grid(variable~.) + 
+    facet_grid(cols="variable") + 
     theme_classic() + NoLegend() + 
     xlab("Cluster") + ylab("Expression") +
     theme(strip.background=element_blank(),
@@ -1276,7 +1276,7 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
     guides(size = guide_legend(title = "Percent Expressed")) +
     labs(x = "Features", y = "Identity") +
     theme_cowplot() + 
-    facet_grid(facets = ~feature.groups, scales = "free_x", space = "free_x", switch = "y") + 
+    facet_grid(rows="feature.groups", scales = "free_x", space = "free_x", switch = "y") + 
     theme(panel.spacing = unit(x = 1,units = "lines"), strip.background = element_blank())
     
   if(use_blue_yellow_red){
@@ -2481,7 +2481,7 @@ get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell
     p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2)
 
     if(length(unique(geneexp$Sample)) > 1){
-      p0 = p0 + facet_grid(~Sample)
+      p0 = p0 + facet_grid(rows="Sample")
     }
     p0 = p0 + theme_bw3() + 
       scale_color_manual(values = groupColors) +
@@ -2506,7 +2506,7 @@ BC")
       p1<-MyFeaturePlot(object = cell_obj, features=sig_gene, order=T, reduction="umap", raster=FALSE, pt.size=0.5)
     }
     p1$data$Group=cell_obj@meta.data[rownames(p1$data), "DisplayGroup"]
-    p1<-p1+facet_grid(~Group) + theme_bw3() + ggtitle("") + theme(aspect.ratio=1)
+    p1<-p1+facet_grid(rows="Group") + theme_bw3() + ggtitle("") + theme(aspect.ratio=1)
     
     if(!DE_by_cell){
       melt_cpm = as.data.frame(t(log_cpm[sig_gene,,drop=F]))
@@ -2549,7 +2549,7 @@ read_scrna_data<-function(fileName, keep_seurat=FALSE){
     )
   } else if (grepl('.gz$', fileName)) {
     counts = data.frame(read_gzip_count_file(fileName, fileTitle, species))
-  } else if (grepl('.rds$', fileName)) {
+  } else if (grepl('.rds$', tolower(fileName))) {
     counts = readRDS(fileName)
     if(is_seurat_object(counts)){
       if(!keep_seurat){
@@ -2738,7 +2738,7 @@ my_feature_plot<-function(obj, gene, high_color="red", umap1 = "UMAP_1", umap2 =
     theme(aspect.ratio=1)
 
   if(!is.null(split.by)){
-    g<-g + facet_grid(as.formula(paste0("~ ", split.by))) +
+    g<-g + facet_grid(rows=split.by) +
       theme(strip.background = element_blank())
   }
 
@@ -2777,7 +2777,7 @@ get_barplot<-function(
 
   g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + 
     geom_bar(width=0.5, stat = "identity") + 
-    facet_grid(Var1~Category, scales = "free", space='free_x') + 
+    facet_grid(cols="Var1", rows="Category", scales = "free", space='free_x') + 
     theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend() +
     theme(strip.text.y = element_text(angle = 0))
 
@@ -3155,6 +3155,7 @@ layer_cluster_celltype<-function(obj,
                             ignore_variable_genes=ignore_variable_genes)
 
       all_cur_cts<-lst$all_cur_cts
+
       cur_files<-lst$files
 
       files<-rbind(files, cur_files)
