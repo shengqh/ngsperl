@@ -446,6 +446,19 @@ to_filename<-function(pct){
   return(gsub('[/:()?\ ]+', "_", pct))
 }
 
+get_packages_table=function(){
+  info <- sessionInfo()
+
+  packages <- data.frame(
+    Package = c(names(info$otherPkgs), names(info$loadedOnly)),
+    Version = c(
+      sapply(info$otherPkgs, function(x) as.character(x$Version)),
+      sapply(info$loadedOnly, function(x) as.character(x$Version))
+    )
+  )
+  return(packages)
+}
+
 ###################################
 #report functions end
 ###################################
