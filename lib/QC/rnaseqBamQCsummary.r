@@ -28,7 +28,7 @@ png(file=paste0(finalFile, ".png"), width=9000, height=height, res=300)
 g<-ggplot(final, aes(x=Sample, y=Count)) + 
   geom_bar(aes(fill=Category), stat = "identity") + 
   coord_flip() +
-  facet_grid(~Chromosome, scales="free_x") +
+  facet_grid(rows="Chromosome", scales="free_x") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 print(g)

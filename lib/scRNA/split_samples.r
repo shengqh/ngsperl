@@ -66,7 +66,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   
   width=length(tagnames) * 3
   pdf(paste0(output_prefix, ".class.pdf"), width=width, height=4)
-  g<-ggplot(tmat, aes(x=nCount_RNA, y=nFeature_RNA)) + geom_point() + facet_grid(~HTO.global) + theme_bw() + theme(strip.background = element_blank())
+  g<-ggplot(tmat, aes(x=nCount_RNA, y=nFeature_RNA)) + geom_point() + facet_grid(rows="HTO.global") + theme_bw() + theme(strip.background = element_blank())
   print(g)
   dev.off()
   

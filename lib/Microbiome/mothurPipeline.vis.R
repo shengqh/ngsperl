@@ -64,7 +64,7 @@ if (totalReads_file !="" & file.exists(totalReads_file)) {
   dataForPlot=dataForPlot %>% pivot_longer(cols=c("ClassfiedReads","NotClassfiedReads"))
   
   p=ggplot(dataForPlot,aes(x=Sample,y=value,fill=name))+
-    facet_grid(~group,scales = "free_x",space="free")+ylab("Reads")+
+    facet_grid(rows="group",scales = "free_x",space="free")+ylab("Reads")+
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
   p1=p+geom_bar(stat = "identity")
   p2=p+geom_bar(stat = "identity",position="fill")+ scale_y_continuous(labels = scales::percent_format())

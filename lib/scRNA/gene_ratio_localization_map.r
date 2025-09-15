@@ -55,7 +55,7 @@ for (gene in genes_tbl$V1){
 
   pngfile2 = paste0(outFile, ".", gene1, "_vs_", gene2, ".1.group.png")
   png(filename=pngfile2, width= ngroup * 2000 + 400, height=2000, res=300)
-  g<-g + facet_grid(~group)
+  g<-g + facet_grid(rows="group")
   print(g)
   dev.off()
 
@@ -75,7 +75,7 @@ for (gene in genes_tbl$V1){
   
   pngfile4 = paste0(outFile, ".", gene1, "_vs_", gene2, ".2.group.png")
   png(filename=pngfile4, width= ngroup * 2000 + 400, height=2000, res=300)
-  g<-g + facet_grid(~group)
+  g<-g + facet_grid(rows="group")
   print(g)
   dev.off()
 

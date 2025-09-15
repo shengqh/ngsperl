@@ -38,7 +38,11 @@ write.csv(df, paste0(outFile, ".csv"))
 mdf<-melt(df)
 colnames(mdf)<-c("Category", "Sample", "Reads")
 
-g<-ggplot(mdf, aes(x=Category, y=Reads)) + geom_bar(stat="identity") + facet_grid(Sample~.) + coord_flip() + theme_bw3()
+g<-ggplot(mdf, aes(x=Category, y=Reads)) + 
+  geom_bar(stat="identity") + 
+  facet_grid(cols="Sample") + 
+  coord_flip() + 
+  theme_bw3()
 
 width=2000
 height=min(10000, max(2000, ncol(df) * 400))

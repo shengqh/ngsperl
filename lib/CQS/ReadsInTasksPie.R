@@ -141,7 +141,7 @@ if(file.exists(parFile3) & file.exists(groupFileList)){
   colors<-c("Microbial" = "chartreuse3", "Host" = "deepskyblue", "Other" = "gray")
   g<-ggplot(mFigData) + 
     geom_bar(aes(y = Percentage, x = Sample, fill = Category), stat="identity") + 
-    facet_grid(~Group, scales = "free_x") +
+    facet_grid(rows="Group", scales = "free_x") +
     scale_fill_manual(values=colors) +
     ylab("Proportion") +
     ylim(0, 100) +
