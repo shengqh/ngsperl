@@ -56,6 +56,99 @@ sub getSpatialTranscriptome {
 
   my $target_dir = getValue($def, "target_dir");
 
+  if ($def->{perform_space_ranger}){
+    my $spaceranger_task = "spaceranger";
+    my $fastq_folder = getValue($def, "fastq_folder");
+    my $spaceranger_transcriptome = getValue($def, "spaceranger_transcriptome");
+    my $spaceranger_probe_set = getValue($def, "spaceranger_probe_set");
+    my $spaceranger_jobmode = getValue($def, "spaceranger_jobmode", "slurm");
+    
+    $config->{files} = getValue($def, "files");
+    $config->{H_E_brightfield_images} = getValue($def, "H_E_brightfield_images");
+    $config->{manual_alignment_json} = $def->{"manual_alignment_json"};
+
+    my $json_option = "";
+    if(defined $def->{manual_alignment_json}){
+      $json_option = "--loupe-alignment __FILE4__";
+    }
+
+    if(defined $def->{id_to_samples}){
+      $config->{id_to_samples} = getValue($def, "id_to_samples");
+    }else{
+      my $all_samples = [];
+      for my $k (keys %{$config->{files}}){
+        push(@$all_samples, $k);
+      }
+      $config->{id_to_samples} = { map { $_ => [$_] } @$all_samples };
+    }
+
+    $config->{$spaceranger_task} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => "$target_dir/$spaceranger_task",
+      perform => 1,
+      program => "",
+      check_program => 0,
+      option => "
+
+rm -rf __NAME__ ____NAME__.mro
+
+spaceranger count --disable-ui \\
+  --id __NAME__ \\
+  --transcriptome $spaceranger_transcriptome \\
+  --probe-set $spaceranger_probe_set \\
+  --create-bam false \\
+  --cytaimage __FILE__ \\
+  --image __FILE2__ \\
+  --sample __FILE3__ $json_option \\
+  --fastqs $fastq_folder \\
+  --jobmode $spaceranger_jobmode
+
+",
+      parameterSampleFile1_ref => "files",
+      parameterSampleFile2_ref => "H_E_brightfield_images",
+      parameterSampleFile3_ref => "id_to_samples",
+      sh_direct => 1,
+      no_docker => 1,
+      no_output => 1,
+      output_ext => "__NAME__/outs/web_summary.html,__NAME__/outs/segmented_outputs/filtered_feature_cell_matrix.h5",
+      pbs => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      }
+    };
+    if(defined $def->{manual_alignment_json}){
+      $config->{$spaceranger_task}{parameterSampleFile4_ref} = "manual_alignment_json";
+    }
+
+    push (@$tasks, $spaceranger_task);
+
+    my $copy_report_task = "${spaceranger_task}_report";
+    $config->{$copy_report_task} = {
+      class => "CQS::ProgramWrapperOneToOne",
+      target_dir => "$target_dir/$copy_report_task",
+      perform => 1,
+      program => "",
+      check_program => 0,
+      option => "
+
+cp __FILE__ __NAME__.web_summary.html
+
+",
+      parameterSampleFile1_ref => [ $spaceranger_task, "web_summary.html" ],
+      sh_direct => 1,
+      no_docker => 1,
+      no_output => 1,
+      output_ext => ".web_summary.html",
+      pbs => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "2gb"
+      }
+    };
+    push (@$tasks, $copy_report_task);
+  }
+
   if ($def->{perform_RCTD}){
     my $rctd_task = "RCTD";
 
@@ -113,7 +206,29 @@ sub getSpatialTranscriptome {
         "mem"      => "40gb"
       }
     };
-    push (@$tasks, $rctd_report_task);    
+    push (@$tasks, $rctd_report_task);  
+
+    my $singlet_task = $rctd_task . "_singlet";
+    $config->{$singlet_task} = {
+      class => "CQS::IndividualR",
+      target_dir => "$target_dir/$singlet_task",
+      perform => 1,
+      option => "",
+      rtemplate => "../scRNA/Deconvolution_RCTD_singlet.r",
+      parameterSampleFile1_ref => [ $rctd_task, ".post_RCTD.RDS" ],
+      parameterSampleFile2 => {
+        "bin.size" => $binsize,
+      },
+      sh_direct => 0,
+      no_docker => getValue($def, "no_docker", 0),
+      output_ext => ".post_RCTD.singlet.RDS",
+      pbs => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "4",
+        "mem"      => "20gb"
+      }
+    };
+    push (@$tasks, $singlet_task);
   }
 
   $config->{sequencetask} = {
