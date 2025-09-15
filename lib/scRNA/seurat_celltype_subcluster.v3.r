@@ -1,16 +1,17 @@
 rm(list=ls()) 
-outFile='VK13010_mouse_kidney'
+outFile='PH_scRNA'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn/result/VK13010_mouse_kidney.final.rds'
-parFile2='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_1_call/result/VK13010_mouse_kidney.scDynamic.meta.rds'
-parFile3='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/essential_genes/result/VK13010_mouse_kidney.txt'
+parFile1='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/seurat_merge/result/PH_scRNA.final.rds'
+parFile2='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/seurat_merge_dr0.5_1_call/result/PH_scRNA.scDynamic.meta.rds'
+parFile3='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/essential_genes/result/PH_scRNA.txt'
 
 
-setwd('/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_2_subcluster/result')
+setwd('/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/seurat_merge_dr0.5_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -403,13 +404,13 @@ check_cell_type<-function(subobj, ct_column, filelist, pct, curprefix, species, 
   stopifnot(ct_column %in% colnames(subobj@meta.data))
 
   sxobj=get_filtered_obj(subobj, ct_column)
-  sxnames<-levels(sxobj[[ct_column]])
+  sxnames<-levels(sxobj@meta.data[,ct_column])
 
   g4<-get_dim_plot_labelby(sxobj, reduction="umap", label.by = ct_column, label=T) + ggtitle(ct_column)
   g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = ct_column, label=T) + ggtitle(paste0(subumap, ": ", ct_column))
   g<-g4+g5+plot_layout(ncol=2)
 
-  nlens=nchar(sxobj@meta.data[[ct_column]])
+  nlens=nchar(as.character(sxobj@meta.data[,ct_column]))
   nlens=nlens[!is.na(nlens)]
   max_len=max(nlens)
   width=ifelse(max_len < 30, 3600, 4800)
@@ -684,3 +685,4 @@ rm(obj)
 cat("final memory used:", lobstr_mem_used(), "\n")
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+
