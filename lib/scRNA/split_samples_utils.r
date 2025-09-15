@@ -38,14 +38,50 @@ save_to_matrix<-function(counts, target_folder) {
   gzip(matrix_file, overwrite=T)
 }
 
+
+rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1){
+  DefaultAssay(object = object) <- assay
+  data <- FetchData(object = object, vars = c(features, identName))
+  mdata<-reshape2::melt(data, id.vars=identName)
+  if (withAllCells) {
+    mdata2<-mdata
+    mdata2[,1] = "All cells"
+    mdata<-rbind(mdata, mdata2)
+  }
+  
+  gfinal=list()
+  for(feature in features){
+    ddata=mdata[mdata$variable==feature,]
+    mvalue=ceiling(max(ddata$value))
+    breaks = seq(0, mvalue, 0.5)
+    
+    g<-ggplot(ddata, aes_string(x="value")) + 
+      geom_histogram(aes(y=..density..), bins=50, colour="black", fill="white", position="identity") + 
+      geom_density(color="red") +
+      xlab(feature) + theme_bw()+
+      theme(axis.text=element_text(size=18),
+            axis.title=element_text(size=24),
+            axis.title.y=element_blank(),
+            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+      scale_x_continuous(breaks=breaks)
+    if(length(unique(mdata[,identName])) > 1){
+      g<-g+facet_grid(reformulate(".", identName), scale="free_y") + 
+        theme(strip.background=element_rect(colour="black", fill=NA),
+              strip.text = element_text(size = 24))
+    }
+    gfinal = append(gfinal, list(g))
+  }
+  grid.arrange(grobs=gfinal, nrow=n_row)
+}
+
 output_tag_dist<-function(obj, filename, tagnames=rownames(obj[["HTO"]]), identName="orig.ident"){
   n_col=ceiling(sqrt(length(tagnames)))
   n_row=ceiling(length(tagnames) / n_col)
   width=min(20000, n_col * 3000 + 200)
   height=min(20000, n_row * 1500)
-  png(filename, width=width, height=height, res=300)
-  rplot(object=obj, assay="HTO", features = tagnames, identName=identName, n_row=n_row)
-  dev.off()
+
+  g=rplot(obj, assay = "HTO", features = tagnames, identName=identName,n_row=n_row)
+  ggsave(filename, g, width=width, height=height, dpi=300, units="px", bg="white")
 }
 
 # rename_tags<-function(tags){
@@ -95,41 +131,6 @@ read_hto_file<-function(cname, cfiles){
   # cat("After name clean: ", paste(rownames(htos), collapse=","), "\n")
 
   return(list(exp=exp, htos=htos))
-}
-
-rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1){
-  DefaultAssay(object = object) <- assay
-  data <- FetchData(object = object, vars = c(features, identName))
-  mdata<-melt(data, id.vars=identName)
-  if (withAllCells) {
-    mdata2<-mdata
-    mdata2[,1] = "All cells"
-    mdata<-rbind(mdata, mdata2)
-  }
-  
-  gfinal=list()
-  for(feature in features){
-    ddata=mdata[mdata$variable==feature,]
-    mvalue=ceiling(max(ddata$value))
-    breaks = seq(0, mvalue, 0.5)
-    
-    g<-ggplot(ddata, aes_string(x="value")) + 
-      geom_histogram(aes(y=..density..), bins=50, colour="black", fill="white", position="identity") + 
-      geom_density(color="red") +
-      xlab(feature) + theme_bw()+
-      theme(axis.text=element_text(size=18),
-            axis.title=element_text(size=24),
-            axis.title.y=element_blank(),
-            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
-      scale_x_continuous(breaks=breaks)
-    if(length(unique(mdata[,identName])) > 1){
-      g<-g+facet_grid(reformulate(".", identName), scale="free_y") + 
-        theme(strip.background=element_rect(colour="black", fill=NA),
-              strip.text = element_text(size = 24))
-    }
-    gfinal = append(gfinal, list(g))
-  }
-  grid.arrange(grobs=gfinal, nrow=n_row)
 }
 
 #read prepared hto object
