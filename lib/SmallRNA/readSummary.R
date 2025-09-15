@@ -58,7 +58,7 @@ tableBarplot<-function(dat,textSize=13,colorNames="Set1",barwidth=0.5, legend_sp
     geom_bar(aes(x=Sample,y=Reads,fill=Category), stat="identity", width=barwidth) +
     scale_fill_manual(values=colors) +
     theme_classic() +
-    facet_grid(cols="Type", scale="free_y") +
+    facet_grid(rows=Type~., scale="free_y") +
     theme(legend.position = "top")+
     guides(fill = guide_legend(nrow = 1)) +
     ylab(ylab) +

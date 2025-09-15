@@ -242,7 +242,7 @@ for(ct in cts){
     g2<-VlnPlot(ct_obj, features = "decontX", group.by=celltype_cluster_column) + xlab("") + theme_bw3(TRUE) + ggtitle("") + NoLegend()
     if("DF" %in% colnames(ct_obj@meta.data)){
       g2$data$DF = ct_obj@meta.data[rownames(g2$data), "DF"]
-      g2<-g2 + facet_grid(cols="DF")
+      g2<-g2 + facet_grid(rows=DF~.)
     }
     g<-g1+g2+plot_layout(design="ABBB")
     ggsave(paste0(file_prefix, ".", pct, ".decontX.png"), g, width=4400, height=1600, units="px", dpi=300, bg="white")

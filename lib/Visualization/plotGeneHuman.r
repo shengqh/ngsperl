@@ -108,7 +108,7 @@ for (selectedFeature in unique(rawTable$Feature)) {
     }
 
     g <- g +
-      facet_grid(cols="FileName") +
+      facet_grid(rows=FileName~.) +
       theme_bw() +
       theme(strip.background=element_blank(),
             axis.title.x=element_blank())

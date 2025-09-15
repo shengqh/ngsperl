@@ -103,7 +103,7 @@ plot <- ggplot(data = data.plot, mapping = aes_string(x = "features.plot", y = "
   theme(axis.title.x = element_blank(), axis.title.y = element_blank()) + guides(size = guide_legend(title = "Percent Expressed")) +
   labs(x = "Features", y = "Identity") +
   theme_cowplot() + 
-  facet_grid(rows="feature.groups", scales = "free_x", space = "free_x", switch = "y") + 
+  facet_grid(rows=~feature.groups, scales = "free_x", space = "free_x", switch = "y") + 
   theme(panel.spacing = unit(x = 1,units = "lines"), strip.background = element_blank()) + 
   scale_color_gradient(low = cols[1], high = cols[2])
 

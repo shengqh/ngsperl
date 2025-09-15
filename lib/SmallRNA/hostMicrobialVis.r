@@ -41,7 +41,7 @@ pdf(paste0(outFile, ".pdf"), width=10, height=6)
 colors<-c("Microbial" = "chartreuse3", "Host" = "deepskyblue", "Other" = "gray")
 g<-ggplot(mFigData) + 
   geom_bar(aes(y = Percentage, x = Sample, fill = Category), stat="identity", width=1) + 
-  facet_grid(rows="Group", scales = "free_x") +
+  facet_grid(rows=~Group, scales = "free_x") +
   scale_fill_manual(values=colors) +
   ylab("Percentage of Reads") +
   theme(axis.title.x=element_blank(),

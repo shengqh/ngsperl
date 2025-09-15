@@ -40,7 +40,7 @@ colnames(mdf)<-c("Category", "Sample", "Reads")
 
 g<-ggplot(mdf, aes(x=Category, y=Reads)) + 
   geom_bar(stat="identity") + 
-  facet_grid(cols="Sample") + 
+  facet_grid(rows=Sample~.) + 
   coord_flip() + 
   theme_bw3()
 

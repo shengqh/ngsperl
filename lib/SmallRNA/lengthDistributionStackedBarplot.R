@@ -218,7 +218,7 @@ if(length(unique(groups$Group)) > 1){
     geom_line() +
     geom_point() +
     scale_color_manual(values=allcolors) +
-    facet_grid(cols="Group") + 
+    facet_grid(rows=Group~.) + 
     xlim(15,40) + 
     theme_bw3()
   print(gga)

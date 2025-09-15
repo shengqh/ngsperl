@@ -92,7 +92,7 @@ for(isotype in unique(group_positions$Isotype)){
 
   g<-ggplot(isotype_positions, aes(Position, SumCount, fill=Category)) + 
     geom_bar(stat="Identity") + 
-    facet_grid(cols="Transcript", rows="Group", scale="free_y") + 
+    facet_grid(rows=Transcript~., rows="Group", scale="free_y") + 
     theme_bw3(TRUE) +
     scale_x_continuous(breaks=seq(0,max_position,1)) +
     theme(strip.text.y.right = element_text(angle = 0, hjust = 0)) + xlab("Absolute position") + ylab("Read coverage")

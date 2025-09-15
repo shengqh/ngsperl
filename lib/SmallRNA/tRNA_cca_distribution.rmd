@@ -178,7 +178,7 @@ for(anticodon in all_anticodon){
   g=ggplot(anticodon_cca_dat, aes(x=sample, y=RPM, fill=CCA_status)) + 
     geom_bar(stat="identity") + 
     ggtitle(anticodon) + 
-    facet_grid(rows="condition", scales="free_x") +
+    facet_grid(rows=~condition, scales="free_x") +
     scale_fill_manual(values=cca_colors) +
     theme_bw3() + 
     theme(plot.title = element_text(hjust = 0.5, face="bold", size=18),
@@ -197,7 +197,7 @@ for(anticodon in all_anticodon){
   g=ggplot(anticodon_cca_dat, aes(x=sample, y=RPM, fill=CCA_status)) + 
     geom_bar(stat="identity", position="fill") + 
     ggtitle(anticodon) + 
-    facet_grid(rows="condition", scales="free_x") +
+    facet_grid(rows=~condition, scales="free_x") +
     scale_fill_manual(values=cca_colors) +
     ylab("Percentage") +
     theme_bw3() + 
