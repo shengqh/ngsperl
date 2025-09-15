@@ -286,7 +286,7 @@ if(is_qc_data){
       mat<-as.matrix(adt.counts)
       cat(paste0("  ADT names: ", paste0(rownames(mat), collapse=", "), "\n"))
       if(!is.null(hto_regex)){
-        mat<-mat[!grepl(hto_regex, rownames(mat)),]
+        mat<-mat[grepl(hto_regex, rownames(mat)),]
         cat(paste0("  hto_regex=", hto_regex, ", after filter: ", paste0(rownames(mat), collapse=", "), "\n"))
       }
       #remove the .1 suffix due to conflict with rna data
