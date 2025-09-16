@@ -738,7 +738,7 @@ do_sctransform<-function( rawobj,
     }
 
     #https://github.com/satijalab/seurat/issues/2814
-    sct_var_genes=rownames(obj[["SCT"]]@scale.data)
+    sct_var_genes=rownames(GetAssayData(obj, assay="SCT", layer="scale.data"))
     VariableFeatures(obj[["SCT"]]) <- setdiff(sct_var_genes, ignore_variable_genes)
     rm(objs)
     return(obj)
@@ -746,7 +746,7 @@ do_sctransform<-function( rawobj,
     print("  perform sctransform ...")
     rawobj<-SCTransform(rawobj, method = "glmGamPoi", vars.to.regress = vars.to.regress, return.only.var.genes=return.only.var.genes, verbose = FALSE, vst.flavor=vst.flavor)
     print("  sctransform done")
-    sct_var_genes=rownames(obj[["SCT"]]@scale.data)
+    sct_var_genes=rownames(GetAssayData(rawobj, assay="SCT", layer="scale.data"))
     VariableFeatures(rawobj[["SCT"]]) <- setdiff(sct_var_genes, ignore_variable_genes)
     return(rawobj)
   }
@@ -1351,6 +1351,9 @@ get_bubble_plot<-function(obj,
   }
 
   genes_df=genes_df[genes_df$gene %in% rownames(obj),,drop=FALSE]
+
+  #incase some cell types have no genes after filtering
+  genes_df$cell_type=factor(genes_df$cell_type, levels=unique(genes_df$cell_type))
   
   gene_groups=split(genes_df$gene, genes_df$cell_type)
 
