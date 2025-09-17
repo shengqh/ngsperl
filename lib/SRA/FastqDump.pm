@@ -38,7 +38,7 @@ sub perform {
 
   my $ispaired = get_is_paired_end_option($config, $section, 0);
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
-  my $prefetch_option = get_option($config, $section, "prefetch_option", "-X 50G");
+  my $prefetch_option = get_option($config, $section, "prefetch_option", "");
 
   if($ispaired){
     $option = $option . " --split-3 ";
@@ -155,8 +155,8 @@ echo dump $sample_name
 rm -f $sample_name.failed
 
 if [[ ! -s ${sample_file}.sra ]]; then
-  echo prefetch $sample_file $prefetch_option -o ${sample_file}.tmp.sra
-  prefetch $sample_file $prefetch_option --check-rs no -o ${sample_file}.tmp.sra
+  echo prefetch $sample_file $prefetch_option --max-size u --check-rs no --progress -o ${sample_file}.tmp.sra
+  prefetch $sample_file $prefetch_option --max-size u --check-rs no --progress -o ${sample_file}.tmp.sra
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch $sample_name.prefetch.failed
