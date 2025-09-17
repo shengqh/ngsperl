@@ -40,6 +40,37 @@ sub initializeSpatialTranscriptomeDefaultOptions {
   return $def;
 }
 
+sub add_spaceranger_summary {
+  my ($config, $def, $target_dir, $spaceranger_task, $tasks) = @_;
+
+	my $spaceranger_summary_task = "${spaceranger_task}_summary";
+	$config->{$spaceranger_summary_task} = {
+	  class => "CQS::UniqueRmd",
+	  target_dir => "$target_dir/$spaceranger_summary_task",
+	  perform => 1,
+	  option => "",
+	  report_rmd_file => "../scRNA/space_ranger_summary.Rmd",
+	  additional_rmd_files => "../CQS/reportFunctions.R;../scRNA/scRNA_func.r",
+	  parameterSampleFile1_ref => [ $spaceranger_task, "metrics_summary.csv" ],
+	  parameterSampleFile2 => {
+      email => getValue($def, "email"),
+      affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
+	  },
+	  output_file_ext => ".spaceranger.html",
+	  output_other_ext => ".spaceranger.html",
+	  sh_direct => 0,
+	  no_docker => getValue($def, "no_docker", 0),
+	  pbs => {
+		"nodes"    => "1:ppn=1",
+		"walltime" => "8",
+		"mem"      => "40gb"
+	  }
+	};
+	
+  push (@$tasks, $spaceranger_summary_task);
+  return $spaceranger_summary_task;
+}
+
 sub getSpatialTranscriptome {
   my ($def) = @_;
   $def->{VERSION} = $VERSION;
@@ -55,6 +86,11 @@ sub getSpatialTranscriptome {
   my $tasks = [@$individual, @$summary];
 
   my $target_dir = getValue($def, "target_dir");
+
+  if(defined $def->{raw_spaceranger_metrics}){
+    $config->{raw_spaceranger} = $def->{raw_spaceranger_metrics};
+    my $raw_spaceranger_summary_task = add_spaceranger_summary($config, $def, $target_dir, "raw_spaceranger", $tasks);
+  }
 
   if ($def->{perform_space_ranger}){
     my $spaceranger_task = "spaceranger";
@@ -110,7 +146,7 @@ spaceranger count --disable-ui \\
       sh_direct => 1,
       no_docker => 1,
       no_output => 1,
-      output_ext => "__NAME__/outs/web_summary.html,__NAME__/outs/segmented_outputs/filtered_feature_cell_matrix.h5",
+      output_ext => "__NAME__/outs/web_summary.html,__NAME__/outs/metrics_summary.csv,__NAME__/outs/segmented_outputs/filtered_feature_cell_matrix.h5",
       pbs => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
@@ -147,6 +183,8 @@ cp __FILE__ __NAME__.web_summary.html
       }
     };
     push (@$tasks, $copy_report_task);
+
+    my $spaceranger_summary_task = add_spaceranger_summary($config, $def, $target_dir, $spaceranger_task, $tasks);
   }
 
   if ($def->{perform_RCTD}){

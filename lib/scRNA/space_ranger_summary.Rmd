@@ -1,0 +1,148 @@
+---
+title: "Visium HD data - SpaceRanger summary"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+source("scRNA_func.r")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+```
+
+---
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r}
+metrics_map=read_file_map("fileList1.txt")
+
+failed_samples = metrics_map[!file.exists(unlist(metrics_map))]
+if(length(failed_samples) > 0){
+  cat(paste0("Cannot find metrics file for samples: ", paste(names(failed_samples), collapse = ", ")))
+}
+
+metrics_map = metrics_map[file.exists(unlist(metrics_map))]
+samples <- names(metrics_map)
+
+output <- NULL
+sample=samples[1]
+for (sample in samples) {
+  metrics_file=metrics_map[[sample]]
+  metrics <- read.csv(metrics_file, check.names=F)
+  if("Sample ID" %in% colnames(metrics)){
+    metrics$`Sample ID` = sample
+  }
+  output <- rbind(output,metrics)
+}
+```
+
+# Mapping
+
+```{r}
+query_cols = c("Sample ID","Number of Reads","Reads Mapped to Probe Set","Reads Mapped Confidently to Probe Set","Reads Mapped Confidently to the Filtered Probe Set","Reads Half-Mapped to Probe Set","Reads Split-Mapped to Probe Set")
+valid_cols = query_cols[query_cols %in% colnames(output)]
+print_table(output[,valid_cols], row.names=F)
+```
+
+# Sequencing
+
+```{r}
+query_cols = c("Sample ID","Number of Reads","Valid Barcodes","Valid UMI Sequences","Sequencing Saturation","Q30 Bases in Barcode","Q30 Bases in Probe Read","Q30 Bases in UMI","Fraction of Bins Under Tissue 8 µm","UMIs per sq mm of Tissue","Reads per sq mm of Tissue","Fraction Reads in Squares Under Tissue")
+valid_cols = query_cols[query_cols %in% colnames(output)]
+print_table(output[,valid_cols], row.names=FALSE)
+```
+
+# Bined Metrics
+
+```{r}
+query_cols = c("Sample ID","Number of Squares Under Tissue 2 µm","Mean Reads Under Tissue per Square 2 µm","Mean Genes Under Tissue per Square 2 µm","Mean UMIs Under Tissue per Square 2 µm","Number of Bins Under Tissue 8 µm","Mean Reads Under Tissue per Bin 8 µm","Mean Genes Under Tissue per Bin 8 µm","Mean UMIs Under Tissue per Bin 8 µm","Number of Bins Under Tissue 16 µm","Mean Reads Under Tissue per Bin 16 µm","Mean Genes Under Tissue per Bin 16 µm","Mean UMIs Under Tissue per Bin 16 µm")
+valid_cols = query_cols[query_cols %in% colnames(output)]
+print_table(output[,valid_cols], row.names=FALSE)
+```
+
+```{r}
+if(any(grepl("per Cell", colnames(output)))){
+  cat("\n\n# Cell Segmentation Metrics\n\n")
+  query_cols = c("Sample ID","Number of Cells","Reads in Cells","UMIs in Cells","Mean Reads per Cell","Median Genes per Cell","Median UMIs per Cell","Median Cell Area (μm²)","Median Nucleus Area (μm²)","Maximum Nucleus Diameter (pixels)")
+  valid_cols = query_cols[query_cols %in% colnames(output)]
+  print_table(output[,valid_cols], row.names=FALSE)
+
+  cat("\n\n# Compare bined and segmented metrics\n\n")
+  cat("\n\n## Mean reads within each cell or each 8µm bin\n\n")
+
+  df_long <- output %>%
+    dplyr::select(`Sample ID`, 
+          `Mean Reads Under Tissue per Bin 8 µm`, 
+          `Mean Reads per Cell`) %>%
+    tidyr::pivot_longer(cols = c(`Mean Reads Under Tissue per Bin 8 µm`, 
+                          `Mean Reads per Cell`),
+                names_to = "Metric",
+                values_to = "Value")
+
+  # Compute averages (dplyr; fallback to base-R if needed)
+  avg_values <- aggregate(Value ~ Metric, data = df_long, FUN = function(x) mean(x, na.rm = TRUE))
+  names(avg_values)[names(avg_values) == "Value"] <- "Average"
+
+  # Scatter plot with average lines
+  g = ggplot(df_long, aes(x = `Sample ID`, y = Value, color = Metric)) +
+    geom_point(size = 3) +
+    geom_hline(data = avg_values, 
+              aes(yintercept = Average, color = Metric),
+              linetype = "dashed", size = 1) +
+    labs(
+      y = "Mean reads"
+    ) +
+    scale_color_manual(
+      values = c(
+        "Mean Reads Under Tissue per Bin 8 µm" = "red",
+        "Mean Reads per Cell" = "blue"
+      ),
+      labels = c(
+        "Mean Reads Under Tissue per Bin 8 µm" = "per 8 µm bin\nunder tissue",
+        "Mean Reads per Cell" = "per cell"
+      )
+    ) +
+    theme_bw() +
+    theme(
+      axis.title.x = element_blank(),   # x-axis title
+      axis.title.y = element_text(size = 24),   # y-axis title
+      axis.text.x  = element_text(size = 18, angle = 45, hjust = 1),  # x-axis labels
+      axis.text.y  = element_text(size = 18),   # y-axis labels
+      legend.title = element_text(size = 18),   # legend title
+      legend.text  = element_text(size = 16),   # legend labels
+      plot.title   = element_blank() # plot title
+    )
+
+  mean_read_png = "mean_read_comparison.png"
+  ggsave(mean_read_png, plot = g, width = 8, height = 4, units = "in", dpi = 300, bg="white")
+  include_graphics(mean_read_png)
+}
+```
