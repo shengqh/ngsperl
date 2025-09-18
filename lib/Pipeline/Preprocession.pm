@@ -485,12 +485,17 @@ sub getPreprocessionConfig {
   }
 
   if ( $def->{sra_to_fastq} ) {
-    if($def->{sra_to_fastq_prefetch_fasterqDump}){ #only support pairend
+    if($def->{sra_to_fastq_prefetch} | $def->{sra_to_fastq_prefetch_fasterqDump}){ #only support pairend
       #print("sra_to_fastq_with_prefetch\n");
       my $prefetch_option = getValue($def, "prefetch_option", "--max-size u");
       my $ngc_file = getValue($def, "ngc_file", "");
       my $ngc_file_option = $ngc_file eq "" ? "" : "--ngc $ngc_file";
-      my $fasterq_dump_option = getValue($def, "fasterq-dump_option", "--split-3 --qual-defline '+'");
+      
+      my $dump_software = getValue($def, "dump_fastq_software", "fasterq-dump");
+      my $default_dump_option = $dump_software eq "fasterq-dump" ? "--split-files --qual-defline '+' --progress" : "--split-3 --defline-qual '+' --origfmt --disable-multithreading";
+      my $dump_option = getValue($def, "dump_fastq_option", $default_dump_option);
+      my $tmp_dir_option = $dump_software eq "fasterq-dump" ? "--temp \$tmp_dir" : "";
+
       my $sratoolkit_setting_file = getValue($def, "sratoolkit_setting_file");
 
       my $docker_prefix = "sratools_";
@@ -545,15 +550,17 @@ status=0
 if [[ -s __NAME__.sra ]]; then
   echo __NAME__.sra exist, no need to run prefetch again
 else
-  echo prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.sra
-  prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.sra --progress
+  rm -f __NAME__.prefetch.failed __NAME__.prefetch.succeed 
+
+  echo prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.tmp.sra --progress
+  prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.tmp.sra --progress
   status=\$?
   if [[ \$status -ne 0 ]]; then
     echo failed to prefetch: \$status | tee __NAME__.prefetch.failed
-    rm -f __NAME__.sra __NAME__.prefetch.succeed
+    rm -f __NAME__.tmp.sra
   else
     touch __NAME__.prefetch.succeed 
-    rm -f __NAME__.prefetch.failed
+    mv __NAME__.tmp.sra __NAME__.sra
   fi
 fi
 
@@ -561,32 +568,33 @@ if [[ \$status -eq 0 ]]; then # has __NAME__.sra
   if [[ -f __NAME__.vdbvalidate.succeed ]]; then 
     echo __NAME__.vdbvalidate.succeed exist, no need to run vdb-validate again
   else
+    rm -f __NAME__.vdbvalidate.failed
+
     echo vdb-validate $ngc_file_option __NAME__.sra
     vdb-validate $ngc_file_option __NAME__.sra
     status=\$?
     if [[ \$status -ne 0 ]]; then
       echo failed to vdbvalidate: \$status | tee __NAME__.vdbvalidate.failed
-      rm -f __NAME__.sra __NAME__.vdbvalidate.succeed
+      rm -f __NAME__.sra
     else
       touch __NAME__.vdbvalidate.succeed
-      rm -f __NAME__.vdbvalidate.failed
     fi
   fi
 fi
 
 if [[ \$status -eq 0 ]]; then # validate succeed
-  if [[ (-s __NAME___1.fastq || -s __NAME___1.fastq.gz) && (-s __NAME___2.fastq) && -f __NAME__.fasterq-dump.succeed ]]; then
-    echo fasterq-dump succeed, no need to run again
+  if [[ (-s __NAME___1.fastq || -s __NAME___1.fastq.gz) && (-s __NAME___2.fastq) && -f __NAME__.$dump_software.succeed ]]; then
+    echo $dump_software succeed, no need to run again
   else
-    echo fasterq-dump $fasterq_dump_option __NAME__.sra
-    fasterq-dump $fasterq_dump_option --temp \$tmp_dir --progress __NAME__.sra
+    echo $dump_software $dump_option $tmp_dir_option __NAME__.sra
+    $dump_software $dump_option $tmp_dir_option __NAME__.sra
     status=\$?
     if [[ \$status -ne 0 ]]; then
-      echo failed to fasterqer: \$status | tee __NAME__.fasterq-dump.failed
-      rm -f __NAME___1.fastq __NAME___2.fastq __NAME__.fastq __NAME__.fasterq-dump.succeed
+      echo failed to $dump_software: \$status | tee __NAME__.$dump_software.failed
+      rm -f __NAME___1.fastq __NAME___2.fastq __NAME__.fastq __NAME__.$dump_software.succeed
     else
-      touch __NAME__.fasterq-dump.succeed
-      rm -f __NAME__.fasterq-dump.failed
+      touch __NAME__.$dump_software.succeed
+      rm -f __NAME__.$dump_software.failed
     fi
   fi
 fi
@@ -636,7 +644,7 @@ rm -rf fasterq.tmp*
         pbs        => {
           "nodes"     => "1:ppn=1",
           "walltime"  => getValue($def, "sra_to_fastq_walltime", "24"),
-          "mem"       => "40gb"
+          "mem"       => getValue($def, "sra_to_fastq_mem", "40gb")
         },
       };
     }else{
