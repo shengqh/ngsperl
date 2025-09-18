@@ -69,6 +69,10 @@ if (!exists("show_row_names")){
   show_row_names=length(target_genes) < 100
 }
 
+if (!exists("perform_z_score")){
+  perform_z_score=TRUE
+}
+
 draw_gene_exp_heatmap_5perc_global = perform_gene_exp_5perc & draw_gene_exp_heatmap_5perc_global & has_background_genes
 ```
 
@@ -252,11 +256,10 @@ include_graphics(top5perc_ratio_png)
 cat("\nPlot on the left is the direct counts of overlap between the significant genes and the top 5% expressed genes per tissue, plot on right is the number of direct overlaps divided by the total number of top 5% expressed genes for that tabula tissue.\n")
 ```
 
-### Tissue specific genes and their distribution across tissues
+```{r eval=perform_z_score}
+cat("\n\n### Tissue specific genes and their distribution across tissues\n\n")
+cat("How many genes reach a z-score of >1 for how many tissues?\n\n")
 
-How many genes reach a z-score of >1 for how many tissues?
-
-```{r}
 tdf<-geneExprTabR[which(row.names(geneExprTabR) %in% eg$TO),]
 tdf=calc_z_scores(tdf)
 
@@ -272,11 +275,9 @@ for(i in 1:nrow(gene_counts_print)){
 names(gene_counts_print)[1]<-c("Number of Tissues with zscore>1")
 
 print_table(gene_counts_print, byDT=TRUE, row.names=FALSE)
-```
 
-What tissues have the most representation in the genes that only have high expression in one tissue (z score > 1 in only one tissue)
+cat("\nWhat tissues have the most representation in the genes that only have high expression in one tissue (z score > 1 in only one tissue)\n")
 
-```{r}
 ones_df<-gene_counts_plot |>
   dplyr::filter(counts == 1)
 
@@ -298,8 +299,6 @@ ht_size = draw_heatmap_png( filepath=zscore_one_png,
                             show_column_dend =FALSE,
                             show_row_dend =FALSE,
                             column_title = "Gene expression with z-score > 1 in only 1 tissue")
-```
 
-```{r, fig.width=ht_size[1], fig.height=ht_size[2]}
 include_graphics(zscore_one_png)
 ```
