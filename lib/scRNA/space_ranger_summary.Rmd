@@ -33,6 +33,7 @@ options(future.globals.maxSize = 600000 * 1024^2)
 options(future.seed = TRUE)
 
 myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+file_prefix = paste0(myoptions$task_name, ".spaceranger")
 ```
 
 ---
@@ -62,87 +63,110 @@ for (sample in samples) {
   }
   output <- rbind(output,metrics)
 }
+
+write.csv(output, file=paste0(file_prefix, ".summary_metrics.csv"), row.names=FALSE)
+
+has_cell=any(grepl("per Cell", colnames(output)))
 ```
 
 # Mapping
 
+## Probe Set Mapping Metrics
+
 ```{r}
 query_cols = c("Sample ID","Number of Reads","Reads Mapped to Probe Set","Reads Mapped Confidently to Probe Set","Reads Mapped Confidently to the Filtered Probe Set","Reads Half-Mapped to Probe Set","Reads Split-Mapped to Probe Set")
 valid_cols = query_cols[query_cols %in% colnames(output)]
-print_table(output[,valid_cols], row.names=F)
+print_table(output[,valid_cols], byDT=TRUE, row.names=F)
+```
+
+## Reads Mapped Confidently to the Filtered Probe Set
+
+```{r}
+g=ggplot(output, aes(x=`Sample ID`, y=`Reads Mapped Confidently to the Filtered Probe Set` * 100)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  labs(
+    y = "Perc. of reads mapped\nto filtered probe set"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),   # x-axis title
+    axis.title.y = element_text(size = 20),   # y-axis title
+    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.y  = element_text(size = 16),   # y-axis labels
+    plot.title   = element_blank() # plot title
+  )
+mapping_png = paste0(file_prefix, ".mapping_rate.png")
+ggsave(mapping_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
+include_graphics(mapping_png)
 ```
 
 # Sequencing
 
+## Sequencing Metrics
+
 ```{r}
 query_cols = c("Sample ID","Number of Reads","Valid Barcodes","Valid UMI Sequences","Sequencing Saturation","Q30 Bases in Barcode","Q30 Bases in Probe Read","Q30 Bases in UMI","Fraction of Bins Under Tissue 8 µm","UMIs per sq mm of Tissue","Reads per sq mm of Tissue","Fraction Reads in Squares Under Tissue")
 valid_cols = query_cols[query_cols %in% colnames(output)]
-print_table(output[,valid_cols], row.names=FALSE)
+print_table(output[,valid_cols], byDT=TRUE, row.names=FALSE)
 ```
 
-# Bined Metrics
+```{r eval="UMIs per sq mm of Tissue" %in% colnames(output)}
+cat("\n\n## UMIs per sq mm of Tissue\n\n")
+
+g=ggplot(output, aes(x=`Sample ID`, y=`UMIs per sq mm of Tissue`)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  labs(
+    y = "UMIs per sq mm\nof Tissue"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),   # x-axis title
+    axis.title.y = element_text(size = 20),   # y-axis title
+    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.y  = element_text(size = 16),   # y-axis labels
+    plot.title   = element_blank() # plot title
+  )
+sequencing_png = paste0(file_prefix, ".sequencing_umi.png")
+ggsave(sequencing_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
+include_graphics(sequencing_png)
+```
+
+# Binned Data
+
+## Binned Metrics
 
 ```{r}
 query_cols = c("Sample ID","Number of Squares Under Tissue 2 µm","Mean Reads Under Tissue per Square 2 µm","Mean Genes Under Tissue per Square 2 µm","Mean UMIs Under Tissue per Square 2 µm","Number of Bins Under Tissue 8 µm","Mean Reads Under Tissue per Bin 8 µm","Mean Genes Under Tissue per Bin 8 µm","Mean UMIs Under Tissue per Bin 8 µm","Number of Bins Under Tissue 16 µm","Mean Reads Under Tissue per Bin 16 µm","Mean Genes Under Tissue per Bin 16 µm","Mean UMIs Under Tissue per Bin 16 µm")
 valid_cols = query_cols[query_cols %in% colnames(output)]
-print_table(output[,valid_cols], row.names=FALSE)
+print_table(output[,valid_cols], byDT=TRUE, row.names=FALSE)
 ```
 
+## Mean UMIs/Genes Under Tissue per Bin 8 µm
+
 ```{r}
-if(any(grepl("per Cell", colnames(output)))){
-  cat("\n\n# Cell Segmentation Metrics\n\n")
-  query_cols = c("Sample ID","Number of Cells","Reads in Cells","UMIs in Cells","Mean Reads per Cell","Median Genes per Cell","Median UMIs per Cell","Median Cell Area (μm²)","Median Nucleus Area (μm²)","Maximum Nucleus Diameter (pixels)")
-  valid_cols = query_cols[query_cols %in% colnames(output)]
-  print_table(output[,valid_cols], row.names=FALSE)
+od=output |> 
+  dplyr::select(`Sample ID`, `Mean UMIs Under Tissue per Bin 8 µm`, `Mean Genes Under Tissue per Bin 8 µm`) |> 
+  dplyr::rename("Mean UMIs" = `Mean UMIs Under Tissue per Bin 8 µm`, "Mean Genes" = `Mean Genes Under Tissue per Bin 8 µm`) |>
+  tidyr::pivot_longer(cols=c(`Mean UMIs`, `Mean Genes`), names_to="Metric", values_to="Value")
+  
+g=ggplot(od, aes(x=`Sample ID`, y=`Value`, fill=`Metric`)) +
+  geom_bar(stat="identity", position="dodge") +
+  labs(
+    y = "Mean (UMIs/Genes)\nper Bin 8 µm"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "top",
+    axis.title.x = element_blank(),   # x-axis title
+    axis.title.y = element_text(size = 20),   # y-axis title
+    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.y  = element_text(size = 16),   # y-axis labels
+    plot.title   = element_blank() # plot title
+  )
+binned_mean_png = paste0(file_prefix, ".binned_mean_8um.png")
+ggsave(binned_mean_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
+include_graphics(binned_mean_png)
+```
 
-  cat("\n\n# Compare bined and segmented metrics\n\n")
-  cat("\n\n## Mean reads within each cell or each 8µm bin\n\n")
-
-  df_long <- output %>%
-    dplyr::select(`Sample ID`, 
-          `Mean Reads Under Tissue per Bin 8 µm`, 
-          `Mean Reads per Cell`) %>%
-    tidyr::pivot_longer(cols = c(`Mean Reads Under Tissue per Bin 8 µm`, 
-                          `Mean Reads per Cell`),
-                names_to = "Metric",
-                values_to = "Value")
-
-  # Compute averages (dplyr; fallback to base-R if needed)
-  avg_values <- aggregate(Value ~ Metric, data = df_long, FUN = function(x) mean(x, na.rm = TRUE))
-  names(avg_values)[names(avg_values) == "Value"] <- "Average"
-
-  # Scatter plot with average lines
-  g = ggplot(df_long, aes(x = `Sample ID`, y = Value, color = Metric)) +
-    geom_point(size = 3) +
-    geom_hline(data = avg_values, 
-              aes(yintercept = Average, color = Metric),
-              linetype = "dashed", size = 1) +
-    labs(
-      y = "Mean reads"
-    ) +
-    scale_color_manual(
-      values = c(
-        "Mean Reads Under Tissue per Bin 8 µm" = "red",
-        "Mean Reads per Cell" = "blue"
-      ),
-      labels = c(
-        "Mean Reads Under Tissue per Bin 8 µm" = "per 8 µm bin\nunder tissue",
-        "Mean Reads per Cell" = "per cell"
-      )
-    ) +
-    theme_bw() +
-    theme(
-      axis.title.x = element_blank(),   # x-axis title
-      axis.title.y = element_text(size = 24),   # y-axis title
-      axis.text.x  = element_text(size = 18, angle = 45, hjust = 1),  # x-axis labels
-      axis.text.y  = element_text(size = 18),   # y-axis labels
-      legend.title = element_text(size = 18),   # legend title
-      legend.text  = element_text(size = 16),   # legend labels
-      plot.title   = element_blank() # plot title
-    )
-
-  mean_read_png = "mean_read_comparison.png"
-  ggsave(mean_read_png, plot = g, width = 8, height = 4, units = "in", dpi = 300, bg="white")
-  include_graphics(mean_read_png)
-}
+```{r, child="space_ranger_summary_cell.Rmd", eval=has_cell, trunk.eval=has_cell}
 ```

@@ -1,0 +1,90 @@
+# Cell Segmentation Data 
+
+## Cell Segmentation Metrics
+
+```{r}
+query_cols = c("Sample ID","Number of Cells","Reads in Cells","UMIs in Cells","Mean Reads per Cell","Median Genes per Cell","Median UMIs per Cell","Median Cell Area (μm²)","Median Nucleus Area (μm²)","Maximum Nucleus Diameter (pixels)")
+valid_cols = query_cols[query_cols %in% colnames(output)]
+print_table(output[,valid_cols], byDT=TRUE, row.names=FALSE)
+```
+
+## Number of Cells
+
+```{r}
+g=ggplot(output, aes(x=`Sample ID`, y=`Number of Cells`)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),   # x-axis title
+    axis.title.y = element_text(size = 20),   # y-axis title
+    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.y  = element_text(size = 16),   # y-axis labels
+    plot.title   = element_blank() # plot title
+  )
+cell_numbers_png = paste0(file_prefix, ".cell_numbers.png")
+ggsave(cell_numbers_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
+include_graphics(cell_numbers_png)
+```
+
+## Median UMIs/Genes per Cell
+
+```{r}
+od=output |> 
+  dplyr::select(`Sample ID`, `Median UMIs per Cell`, `Median Genes per Cell`) |> 
+  dplyr::rename("Median UMIs" = `Median UMIs per Cell`, "Median Genes" = `Median Genes per Cell`) |>
+  tidyr::pivot_longer(cols=c(`Median UMIs`, `Median Genes`), names_to="Metric", values_to="Value")
+  
+g=ggplot(od, aes(x=`Sample ID`, y=`Value`, fill=`Metric`)) +
+  geom_bar(stat="identity", position="dodge") +
+  labs(
+    y = "Median (UMIs/Genes)\nper Cell"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "top",
+    axis.title.x = element_blank(),   # x-axis title
+    axis.title.y = element_text(size = 20),   # y-axis title
+    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.y  = element_text(size = 16),   # y-axis labels
+    plot.title   = element_blank() # plot title
+  )
+cell_median_png = paste0(file_prefix, ".cell_median.png")
+ggsave(cell_median_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
+include_graphics(cell_median_png)
+```
+
+# Compare Binned and Segmented Metrics
+
+## Mean Reads within Each Cell or Each 8µm Bin
+
+```{r}
+df_long <- output |>
+  dplyr::select(`Sample ID`, `Mean Reads Under Tissue per Bin 8 µm`, `Mean Reads per Cell`) |>
+  dplyr::rename("per 8 µm bin\nunder tissue" = `Mean Reads Under Tissue per Bin 8 µm`, 
+                "per cell" = `Mean Reads per Cell`) |>
+
+  tidyr::pivot_longer(cols = c(`per 8 µm bin\nunder tissue`, 
+                        `per cell`),
+              names_to = "Metric",
+              values_to = "Value")
+
+g = ggplot(df_long, aes(x = `Sample ID`, y = Value, fill = Metric)) +
+  geom_bar(stat="identity", position="dodge") +
+  labs(
+    y = "Mean reads"
+  ) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),   # x-axis title
+    axis.title.y = element_text(size = 24),   # y-axis title
+    axis.text.x  = element_text(size = 18, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.y  = element_text(size = 18),   # y-axis labels
+    legend.title = element_text(size = 18),   # legend title
+    legend.text  = element_text(size = 16),   # legend labels
+    plot.title   = element_blank() # plot title
+  )
+
+mean_read_png = paste0(file_prefix, ".mean_read_comparison.png")
+ggsave(mean_read_png, plot = g, width = 8, height = 4, units = "in", dpi = 300, bg="white")
+include_graphics(mean_read_png)
+```

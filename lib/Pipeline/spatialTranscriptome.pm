@@ -50,9 +50,10 @@ sub add_spaceranger_summary {
 	  perform => 1,
 	  option => "",
 	  report_rmd_file => "../scRNA/space_ranger_summary.Rmd",
-	  additional_rmd_files => "../CQS/reportFunctions.R;../scRNA/scRNA_func.r",
+	  additional_rmd_files => "../CQS/reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/space_ranger_summary_cell.Rmd",
 	  parameterSampleFile1_ref => [ $spaceranger_task, "metrics_summary.csv" ],
 	  parameterSampleFile2 => {
+      task_name => getValue($def, "task_name"),
       email => getValue($def, "email"),
       affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
 	  },
@@ -138,6 +139,20 @@ spaceranger count --disable-ui \\
   --sample __FILE3__ $json_option \\
   --fastqs $fastq_folder \\
   --jobmode $spaceranger_jobmode
+
+rm -rf __NAME__/SPATIAL_RNA_COUNTER_CS \\
+  __NAME__/extras \\
+  __NAME__/_filelist \\
+  __NAME__/_finalstate \\
+  __NAME__/_invocation \\
+  __NAME__/_jobmode \\
+  __NAME__/_mrosource \\
+  __NAME__/_perf \\
+  __NAME__/_perf._truncated_ \\
+  __NAME__/_sitecheck \\
+  __NAME__/_tags \\
+  __NAME__/_uuid \\
+  __NAME__/_vdrkill 
 
 ",
       parameterSampleFile1_ref => "files",
