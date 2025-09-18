@@ -1,0 +1,116 @@
+```{r eval=FALSE}
+tau_file="/data/cqs/references/tissue_specific/tau_tissue_specificity_gtex.csv"
+gtex_file="/data/cqs/references/protein_atlas/v24.0/rna_tissue_gtex.tsv.zip"
+tabula_file = "/data/cqs/references/Tabula_Sapiens/cellxgene_10x3.rds"
+```
+
+```{r}
+stopifnot(exists("tau_file"))
+stopifnot(exists("gtex_file"))
+stopifnot(exists("tabula_file"))
+stopifnot(exists("all_genes"))
+stopifnot(exists("all_genes_label"))
+all_genes_fn=gsub('[/:()?\ ]+', "_", all_genes_label)
+```
+
+# Read tau file
+
+Tau file was shared by Dr. Kendall Jensen team.
+
+```{r}
+tau_df=fread(tau_file, data.table=FALSE)
+
+tau_df$gene_biotype=factor(tau_df$gene_biotype, levels=c("protein_coding", "long_noncoding", "pseudogene", "short_noncoding", "TEC"))
+
+tau_df=tau_df |> dplyr::arrange(gene_name, gene_biotype)
+
+tau_df=tau_df[!duplicated(tau_df$gene_name),] |>
+  dplyr::select(-gene_id, -gene_type, -gene_biotype ) |>
+  tibble::remove_rownames() |>
+  tibble::column_to_rownames("gene_name")
+
+print_table(head(tau_df))
+```
+
+## Overlap between tau genes and `r all_genes_label` genes
+
+```{r}
+genes = list(rownames(tau_df), unique(all_genes))
+names(genes)=c("Tau", all_genes_label)
+
+g=ggvenn(genes)
+
+venn_png = paste0("tau_", all_genes_fn, "genes.venn.png")
+ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, bg="white")
+include_graphics(venn_png)
+```
+
+# Read protein atlas GTEx gene expression file
+
+The file was downloaded from https://www.proteinatlas.org/download/tsv/rna_tissue_gtex.tsv.zip. (v24.0)
+
+```{r}
+gtex=fread(gtex_file)
+colnames(gtex)[2]="Gene_name"
+print_table(head(gtex), row.names=FALSE)
+
+gtex_mat=reshape2::acast(gtex, Gene_name~Tissue, fun.aggregate=sum, value.var="nTPM")
+gtex_mat=gtex_mat[rowSums(gtex_mat)>0, ]
+```
+
+## Overlap between GTEx genes and `r all_genes_label` genes
+
+```{r}
+genes = list(rownames(gtex_mat), unique(all_genes))
+names(genes)=c("GTEx", all_genes_label)
+
+g=ggvenn(genes)
+
+venn_png = paste0("gtex_", all_genes_fn, ".genes.venn.png")
+ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, bg="white")
+include_graphics(venn_png)
+```
+
+# Load Tabula Sapiens snRNA dataset
+
+The tabula sapiens single cell transcriptomic data was downloaded from [cellxgene](https://datasets.cellxgene.cziscience.com/981bcf57-30cb-4a85-b905-e04373432fef.rds).
+
+Only the data from 10x 3' platform was used in this report.
+
+Read tabula sapiens data from `r basename(tabula_file)`.
+
+```{r}
+if(!exists("tabula_obj")){
+  tabula_obj=readRDS(tabula_file)
+}
+```
+
+## Overlap between Tabula Sapiens genes and `r all_genes_label` genes
+
+```{r}
+genes = list(rownames(tabula_obj), unique(all_genes))
+names(genes)=c("Tabula snRNA", all_genes_label)
+
+g=ggvenn(genes)
+
+venn_png = paste0("tabula_", all_genes_fn, ".genes.venn.png")
+ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, bg="white")
+include_graphics(venn_png)
+```
+
+## Cell type UMAP
+
+Only the cell types with at least 1% of total cells were shown in the UMAP plot.
+
+```{r}
+perc_1_cell=nrow(tabula_obj@meta.data) * 0.01
+ct=as.data.frame(table(tabula_obj$cell_type)) |>
+  dplyr::filter(Freq >= perc_1_cell) |>
+  dplyr::arrange(desc(Freq))
+ct_obj=tabula_obj[, tabula_obj$cell_type %in% ct$Var1]
+
+g=get_dim_plot_labelby(ct_obj, label.by="cell_type") + theme(plot.title=element_blank())
+tabula_celltype_umap_png="tabula_celltype_umap.png"
+ggsave(tabula_celltype_umap_png, g, width=14, height=6, units="in", dpi=300, bg="white")
+include_graphics(tabula_celltype_umap_png)
+```

@@ -1,0 +1,150 @@
+```{r}
+stopifnot(exists("target_genes"))
+stopifnot(exists("file_prefix"))
+stopifnot(exists("tau_df"))
+stopifnot(exists("gtex_mat"))
+stopifnot(exists("tabula_obj"))
+```
+
+## Tau heatmap
+
+In order to make the figure more readable, we only show genes with tau > 0.6.
+
+```{r}
+genes_tau = tau_df[intersect(target_genes, rownames(tau_df)), ] |>
+  dplyr::filter(tau > 0.6) |>
+  dplyr::select(-tau)
+
+heatmap_png = paste0(file_prefix, ".tau.heatmap.png")
+
+ignored = draw_heatmap_png(heatmap_png, 
+  as.matrix(genes_tau), 
+  name="tau", 
+  show_row_names=TRUE, 
+  show_column_names=TRUE, 
+  cluster_rows=TRUE, 
+  cluster_columns=TRUE,
+  show_column_dend=TRUE,
+  save_rds=FALSE)
+include_graphics(heatmap_png)
+```
+
+## Protein Atlas GTEx heatmap
+
+```{r}
+genes_gtex = gtex_mat[intersect(target_genes, rownames(gtex_mat)), ]
+
+if(nrow(genes_gtex) >= 30){
+  cat("In order to make the figure more readable, we only show genes with max nTPM > 10.\n")
+  genes_gtex = genes_gtex[apply(genes_gtex, 1, max) > 10,,drop=FALSE ]
+}
+
+genes_gtex=calc_z_scores(genes_gtex)
+
+heatmap_png = paste0(file_prefix, ".gtex.heatmap.png")
+
+ignored = draw_heatmap_png(heatmap_png, 
+  as.matrix(genes_gtex), 
+  name="zscore(GTEx nTPM)", 
+  show_row_names=TRUE, 
+  show_column_names=TRUE, 
+  cluster_rows=TRUE, 
+  cluster_columns=TRUE,
+  show_column_dend=TRUE,
+  save_rds=FALSE)
+include_graphics(heatmap_png)
+```
+
+## Tabula Sapiens Activity Score
+
+Now calculated the gene activity score using Seurat function `AddModuleScore`.
+
+```{r}
+score_genes=list(genes_tabula = intersect(target_genes, rownames(tabula_obj)))
+
+score_meta_rds=paste0(file_prefix, ".ActivityScore.meta.rds")
+if(!file.exists(score_meta_rds)){
+  score_obj=AddModuleScore(object=tabula_obj, 
+                            features=score_genes, 
+                            name="ActivityScore", 
+                            assay="RNA",
+                            slot="data",
+                            nbin=24)
+  saveRDS(score_obj@meta.data, score_meta_rds)
+}else{
+  score_obj=tabula_obj
+  score_obj@meta.data=readRDS(score_meta_rds)
+}
+```
+
+### UMAP plot
+
+```{r}
+g=FeaturePlot_scCustom(score_obj, 
+            features='ActivityScore1', 
+            pt.size=0.5,
+            aspect_ratio=1,
+            min.cutoff=quantile(score_obj@meta.data$ActivityScore1, 0.01),
+            max.cutoff=quantile(score_obj@meta.data$ActivityScore1, 0.99)) +
+            xlab("UMAP_1") + ylab("UMAP_2") + 
+            theme(plot.title=element_blank())
+ActivityScore_png=paste0(file_prefix, ".tabula.umap.png")
+ggsave(ActivityScore_png, g, width=5, height=5, units="in", dpi=300, bg="white")
+include_graphics(ActivityScore_png)
+```
+
+### Violin plot by tissue
+
+```{r}
+gd=FetchData(score_obj, c("tissue", "ActivityScore1"))
+
+gdd = gd |>
+  dplyr::group_by(tissue) |>
+  dplyr::summarise(median_score=median(ActivityScore1)) |>
+  dplyr::arrange(dplyr::desc(median_score))
+
+gd$tissue = factor(gd$tissue, levels=gdd$tissue)
+
+g=ggplot(gd, aes(x=tissue, y=ActivityScore1)) +
+  geom_violin() + 
+  geom_boxplot(width=0.1, outliers=FALSE) +
+  ylab("Activity Score") +
+  theme_classic() +
+  theme(axis.text.x=element_text(angle=90, hjust=1),
+        axis.title.x=element_blank(),
+        plot.title=element_blank(),
+        legend.position="none") 
+ActivityScore_png=paste0(file_prefix, ".tabula.violin.tissue.png")
+ggsave(ActivityScore_png, g, width=5, height=3.5, units="in", dpi=300, bg="white")
+include_graphics(ActivityScore_png)       
+```   
+
+### Violin plot by top 20 cell types 
+
+The cell types are ranked by median activity score.
+
+```{r}
+gd=FetchData(score_obj, c("cell_type", "ActivityScore1"))
+
+gdd = gd |>
+  dplyr::group_by(cell_type) |>
+  dplyr::summarise(median_score=median(ActivityScore1)) |>
+  dplyr::arrange(dplyr::desc(median_score)) |>
+  dplyr::slice(1:20)
+
+gd=gd[gd$cell_type %in% gdd$cell_type, ]
+gd$cell_type = factor(gd$cell_type, levels=gdd$cell_type)
+
+g=ggplot(gd, aes(x=cell_type, y=ActivityScore1)) +
+  geom_violin() + 
+  geom_boxplot(width=0.1, outliers=FALSE) +
+  ylab("Activity Score") +
+  theme_classic() +
+  theme(axis.text.x=element_text(angle=90, hjust=1),
+        axis.title.x=element_blank(),
+        plot.title=element_blank(),
+        legend.position="none")
+ActivityScore_png=paste0(file_prefix, ".tabula.violin.cell_type.png")
+ggsave(ActivityScore_png, g, width=5, height=4, units="in", dpi=300, bg="white")
+include_graphics(ActivityScore_png)       
+```
