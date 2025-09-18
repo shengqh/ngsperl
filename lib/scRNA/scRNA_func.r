@@ -2826,6 +2826,8 @@ h5ad_to_h5seurat <- function(h5ad_file){
   }
 
   f$close_all()
+
+  return(h5seurat_file)
 }
 
 update_rownames<-function(counts, name_func){
