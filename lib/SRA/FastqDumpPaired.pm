@@ -199,6 +199,8 @@ echo dump $sample_name
 rm -f $sample_name.failed
 
 if [[ ! -s ${sample_file}.sra ]]; then
+  rm -f $sample_name.prefetch.failed $sample_name.prefetch.succeed
+
   echo prefetch $sample_file $prefetch_option --max-size u --check-rs no --progress-o ${sample_file}.tmp.sra
   prefetch $sample_file $prefetch_option --max-size u --check-rs no --progress -o ${sample_file}.tmp.sra
   status=\$?
@@ -206,13 +208,8 @@ if [[ ! -s ${sample_file}.sra ]]; then
     touch $sample_name.prefetch.failed
     rm -f ${sample_file}.tmp.sra
   else
-    if [[ ! -s ${sample_file}.sra ]]; then
-      touch $sample_name.prefetch.failed
-    else
-      touch $sample_name.prefetch.succeed
-      rm -f $sample_name.prefetch.failed
-      mv ${sample_file}.tmp.sra ${sample_file}.sra
-    fi
+    touch $sample_name.prefetch.succeed
+    mv ${sample_file}.tmp.sra ${sample_file}.sra
   fi
 fi
 
