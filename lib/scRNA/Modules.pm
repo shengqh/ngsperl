@@ -1179,9 +1179,12 @@ sub addCellRangerMulti {
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => "${target_dir}/$task_name",
       docker_prefix => "cellranger_",
-      program => "cellranger",
+      program => "",
       check_program => 0,
-      option => " multi --disable-ui --id=__NAME__ --csv=__FILE__ $job_arg $cellranger_option
+      option => " 
+rm -rf __NAME__
+
+cellranger multi --disable-ui --id=__NAME__ --csv=__FILE__ $job_arg $cellranger_option
 
 if [[ -s __NAME__/outs ]]; then
   rm -rf __NAME__/SC_MULTI_CS
@@ -1190,8 +1193,6 @@ if [[ -s __NAME__/outs ]]; then
   mv __NAME__/outs/* __NAME__
   rm -rf __NAME__/outs
 fi
-
-#__OUTPUT__
 
 ",
       source_arg => "",
@@ -1202,7 +1203,8 @@ fi
       output_to_same_folder => 1,
       samplename_in_result => 1,
       can_result_be_empty_file => 0,
-      sh_direct   => $sh_direct,
+      no_output => 1,
+      sh_direct => $sh_direct,
       pbs => {
           "nodes"     => "1:ppn=" . getValue($def, "cellranger_count_cpu", 8),
           "walltime"  => getValue($def, "cellranger_count_walltime", 48),
