@@ -1192,6 +1192,8 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
     genes<-genes[genes$gene %in% allgenes,]
   }
   genes$cell_type=factor(genes$cell_type, levels=unique(genes$cell_type))
+
+  genes = genes |> dplyr::arrange(cell_type, gene)
   
   return(genes)
 }
@@ -1236,7 +1238,7 @@ get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
   return(result)
 }
 
-get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE, dot.scale=6){
+get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE, dot.scale=6, panel.spacing.lines=NULL){
   genes=unique(unlist(gene_groups))
   assaydata=MyGetAssayData(obj, assay=assay, slot="data")
   if(!all(genes %in% rownames(assaydata))){
@@ -1276,8 +1278,7 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
     guides(size = guide_legend(title = "Percent Expressed")) +
     labs(x = "Features", y = "Identity") +
     theme_cowplot() + 
-    facet_grid(rows=~feature.groups, scales = "free_x", space = "free_x", switch = "y") + 
-    theme(panel.spacing = unit(x = 1,units = "lines"), strip.background = element_blank())
+    facet_grid(rows=~feature.groups, scales = "free_x", space = "free_x", switch = "y") 
     
   if(use_blue_yellow_red){
     plot <- plot + scale_colour_gradient2(low="blue", mid="yellow", high="red", midpoint=0 )
@@ -1285,9 +1286,16 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
     plot <- plot + scale_color_gradient(low="lightgray", high="blue")
   }
   
-  g=plot + xlab("") + ylab("") + theme_bw() + theme(plot.title = element_text(hjust = 0.5),
-                                             axis.text.x = element_text(angle = 90, hjust=1, vjust=0.5),
-                                             strip.background = element_blank())
+  g=plot + 
+    theme_bw() + 
+    theme(plot.title = element_text(hjust = 0.5),
+          strip.background = element_blank(),
+          axis.title = element_blank(),
+          axis.text.x = element_text(angle = 90, hjust=1, vjust=0.5))
+
+  if(!is.null(panel.spacing.lines)){
+    g=g+theme(panel.spacing = unit(x = panel.spacing.lines,units = "lines"))
+  }
   
   if(rotate.title){
     g=g+theme(strip.text.x = element_text(angle=90, hjust=0, vjust=0.5))
@@ -1848,9 +1856,13 @@ build_dummy_cluster<-function(obj, label.by, new_cluster_name, new_cluster_name_
   }
 
   groups<-as.character(obj@meta.data[,label.by])
-
-  gt<-table(groups)
-  gt<-gt[order(gt, decreasing=T)]
+  if(class(obj@meta.data[,label.by]) == 'factor'){
+    gt<-table(obj@meta.data[,label.by])
+    gt=gt[gt>0]
+  }else{
+    gt<-table(groups)
+    gt<-gt[order(gt, decreasing=T)]
+  }
   dummy_cluster<-c(0:(length(gt)-1))
   names(dummy_cluster)<-names(gt)
   dc<-factor(dummy_cluster[groups], levels=dummy_cluster)
