@@ -48,30 +48,33 @@ rplot<-function(object, features, assay, identName, withAllCells=FALSE, n_row=1)
     mdata2[,1] = "All cells"
     mdata<-rbind(mdata, mdata2)
   }
-  
-  gfinal=list()
-  for(feature in features){
+
+  nIdent=length(unique(mdata[,identName]))
+  nFeature=length(features)
+
+  gfinal=lapply(features, function(feature){
     ddata=mdata[mdata$variable==feature,]
     mvalue=ceiling(max(ddata$value))
     breaks = seq(0, mvalue, 0.5)
     
-    g<-ggplot(ddata, aes_string(x="value")) + 
-      geom_histogram(aes(y=..density..), bins=50, colour="black", fill="white", position="identity") + 
+    g<-ggplot(ddata, aes(x=value)) + 
+      geom_histogram(aes(y=after_stat(density)), bins=50, colour="black", fill="white", position="identity") + 
       geom_density(color="red") +
-      xlab(feature) + theme_bw()+
-      theme(axis.text=element_text(size=18),
-            axis.title=element_text(size=24),
-            axis.title.y=element_blank(),
-            axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+      ggtitle(feature) + 
+      theme_classic()+
+      theme(plot.title=element_text(hjust = 0.5),
+            axis.title=element_blank(),
+            axis.text.x=element_text(angle = 90, vjust = 0.5, hjust=1)) + 
       scale_x_continuous(breaks=breaks)
-    if(length(unique(mdata[,identName])) > 1){
+    if(nIdent > 1){
       g<-g+facet_grid(reformulate(".", identName), scale="free_y") + 
-        theme(strip.background=element_rect(colour="black", fill=NA),
-              strip.text = element_text(size = 24))
+        theme(strip.background=element_blank())
     }
-    gfinal = append(gfinal, list(g))
-  }
-  grid.arrange(grobs=gfinal, nrow=n_row)
+    return(g)
+  })
+  gg = wrap_plots(grobs=gfinal, nrow=n_row)
+
+  return(gg)
 }
 
 output_tag_dist<-function(obj, filename, tagnames=rownames(obj[["HTO"]]), identName="orig.ident"){
@@ -185,31 +188,31 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
   cat_file=paste0(output_prefix, ".tag_cell.csv")
   write.csv(tbl, cat_file)
   
+  nFeature=length(tagnames)
+  nIdent=length(unique(obj$HTO_classification))
+
   width=max(1800, length(tagnames) * 1500 + 300)
   
   Idents(obj) <- "HTO_classification"
-  png(paste0(output_prefix, ".class.ridge.png"), width=width, height=max(1400, (length(tagnames) + 2) * 300), res=300)
-  print(RidgePlot(obj, assay = "HTO", features = tagnames, ncol = length(tagnames)))
-  dev.off()
+  g = RidgePlot(obj, assay = "HTO", features = tagnames, ncol = length(tagnames)) &
+    theme(axis.title.y=element_blank())
+  ggsave(paste0(output_prefix, ".class.ridge.png"), g, width=nFeature * 4, height=(nIdent + 2) * 0.6, units="in", dpi=300, bg="white")
   
-  png(paste0(output_prefix, ".class.dist.png"), width=width, height=(length(tagnames) + 2) * 800, res=300)
   old_levels=levels(obj$HTO_classification)
   obj$HTO_classification<-factor(obj$HTO_classification, levels=rev(old_levels))
-  rplot(obj, assay = "HTO", features = tagnames, identName="HTO_classification")
+
+  g = rplot(obj, assay = "HTO", features = tagnames, identName="HTO_classification")
+  ggsave(paste0(output_prefix, ".class.dist.png"), g, width=nFeature * 3, height=nIdent * 1.4, units="in", dpi=300, bg="white")
+
   obj$HTO_classification<-factor(obj$HTO_classification, levels=old_levels)
-  dev.off()
   
   if (length(tagnames) == 2) {
-    png(paste0(output_prefix, ".class.point.png"), width=2000, height=1800, res=300)
-    print(FeatureScatter(object = obj, feature1 = tagnames[1], feature2 = tagnames[2],group.by="HTO_classification"))
-    dev.off()
+    g = FeatureScatter(object = obj, feature1 = tagnames[1], feature2 = tagnames[2],group.by="HTO_classification", plot.cor=FALSE) +
+      theme(aspect.ratio=1)
+    ggsave(paste0(output_prefix, ".class.point.png"), g, width=5, height=3.2, units="in", dpi=300, bg="white")
   }
   
-  if(is_seurat_5_plus(obj)){
-    counts=obj[["HTO"]]$counts
-  }else{
-    counts=obj[["HTO"]]@counts
-  }
+  counts=GetAssayData(obj, assay = "HTO", layer = "counts")
 
   tmat=data.frame(t(data.frame(counts, check.names = F)), check.names = F)
   rownames(tmat)=colnames(obj)
@@ -217,7 +220,7 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
   tmat$HTO.global = unlist(obj$HTO_classification.global)
   write.csv(tmat, file=paste0(output_prefix, ".csv"))
   
-  if(length(tagnames) >= 2) {
+  if(length(tagnames) > 2) {
     if(is_seurat_5_plus(obj)){
       VariableFeatures(obj) = tagnames
       cat("ScaleData...\n")
@@ -247,17 +250,14 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
     alldata<-cbind(umap, scaled_data, tmat)
     write.csv(alldata, file=paste0(output_prefix, ".csv"))
     
-    png(paste0(output_prefix, ".umap.class.png"), width=2000, height=1800, res=300)
     g<-MyDimPlot(obj, reduction = "umap", group.by="HTO_classification")
-    print(g)
-    dev.off()
+    ggsave(paste0(output_prefix, ".umap.class.png"), g, width=2000, height=1800, units="px", dpi=300, bg="white")
 
     ncol=ceiling(sqrt(length(tagnames)))
     nrow=ceiling(length(tagnames)/ncol)
     png(paste0(output_prefix, ".umap.tag.png"), width=ncol*1500, height=1500*nrow, res=300)
     g<-FeaturePlot(obj, features=tagnames, reduction = "umap", ncol=ncol)
-    print(g)
-    dev.off()
+    ggsave(paste0(output_prefix, ".umap.tag.png"), g, width=ncol*1500, height=1500*nrow, units="px", dpi=300, bg="white")
 
     glist=list()
     for(tagname in tagnames){
@@ -268,20 +268,14 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
         scale_color_manual(values=cols) + ggtitle(tagname)
     }
     g<-wrap_plots(glist, nrow = nrow, ncol = ncol)
-    png(paste0(output_prefix, ".umap.assigned.png"), width=ncol*1500, height=1500*nrow, res=300)
-    print(g)
-    dev.off()
+    ggsave(paste0(output_prefix, ".umap.assigned.png"), g, width=ncol*1500, height=1500*nrow, units="px", dpi=300, bg="white")
 
     cols=rep("gray", length(hto_names))
     names(cols)=hto_names
     cols[['Negative']]="blue"
     cols[["Doublet"]]="red"
-    
-    png(paste0(output_prefix, ".umap.all.png"), width=2000, height=1800, res=300)
-    g<-MyDimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
-      scale_color_manual(values=cols)
-    print(g)
-    dev.off()
+
+    ggsave(paste0(output_prefix, ".umap.all.png"), g, width=2000, height=1800, units="px", dpi=300, bg="white")
   }
 }
 
