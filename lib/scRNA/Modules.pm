@@ -1182,24 +1182,31 @@ sub addCellRangerMulti {
       program => "",
       check_program => 0,
       option => " 
-rm -rf __NAME__
+rm -rf __NAME__ ____NAME__.mro
 
 cellranger multi --disable-ui --id=__NAME__ --csv=__FILE__ $job_arg $cellranger_option
 
 if [[ -s __NAME__/outs ]]; then
-  rm -rf __NAME__/SC_MULTI_CS
+  rm -rf __NAME__/SC_MULTI_CS __NAME__/vdj_reference __NAME__/extras __NAME__/__NAME__.mri.tgz
+
   mkdir __NAME__/log
-  mv __NAME__/_* __NAME__/log   
-  mv __NAME__/outs/* __NAME__
-  rm -rf __NAME__/outs
+  mv __NAME__/_* __NAME__/log
+
+  mv __NAME__/outs/* __NAME__/
+  
+  mv __NAME__/multi/count/* __NAME__/
+  mv __NAME__/per_sample_outs/__NAME__/count/* __NAME__/
+  mv __NAME__/per_sample_outs/__NAME__/metrics_summary.csv __NAME__/per_sample_outs/__NAME__/web_summary.html __NAME__/
+
+  rm -rf __NAME__/outs __NAME__/multi/count/ __NAME__/per_sample_outs/__NAME__/count/
 fi
 
 ",
       source_arg => "",
       source => $csv_files,
       output_arg => "",
-      output_file_prefix => "__NAME__/per_sample_outs/__NAME__/count/sample_filtered_feature_bc_matrix.h5",
-      output_file_ext => "__NAME__/per_sample_outs/__NAME__/count/sample_filtered_feature_bc_matrix.h5,__NAME__/per_sample_outs/__NAME__/metrics_summary.csv,__NAME__/per_sample_outs/__NAME__/web_summary.html,__NAME__/multi/count/raw_feature_bc_matrix.h5",
+      output_file_prefix => "__NAME__/sample_filtered_feature_bc_matrix.h5",
+      output_file_ext => "__NAME__/sample_filtered_feature_bc_matrix.h5,__NAME__/metrics_summary.csv,__NAME__/web_summary.html,__NAME__/raw_feature_bc_matrix.h5",
       output_to_same_folder => 1,
       samplename_in_result => 1,
       can_result_be_empty_file => 0,
@@ -2484,7 +2491,7 @@ sub add_hto {
     parameterSampleFile4 => $def->{"HTO_tags"},
     output_perSample_file => "parameterSampleFile1",
     output_perSample_file_byName => 1,
-    output_perSample_file_ext => ".HTO.umap.class.png;.HTO.csv;.HTO.data.csv;.HTO.umap.rds",
+    output_perSample_file_ext => ".HTO.csv;.HTO.scDemultiplex.final.rds",
     sh_direct   => 1,
     pbs => {
       "nodes"     => "1:ppn=$thread",
