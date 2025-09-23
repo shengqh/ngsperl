@@ -25,6 +25,8 @@ knitr::opts_chunk$set(echo=FALSE,
 }
 ```
 
+# Parameters
+
 ```{r data, echo = FALSE}
 source("reportFunctions.R")
 source("scRNA_func.r")
@@ -52,10 +54,24 @@ if(file.exists("iter_png.txt")){
   }
 
   iter_png<-read.csv(iter_png_file)
+
+  umap_dir=dirname(iter_png_file)
+  umap_png=paste0(umap_dir, "/details/", outFile, ".layer4.umap.png")
+  if (!file.exists(umap_png)){
+    umap_png = NULL
+  }
 }else{
   iter_png = NULL
+  umap_png = NULL
 }
+```
 
+```{r eval=!is.null(umap_png)}
+cat("# UMAP\n\n")
+include_graphics(umap_png)
+```
+
+```{r}
 meta_file=paste0(detail_prefix, ".meta.rds")
 if(!file.exists(meta_file)){
   stop(paste0("Cannot find file ", meta_file))
@@ -73,6 +89,7 @@ get_last_figure<-function(ct_png, png_type){
   type_png_list<-ct_png[ct_png$type == png_type, "fname"]
   return(type_png_list[length(type_png_list)])
 }
+
 
 resFile<-"cluster.Rmd"
 
