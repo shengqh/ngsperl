@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='T02_demultiplex'
+outFile='PH_scRNA'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20241111_T02_demultiplex/hto_samples_preparation/result')
+setwd('/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/hto_samples_preparation/result')
 
 ### Parameter setting end ###
 
@@ -40,7 +40,7 @@ if(has_filtered_files){
 }
 cutoff_tbl<-NULL
 
-cname = names(files)[1]
+cname = names(files)[2]
 for(cname in names(files)){
   cfiles = files[[cname]]
   res_lst = read_hto_file(cname, cfiles)
@@ -73,18 +73,13 @@ for(cname in names(files)){
   }
 
   obj <- CreateSeuratObject(counts = htos, assay="HTO")
+  DefaultAssay(obj) <- "HTO"
 
-  if(is_seurat_5_plus(obj)){
-    htos <- obj[["HTO"]]$counts
-  }else{
-    htos <- obj@assays$HTO@counts
-  }
-
+  htos = GetAssayData(obj, assay = "HTO", layer = "counts")
   cat("Final tagnames:", paste0(rownames(htos), collapse = ", "), "\n")
   
   # Normalize HTO data, here we use centered log-ratio (CLR) transformation
   obj <- NormalizeData(obj, assay = "HTO", normalization.method = "CLR")
-  DefaultAssay(object = obj) <- "HTO"
 
   output_tag_dist(obj, paste0(cname, ".alltags_raw.png"))
 
@@ -124,14 +119,17 @@ for(cname in names(files)){
   }else{
     identName='orig.ident'
   }
-  output_tag_dist(obj, paste0(cname, ".tag.dist.png"), tagnames=tagnames, identName=identName)
+  output_tag_dist(obj, filename=paste0(cname, ".tag.dist.png"), tagnames=tagnames, identName=identName)
 
   obj<-subset(obj, cells=colnames(htos))
 
   if (length(tagnames) == 2) {
-    png(paste0(cname, ".tag.point.png"), width=2000, height=1800, res=300)
-    print(FeatureScatter(object = obj, feature1 = tagnames[1], feature2 = tagnames[2], cols = "black"))
-    dev.off()
+    gdata=FetchData(obj, vars = tagnames)
+    g=ggplot(gdata, aes(x = !!sym(tagnames[1]), y = !!sym(tagnames[2]))) + 
+      geom_bin2d(bins=100) +
+      theme_classic() +
+      theme(legend.position = "none")
+    ggsave(paste0(cname, ".tag.point.png"), g, width=4, height=4, units="in", dpi=300, bg="white")
   }
 
   saveRDS(obj, paste0(cname, ".hto.rds"))
