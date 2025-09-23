@@ -490,6 +490,9 @@ sub getScRNASeqConfig {
     if(defined $hto_file_names){
       my $hto_files = {};
       for my $hto_name (@$hto_file_names){
+        if(!defined $files->{$hto_name}){
+          die "HTO file name $hto_name is not found in files.";
+        }
         $hto_files->{$hto_name} = $files->{$hto_name};
       }
       $config->{hto_files} = $hto_files;
