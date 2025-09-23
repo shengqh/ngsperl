@@ -4,6 +4,10 @@ stopifnot(exists("file_prefix"))
 stopifnot(exists("tau_df"))
 stopifnot(exists("gtex_mat"))
 stopifnot(exists("tabula_obj"))
+
+if(!exists("perform_significance_test")){
+  perform_significance_test=FALSE
+}
 ```
 
 ## Tau heatmap
@@ -55,6 +59,15 @@ ignored = draw_heatmap_png(heatmap_png,
 include_graphics(heatmap_png)
 ```
 
+```{r eval=perform_significance_test}
+df = dataRankTest(selectedGenes=target_genes, 
+                  alldata=gtex_mat, 
+                  universGenes=NULL) |>
+  dplyr::arrange(p)
+
+print_table(df, byDT=TRUE, row.names=TRUE)
+```
+
 ## Tabula Sapiens Activity Score
 
 Now calculated the gene activity score using Seurat function `AddModuleScore`.
@@ -98,53 +111,44 @@ include_graphics(ActivityScore_png)
 ```{r}
 gd=FetchData(score_obj, c("tissue", "ActivityScore1"))
 
-gdd = gd |>
-  dplyr::group_by(tissue) |>
-  dplyr::summarise(median_score=median(ActivityScore1)) |>
-  dplyr::arrange(dplyr::desc(median_score))
-
-gd$tissue = factor(gd$tissue, levels=gdd$tissue)
+gd$tissue=factor(gd$tissue, levels=rev(names(sort(tapply(gd[,"ActivityScore1"], gd$tissue, median)))))
 
 g=ggplot(gd, aes(x=tissue, y=ActivityScore1)) +
-  geom_violin() + 
-  geom_boxplot(width=0.1, outliers=FALSE) +
-  ylab("Activity Score") +
+  geom_violin(scale="width") + 
+  geom_boxplot(outliers=FALSE, width=0.4, color="white", fill="black", linewidth=0.2) +
+  ylab("Activity Score") +  
   theme_classic() +
-  theme(axis.text.x=element_text(angle=90, hjust=1),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         axis.title.x=element_blank(),
-        plot.title=element_blank(),
-        legend.position="none") 
+        plot.title = element_blank(),
+        legend.position = "none")
+
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.tissue.png")
-ggsave(ActivityScore_png, g, width=5, height=3.5, units="in", dpi=300, bg="white")
+ggsave(ActivityScore_png, g, width=7, height=5, units="in", dpi=300, bg="white")
 include_graphics(ActivityScore_png)       
 ```   
 
-### Violin plot by top 20 cell types 
+### Violin plot by cell types 
 
 The cell types are ranked by median activity score.
 
 ```{r}
 gd=FetchData(score_obj, c("cell_type", "ActivityScore1"))
 
-gdd = gd |>
-  dplyr::group_by(cell_type) |>
-  dplyr::summarise(median_score=median(ActivityScore1)) |>
-  dplyr::arrange(dplyr::desc(median_score)) |>
-  dplyr::slice(1:20)
-
-gd=gd[gd$cell_type %in% gdd$cell_type, ]
-gd$cell_type = factor(gd$cell_type, levels=gdd$cell_type)
+gd$cell_type=factor(gd$cell_type, levels=rev(names(sort(tapply(gd[,"ActivityScore1"], gd$cell_type, median)))))
 
 g=ggplot(gd, aes(x=cell_type, y=ActivityScore1)) +
-  geom_violin() + 
-  geom_boxplot(width=0.1, outliers=FALSE) +
-  ylab("Activity Score") +
+  geom_violin(scale="width") + 
+  geom_boxplot(outliers=FALSE, width=0.4, color="white", fill="black", linewidth=0.2) +
+  ylab("Activity Score") + 
+  scale_color_manual(values=c("black", "red")) +
   theme_classic() +
-  theme(axis.text.x=element_text(angle=90, hjust=1),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         axis.title.x=element_blank(),
-        plot.title=element_blank(),
-        legend.position="none")
+        plot.title = element_blank(),
+        legend.position = "none")
+
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.cell_type.png")
-ggsave(ActivityScore_png, g, width=5, height=4, units="in", dpi=300, bg="white")
-include_graphics(ActivityScore_png)       
+ggsave(ActivityScore_png, g, width=10, height=7, units="in", dpi=300, limitsize=FALSE, bg="white")
+include_graphics(ActivityScore_png)
 ```
