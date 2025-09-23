@@ -1507,6 +1507,112 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     }
   }
 
+  if ( $def->{perform_LOH_analysis} && $config->{"muTect2_02_merge"}){
+    my ($tumor_files, $normal_files) = init_normal_tumor_files($config, $def, $bam_input);
+
+    my $snp_vcf_task = "LOH_1_sites_vcf";
+    my $snp_pileup_positions_vcf = getValue($def, "snp_pileup_positions_vcf", "");
+    $config->{$snp_vcf_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${snp_vcf_task}",
+      option                => "
+
+gatk MakeSitesOnlyVcf -I __FILE__ -O __NAME__.sites.vcf
+
+",
+      interpretor           => "",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "",
+      source_ref => [ "muTect2_02_merge", ".vcf\$" ],
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".sites.vcf",
+      sh_direct             => 0,
+      docker_prefix         => "gatk4_",
+      no_docker => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$tasks, $snp_vcf_task);
+
+    my $snp_pileup_task = "LOH_2_snp_pileup";
+    my $snp_pileup_positions_vcf = getValue($def, "snp_pileup_positions_vcf", "");
+    $config->{$snp_pileup_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${snp_pileup_task}",
+      option                => "
+
+snp-pileup -g -q15 -Q20 __parameterFile1__ __NAME__.snp_pileup.gz __FILE2__ __FILE__
+  ",
+      interpretor           => "",
+      docker_prefix         => "",
+      program               => "",
+      check_program         => 0,
+      parameterFile1_ref   => [ $snp_vcf_task, ".vcf\$" ],
+      source_arg            => "",
+      source_ref => [ $tumor_files, ".bam\$" ],
+      parameterSampleFile2_ref => [ $normal_files, ".bam\$" ],
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => ".snp_pileup.gz",
+      sh_direct             => 0,
+      no_docker => 1,
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$tasks, $snp_pileup_task);
+
+    my $facets_task = "LOH_3_facets";
+    $config->{$facets_task} = {
+      class                 => "CQS::ProgramWrapperOneToOne",
+      perform               => 1,
+      target_dir            => "${target_dir}/${facets_task}",
+      option                => "
+
+run-facets-wrapper.R \\
+    --counts-file __FILE__ \\
+    --sample-id __NAME__
+
+",
+      interpretor           => "",
+      docker_prefix         => "",
+      program               => "",
+      check_program         => 0,
+      source_arg            => "",
+      source_ref => $snp_pileup_task,
+      output_to_same_folder => 1,
+      output_arg            => "",
+      no_output => 1,
+      output_file_prefix    => "",
+      output_file_ext       => "__NAME__/__NAME__.txt",
+      sh_direct             => 0,
+      no_docker => 0,
+      docker_prefix => "facets_",
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      },
+    };
+
+    push(@$tasks, $snp_pileup_task);    
+  }
+
   if ( $def->{"perform_cnv_gatk4_somatic"}) {
     my $somaticCNVtask = addSomaticCNV($config, $def, $tasks, $target_dir, $bam_input);
   }
