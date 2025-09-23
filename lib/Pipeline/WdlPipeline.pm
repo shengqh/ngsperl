@@ -266,9 +266,11 @@ sub addMutect2Wdl {
   #   }
   # }
 
+  # print("run_funcotator = $run_funcotator\n");
+
   my $output_file_ext;
   my $output_other_ext;
-  if ( $def->{ncbi_build} eq "GRCh38" && ! $is_pon ){
+  if ( ($def->{ncbi_build} eq "GRCh38") && (! $is_pon) && ($run_funcotator eq "true") ){
     $output_file_ext = $output_sample_ext."-filtered.annotated.maf";
     $output_other_ext = $output_sample_ext."-filtered.vcf";
   }else{
