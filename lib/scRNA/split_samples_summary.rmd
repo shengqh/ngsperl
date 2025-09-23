@@ -73,17 +73,22 @@ figureRmd<-function(samples, hto_samples){
 
     result<-paste0(result, getFigure(paste0(sample, ".HTO.class.ridge.png")))
 
-    result<-paste0(result, paste0("\n\n## Demultiplex UMAP\n\n"))
-    result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.class.png")))
+    if(length(tags) > 2){
+      result<-paste0(result, paste0("\n\n## Demultiplex UMAP\n\n"))
+      result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.class.png")))
 
-    result<-paste0(result, paste0("\n\n## Doublet/Negative UMAP\n\n"))
-    result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.all.png")))
+      result<-paste0(result, paste0("\n\n## Doublet/Negative UMAP\n\n"))
+      result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.all.png")))
 
-    result<-paste0(result, paste0("\n\n## Hashtag UMAP\n\n"))
-    result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.tag.png")))
+      result<-paste0(result, paste0("\n\n## Hashtag UMAP\n\n"))
+      result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.tag.png")))
 
-    result<-paste0(result, paste0("\n\n## Hashtag Assignment UMAP\n\n"))
-    result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.assigned.png")))
+      result<-paste0(result, paste0("\n\n## Hashtag Assignment UMAP\n\n"))
+      result<-paste0(result, getFigure(paste0(sample, ".HTO.umap.assigned.png")))
+    }else{
+      result<-paste0(result, paste0("\n\n## Hashtag Assignment Scatter Plot\n\n"))
+      result<-paste0(result, getFigure(paste0(sample, ".HTO.class.point.png")))
+    }
   }
   return(result)
 }
