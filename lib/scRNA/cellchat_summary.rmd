@@ -47,9 +47,7 @@ chord_height=to_numeric(myoptions$chord_height, 8.5)
 
 ---
 title: "`r myoptions$task_name` - CellChat"
-author: 
-  email: `r myoptions$email`
-  affiliation: `r myoptions$affiliation`
+author: "`r myoptions$email`"
 ---
 
 ```{r}

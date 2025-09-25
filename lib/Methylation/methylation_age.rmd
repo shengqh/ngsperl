@@ -57,9 +57,7 @@ if(file.exists('fileList3.age.txt')){
 
 ---
 title: "`r task_name` - Methylation Age"
-author:
-- email: `r email`
-  affiliation: `r affiliation`
+author: "`r email`"
 ---
 
 # Read beta values
