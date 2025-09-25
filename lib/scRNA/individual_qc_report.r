@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='P12629_mm10'
+outFile='CosMx'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -10,7 +10,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/shengq2/test/20250202_12629_scRNA_mm10_for_testonly/raw_qc_report/result')
+setwd('/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_S4_32203/raw_qc_report/result')
 
 ### Parameter setting end ###
 
@@ -225,9 +225,9 @@ for(sample_name in sample_names){
   draw_figure(sample_prefix, cur_meta, cur_validation_columns)
 }
 
-stats_df<-stats_df[,colnames(stats_df) != "tringsAsFactors"]
+stats_df<-stats_df[,colnames(stats_df) != "tringsAsFactors",drop=FALSE]
 if(all(colnames(stats_df)[1:2] == "sample")){
-  stats_df=stats_df[,c(2:ncol(stats_df))]
+  stats_df=stats_df[,c(2:ncol(stats_df)),drop=FALSE]
 }
 write.csv(stats_df, file.path(detail_folder, "sample_summary.csv"), row.names=F)
 
