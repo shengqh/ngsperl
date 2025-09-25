@@ -1,0 +1,184 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: yes
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+source('reportFunctions.R')
+```
+
+```{r}
+myoptions = read_file_map('fileList1.txt', do_unlist=FALSE)
+task_name = myoptions$task_name
+has_interesting_genes = !is.null(myoptions$LOH_genes) && myoptions$LOH_genes != ""
+```
+
+---
+title: "`r task_name` - Facets Loss of Heterozygosity Analysis Report"
+author: "`r myoptions$email`"
+---
+
+```{r}
+facets_files=read_file_map('fileList2.txt', do_unlist=FALSE)
+facets_files=facets_files[file.exists(unlist(facets_files))]
+```
+
+# Introduction
+
+In Loss of Heterozygosity (LOH) analysis, cnLOH, hetloss, and homdel are terms used to classify the different types of allelic loss that occur in a genome, most often in cancer cells. 
+
+Background: Heterozygosity and LOH
+
+- Heterozygosity is the condition of having two different versions (alleles) of a gene, one inherited from each parent.
+- Loss of Heterozygosity (LOH) occurs when a cell's heterozygous state at a gene location becomes homozygous because one of the two alleles is lost. This can be a critical step in cancer development, especially if the lost allele was a healthy tumor-suppressor gene. 
+
+cnLOH: Copy-Neutral Loss of Heterozygosity
+
+- Definition: The loss of one allele is followed by the duplication of the remaining allele, resulting in a region that is homozygous but has a normal (neutral) total copy number.
+- Mechanism: Can arise from events like mitotic recombination or trisomic rescue.
+- Significance: Because the total copy number is unchanged, this type of LOH cannot be detected by standard karyotyping and requires higher-resolution methods like single-nucleotide polymorphism (SNP) arrays. It can play a significant role in unmasking a recessive mutation on the remaining allele, inactivating a tumor-suppressor gene. 
+
+hetloss: Heterozygous Loss (Copy-Loss LOH)
+
+- Definition: This is the most straightforward form of LOH, where one of the two alleles is completely deleted, leading to both a loss of heterozygosity and a reduction in the total copy number. The cell retains only a single copy of the genetic region.
+- Significance: If a region contains a tumor-suppressor gene, the "first hit" is a point mutation in one allele, and the "second hit" is a deletion of the second, healthy allele. This results in complete inactivation of the tumor-suppressor function. 
+
+homdel: Homozygous Deletion (Deep Deletion)
+
+- Definition: This refers to the complete deletion of both copies of a gene or chromosomal region. The prefix hom- indicates that the locus is completely lost (homozygous for the deletion).
+- Significance: A homozygous deletion represents the most severe form of genetic loss. Since the gene is entirely absent, its function is completely eliminated. This is a common mechanism for the inactivation of tumor-suppressor genes, and its detection can be an important diagnostic marker. 
+
+# Sample LOH Summary
+
+```{r}
+sample_res=lapply(facets_files, function(cur_file){
+  cur_data=read.table(cur_file, header=TRUE, sep="\t", stringsAsFactors=FALSE, check.names=FALSE)
+  cur_data
+})
+sample_res_df=do.call(rbind, sample_res)
+
+sample_res_df = sample_res_df |>
+  dplyr::select(-grep("flag", colnames(sample_res_df)), -input_file, -seed, -genome_doubled)
+
+sample_csv=paste0(task_name, "_facets_summary.csv")
+write.csv(sample_res_df, sample_csv, row.names=FALSE, quote=FALSE)
+
+print_table(sample_res_df, byDT=TRUE, row.names=FALSE)
+```
+
+# Arm LOH Summary
+
+```{r}
+arm_files=gsub(".txt$", ".arm_level.txt", facets_files)
+arm_res=lapply(arm_files, function(cur_file){
+  cur_data=read.table(cur_file, header=TRUE, sep="\t", stringsAsFactors=FALSE, check.names=FALSE)
+  cur_data
+})
+arm_res_df=do.call(rbind, arm_res)
+
+arm_csv=paste0(task_name, "_facets_arm_level_summary.csv")
+write.csv(arm_res_df, arm_csv, row.names=FALSE, quote=FALSE)
+
+print_table(arm_res_df, byDT=TRUE, row.names=FALSE)
+```
+
+```{r}
+sorted_arm = arm_res_df |>
+  dplyr::mutate("arm1"=as.numeric(gsub("p|q", "", arm))) |>
+  dplyr::arrange(arm1, arm) |>
+  dplyr::pull(arm) |>
+  unique()
+
+arm_res_df$arm = factor(arm_res_df$arm, levels=sorted_arm)
+
+g=ggplot(arm_res_df, aes(x=sample, y=arm, fill=cn_state)) + 
+  geom_tile(color = "white", size = 0.1) +
+  coord_fixed() +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        axis.title.x = element_blank(),
+        plot.title = element_blank()) +
+  labs(y = "Chromosome Arm", fill = "LOH Status")
+arm_png=paste0(task_name, ".arm_level_loh_status.png")
+ggsave(arm_png, plot = g, width = nrow(sample_res_df)/15 + 1, height = 6, units = "in", dpi = 300, bg="white")
+include_graphics(arm_png)
+```
+
+# Gene LOH Summary
+
+```{r}
+gene_files=gsub(".txt$", ".gene_level.txt", facets_files)
+gene_res=lapply(gene_files, function(cur_file){
+  cur_data=read.table(cur_file, header=TRUE, sep="\t", stringsAsFactors=FALSE, check.names=FALSE)
+  cur_data
+})
+gene_res_df=do.call(rbind, gene_res) |> 
+  dplyr::filter(cn_state != "INDETERMINATE")
+
+gene_csv=paste0(task_name, "_facets_gene_level_summary.csv")
+write.csv(gene_res_df, gene_csv, row.names=FALSE, quote=FALSE)
+
+print_table(gene_res_df, byDT=TRUE, row.names=FALSE)
+```
+
+```{r, eval=has_interesting_genes}
+cat("\n# Interesting Gene LOH Summary\n\n")
+gene_list = unlist(strsplit(myoptions$LOH_genes, ",\\s*"))
+gene_res_df = gene_res_df |> dplyr::filter(gene %in% gene_list)
+interesting_gene_csv=paste0(task_name, "_facets_interesting_gene_level_summary.csv")
+write.csv(gene_res_df, interesting_gene_csv, row.names=FALSE, quote=FALSE)
+print_table(gene_res_df, byDT=TRUE, row.names=FALSE)
+
+n_genes = length(unique(gene_res_df$gene))
+g=ggplot(gene_res_df, aes(x=sample, y=gene, fill=cn_state)) + 
+  geom_tile(color = "white", size = 0.1) +
+  coord_fixed() +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        axis.title = element_blank(),
+        plot.title = element_blank()) +
+  labs(fill = "LOH Status")
+gene_png=paste0(task_name, ".interesting_gene_level_loh_status.png")
+ggsave(gene_png, plot = g, width = nrow(sample_res_df)/13 + 1, height=max(2,n_genes/8), units = "in", dpi = 300, bg="white", limitsize = FALSE)
+include_graphics(gene_png)
+```
+
+# MD5 Checksum
+
+```{r}
+all_files = c(sample_csv, arm_csv, gene_csv)
+if(has_interesting_genes){
+  all_files = c(all_files, interesting_gene_csv)
+}
+md5sum_df = data.frame(
+  file = all_files,
+  md5sum = sapply(all_files, function(f) tools::md5sum(f))
+)
+print_table(md5sum_df, byDT=TRUE, row.names=FALSE)
+```
+
+# Session information
+
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=FALSE)
+```

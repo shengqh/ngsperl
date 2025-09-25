@@ -1507,57 +1507,128 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     }
   }
 
-  if ( $def->{perform_LOH_analysis} && $config->{"muTect2_02_merge"}){
+  if ( $def->{perform_LOH_analysis} ){
     my ($tumor_files, $normal_files) = init_normal_tumor_files($config, $def, $bam_input);
 
     my $snp_vcf_task = "LOH_1_sites_vcf";
-    my $snp_pileup_positions_vcf = getValue($def, "snp_pileup_positions_vcf", "");
-    $config->{$snp_vcf_task} = {
-      class                 => "CQS::ProgramWrapperOneToOne",
-      perform               => 1,
-      target_dir            => "${target_dir}/${snp_vcf_task}",
-      option                => "
+    my $vcf_str = getValue($def, "snp_pileup_positions_vcf", "");
+    my $parameterFile1_ref = undef;
+    if ($vcf_str eq ""){
+      if (!$config->{"bwa_g4_refine_gatk4_SNV_02_vqsr"}){
+        die "In order to run LOHH analysis, set perform_gatk4_callvariants to 1 in your configuration file!";
+      }
 
-gatk MakeSitesOnlyVcf -I __FILE__ -O __NAME__.sites.vcf
+      $config->{$snp_vcf_task} = {
+        class                 => "CQS::ProgramWrapperOneToOne",
+        perform               => 1,
+        target_dir            => "${target_dir}/${snp_vcf_task}",
+        option                => "
+gatk MakeSitesOnlyVcf \\
+  -I __FILE__ \\
+  -O __NAME__.sites.vcf.gz
 
+gatk SelectVariants \\
+  -V __NAME__.sites.vcf.gz \\
+  --select-type-to-include SNP \\
+  -O __NAME__.sites.snp.tmp.vcf.gz
+
+bcftools annotate -x INFO -o __NAME__.sites.snp.vcf.gz __NAME__.sites.snp.tmp.vcf.gz
+
+rm -rf __NAME__.sites.snp.tmp.vcf.gz*
 ",
-      interpretor           => "",
-      program               => "",
-      check_program         => 0,
-      source_arg            => "",
-      source_ref => [ "muTect2_02_merge", ".vcf\$" ],
-      output_to_same_folder => 1,
-      output_arg            => "",
-      no_output => 1,
-      output_file_prefix    => "",
-      output_file_ext       => ".sites.vcf",
-      sh_direct             => 0,
-      docker_prefix         => "gatk4_",
-      no_docker => 0,
-      pbs                   => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
-      },
-    };
+        interpretor           => "",
+        program               => "",
+        check_program         => 0,
+        source_arg            => "",
+        source_ref => [ "bwa_g4_refine_gatk4_SNV_02_vqsr", ".vcf.gz\$" ],
+        output_to_same_folder => 1,
+        output_arg            => "",
+        no_output => 1,
+        output_file_prefix    => "",
+        output_file_ext       => ".sites.snp.vcf.gz",
+        sh_direct             => 0,
+        docker_prefix         => "gatk4_",
+        no_docker => 0,
+        pbs                   => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        },
+      };
 
-    push(@$tasks, $snp_vcf_task);
+      push(@$tasks, $snp_vcf_task);
+
+      $vcf_str = "__parameterFile1__";
+      $parameterFile1_ref = [ $snp_vcf_task, ".vcf.gz\$" ];
+    }else{
+      my $covered_bed = getValue($def, "covered_bed");
+      my $task_name = getValue($def, "task_name");
+
+      $config->{$snp_vcf_task} = {
+        class                 => "CQS::ProgramWrapperOneToOne",
+        perform               => 1,
+        target_dir            => "${target_dir}/${snp_vcf_task}",
+        option                => "
+gatk SelectVariants \\
+  -V __FILE__ \\
+  --select-type-to-include SNP \\
+  -L $covered_bed \\
+  -O __NAME__.sites.snp.tmp.vcf.gz
+
+bcftools annotate -x INFO -o __NAME__.sites.snp.vcf.gz __NAME__.sites.snp.tmp.vcf.gz
+
+rm -rf __NAME__.sites.snp.tmp.vcf.gz*
+",
+        interpretor           => "",
+        program               => "",
+        check_program         => 0,
+        source_arg            => "",
+        source => {
+          $task_name => $vcf_str,
+        },
+        output_to_same_folder => 1,
+        output_arg            => "",
+        no_output => 1,
+        output_file_prefix    => "",
+        output_file_ext       => ".sites.snp.vcf.gz",
+        sh_direct             => 0,
+        docker_prefix         => "gatk4_",
+        no_docker => 0,
+        pbs                   => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        },
+      };
+
+      push(@$tasks, $snp_vcf_task);
+
+      $vcf_str = "__parameterFile1__";
+      $parameterFile1_ref = [ $snp_vcf_task, ".vcf.gz\$" ];
+       
+    }
 
     my $snp_pileup_task = "LOH_2_snp_pileup";
-    my $snp_pileup_positions_vcf = getValue($def, "snp_pileup_positions_vcf", "");
     $config->{$snp_pileup_task} = {
       class                 => "CQS::ProgramWrapperOneToOne",
       perform               => 1,
       target_dir            => "${target_dir}/${snp_pileup_task}",
       option                => "
+snp-pileup -g -q15 -Q20 $vcf_str __NAME__.snp_pileup.tmp.gz __FILE2__ __FILE__
 
-snp-pileup -g -q15 -Q20 __parameterFile1__ __NAME__.snp_pileup.gz __FILE2__ __FILE__
-  ",
+status=\$?
+if [ \$status -ne 0 ]; then
+  echo \"Error: snp-pileup failed with exit code \$status\"
+  exit \$status
+else
+  mv __NAME__.snp_pileup.tmp.gz __NAME__.snp_pileup.gz
+fi
+",
       interpretor           => "",
       docker_prefix         => "",
       program               => "",
       check_program         => 0,
-      parameterFile1_ref   => [ $snp_vcf_task, ".vcf\$" ],
+      parameterFile1_ref   => $parameterFile1_ref,
       source_arg            => "",
       source_ref => [ $tumor_files, ".bam\$" ],
       parameterSampleFile2_ref => [ $normal_files, ".bam\$" ],
@@ -1570,47 +1641,69 @@ snp-pileup -g -q15 -Q20 __parameterFile1__ __NAME__.snp_pileup.gz __FILE2__ __FI
       no_docker => 1,
       pbs                   => {
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
+        "walltime" => "10",
+        "mem"      => "10gb"
       },
     };
 
     push(@$tasks, $snp_pileup_task);
 
     my $facets_task = "LOH_3_facets";
+    my $genome_ver = getValue($def, "annovar_buildver", "hg38");
     $config->{$facets_task} = {
-      class                 => "CQS::ProgramWrapperOneToOne",
-      perform               => 1,
-      target_dir            => "${target_dir}/${facets_task}",
-      option                => "
-
-run-facets-wrapper.R \\
-    --counts-file __FILE__ \\
-    --sample-id __NAME__
-
-",
-      interpretor           => "",
-      docker_prefix         => "",
-      program               => "",
-      check_program         => 0,
-      source_arg            => "",
-      source_ref => $snp_pileup_task,
-      output_to_same_folder => 1,
-      output_arg            => "",
+      class => "CQS::IndividualR",
+      perform => 1,
+      target_dir => "${target_dir}/${facets_task}",
+      rtemplate => "../Variants/FacetsWrapper.R",
+      option => "",
+      parameterSampleFile1_ref => $snp_pileup_task,
+      parameterSampleFile2 => {
+        task_name => getValue($def, "task_name"),
+        email => getValue($def, "email"),
+        affiliation => $def->{"affiliation"},
+        genome => getValue($def, "annovar_buildver", "hg38"),
+      },
+      output_to_same_folder => 0,
       no_output => 1,
-      output_file_prefix    => "",
-      output_file_ext       => "__NAME__/__NAME__.txt",
-      sh_direct             => 0,
-      no_docker => 0,
-      docker_prefix => "facets_",
-      pbs                   => {
+      output_file_prefix => "",
+      output_file_ext => ".txt",
+      sh_direct => 0,
+      no_docker => 1,
+      pbs => {
         "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
+        "walltime" => "5",
+        "mem"      => "10gb"
       },
     };
 
-    push(@$tasks, $snp_pileup_task);    
+    push(@$tasks, $facets_task);    
+
+    my $summary_task = "LOH_4_facets_summary";
+    $config->{$summary_task} = {
+      class                      => "CQS::UniqueRmd",
+      perform                    => 1,
+      target_dir                 => "$target_dir/$summary_task",
+      report_rmd_file => "../Variants/FacetsSummary.rmd",
+      additional_rmd_files => "../CQS/reportFunctions.R",
+      option => "",
+      parameterSampleFile1   => {
+        task_name => getValue($def, "task_name"),
+        email => getValue($def, "email"),
+        affiliation => $def->{"affiliation"},
+        LOH_genes => getValue($def, "LOH_genes", ""),
+      },
+      parameterSampleFile2_ref   => [ $facets_task, ".txt\$" ],
+      output_file_ext => ".facets_summary.html",
+      output_other_ext => ".facets_summary.txt;.facets_summary.gene_level.txt;.facets_summary.arm_level.txt",
+      can_result_be_empty_file => 0,
+      sh_direct   => 1,
+      pbs => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };    
+    push(@$tasks, $summary_task);    
   }
 
   if ( $def->{"perform_cnv_gatk4_somatic"}) {
