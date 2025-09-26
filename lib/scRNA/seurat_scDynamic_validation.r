@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='PH_scRNA'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.final.rds'
-parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.meta.rds'
-parFile3=''
+parFile1='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge/result/PH_scRNA.final.rds'
+parFile2='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge_dr0.5_1_call/result/PH_scRNA.scDynamic.meta.rds'
+parFile3='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge_dr0.5_1_call/result/PH_scRNA.iter_png.csv'
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose_validation/result')
+setwd('/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge_dr0.5_1_call_validation/result')
 
 ### Parameter setting end ###
 
@@ -292,3 +292,4 @@ writeLines(validation_columns, "validation_columns.txt")
 if(file.exists(parFile3)){
   writeLines(parFile3, "iter_png.txt")
 }
+
