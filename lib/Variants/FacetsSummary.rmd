@@ -133,7 +133,8 @@ gene_res=lapply(gene_files, function(cur_file){
   cur_data
 })
 gene_res_df=do.call(rbind, gene_res) |> 
-  dplyr::filter(cn_state != "INDETERMINATE")
+  dplyr::filter(cn_state != "INDETERMINATE") |>
+  dplyr::filter(filter == "PASS" | filter == "RESCUE")
 
 gene_csv=paste0(task_name, "_facets_gene_level_summary.csv")
 write.csv(gene_res_df, gene_csv, row.names=FALSE, quote=FALSE)
