@@ -52,11 +52,11 @@ sub perform {
   my $output_unmapped_fastq = get_option( $config, $section, "output_unmapped_fastq", 0 );
 
   my $sort_by_thread        = get_option( $config, $section, "sort_by_thread",     0 );
-  my $samtools_sort_thread = $sort_by_thread ? "-@ $thread":"";
+  my $samtools_sort_thread = $sort_by_thread ? "--threads $thread":"";
   my $sambamba_sort_thread = $sort_by_thread ? "-t $thread":"";
 
   my $index_by_thread        = get_option( $config, $section, "index_by_thread",     0 );
-  my $samtools_index_thread = $index_by_thread ? "-@ $thread":"";
+  my $samtools_index_thread = $index_by_thread ? "--threads $thread":"";
   my $sambamba_index_thread = $index_by_thread ? "-t $thread":"";
 
   my $do_bam_stat = get_option( $config, $section, "do_bam_stat",     1 );

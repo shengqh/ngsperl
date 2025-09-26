@@ -211,7 +211,7 @@ else
 fi
 
 echo sort=`date` 
-samtools sort -@ 8 -o __NAME__.sorted.bam -T __NAME__ __NAME__.unsorted.bam
+samtools sort --threads 8 -o __NAME__.sorted.bam -T __NAME__ __NAME__.unsorted.bam
 
 status=\$?
 if [[ \$status -eq 0 ]]; then

@@ -111,7 +111,7 @@ if [[ ! -s ${sample_name}.uniq.bam.dupstats ]]; then
       #dnmtools format requires unsorted bam file
       #-F: This option forces the format command to process paired-end reads even if it is unable to detect mates. 
       echo dnmtools format=`date`
-      $dnmtools_command format -t $thread -B -F -v -f abismal -stdout $raw_bam | samtools sort -@ $thread -o ${sample_name}.formatted.sorted.bam
+      $dnmtools_command format -t $thread -B -F -v -f abismal -stdout $raw_bam | samtools sort --threads $thread -o ${sample_name}.formatted.sorted.bam
       status=\$?
       if [[ \$status -eq 0 ]]; then
         touch ${sample_name}.format.succeed
@@ -134,7 +134,7 @@ if [[ ! -s ${sample_name}.uniq.bam.dupstats ]]; then
       exit \$status
     fi
 
-    samtools index -@ $thread ${sample_name}.uniq.bam
+    samtools index --threads $thread ${sample_name}.uniq.bam
   fi
 fi
 
@@ -142,7 +142,7 @@ if [[ ! -s ${sample_name}.rrbs_summary_metrics ]]; then
   if [[ ! -s $result_file_addqual_bai ]]; then
     if [[ ! -s $sorted_bam ]]; then
       echo sort=`date`
-      samtools sort -@ $thread -O BAM -o $sorted_bam $raw_bam
+      samtools sort --threads $thread -O BAM -o $sorted_bam $raw_bam
       status=\$?
       if [[ \$status -eq 0 ]]; then
         touch ${sample_name}.sort.succeed
@@ -191,7 +191,7 @@ if [[ ! -s ${sample_name}.rrbs_summary_metrics ]]; then
       gzip ${sample_name}.rrbs_detail_metrics
     fi
 
-    if [[ -s ${sample_name}.rrbs_summary_metrics ]]; then
+    if [[ -s ${sample_name}.rrbs_summary_metrics && -s $hs_metrics ]]; then
       rm -f $result_file_addqual_bam $result_file_addqual_bai
     fi
   fi

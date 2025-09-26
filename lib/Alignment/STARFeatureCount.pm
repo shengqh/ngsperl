@@ -147,7 +147,7 @@ fi
     print $pbs "
 if [[ \$status -eq 0 && -s $unsorted && ! -s $final_bam ]]; then
   echo bamSort=`date` 
-  samtools sort -m $sort_memory -T ${sample_name} -t $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
+  samtools sort -m $sort_memory -T ${sample_name} --threads $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
   if [[ ! -e ${final_bam}.succeed ]]; then
     rm -rf $final_bam
   else

@@ -2496,7 +2496,7 @@ if [[ \$status -ne 0 ]]; then
   touch __NAME__.failed
 else
   echo sort __NAME__.sam
-  samtools sort -O BAM -o __NAME__.bam -@ $thread __NAME__.sam
+  samtools sort -O BAM -o __NAME__.bam --threads $thread __NAME__.sam
   echo index __NAME__.bam
   samtools index __NAME__.bam
   rm __NAME__.sam

@@ -123,7 +123,7 @@ if [[ \$status -eq 0 ]]; then
   echo samtools_sort=`date`
   samtools sort \\
     -m $sort_memory \\
-    -@ $thread \\
+    --threads $thread \\
     -T bwa_${sample_name} \\
     --output-fmt CRAM \\
     --reference $bwa_index \\

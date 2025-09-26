@@ -105,7 +105,7 @@ if [[ ! -s temp ]]; then
   mkdir temp
 fi
 
-samtools sort -m ${memory} -T ${sample_name} -o $final -t $thread $unsorted
+samtools sort -m ${memory} -T ${sample_name} -o $final --threads $thread $unsorted
 ";
   }
 
