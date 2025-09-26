@@ -2799,7 +2799,16 @@ get_barplot<-function(
     theme(strip.text.y = element_text(angle = 0))
 
   if(!is.null(bar_file)){
-    height = max(1500, length(unique(alltbl$Var1)) * calc_height_per_cluster + label_height)
+    max_str_len = max(nchar(as.character(alltbl$Var2)))
+    # Estimate the width of the longest string. This is an approximation.
+    # The default font size in ggplot2 is 11pt. 1pt = 1/72 inch.
+    # The dpi is 300. So 1 pt = 300/72 pixels.
+    # A character is roughly 0.6 * font size in width.
+    # So, width in pixels = number of chars * font_size_pt * (300/72) * 0.6
+    # = number of chars * 11 * 4.16 * 0.6 ~= number of chars * 27.5
+    # Let's use a simpler multiplier, like 25, to be safe.
+    cur_label_height=max(label_height, max_str_len * 25)
+    height = max(1500, length(unique(alltbl$Var1)) * calc_height_per_cluster + cur_label_height)
     width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + 400
 
     ggsave(bar_file, g, width=width, height=height, dpi=300, units="px", bg="white")
