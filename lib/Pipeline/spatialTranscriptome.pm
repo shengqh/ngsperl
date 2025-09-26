@@ -40,6 +40,36 @@ sub initializeSpatialTranscriptomeDefaultOptions {
   return $def;
 }
 
+sub add_copy_report {
+  my ($config, $def, $target_dir, $spaceranger_task, $tasks) = @_;
+
+  my $copy_report_task = "${spaceranger_task}_report";
+  $config->{$copy_report_task} = {
+    class => "CQS::ProgramWrapperOneToOne",
+    target_dir => "$target_dir/$copy_report_task",
+    perform => 1,
+    program => "",
+    check_program => 0,
+    option => "
+
+cp __FILE__ __NAME__.web_summary.html
+
+",
+    parameterSampleFile1_ref => [ $spaceranger_task, "web_summary.html" ],
+    sh_direct => 1,
+    no_docker => 1,
+    no_output => 1,
+    output_ext => ".web_summary.html",
+    pbs => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "2gb"
+    }
+  };
+  push (@$tasks, $copy_report_task);
+  return($copy_report_task);
+}
+
 sub add_spaceranger_summary {
   my ($config, $def, $target_dir, $spaceranger_task, $tasks) = @_;
 
@@ -89,7 +119,16 @@ sub getSpatialTranscriptome {
   my $target_dir = getValue($def, "target_dir");
 
   if(defined $def->{raw_spaceranger_metrics}){
-    $config->{raw_spaceranger} = $def->{raw_spaceranger_metrics};
+    my $raw_spaceranger = {};
+    for my $k (keys %{$def->{raw_spaceranger_metrics}}){
+      my $metrics_file = $def->{raw_spaceranger_metrics}->{$k}[0];
+      my $web_summary_file = $metrics_file;
+      $web_summary_file =~ s/metrics_summary\.csv/web_summary.html/;
+      $raw_spaceranger->{$k} = [ $metrics_file, $web_summary_file ];
+    }
+    $config->{raw_spaceranger} = $raw_spaceranger;
+
+    my $raw_spaceranger_copy_report_task = add_copy_report($config, $def, $target_dir, "raw_spaceranger", $tasks);
     my $raw_spaceranger_summary_task = add_spaceranger_summary($config, $def, $target_dir, "raw_spaceranger", $tasks);
   }
 
@@ -174,31 +213,7 @@ rm -rf __NAME__/SPATIAL_RNA_COUNTER_CS \\
 
     push (@$tasks, $spaceranger_task);
 
-    my $copy_report_task = "${spaceranger_task}_report";
-    $config->{$copy_report_task} = {
-      class => "CQS::ProgramWrapperOneToOne",
-      target_dir => "$target_dir/$copy_report_task",
-      perform => 1,
-      program => "",
-      check_program => 0,
-      option => "
-
-cp __FILE__ __NAME__.web_summary.html
-
-",
-      parameterSampleFile1_ref => [ $spaceranger_task, "web_summary.html" ],
-      sh_direct => 1,
-      no_docker => 1,
-      no_output => 1,
-      output_ext => ".web_summary.html",
-      pbs => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "2gb"
-      }
-    };
-    push (@$tasks, $copy_report_task);
-
+    my $spaceranger_copy_report_task = add_copy_report($config, $def, $target_dir, $spaceranger_task, $tasks);
     my $spaceranger_summary_task = add_spaceranger_summary($config, $def, $target_dir, $spaceranger_task, $tasks);
   }
 
