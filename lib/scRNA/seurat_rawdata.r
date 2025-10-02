@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='PH_scRNA'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/h_cqs/shengq2/program/collaborations/celestine_wanjalla/20230115_combined_scRNA_hg38/20230501_filter_config.txt'
+parFile1='/nobackup/h_cqs/shengq2/program/collaborations/paula_hurley/20250912_reproduce_20210303_scRNA_human/20250926_filter_config.csv'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20231025_combined_scRNA_hg38_CITEseq/seurat_rawdata/result')
+setwd('/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_rawdata/result')
 
 ### Parameter setting end ###
 
@@ -110,36 +110,32 @@ if (has_hto) {
   hto_str = paste0(hto_md5, collapse="_")
 }
 
-read_remove_cells_from_combined_qc<-function(obj_file, config_file){
+read_remove_cells_from_qc_data<-function(parSampleFile6, parFile1){
   result = list()
 
-  load(obj_file)
-  
-  objs_config=read.table(config_file, sep="\t", header=T, stringsAsFactors = F)
-  
-  if(all(is.null(names(object.list)))){
-    names(object.list)<-objs_config$sample
+  remove_tbl=fread(parFile1) |> dplyr::filter(!is.na(cluster_remove)) |> as.data.frame()
+  if(nrow(remove_tbl) == 0){
+    remove_map = list()
+  }else{
+    remove_tbl = separate_rows(remove_tbl, cluster_remove, sep=';')
+    remove_map = split(remove_tbl$cluster_remove, remove_tbl$sample)
   }
-  
-  rowi=1
-  for(rowi in c(1:nrow(objs_config))){
-    sample_id = objs_config$sample[rowi]
 
-    #cat(sample_id, "\n")
-    
-    if(sample_id %in% names(object.list)){
-      crs<-objs_config$cluster_remove[rowi]
-      if(!is.na(crs)){
-        sample_obj = object.list[[sample_id]]
-        cd<-sample_obj$meta
-  
-        crslist<-unlist(strsplit(crs,','))
-        rcs<-rownames(cd)[as.character(cd$seurat_clusters) %in% crslist] 
-        
-        result[[sample_id]]=rcs
-      }
-    }
+  obj_map = read_file_map(parSampleFile6)
+
+  sample = names(remove_map)[1]
+  for(sample in names(remove_map)){
+    obj_file = obj_map[[sample]]
+    sample_obj = readRDS(obj_file)
+
+    cd<-sample_obj[[1]]$meta
+
+    crslist<-as.character(remove_map[[sample]])
+    rcs<-rownames(cd)[as.character(cd$seurat_clusters) %in% crslist] 
+    result[[sample]] = rcs
+    cat("  ", length(rcs), "cells from clusters", paste0(crslist, collapse=", "),"in sample", sample, "will be removed.\n")
   }
+
   return(result)
 }
 
@@ -171,136 +167,112 @@ read_gzip_count_file<-function(files, sample, species){
   return(all_counts)
 }
 
-#read object from either qc seurat object file or original count file
-raw_objs = list()
 remove_cells = list()
+if(parFile1 != "" && exists('parSampleFile6')){
+  remove_cells = read_remove_cells_from_qc_data(parSampleFile6, parFile1)
+}
 
-is_qc_data = exists('parSampleFile6')
-if(is_qc_data){
-  #from qc data
-  obj_map = read_file_map(parSampleFile6)
-  if(parFile1 != ""){
-    remove_tbl = fread(parFile1, header=T, data.table=F)
-    remove_tbl = remove_tbl[remove_tbl$cluster_remove != "",,drop=F]
-    if(nrow(remove_tbl) == 0){
-      remove_map = list()
+if(exists("parSampleFile5")){
+  doublet_map=read_file_map(parSampleFile5)
+  doublet_column=myoptions$doublet_column
+  doublet_cells = list()
+  sname = names(doublet_map)[1]
+  for(sname in names(doublet_map)){
+    sfile = doublet_map[sname]
+    smeta = readRDS(sfile)
+    dcells = rownames(smeta)[smeta[,doublet_column] %in% c("Doublet", "doublet")]
+    if(sname %in% names(remove_cells)){
+      remove_cells[[sname]] = c(remove_cells[[sname]], dcells)
     }else{
-      remove_tbl = separate_rows(remove_tbl, cluster_remove, sep=';')
-      remove_map = split(remove_tbl$cluster_remove, remove_tbl$sample)
+      remove_cells[[sname]] = dcells
+    }
+  }
+  remove_doublets=TRUE
+}
+
+#read raw count dat
+file_map<-read_file_map(parSampleFile1)
+if(length(file_map) == 0){
+  die("No data defined, check your configuration file.")
+}
+
+raw_objs = list()
+
+sample_names = names(file_map)
+sample_name = sample_names[5]
+for(sample_name in sample_names) {
+  file_path  = file_map[[sample_name]]
+  cat("reading", sample_name, ":", file_path, "\n")
+  lst = read_scrna_data(file_path, keep_seurat_object)
+
+  counts = lst$counts  
+  adt.counts = lst$adt.counts
+
+  if(is_seurat_object(counts)){
+    sobj<-counts
+    rm(counts)
+
+    if("" != seurat_sample_column){
+      sobj$orig.ident = unlist(sobj@meta.data[,seurat_sample_column])
+    }else{
+      sobj$orig.ident = sample_name
     }
   }else{
-    remove_map = list()
-  }
+    rs<-rowSums(counts)
+    counts<-counts[rs>0,]
 
-  sample_names = names(obj_map)
-  sample_name = sample_names[1]
-  for(sample_name in sample_names){
-    obj_file = obj_map[[sample_name]]
-    cat("reading", sample_name, ":", obj_file, "\n")
-    sobj = read_object(obj_file, sample_name=sample_name)
-
-    if(sample_name %in% names(remove_map)){
-      cd<-sobj@meta.data
-      crslist<-as.character(remove_map[[sample_name]])
-      rm_cells = rownames(cd)[as.character(cd$seurat_clusters) %in% crslist] 
-      remove_cells[[sample_name]] = rm_cells
-      cat("  ", length(rm_cells), "cells from clusters", paste0(crslist, collapse=", "), "will be removed.\n")
-    }
-    
-    raw_objs[[sample_name]]=sobj
-  }
-}else{
-  if(file.exists(parFile1) & file.exists(parFile2)){
-    remove_cells = read_remove_cells_from_combined_qc(parFile1, parFile2)
-  }
-
-  if(exists("parSampleFile5")){
-    doublet_tbl=read.table(parSampleFile5, sep="\t", header=F)
-    doublet_map=unlist(split(doublet_tbl$V1, doublet_tbl$V2))
-    doublet_column=myoptions$doublet_column
-    doublet_cells = list()
-    sname = names(doublet_map)[1]
-    for(sname in names(doublet_map)){
-      sfile = doublet_map[sname]
-      smeta = readRDS(sfile)
-      dcells = rownames(smeta)[smeta[,doublet_column] %in% c("Doublet", "doublet")]
-      if(sname %in% names(remove_cells)){
-        remove_cells[[sname]] = c(remove_cells[[sname]], dcells)
-      }else{
-        remove_cells[[sname]] = dcells
-      }
-    }
-    remove_doublets=TRUE
-  }
-
-  #read raw count dat
-  file_map<-read_file_map(parSampleFile1)
-  if(length(file_map) == 0){
-    die("No data defined, check your configuration file.")
-  }
-
-  sample_names = names(file_map)
-  sample_name = sample_names[1]
-  for(sample_name in sample_names) {
-    file_path  = file_map[[sample_name]]
-    cat("reading", sample_name, ":", file_path, "\n")
-    lst = read_scrna_data(file_path, keep_seurat_object)
-
-    counts = lst$counts  
-    adt.counts = lst$adt.counts
-
-    if(is_seurat_object(counts)){
-      sobj<-counts
-      rm(counts)
-
-      if("" != seurat_sample_column){
-        sobj$orig.ident = unlist(sobj@meta.data[,seurat_sample_column])
-      }else{
-        sobj$orig.ident = sample_name
-      }
-    }else{
-      rs<-rowSums(counts)
-      counts<-counts[rs>0,]
-
-      if(!is.null(ensembl_map)){
-        cat("remapping gene names ... \n")
-        gtf_counts<-counts[!(rownames(counts) %in% names(ensembl_map)),]
-        ensembl_counts<-counts[(rownames(counts) %in% names(ensembl_map)),]
-        gene_names<-unlist(ensembl_map[rownames(ensembl_counts)])
-        gene_counts<-DelayedArray::rowsum(ensembl_counts, gene_names)
-        counts<-rbind(gtf_counts, gene_counts)
-      }
-
-      if (species=="Mm") {
-        counts=update_rownames(counts, toMouseGeneSymbol)
-      }
-      if (species=="Hs") {
-        counts=update_rownames(counts, toupper)
-      }
-      sobj = CreateSeuratObject(counts = counts, project = sample_name)
-      sobj$orig.ident <- sample_name
-      rm(counts)
+    if(!is.null(ensembl_map)){
+      cat("remapping gene names ... \n")
+      gtf_counts<-counts[!(rownames(counts) %in% names(ensembl_map)),]
+      ensembl_counts<-counts[(rownames(counts) %in% names(ensembl_map)),]
+      gene_names<-unlist(ensembl_map[rownames(ensembl_counts)])
+      gene_counts<-DelayedArray::rowsum(ensembl_counts, gene_names)
+      counts<-rbind(gtf_counts, gene_counts)
     }
 
-    if (!is.null(adt.counts)){
-      mat<-as.matrix(adt.counts)
-      cat(paste0("  ADT names: ", paste0(rownames(mat), collapse=", "), "\n"))
-      if(!is.null(hto_regex)){
-        mat<-mat[grepl(hto_regex, rownames(mat)),]
-        cat(paste0("  hto_regex=", hto_regex, ", after filter: ", paste0(rownames(mat), collapse=", "), "\n"))
-      }
-      #remove the .1 suffix due to conflict with rna data
-      rownames(mat)<-gsub("\\.1", "", rownames(mat))
-      cat(paste0("  final ADT names: ", paste0(rownames(mat), collapse=", "), "\n"))
-      #rowsum<-apply(mat>0, 1, sum)
-      #mat<-mat[rowsum > (ncol(mat) / 2),,drop=FALSE]
-      if(nrow(mat) > 0){
-        sobj[["ADT"]] <- CreateAssayObject(counts = mat)
-      }
+    if (species=="Mm") {
+      counts=update_rownames(counts, toMouseGeneSymbol)
     }
-
-    raw_objs[[sample_name]]=sobj
+    if (species=="Hs") {
+      counts=update_rownames(counts, toupper)
+    }
+    sobj = CreateSeuratObject(counts = counts, project = sample_name)
+    sobj$orig.ident <- sample_name
+    rm(counts)
   }
+
+  if (!is.null(adt.counts)){
+    mat<-as.matrix(adt.counts)
+    cat(paste0("  ADT names: ", paste0(rownames(mat), collapse=", "), "\n"))
+    if(!is.null(hto_regex)){
+      mat<-mat[grepl(hto_regex, rownames(mat)),]
+      cat(paste0("  hto_regex=", hto_regex, ", after filter: ", paste0(rownames(mat), collapse=", "), "\n"))
+    }
+    #remove the .1 suffix due to conflict with rna data
+    rownames(mat)<-gsub("\\.1", "", rownames(mat))
+    cat(paste0("  final ADT names: ", paste0(rownames(mat), collapse=", "), "\n"))
+    #rowsum<-apply(mat>0, 1, sum)
+    #mat<-mat[rowsum > (ncol(mat) / 2),,drop=FALSE]
+    if(nrow(mat) > 0){
+      sobj[["ADT"]] <- CreateAssayObject(counts = mat)
+    }
+  }
+
+  if(sample_name %in% names(remove_cells)){
+    cat("processing removing cells from sample ", sample_name, "\n")
+    rcs<-remove_cells[[sample_name]]
+    if(length(rcs) > 0){
+      if(!all(rcs %in% colnames(sobj))){
+        stop(paste0("  failed, not all ", length(rcs), " cells to remove are found in sample ", sample_name))
+      }
+      
+      cat("  removing ", length(rcs), " cells from sample ", sample_name, "\n")
+      valid_cells=colnames(sobj)[!(colnames(sobj) %in% rcs)]
+      sobj=subset(sobj, cells=valid_cells)
+    }
+  }
+
+  raw_objs[[sample_name]]=sobj
 }
 
 sample_names=names(raw_objs)
@@ -312,19 +284,9 @@ for(sample_name in sample_names){
     sobj$orig.cell = colnames(sobj)
   }
 
-  if(!is_qc_data){
-    sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt", assay="RNA")
-    sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo", assay="RNA")
-    sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb", assay="RNA")
-  }
-
-  if(sample_name %in% names(remove_cells)){
-    rcs<-remove_cells[[sample_name]]
-    if(length(rcs) > 0){
-      valid_cells=colnames(sobj)[!(colnames(sobj) %in% rcs)]
-      sobj=subset(sobj, cells=valid_cells)
-    }
-  }
+  sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt", assay="RNA")
+  sobj<-PercentageFeatureSet(object=sobj, pattern=rRNApattern, col.name = "percent.ribo", assay="RNA")
+  sobj<-PercentageFeatureSet(object=sobj, pattern=hemoglobinPattern, col.name="percent.hb", assay="RNA")
 
   #################################################
   #three columns for source of the data
@@ -433,9 +395,6 @@ if(is_seurat_5_plus(rawobj)){
 }
 
 cat("outputing result ... \n")
-
 saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
-
-#rawobj <-readRDS(paste0(outFile, ".rawobj.rds"))
 
 output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)
