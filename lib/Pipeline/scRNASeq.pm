@@ -628,7 +628,7 @@ sub getScRNASeqConfig {
           if (getValue($def, "merge_seurat_object", 0)){
             add_seurat_merge_object($config, $def, $tasks, $target_dir, $seurat_rawdata, $files_def, undef, undef, 0, {});
           }else{
-            add_seurat_rawdata($config, $def, $tasks, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef );
+            add_seurat_rawdata($config, $def, $tasks, $target_dir, $seurat_rawdata, $hto_ref, $hto_sample_file, $files_def, undef, undef, $raw_individual_qc_task, $decontX_ref );
           }
           $is_preprocessed = 0;
         }
