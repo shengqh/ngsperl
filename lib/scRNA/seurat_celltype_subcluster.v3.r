@@ -404,7 +404,6 @@ check_cell_type<-function(subobj, ct_column, filelist, pct, curprefix, species, 
   stopifnot(ct_column %in% colnames(subobj@meta.data))
 
   sxobj=get_filtered_obj(subobj, ct_column)
-  sxnames<-levels(sxobj@meta.data[,ct_column])
 
   g4<-get_dim_plot_labelby(sxobj, reduction="umap", label.by = ct_column, label=T) + ggtitle(ct_column)
   g5<-get_dim_plot_labelby(sxobj, reduction=subumap, label.by = ct_column, label=T) + ggtitle(paste0(subumap, ": ", ct_column))
