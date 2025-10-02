@@ -159,7 +159,7 @@ g<-ggplot(mfinal, aes(x=Sample, y=Count, fill=Read)) +
 ggsave(mapping_png, g, width=mapping_width, height=mapping_height, units="in", dpi=300, bg="white")
 ```
 
-```{r fig.width=mapping_width, fig.height=mapping_height, fig.cap=figRef("mapping_summary", "The statistics of WGBS mapping results")}
+```{r fig.cap=figRef("mapping_summary", "The statistics of WGBS mapping results")}
 include_graphics(mapping_png)
 ```
 
@@ -284,7 +284,7 @@ g2<-ggplot(cov_perc_depth, aes(x=sample, y=Percentage, group = Depth, colour=Dep
 ggsave(cov_png, g2, width=cov_width, height=cov_height, units="in", dpi=300, bg="white")
 ```
 
-```{r fig.width=cov_width, fig.height=cov_height, fig.cap=figRef("coverage_depth_summary", "The Coverage proportion of target bases at different depths")}
+```{r fig.cap=figRef("coverage_depth_summary", "The Coverage proportion of target bases at different depths")}
 include_graphics(cov_png)
 ```
 
@@ -338,7 +338,7 @@ g3<-ggplot(dup_rate, aes(x=Sample, y=duplication_rate)) +
 ggsave(dup_png, g3, width=dup_width, height=dup_height, units="in", dpi=300, bg="white")
 ```
 
-```{r fig.width=dup_width, fig.height=dup_height, fig.cap=figRef("dup_summary", "The duplication rate")}
+```{r fig.cap=figRef("dup_summary", "The duplication rate")}
 include_graphics(dup_png)
 ```
 
@@ -385,7 +385,7 @@ g4<-ggplot(bs_overall_df, aes(x=samples, y=bsrate)) +
 ggsave(bs_png, g4, width=bs_width, height=bs_height, units="in", dpi=300, bg="white")
 ```
 
-```{r fig.width=bs_width, fig.height=bs_height, fig.cap=figRef("bs_summary", "The BS convert rate")}
+```{r fig.cap=figRef("bs_summary", "The BS convert rate")}
 include_graphics(bs_png)
 ```
 
