@@ -75,16 +75,15 @@ g = ggplot(df_long, aes(x = `Sample ID`, y = Value, fill = Metric)) +
   ) +
   theme_bw() +
   theme(
+    legend.position = "top",
     axis.title.x = element_blank(),   # x-axis title
-    axis.title.y = element_text(size = 24),   # y-axis title
-    axis.text.x  = element_text(size = 18, angle = 45, hjust = 1),  # x-axis labels
-    axis.text.y  = element_text(size = 18),   # y-axis labels
-    legend.title = element_text(size = 18),   # legend title
-    legend.text  = element_text(size = 16),   # legend labels
+    axis.title.y = element_text(size = 20),   # y-axis title
+    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.y  = element_text(size = 16),   # y-axis labels
     plot.title   = element_blank() # plot title
   )
 
 mean_read_png = paste0(file_prefix, ".mean_read_comparison.png")
-ggsave(mean_read_png, plot = g, width = 8, height = 4, units = "in", dpi = 300, bg="white")
+ggsave(mean_read_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
 include_graphics(mean_read_png)
 ```
