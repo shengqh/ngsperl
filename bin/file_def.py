@@ -11,7 +11,7 @@ import csv
 from glob import glob
 
 def get_valid_sample_name(old):
-  return re.sub('[ \-*+~]+', '_', old)
+  return re.sub(r'[ \-*+~]+', '_', old)
 
 def get_dir_name(file_name, use_dir_name):
   result = file_name
@@ -89,7 +89,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
     numbers = {}
     max_len = 0
     for sample_name in sorted(result.keys()):
-      digits = re.search('(\d+)$', sample_name)
+      digits = re.search(r'(\d+)$', sample_name)
       if digits:
         numbers[sample_name] = digits.group(1)
         max_len = max(max_len, len(numbers[sample_name]))
@@ -107,7 +107,7 @@ def find_files(logger, source_dir, file_pattern, name_pattern, use_dir_name=0, r
         continue
 
       new_number = number.zfill(max_len)
-      new_name = re.sub('\d+$', new_number, sample_name)
+      new_name = re.sub(r'\d+$', new_number, sample_name)
       #print("%s : %s => %s => %s" % (sample_name, number, new_number, new_name))
       new_result[new_name] = result[sample_name]
 
