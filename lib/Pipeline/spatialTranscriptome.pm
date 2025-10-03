@@ -71,7 +71,7 @@ cp __FILE__ __NAME__.web_summary.html
 }
 
 sub add_spaceranger_summary {
-  my ($config, $def, $target_dir, $spaceranger_task, $tasks) = @_;
+  my ($config, $def, $target_dir, $spaceranger_task, $tasks, $copy_report_task) = @_;
 
 	my $spaceranger_summary_task = "${spaceranger_task}_summary";
 	$config->{$spaceranger_summary_task} = {
@@ -87,6 +87,7 @@ sub add_spaceranger_summary {
       email => getValue($def, "email"),
       affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
 	  },
+	  parameterSampleFile3_ref => [ $copy_report_task, ".html" ],
 	  output_file_ext => ".spaceranger.html",
 	  output_other_ext => ".spaceranger.html",
 	  sh_direct => 0,
@@ -129,7 +130,7 @@ sub getSpatialTranscriptome {
     $config->{raw_spaceranger} = $raw_spaceranger;
 
     my $raw_spaceranger_copy_report_task = add_copy_report($config, $def, $target_dir, "raw_spaceranger", $tasks);
-    my $raw_spaceranger_summary_task = add_spaceranger_summary($config, $def, $target_dir, "raw_spaceranger", $tasks);
+    my $raw_spaceranger_summary_task = add_spaceranger_summary($config, $def, $target_dir, "raw_spaceranger", $tasks, $raw_spaceranger_copy_report_task);
   }
 
   if ($def->{perform_space_ranger}){
@@ -214,7 +215,62 @@ rm -rf __NAME__/SPATIAL_RNA_COUNTER_CS \\
     push (@$tasks, $spaceranger_task);
 
     my $spaceranger_copy_report_task = add_copy_report($config, $def, $target_dir, $spaceranger_task, $tasks);
-    my $spaceranger_summary_task = add_spaceranger_summary($config, $def, $target_dir, $spaceranger_task, $tasks);
+    my $spaceranger_summary_task = add_spaceranger_summary($config, $def, $target_dir, $spaceranger_task, $tasks, $spaceranger_copy_report_task);
+
+    $source_ref = [ $spaceranger_task, ".h5" ];
+  }
+
+  if ($def->{perform_segment_report}){
+    my $segment_report_task = "segment_report";
+    $config->{$segment_report_task} = {
+      class => "CQS::IndividualRmd",
+      target_dir => "$target_dir/$segment_report_task",
+      perform => 1,
+      program => "",
+      check_program => 0,
+      rReportTemplate => "../scRNA/spaceranger_cell_individual.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spaceranger_cell_individual_func.r",
+      option => "
+
+Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('spaceranger_cell_individual.Rmd', output_file='__OUTPUT__')\"
+
+",
+      parameterSampleFile1_ref => $source_ref,
+      parameterSampleFile2 => {
+        email => getValue($def, "email"),
+        affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
+        task_name => getValue($def, "task_name"),
+        Mtpattern => getValue( $def, "Mtpattern" ),
+        rRNApattern => getValue( $def, "rRNApattern" ),
+        regress_by_percent_mt => getValue( $def, "regress_by_percent_mt" ),
+        nFeature_cutoff_min => getValue( $def, "nFeature_cutoff_min" ),
+        nFeature_cutoff_max => getValue( $def, "nFeature_cutoff_max" ),
+        nCount_cutoff => getValue( $def, "nCount_cutoff" ),
+        mt_cutoff => getValue( $def, "mt_cutoff" ),
+        species => getValue( $def, "species" ),
+        resolution => getValue( $def, "resolution" ),
+        pca_dims => getValue( $def, "pca_dims" ),
+        by_sctransform => getValue( $def, "by_sctransform" ),
+        use_sctransform_v2 => getValue( $def, "use_sctransform_v2", 1),
+        markers_file => getValue( $def, "markers_file" ),
+        curated_markers_file => getValue( $def, "curated_markers_file" ),
+        remove_subtype => getValue( $def, "remove_subtype" ),
+        HLA_panglao5_file => getValue( $def, "HLA_panglao5_file" ),
+        bubblemap_file => getValue( $def, "bubblemap_file" ),
+        celltype_predictmethod => getValue( $def, "celltype_predictmethod", "cta" ),
+      },
+      no_prefix => 1,
+      sh_direct => 1,
+      no_docker => 1,
+      output_to_same_folder => 0,
+      output_file_prefix => ".segment_report.html",
+      output_ext => ".segment_report.html",
+      pbs => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      }
+    };
+    push (@$tasks, $segment_report_task);
   }
 
   if ($def->{perform_RCTD}){

@@ -1,0 +1,111 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc: true
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+source("scRNA_func.r")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+
+nFeature_cutoff_min = as.numeric(myoptions$nFeature_cutoff_min)
+nFeature_cutoff_max = as.numeric(myoptions$nFeature_cutoff_max)
+nCount_cutoff = as.numeric(myoptions$nCount_cutoff)
+mt_cutoff = as.numeric(myoptions$mt_cutoff)
+resolution = as.numeric(myoptions$resolution)
+pca_dims = as.numeric(myoptions$pca_dims)
+Mtpattern = myoptions$Mtpattern
+rRNApattern = myoptions$rRNApattern
+Remove_Mt_rRNA = FALSE
+species = myoptions$species
+celltype_predictmethod = myoptions$celltype_predictmethod
+markerfile = myoptions$markers_file
+Ensemblfile = myoptions$Ensemblfile
+bubblemap_file = myoptions$bubblemap_file
+
+Cutoff = list(nFeature_cutoff_min = nFeature_cutoff_min,
+              nFeature_cutoff_max = nFeature_cutoff_max,
+              nCount_cutoff = nCount_cutoff,
+              mt_cutoff = mt_cutoff)
+
+if(is.null(myoptions$affiliation)) {
+  myoptions$affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
+}
+
+h5_files<-read_file_map("fileList1.txt", do_unlist=FALSE)
+sample_name=names(h5_files)[1]
+SampleInfo=list(SampleId=sample_name, countfile=h5_files[[sample_name]])
+```
+
+---
+title: "SpaceRanger cell segmentation report - `r sample_name`"
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r}
+#load the library and set the parameters and load our own function
+library(Seurat)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(pheatmap)
+library(RCurl)
+library(scider)
+library(SpatialExperiment)
+```
+
+# cell type annotation parameters
+
+```{r, echo=F}
+add_Subtype=FALSE ## add subtype signature
+source("spaceranger_cell_individual_func.r")
+
+immune_genes<-c("IFNG","IFNGR1","IFNGR2","IL10","IL12A","IL12B","IL12RB1","IL12RB2","IL13","IL17A","IL17F","IL18","IL18R1","IL18RAP","IL1A","IL1B","IL2","IL21","IL21R","IL22","IL23A","IL23R","IL2RG","IL4","IL4R","IL5","IL6","JUN","NFKB1","RELA","RORA","RORC","S100A8","S100A9","STAT1","STAT3","STAT4","STAT6","TGFB1","TGFB2","TGFB3","TNF","CDC45","CD3E" , "CD4"  ,  "CD8A" ,  "LAMP1" , "CD69" ,  "CD44"  , "IL2RA"  ,"LY6G"  , "CDK11B", "LY6C"  , "CD14" ,  "PDCD1",  "LAG3" ,  "DDX3Y")
+tcell_genes<-c("GNLY","GZMB","GZMK","IFNG","NKG7","CTLA4","PDCD1","TIGIT","HAVCR2","LAG3","BTLA","PDPN","CD160","GP49A","LILRB4","CD274","CD200","CD244","PILRA","SIRPB1","LAIR1","CEACAM1","KLRA7","KLRA3","KLRA9","PTGER4","KLRD1","KLRC1","PROCR","CD28","CD226","TNFRSF4","TNFRSF9","ICOS","CD27","TNFSF14","CD80","TNFSF4","CD86","TNFSF11","CD276","CD40LG","TNFRSF18","CD3D","CD3E","CD4","CD8A","CD8B")
+knownmarkers <- unique(c(immune_genes,tcell_genes))
+```
+
+```{r}
+
+object<-preprocess(SampleInfo,Cutoff,Mtpattern,resolution=resolution,
+                    Remove_Mt_rRNA,celltype_predictmethod,transpose=transpose,
+                    analysis_individual=analysis_individual,Ensemblfile=Ensemblfile)
+cat("\n\n### ", "Fig.11 Marker genes scaled expression in each cluster\n\n")
+cat("![](",paste0(workdir,"/data/heatmap_of_markers_withinscaledata.png"),")")
+cat("![](",paste0(workdir,"/data/heatmap_of_markers_withindata.png"),")")
+saveRDS(object,file=paste0("data/",SampleInfo[i,"SampleId"],"_seurat.rds"))
+spe<-scider_process(SampleInfo[i,],object)
+saveRDS(spe,file=paste0("data/",SampleInfo[i,"SampleId"],"_spe.rds"))
+```
+
+
+
