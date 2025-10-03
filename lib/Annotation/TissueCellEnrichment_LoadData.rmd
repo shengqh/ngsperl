@@ -5,9 +5,14 @@ tabula_file = "/data/cqs/references/Tabula_Sapiens/cellxgene_10x3.rds"
 ```
 
 ```{r}
-stopifnot(exists("tau_file"))
-stopifnot(exists("gtex_file"))
-stopifnot(exists("tabula_file"))
+if(!exists("perform_tau")) perform_tau=TRUE
+if(!exists("perform_gtex")) perform_gtex=TRUE
+if(!exists("perform_tabula")) perform_tabula=TRUE
+
+if(perform_tau) stopifnot(exists("tau_file"))
+if(perform_gtex) stopifnot(exists("gtex_file"))
+if(perform_tabula) stopifnot(exists("tabula_file"))
+
 stopifnot(exists("all_genes"))
 stopifnot(exists("all_genes_label"))
 all_genes_fn=gsub('[/:()?\ ]+', "_", all_genes_label)
@@ -55,11 +60,10 @@ dataRankTest=function(selectedGenes,alldata,universGenes=NULL,nRep=1000,returnEx
 }
 ```
 
-# Read tau file
+```{r eval=perform_tau}
+cat("\n# Read tau file\n\n")
+cat("Tau file was shared by Dr. Kendall Jensen team.\n\n")
 
-Tau file was shared by Dr. Kendall Jensen team.
-
-```{r}
 tau_df=fread(tau_file, data.table=FALSE)
 
 tau_df$gene_biotype=factor(tau_df$gene_biotype, levels=c("protein_coding", "long_noncoding", "pseudogene", "short_noncoding", "TEC"))
@@ -72,11 +76,9 @@ tau_df=tau_df[!duplicated(tau_df$gene_name),] |>
   tibble::column_to_rownames("gene_name")
 
 print_table(head(tau_df))
-```
 
-## Overlap between tau genes and `r all_genes_label` genes
+cat(paste0("## Overlap between tau genes and ", all_genes_label, "genes.\n\n"))
 
-```{r}
 genes = list(rownames(tau_df), unique(all_genes))
 names(genes)=c("Tau", all_genes_label)
 
@@ -87,22 +89,19 @@ ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, b
 include_graphics(venn_png)
 ```
 
-# Read protein atlas GTEx gene expression file
+```{r, eval=perform_gtex}
+cat("\n# Read protein atlas GTEx gene expression file\n\n")
+cat("\nThe file was downloaded from https://www.proteinatlas.org/download/tsv/rna_tissue_gtex.tsv.zip. (v24.0)\n\n")
 
-The file was downloaded from https://www.proteinatlas.org/download/tsv/rna_tissue_gtex.tsv.zip. (v24.0)
-
-```{r}
 gtex=fread(gtex_file)
 colnames(gtex)[2]="Gene_name"
 print_table(head(gtex), row.names=FALSE)
 
 gtex_mat=reshape2::acast(gtex, Gene_name~Tissue, fun.aggregate=sum, value.var="nTPM")
 gtex_mat=gtex_mat[rowSums(gtex_mat)>0, ]
-```
 
-## Overlap between GTEx genes and `r all_genes_label` genes
+cat("\n## Overlap between GTEx genes and ", all_genes_label, " genes\n\n")
 
-```{r}
 genes = list(rownames(gtex_mat), unique(all_genes))
 names(genes)=c("GTEx", all_genes_label)
 
@@ -113,23 +112,18 @@ ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, b
 include_graphics(venn_png)
 ```
 
-# Load Tabula Sapiens snRNA dataset
+```{r eval=perform_tabula}
+cat("\n# Load Tabula Sapiens snRNA dataset\n\n")
+cat("The tabula sapiens single cell transcriptomic data was downloaded from [cellxgene](https://datasets.cellxgene.cziscience.com/981bcf57-30cb-4a85-b905-e04373432fef.rds).\n\n")
+cat("Only the data from 10x 3' platform was used in this report.\n\n")
+cat("Read tabula sapiens data from ",basename(tabula_file), ".\n\n")
 
-The tabula sapiens single cell transcriptomic data was downloaded from [cellxgene](https://datasets.cellxgene.cziscience.com/981bcf57-30cb-4a85-b905-e04373432fef.rds).
-
-Only the data from 10x 3' platform was used in this report.
-
-Read tabula sapiens data from `r basename(tabula_file)`.
-
-```{r}
 if(!exists("tabula_obj")){
   tabula_obj=readRDS(tabula_file)
 }
-```
 
-## Overlap between Tabula Sapiens genes and `r all_genes_label` genes
+cat("\n## Overlap between Tabula Sapiens genes and ", all_genes_label, " genes\n\n")
 
-```{r}
 genes = list(rownames(tabula_obj), unique(all_genes))
 names(genes)=c("Tabula snRNA", all_genes_label)
 
@@ -138,13 +132,10 @@ g=ggvenn(genes)
 venn_png = paste0("tabula_", all_genes_fn, ".genes.venn.png")
 ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, bg="white")
 include_graphics(venn_png)
-```
 
-## Cell type UMAP
+cat("\n## Cell type UMAP\n\n")
+cat("Only the cell types with at least 1% of total cells were shown in the UMAP plot.\n\n")
 
-Only the cell types with at least 1% of total cells were shown in the UMAP plot.
-
-```{r}
 perc_1_cell=nrow(tabula_obj@meta.data) * 0.01
 ct=as.data.frame(table(tabula_obj$cell_type)) |>
   dplyr::filter(Freq >= perc_1_cell) |>

@@ -5,6 +5,18 @@ stopifnot(exists("tau_df"))
 stopifnot(exists("gtex_mat"))
 stopifnot(exists("tabula_obj"))
 
+if(!exists('transpose_heatmap')){
+  transpose_heatmap=FALSE
+}
+
+if(!exists("tau_threshold")){
+  tau_threshold=0.6
+}
+
+if(!exists("tau_filter_tissue")){
+  tau_filter_tissue=FALSE
+}
+
 if(!exists("perform_significance_test")){
   perform_significance_test=FALSE
 }
@@ -12,12 +24,23 @@ if(!exists("perform_significance_test")){
 
 ## Tau heatmap
 
-In order to make the figure more readable, we only show genes with tau > 0.6.
+In order to make the figure more readable, we only show genes with tau >= `r tau_threshold`.
+`r if(tau_filter_tissue){paste0(" We also filter out tissues without any gene with tau >= ", tau_threshold, ".")}`
 
 ```{r}
 genes_tau = tau_df[intersect(target_genes, rownames(tau_df)), ] |>
-  dplyr::filter(tau > 0.6) |>
+  dplyr::filter(tau >= tau_threshold) |>
   dplyr::select(-tau)
+
+if(tau_filter_tissue){
+  genes_tau = genes_tau[, apply(genes_tau, 2, max) >= tau_threshold, drop=FALSE]
+}
+
+print_table(genes_tau, byDT=TRUE, row.names=TRUE)
+
+if(transpose_heatmap){
+  genes_tau=t(genes_tau)
+}
 
 heatmap_png = paste0(file_prefix, ".tau.heatmap.png")
 
@@ -44,6 +67,10 @@ if(nrow(genes_gtex) >= 30){
 }
 
 genes_gtex=calc_z_scores(genes_gtex)
+
+if(transpose_heatmap){
+  genes_gtex=t(genes_gtex)
+}
 
 heatmap_png = paste0(file_prefix, ".gtex.heatmap.png")
 
@@ -90,7 +117,7 @@ if(!file.exists(score_meta_rds)){
 }
 ```
 
-### UMAP plot
+### UMAP of Activity score
 
 ```{r}
 g=FeaturePlot_scCustom(score_obj, 
@@ -106,7 +133,7 @@ ggsave(ActivityScore_png, g, width=5, height=5, units="in", dpi=300, bg="white")
 include_graphics(ActivityScore_png)
 ```
 
-### Violin plot by tissue
+### Violin plot by tissue ranked by median activity score
 
 ```{r}
 gd=FetchData(score_obj, c("tissue", "ActivityScore1"))
@@ -124,13 +151,11 @@ g=ggplot(gd, aes(x=tissue, y=ActivityScore1)) +
         legend.position = "none")
 
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.tissue.png")
-ggsave(ActivityScore_png, g, width=7, height=5, units="in", dpi=300, bg="white")
+ggsave(ActivityScore_png, g, width=5, height=3, units="in", dpi=300, bg="white")
 include_graphics(ActivityScore_png)       
 ```   
 
-### Violin plot by cell types 
-
-The cell types are ranked by median activity score.
+### Violin plot by cell type ranked by median activity score
 
 ```{r}
 gd=FetchData(score_obj, c("cell_type", "ActivityScore1"))
@@ -149,6 +174,38 @@ g=ggplot(gd, aes(x=cell_type, y=ActivityScore1)) +
         legend.position = "none")
 
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.cell_type.png")
-ggsave(ActivityScore_png, g, width=10, height=7, units="in", dpi=300, limitsize=FALSE, bg="white")
+ggsave(ActivityScore_png, g, width=15, height=7, units="in", dpi=300, limitsize=FALSE, bg="white")
 include_graphics(ActivityScore_png)
+```
+
+### UMAP of Activity score and cell types
+
+Top 10 cell types with highest median activity score and all cell types with at least 1% of cells are shown in UMAP.
+
+```{r}
+gd=FetchData(score_obj, c("cell_type", "ActivityScore1"))
+gd$cell_type=factor(gd$cell_type, levels=rev(names(sort(tapply(gd[,"ActivityScore1"], gd$cell_type, median)))))
+
+view_cell_types=unique(c(levels(gd$cell_type)[1:10], unique(ct_obj$cell_type)))
+
+view_obj=score_obj[, score_obj$cell_type %in% view_cell_types]
+
+g1=FeaturePlot_scCustom(view_obj, 
+      features='ActivityScore1', 
+      pt.size=0.5,
+      aspect_ratio=1,
+      min.cutoff=quantile(view_obj@meta.data$ActivityScore1, 0.01),
+      max.cutoff=quantile(view_obj@meta.data$ActivityScore1, 0.99)) +
+      xlab("UMAP_1") + ylab("UMAP_2") + 
+      theme(plot.title=element_blank())
+
+g2=get_dim_plot_labelby(view_obj, label.by="cell_type") + 
+   theme(plot.title=element_blank()) +
+   guides(color = guide_legend(title = "Cell type", ncol = 2, override.aes = list(size=4)))
+
+g=g1+g2 + plot_layout(ncol=2) & theme(legend.position = 'right')
+
+tabula_score_celltype_umap_png=ActivityScore_png=paste0(file_prefix, ".tabula.umap.score.cell_type.png")
+ggsave(tabula_score_celltype_umap_png, g, width=20, height=6.5, units="in", dpi=300, bg="white")
+include_graphics(tabula_score_celltype_umap_png)
 ```
