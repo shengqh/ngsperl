@@ -112,6 +112,8 @@ deseq2<-plotData$deseq2
 
 cat(paste0("### ", tabRef("enriched", plotData$category), "\n\n"))
 
+enriched = enriched |> dplyr::filter(!is.na(FDR))
+
 if(all(enriched$FDR >= 0.05)){
 	cat(paste0('\n#### <span style="color:red">WARNING: no geneset is significantly enriched, display top 10.</span>\n\n'))
 }

@@ -21,6 +21,8 @@ deseq2<-plotData$deseq2
 
 cat(paste0(webgestalt_intent, "# Overview table\n\n"))
 
+enriched = enriched |> dplyr::filter(!is.na(FDR))
+
 if(all(enriched$FDR >= 0.05)){
 	cat('\n\n<mark>WARNING: no geneset is significantly enriched, display top 10.</mark>\n\n')
 }else{
