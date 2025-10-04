@@ -1,9 +1,10 @@
 ```{r}
 stopifnot(exists("target_genes"))
 stopifnot(exists("file_prefix"))
-stopifnot(exists("tau_df"))
-stopifnot(exists("gtex_mat"))
-stopifnot(exists("tabula_obj"))
+
+if(perform_tau) stopifnot(exists("tau_df"))
+if(perform_gtex) stopifnot(exists("gtex_mat"))
+if(perform_tabula) stopifnot(exists("tabula_obj"))
 
 if(!exists('transpose_heatmap')){
   transpose_heatmap=FALSE
@@ -22,47 +23,80 @@ if(!exists("perform_significance_test")){
 }
 ```
 
-## Tau heatmap
+```{r eval=perform_tau}
+cat("\n## Tau heatmap\n\n")
 
-In order to make the figure more readable, we only show genes with tau >= `r tau_threshold`.
-`r if(tau_filter_tissue){paste0(" We also filter out tissues without any gene with tau >= ", tau_threshold, ".")}`
-
-```{r}
 genes_tau = tau_df[intersect(target_genes, rownames(tau_df)), ] |>
   dplyr::filter(tau >= tau_threshold) |>
   dplyr::select(-tau)
 
+cat("\nIn order to make the figure more readable, we only show ", nrow(genes_tau), " genes with tau >= ", tau_threshold, ".")
+
 if(tau_filter_tissue){
+  cat(paste0(" We also filter out tissues without any gene with tau >= ", tau_threshold, ".\n"))
   genes_tau = genes_tau[, apply(genes_tau, 2, max) >= tau_threshold, drop=FALSE]
 }
 
 print_table(genes_tau, byDT=TRUE, row.names=TRUE)
 
 if(transpose_heatmap){
-  genes_tau=t(genes_tau)
+  heatmap_genes_tau=t(genes_tau)
+}else{
+  heatmap_genes_tau=genes_tau
 }
 
 heatmap_png = paste0(file_prefix, ".tau.heatmap.png")
 
 ignored = draw_heatmap_png(heatmap_png, 
-  as.matrix(genes_tau), 
+  as.matrix(heatmap_genes_tau), 
   name="tau", 
   show_row_names=TRUE, 
   show_column_names=TRUE, 
   cluster_rows=TRUE, 
   cluster_columns=TRUE,
   show_column_dend=TRUE,
-  save_rds=FALSE)
+  save_rds=FALSE,
+  add_height_inch=1)
 include_graphics(heatmap_png)
 ```
 
-## Protein Atlas GTEx heatmap
+```{r eval=perform_tau}
+library(UpSetR)
 
-```{r}
+#genes_tau is a data frame with row as genes and column as tissues, value as tau
+#we will convert it to a list of genes for each tissue with tau >= tau_threshold
+genes_list = list()
+for(tissue in colnames(genes_tau)){
+  genes_list[[tissue]] = rownames(genes_tau)[genes_tau[[tissue]] >= tau_threshold]
+}
+count_tbl=data.frame(Tissue=names(genes_list), EnrichedGenes=sapply(genes_list, length)) |>
+  dplyr::arrange(desc(EnrichedGenes))
+
+cat("\n## Tissue specific gene count table\n\n")
+
+print_table(count_tbl, byDT=TRUE, row.names=FALSE)
+
+cat("\n## Tissue specific gene Upset plot\n\n")
+
+upset_png = paste0(file_prefix, ".tau.upset.png")
+png(upset_png, width=5, height=5, units="in", res=300) 
+g = upset(fromList(genes_list), 
+     sets = names(genes_list),
+     keep.order = FALSE,
+     order.by = "freq",
+     mb.ratio = c(0.3, 0.7))
+print(g)
+ignored=dev.off()
+include_graphics(upset_png)
+```
+
+```{r eval=perform_gtex}
+cat("\n## Protein Atlas GTEx heatmap\n\n")
+
 genes_gtex = gtex_mat[intersect(target_genes, rownames(gtex_mat)), ]
 
 if(nrow(genes_gtex) >= 30){
-  cat("In order to make the figure more readable, we only show genes with max nTPM > 10.\n")
+  cat("In order to make the figure more readable, we only show ", nrow(genes_gtex), " genes with max nTPM > 10.\n")
   genes_gtex = genes_gtex[apply(genes_gtex, 1, max) > 10,,drop=FALSE ]
 }
 
@@ -82,11 +116,12 @@ ignored = draw_heatmap_png(heatmap_png,
   cluster_rows=TRUE, 
   cluster_columns=TRUE,
   show_column_dend=TRUE,
-  save_rds=FALSE)
+  save_rds=FALSE,
+  add_height_inch=2)
 include_graphics(heatmap_png)
 ```
 
-```{r eval=perform_significance_test}
+```{r eval=perform_gtex & perform_significance_test}
 df = dataRankTest(selectedGenes=target_genes, 
                   alldata=gtex_mat, 
                   universGenes=NULL) |>
@@ -95,11 +130,10 @@ df = dataRankTest(selectedGenes=target_genes,
 print_table(df, byDT=TRUE, row.names=TRUE)
 ```
 
-## Tabula Sapiens Activity Score
-
-Now calculated the gene activity score using Seurat function `AddModuleScore`.
-
 ```{r}
+cat("\n## Tabula Sapiens Activity Score\n\n")
+cat("Now calculated the gene activity score using Seurat function `AddModuleScore`.\n")
+
 score_genes=list(genes_tabula = intersect(target_genes, rownames(tabula_obj)))
 
 score_meta_rds=paste0(file_prefix, ".ActivityScore.meta.rds")
@@ -115,11 +149,9 @@ if(!file.exists(score_meta_rds)){
   score_obj=tabula_obj
   score_obj@meta.data=readRDS(score_meta_rds)
 }
-```
 
-### UMAP of Activity score
+cat("\n### UMAP of Activity score\n\n")
 
-```{r}
 g=FeaturePlot_scCustom(score_obj, 
             features='ActivityScore1', 
             pt.size=0.5,
@@ -131,11 +163,9 @@ g=FeaturePlot_scCustom(score_obj,
 ActivityScore_png=paste0(file_prefix, ".tabula.umap.png")
 ggsave(ActivityScore_png, g, width=5, height=5, units="in", dpi=300, bg="white")
 include_graphics(ActivityScore_png)
-```
 
-### Violin plot by tissue ranked by median activity score
+cat("\n### Violin plot by tissue ranked by median activity score\n\n")
 
-```{r}
 gd=FetchData(score_obj, c("tissue", "ActivityScore1"))
 
 gd$tissue=factor(gd$tissue, levels=rev(names(sort(tapply(gd[,"ActivityScore1"], gd$tissue, median)))))
@@ -153,11 +183,9 @@ g=ggplot(gd, aes(x=tissue, y=ActivityScore1)) +
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.tissue.png")
 ggsave(ActivityScore_png, g, width=5, height=3, units="in", dpi=300, bg="white")
 include_graphics(ActivityScore_png)       
-```   
 
-### Violin plot by cell type ranked by median activity score
+cat("\n### Violin plot by cell type ranked by median activity score\n\n")
 
-```{r}
 gd=FetchData(score_obj, c("cell_type", "ActivityScore1"))
 
 gd$cell_type=factor(gd$cell_type, levels=rev(names(sort(tapply(gd[,"ActivityScore1"], gd$cell_type, median)))))
@@ -176,17 +204,15 @@ g=ggplot(gd, aes(x=cell_type, y=ActivityScore1)) +
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.cell_type.png")
 ggsave(ActivityScore_png, g, width=15, height=7, units="in", dpi=300, limitsize=FALSE, bg="white")
 include_graphics(ActivityScore_png)
-```
 
-### UMAP of Activity score and cell types
+cat("\n### UMAP of Activity score and cell types\n\n")
 
-Top 10 cell types with highest median activity score and all cell types with at least 1% of cells are shown in UMAP.
+cat("Top 5 cell types with highest median activity score and all cell types with at least 1% of cells are shown in UMAP.\n")
 
-```{r}
 gd=FetchData(score_obj, c("cell_type", "ActivityScore1"))
 gd$cell_type=factor(gd$cell_type, levels=rev(names(sort(tapply(gd[,"ActivityScore1"], gd$cell_type, median)))))
 
-view_cell_types=unique(c(levels(gd$cell_type)[1:10], unique(ct_obj$cell_type)))
+view_cell_types=unique(c(levels(gd$cell_type)[1:5], unique(ct_obj$cell_type)))
 
 view_obj=score_obj[, score_obj$cell_type %in% view_cell_types]
 
