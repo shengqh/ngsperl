@@ -1004,7 +1004,7 @@ get_text_width <- function(txt, font_family, font_size = 10, units = "inches", r
   png(tmp_file, res=res)
   par(family = font_family, ps = font_size)
   ret = strwidth(txt, units = units)
-  dev.off()
+  ignored = dev.off()
   unlink(tmp_file)
 
   return(ret)
@@ -1022,7 +1022,7 @@ get_text_height <- function(font_family, font_size = 10, units = "inches", res=3
   png(tmp_file, res=res)
   par(family = font_family, ps = font_size)
   ret = strwidth('M', units = units)
-  dev.off()
+  ignored = dev.off()
   unlink(tmp_file)
 
   return(ret)
@@ -1077,6 +1077,7 @@ draw_heatmap_png<-function( filepath,
                             save_pdf=FALSE,
                             add_width_inch=0,
                             add_height_inch=0,
+                            row_names_gp=gpar(fontface = "bold"),
                             column_names_gp=gpar(fontface = "bold"),
                             legend_gp=gpar(fontface = "bold"),
                             show_row_names, 
@@ -1110,6 +1111,7 @@ draw_heatmap_png<-function( filepath,
               use_raster=FALSE,
               heatmap_width=possible_width,
               heatmap_height=possible_height,
+              row_names_gp = row_names_gp,
               column_names_gp = column_names_gp,
               heatmap_legend_param = list(title_gp = legend_gp),
               ...)
