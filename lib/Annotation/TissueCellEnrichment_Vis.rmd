@@ -79,12 +79,12 @@ print_table(count_tbl, byDT=TRUE, row.names=FALSE)
 cat("\n## Tissue specific gene Upset plot\n\n")
 
 upset_png = paste0(file_prefix, ".tau.upset.png")
-png(upset_png, width=5, height=5, units="in", res=300) 
+png(upset_png, width=6, height=4.5, units="in", res=300) 
 g = upset(fromList(genes_list), 
      sets = names(genes_list),
      keep.order = FALSE,
      order.by = "freq",
-     mb.ratio = c(0.3, 0.7))
+     mb.ratio = c(0.35, 0.65))
 print(g)
 ignored=dev.off()
 include_graphics(upset_png)
