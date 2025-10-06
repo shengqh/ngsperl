@@ -2476,7 +2476,7 @@ get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell
 
     gdismap<-unlist(split(ddata$DisplayGroup, ddata$Sample))
 
-    cell_obj@meta.data$DisplayGroup=factor(gdismap[cell_obj$orig.ident], levels=display_group_levels)
+    cell_obj@meta.data$DisplayGroup=factor(gdismap[as.character(cell_obj$orig.ident)], levels=display_group_levels)
   }
 
   logFC<-sigout[sig_gene, "logFC"]
@@ -2484,14 +2484,15 @@ get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell
 
   stopifnot(sig_gene %in% rownames(cell_obj))
 
-  geneexp=FetchData(cell_obj,vars=c(sig_gene))
-  colnames(geneexp)<-"Gene"
-  colorRange<-c(min(geneexp), max(geneexp))
+  geneexp=FetchData(cell_obj,vars=c(sig_gene, "DisplayGroup", "orig.ident")) |>
+    dplyr::rename(Gene=1, Group=2, Sample=3) |>
+    dplyr::arrange(Group, Sample) 
+    
+  geneexp$Sample=factor(geneexp$Sample, levels=unique(geneexp$Sample))
+
+  colorRange<-c(min(geneexp$Gene), max(geneexp$Gene))
   fix.sc <- scale_color_gradientn(colors=c("lightgrey", "red"), limits = colorRange)
-  
-  geneexp$Group<-cell_obj$DisplayGroup
-  geneexp$Sample<-cell_obj$orig.ident
-  
+
   title<-paste0(sig_gene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
   
   if(is_between_cluster){
