@@ -205,13 +205,13 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
 
         volcano_png<-paste0(cur_prefix, ct_comp_name, ".volcano.png")
         if(file.exists(volcano_png)){
-          result<-paste0(result,"\n#### Volcano plot\n\n")
+          result<-paste0(result,"\n### Volcano plot\n\n")
           result<-paste0(result, getFigure(volcano_png))
         }
 
         top_gene_png<-paste0(cur_prefix, ct_comp_name, ".top_1_gene.png")
         if(file.exists(top_gene_png)){
-          result<-paste0(result,"\n#### Top 1 gene plot\n\n")
+          result<-paste0(result,"\n### Top 1 gene plot\n\n")
           result<-paste0(result, getFigure(top_gene_png))
         }
       }
