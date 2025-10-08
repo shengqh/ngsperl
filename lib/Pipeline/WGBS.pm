@@ -85,6 +85,7 @@ sub getConfig {
   my $HOMER_perlFile = getValue($def, "HOMER_perlFile");
   my $addqual_pythonFile = dirname(__FILE__) . "/../Methylation/add_qual.py";
   my $picard = getValue($def, "picard");
+  my $gatk = getValue($def, "gatk");
   my $interval_list = getValue($def, "interval_list");
 
   # my $trimgalore_task = "trimgalore";
@@ -108,14 +109,16 @@ sub getConfig {
   my $methylation_key = "methylation_key";
 
   my $abismal_task = "abismal";
+  my $abismal_class = $def->{abismal_not_filter_intervals} ? "Alignment::Abismal" : "Alignment::AbismalFilterIntervals";
   $config->{$abismal_task} = {
-    class      => "Alignment::Abismal",
+    class      => $abismal_class,
     perform    => 1,
     option     => "",
     thread     => $thread,
     target_dir => "${target_dir}/" . getNextFolderIndex($def) . "abismal",
     chr_fasta    => $chr_fasta,
     picard     => $picard,
+    gatk      => $gatk,
     interval_list => $interval_list,
     addqual_pythonFile => $addqual_pythonFile,
     abismal_index => $abismal_index,
@@ -139,7 +142,7 @@ sub getConfig {
     option        => "",
     chr_fasta       => $chr_fasta,
     chr_size_file => $chr_size_file,
-    source_ref    => ["abismal", ".uniq.bam"],
+    source_ref    => ["abismal", ".intervals.uniq.addqual.bam\$"],
     dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
     docker_prefix => "dnmtools_",
     pbs           => {
