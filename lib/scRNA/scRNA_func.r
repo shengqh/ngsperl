@@ -3619,15 +3619,31 @@ process_move=function(move_formula, move_parts, cur_meta){
     stop(paste0("column ", move_column, " not exists"))
   }
 
+  move_all=move_celltypes_str == "-1" | move_celltypes_str == "*"
+
   if(move_cluster == "-1" | move_cluster == "*"){
-    is_move = cur_meta[,move_column] %in% move_celltypes
+    if (move_all){
+      is_move = rep(TRUE, nrow(cur_meta))
+    }else{
+      is_move = cur_meta[,move_column] %in% move_celltypes
+    }
   }else{
-    is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
+    if (move_all){
+      is_move = cur_meta$seurat_clusters_str==move_cluster
+    }else{
+      is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
+    }
   }
 
-  # even the cells are moved before, we still need to move them again if it is not deleted
-  #final_move = is_move & (!cur_meta$is_moved)
-  final_move = is_move & cur_meta$seurat_clusters[is_move] >= -1
+  if(move_all){
+    # if the cells are moved, we don't move them again
+    final_move = is_move & (!cur_meta$is_moved)
+  }else{
+    # even the cells are moved before, we still need to move them again if it is not deleted
+    # For example, we move cells to T cells by SingleR, 
+    # then we want to move some of them to B cells by Azimuth.
+    final_move = is_move & cur_meta$seurat_clusters[is_move] >= -1
+  }
 
   move_cells=sum(final_move)
 
@@ -3636,9 +3652,9 @@ process_move=function(move_formula, move_parts, cur_meta){
     cur_meta$seurat_clusters_str<-as.character(cur_meta$seurat_clusters)        
   }else{
     cur_meta$cur_layer[final_move] = to_cluster
-    cur_meta$is_moved[final_move] = TRUE
   }
   cat("       cells moved:", move_cells, "\n")
+  cur_meta$is_moved[final_move] = TRUE
 
   return(cur_meta)
 }
