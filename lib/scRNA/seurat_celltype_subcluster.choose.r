@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='VK13010_mouse_kidney'
+outFile='CosMx'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn/result/VK13010_mouse_kidney.final.rds'
-parFile2='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_2_subcluster/result/VK13010_mouse_kidney.meta.rds'
-parFile3='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/essential_genes/result/VK13010_mouse_kidney.txt'
-parFile4='/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_2_subcluster/result/VK13010_mouse_kidney.files.csv'
+parFile1='/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/nd_seurat_fastmnn/result/CosMx.final.rds'
+parFile2='/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/nd_seurat_fastmnn_dr0.5_2_subcluster/result/CosMx.meta.rds'
+parFile3='/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/essential_genes/result/CosMx.txt'
+parFile4='/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/nd_seurat_fastmnn_dr0.5_2_subcluster/result/CosMx.files.csv'
 
 
-setwd('/nobackup/h_cqs/shengq2/temp/20250612_VK13010_scRNA_mouse_kidney/cellbender_nd_seurat_fastmnn_dr0.1_3_choose/result')
+setwd('/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/nd_seurat_fastmnn_dr0.5_3_choose/result')
 
 ### Parameter setting end ###
 
@@ -156,7 +156,9 @@ if(!all(names(clcounts) %in% best_res_tbl$V3)){
 remove_cts<-best_res_tbl$V3[best_res_tbl$V2=="resolution" & best_res_tbl$V1 == "-1"]
 if(length(remove_cts) > 0){
   cells<-colnames(obj)[!(unlist(obj[[output_layer]]) %in% remove_cts)]
+  cat("remove", ncol(obj) - length(cells), "cells of cell types:", paste0(remove_cts, collapse=","), "\n")
   obj<-subset(obj, cells=cells)
+  best_res_tbl<-best_res_tbl[!(best_res_tbl$V3 %in% remove_cts),,drop=FALSE]
 }
 
 if(output_heatmap){
@@ -184,9 +186,7 @@ writeLines(previous_celltypes, paste0(outFile, ".orig_cell_types.txt"))
 
 wrong_ct=best_res_tbl |> dplyr::filter(!V3 %in% previous_celltypes)
 if(nrow(wrong_ct) > 0){
-  print(paste0("those choose definition were defined but the cell types not exists.", ))
-  print(wrong_ct)
-  stop("wrong cell types stop!")
+  stop(paste0("those cell types in the choose definition are not exists:", paste0(wrong_ct$V3, collapse=",")))
 }
 
 DefaultAssay(obj)<-assay
@@ -228,7 +228,7 @@ reorder_seurat_clusters<-function(cur_meta) {
 get_best_resolution=function(best_res_row){
   if(nrow(best_res_row) > 0){
     best_res_str=subset(best_res_row, V2 == "resolution")$V1
-    best_res=as.numeric(best_res_str)
+    best_res=suppressWarnings(as.numeric(best_res_str))
     if(is.na(best_res)){
       best_res=best_res_str
     }
@@ -240,7 +240,7 @@ get_best_resolution=function(best_res_row){
 
 meta$seurat_clusters=-1
 cluster_index=0
-pct<-previous_celltypes[3]
+pct<-previous_celltypes[1]
 for(pct in previous_celltypes){
   cat(pct, "\n")
 
@@ -667,4 +667,3 @@ ggsave( paste0( prefix, ".seurat_cell_type.top10.heatmap.png"),
         limitsize=FALSE)
 
 cat("done ...\n")
-
