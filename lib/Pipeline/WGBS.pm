@@ -134,6 +134,33 @@ sub getConfig {
   };
   push(@$tasks, $abismal_task);
 
+  my $abismal_summary_task = "abismal_summary";
+  $config->{$abismal_summary_task} = {
+    class              => "CQS::UniqueRmd",
+    perform            => 1,
+    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "$abismal_summary_task",
+    report_rmd_file => "../Alignment/AbismalSummary.rmd",
+    additional_rmd_files => "../CQS/reportFunctions.R;../CQS/countTableVisFunctions.R",
+    option => "",
+    parameterSampleFile1_ref => [ $abismal_task ],
+    parameterSampleFile2 => {
+      task_name => getValue($def, "task_name"),
+      email => getValue($def, "email"),
+      affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
+    },
+    suffix => ".abismal",
+    output_file_ext => ".abismal.html",
+    can_result_be_empty_file => 0,
+    sh_direct   => 1,
+    no_docker => 1,
+    pbs => {
+      "nodes"     => "1:ppn=1",
+      "walltime"  => "10",
+      "mem"       => "40gb"
+    },
+  };
+  push(@$tasks, $abismal_summary_task);  
+
   my $dnmtools_task = "DNMTools";
   $config->{$dnmtools_task} = {
     class => "Methylation::DNMTools",
@@ -142,7 +169,7 @@ sub getConfig {
     option        => "",
     chr_fasta       => $chr_fasta,
     chr_size_file => $chr_size_file,
-    source_ref    => ["abismal", ".intervals.uniq.addqual.bam\$"],
+    source_ref    => ["abismal", ".intervals.dnmtools_format.uniq.addqual.bam\$"],
     dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
     docker_prefix => "dnmtools_",
     pbs           => {
