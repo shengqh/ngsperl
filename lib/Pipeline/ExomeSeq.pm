@@ -1456,7 +1456,6 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
     my $perform_mutect2_by_wdl = getValue($def, "perform_mutect2_by_wdl", 1);
     if($perform_mutect2_by_wdl){
       my ($tumor_files, $normal_files) = init_normal_tumor_files($config, $def, $bam_input);
-
       # print("tumor_files=" . $tumor_files . "\n");
       # print("normal_files=" . $normal_files . "\n");
 
@@ -1481,6 +1480,64 @@ ls \$(pwd)/__NAME__.intervals/* > __NAME__.intervals_list
       my $mutect2call = $mutect_prefix . "01_call";
       addMutect2($config, $def, $tasks, $target_dir, $bam_input, $mutect2call, $mutect2_option, 1, $pon);
       $mutect_ref = [ $mutect2call, '\.filtered.vcf.gz$' ];
+    }
+
+    if($def->{mutect2_filter_ffpe_artifacts}){
+      my ($tumor_files, $normal_files) = init_normal_tumor_files($config, $def, $bam_input);
+      my $mutect2_ffpe_filter_task = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filter_ffpe_artifacts";
+      $config->{$mutect2_ffpe_filter_task} = {
+        class                 => "CQS::ProgramWrapperOneToOne",
+        perform               => 1,
+        target_dir            => "${target_dir}/${mutect2_ffpe_filter_task}",
+        interpretor           => "",
+        program => "",
+        option => "
+
+gatk CollectSequencingArtifactMetrics \\
+  -I __FILE2__ \\
+  --FILE_EXTENSION '.txt' \\
+  -O __NAME__ \\
+  -R $fasta
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \"Error: gatk CollectSequencingArtifactMetrics failed with exit code \$status\"
+  exit \$status
+fi
+
+gatk FilterByOrientationBias \\
+  -V __FILE__ \\
+  -P __NAME__.pre_adapter_detail_metrics.txt \\
+  -O __NAME__.ffpe_filtered.vcf.gz \\
+  --artifact-modes C/T
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \"Error: gatk FilterByOrientationBias failed with exit code \$status\"
+  rm -f __NAME__.ffpe_filtered.vcf.gz*
+  exit \$status
+fi
+
+",
+        check_program         => 0,
+        parameterSampleFile1_ref => $mutect_ref,
+        parameterSampleFile2_ref => [$tumor_files, ".bam\$"],
+        output_to_same_folder => 1,
+        output_arg            => "",
+        no_output => 1,
+        output_file_prefix    => "",
+        output_file_ext       => ".ffpe_filtered.vcf.gz",
+        sh_direct             => 0,
+        docker_prefix         => "gatk4140_",
+        no_docker => 0,
+        pbs                   => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        },
+      };
+      $mutect_ref = [ $mutect2_ffpe_filter_task, '\.ffpe_filtered.vcf.gz$' ];
+      push(@$tasks, $mutect2_ffpe_filter_task);
     }
 
     my ($annovarMaf,$annovarMafReport) = add_post_mutect($config, $def, $target_dir, $tasks, $mutect_prefix, $mutect_index_dic, $mutect_index_key, $mutect_ref);
