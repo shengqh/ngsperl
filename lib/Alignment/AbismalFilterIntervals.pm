@@ -90,6 +90,7 @@ if [[ ! -s $raw_bam || ! -e ${sample_name}.abismal.succeed ]]; then
 
   echo abismal=`date`
   $dnmtools_command abismal -B -v -t $thread -i $abismal_index -s $map_stat $sample_files_str -o $raw_bam
+
   status=\$?
   if [[ \$status -eq 0 ]]; then
     touch ${sample_name}.abismal.succeed
@@ -161,11 +162,11 @@ fi
 if [[ ! -s ${sample_name}.sorted.addqual.fixmate.bam || ! -e ${sample_name}.sorted.addqual.fixmate.succeed ]]; then
   rm -f ${sample_name}.sorted.addqual.fixmate.bam ${sample_name}.sorted.addqual.fixmate.bam.bai ${sample_name}.sorted.addqual.fixmate.succeed ${sample_name}.sorted.addqual.fixmate.failed
 
-  gatk FixMateInformation \
-    -I ${sample_name}.sorted.addqual.bam \
-    -O ${sample_name}.sorted.addqual.fixmate.bam \
-    --ADD_MATE_CIGAR true \
-    --VERBOSITY ERROR \
+  java -jar $gatk FixMateInformation \\
+    -I ${sample_name}.sorted.addqual.bam \\
+    -O ${sample_name}.sorted.addqual.fixmate.bam \\
+    --ADD_MATE_CIGAR true \\
+    --VERBOSITY ERROR \\
     --VALIDATION_STRINGENCY SILENT
 
   status=\$?
@@ -310,9 +311,9 @@ fi
 
 if [[ -s ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam.bai && -e ${sample_name}.intervals.dnmtools_format.uniq.addqual.succeed ]]; then
   #Keep raw.bam, intervals.bam, intervals.dnmtools_format.uniq.addqual.bam
-  rm -f $sample_name.sorted.bam \\
-        $sample_name.sorted.addqual.bam \\
-        $sample_name.sorted.addqual.fixmate.bam \\
+  rm -f ${sample_name}.sorted.bam \\
+        ${sample_name}.sorted.addqual.bam ${sample_name}.sorted.addqual.bam.bai\\
+        ${sample_name}.sorted.addqual.fixmate.bam \\
         ${sample_name}.intervals.sorted_by_name.bam \\
         ${sample_name}.intervals.dnmtools_format.bam  ${sample_name}.intervals.dnmtools_format.bam.bai \\
         ${sample_name}.intervals.dnmtools_format.uniq.bam
