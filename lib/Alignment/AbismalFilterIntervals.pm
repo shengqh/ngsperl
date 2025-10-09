@@ -59,9 +59,7 @@ sub perform {
     my $raw_bam = $sample_name . ".raw.bam";
 
     my $map_stat                 = $sample_name . ".mapstats";
-
     my $hs_metrics               = $sample_name . "_hs_metrics.txt";
-    my $rrbs_metrics             = $sample_name . ".rrbs_summary_metrics";
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -72,7 +70,7 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $rmlist = "";
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $rrbs_metrics );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, "${sample_name}.intervals.uniq.addqual.bam" );
 
 		foreach my $sampleFile (@sample_files) {
 			print $pbs "
@@ -102,45 +100,45 @@ if [[ ! -s $raw_bam || ! -e ${sample_name}.abismal.succeed ]]; then
   fi
 fi
 
+if [[ ! -s $sample_name.sorted.bam || ! -e ${sample_name}.sort.succeed ]]; then
+  rm -f $sample_name.sorted.bam ${sample_name}.sorted.failed ${sample_name}.sorted.succeed
+
+  echo sort=`date`
+  samtools sort --threads $thread -O BAM -o $sample_name.sorted.bam $raw_bam
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.sorted.succeed
+  else
+    touch ${sample_name}.sorted.failed
+    rm -f $sample_name.sorted.bam
+    exit \$status
+  fi
+fi
+
+# Missing the qual data would cause error. We will have to add the qual data first.
+if [[ ! -s $sample_name.sorted.addqual.bam.bai || ! -e ${sample_name}.sorted.addqual.succeed ]]; then
+  rm -f $sample_name.sorted.addqual.bam $sample_name.sorted.addqual.bam.bai ${sample_name}.sorted.addqual.succeed ${sample_name}.sorted.addqual.failed
+
+  echo add_qual =`date`
+  python3 $addqual_pythonFile $sample_name.sorted.bam $sample_name.sorted.addqual.bam
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.sorted.addqual.succeed
+  else
+    touch ${sample_name}.sorted.addqual.failed
+    rm -f $sample_name.sorted.addqual.bam
+    exit \$status
+  fi    
+
+  echo samtools index=`date`
+  samtools index --threads $thread $sample_name.sorted.addqual.bam
+fi
+
 # Performed CollectHsMetrics on raw data level.
-if [[ ! -s $hs_metrics ]]; then
-  if [[ ! -s $sample_name.sorted.bam || ! -e ${sample_name}.sort.succeed ]]; then
-    rm -f $sample_name.sorted.bam ${sample_name}.sort.failed ${sample_name}.sort.succeed
-
-    echo sort=`date`
-    samtools sort --threads $thread -O BAM -o $sample_name.sorted.bam $raw_bam
-
-    status=\$?
-    if [[ \$status -eq 0 ]]; then
-      touch ${sample_name}.sort.succeed
-    else
-      touch ${sample_name}.sort.failed
-      rm -f $sample_name.sorted.bam
-      exit \$status
-    fi
-  fi
-
-  # Missing the qual data would cause error. We will have to add the qual data first.
-  if [[ ! -s $sample_name.sorted.addqual.bam.bai || ! -e ${sample_name}.sorted.addqual.succeed ]]; then
-    rm -f $sample_name.sorted.addqual.bam $sample_name.sorted.addqual.bam.bai ${sample_name}.sorted.addqual.succeed ${sample_name}.sorted.addqual.failed
-
-    echo add_qual =`date`
-    python3 $addqual_pythonFile $sample_name.sorted.bam $sample_name.sorted.addqual.bam
-
-    status=\$?
-    if [[ \$status -eq 0 ]]; then
-      touch ${sample_name}.sorted.addqual.succeed
-    else
-      touch ${sample_name}.sorted.addqual.failed
-      rm -f $sample_name.sorted.addqual.bam
-      exit \$status
-    fi    
-
-    echo samtools index=`date`
-    samtools index --threads $thread $sample_name.sorted.addqual.bam
-  fi
-
-  rm -f ${sample_name}.CollectHsMetrics.failed ${sample_name}.CollectHsMetrics.succeed
+if [[ ! -s $hs_metrics || ! -e ${sample_name}.CollectHsMetrics.succeed ]]; then
+  rm -f $hs_metrics ${sample_name}.CollectHsMetrics.failed ${sample_name}.CollectHsMetrics.succeed
 
   echo picard CollectHsMetrics =`date`
   java -jar $picard CollectHsMetrics \\
@@ -153,131 +151,171 @@ if [[ ! -s $hs_metrics ]]; then
   status=\$?
   if [[ \$status -eq 0 ]]; then
     touch ${sample_name}.CollectHsMetrics.succeed
-    #rm -f $sample_name.sorted.addqual.bam $sample_name.sorted.addqual.bam.bai $sample_name.sorted.bam $sample_name.sorted.bam.bai
   else
     touch ${sample_name}.CollectHsMetrics.failed
     exit \$status
   fi
 fi
 
-# Prepare final bam file for methylation calling
-if [[ ! -s ${sample_name}.intervals.uniq.addqual.bam.bai || ! -e ${sample_name}.intervals.uniq.addqual.succeed ]]; then
-  if [[ ! -s ${sample_name}.formatted.sorted.bam.bai || ! -s ${sample_name}.formatted.sorted.succeed ]]; then
-    rm -f ${sample_name}.formatted.sorted.bam ${sample_name}.formatted.sorted.bam.bai ${sample_name}.formatted.sorted.bam.flagstat ${sample_name}.formatted.sorted.succeed ${sample_name}.formatted.sorted.failed
+# Fix mate information for FilterSamReads
+if [[ ! -s ${sample_name}.sorted.addqual.fixmate.bam || ! -e ${sample_name}.sorted.addqual.fixmate.succeed ]]; then
+  rm -f ${sample_name}.sorted.addqual.fixmate.bam ${sample_name}.sorted.addqual.fixmate.bam.bai ${sample_name}.sorted.addqual.fixmate.succeed ${sample_name}.sorted.addqual.fixmate.failed
 
-    #dnmtools format requires unsorted bam file
-    #-F: This option forces the format command to process paired-end reads even if it is unable to detect mates. 
-    echo dnmtools format=`date`
-    $dnmtools_command format -t $thread -B -F -v -f abismal -stdout $raw_bam | samtools sort --threads $thread -o ${sample_name}.formatted.sorted.bam
-    
-    status=\$?
-    if [[ \$status -eq 0 ]]; then
-      touch ${sample_name}.formatted.sorted.succeed
-    else
-      touch ${sample_name}.formatted.sorted.failed
-      rm -f ${sample_name}.formatted.sorted.bam
-      exit \$status
-    fi
-
-    echo samtools index=`date`
-    samtools index --threads $thread ${sample_name}.formatted.sorted.bam
-
-    echo samtools flagstat=`date`
-    samtools flagstat ${sample_name}.formatted.sorted.bam > ${sample_name}.formatted.sorted.bam.flagstat
-  fi
-
-  # Keep the reads only in the target regions
-  if [[ ! -s ${sample_name}.intervals.bam.bai || ! -e ${sample_name}.intervals.succeed ]]; then
-    rm -f ${sample_name}.intervals.bam ${sample_name}.intervals.bam.bai ${sample_name}.intervals.bam.flagstat ${sample_name}.intervals.succeed ${sample_name}.intervals.failed
-
-    # Disable WellformedReadFilter to keep all reads, otherwise, it would remove all reads.
-    echo gatk filter intervals PrintReads=`date`
-    java -jar $gatk PrintReads \\
-      --disable-read-filter WellformedReadFilter \\
-      --input ${sample_name}.formatted.sorted.bam \\
-      --output ${sample_name}.intervals.bam \\
-      --intervals $interval_list \\
-      --reference $chr_fasta
-
-    status=\$?
-    if [[ \$status -eq 0 ]]; then
-      touch ${sample_name}.intervals.succeed
-    else
-      touch ${sample_name}.intervals.failed
-      rm -f ${sample_name}.intervals.bam
-      exit \$status
-    fi
-
-    echo samtools flagstat=`date`
-    samtools flagstat ${sample_name}.intervals.bam > ${sample_name}.intervals.bam.flagstat
-  fi
-
-  # Remove duplicates
-  if [[ ! -s ${sample_name}.intervals.uniq.bam || ! -e ${sample_name}.intervals.uniq.succeed ]]; then
-    rm -f ${sample_name}.intervals.uniq.bam ${sample_name}.intervals.uniq.failed ${sample_name}.intervals.uniq.succeed
-
-    echo dnmtools uniq=`date`
-    $dnmtools_command uniq -t $thread -B -v -S ${sample_name}.intervals.uniq.bam.dupstats ${sample_name}.intervals.bam ${sample_name}.intervals.uniq.bam
-
-    status=\$?
-    if [[ \$status -eq 0 ]]; then
-      touch ${sample_name}.intervals.uniq.succeed
-    else
-      touch ${sample_name}.intervals.uniq.failed
-      rm -f ${sample_name}.intervals.uniq.bam
-      exit \$status
-    fi
-  fi  
-
-  # add qual to uniq bam file in case it would be used in downstream analysis
-
-  rm -f ${sample_name}.intervals.uniq.addqual.bam ${sample_name}.intervals.uniq.addqual.bam.bai ${sample_name}.intervals.uniq.addqual.failed ${sample_name}.intervals.uniq.addqual.succeed
-
-  echo add_qual =`date`
-  python3 $addqual_pythonFile ${sample_name}.intervals.uniq.bam ${sample_name}.intervals.uniq.addqual.bam
+  gatk FixMateInformation \
+    -I ${sample_name}.sorted.addqual.bam \
+    -O ${sample_name}.sorted.addqual.fixmate.bam \
+    --ADD_MATE_CIGAR true \
+    --VERBOSITY ERROR \
+    --VALIDATION_STRINGENCY SILENT
 
   status=\$?
   if [[ \$status -eq 0 ]]; then
-    touch ${sample_name}.intervals.uniq.addqual.succeed
+    touch ${sample_name}.sorted.addqual.fixmate.succeed
   else
-    touch ${sample_name}.intervals.uniq.addqual.failed
-    rm -f ${sample_name}.intervals.uniq.addqual.bam
+    touch ${sample_name}.sorted.addqual.fixmate.failed
+    rm -f ${sample_name}.sorted.addqual.fixmate.bam
+    exit \$status
+  fi
+fi
+
+# Keep the reads only in the target regions
+if [[ ! -s ${sample_name}.intervals.bam.bai || ! -e ${sample_name}.intervals.succeed ]]; then
+  rm -f ${sample_name}.intervals.bam ${sample_name}.intervals.bam.bai ${sample_name}.intervals.bam.flagstat ${sample_name}.intervals.succeed ${sample_name}.intervals.failed
+
+  echo gatk FilterSamReads=`date`
+  java -jar $gatk FilterSamReads \\
+    -I ${sample_name}.sorted.addqual.fixmate.bam \\
+    -O ${sample_name}.intervals.bam \\
+    --FILTER includePairedIntervals \\
+    --INTERVAL_LIST $interval_list
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.intervals.succeed
+  else
+    touch ${sample_name}.intervals.failed
+    rm -f ${sample_name}.intervals.bam
     exit \$status
   fi
 
   echo samtools index=`date`
-  samtools index --threads $thread ${sample_name}.intervals.uniq.addqual.bam
+  samtools index --threads $thread ${sample_name}.intervals.bam
 
   echo samtools flagstat=`date`
-  samtools flagstat ${sample_name}.intervals.uniq.addqual.bam > ${sample_name}.intervals.uniq.addqual.bam.flagstat
+  samtools flagstat ${sample_name}.intervals.bam > ${sample_name}.intervals.bam.flagstat
+fi
 
-  if [[ -s ${sample_name}.intervals.uniq.addqual.bam.bai && -e ${sample_name}.intervals.uniq.addqual.succeed ]]; then
-    #rm -f $raw_bam ${sample_name}.formatted.sorted.bam ${sample_name}.formatted.sorted.bam.bai ${sample_name}.intervals.bam ${sample_name}.intervals.bam.bai ${sample_name}.intervals.uniq.bam ${sample_name}.intervals.uniq.bam.bai
+if [[ ! -s ${sample_name}.intervals.rrbs_metrics || ! -e ${sample_name}.intervals.rrbs_metrics.succeed ]]; then
+  rm -f ${sample_name}.intervals.rrbs_metrics ${sample_name}.intervals.rrbs_detail_metrics ${sample_name}.intervals.rrbs_metrics.failed ${sample_name}.intervals.rrbs_metrics.succeed
+
+  echo picard CollectRrbsMetrics=`date`
+  java -jar $picard CollectRrbsMetrics \\
+    I=${sample_name}.intervals.bam \\
+    M=${sample_name}.intervals \\
+    R=$chr_fasta
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.intervals.rrbs_metrics.succeed
+    gzip ${sample_name}.intervals.rrbs_detail_metrics
+  else
+    touch ${sample_name}.intervals.rrbs_metrics.failed
+    rm -f ${sample_name}.intervals.rrbs_metrics
+    exit \$status
   fi
 fi
 
-# For rrbs summary metrics, we will perform on the filtered uniq bam file since we want to know 
-# the QC result of the final usable data.
-if [[ ! -s ${sample_name}.rrbs_summary_metrics ]]; then
-  if [[ ! -s ${sample_name}.c_curve ]]; then
-    echo preseq c_curve=`date`
-    $preseq_command c_curve -B ${sample_name}.intervals.uniq.addqual.bam > ${sample_name}.c_curve
+# dnmtools format requires queryname sorted bam file
+if [[ ! -s ${sample_name}.intervals.sorted_by_name.bam || ! -e ${sample_name}.intervals.sorted_by_name.succeed ]]; then
+  rm -f ${sample_name}.intervals.sorted_by_name.bam ${sample_name}.intervals.sorted_by_name.succeed ${sample_name}.intervals.sorted_by_name.failed
+
+  echo samtools sort -n=`date`
+  samtools sort --threads 8 -n -o ${sample_name}.intervals.sorted_by_name.bam ${sample_name}.intervals.bam
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.intervals.sorted_by_name.succeed
+  else
+    touch ${sample_name}.intervals.sorted_by_name.failed
+    rm -f ${sample_name}.intervals.sorted_by_name.bam
+    exit \$status
+  fi
+fi
+
+if [[ ! -s ${sample_name}.intervals.dnmtools_format.bam.bai || ! -e ${sample_name}.intervals.dnmtools_format.succeed ]]; then
+  rm -f ${sample_name}.intervals.dnmtools_format.bam ${sample_name}.intervals.dnmtools_format.bam.bai ${sample_name}.intervals.dnmtools_format.bam.flagstat ${sample_name}.intervals.dnmtools_format.succeed ${sample_name}.intervals.dnmtools_format.failed
+
+  #dnmtools format requires unsorted bam file
+  echo dnmtools format=`date`
+  $dnmtools_command format -t $thread -B -v -f abismal -stdout ${sample_name}.intervals.sorted_by_name.bam | samtools sort --threads $thread -o ${sample_name}.intervals.dnmtools_format.bam
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.intervals.dnmtools_format.succeed
+  else
+    touch ${sample_name}.intervals.dnmtools_format.failed
+    rm -f ${sample_name}.intervals.dnmtools_format.bam
+    exit \$status
+  fi
+fi
+
+if [[ ! -s ${sample_name}.intervals.dnmtools_format.uniq.bam || ! -e ${sample_name}.intervals.dnmtools_format.uniq.succeed ]]; then
+  rm -f ${sample_name}.intervals.dnmtools_format.uniq.bam ${sample_name}.intervals.dnmtools_format.uniq.failed ${sample_name}.intervals.dnmtools_format.uniq.succeed
+
+  echo dnmtools uniq=`date`
+  $dnmtools_command uniq -t $thread -B -v -S ${sample_name}.intervals.dnmtools_format.uniq.bam.dupstats ${sample_name}.intervals.dnmtools_format.bam ${sample_name}.intervals.dnmtools_format.uniq.bam
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.intervals.dnmtools_format.uniq.succeed
+  else
+    touch ${sample_name}.intervals.dnmtools_format.uniq.failed
+    rm -f ${sample_name}.intervals.dnmtools_format.uniq.bam
+    exit \$status
+  fi
+fi
+
+# add qual to uniq bam file in case it would be used in downstream analysis
+if [[ ! -s ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam.bai || ! -e ${sample_name}.intervals.dnmtools_format.uniq.addqual.succeed ]]; then
+  rm -f ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam.bai ${sample_name}.intervals.dnmtools_format.uniq.addqual.failed ${sample_name}.intervals.dnmtools_format.uniq.addqual.succeed
+
+  echo add_qual =`date`
+  python3 $addqual_pythonFile ${sample_name}.intervals.dnmtools_format.uniq.bam ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.intervals.dnmtools_format.uniq.addqual.succeed
+  else
+    touch ${sample_name}.intervals.dnmtools_format.uniq.addqual.failed
+    rm -f ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam
+    exit \$status
   fi
 
-  if [[ ! -s ${sample_name}.lc_extrap ]]; then
-    echo preseq lc_extrap=`date`
-    $preseq_command lc_extrap -B -D ${sample_name}.intervals.uniq.addqual.bam > ${sample_name}.lc_extrap
-  fi
+  echo samtools index=`date`
+  samtools index --threads $thread ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam
 
-  if [[ ! -s $rrbs_metrics ]]; then
-    echo picard CollectRrbsMetrics =`date`
-    java -jar $picard CollectRrbsMetrics \\
-      I=${sample_name}.intervals.uniq.addqual.bam \\
-      M=$sample_name \\
-      R=$chr_fasta
+  echo samtools flagstat=`date`
+  samtools flagstat ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam > ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam.flagstat
+fi
 
-    gzip ${sample_name}.rrbs_detail_metrics
-  fi
+if [[ ! -s ${sample_name}.c_curve ]]; then
+  echo preseq c_curve=`date`
+  $preseq_command c_curve -B ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam > ${sample_name}.c_curve
+fi
+
+if [[ ! -s ${sample_name}.lc_extrap ]]; then
+  echo preseq lc_extrap=`date`
+  $preseq_command lc_extrap -B -D ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam > ${sample_name}.lc_extrap
+fi
+
+if [[ -s ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam.bai && -e ${sample_name}.intervals.dnmtools_format.uniq.addqual.succeed ]]; then
+  #Keep raw.bam, intervals.bam, intervals.dnmtools_format.uniq.addqual.bam
+  rm -f $sample_name.sorted.bam \\
+        $sample_name.sorted.addqual.bam \\
+        $sample_name.sorted.addqual.fixmate.bam \\
+        ${sample_name}.intervals.sorted_by_name.bam \\
+        ${sample_name}.intervals.dnmtools_format.bam  ${sample_name}.intervals.dnmtools_format.bam.bai \\
+        ${sample_name}.intervals.dnmtools_format.uniq.bam
 fi
 
 ";
@@ -303,11 +341,11 @@ sub result {
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
-    push( @result_files, "${result_dir}/${sample_name}.intervals.uniq.addqual.bam" );
-    push( @result_files, "${result_dir}/${sample_name}.intervals.uniq.addqual.bam.dupstats" );
     push( @result_files, "${result_dir}/${sample_name}.mapstats" );
     push( @result_files, "${result_dir}/${sample_name}_hs_metrics.txt" );
-    push( @result_files, "${result_dir}/${sample_name}.rrbs_summary_metrics" );
+    push( @result_files, "${result_dir}/${sample_name}.intervals.rrbs_summary_metrics" );
+    push( @result_files, "${result_dir}/${sample_name}.intervals.dnmtools_format.uniq.addqual.bam.flagstat" );
+    push( @result_files, "${result_dir}/${sample_name}.intervals.dnmtools_format.uniq.addqual.bam" );
     
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
   }
