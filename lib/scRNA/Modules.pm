@@ -3817,7 +3817,7 @@ sub add_cell_chat {
       thread => 4,
     },
     parameterFile1_ref => $obj_ref,
-    parameterFile2 => getValue($def, "cellchat_meta_file"),
+    parameterFile2 => $def->{"cellchat_meta_file"},
     output_ext => ".cellchat.rds",
     output_to_result => 1,
     pbs => {
