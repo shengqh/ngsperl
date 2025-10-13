@@ -48,9 +48,9 @@ sub get_pbs_key {
 }
 
 sub print_sh_pbs {
-  my ($self, $sh, $pbs_name, $final_file, $pbs_index) = @_;
+  my ($self, $sh, $pbs_name, $final_file, $pbs_index, $cur_sh_log) = @_;
   print $sh "if [[ ! -s $final_file ]]; then
-  \$MYCMD ./$pbs_name 
+  \$MYCMD ./$pbs_name $cur_sh_log
 fi
 ";
 }
@@ -58,7 +58,7 @@ fi
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command, $sh_log ) = $self->init_parameter( $config, $section );
 
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   my $task_suffix = get_option( $config, $section, "suffix", "" );
@@ -70,7 +70,6 @@ sub perform {
 
   my $check_file_ext = get_option( $config, $section, "check_file_ext", "" );
 
-  my $init_command = get_option( $config, $section, "init_command", "" );
   my $post_command = get_option( $config, $section, "post_command", "" );
 
   my $interpretor = get_option( $config, $section, "interpretor", "" );
@@ -147,8 +146,13 @@ sub perform {
     #print("final file=" . $final_file . "\n");
     my $pbs        = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, $init_command, $can_result_be_empty_file );
 
+    my $cur_sh_log = $sh_log;
+    if ($cur_sh_log =~ /__NAME__/){
+      $cur_sh_log =~ s/__NAME__/$sample_name/g;
+    }
+
     if ( $has_multi_samples ) {
-      $self->print_sh_pbs( $sh, $pbs_name, $final_file, $pbs_index );
+      $self->print_sh_pbs( $sh, $pbs_name, $final_file, $pbs_index, $cur_sh_log );
     }
 
     my $final_prefix = $output_to_folder ? "." : $sample_name . $output_file_prefix;
@@ -293,11 +297,11 @@ sub result {
           next;
         }
 
-        if (not $samplename_in_result) {
-          $result_file = $output_ext;
-        }elsif($output_ext =~ /__NAME__/) {
+        if($output_ext =~ /__NAME__/) {
           $result_file = $output_ext;
           $result_file =~ s/__NAME__/$sample_name/g;
+        }elsif (not $samplename_in_result) {
+          $result_file = $output_ext;
         }else{
           $result_file = $sample_name . $output_ext;
         }
