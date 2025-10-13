@@ -33,6 +33,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "cluster",   "slurm" );
   initDefaultValue( $def, "perform_preprocessing", 1 );
   initDefaultValue( $def, "perform_age_estimation", 0 );
+  initDefaultValue( $def, "methylation_mincov", "20" );
+  initDefaultValue( $def, "perform_multiqc", 1 );
 
   return $def;
 }
@@ -219,70 +221,10 @@ sub getConfig {
   };
   push(@$tasks, $methylkitprep_task);
 
-  my $methylkitcorr_task = "MethylKitCorr";
-  $config->{$methylkitcorr_task} = {
-    class                    => "CQS::UniqueR",
-    perform                  => 1,
-    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitCorr",
-    #option                   => " --args ${task_name} hg19 group 4 ",
-    docker_prefix           => "wgbs_r_",
-    rtemplate                => "../Methylation/methylkit_corr.R",
-    rReportTemplate          => "../Methylation/methylkit_corr.Rmd;../CQS/reportFunctions.R;../CQS/countTableVisFunctions.R",
-    run_rmd_independent => 1,
-    rmd_ext => ".methylation.corr.html",
-    output_file_ext          => ".methylation.corr.html;.filtered.cpg.meth.rds",
-    parameterSampleFile1_ref => $methylkitprep_task,
-    parameterSampleFile2 => {
-      task_name => $task_name,
-      email => getValue($def, "email"),
-      affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
-      org       => getValue($def, "genome"),
-      var       => "group",
-      control_group => $def->{control_group},
-      mincov     => 4,
-      corr_dim1_cutoff => $def->{corr_dim1_cutoff},
-      mds_legendPos => getValue($def, "mds_legendPos", "bottomleft"),
-    },
-    parameterSampleFile3_ref => "groups",
-    #parameterFile1 => getValue($def, "meta_file"),
-    sh_direct                => 1,
-    pbs                      => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "80gb"
-    },
-  };
-  push(@$tasks, $methylkitcorr_task);
+  my $methylkitcorr_task = add_MethylKitCorr( $config, $def, $tasks, $target_dir, "MethylKitCorr", [ $methylkitprep_task, ".CpG.txt.gz" ], "amp" );
 
   if($def->{perform_age_estimation}){
-    my $methy_age_task = "MethylKit_age";
-    $config->{$methy_age_task} = {
-      class              => "CQS::UniqueRmd",
-      perform            => 1,
-      target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "$methy_age_task",
-      report_rmd_file => "../Methylation/methylation_age.rmd",
-      additional_rmd_files => "../CQS/reportFunctions.R",
-      option => "",
-      parameterSampleFile1_ref => [ $methylkitcorr_task, 'meth.rds$' ],
-      parameterSampleFile2 => {
-        task_name => getValue($def, "task_name"),
-        email => getValue($def, "email"),
-        affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
-        probe_locus_file => getValue($def, "probe_locus_file"),
-      },
-      parameterSampleFile3 => $def->{"age_dict"},
-      suffix => ".age",
-      output_file_ext => ".age.html",
-      can_result_be_empty_file => 0,
-      sh_direct   => 1,
-      no_docker => 1,
-      pbs => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
-        "mem"       => "40gb"
-      },
-    };
-    push( @$tasks, "bamplot_html" );
+    my $methy_age_task = add_MethylAgeEstimation( $config, $def, $tasks, $target_dir, "MethylKit_age", $methylkitcorr_task );
   }
 
   my $methylkitdiff_task=undef;
@@ -456,6 +398,10 @@ rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt
     push( @copy_files, $webgestalt_task, "_geneontology_Cellular_Component\$" );
     push( @copy_files, $webgestalt_task, "_geneontology_Molecular_Function\$" );
     push( @copy_files, $webgestalt_task, "_pathway_KEGG\$" );
+  }
+
+  if($def->{perform_multiqc}){
+    addMultiQC( $config, $def, $tasks, $target_dir, $target_dir, $dnmtools_task );
   }
 
   $config->{report} = {
