@@ -15,8 +15,6 @@ output:
 
 ```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 library(knitr)
-library(tibble)
-library(dplyr)
 
 knitr::opts_chunk$set(
   echo=TRUE, 
@@ -34,6 +32,8 @@ library(methylKit)
 #devtools::install_github("jmw86069/splicejam")
 library(splicejam)
 library(GenomicRanges)
+library(assertthat)
+library(tibble)
 
 source('reportFunctions.R')
 
@@ -143,11 +143,13 @@ Beta file with probe id has been saved to <mark>`r csv_file`</mark>.
 - Keep beta column only
 
 ```{r, echo=FALSE}
-final_betas = probe_betas_tbl |> dplyr::select(contains("DY_"))
+final_betas = probe_betas_tbl |> dplyr::select(-seqnames, -start, -end, -strand, -width)
 print_table(head(final_betas) |> head(), byDT=FALSE, row.names=TRUE, round_value=0)
 ```
 
-# Calculate methylation age
+# Methylation Age Estimation
+
+The age estimation is performed by `dnaMethyAge` package.
 
 ```{r}
 #devtools::install_github("yiluyucheng/dnaMethyAge")
@@ -161,7 +163,8 @@ clocks = setdiff(clocks, discard_clocks)
 Valid clocks: `r paste(clocks, sep=", ")`.
 
 ```{r message=FALSE, results='hide'}
-pred_ages = lapply(clocks[1:2], function(clock_name){
+rds_file=paste0(task_name, ".age.rds")
+pred_ages = lapply(clocks, function(clock_name){
   cat(clock_name, "\n")
   tryCatch(
         {
@@ -178,23 +181,20 @@ saveRDS(pred_ages, rds_file)
 ```
 
 ```{r}
+clock_name=clocks[1]
 for(clock_name in clocks){
   pred_age=pred_ages[[clock_name]]
-  if(is.string(pred_age)){
-    cat("<mark>Failed:", pred_age, "</mark>\n\n")
+  cat("## ", clock_name, "\n\n")
+  if(class(pred_age)[1] == "data.frame"){
+    print_table(pred_age, row.names=FALSE, round_value=0)
   }else{
-    pred_age$chronological_age=c(80, 0, 84, 0, 25, 0)
-    print_table(pred_age, row.names=FALSE)
+    cat("Failed.\n\n")
   }
 }
 ```
 
-# Save the session information
+# Session info
 
-<pre>
-```{r include=TRUE, echo=FALSE}
-sessionInfo()
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=FALSE)
 ```
-</pre>
-
-
