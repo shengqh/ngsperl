@@ -417,10 +417,14 @@ sub get_parameter {
 
   my $init_command = get_option( $config, $section, "init_command", "" );
 
-  if ($sh_direct) {
-    $sh_direct = "sh";
-  }
-  else {
+  my $sh_log = "";
+  if ($sh_direct eq "nohup") {
+    $sh_direct = "nohup bash";
+    $sh_log = " | tee ../log/__NAME__.log &"; 
+  } elsif ($sh_direct) {
+    $sh_direct = "bash";
+    $sh_log = " | tee ../log/__NAME__.log"; 
+  } else {
     $sh_direct = $cluster->get_submit_command();
   }
 
@@ -435,7 +439,7 @@ sub get_parameter {
     $option =~ s/__THREAD__/$thread/g;
   }
 
-  return ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command );
+  return ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command, $sh_log );
 }
 
 #get parameter which indicates a file. If required, not defined or not exists, die. If defined but not exists, die.
@@ -1321,11 +1325,20 @@ sub save_parameter_sample_file {
       @orderedSampleNames = sort keys %temp;
     }
 
+    my $header = get_option( $config, $section, $key . "_header", "" );
     my $fileOnly = get_option( $config, $section, $key . "_fileonly", 0 );
     my $fileFirst = get_option( $config, $section, $key . "_fileFirst", 1 );
     my $join_delimiter = get_option( $config, $section, $key . "_join_delimiter", "" );
+    my $col_delimiter = get_option( $config, $section, $key . "_col_delimiter", "\t" );
+    my $suffix = get_option( $config, $section, $key . "_suffix", "" );
+    my $fileSuffix = get_option( $config, $section, $key . "_fileSuffix", "" );
+
+    $outputFile = $outputFile . $fileSuffix;
 
     open( my $list, '>', $outputFile ) or die "Cannot create $outputFile";
+    if ($header ne ""){
+      print $list $header . "\n";
+    }
     foreach my $sample_name (@orderedSampleNames) {
       my $subSampleFiles = $temp{$sample_name};
       my $refstr         = ref($subSampleFiles);
@@ -1334,12 +1347,12 @@ sub save_parameter_sample_file {
           my $groupSampleNames = $subSampleFiles->{$groupName};
           for my $groupSampleName (@$groupSampleNames) {
             if ($fileOnly){
-              print $list $groupSampleName . "\n";
+              print $list $groupSampleName . "${suffix}\n";
             }else{
               if($fileFirst){
-                print $list "${groupSampleName}\t${groupName}\t${sample_name}\n";
+                print $list "${groupSampleName}${col_delimiter}${groupName}${col_delimiter}${sample_name}${suffix}\n";
               }else{
-                print $list "${sample_name}\t${groupName}\t${groupSampleName}\n";
+                print $list "${sample_name}${col_delimiter}${groupName}${col_delimiter}${groupSampleName}${suffix}\n";
               }
             }
           }
@@ -1349,12 +1362,12 @@ sub save_parameter_sample_file {
         if($join_delimiter ne ""){
           my $sample_str = join($join_delimiter, @$subSampleFiles);
           if ($fileOnly){
-            print $list $sample_str . "\n";
+            print $list $sample_str . "${suffix}\n";
           }else{
             if($fileFirst){
-              print $list "$sample_str\t$sample_name\n";
+              print $list "$sample_str${col_delimiter}$sample_name${suffix}\n";
             }else{
-              print $list "$sample_name\t$sample_str\n";
+              print $list "$sample_name${col_delimiter}$sample_str${suffix}\n";
             }
           }
         }else{
@@ -1363,9 +1376,9 @@ sub save_parameter_sample_file {
               print $list $subSampleFile . "\n";
             }else{
               if($fileFirst){
-                print $list "$subSampleFile\t$sample_name\n";
+                print $list "$subSampleFile${col_delimiter}$sample_name${suffix}\n";
               }else{
-                print $list "$sample_name\t$subSampleFile\n";
+                print $list "$sample_name${col_delimiter}$subSampleFile${suffix}\n";
               }
             }
           }
@@ -1379,9 +1392,9 @@ sub save_parameter_sample_file {
           print $list $subSampleFiles . "\n";
         }else{
           if($fileFirst){
-            print $list "$subSampleFiles\t$sample_name\n";
+            print $list "$subSampleFiles${col_delimiter}$sample_name${suffix}\n";
           }else{
-            print $list "$sample_name\t$subSampleFiles\n";
+            print $list "$sample_name${col_delimiter}$subSampleFiles${suffix}\n";
           }
         }
       }
