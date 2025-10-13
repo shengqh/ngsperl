@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='P13303'
+outFile='P13927'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20250605_13303_DNAMethyl_mm10/MethylKitCorr/result')
+setwd('/nobackup/vickers_lab/projects/20251010_13927_DNAMethyl_mm10_nextflow_slurm/MethylKitCorr/result')
 
 ### Parameter setting end ###
 
@@ -38,6 +38,16 @@ if("control_group" %in% names(params)){
   control_group=NA
 }
 
+if("pipeline" %in% names(params)){
+  pipeline=params$pipeline
+  if(pipeline == ""){
+    pipeline="amp"
+  }
+}else{
+  pipeline="amp"
+}
+cat("Using data from pipeline:", pipeline, "\n")
+
 #prepare to find all specific format files
 cpg.all <-read.table(parSampleFile1, sep="\t", header=F)
 cpg.infile = cpg.all$V1
@@ -66,7 +76,8 @@ if(!file.exists(rds_file)){
                       assembly = assembly,
                       treatment = treatment,
                       context = "CpG",
-                      mincov = mincov)
+                      mincov = mincov,
+                      pipeline = pipeline)
 
   filtered.obj <- filterByCoverage(cpg.obj,
                                   lo.count=mincov,
@@ -186,3 +197,4 @@ top10000_cpg_bvalue_df=cpg_bvalue_df[o,]
 
 cat("draw MDS plot for top 10000 CPGs ...\n")
 saved = draw_corr_mds_plot(top10000_cpg_bvalue_df, meta$group, paste0(project, ".pearson_corr.top10000.MDS.png"))
+
