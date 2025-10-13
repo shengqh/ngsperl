@@ -158,6 +158,26 @@ if [[ ! -s $hs_metrics || ! -e ${sample_name}.CollectHsMetrics.succeed ]]; then
   fi
 fi
 
+# Performed CollectRrbsMetrics on raw data level.
+if [[ ! -s ${sample_name}.rrbs_metrics || ! -e ${sample_name}.rrbs_metrics.succeed ]]; then
+  rm -f ${sample_name}.rrbs_metrics ${sample_name}.rrbs_detail_metrics ${sample_name}.rrbs_metrics.failed ${sample_name}.rrbs_metrics.succeed
+
+  echo picard CollectRrbsMetrics=`date`
+  java -jar $picard CollectRrbsMetrics \\
+    I=$sample_name.sorted.addqual.bam \\
+    M=${sample_name} \\
+    R=$chr_fasta
+
+  status=\$?
+  if [[ \$status -eq 0 ]]; then
+    touch ${sample_name}.rrbs_metrics.succeed
+  else
+    touch ${sample_name}.rrbs_metrics.failed
+    rm -f ${sample_name}.rrbs_metrics ${sample_name}.rrbs_detail_metrics
+    exit \$status
+  fi
+fi
+
 # Fix mate information for FilterSamReads
 if [[ ! -s ${sample_name}.sorted.addqual.fixmate.bam || ! -e ${sample_name}.sorted.addqual.fixmate.succeed ]]; then
   rm -f ${sample_name}.sorted.addqual.fixmate.bam ${sample_name}.sorted.addqual.fixmate.bam.bai ${sample_name}.sorted.addqual.fixmate.succeed ${sample_name}.sorted.addqual.fixmate.failed
@@ -218,10 +238,9 @@ if [[ ! -s ${sample_name}.intervals.rrbs_metrics || ! -e ${sample_name}.interval
   status=\$?
   if [[ \$status -eq 0 ]]; then
     touch ${sample_name}.intervals.rrbs_metrics.succeed
-    gzip ${sample_name}.intervals.rrbs_detail_metrics
   else
     touch ${sample_name}.intervals.rrbs_metrics.failed
-    rm -f ${sample_name}.intervals.rrbs_metrics
+    rm -f ${sample_name}.intervals.rrbs_metrics ${sample_name}.intervals.rrbs_detail_metrics
     exit \$status
   fi
 fi
