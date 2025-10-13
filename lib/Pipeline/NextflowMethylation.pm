@@ -215,8 +215,26 @@ fi
   my $methylkitcorr_task = add_MethylKitCorr( $config, $def, $tasks, $target_dir, "MethylKitCorr", [ $methylkitprep_task, ".bismark.cov.gz" ], "bismarkCoverage" );
 
   if ( $def->{perform_age_estimation} ) {
-    my $methy_age_task = add_MethylAgeEstimation( $config, $def, $tasks, $target_dir, "MethylKit_age", $methylkitcorr_task );
+    my $methy_age_task = add_MethylAgeEstimation( $config, $def, $tasks, $target_dir, "dnaMethyAge", $methylkitcorr_task );
   }
+
+  if ( $def->{pairs} ) {
+    add_MethylDiffAnalysis( $config, $def, $tasks, $target_dir, $methylkitcorr_task );
+  }
+
+  $config->{"sequencetask"} = {
+    class      => getSequenceTaskClassname($cluster),
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    option     => "",
+    source     => { tasks => $tasks, },
+    sh_direct  => 0,
+    pbs        => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
+      "mem"      => "40gb"
+    },
+  };
 
   return ($config);
 

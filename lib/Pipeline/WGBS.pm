@@ -12,6 +12,7 @@ use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
 use Pipeline::Preprocession;
+use Pipeline::MethylationUtils;
 use Data::Dumper;
 use Hash::Merge qw( merge );
 
@@ -24,20 +25,22 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+
 sub initializeDefaultOptions {
   my $def = shift;
 
   fix_task_name($def);
 
-  initDefaultValue( $def, "emailType", "FAIL" );
-  initDefaultValue( $def, "cluster",   "slurm" );
-  initDefaultValue( $def, "perform_preprocessing", 1 );
+  initDefaultValue( $def, "emailType",              "FAIL" );
+  initDefaultValue( $def, "cluster",                "slurm" );
+  initDefaultValue( $def, "perform_preprocessing",  1 );
   initDefaultValue( $def, "perform_age_estimation", 0 );
-  initDefaultValue( $def, "methylation_mincov", "20" );
-  initDefaultValue( $def, "perform_multiqc", 1 );
+  initDefaultValue( $def, "methylation_mincov",     "20" );
+  initDefaultValue( $def, "perform_multiqc",        1 );
 
   return $def;
-}
+} ## end sub initializeDefaultOptions
+
 
 sub getConfig {
   my ($def) = @_;
@@ -52,43 +55,41 @@ sub getConfig {
   #$def->{perform_cutadapt} = 0;
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
-  my $tasks = [@$individual, @$summary];
+  my $tasks = [ @$individual, @$summary ];
 
-  my $target_dir      = $def->{target_dir};
+  my $target_dir = $def->{target_dir};
 
-  if ($def->{perform_preprocessing_only}) {
+  if ( $def->{perform_preprocessing_only} ) {
 
     $config->{sequencetask} = {
       class      => getSequenceTaskClassname($cluster),
       perform    => 1,
       target_dir => "${target_dir}/sequencetask",
       option     => "",
-      source     => {
-        tasks => $tasks,
-      },
-      sh_direct => 0,
-      cluster   => $cluster,
-      pbs       => {
-        "nodes"     => "1:ppn=" . $def->{max_thread},
-        "walltime"  => $def->{sequencetask_run_time},
-        "mem"       => "40gb"
+      source     => { tasks => $tasks, },
+      sh_direct  => 0,
+      cluster    => $cluster,
+      pbs        => {
+        "nodes"    => "1:ppn=" . $def->{max_thread},
+        "walltime" => $def->{sequencetask_run_time},
+        "mem"      => "40gb"
       },
     };
     return $config;
-  }
+  } ## end if ( $def->{perform_preprocessing_only...})
 
-  my $thread = getValue($def, "thread", 4);
-  my $abismal_index = getValue($def, "abismal_index");
-  my $chr_fasta = getValue($def, "chr_fasta");
-  my $chr_size_file = getValue($def, "chr_size_file");
-  my $annovar_buildver = getValue($def, "annovar_buildver");
-  my $annovar_db = getValue($def, "annovar_db");
-  my $annovar_param = getValue($def, "annovar_param");
-  my $HOMER_perlFile = getValue($def, "HOMER_perlFile");
+  my $thread             = getValue( $def, "thread", 4 );
+  my $abismal_index      = getValue( $def, "abismal_index" );
+  my $chr_fasta          = getValue( $def, "chr_fasta" );
+  my $chr_size_file      = getValue( $def, "chr_size_file" );
+  my $annovar_buildver   = getValue( $def, "annovar_buildver" );
+  my $annovar_db         = getValue( $def, "annovar_db" );
+  my $annovar_param      = getValue( $def, "annovar_param" );
+  my $HOMER_perlFile     = getValue( $def, "HOMER_perlFile" );
   my $addqual_pythonFile = dirname(__FILE__) . "/../Methylation/add_qual.py";
-  my $picard = getValue($def, "picard");
-  my $gatk = getValue($def, "gatk");
-  my $interval_list = getValue($def, "interval_list");
+  my $picard             = getValue( $def, "picard" );
+  my $gatk               = getValue( $def, "gatk" );
+  my $interval_list      = getValue( $def, "interval_list" );
 
   # my $trimgalore_task = "trimgalore";
   # $config->{$trimgalore_task} = {
@@ -110,97 +111,97 @@ sub getConfig {
   # push(@$tasks, $trimgalore_task);
   my $methylation_key = "methylation_key";
 
-  my $abismal_task = "abismal";
+  my $abismal_task  = "abismal";
   my $abismal_class = $def->{abismal_not_filter_intervals} ? "Alignment::Abismal" : "Alignment::AbismalFilterIntervals";
   $config->{$abismal_task} = {
-    class      => $abismal_class,
-    perform    => 1,
-    option     => "",
-    thread     => $thread,
-    target_dir => "${target_dir}/" . getNextFolderIndex($def) . "abismal",
-    chr_fasta    => $chr_fasta,
-    picard     => $picard,
-    gatk      => $gatk,
-    interval_list => $interval_list,
+    class              => $abismal_class,
+    perform            => 1,
+    option             => "",
+    thread             => $thread,
+    target_dir         => "${target_dir}/" . getNextFolderIndex($def) . "abismal",
+    chr_fasta          => $chr_fasta,
+    picard             => $picard,
+    gatk               => $gatk,
+    interval_list      => $interval_list,
     addqual_pythonFile => $addqual_pythonFile,
-    abismal_index => $abismal_index,
-    source_ref => $source_ref,
-    dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
-    preseq_command => getValue($def, "preseq_command", "preseq"),
-    docker_prefix => "dnmtools_",
-    pbs        => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => getValue($def, "abismal_walltime", "128"),
-      "mem"       => "80gb"
+    abismal_index      => $abismal_index,
+    source_ref         => $source_ref,
+    dnmtools_command   => getValue( $def, "dnmtools_command", "dnmtools" ),
+    preseq_command     => getValue( $def, "preseq_command",   "preseq" ),
+    docker_prefix      => "dnmtools_",
+    pbs                => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => getValue( $def, "abismal_walltime", "128" ),
+      "mem"      => "80gb"
     },
   };
-  push(@$tasks, $abismal_task);
+  push( @$tasks, $abismal_task );
 
   my $abismal_summary_task = "abismal_summary";
   $config->{$abismal_summary_task} = {
-    class              => "CQS::UniqueRmd",
-    perform            => 1,
-    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "$abismal_summary_task",
-    report_rmd_file => "../Alignment/AbismalSummary.rmd",
-    additional_rmd_files => "../CQS/reportFunctions.R;../CQS/countTableVisFunctions.R",
-    option => "",
-    parameterSampleFile1_ref => [ $abismal_task ],
-    parameterSampleFile2 => {
-      task_name => getValue($def, "task_name"),
-      email => getValue($def, "email"),
-      affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
+    class                    => "CQS::UniqueRmd",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "$abismal_summary_task",
+    report_rmd_file          => "../Alignment/AbismalSummary.rmd",
+    additional_rmd_files     => "../CQS/reportFunctions.R;../CQS/countTableVisFunctions.R",
+    option                   => "",
+    parameterSampleFile1_ref => [$abismal_task],
+    parameterSampleFile2     => {
+      task_name   => getValue( $def, "task_name" ),
+      email       => getValue( $def, "email" ),
+      affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
     },
-    suffix => ".abismal",
-    output_file_ext => ".abismal.html",
+    suffix                   => ".abismal",
+    output_file_ext          => ".abismal.html",
     can_result_be_empty_file => 0,
-    sh_direct   => 1,
-    no_docker => 1,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "40gb"
+    sh_direct                => 1,
+    no_docker                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "40gb"
     },
   };
-  push(@$tasks, $abismal_summary_task);  
+  push( @$tasks, $abismal_summary_task );
 
   my $dnmtools_task = "DNMTools";
   $config->{$dnmtools_task} = {
-    class => "Methylation::DNMTools",
-    perform       => 1,
-    target_dir    => "${target_dir}/" . getNextFolderIndex($def) . "dnmtools",
-    option        => "",
-    chr_fasta       => $chr_fasta,
-    chr_size_file => $chr_size_file,
-    source_ref    => ["abismal", ".intervals.dnmtools_format.uniq.addqual.bam\$"],
-    dnmtools_command => getValue($def, "dnmtools_command", "dnmtools"),
-    docker_prefix => "dnmtools_",
-    pbs           => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => "72",
-      "mem"       => "80gb"
+    class            => "Methylation::DNMTools",
+    perform          => 1,
+    target_dir       => "${target_dir}/" . getNextFolderIndex($def) . "dnmtools",
+    option           => "",
+    chr_fasta        => $chr_fasta,
+    chr_size_file    => $chr_size_file,
+    source_ref       => [ "abismal", ".intervals.dnmtools_format.uniq.addqual.bam\$" ],
+    dnmtools_command => getValue( $def, "dnmtools_command", "dnmtools" ),
+    docker_prefix    => "dnmtools_",
+    pbs              => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => "72",
+      "mem"      => "80gb"
     },
   };
-  push(@$tasks, $dnmtools_task);
+  push( @$tasks, $dnmtools_task );
 
   my $dnmtoolsannovar_task = "dnmtoolsAnnovar";
   $config->{$dnmtoolsannovar_task} = {
-    class      => "Annotation::Annovar",
-    perform    => 1,
-    target_dir => "${target_dir}/" . getNextFolderIndex($def) . "dnmtoolsAnnovar",
-    option     => $annovar_param,
-    annovar_db => $annovar_db,
-    buildver   => $annovar_buildver,
+    class            => "Annotation::Annovar",
+    perform          => 1,
+    target_dir       => "${target_dir}/" . getNextFolderIndex($def) . "dnmtoolsAnnovar",
+    option           => $annovar_param,
+    annovar_db       => $annovar_db,
+    buildver         => $annovar_buildver,
     perform_splicing => 0,
-    docker_prefix => "annovar_",
-    isBed      => 1,
-    source_ref => [ "DNMTools", ".hmr\$|.amr\$|.pmd\$" ],
-    pbs        => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "40gb"
+    docker_prefix    => "annovar_",
+    isBed            => 1,
+    source_ref       => [ "DNMTools", ".hmr\$|.amr\$|.pmd\$" ],
+    pbs              => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "40gb"
     },
   };
-  push(@$tasks, $dnmtoolsannovar_task);
+  push( @$tasks, $dnmtoolsannovar_task );
 
   my $methylkitprep_task = "MethylKitPreparation";
   $config->{$methylkitprep_task} = {
@@ -208,189 +209,84 @@ sub getConfig {
     perform                  => 1,
     target_dir               => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitPreparation",
     option                   => "",
-    docker_prefix           => "wgbs_r_",
+    docker_prefix            => "wgbs_r_",
     rtemplate                => "../Methylation/prepare_CpG_input.R",
-    parameterSampleFile1_ref   => [ "DNMTools", ".cpg.meth.gz\$" ],
+    parameterSampleFile1_ref => [ "DNMTools", ".cpg.meth.gz\$" ],
     output_file_ext          => ".CpG.txt.gz",
     sh_direct                => 1,
     pbs                      => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "24",
-      "mem"       => "100gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "24",
+      "mem"      => "100gb"
     },
   };
-  push(@$tasks, $methylkitprep_task);
+  push( @$tasks, $methylkitprep_task );
 
   my $methylkitcorr_task = add_MethylKitCorr( $config, $def, $tasks, $target_dir, "MethylKitCorr", [ $methylkitprep_task, ".CpG.txt.gz" ], "amp" );
 
-  if($def->{perform_age_estimation}){
-    my $methy_age_task = add_MethylAgeEstimation( $config, $def, $tasks, $target_dir, "MethylKit_age", $methylkitcorr_task );
+  if ( $def->{perform_age_estimation} ) {
+    my $methy_age_task = add_MethylAgeEstimation( $config, $def, $tasks, $target_dir, "dnaMethyAge", $methylkitcorr_task );
   }
 
-  my $methylkitdiff_task=undef;
-  my $methylkitdiffannovar_task=undef;
-  my $MethylKitDiffAnnovarGenes_task=undef;
-  my $webgestalt_task=undef;
+  my $methylkitdiff_task             = undef;
+  my $methylkitdiffannovar_task      = undef;
+  my $MethylKitDiffAnnovarGenes_task = undef;
+  my $webgestalt_task                = undef;
 
-  if(defined $def->{pairs}){
-    my $ncore = getValue($def, "MethylKitDiff_ncore", "8");
-    $methylkitdiff_task = "MethylKitDiff";
-    $config->{$methylkitdiff_task} = {
-      class                    => "Methylation::MethylKitDiff",
-      target_dir               => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitDiff",
-      docker_prefix           => "wgbs_r_",
-      rtemplate                => "../Methylation/methylkit_diff.R",
-      source_ref => "pairs",
-      parameterSampleFile2 => {
-        task_name => $task_name,
-        difference => getValue($def, "methylDiff_difference", 25),
-        qvalue => getValue($def, "methylDiff_qvalue", 0.01),
-        ncore => $ncore,
-        overdispersion => getValue($def, "methylDiff_overdispersion", "MN"), #MN for overdispersion, Chisq-test for no overdispersion
-        test_method => getValue($def, "methylDiff_test_method", "dss"), #F, Chisq, fast.fisher and dss
-        adjust => getValue($def, "methylDiff_adjust", "BH"), #SLIM, holm, hochberg, hommel, bonferroni, BH, BY, fdr, none, qvalue
-      },
-      parameterSampleFile3_ref => "pairs",
-      parameterSampleFile4_ref => "groups",
-      parameterFile1_ref => [ "MethylKitCorr", ".filtered.cpg.meth.rds\$" ],
-      pbs                      => {
-        "nodes"     => "1:ppn=" . $ncore,
-        "walltime"  => getValue($def, "MethylKitDiff_walltime", "24"),
-        "mem"       => getValue($def, "MethylKitDiff_mem", "80gb")
-      },
-    };
-    push(@$tasks, $methylkitdiff_task);
+  if ( defined $def->{pairs} ) {
+    add_MethylDiffAnalysis( $config, $def, $tasks, $target_dir, $methylkitcorr_task );
 
-
-  #  my $dnmtoolsdiff_task = "DNMToolsDiff";
-  #  $config->{$dnmtoolsdiff_task} = {
-  #    class      => "Methylation::DNMToolsDiff",
-  #    perform    => 1,
-  #    target_dir => "${target_dir}/DNMToolsDiff",
-  #    option     => "",
-  #    source_ref    => "pairs",
-  #    methfile_ref  => [ "DNMTools", "^(?!.*?all).*\.meth\$" ],
-  #    hmrfile_ref   => [ "DNMTools", ".hmr\$" ],
-  #    parameterSampleFile1_ref => "pairs",
-  #    parameterSampleFile2_ref => "groups",
-  #    minCpG        => 10,
-  #    minSigCpG     => 5,
-  #    perc_cut      => 0.25,
-  #    FDR           => 0.05,
-  #    mincov        => 4,
-  #    chr_size_file => $chr_size_file,
-  #    pbs => {
-  #      "nodes"     => "1:ppn=1",
-  #      "walltime"  => "12",
-  #      "mem"       => "60gb"
-  #    },
-  #  };
-  #  push(@$tasks, "DNMToolsDiff");
-
-    $methylkitdiffannovar_task = "MethylKitDiffAnnovar";
-    $config->{$methylkitdiffannovar_task} = {
-      class      => "CQS::ProgramWrapperOneToOne",
-      perform    => 1,
-      program => "",
-      check_program => 0,
-      target_dir => "${target_dir}/" . getNextFolderIndex($def) . "MethylKitDiffAnnovar",
-      option     => "
-perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"  \",\@F[3..(\$fileColNum-1)]);print \"\$F[0]	\$F[1]	\$F[2]	0	-	\$fileColPart\"' __FILE__ | tail -n +2 > __NAME__.avinput
-
-table_annovar.pl __NAME__.avinput $annovar_db -buildver $annovar_buildver --otherinfo -protocol refGene, -operation g --remove --thread 1 --outfile __NAME__.annovar --remove
-
-echo -e \"Chr\tStart\tEnd\tRef\tAlt\tFunc.refGene\tGene.refGene\tGeneDetail.refGene\tExonicFunc.refGene\tAAChange.refGene\tstrand\tpvalue\tqvalue\tmeth.diff\tdirection\" > __NAME__.dmcpgs.annovar.final.tsv
-tail -n +2 __NAME__.annovar.${annovar_buildver}_multianno.txt | perl -pe 's/[ ]+/\\t/g' >> __NAME__.dmcpgs.annovar.final.tsv
-
-rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt 
-
-",
-      docker_prefix => "annovar_",
-      output_ext => ".dmcpgs.annovar.final.tsv",
-      source_ref => [ "MethylKitDiff", ".dmcpgs\$" ],
-      output_to_same_folder => 1,
-      sh_direct          => 1,
-      pbs        => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
-      },
-    };
-    push(@$tasks, $methylkitdiffannovar_task);
-
-    $MethylKitDiffAnnovarGenes_task = "MethylKitDiffAnnovarGenes";
-    $config->{$MethylKitDiffAnnovarGenes_task} = {
-      class              => "CQS::ProgramWrapperOneToOne",
-      perform            => 1,
-      target_dir         => "$target_dir/" . getNextFolderIndex($def) . "MethylKitDiffAnnovarGenes",
-      interpretor => "perl",
-      program => "../Methylation/get_gene_names.pl",
-      source_ref => ["MethylKitDiffAnnovar", ".dmcpgs.annovar.final.tsv\$" ],
-      output_file_prefix => ".dmcpgs.annovar.final.tsv.genename.txt",
-      output_ext => ".dmcpgs.annovar.final.tsv.genename.txt",
-      output_by_file => 0,
-      sh_direct          => 1,
-      pbs                => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
-      },
-    };
-    push(@$tasks, $MethylKitDiffAnnovarGenes_task);
-
-    $webgestalt_task = addWebgestalt($config, $def, $tasks, $target_dir, $MethylKitDiffAnnovarGenes_task,  [ $MethylKitDiffAnnovarGenes_task, ".genename.txt\$" ]);
-
-  #  my $homer_task = "HOMER_DMR";
-  #  $config->{$homer_task} = {
-  #    class        => "Homer::FindMotifs",
-  #    perform      => 1,
-  #    target_dir   => "${target_dir}/HOMER_DMR",
-  #    option       => "-nomotif",
-  #    homer_genome => "hg19",
-  #    source_ref   => [ "DNMToolsDiff", ".DMR.filtered\$" ],
-  #    remove_empty_source => 1,
-  #    sh_direct    => 0,
-  #    pbs          => {
-  #      "nodes"     => "1:ppn=1",
-  #      "walltime"  => "2",
-  #      "mem"       => "40gb"
-  #    },
-  #  };
-  #  push(@$tasks, "HOMER_DMR");
-  }
+    #  my $homer_task = "HOMER_DMR";
+    #  $config->{$homer_task} = {
+    #    class        => "Homer::FindMotifs",
+    #    perform      => 1,
+    #    target_dir   => "${target_dir}/HOMER_DMR",
+    #    option       => "-nomotif",
+    #    homer_genome => "hg19",
+    #    source_ref   => [ "DNMToolsDiff", ".DMR.filtered\$" ],
+    #    remove_empty_source => 1,
+    #    sh_direct    => 0,
+    #    pbs          => {
+    #      "nodes"     => "1:ppn=1",
+    #      "walltime"  => "2",
+    #      "mem"       => "40gb"
+    #    },
+    #  };
+    #  push(@$tasks, "HOMER_DMR");
+  } ## end if ( defined $def->{pairs...})
 
   my @report_files = ();
   my @report_names = ();
   my @copy_files   = ();
   if ( defined $config->{fastqc_raw_summary} ) {
-    push( @report_files, "fastqc_raw_summary",                   ".FastQC.baseQuality.tsv.png" );
-    push( @report_files, "fastqc_raw_summary",                   ".FastQC.sequenceGC.tsv.png" );
-    push( @report_files, "fastqc_raw_summary",                   ".FastQC.adapter.tsv.png" );
+    push( @report_files, "fastqc_raw_summary", ".FastQC.baseQuality.tsv.png" );
+    push( @report_files, "fastqc_raw_summary", ".FastQC.sequenceGC.tsv.png" );
+    push( @report_files, "fastqc_raw_summary", ".FastQC.adapter.tsv.png" );
     push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
-  }
+  } ## end if ( defined $config->...)
 
   if ( defined $config->{fastqc_post_trim_summary} ) {
-    push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.baseQuality.tsv.png" );
-    push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.sequenceGC.tsv.png" );
-    push( @report_files, "fastqc_post_trim_summary",                   ".FastQC.adapter.tsv.png" );
+    push( @report_files, "fastqc_post_trim_summary", ".FastQC.baseQuality.tsv.png" );
+    push( @report_files, "fastqc_post_trim_summary", ".FastQC.sequenceGC.tsv.png" );
+    push( @report_files, "fastqc_post_trim_summary", ".FastQC.adapter.tsv.png" );
     push( @report_names, "fastqc_post_trim_per_base_sequence_quality", "fastqc_post_trim_per_sequence_gc_content", "fastqc_post_trim_adapter_content" );
-  }
+  } ## end if ( defined $config->...)
 
-  if(( defined $dnmtools_task ) && ( defined $config->{$dnmtools_task} )) {
+  if ( ( defined $dnmtools_task ) && ( defined $config->{$dnmtools_task} ) ) {
     push( @copy_files, $dnmtools_task, ".amr\$" );
     push( @copy_files, $dnmtools_task, ".hmr\$" );
     push( @copy_files, $dnmtools_task, ".pmd\$" );
   }
-  if(( defined $dnmtoolsannovar_task ) && ( defined $config->{$dnmtoolsannovar_task} )) {
+  if ( ( defined $dnmtoolsannovar_task ) && ( defined $config->{$dnmtoolsannovar_task} ) ) {
     push( @copy_files, $dnmtoolsannovar_task, ".annovar.final.tsv\$" );
   }
-  if (( defined $methylkitcorr_task ) && ( defined $config->{$methylkitcorr_task} )) {
+  if ( ( defined $methylkitcorr_task ) && ( defined $config->{$methylkitcorr_task} ) ) {
     push( @copy_files, $methylkitcorr_task, ".pdf\$|.png\$|.rds\$" );
   }
-  if (( defined $methylkitdiff_task ) && ( defined $config->{$methylkitdiff_task} )) {
+  if ( ( defined $methylkitdiff_task ) && ( defined $config->{$methylkitdiff_task} ) ) {
     push( @copy_files, $methylkitdiff_task, ".dmcpgs\$" );
   }
-  if (( defined $methylkitdiffannovar_task ) && ( defined $config->{$methylkitdiffannovar_task} )) {
+  if ( ( defined $methylkitdiffannovar_task ) && ( defined $config->{$methylkitdiffannovar_task} ) ) {
     push( @copy_files, $methylkitdiffannovar_task, ".annovar.final.tsv\$" );
   }
   if ( defined $webgestalt_task ) {
@@ -398,42 +294,42 @@ rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt
     push( @copy_files, $webgestalt_task, "_geneontology_Cellular_Component\$" );
     push( @copy_files, $webgestalt_task, "_geneontology_Molecular_Function\$" );
     push( @copy_files, $webgestalt_task, "_pathway_KEGG\$" );
-  }
+  } ## end if ( defined $webgestalt_task)
 
-  if($def->{perform_multiqc}){
+  if ( $def->{perform_multiqc} ) {
     addMultiQC( $config, $def, $tasks, $target_dir, $target_dir, $dnmtools_task );
   }
 
   $config->{report} = {
-    class                      => "CQS::BuildReport",
-    perform                    => 1,
-    target_dir                 => "$target_dir/report",
+    class      => "CQS::BuildReport",
+    perform    => 1,
+    target_dir => "$target_dir/report",
     #docker_command             => "singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
-    docker_prefix           => "wgbs_r_",
+    docker_prefix              => "wgbs_r_",
     report_rmd_file            => "../Pipeline/WGBS.Rmd",
     additional_rmd_files       => "../Pipeline/Pipeline.R;reportFunctions.R",
     parameterSampleFile1_ref   => \@report_files,
     parameterSampleFile1_names => \@report_names,
-    parameterSampleFile2 => {
-      task_name => $task_name,
-      meta_data => "../../" . $task_name . "_meta.tsv",
-      abismal_path  => $config->{abismal}{target_dir} . "/result/",
-      dnmtools_path => $config->{DNMTools}{target_dir} . "/result/",
+    parameterSampleFile2       => {
+      task_name          => $task_name,
+      meta_data          => "../../" . $task_name . "_meta.tsv",
+      abismal_path       => $config->{abismal}{target_dir} . "/result/",
+      dnmtools_path      => $config->{DNMTools}{target_dir} . "/result/",
       MethylKitCorr_path => $config->{MethylKitCorr}{target_dir} . "/result/",
       MethylKitDiff_path => defined $config->{MethylKitDiff} ? $config->{MethylKitDiff}{target_dir} . "/result/" : undef,
     },
-    parameterSampleFile3_ref   => \@copy_files,
-    parameterSampleFile4_ref   => $webgestalt_task,
-    parameterSampleFile5_ref   => $abismal_task,
-    parameterSampleFile6_ref   => $dnmtools_task,
-    parameterSampleFile7_ref   => [ $methylkitcorr_task, ".pdf\$|.png\$" ],
-    parameterSampleFile8_ref   => $methylkitdiff_task,
-    parameterSampleFile9_ref   => $methylkitdiffannovar_task,
-    sh_direct                  => 1,
-    pbs                        => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "40gb"
+    parameterSampleFile3_ref => \@copy_files,
+    parameterSampleFile4_ref => $webgestalt_task,
+    parameterSampleFile5_ref => $abismal_task,
+    parameterSampleFile6_ref => $dnmtools_task,
+    parameterSampleFile7_ref => [ $methylkitcorr_task, ".pdf\$|.png\$" ],
+    parameterSampleFile8_ref => $methylkitdiff_task,
+    parameterSampleFile9_ref => $methylkitdiffannovar_task,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "40gb"
     },
   };
   push( @$tasks, "report" );
@@ -443,19 +339,17 @@ rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
-    source     => {
-      tasks => $tasks,
-    },
-    sh_direct => 0,
-    pbs       => {
+    source     => { tasks => $tasks, },
+    sh_direct  => 0,
+    pbs        => {
       "nodes"    => "1:ppn=8",
       "walltime" => "72",
       "mem"      => "40gb"
     },
   };
 
-  return($config);
-};
+  return ($config);
+} ## end sub getConfig
 
 
 sub performWGBS {
@@ -473,18 +367,7 @@ sub performWGBS {
   }
 
   return $config;
-}
-
-sub performWGBSTask {
-  my ( $def, $task ) = @_;
-
-  my $config = performWGBS($def, 0);
-
-  performTask( $config, $task );
-
-  return $config;
-}
-
+} ## end sub performWGBS
 
 1;
 

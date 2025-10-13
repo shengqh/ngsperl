@@ -21,6 +21,7 @@ our %EXPORT_TAGS = (
     qw(
         add_MethylKitCorr
         add_MethylAgeEstimation
+        add_MethylDiffAnalysis
     )
   ]
 );
@@ -101,5 +102,95 @@ sub add_MethylAgeEstimation {
 
   return ($methy_age_task);
 } ## end sub add_MethylAgeEstimation
+
+
+sub add_MethylDiffAnalysis {
+  my ( $config, $def, $tasks, $target_dir, $methylkitcorr_task ) = @_;
+
+  my $ncore            = getValue( $def, "MethylKitDiff_ncore", "8" );
+  my $annovar_buildver = getValue( $def, "annovar_buildver" );
+  my $annovar_db       = getValue( $def, "annovar_db" );
+  my $annovar_param    = getValue( $def, "annovar_param" );
+
+  my $methylkitdiff_task = "MethylKitDiff";
+  $config->{$methylkitdiff_task} = {
+    class                => "Methylation::MethylKitDiff",
+    target_dir           => "${target_dir}/" . getNextFolderIndex($def) . "$methylkitdiff_task",
+    docker_prefix        => "wgbs_r_",
+    rtemplate            => "../Methylation/methylkit_diff.R",
+    source_ref           => "pairs",
+    parameterSampleFile2 => {
+      task_name      => getValue( $def, "task_name" ),
+      difference     => getValue( $def, "methylDiff_difference", 25 ),
+      qvalue         => getValue( $def, "methylDiff_qvalue",     0.01 ),
+      ncore          => $ncore,
+      overdispersion => getValue( $def, "methylDiff_overdispersion", "MN" ),     #MN for overdispersion, Chisq-test for no overdispersion
+      test_method    => getValue( $def, "methylDiff_test_method",    "dss" ),    #F, Chisq, fast.fisher and dss
+      adjust         => getValue( $def, "methylDiff_adjust",         "BH" ),     #SLIM, holm, hochberg, hommel, bonferroni, BH, BY, fdr, none, qvalue
+    },
+    parameterSampleFile3_ref => "pairs",
+    parameterSampleFile4_ref => "groups",
+    parameterFile1_ref       => [ $methylkitcorr_task, ".filtered.cpg.meth.rds\$" ],
+    pbs                      => {
+      "nodes"    => "1:ppn=" . $ncore,
+      "walltime" => getValue( $def, "MethylKitDiff_walltime", "24" ),
+      "mem"      => getValue( $def, "MethylKitDiff_mem",      "80gb" )
+    },
+  };
+  push( @$tasks, $methylkitdiff_task );
+
+  my $methylkitdiffannovar_task = "MethylKitDiffAnnovar";
+  $config->{$methylkitdiffannovar_task} = {
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    program       => "",
+    check_program => 0,
+    target_dir    => "${target_dir}/" . getNextFolderIndex($def) . "$methylkitdiffannovar_task",
+    option        => "
+perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"  \",\@F[3..(\$fileColNum-1)]);print \"\$F[0]	\$F[1]	\$F[2]	0	-	\$fileColPart\"' __FILE__ | tail -n +2 > __NAME__.avinput
+
+table_annovar.pl __NAME__.avinput $annovar_db -buildver $annovar_buildver --otherinfo -protocol refGene, -operation g --remove --thread 1 --outfile __NAME__.annovar --remove
+
+echo -e \"Chr\tStart\tEnd\tRef\tAlt\tFunc.refGene\tGene.refGene\tGeneDetail.refGene\tExonicFunc.refGene\tAAChange.refGene\tstrand\tpvalue\tqvalue\tmeth.diff\tdirection\" > __NAME__.dmcpgs.annovar.final.tsv
+tail -n +2 __NAME__.annovar.${annovar_buildver}_multianno.txt | perl -pe 's/[ ]+/\\t/g' >> __NAME__.dmcpgs.annovar.final.tsv
+
+rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt 
+
+",
+    docker_prefix         => "annovar_",
+    output_ext            => ".dmcpgs.annovar.final.tsv",
+    source_ref            => [ $methylkitdiff_task, ".dmcpgs\$" ],
+    output_to_same_folder => 1,
+    sh_direct             => 1,
+    pbs                   => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
+    },
+  };
+  push( @$tasks, $methylkitdiffannovar_task );
+
+  my $MethylKitDiffAnnovarGenes_task = "MethylKitDiffAnnovarGenes";
+  $config->{$MethylKitDiffAnnovarGenes_task} = {
+    class              => "CQS::ProgramWrapperOneToOne",
+    perform            => 1,
+    target_dir         => "$target_dir/" . getNextFolderIndex($def) . "$MethylKitDiffAnnovarGenes_task",
+    interpretor        => "perl",
+    program            => "../Methylation/get_gene_names.pl",
+    source_ref         => [ $methylkitdiffannovar_task, ".dmcpgs.annovar.final.tsv\$" ],
+    output_file_prefix => ".dmcpgs.annovar.final.tsv.genename.txt",
+    output_ext         => ".dmcpgs.annovar.final.tsv.genename.txt",
+    output_by_file     => 0,
+    sh_direct          => 1,
+    pbs                => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "10gb"
+    },
+  };
+  push( @$tasks, $MethylKitDiffAnnovarGenes_task );
+
+  my $webgestalt_task = addWebgestalt( $config, $def, $tasks, $target_dir, $MethylKitDiffAnnovarGenes_task, [ $MethylKitDiffAnnovarGenes_task, ".genename.txt\$" ] );
+} ## end sub add_MethylDiffAnalysis
 
 1;
