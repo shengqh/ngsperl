@@ -116,6 +116,7 @@ fi
       output_ext                          => "__NAME__/bismark/summary/bismark_summary_report.html",
       output_to_same_folder               => 1,
       sh_direct                           => $sh_direct,
+      no_docker                           => 1,
       pbs                                 => {
         "nodes"    => "1:ppn=8",
         "walltime" => "72",
@@ -194,6 +195,7 @@ fi
       output_to_same_folder    => 0,
       samplename_in_result     => 0,
       sh_direct                => $sh_direct,
+      no_docker                => 1,
       pbs                      => {
         "nodes"    => "1:ppn=8",
         "walltime" => "72",
