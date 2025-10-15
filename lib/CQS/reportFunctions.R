@@ -156,7 +156,7 @@ print_table_from_file<-function(filepath, row.names=1, caption=NULL, description
   output_table(tbl, caption, description)
 }
 
-print_table<-function(tbl, round_value=3, byDT=FALSE, row.names=TRUE){
+print_table<-function(tbl, byDT=FALSE, row.names=TRUE, round_value=0){
   if(round_value > 0){
     tbl <- tbl %>% dplyr::mutate(across(where(is.numeric), round, round_value))
   }
