@@ -8,7 +8,9 @@ load_install<-function(library_name, library_sources=library_name){
 
 load_install("harmony")
 load_install("cowplot")
-load_install("Seurat")
+load_install("SeuratData", "satijalab/seurat-data")
+load_install("SeuratWrappers", "satijalab/seurat-wrappers")
+load_install("Seurat", "satijalab/seurat")
 load_install("tools")
 load_install("scales")
 load_install("ggplot2")
@@ -20,9 +22,8 @@ load_install("plyr")
 load_install("dplyr")
 load_install("rlang")
 load_install("scCustomize")
-load_install("SeuratData", "satijalab/seurat-data")
-load_install("SeuratWrappers", "satijalab/seurat-wrappers")
 load_install("BiocParallel")
+load_install("viridis")
 
 #https://github.com/r-lib/lobstr/blob/main/R/mem.R
 lobstr_node_size <- function() {
@@ -1018,7 +1019,7 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="",
   return(finalList)
 }
 
-output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL){
+output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL, assay="RNA"){
   g<-FeaturePlot_scCustom(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
   width=1700
   ncol=1
@@ -1061,13 +1062,15 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   cat("draw pictures ... \n")
   draw_feature_qc(prefix=paste0(outFile, ".Ident"), 
     rawobj=obj, 
-    ident_name="orig.ident")
+    ident_name="orig.ident",
+    assay=assay)
 
   p<-draw_dimplot(mt, paste0(outFile, ".Ident.png"), "Ident")
   if(!all(mt$Sample == mt$Ident)){
     draw_feature_qc(prefix=paste0(outFile, ".sample"), 
       rawobj=obj, 
-      ident_name="sample")
+      ident_name="sample",
+      assay=assay)
     p1<-draw_dimplot(mt, paste0(outFile, ".sample.png"), "Sample")
     p<-p+p1
     width=width + nWidth * 600
@@ -1076,7 +1079,8 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   if(has_batch_file){
     draw_feature_qc(prefix=paste0(outFile, ".batch"), 
       rawobj=obj, 
-      ident_name="batch")
+      ident_name="batch",
+      assay=assay)
     p2<-draw_dimplot(mt, paste0(outFile, ".batch.png"), "batch")
     p<-p+p2
     width=width+nWidth * 600
@@ -1627,12 +1631,23 @@ output_ElbowPlot<-function(obj, outFile, reduction){
   ggsave(paste0(outFile, ".elbowplot.", reduction, ".png"), p, width=1500, height=1200, dpi=300, units="px", bg="white")
 }
 
-draw_feature_qc<-function(prefix, rawobj, ident_name) {
+draw_feature_qc<-function(prefix, rawobj, ident_name, assay="RNA") {
+  DefaultAssay(rawobj)<-assay
+
+  cells=colnames(GetAssayData(rawobj, assay=assay, layer="counts"))
+  cat("number of cells in assay", assay, ":", length(cells), "\n")
+
   Idents(rawobj)<-ident_name
 
   nsample<-length(unique(unlist(rawobj[[ident_name]])))
-  
-  feats<-c("nFeature_RNA","nCount_RNA","percent.mt","percent.ribo")
+
+  nFeatureCol=paste0("nFeature_", assay)
+  nCountCol=paste0("nCount_", assay)
+
+  feats<-c(nFeatureCol, nCountCol, "percent.mt")
+  if("percent.ribo" %in% colnames(rawobj@meta.data)){
+    feats<-c(feats, "percent.ribo")
+  }
   if("percent.hb" %in% colnames(rawobj@meta.data)){
     feats<-c(feats, "percent.hb")
   }
@@ -1645,15 +1660,15 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     height=4000
   }
 
-  cat("draw qc voilin ...\n")
-  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = ncol, raster=FALSE) + NoLegend() & theme(axis.title.x = element_blank())
+  cat("draw qc violin ...\n")
+  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = ncol, raster=FALSE, assay=assay) + NoLegend() & theme(axis.title.x = element_blank())
   ggsave(paste0(prefix, ".qc.violin.png"), g, width=6000, height=height, dpi=300, units="px", bg="white")
 
   if('umap' %in% names(rawobj@reductions)){
     nfeature<-length(feats)
 
     by.col=nfeature>=nsample
-    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col, raster=FALSE) +
+    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col, raster=FALSE, assay=assay) +
       theme(aspect.ratio=1)
     if(by.col){
       width = min(50000, nsample * 700)
@@ -1668,13 +1683,21 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     ggsave(paste0(prefix, ".qc.exp.png"), g, width=width, height=height, dpi=300, units="px", bg="white", limitsize = FALSE)
   }
 
+  # We need to limit the cells to current assay only. Otherwise, for the spatial data, it might contains both 8um and polygons
   cat("draw qc scatter ...\n")
-  p1 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "percent.mt", raster=FALSE) + NoLegend()
-  p2 <- FeatureScatter(object = rawobj, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", raster=FALSE) + NoLegend()
+  p1 <- FeatureScatter(object = rawobj, feature1 = nCountCol, feature2 = "percent.mt", cells=cells, raster=FALSE) + NoLegend()
+  p2 <- FeatureScatter(object = rawobj, feature1 = nCountCol, feature2 = nFeatureCol, cells=cells, raster=FALSE) + NoLegend()
   p<-p1+p2+plot_layout(ncol=2)
   ggsave(paste0(prefix, ".qc.png"), p, width=2600, height=1200, dpi=300, units="px", bg="white")
+
+  mt <- FetchData(rawobj, vars=c("percent.mt", ident_name, nFeatureCol, nCountCol), assay=assay)
+  mt = mt[cells,,drop=FALSE] |>
+    dplyr::mutate(nFeature = log10(get(nFeatureCol)),
+                  nCount = log10(get(nCountCol)),
+                  Sample = get(ident_name),
+                  mt = percent.mt) |>
+    dplyr::select(mt, Sample, nFeature, nCount)
   
-  mt<-data.frame(mt=rawobj$percent.mt, Sample=unlist(rawobj[[ident_name]]), nFeature=log10(rawobj$nFeature_RNA), nCount=log10(rawobj$nCount_RNA))
   nwidth=ceiling(sqrt(nsample))
   nheight=ceiling(nsample/nwidth)
 
@@ -1696,7 +1719,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name) {
     facet_wrap(Sample~.) + theme_bw() + theme(strip.background = element_rect(colour="black", fill="white"))
   ggsave(paste0(prefix, ".qc.feature.png"), p2, width=min(20000, 500 * nwidth + 300), height=min(10000, 500*nheight), dpi=300, units="px", bg="white", limitsize = FALSE)
 
-  ct<-as.data.frame(table(rawobj[[ident_name]]))
+  ct<-as.data.frame(table(rawobj@meta.data[cells, ident_name]))
   colnames(ct)<-c("Sample","Cell")
 
   if(!("project" %in% colnames(rawobj@meta.data))){
@@ -1999,17 +2022,19 @@ get_valid_path<-function(oldpath){
   return(result)
 }
 
-output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern) {
+output_rawdata<-function(rawobj, outFile, assay="RNA") {
+  DefaultAssay(rawobj)<-assay
+  
   writeLines(rownames(rawobj), paste0(outFile, ".genes.txt"))
   if("ADT" %in% names(rawobj)){
     writeLines(rownames(rawobj$ADT@counts), paste0(outFile, ".antibodies.txt"))
   }
 
   cat("draw top 20 gene figure\n")
-  C <- MyGetAssayData(obj=rawobj, assay="RNA", slot="counts")
-  if(ncol(C) > 100000){
-    cat("Too many cells, sample 100000 cells for top20 genes visualization\n")
-    C <- C[,sample(1:ncol(C), 100000)]
+  C <- MyGetAssayData(obj=rawobj, assay=assay, slot="counts")
+  if(ncol(C) > 10000){
+    cat("Too many cells, sample 10000 cells for top20 genes visualization\n")
+    C <- C[,sample(1:ncol(C), 10000)]
   }
   C <- Matrix::t(Matrix::t(C)/Matrix::colSums(C)) * 100
   mc <- MatrixGenerics::rowMedians(C)
@@ -2020,40 +2045,32 @@ output_rawdata<-function(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPatt
   par(mar = c(4, 8, 2, 1))
   boxplot(tm, cex = 0.1, las = 1, xlab = "% total count per cell",
           col = (scales::hue_pal())(20)[20:1], horizontal = TRUE)
-  dev.off()
+  ignored = dev.off()
 
   has_project = ifelse("project" %in% colnames(rawobj@meta.data), any(rawobj$orig.ident != rawobj$project),FALSE)
   has_sample = ifelse("sample" %in% colnames(rawobj@meta.data), any(rawobj$orig.ident != rawobj$sample), FALSE)
 
   cat("draw qc by orig.ident\n")
-  draw_feature_qc(outFile, rawobj, "orig.ident")
+  draw_feature_qc(prefix=outFile, 
+                  rawobj=rawobj, 
+                  ident_name="orig.ident", 
+                  assay=assay)
 
   if(has_sample){
     cat("draw qc by sample\n")
-    draw_feature_qc(paste0(outFile, ".sample"), rawobj, "sample")
+    draw_feature_qc(prefix=paste0(outFile, ".sample"), 
+                    rawobj=rawobj, 
+                    ident_name="sample", 
+                    assay=assay)
   }
 
   if(has_project){
     cat("draw qc by project\n")
-    draw_feature_qc(paste0(outFile, ".project"), rawobj, "project")
+    draw_feature_qc(prefix=paste0(outFile, ".project"), 
+                    rawobj=rawobj, 
+                    ident_name="project", 
+                    assay=assay)
   }
-
-  # rRNA.genes <- grep(pattern = rRNApattern,  rownames(rawobj), value = TRUE)
-  # rawobj<-rawobj[!(rownames(rawobj) %in% rRNA.genes),]
-
-  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=Mtpattern, col.name="percent.mt", assay="RNA")
-  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=rRNApattern, col.name = "percent.ribo", assay="RNA")
-  # rawobj<-PercentageFeatureSet(object=rawobj, pattern=hemoglobinPattern, col.name="percent.hb", assay="RNA")    
-
-  # draw_feature_qc(paste0(outFile, ".no_ribo"), rawobj, "orig.ident")
-
-  # if(has_sample){
-  #   draw_feature_qc(paste0(outFile, ".no_ribo.sample"), rawobj, "sample")
-  # }
-
-  # if(has_project){
-  #   draw_feature_qc(paste0(outFile, ".no_ribo.project"), rawobj, "project")
-  # }
 }
 
 XAxisRotation<-function(){
@@ -3816,4 +3833,14 @@ get_nhood_stat_ct <- function(comp_milo, annotation_column){
                                         nhood_stat_ct , 
                                         coldata_col = annotation_column)
   return(nhood_stat_ct)
+}
+
+SpatialFeaturePlot_cqs<-function(object, features, max.cutoff="q98", ...) {
+  g=SpatialFeaturePlot(
+      object = object,
+      features = features,
+      max.cutoff = max.cutoff,
+      ...
+    ) + scale_fill_gradientn(colours = turbo(n = 256))
+  return(g)
 }
