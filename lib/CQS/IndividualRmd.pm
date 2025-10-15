@@ -87,7 +87,7 @@ sub perform {
       }
     }
 
-    my $final_file = $self->get_absolute_final_file($config, $section, $sample_name);
+    my $final_file = "$cur_dir/${sample_name}${output_ext}";
 
     my $rmd_file = undef;
     my $rReportTemplates = get_option( $config, $section, "rReportTemplate");
