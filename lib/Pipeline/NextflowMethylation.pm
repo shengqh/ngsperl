@@ -113,14 +113,15 @@ fi
       parameterSampleFile1_suffix         => ",",
       no_prefix                           => 1,
       no_output                           => 1,
-      output_ext                          => "__NAME__/bismark/summary/bismark_summary_report.html",
+      output_ext                          => "bismark/summary/bismark_summary_report.html",
+      samplename_in_result                => 0,
       output_to_same_folder               => 1,
       sh_direct                           => $sh_direct,
       no_docker                           => 1,
       pbs                                 => {
-        "nodes"    => "1:ppn=8",
+        "nodes"    => "1:ppn=1",
         "walltime" => "72",
-        "mem"      => "50gb",
+        "mem"      => "10gb",
       },
     };
 
