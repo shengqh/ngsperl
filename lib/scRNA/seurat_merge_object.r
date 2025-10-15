@@ -83,4 +83,4 @@ cat("outputing result ... \n")
 
 saveRDS(rawobj, paste0(outFile, ".rawobj.rds"))
 
-output_rawdata(rawobj, outFile, Mtpattern, rRNApattern, hemoglobinPattern)
+output_rawdata(rawobj, outFile)
