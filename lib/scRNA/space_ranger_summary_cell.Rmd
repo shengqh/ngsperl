@@ -17,12 +17,12 @@ g=ggplot(output, aes(x=`Sample ID`, y=`Number of Cells`)) +
   theme(
     axis.title.x = element_blank(),   # x-axis title
     axis.title.y = element_text(size = 20),   # y-axis title
-    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.x  = element_text(size = 16, angle = bar_x_angle, hjust = 1),  # x-axis labels
     axis.text.y  = element_text(size = 16),   # y-axis labels
     plot.title   = element_blank() # plot title
   )
 cell_numbers_png = paste0(file_prefix, ".cell_numbers.png")
-ggsave(cell_numbers_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
+ggsave(cell_numbers_png, plot = g, width = bar_width, height = bar_height, units = "in", dpi = 300, bg="white")
 include_graphics(cell_numbers_png)
 ```
 
@@ -44,12 +44,12 @@ g=ggplot(od, aes(x=`Sample ID`, y=`Value`, fill=`Metric`)) +
     legend.position = "top",
     axis.title.x = element_blank(),   # x-axis title
     axis.title.y = element_text(size = 20),   # y-axis title
-    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.x  = element_text(size = 16, angle = bar_x_angle, hjust = 1),  # x-axis labels
     axis.text.y  = element_text(size = 16),   # y-axis labels
     plot.title   = element_blank() # plot title
   )
 cell_median_png = paste0(file_prefix, ".cell_median.png")
-ggsave(cell_median_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
+ggsave(cell_median_png, plot = g, width = bar_width, height = bar_height, units = "in", dpi = 300, bg="white")
 include_graphics(cell_median_png)
 ```
 
@@ -78,12 +78,12 @@ g = ggplot(df_long, aes(x = `Sample ID`, y = Value, fill = Metric)) +
     legend.position = "top",
     axis.title.x = element_blank(),   # x-axis title
     axis.title.y = element_text(size = 20),   # y-axis title
-    axis.text.x  = element_text(size = 16, angle = 45, hjust = 1),  # x-axis labels
+    axis.text.x  = element_text(size = 16, angle = bar_x_angle, hjust = 1),  # x-axis labels
     axis.text.y  = element_text(size = 16),   # y-axis labels
     plot.title   = element_blank() # plot title
   )
 
 mean_read_png = paste0(file_prefix, ".mean_read_comparison.png")
-ggsave(mean_read_png, plot = g, width = nrow(output) * 0.4 + 1, height = 4, units = "in", dpi = 300, bg="white")
+ggsave(mean_read_png, plot = g, width = bar_width, height = bar_height, units = "in", dpi = 300, bg="white")
 include_graphics(mean_read_png)
 ```
