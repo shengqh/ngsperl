@@ -1,0 +1,231 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+source("scRNA_func.r")
+source("spatial_plotting_functions.R")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+if(is.null(myoptions$affiliation)) {
+  myoptions$affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
+}
+
+data_dir_map<-read_file_map("fileList1.txt", do_unlist=FALSE)
+sample_name=names(data_dir_map)[1]
+data_dir=data_dir_map[[sample_name]]
+```
+
+---
+title: "VisiumHD data - `r sample_name`"
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r}
+library(sf)
+library(Seurat)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+```
+
+# Build Seurat object
+
+Load data from `r data_dir` with bin size: `r myoptions$bin_size`.
+
+```{r}
+bin_size=sort(unlist(strsplit(myoptions$bin_size, ",")))
+rds_file = paste0(sample_name, ".", paste0(bin_size, collapse = "_"), ".rds")
+if(file.exists(rds_file)){
+  rawobj = readRDS(rds_file)
+}else{
+  rawobj = Seurat::Load10X_Spatial(bin.size = bin_size, data.dir = data_dir, slice = 'slice1')
+  rawobj$orig.ident = sample_name
+
+  assays = names(rawobj@assays)
+  for(assay in assays){
+    rawobj = PercentageFeatureSet(object=rawobj, pattern=myoptions$Mtpattern, col.name="percent.mt", assay=assay)
+  }  
+  saveRDS(rawobj, file = rds_file)
+}
+
+assays = names(rawobj@assays)
+
+rawobj$AssayName=""
+rawobj$nCount=0
+rawobj$nFeature=0
+for(assay in assays){
+  assay_cells = colnames(rawobj[[assay]])
+
+  nFeatureCol=paste0("nFeature_", assay)
+  nCountCol=paste0("nCount_", assay)
+
+  rawobj@meta.data[assay_cells, "AssayName"] = assay
+  rawobj@meta.data[assay_cells, "nCount"] = rawobj@meta.data[assay_cells, nCountCol] 
+  rawobj@meta.data[assay_cells, "nFeature"] = rawobj@meta.data[assay_cells, nFeatureCol]
+
+  DefaultAssay(rawobj) <- assay
+  rawobj <- suppressMessages(NormalizeData(rawobj))
+}
+```
+
+# Bin/cell counts
+
+```{r}
+print_table(get_freq_table(rawobj@meta.data, "AssayName"), row.names=FALSE)
+```
+
+# QC violin plot
+
+```{r}
+fdata = FetchData(rawobj, vars = c("AssayName", "percent.mt", "nCount", "nFeature"))
+
+gdata = fdata |> 
+  tibble::rownames_to_column("Cell") |>
+  tidyr::pivot_longer(cols = c("percent.mt", "nCount", "nFeature"), 
+                      names_to = "Metric", 
+                      values_to = "Value")
+
+g=ggplot(gdata, aes(x=AssayName, y=Value, color=AssayName)) + 
+  geom_violin(scale = "width", trim=TRUE) + 
+  geom_boxplot(width=0.1, outliers=FALSE, position=position_dodge(width=0.9)) +
+  facet_grid(~Metric, scales = "free_y") + 
+  theme_bw() + 
+  theme(legend.position = "none", 
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        strip.background = element_blank()) + 
+  labs(title=paste0("QC metrics for ", sample_name))
+
+vln_png=paste0(sample_name, ".qc.violin.png")
+ggsave(vln_png, g, width=5, height=3.5, dpi=300, units="in", bg="white")
+include_graphics(vln_png)
+```
+
+# QC density plot
+
+```{r}
+fdata = fdata |>
+  dplyr::mutate(log10_nCount = log10(nCount + 1),
+                log10_nFeature = log10(nFeature + 1))
+
+gdata = fdata |> 
+  dplyr::select(AssayName, percent.mt, log10_nCount, log10_nFeature) |>
+  tibble::rownames_to_column("Cell") |>
+  tidyr::pivot_longer(cols = c("log10_nCount", "log10_nFeature"), 
+                      names_to = "Metric", 
+                      values_to = "Value")
+
+g = ggplot(gdata, aes(x=Value, y=percent.mt)) + 
+  geom_bin2d(bins = 70) + 
+  scale_fill_continuous(type = "viridis") + 
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  facet_grid(AssayName ~ Metric, scales = "free_y", switch = "x") + 
+  theme_bw() + 
+  theme(legend.position = "none", 
+        plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        strip.background = element_blank(),
+        strip.placement = "outside") + 
+  labs(title=paste0("QC density for ", sample_name), y="Percentage of Mitochondrial genes")
+
+density_png=paste0(sample_name, ".qc.density.png")
+ggsave(density_png, g, width=5, height=5, dpi=300, units="in", bg="white")
+include_graphics(density_png)
+```
+
+# Spatial feature plot
+
+```{r}
+g1=SpatialPlot(object = rawobj, image.alpha = 1, alpha = c(0, 0)) + 
+  ggtitle(paste0("Tissue image for ", sample_name)) + 
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5)) 
+```
+
+```{r}
+# split object by assay, some figures might be failed if there are two assays.
+obj_list=lapply(assays, function(x){
+  DefaultAssay(rawobj) <- x
+  subset(rawobj, subset = AssayName == x)
+})
+names(obj_list)=assays
+```
+
+```{r}
+ncount_content=""
+assays=names(obj_list)[2]
+for(assay in assays){
+  ncount_content = paste0(ncount_content, "\n## ", assay, "\n\n")
+  cur_obj = obj_list[[assay]]
+
+  pt.size.factor=ifelse(assay=="Spatial.008um", 16, ifelse(assay=="Spatial.Polygons", 11, 1.6))
+  plot_segmentations = ifelse(assay=="Spatial.Polygons", TRUE, FALSE)
+
+  nCountCol=paste0("nCount_", assay)
+  nFeatureCol=paste0("nFeature_", assay)
+  cur_png = paste0(sample_name, ".", nCountCol, ".png")
+
+  g2 = SpatialFeaturePlot(object = cur_obj, 
+                          features = c(nCountCol), 
+                          max.cutoff="q98", 
+                          image.alpha = 0, 
+                          pt.size.factor = pt.size.factor,
+                          plot_segmentations = plot_segmentations,
+                          images = NULL) +
+    scale_fill_gradientn(colours = turbo(n = 256))
+
+  g3 = SpatialFeaturePlot(object = cur_obj, 
+                          features = c(nFeatureCol), 
+                          max.cutoff="q98", 
+                          image.alpha = 0, 
+                          pt.size.factor = pt.size.factor,
+                          plot_segmentations = plot_segmentations,
+                          images = NULL) +
+    scale_fill_gradientn(colours = turbo(n = 256))
+
+  g = g1 + g2 + g3 + plot_layout(ncol=3)
+  ggsave(cur_png, g, width=15, height=5, dpi=300, units="in", bg="white")
+  ncount_content = paste0(ncount_content, getFigure(cur_png))
+}
+ncount_rmd = paste0(sample_name, ".nCount.nFeature.rmd")
+writeLines(ncount_content, con = ncount_rmd)
+```
+
+```{r child=ncount_rmd}
+```
+
+# Session Info
+
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=F)
+```
