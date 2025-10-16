@@ -1,0 +1,67 @@
+---
+title: "Visium HD data - QC summary"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    self_contained: false
+    theme: cosmo
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+
+.main-container {
+  max-width: 1920px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+if(is.null(myoptions$affiliation)) {
+  myoptions$affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
+}
+```
+
+---
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+## QC reports {.tabset}
+
+```{r}
+library(fs)
+
+curwd = gsub("^/panfs/accrepfs.vampire", "", getwd())
+
+html_map=read_file_map("fileList1.txt", do_unlist=FALSE)
+for (fname in names(html_map)) {
+  fpath=gsub("^/panfs/accrepfs.vampire", "", html_map[[fname]])
+  rpath=fs::path_rel(fpath, start = curwd)
+  cat("### ", fname, "\n")
+  cat(sprintf('<iframe src="%s" width="100%%" height="800px" style="border:none;"></iframe>\n\n', rpath))
+}
+```
+
