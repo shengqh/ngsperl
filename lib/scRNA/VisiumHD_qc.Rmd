@@ -25,6 +25,12 @@ knitr::opts_chunk$set(echo=FALSE,
 ```
 
 ```{r data, echo = FALSE}
+library('sf')
+library(Seurat)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+
 source("reportFunctions.R")
 source("scRNA_func.r")
 source("spatial_plotting_functions.R")
@@ -49,20 +55,12 @@ author:
   affiliation: `r myoptions$affiliation`
 ---
 
-```{r}
-library(sf)
-library(Seurat)
-library(data.table)
-library(dplyr)
-library(ggplot2)
-```
-
 # Build Seurat object
 
 Load data from `r data_dir` with bin size: `r myoptions$bin_size`.
 
 ```{r}
-bin_size=sort(unlist(strsplit(myoptions$bin_size, ",")))
+bin_size = sort(unlist(strsplit(myoptions$bin_size, ",")))
 rds_file = paste0(sample_name, ".", paste0(bin_size, collapse = "_"), ".rds")
 if(file.exists(rds_file)){
   rawobj = readRDS(rds_file)
@@ -100,7 +98,35 @@ for(assay in assays){
 # Bin/cell counts
 
 ```{r}
-print_table(get_freq_table(rawobj@meta.data, "AssayName"), row.names=FALSE)
+count_thresholds = c(0, 50, 100,  150, 200, 250, 300, 350, 400)
+```
+
+## By UMI count thresholds
+
+```{r}
+t = data.frame(AssayName = unique(rawobj@meta.data$AssayName))
+
+for(threshold in count_thresholds) {
+  col_name = ifelse(threshold == 0, "spot", paste0("nCount>=", threshold))
+  freq_table = get_freq_table(rawobj@meta.data |> dplyr::filter(nCount >= threshold), "AssayName")
+  names(freq_table)[2] = col_name
+  t = merge(t, freq_table, by="AssayName", all=TRUE)
+}
+print_table(t, row.names=FALSE)
+```
+
+## By Feature count thresholds
+
+```{r}
+t = data.frame(AssayName = unique(rawobj@meta.data$AssayName))
+
+for(threshold in count_thresholds) {
+  col_name = ifelse(threshold == 0, "spot", paste0("nFeature>=", threshold))
+  freq_table = get_freq_table(rawobj@meta.data |> dplyr::filter(nFeature >= threshold), "AssayName")
+  names(freq_table)[2] = col_name
+  t = merge(t, freq_table, by="AssayName", all=TRUE)
+}
+print_table(t, row.names=FALSE)
 ```
 
 # QC violin plot
@@ -183,7 +209,7 @@ names(obj_list)=assays
 
 ```{r}
 ncount_content=""
-assays=names(obj_list)[2]
+assays=names(obj_list)
 for(assay in assays){
   ncount_content = paste0(ncount_content, "\n## ", assay, "\n\n")
   cur_obj = obj_list[[assay]]
@@ -204,17 +230,8 @@ for(assay in assays){
                           images = NULL) +
     scale_fill_gradientn(colours = turbo(n = 256))
 
-  g3 = SpatialFeaturePlot(object = cur_obj, 
-                          features = c(nFeatureCol), 
-                          max.cutoff="q98", 
-                          image.alpha = 0, 
-                          pt.size.factor = pt.size.factor,
-                          plot_segmentations = plot_segmentations,
-                          images = NULL) +
-    scale_fill_gradientn(colours = turbo(n = 256))
-
-  g = g1 + g2 + g3 + plot_layout(ncol=3)
-  ggsave(cur_png, g, width=15, height=5, dpi=300, units="in", bg="white")
+  g = g1 + g2 + plot_layout(ncol=2)
+  ggsave(cur_png, g, width=10, height=5, dpi=300, units="in", bg="white")
   ncount_content = paste0(ncount_content, getFigure(cur_png))
 }
 ncount_rmd = paste0(sample_name, ".nCount.nFeature.rmd")
