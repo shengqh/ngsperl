@@ -81,40 +81,12 @@ if(test_method == "dss"){
                                 mc.cores = ncore)
 }
 
-cur_prefix <- paste0(sample_name, "_", test_method)
-
-test_rds=paste0(cur_prefix, ".rds")
-cat("Saving intermediate results to: ", test_rds, "\n")
-saveRDS(sub_diff, file = test_rds)
-
-if(0){
-  sub_diff <- readRDS(test_rds)
-}
+cur_prefix <- paste0(sample_name, ".", test_method)
+meth_rds = paste0(cur_prefix, ".rds")
+saveRDS(sub_diff, file = meth_rds)
 
 cat("Extracting all differential methylation results for test method", test_method, "...\n")
 diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
-diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hypo_in_", control_group_name), paste0("hypo_in_", treatment_group_name))
-methyldiff_rds=paste0(cur_prefix, ".methyldiff.rds")
-saveRDS(diff_res, file = methyldiff_rds)
-if(0){
-  diff_res <- readRDS(methyldiff_rds)
-}
-
-cat("extracting differential methylation results for treatment group of test method", test_method, "...\n")
-diff_res_treatment_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hypo")
-if(nrow(diff_res_treatment_high) > 0){
-  diff_res_treatment_high$direction <- paste0("hypo_in_", treatment_group_name)
-  diff_res_treatment_high <- diff_res_treatment_high[order(diff_res_treatment_high$meth.diff),]
-}
-write.table(diff_res_treatment_high, file = paste0(cur_prefix, "_", treatment_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
-
-cat("extracting differential methylation results for control group of test method", test_method, "...\n")
-diff_res_control_high <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "hyper")
-if(nrow(diff_res_control_high) > 0){
-  diff_res_control_high$direction <- paste0("hypo_in_", control_group_name)
-  diff_res_control_high <- diff_res_control_high[order(diff_res_control_high$meth.diff),]
-}
-write.table(diff_res_control_high, file = paste0(cur_prefix, "_", control_group_name, ".dmcpgs"), sep = "\t", quote = F, row.names = F)
-# }
-
-
+diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hyper_in_", treatment_group_name), paste0("hyper_in_", control_group_name))
+diff_res = diff_res |> dplyr::arrange(pvalue)
+write.table(diff_res, file = paste0(cur_prefix, ".dmcpgs.tsv"), sep = "\t", quote = F, row.names = F)
