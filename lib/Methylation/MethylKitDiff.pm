@@ -41,8 +41,8 @@ sub result {
     my $cur_dir      = $result_dir . "/$comparison_name";
     my @group_names = @{ $comparisons->{$comparison_name}; };
 
-    my $dmcpgsFile1=${comparison_name}."_".$group_names[0]."_${test_method}.dmcpgs";
-    my $dmcpgsFile2=${comparison_name}."_".$group_names[1]."_${test_method}.dmcpgs";
+    my $dmcpgsFile1=${comparison_name}."_${test_method}_".$group_names[0].".dmcpgs.tsv";
+    my $dmcpgsFile2=${comparison_name}."_${test_method}_".$group_names[1].".dmcpgs.tsv";
 
     #don't use common @result_files and $filtered in two filtering procedures. It might cause problem.
     my @result_files1 = ();
@@ -79,7 +79,7 @@ sub get_absolute_final_file {
 
   my @group_names = @{ $comparisons->{$comparison_name} };
 
-  my $dmcpgsFile1=${comparison_name}."_".$group_names[0]."_${test_method}.dmcpgs";
+  my $dmcpgsFile1=${comparison_name}."_${test_method}_".$group_names[0].".dmcpgs.tsv";
 
   return( "$cur_dir/${dmcpgsFile1}" );
 }
