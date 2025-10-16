@@ -1,0 +1,217 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+library(sf)
+library(ggplot2)
+
+source("reportFunctions.R")
+source("scRNA_func.r")
+source("Deconvolution_functions.R")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+if(is.null(myoptions$affiliation)) {
+  myoptions$affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
+}
+
+sample_name=fread("fileList1.txt", header=FALSE)$V2[1]
+paths_CS=fread("fileList1.txt", header=FALSE)$V1[1]
+paths_8u=fread("fileList3.txt", header=FALSE)$V1[1]
+```
+
+---
+title: "VisiumHD data - RCTD comparison - `r sample_name`"
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(ggrepel)
+library(ggpubr)
+library(spacexr)
+library(viridis)
+library(RColorBrewer)
+library(ggthemes)
+library(cartography)
+library(patchwork)
+
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+
+col_vector = carto.pal("multi.pal", 16)
+
+spatial_CS = readRDS(paths_CS)
+spatial_8u = readRDS(paths_8u)
+```
+
+# Number of categorized spots detected by RCTD
+
+By default, only the spots with at least 100 UMIs are kept for RCTD deconvolution.
+
+```{r}
+cs_tbl = get_freq_table(spatial_CS@meta.data, "RCTD1_spot_class") |> dplyr::rename("CellSegmentation_Count" = "count")
+b8_tbl = get_freq_table(spatial_8u@meta.data, "RCTD1_spot_class") |> dplyr::rename("8uM_Count" = "count")
+
+compare_tbl = merge(cs_tbl, b8_tbl, by.x="RCTD1_spot_class", by.y="RCTD1_spot_class", all=TRUE) |>
+  dplyr::rename("RCTD spot class" = "RCTD1_spot_class") |>
+  dplyr::arrange(desc(CellSegmentation_Count))
+
+print_table(compare_tbl, row.names=FALSE)
+```
+
+# Number of cell types detected by RCTD
+
+```{r}
+cs_tbl = get_freq_table(spatial_CS@meta.data, "RCTD1_first_type") |> dplyr::rename("CellSegmentation_Count" = "count")
+b8_tbl = get_freq_table(spatial_8u@meta.data, "RCTD1_first_type") |> dplyr::rename("8uM_Count" = "count")
+
+compare_tbl = merge(cs_tbl, b8_tbl, by.x="RCTD1_first_type", by.y="RCTD1_first_type", all=TRUE) |>
+  dplyr::rename("RCTD first type" = "RCTD1_first_type") |>
+  dplyr::arrange(desc(CellSegmentation_Count))
+
+print_table(compare_tbl, row.names=FALSE)
+```
+
+# Tissue image 
+
+```{r}
+image_8um_p = SpatialFeaturePlot(object=spatial_8u, 
+                          features='nCount_Spatial.008um',
+                           pt.size.factor = 10,
+                           alpha=c(0, 0),
+                           image.alpha=1
+  ) + theme(legend.position = "none",
+            plot.title = element_text(hjust = 0.5),
+            panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+
+tissue_png = paste0(sample_name, ".tissue.png")
+ggsave(tissue_png, image_8um_p, width = 5, height = 5, units = "in", dpi = 300, bg="white")
+include_graphics(tissue_png)
+```
+
+```{r}
+cell_types = table(c(spatial_CS$RCTD1_first_type, spatial_8u$RCTD1_first_type)) |> sort(decreasing=TRUE) |> names()
+set.seed(20251015)
+the_col_pal = sample(col_vector,length(cell_types))
+names(the_col_pal) = cell_types
+
+spatial_CS$RCTD1_first_type = factor(spatial_CS$RCTD1_first_type, levels=cell_types)
+Idents(spatial_CS) <- "RCTD1_first_type"
+
+spatial_8u$RCTD1_first_type = factor(spatial_8u$RCTD1_first_type, levels=cell_types)
+Idents(spatial_8u) <- "RCTD1_first_type"
+```
+
+```{r}
+CS_p = ImageDimPlot(spatial_CS, 
+                    fov = "slice1.polygons", 
+                    cols = the_col_pal, 
+                    border.size = NA,
+                    axes = F, 
+                    dark.background = F, 
+                    coord.fixed = T) + 
+  ggtitle(label = "Cell Segmentation")
+
+b8_p = ImageDimPlot(spatial_8u, 
+                    fov = "slice1.008um", 
+                    cols = the_col_pal, 
+                    border.size = NA,
+                    axes = F,
+                    dark.background = F,
+                    coord.fixed = T) + 
+  ggtitle(label = "8uM Bin")
+
+g = CS_p + b8_p + plot_layout(ncol=2, guides = "collect") & theme(legend.position = 'right', legend.title = element_blank())
+comparison_png = paste0(sample_name, ".RCTD_comparison_image.png")
+ggsave(comparison_png, g, width=10, height=5, dpi=300, units="in", bg="white")
+include_graphics(comparison_png)
+```
+
+```{r}
+CS_p = SpatialDimPlot(spatial_CS, 
+                    cols = the_col_pal, 
+                    image.alpha = 0.2,
+                    pt.size.factor = 0.5) + 
+  ggtitle(label = "Cell Segmentation") + theme(legend.position = 'none')
+
+b8_p = SpatialDimPlot(spatial_8u, 
+                    cols = the_col_pal, 
+                    image.alpha = 1,
+                    pt.size.factor = 12) + 
+  ggtitle(label = "8uM Bin") + 
+  theme(legend.position = 'right', 
+        legend.title = element_blank()) +
+  guides(fill = guide_legend(override.aes = list(size = 5)))
+
+g = CS_p + b8_p + plot_layout(ncol=2)
+comparison_png = paste0(sample_name, ".RCTD_comparison_spatial.png")
+ggsave(comparison_png, g, width=10, height=5, dpi=300, units="in", bg="white")
+include_graphics(comparison_png)
+```
+
+# Features individually
+
+```{r}
+get_ImageFeaturePlot <- function(object, sample_name, assay_label){
+  feature_set = paste0("RCTD2_",levels(object@meta.data$RCTD1_first_type))
+  ncol=ceiling(sqrt(length(feature_set)))
+  nrow=ceiling(length(feature_set)/ncol)
+  width=ncol * 6.5
+  height=nrow * 5
+  
+  g=ImageFeaturePlot(object, features = feature_set, border.size = NA) 
+  seg_png = paste0(sample_name, ".RCTD_celltype.", assay_label, ".png")
+  ggsave(seg_png, g, width=width, height=height, dpi=300, units="in", bg="white")
+
+  return(seg_png)
+}
+```
+
+## Cell Segmentation
+
+```{r}
+cell_seg_png = get_ImageFeaturePlot(spatial_CS, sample_name, "CellSegmentation")
+include_graphics(cell_seg_png)
+```
+
+## 8um Bin
+
+```{r}
+eight_um_png = get_ImageFeaturePlot(spatial_8u, sample_name, "8uBin")
+include_graphics(eight_um_png)
+```
+
+# Session Info
+
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=FALSE)
+```
