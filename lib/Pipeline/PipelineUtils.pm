@@ -13,106 +13,106 @@ use Data::Dumper;
 use Text::CSV;
 #use Pipeline::WdlPipeline qw(addCollectAllelicCounts);
 use List::MoreUtils qw(first_index);
-use Hash::Merge qw( merge );
-use POSIX qw/ceil/;
+use Hash::Merge     qw( merge );
+use POSIX           qw/ceil/;
 
 require Exporter;
 our @ISA = qw(Exporter);
 
 our %EXPORT_TAGS = (
   'all' => [
-    qw( 
-    do_add_gene_locus
-    getIntermidiateDir
-    getIndexName
-    initPipelineOptions 
-    readChromosomeFromDictFile
-    addPreprocess 
-    addPairendFastqValidation
-    addFastQC 
-    addBlastn 
-    addBowtie 
-    addPARalyzer
-    addBowtie1PARalyzer 
-    addBamStat 
-    addOutputOption 
-    getOutputFormat
-    add_table_correlation
-    getDEseq2TaskName 
-    addDEseq2 
-    addDeseq2Visualization 
-    addDeseq2SignificantSequenceBlastn
-    getBatchGroups 
-    addHomerMotif 
-    addDiffbind    
-    addHomerAnnotation 
-    addEnhancer 
-    init_design_table_by_pattern    
-    writeDesignTable 
-    addMultiQC
-    getNextIndex
-    getNextFolderIndex 
-    addCleanBAM 
-    getReportDir 
-    getSequenceTaskClassname
-    addAnnovar 
-    addAnnovarFilter 
-    addAnnovarFilterGeneannotation
-    addAnnovarMafReport
-    addFilterMafAndReport
-    addMafToIntervals
-    addGATK4CNVGermlineCohortAnalysis
-    addAllelicCountsForClonalAnalysis
-    addSciCloneAndClonevol
-    addPyCloneVIAndClonevol
-    addApePhylogeneticTree
-    AddMothurPipeline
-    AddMothurPipelineVis
-    addXHMM
-    addGeneLocus
-    annotateNearestGene
-    checkFileGroupPairNames
-    addStarFeaturecount
-    add_salmon
-    add_pairedend_fastq_gather
-    add_pairedend_fastq_to_ubam
-    add_BWA
-    add_BWA_WGS
-    add_BWA_summary
-    add_BWA_and_summary
-    get_expect_trunk
-    add_BWA_and_summary_scatter
-    addMarkduplicates
-    addMarkduplicates_merge    
-    addSequenceTask
-    addFilesFromSraRunTable
-    addWebgestalt
-    addBamsnap
-    addBamsnapLocus
-    addPlotGene
-    addSizeFactor
-    addAnnotationLocus
-    addAnnotationGenes
-    add_peak_count
-    add_alignment_summary
-    add_bam_validation
-    add_gsea
-    add_unique_r
-    add_maf_filter
-    add_bowtie_index
-    addLocusCoverage    
-    addGeneCoverage
-    get_next_index
-    add_extract_bam_locus
-    has_comparison
-    add_featurecount
-    add_md5
-    add_bamplot
-    add_fastq_screen
-    writeAnnotationLocus_bed
-    writeAnnotationLocus_gff
-    add_split_fastq_dynamic
-    add_trimmomatic
+    qw(
+        do_add_gene_locus
+        getIntermidiateDir
+        getIndexName
+        initPipelineOptions
+        readChromosomeFromDictFile
+        addPreprocess
+        addPairendFastqValidation
+        addFastQC
+        addBlastn
+        addBowtie
+        addPARalyzer
+        addBowtie1PARalyzer
+        addBamStat
+        addOutputOption
+        getOutputFormat
+        add_table_correlation
+        getDEseq2TaskName
+        addDEseq2
+        addDeseq2Visualization
+        addDeseq2SignificantSequenceBlastn
+        getBatchGroups
+        addHomerMotif
+        addDiffbind
+        addHomerAnnotation
+        addEnhancer
+        init_design_table_by_pattern
+        writeDesignTable
+        addMultiQC
+        getNextIndex
+        getNextFolderIndex
+        addCleanBAM
+        getReportDir
+        getSequenceTaskClassname
+        addAnnovar
+        addAnnovarFilter
+        addAnnovarFilterGeneannotation
+        addAnnovarMafReport
+        addFilterMafAndReport
+        addMafToIntervals
+        addGATK4CNVGermlineCohortAnalysis
+        addAllelicCountsForClonalAnalysis
+        addSciCloneAndClonevol
+        addPyCloneVIAndClonevol
+        addApePhylogeneticTree
+        AddMothurPipeline
+        AddMothurPipelineVis
+        addXHMM
+        addGeneLocus
+        annotateNearestGene
+        checkFileGroupPairNames
+        addStarFeaturecount
+        add_salmon
+        add_pairedend_fastq_gather
+        add_pairedend_fastq_to_ubam
+        add_BWA
+        add_BWA_WGS
+        add_BWA_summary
+        add_BWA_and_summary
+        get_expect_trunk
+        add_BWA_and_summary_scatter
+        addMarkduplicates
+        addMarkduplicates_merge
+        addSequenceTask
+        addFilesFromSraRunTable
+        addWebgestalt
+        addBamsnap
+        addBamsnapLocus
+        addPlotGene
+        addSizeFactor
+        addAnnotationLocus
+        addAnnotationGenes
+        add_peak_count
+        add_alignment_summary
+        add_bam_validation
+        add_gsea
+        add_unique_r
+        add_maf_filter
+        add_bowtie_index
+        addLocusCoverage
+        addGeneCoverage
+        get_next_index
+        add_extract_bam_locus
+        has_comparison
+        add_featurecount
+        add_md5
+        add_bamplot
+        add_fastq_screen
+        writeAnnotationLocus_bed
+        writeAnnotationLocus_gff
+        add_split_fastq_dynamic
+        add_trimmomatic
     )
   ]
 );
@@ -121,27 +121,29 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+
 sub getIntermidiateDir {
-  my ($defaultDir, $def) = @_;
+  my ( $defaultDir, $def ) = @_;
 
   my $result = $defaultDir;
-  if($def->{use_intermediate_dir} ){
+  if ( $def->{use_intermediate_dir} ) {
     $result = $def->{target_dir} . "/intermediate_data";
-    if (-e $result) {
-      return($result);
+    if ( -e $result ) {
+      return ($result);
     }
-    if ($def->{use_intermediate_dir_aside}){
+    if ( $def->{use_intermediate_dir_aside} ) {
       $result = $def->{target_dir} . ".intermediate_data";
     }
-    $result = create_directory_or_die( $result );
-  }
+    $result = create_directory_or_die($result);
+  } ## end if ( $def->{use_intermediate_dir...})
 
   return $result;
-}
+} ## end sub getIntermidiateDir
+
 
 sub readChromosomeFromDictFile {
-  my ($dictFile, $primaryOnly) = shift;
-  if(! defined $primaryOnly){
+  my ( $dictFile, $primaryOnly ) = shift;
+  if ( !defined $primaryOnly ) {
     $primaryOnly = 1;
   }
 
@@ -150,59 +152,64 @@ sub readChromosomeFromDictFile {
   while ( my $line = (<$fin>) ) {
     chomp $line;
     my @parts = split( '\t', $line );
-    if ($parts[0] eq "\@SQ"){
-      my $chrName = substr($parts[1], 3);
-      if ($primaryOnly){
-        my $maxLength = rindex($chrName, "chr", 0) == 0 ? 5 : 2;
-        if (length($chrName) <= $maxLength){
+    if ( $parts[0] eq "\@SQ" ) {
+      my $chrName = substr( $parts[1], 3 );
+      if ($primaryOnly) {
+        my $maxLength = rindex( $chrName, "chr", 0 ) == 0 ? 5 : 2;
+        if ( length($chrName) <= $maxLength ) {
           push @$result, $chrName;
         }
-      }else{
+      } ## end if ($primaryOnly)
+      else {
         push @$result, $chrName;
       }
-    }
-  }
+    } ## end if ( $parts[0] eq "\@SQ")
+  } ## end while ( my $line = (<$fin>...))
   close($fin);
 
-  return($result);
-}
+  return ($result);
+} ## end sub readChromosomeFromDictFile
+
 
 sub getNextIndex {
-  my ($def, $key, $digital) = @_;
+  my ( $def, $key, $digital ) = @_;
 
-  if (! defined $digital){
+  if ( !defined $digital ) {
     $digital = 2;
   }
 
   my $result = "";
-  my $index = getValue( $def, $key, 1 );
+  my $index  = getValue( $def, $key, 1 );
   $result = sprintf( "%0" . $digital . "d", $index );
   $def->{$key} = $index + 1;
 
   return $result;
-}
+} ## end sub getNextIndex
+
 
 sub get_next_index {
-  my ($def, $key, $format_index) = @_;
-  if (not defined $def->{$key}){
+  my ( $def, $key, $format_index ) = @_;
+  if ( not defined $def->{$key} ) {
     $def->{$key} = 1;
-  }else{
+  }
+  else {
     $def->{$key} = $def->{$key} + 1;
   }
 
-  if(not defined $format_index){
+  if ( not defined $format_index ) {
     $format_index = 0;
   }
 
   #print("current_index = " . $def->{$key} . "\n");
-  my $res = $format_index ? sprintf("_%02d", $def->{$key}) : $def->{$key};
-  return($res);
-}
+  my $res = $format_index ? sprintf( "_%02d", $def->{$key} ) : $def->{$key};
+  return ($res);
+} ## end sub get_next_index
+
 
 sub getNextFolderIndex {
   my ($def) = @_;
 
-  my $result = "";
+  my $result           = "";
   my $add_folder_index = getValue( $def, "add_folder_index", 0 );
   if ($add_folder_index) {
     my $folder_index = getValue( $def, "folder_index", 1 );
@@ -211,55 +218,57 @@ sub getNextFolderIndex {
   }
 
   return $result;
-}
+} ## end sub getNextFolderIndex
+
 
 sub addPairendFastqValidation {
-  my ($config, $def, $individual, $parent_dir, $task_name, $source_ref) = @_;
+  my ( $config, $def, $individual, $parent_dir, $task_name, $source_ref ) = @_;
   $config->{"$task_name"} = {
-    class => "CQS::ProgramWrapperOneToOne",
-    target_dir => $parent_dir . "/" . getNextFolderIndex($def) . "$task_name",
-    option => "",
-    use_tmp_folder => 1,
-    suffix  => "_qc",
-    interpretor => "python3",
-    program => "../QC/validatePairendFastq.py",
-    source_arg => "-i",
-    source_ref => $source_ref,
-    output_arg => "-o",
-    output_file_prefix => ".txt",
-    output_file_ext => ".txt",
-    output_to_same_folder => 1,
+    class                    => "CQS::ProgramWrapperOneToOne",
+    target_dir               => $parent_dir . "/" . getNextFolderIndex($def) . "$task_name",
+    option                   => "",
+    use_tmp_folder           => 1,
+    suffix                   => "_qc",
+    interpretor              => "python3",
+    program                  => "../QC/validatePairendFastq.py",
+    source_arg               => "-i",
+    source_ref               => $source_ref,
+    output_arg               => "-o",
+    output_file_prefix       => ".txt",
+    output_file_ext          => ".txt",
+    output_to_same_folder    => 1,
     can_result_be_empty_file => 1,
-    use_tmp_folder => getValue($def, "use_tmp_folder_paired_end_validation", 0),
-    sh_direct   => 0,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "6",
-      "mem"       => "10gb"
+    use_tmp_folder           => getValue( $def, "use_tmp_folder_paired_end_validation", 0 ),
+    sh_direct                => 0,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "6",
+      "mem"      => "10gb"
     }
   };
-  push(@$individual, $task_name);
-}
+  push( @$individual, $task_name );
+} ## end sub addPairendFastqValidation
+
 
 sub addFastQC {
   my ( $config, $def, $individual, $summary, $fastqcTask, $source_ref, $parentDir ) = @_;
 
-  my $intermediateDir = getIntermidiateDir($parentDir, $def);
+  my $intermediateDir = getIntermidiateDir( $parentDir, $def );
 
-  my $pairend = is_paired_end( $def );
-  my $curThread = $pairend? 2: 1;
+  my $pairend   = is_paired_end($def);
+  my $curThread = $pairend ? 2 : 1;
 
   $config->{$fastqcTask} = {
-    class      => "QC::FastQC",
-    perform    => 1,
-    target_dir => $intermediateDir . "/" . getNextFolderIndex($def) . $fastqcTask,
-    option     => "",
-    source_ref => $source_ref,
-    cluster    => $def->{"cluster"},
-    fastqc     => $def->{"fastqc"},
+    class          => "QC::FastQC",
+    perform        => 1,
+    target_dir     => $intermediateDir . "/" . getNextFolderIndex($def) . $fastqcTask,
+    option         => "",
+    source_ref     => $source_ref,
+    cluster        => $def->{"cluster"},
+    fastqc         => $def->{"fastqc"},
     use_tmp_folder => $def->{use_tmp_folder_fastqc},
-    sh_direct  => 0,
-    pbs        => {
+    sh_direct      => 0,
+    pbs            => {
       "nodes"    => "1:ppn=" . $curThread,
       "walltime" => "12",
       "mem"      => "10gb"
@@ -267,30 +276,30 @@ sub addFastQC {
   };
   push @$individual, $fastqcTask;
 
-  my $summaryTask = $fastqcTask . "_summary";
-  my $python_script = dirname(dirname(__FILE__)) . "/QC/fastQCSummary.py";
-  my $task_name = getValue($def, "task_name");
+  my $summaryTask   = $fastqcTask . "_summary";
+  my $python_script = dirname( dirname(__FILE__) ) . "/QC/fastQCSummary.py";
+  my $task_name     = getValue( $def, "task_name" );
   $config->{$summaryTask} = {
-    class => "CQS::UniqueR",
-    target_dir => $parentDir . "/" . getNextFolderIndex($def) . $summaryTask,
+    class        => "CQS::UniqueR",
+    target_dir   => $parentDir . "/" . getNextFolderIndex($def) . $summaryTask,
     init_command => "
 python3 $python_script -i fileList1.txt -o ${task_name}.FastQC      
 ",
-    rtemplate => "../QC/fastQCSummary.r",
-    rReportTemplate => "../QC/fastQCSummary.Rmd;reportFunctions.R;countTableVisFunctions.R",
-    run_rmd_independent => 1,
-    rmd_ext => ".FastQC.html",
-    option => "",
-    output_file_ext => ".FastQC.summary.tsv,.FastQC.summary.tsv.png,.FastQC.reads.tsv,.FastQC.reads.tsv.png,.FastQC.baseQuality.tsv,.FastQC.baseQuality.tsv.png,.FastQC.sequenceGC.tsv,.FastQC.sequenceGC.tsv.png,.FastQC.adapter.tsv,.FastQC.adapter.tsv.png,.FastQC.overrepresented.tsv",
-    docker_prefix => "report_",
+    rtemplate                => "../QC/fastQCSummary.r",
+    rReportTemplate          => "../QC/fastQCSummary.Rmd;reportFunctions.R;countTableVisFunctions.R",
+    run_rmd_independent      => 1,
+    rmd_ext                  => ".FastQC.html",
+    option                   => "",
+    output_file_ext          => ".FastQC.summary.tsv,.FastQC.summary.tsv.png,.FastQC.reads.tsv,.FastQC.reads.tsv.png,.FastQC.baseQuality.tsv,.FastQC.baseQuality.tsv.png,.FastQC.sequenceGC.tsv,.FastQC.sequenceGC.tsv.png,.FastQC.adapter.tsv,.FastQC.adapter.tsv.png,.FastQC.overrepresented.tsv",
+    docker_prefix            => "report_",
     can_result_be_empty_file => 0,
-    parameterSampleFile1_ref => [$fastqcTask, "data.txt"],
-    parameterSampleFile2 => {
+    parameterSampleFile1_ref => [ $fastqcTask, "data.txt" ],
+    parameterSampleFile2     => {
       task_name => $task_name,
-      email => getValue($def, "email"),
+      email     => getValue( $def, "email" ),
     },
-    sh_direct  => 1,
-    pbs        => {
+    sh_direct => 1,
+    pbs       => {
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
       "mem"      => "10gb"
@@ -298,8 +307,9 @@ python3 $python_script -i fileList1.txt -o ${task_name}.FastQC
   };
   push @$summary, $summaryTask;
 
-  return($summaryTask);
-}
+  return ($summaryTask);
+} ## end sub addFastQC
+
 
 sub addBlastn {
   my ( $config, $def, $summary, $blastTask, $fastaTask, $filePattern, $parentDir ) = @_;
@@ -323,7 +333,8 @@ sub addBlastn {
   };
 
   push @$summary, $blastTask;
-}
+} ## end sub addBlastn
+
 
 sub addBowtie {
   my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption, $hours ) = @_;
@@ -332,7 +343,7 @@ sub addBowtie {
     $hours = "23";
   }
 
-  my $intermediateDir = getIntermidiateDir($parentDir, $def);
+  my $intermediateDir = getIntermidiateDir( $parentDir, $def );
 
   $config->{$taskName} = {
     class                 => "Alignment::Bowtie1",
@@ -341,29 +352,30 @@ sub addBowtie {
     option                => $bowtieOption,
     source_ref            => $sourceRef,
     samonly               => 0,
-    sh_direct             => getValue($def, "bowtie1_direct", 0),
+    sh_direct             => getValue( $def, "bowtie1_direct", 0 ),
     mappedonly            => 1,
     export_max_mapped     => $def->{export_max_mapped},
     cluster               => $def->{cluster},
     output_to_same_folder => $def->{bowtie1_output_to_same_folder},
     pbs                   => {
-      "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => $hours,
-      "mem"       => "40gb"
+      "nodes"    => "1:ppn=" . $def->{max_thread},
+      "walltime" => $hours,
+      "mem"      => "40gb"
     },
   };
 
-  if(is_array($bowtieIndex) or defined $config->{$bowtieIndex}){
+  if ( is_array($bowtieIndex) or defined $config->{$bowtieIndex} ) {
     $config->{$taskName}{bowtie1_index_ref} = $bowtieIndex;
-  }else{
+  }
+  else {
     $config->{$taskName}{bowtie1_index} = $bowtieIndex;
   }
-
 
   push @$individual, $taskName;
 
   return ($taskName);
-}
+} ## end sub addBowtie
+
 
 sub addPARalyzer {
   my ( $config, $def, $individual, $taskName, $parentDir, $sourceRef ) = @_;
@@ -388,7 +400,8 @@ sub addPARalyzer {
   };
 
   return ($taskName);
-}
+} ## end sub addPARalyzer
+
 
 sub addBowtie1PARalyzer {
   my ( $config, $def, $individual, $taskName, $parentDir, $bowtieIndex, $sourceRef, $bowtieOption ) = @_;
@@ -416,7 +429,8 @@ sub addBowtie1PARalyzer {
   push @$individual, $taskName;
 
   return ($taskName);
-}
+} ## end sub addBowtie1PARalyzer
+
 
 sub addBamStat {
   my ( $config, $def, $summary, $taskName, $targetDir, $sourceRef ) = @_;
@@ -440,7 +454,8 @@ sub addBamStat {
     },
   };
   push @$summary, $taskName;
-}
+} ## end sub addBamStat
+
 
 sub getDEseq2TaskName {
   my ( $taskKey, $libraryKey, $def ) = @_;
@@ -453,7 +468,8 @@ sub getDEseq2TaskName {
     $result = $result . $def->{DE_task_suffix};
   }
   return $result;
-}
+} ## end sub getDEseq2TaskName
+
 
 sub getReportDir {
   my $def        = shift;
@@ -462,7 +478,8 @@ sub getReportDir {
     $report_dir = $def->{target_dir} . "/report";
   }
   return ($report_dir);
-}
+} ## end sub getReportDir
+
 
 sub addOutputOption {
   my ( $def, $rcode, $key, $defaultValue, $alternativeKey ) = @_;
@@ -470,71 +487,77 @@ sub addOutputOption {
   my $newkey = ( defined $alternativeKey ) ? $alternativeKey : $key;
   if ( $result !~ /$key/ ) {
     my $value = getValue( $def, $key, $defaultValue );
-    if($value eq "FALSE"){
+    if ( $value eq "FALSE" ) {
       $result = $result . "$newkey<-FALSE;";
-    }elsif( $value ) {
+    }
+    elsif ($value) {
       $result = $result . "$newkey<-TRUE;";
     }
     else {
       $result = $result . "$newkey<-FALSE;";
     }
-  }
+  } ## end if ( $result !~ /$key/)
   return ($result);
-}
+} ## end sub addOutputOption
+
 
 sub getOutputFormat {
   my ( $def, $rcode, $is_DE ) = @_;
   my $result = $rcode;
 
-  if(!defined $is_DE){
+  if ( !defined $is_DE ) {
     $is_DE = 0;
   }
 
-  $result = addOutputOption( $def, $result, "DE_outputPdf",         0,                          "outputPdf" );
-  $result = addOutputOption( $def, $result, "DE_outputPng",         1,                          "outputPng" );
-  $result = addOutputOption( $def, $result, "DE_outputTIFF",        0,                          "outputTIFF" );
-  $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 0,                          "showVolcanoLegend" );
+  $result = addOutputOption( $def, $result, "DE_outputPdf",         0, "outputPdf" );
+  $result = addOutputOption( $def, $result, "DE_outputPng",         1, "outputPng" );
+  $result = addOutputOption( $def, $result, "DE_outputTIFF",        0, "outputTIFF" );
+  $result = addOutputOption( $def, $result, "DE_showVolcanoLegend", 0, "showVolcanoLegend" );
 
   return ($result);
-}
+} ## end sub getOutputFormat
+
 
 sub get_output_hash {
   my ( $def, $result, $is_DE ) = @_;
 
-  if(!defined $is_DE){
+  if ( !defined $is_DE ) {
     $is_DE = 0;
   }
 
-  $result->{outputPdf} = getValue($def, "DE_outputPdf", 0);
-  $result->{outputPng} = getValue($def, "DE_outputPng", 1);
-  $result->{outputTIFF} = getValue($def, "DE_outputTIFF", 0);
-  $result->{showVolcanoLegend} = getValue($def, "DE_showVolcanoLegend", 0);
-  $result->{usePearsonInHCA} = getValue($def, "use_pearson_in_hca", 0);
+  $result->{outputPdf}         = getValue( $def, "DE_outputPdf",         0 );
+  $result->{outputPng}         = getValue( $def, "DE_outputPng",         1 );
+  $result->{outputTIFF}        = getValue( $def, "DE_outputTIFF",        0 );
+  $result->{showVolcanoLegend} = getValue( $def, "DE_showVolcanoLegend", 0 );
+  $result->{usePearsonInHCA}   = getValue( $def, "use_pearson_in_hca",   0 );
 
-  if($is_DE){
-    $result->{showLabelInPCA} = getValue($def, [ "DE_show_label_PCA", "showLabelInPCA", "show_label_PCA"], 1);
-  }else{
-    $result->{showLabelInPCA} = getValue($def, [ "showLabelInPCA", "show_label_PCA"], 1);
+  if ($is_DE) {
+    $result->{showLabelInPCA} = getValue( $def, [ "DE_show_label_PCA", "showLabelInPCA", "show_label_PCA" ], 1 );
+  }
+  else {
+    $result->{showLabelInPCA} = getValue( $def, [ "showLabelInPCA", "show_label_PCA" ], 1 );
   }
 
   return ($result);
-}
+} ## end sub get_output_hash
+
 
 sub has_contrast {
-  my $def = shift;
+  my $def   = shift;
   my $pairs = $def->{pairs};
-  for my $cname (keys %$pairs){
+  for my $cname ( keys %$pairs ) {
     my $cdef = $pairs->{$cname};
-    if(ref($cdef) eq "HASH"){
-      for my $cname (keys %$cdef){
-        if($cname eq "contrast"){
-          return(1);
+    if ( ref($cdef) eq "HASH" ) {
+      for my $cname ( keys %$cdef ) {
+        if ( $cname eq "contrast" ) {
+          return (1);
         }
       }
-    }
-  }
-  return(0);
-}
+    } ## end if ( ref($cdef) eq "HASH")
+  } ## end for my $cname ( keys %$pairs)
+  return (0);
+} ## end sub has_contrast
+
 
 sub addDEseq2 {
   my ( $config, $def, $summary, $taskKey, $countfileRef, $deseq2Dir, $DE_min_median_read, $libraryFile, $libraryKey, $feature_name_regex, $n_first, $de_biotype ) = @_;
@@ -546,25 +569,25 @@ sub addDEseq2 {
     $libraryFileKey = "library_file_ref";
   }
 
-  my $rCode = getOutputFormat( $def, getValue($def, "DE_rCode", ""), 1 );
+  my $rCode = getOutputFormat( $def, getValue( $def, "DE_rCode", "" ), 1 );
   $rCode = addOutputOption( $def, $rCode, "top25cv_in_hca", $def->{top25cv_in_hca}, "top25cvInHCA" );
 
-  my $raw_rCode = $rCode;
-  my $filterBaseMean = (defined $def->{filterBaseMean}) && $def->{filterBaseMean};
-  if($filterBaseMean){
+  my $raw_rCode      = $rCode;
+  my $filterBaseMean = ( defined $def->{filterBaseMean} ) && $def->{filterBaseMean};
+  if ($filterBaseMean) {
     #die("filterBaseMean");
-    $rCode = $rCode . "filterBaseMean=1;filterBaseMeanValue=" . getValue($def, "filterBaseMeanValue", 30) . ";";
+    $rCode = $rCode . "filterBaseMean=1;filterBaseMeanValue=" . getValue( $def, "filterBaseMeanValue", 30 ) . ";";
   }
 
-  if(not defined $feature_name_regex){
-    $feature_name_regex = getValue($def, "DE_feature_name_regex", "");
+  if ( not defined $feature_name_regex ) {
+    $feature_name_regex = getValue( $def, "DE_feature_name_regex", "" );
   }
 
-  if(not defined $n_first){
-    $n_first = getValue($def, "DE_n_first", -1);
+  if ( not defined $n_first ) {
+    $n_first = getValue( $def, "DE_n_first", -1 );
   }
 
-  if(not defined $de_biotype){
+  if ( not defined $de_biotype ) {
     $de_biotype = "";
   }
 
@@ -574,7 +597,7 @@ sub addDEseq2 {
     output_to_dir                => getReportDir($def),
     option                       => "",
     sh_direct                    => 1,
-    show_label_PCA               => getValue($def, ["DE_showLabelInPCA", "showLabelInPCA", "show_label_PCA"], 1),
+    show_label_PCA               => getValue( $def, [ "DE_showLabelInPCA", "showLabelInPCA", "show_label_PCA" ], 1 ),
     use_pearson_in_hca           => $def->{use_pearson_in_hca},
     show_DE_gene_cluster         => $def->{DE_show_gene_cluster},
     pvalue                       => $def->{DE_pvalue},
@@ -588,52 +611,56 @@ sub addDEseq2 {
     cluster                      => $def->{cluster},
     export_significant_gene_name => $def->{DE_export_significant_gene_name},
     cooksCutoff                  => $def->{DE_cooksCutoff},
-    covariance_file => $def->{covariance_file},
-    independentFiltering => $def->{DE_independentFiltering},
-    covariance_name_index        => getValue($def, "covariance_name_index", 0),
+    covariance_file              => $def->{covariance_file},
+    independentFiltering         => $def->{DE_independentFiltering},
+    covariance_name_index        => getValue( $def, "covariance_name_index", 0 ),
+    de_biotype                   => $de_biotype,
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
     rCode                        => $rCode,
-    docker_prefix => "deseq2_",
-    parameterSampleFile1 => {
-      "feature_name_regex" => $feature_name_regex,
-      "feature_name_filter" => getValue($def, "DE_feature_name_filter", ""),
-      "enhanced_volcano_red_blue_only" => getValue($def, "DE_enhanced_volcano_red_blue_only", 0),
-      "title_in_volcano" => getValue($def, "DE_title_in_volcano", 1),
-      "caption_in_volcano" => getValue($def, "DE_caption_in_volcano", 1),
-      "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
-      "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
-      "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 6),
-      "heatmap_column_names_group_max_height_cm" => getValue($def, "heatmap_column_names_group_max_height_cm", 4),
-      "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
-      "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18),
-      "n_first" => $n_first,
-      "de_biotype" => $de_biotype,
-      "showLabelInVolcano" => getValue($def, "DE_showLabelInVolcano", 1),
-      "DE_combatseq" => getValue($def, "DE_combatseq", 0),
+    docker_prefix                => "deseq2_",
+    parameterSampleFile1         => {
+      "feature_name_regex"                       => $feature_name_regex,
+      "feature_name_filter"                      => getValue( $def, "DE_feature_name_filter",                   "" ),
+      "enhanced_volcano_red_blue_only"           => getValue( $def, "DE_enhanced_volcano_red_blue_only",        0 ),
+      "title_in_volcano"                         => getValue( $def, "DE_title_in_volcano",                      1 ),
+      "caption_in_volcano"                       => getValue( $def, "DE_caption_in_volcano",                    1 ),
+      "heatmap_add_width_inch"                   => getValue( $def, "heatmap_add_width_inch",                   2 ),
+      "heatmap_add_height_inch"                  => getValue( $def, "heatmap_add_height_inch",                  0 ),
+      "heatmap_column_names_max_height_cm"       => getValue( $def, "heatmap_column_names_max_height_cm",       6 ),
+      "heatmap_column_names_group_max_height_cm" => getValue( $def, "heatmap_column_names_group_max_height_cm", 4 ),
+      "heatmap_legend_label_fontsize"            => getValue( $def, "heatmap_legend_label_fontsize",            18 ),
+      "heatmap_column_name_fontsize"             => getValue( $def, "heatmap_column_name_fontsize",             18 ),
+      "n_first"                                  => $n_first,
+      "de_biotype"                               => $de_biotype,
+      "showLabelInVolcano"                       => getValue( $def, "DE_showLabelInVolcano", 1 ),
+      "DE_combatseq"                             => getValue( $def, "DE_combatseq",          0 ),
     },
     pbs => {
-      "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => getValue($def, "DESeq2_walltime", "23"),
-      "mem"       => getValue($def, "DESeq2_mem", "40gb"),
+      "nodes"    => "1:ppn=" . $def->{max_thread},
+      "walltime" => getValue( $def, "DESeq2_walltime", "23" ),
+      "mem"      => getValue( $def, "DESeq2_mem",      "40gb" ),
     },
   };
 
-  if (defined $def->{pairs_config}) {
-    $config->{$taskName}{class} = "Comparison::DESeq2config";
+  if ( defined $def->{pairs_config} ) {
+    $config->{$taskName}{class}  = "Comparison::DESeq2config";
     $config->{$taskName}{source} = $def->{pairs_config};
-  }else{
+  }
+  else {
     my $groupNames = defined $def->{deseq2_groups} ? "deseq2_groups" : "groups";
     $config->{$taskName}{source_ref} = "pairs";
     $config->{$taskName}{groups_ref} = $groupNames;
-    if(has_contrast($def)){
+    if ( has_contrast($def) ) {
       $config->{$taskName}{class} = "Comparison::DESeq2contrast";
-    }elsif(defined $def->{covariance_file}){
+    }
+    elsif ( defined $def->{covariance_file} ) {
       $config->{$taskName}{class} = "Comparison::DESeq2covariance";
-    }else{
+    }
+    else {
       $config->{$taskName}{class} = "Comparison::DESeq2";
     }
-  }
+  } ## end else [ if ( defined $def->{pairs_config...})]
 
   if ( is_array($countfileRef) ) {
     $config->{$taskName}{countfile_ref} = $countfileRef;
@@ -643,21 +670,22 @@ sub addDEseq2 {
   }
   push @$summary, $taskName;
 
-  if($filterBaseMean){
-    my $raw_section = $taskName . "_noFilterBaseMean";
+  if ($filterBaseMean) {
+    my $raw_section    = $taskName . "_noFilterBaseMean";
     my $base_mean_task = {};
-    my $filterSection = $config->{$taskName};
-    for my $task_key (sort keys %$filterSection){
+    my $filterSection  = $config->{$taskName};
+    for my $task_key ( sort keys %$filterSection ) {
       $base_mean_task->{$task_key} = $filterSection->{$task_key};
     }
-    $base_mean_task->{rCode} = $raw_rCode;
+    $base_mean_task->{rCode}      = $raw_rCode;
     $base_mean_task->{target_dir} = $base_mean_task->{target_dir} . "_noFilterBaseMean";
-    $config->{$raw_section} = $base_mean_task;
+    $config->{$raw_section}       = $base_mean_task;
     push @$summary, $raw_section;
-  }
+  } ## end if ($filterBaseMean)
 
   return $taskName;
-}
+} ## end sub addDEseq2
+
 
 sub addDeseq2Visualization {
   my ( $config, $def, $summary, $taskKey, $deseq2Tasks, $dataVisualizationDir, $layoutName, $libraryKey ) = @_;
@@ -684,14 +712,15 @@ sub addDeseq2Visualization {
     sh_direct                => 1,
     cluster                  => $def->{cluster},
     pbs                      => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
     },
   };
   push @$summary, $taskName;
   return $taskName;
-}
+} ## end sub addDeseq2Visualization
+
 
 sub addDeseq2SignificantSequenceBlastn {
   my ( $config, $def, $summary, $deseq2Task, $parentDir ) = @_;
@@ -718,7 +747,8 @@ sub addDeseq2SignificantSequenceBlastn {
   push @$summary, ($fastaTask);
 
   addBlastn( $config, $def, $summary, $fastaTask . "_blastn", $fastaTask, ".fasta\$", $parentDir );
-}
+} ## end sub addDeseq2SignificantSequenceBlastn
+
 
 sub getBatchGroups {
   my ($def) = @_;
@@ -757,24 +787,24 @@ sub getBatchGroups {
               push( @$lRows,   $sampleGroupName );
               push( @$lGroups, $groupName );
               $pushed->{$groupName} = "";
-            }
+            } ## end if ( !exists( $pushed->...))
 
             if ( !defined $curGroups->{$groupName} ) {
               $curGroups->{$groupName} = [];
             }
             my $groups = $curGroups->{$groupName};
             push @$groups, $sample;
-          }
+          } ## end if ( $sample =~ /$nameRegex/igs)
           else {
             die( $sample . " didn't match with name regex " . $nameRegex );
           }
-        }
+        } ## end if ( $sampleFile =~ /$fileRegex/igs)
         else {
           die( $sample . " didn't match with file regex " . $fileRegex . " : " . $sampleFile );
         }
-      }
-    }
-  }
+      } ## end for my $sample ( keys %$files)
+    } ## end for my $regexName ( keys...)
+  } ## end if ( defined $def->{batch_groups_name_file_regex...})
   elsif ( defined $def->{batch_groups_file_regex} ) {
     for my $regexName ( keys %{ $def->{batch_groups_file_regex} } ) {
       my $regex     = $def->{batch_groups_file_regex}->{$regexName};
@@ -790,13 +820,13 @@ sub getBatchGroups {
           }
           my $groups = $curGroups->{$groupName};
           push @$groups, $sample;
-        }
+        } ## end if ( $sampleFile =~ /$regex/igs)
         else {
           die( $sample . " didn't match with regex " . $regex . " : " . $sampleFile );
         }
-      }
-    }
-  }
+      } ## end for my $sample ( keys %$files)
+    } ## end for my $regexName ( keys...)
+  } ## end elsif ( defined $def->{batch_groups_file_regex...})
   elsif ( defined $def->{batch_groups_name_regex} ) {
     for my $regexName ( keys %{ $def->{batch_groups_file_regex} } ) {
       my $regex     = $def->{batch_groups_name_regex}->{$regexName};
@@ -811,19 +841,20 @@ sub getBatchGroups {
           }
           my $groups = $curGroups->{$groupName};
           push @$groups, $sample;
-        }
+        } ## end if ( $sample =~ /$regex/igs)
         else {
           die( $sample . " didn't match with regex " . $regex );
         }
-      }
-    }
-  }
+      } ## end for my $sample ( keys %$files)
+    } ## end for my $regexName ( keys...)
+  } ## end elsif ( defined $def->{batch_groups_name_regex...})
   elsif ( defined $def->{batch_groups} ) {
     $result = $def->{batch_groups};
   }
 
   return ( $result, $layout );
-}
+} ## end sub getBatchGroups
+
 
 sub addHomerMotif {
   my ( $config, $def, $summary, $target_dir, $callName, $callFilePattern ) = @_;
@@ -846,7 +877,8 @@ sub addHomerMotif {
   };
   push @$summary, ($homerName);
   return $homerName;
-}
+} ## end sub addHomerMotif
+
 
 sub addDiffbind {
   my ( $config, $def, $tasks, $target_dir, $task_name, $bam_ref, $peaks_ref ) = @_;
@@ -857,103 +889,104 @@ sub addDiffbind {
     target_dir              => "${target_dir}/" . getNextFolderIndex($def) . "${task_name}",
     option                  => "",
     source_ref              => $bam_ref,
-    groups                  => getValue($def, "treatments"),
+    groups                  => getValue( $def, "treatments" ),
     controls                => $def->{"controls"},
-    design_table            => getValue($def, "design_table"),
+    design_table            => getValue( $def, "design_table" ),
     peaks_ref               => $peaks_ref,
-    peak_software => getValue($def, "peak_software","bed"),
-    use_version2 => getValue($def, "use_version2", 1),
+    peak_software           => getValue( $def, "peak_software", "bed" ),
+    use_version2            => getValue( $def, "use_version2",  1 ),
     homer_annotation_genome => $def->{homer_annotation_genome},
-    parameterSampleFile1 => {
-      summits => getValue($def, "diffbind_summits", 200),
-      consensus_minOverlap => getValue($def, "diffbind_consensus_minOverlap", 2),
+    parameterSampleFile1    => {
+      summits              => getValue( $def, "diffbind_summits",              200 ),
+      consensus_minOverlap => getValue( $def, "diffbind_consensus_minOverlap", 2 ),
     },
     can_result_be_empty_file => 1,
-    sh_direct               => 0,
-    pbs                     => {
+    sh_direct                => 0,
+    pbs                      => {
       "nodes"    => "1:ppn=1",
       "walltime" => "72",
-      "mem"      => getValue($def, "diffbind_mem", "80gb")
+      "mem"      => getValue( $def, "diffbind_mem", "80gb" )
     },
   };
   push @$tasks, $task_name;
-}
+} ## end sub addDiffbind
+
 
 sub add_table_correlation {
-  my ($config, $def, $tasks, $task_name, $task_dir, $count_file_ref, $parameterFile3_ref) = @_;
+  my ( $config, $def, $tasks, $task_name, $task_dir, $count_file_ref, $parameterFile3_ref ) = @_;
 
-  my $rCode = getValue( $def, "correlation_rcode", "" );
-  my $project_name = getValue($def, "task_name");
+  my $rCode        = getValue( $def, "correlation_rcode", "" );
+  my $project_name = getValue( $def, "task_name" );
 
   my $default_onlySamplesInGroup = defined $def->{correlation_groups_dic} ? 1 : 0;
 
-  my $options = {     
-    "task_name" => $project_name,
-    "email" => getValue($def, "email"),
-    "affiliation" => getValue($def, "affiliation", ""),
-    "draw_all_groups_in_HCA" => getValue($def, "draw_all_groups_in_HCA", 0),
-    "draw_umap" => getValue($def, "draw_umap", 0),
-    "use_green_red_color_in_hca" => getValue($def, "use_green_red_color_in_hca", 0),
-    "top25cv_in_hca" => getValue($def, "top25cv_in_hca", 0),
-    "showLabelInPCA" => getValue($def, ["showLabelInPCA", "show_label_PCA"], 0),
-    "outputPdf" => getValue($def, "outputPdf", 0),
-    "outputPng" => getValue($def, "outputPng", 1),
-    "outputTIFF" => getValue($def, "outputTIFF", 0),
-    "usePearsonInHCA" => getValue($def, "use_pearson_in_hca", 0),
-    "n_first" => getValue($def, "correlation_n_first", -1),
-    "onlySamplesInGroup" => getValue($def, "correlation_onlySamplesInGroup", $default_onlySamplesInGroup),
-    "useLeastGroups" => getValue($def, "useLeastGroups", 0),
-    "minMedian" => getValue($def, "minMedian", 0),
-    "minMedianInGroup" => getValue($def, "minMedianInGroup", 1),
-    "totalCountKey" => getValue($def, "totalCountKey", "None"),
-    "pca_width_inch" => getValue($def, "pca_width_inch", 4),
-    "pca_height_inch" => getValue($def, "pca_height_inch", 2.5),
-    "pca_point_size" => getValue($def, "pca_point_size", 3),
-    "num_top_genes_heatmap" => getValue($def, "num_top_genes_heatmap", 25),
-    "heatmap_add_width_inch" => getValue($def, "heatmap_add_width_inch", 2),
-    "heatmap_add_height_inch" => getValue($def, "heatmap_add_height_inch", 0),
-    "heatmap_column_names_max_height_cm" => getValue($def, "heatmap_column_names_max_height_cm", 6),
-    "heatmap_legend_label_fontsize" => getValue($def, "heatmap_legend_label_fontsize", 18),
-    "heatmap_column_name_fontsize" => getValue($def, "heatmap_column_name_fontsize", 18)
+  my $options = {
+    "task_name"                          => $project_name,
+    "email"                              => getValue( $def, "email" ),
+    "affiliation"                        => getValue( $def, "affiliation",                          "" ),
+    "draw_all_groups_in_HCA"             => getValue( $def, "draw_all_groups_in_HCA",                0 ),
+    "draw_umap"                          => getValue( $def, "draw_umap",                             0 ),
+    "use_green_red_color_in_hca"         => getValue( $def, "use_green_red_color_in_hca",            0 ),
+    "top25cv_in_hca"                     => getValue( $def, "top25cv_in_hca",                        0 ),
+    "showLabelInPCA"                     => getValue( $def, [ "showLabelInPCA", "show_label_PCA" ],  0 ),
+    "outputPdf"                          => getValue( $def, "outputPdf",                             0 ),
+    "outputPng"                          => getValue( $def, "outputPng",                             1 ),
+    "outputTIFF"                         => getValue( $def, "outputTIFF",                            0 ),
+    "usePearsonInHCA"                    => getValue( $def, "use_pearson_in_hca",                    0 ),
+    "n_first"                            => getValue( $def, "correlation_n_first",                  -1 ),
+    "onlySamplesInGroup"                 => getValue( $def, "correlation_onlySamplesInGroup",       $default_onlySamplesInGroup ),
+    "useLeastGroups"                     => getValue( $def, "useLeastGroups",                       0 ),
+    "minMedian"                          => getValue( $def, "minMedian",                            0 ),
+    "minMedianInGroup"                   => getValue( $def, "minMedianInGroup",                     1 ),
+    "totalCountKey"                      => getValue( $def, "totalCountKey",                        "None" ),
+    "pca_width_inch"                     => getValue( $def, "pca_width_inch",                       4 ),
+    "pca_height_inch"                    => getValue( $def, "pca_height_inch",                      2.5 ),
+    "pca_point_size"                     => getValue( $def, "pca_point_size",                       3 ),
+    "num_top_genes_heatmap"              => getValue( $def, "num_top_genes_heatmap",                25 ),
+    "heatmap_add_width_inch"             => getValue( $def, "heatmap_add_width_inch",               2 ),
+    "heatmap_add_height_inch"            => getValue( $def, "heatmap_add_height_inch",              0 ),
+    "heatmap_column_names_max_height_cm" => getValue( $def, "heatmap_column_names_max_height_cm",   6 ),
+    "heatmap_legend_label_fontsize"      => getValue( $def, "heatmap_legend_label_fontsize",        18 ),
+    "heatmap_column_name_fontsize"       => getValue( $def, "heatmap_column_name_fontsize",         18 )
   };
 
-  my $corr_output_file_ext = ".density.png;.density.individual.png.Correlation.png;.heatmap.png;.PCA.png;";
+  my $corr_output_file_ext      = ".density.png;.density.individual.png.Correlation.png;.heatmap.png;.PCA.png;";
   my $corr_output_file_task_ext = "";
-  if ( defined $def->{groups} ){
+  if ( defined $def->{groups} ) {
     my $groups = $def->{groups};
-    if(scalar( keys %$groups ) >= 3 ) {
+    if ( scalar( keys %$groups ) >= 3 ) {
       $corr_output_file_task_ext = ".Group.heatmap.png;.Group.Correlation.png";
-    } 
-  }
+    }
+  } ## end if ( defined $def->{groups...})
 
-  my $correlation_script="countTableGroupCorrelation.v2.R";
+  my $correlation_script = "countTableGroupCorrelation.v2.R";
 
   $config->{$task_name} = {
-    class           => "CQS::CountTableGroupCorrelation",
-    perform         => 1,
-    rCode           => $rCode,
-    target_dir      => $task_dir,
+    class                => "CQS::CountTableGroupCorrelation",
+    perform              => 1,
+    rCode                => $rCode,
+    target_dir           => $task_dir,
     parameterSampleFile4 => $options,
-    parameterFile3_ref        => $parameterFile3_ref,
-    parameterFile4 => $def->{covariance_file},
+    parameterFile3_ref   => $parameterFile3_ref,
+    parameterFile4       => $def->{covariance_file},
 
-    rtemplate       => "countTableVisFunctions.R,$correlation_script",
-    rReportTemplate => "CountTableGroupCorrelation.Rmd;reportFunctions.R",
+    rtemplate           => "countTableVisFunctions.R,$correlation_script",
+    rReportTemplate     => "CountTableGroupCorrelation.Rmd;reportFunctions.R",
     run_rmd_independent => 1,
 
-    output_file     => "parameterSampleFile1",
-    output_file_ext           => $corr_output_file_ext,
-    output_file_task_ext      => $corr_output_file_task_ext,
-    output_to_result_dir      => getValue($def, "correlation_output_to_result_dir", 0),
-    output_include_folder_name => getValue($def, "correlation_output_include_folder_name", 1),
+    output_file                => "parameterSampleFile1",
+    output_file_ext            => $corr_output_file_ext,
+    output_file_task_ext       => $corr_output_file_task_ext,
+    output_to_result_dir       => getValue( $def, "correlation_output_to_result_dir",       0 ),
+    output_include_folder_name => getValue( $def, "correlation_output_include_folder_name", 1 ),
 
     can_result_be_empty_file => 1,
-    docker_prefix => "correlation_",
-    sh_direct       => 1,
-    pbs             => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "23",
-      "mem"       => getValue($def, "correlation_mem", "40gb")
+    docker_prefix            => "correlation_",
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "23",
+      "mem"      => getValue( $def, "correlation_mem", "40gb" )
     },
   };
   if ( is_array($count_file_ref) ) {
@@ -990,35 +1023,37 @@ sub add_table_correlation {
           my %cgroups = %$colorGroups;
           die "Color of group '$subGroup' was not define in " . Dumper($colorGroups);
         }
-      }
-    }
-  }
+      } ## end for my $subGroup ( keys...)
+    } ## end for my $title ( keys %$corGroups)
+  } ## end if ( defined $config->...)
   push @$tasks, $task_name;
-}
+} ## end sub add_table_correlation
+
 
 sub addHomerAnnotation {
   my ( $config, $def, $summary, $target_dir, $callName, $callFilePattern, $homerName ) = @_;
-  if(!defined $homerName){
+  if ( !defined $homerName ) {
     $homerName = $callName . "_homer_annotation";
   }
   $config->{$homerName} = {
-    class        => "Homer::Annotation",
-    option       => getValue( $def, "homer_option" ),
-    perform      => 1,
-    target_dir   => $target_dir . "/" . getNextFolderIndex($def) . $homerName,
-    source_ref   => [ $callName, $callFilePattern ],
-    homer_genome => getValue( $def, "homer_genome" ),
+    class                    => "Homer::Annotation",
+    option                   => getValue( $def, "homer_option" ),
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $homerName,
+    source_ref               => [ $callName, $callFilePattern ],
+    homer_genome             => getValue( $def, "homer_genome" ),
     can_result_be_empty_file => 1,
-    sh_direct    => 1,
-    pbs          => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
   push @$summary, ($homerName);
   return $homerName;
-}
+} ## end sub addHomerAnnotation
+
 
 sub addEnhancer {
   my ( $config, $def, $individual, $summary, $target_dir, $enhancerName, $bam_ref, $peak_ref ) = @_;
@@ -1057,7 +1092,7 @@ sub addEnhancer {
     rtemplate                => "../Chipseq/enhancerVis.R",
     output_file              => ".enhancer",
     output_file_ext          => ".log.tss.png",
-    output_other_ext          => ".log.distal.png;.tss.tsv;.distal.tsv",
+    output_other_ext         => ".log.distal.png;.tss.tsv;.distal.tsv",
     sh_direct                => 1,
     parameterSampleFile1_ref => [ "$enhancerName", ".txt\$" ],
     sh_direct                => 1,
@@ -1091,7 +1126,8 @@ sub addEnhancer {
     },
   };
   push @$summary, $enhancerVisCor;
-}
+} ## end sub addEnhancer
+
 
 sub addMultiQC {
   my ( $config, $def, $summary, $target_dir, $root_dir, $multiqc_depedents ) = @_;
@@ -1106,20 +1142,21 @@ sub addMultiQC {
     root_dir      => $root_dir,
     sh_direct     => 1,
     pbs           => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
     },
   };
 
   push @$summary, ("multiqc");
   return "multiqc";
-}
+} ## end sub addMultiQC
+
 
 sub addCleanBAM {
   my ( $config, $def, $individual, $task_name, $target_dir, $bam_ref ) = @_;
 
-  my $pairend = is_paired_end( $def );
+  my $pairend = is_paired_end($def);
 
   my $cleanbam_option;
   my $minimum_insert_size;
@@ -1147,7 +1184,7 @@ sub addCleanBAM {
     minimum_insert_size     => $minimum_insert_size,
     maximum_insert_size     => $maximum_insert_size,
     blacklist_file          => $def->{blacklist_file},
-    mark_duplicates         => getValue($def, "mark_duplicates", 1),
+    mark_duplicates         => getValue( $def, "mark_duplicates", 1 ),
     is_paired_end           => $pairend,
     is_sorted_by_coordinate => 1,
     sh_direct               => 0,
@@ -1158,7 +1195,8 @@ sub addCleanBAM {
     },
   };
   push @$individual, $task_name;
-}
+} ## end sub addCleanBAM
+
 
 sub writeDesignTable {
   my ( $target_dir, $section, $designtable, $bamfiles, $peaksfiles, $peakSoftware, $merged, $task_name, $treatments, $controls ) = @_;
@@ -1168,11 +1206,11 @@ sub writeDesignTable {
   my $defaultTissue = getValue( $designtable, "Tissue", "" );
   my $defaultFactor = getValue( $designtable, "Factor", "" );
 
-  my $result = {};
+  my $result        = {};
   my $condition_map = {};
 
   if ($merged) {
-    my $conditions = {};
+    my $conditions  = {};
     my $mapFileName = "${task_name}.config.txt";
     my $mapfile     = $target_dir . "/" . $mapFileName;
     open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
@@ -1191,18 +1229,18 @@ sub writeDesignTable {
           next;
         }
 
-        my $entryMap = getValue( $sampleList, $sampleName );
-        my $tissue   = getValue( $entryMap,   "Tissue", $defaultNameTissue );
-        my $factor   = getValue( $entryMap,   "Factor", $defaultNameFactor );
+        my $entryMap  = getValue( $sampleList, $sampleName );
+        my $tissue    = getValue( $entryMap,   "Tissue", $defaultNameTissue );
+        my $factor    = getValue( $entryMap,   "Factor", $defaultNameFactor );
         my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
         my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
         my $peakFile  = $peaksfiles->{$sampleName};
-        if(is_array($peakFile)){
+        if ( is_array($peakFile) ) {
           $peakFile = $peakFile->[0];
         }
 
-        my $sampleId   = $treatments->{$sampleName};
-        if(is_array($sampleId)){
+        my $sampleId = $treatments->{$sampleName};
+        if ( is_array($sampleId) ) {
           $sampleId = $sampleId->[0];
         }
 
@@ -1211,33 +1249,24 @@ sub writeDesignTable {
         my $bamControl = "";
 
         if ( defined $controls && defined $controls->{$sampleName} ) {
-          $controlId  = $controls->{$sampleName};
-          if(is_array($controlId)){
+          $controlId = $controls->{$sampleName};
+          if ( is_array($controlId) ) {
             $controlId = $controlId->[0];
           }
 
           $bamControl = $bamfiles->{$controlId}[0];
-        }
+        } ## end if ( defined $controls...)
 
-        print $map $sampleId . "\t"
-          . $tissue . "\t"
-          . $factor . "\t"
-          . $condition . "\t"
-          . $replicate . "\t"
-          . $bamReads . "\t"
-          . $controlId . "\t"
-          . $bamControl . "\t"
-          . $peakFile . "\t"
-          . $peakSoftware . "\n";
+        print $map $sampleId . "\t" . $tissue . "\t" . $factor . "\t" . $condition . "\t" . $replicate . "\t" . $bamReads . "\t" . $controlId . "\t" . $bamControl . "\t" . $peakFile . "\t" . $peakSoftware . "\n";
 
         $conditions->{$condition} = 1;
-      }
-    }
+      } ## end for my $sampleName ( sort...)
+    } ## end for my $name ( sort keys...)
     close($map);
 
-    $result->{$task_name} = $mapfile;
+    $result->{$task_name}        = $mapfile;
     $condition_map->{$task_name} = $conditions;
-  }
+  } ## end if ($merged)
   else {
     for my $name ( sort keys %$designtable ) {
       if ( $name eq "Tissue" || $name eq "Factor" ) {
@@ -1251,9 +1280,9 @@ sub writeDesignTable {
       my $defaultNameFactor = getValue( $sampleList, "Factor", $defaultFactor );
 
       my $hasMinOverlap = 0;
-      my $curdir      = create_directory_or_die( $target_dir . "/" . $name );
-      my $mapFileName = "${name}.config.txt";
-      my $mapfile     = $curdir . "/" . $mapFileName;
+      my $curdir        = create_directory_or_die( $target_dir . "/" . $name );
+      my $mapFileName   = "${name}.config.txt";
+      my $mapfile       = $curdir . "/" . $mapFileName;
       open( my $map, ">$mapfile" ) or die "Cannot create $mapfile";
       print $map "SampleID\tTissue\tFactor\tCondition\tReplicate\tbamReads\tControlID\tbamControl\tPeaks\tPeakCaller\n";
       for my $sampleName ( sort keys %$sampleList ) {
@@ -1266,9 +1295,9 @@ sub writeDesignTable {
           next;
         }
 
-        my $entryMap = getValue( $sampleList, $sampleName );
-        my $tissue   = getValue( $entryMap,   "Tissue", $defaultNameTissue );
-        my $factor   = getValue( $entryMap,   "Factor", $defaultNameTissue );
+        my $entryMap  = getValue( $sampleList, $sampleName );
+        my $tissue    = getValue( $entryMap,   "Tissue", $defaultNameTissue );
+        my $factor    = getValue( $entryMap,   "Factor", $defaultNameTissue );
         my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
         my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
         my $peakFile  = $peaksfiles->{$sampleName}->[0];
@@ -1283,117 +1312,111 @@ sub writeDesignTable {
           $bamControl = $bamfiles->{$controlId}[0];
         }
 
-        print $map $sampleId . "\t"
-          . $tissue . "\t"
-          . $factor . "\t"
-          . $condition . "\t"
-          . $replicate . "\t"
-          . $bamReads . "\t"
-          . $controlId . "\t"
-          . $bamControl . "\t"
-          . $peakFile . "\t"
-          . $peakSoftware . "\n";
+        print $map $sampleId . "\t" . $tissue . "\t" . $factor . "\t" . $condition . "\t" . $replicate . "\t" . $bamReads . "\t" . $controlId . "\t" . $bamControl . "\t" . $peakFile . "\t" . $peakSoftware . "\n";
 
         $conditions->{$condition} = 1;
-      }
+      } ## end for my $sampleName ( sort...)
       close($map);
 
-      if ($hasMinOverlap){
+      if ($hasMinOverlap) {
         my $overlapFileName = "${curdir}/${name}.minoverlap.txt";
         open( my $overlap, ">$overlapFileName" ) or die "Cannot create $overlapFileName";
         print $overlap "Condition\tminoverlap\n";
-        my $overlapDef =  $sampleList->{"MinOverlap"};
-        for my $oKey (sort keys %$overlapDef){
+        my $overlapDef = $sampleList->{"MinOverlap"};
+        for my $oKey ( sort keys %$overlapDef ) {
           print $overlap $oKey . "\t" . $overlapDef->{$oKey} . "\n";
         }
-      }
+      } ## end if ($hasMinOverlap)
 
-      $result->{$name} = $mapfile;
+      $result->{$name}        = $mapfile;
       $condition_map->{$name} = $conditions;
-    }
-  }
+    } ## end for my $name ( sort keys...)
+  } ## end else [ if ($merged) ]
 
   return $result, $condition_map;
-}
+} ## end sub writeDesignTable
+
 
 sub init_design_table_by_pattern {
-  my ( $def ) = @_;
+  my ($def) = @_;
 
-  my $task_name = getValue($def, "task_name");
-  my $treatments = getValue($def, "treatments");
+  my $task_name  = getValue( $def, "task_name" );
+  my $treatments = getValue( $def, "treatments" );
 
-  my $condition_pattern = getValue($def, "design_table_condition_pattern");
-  my $factor_pattern = getValue($def, "design_table_factor_pattern", "");
-  my $replicate_pattern = getValue($def, "design_table_replicate_pattern", "");
+  my $condition_pattern = getValue( $def, "design_table_condition_pattern" );
+  my $factor_pattern    = getValue( $def, "design_table_factor_pattern",    "" );
+  my $replicate_pattern = getValue( $def, "design_table_replicate_pattern", "" );
 
   my $samples = {};
 
   for my $sampleName ( sort keys %$treatments ) {
-    my $condition = capture_regex_groups($sampleName, $condition_pattern);
-    my $factor = ($factor_pattern eq "") ? undef : capture_regex_groups($sampleName, $factor_pattern);
-    my $replicate = ($replicate_pattern eq "") ? "1" : capture_regex_groups($sampleName, $replicate_pattern);
+    my $condition = capture_regex_groups( $sampleName, $condition_pattern );
+    my $factor    = ( $factor_pattern eq "" )    ? undef : capture_regex_groups( $sampleName, $factor_pattern );
+    my $replicate = ( $replicate_pattern eq "" ) ? "1"   : capture_regex_groups( $sampleName, $replicate_pattern );
     $samples->{$sampleName} = {
       'Condition' => $condition,
-      'Factor' => $factor,
+      'Factor'    => $factor,
       'Replicate' => $replicate
     };
-  }
+  } ## end for my $sampleName ( sort...)
 
-  $def->{"design_table"} = {
-    $task_name => $samples
-  };
+  $def->{"design_table"} = { $task_name => $samples };
 
   return $def;
-}
+} ## end sub init_design_table_by_pattern
+
 
 sub getSequenceTaskClassname {
   my $cluster = shift;
-  my $result = $cluster eq "slurm" ? "CQS::SequenceTaskSlurmSlim" : "CQS::SequenceTask";
+  my $result  = $cluster eq "slurm" ? "CQS::SequenceTaskSlurmSlim" : "CQS::SequenceTask";
   return ($result);
 }
 
-sub getIndexName{
-  my ($prefix, $suffix, $indexDic, $indexKey) = @_;
-  my $index = defined $indexDic ? getNextIndex($indexDic, $indexKey) : "";
-  return($prefix . $index . $suffix);
+
+sub getIndexName {
+  my ( $prefix, $suffix, $indexDic, $indexKey ) = @_;
+  my $index = defined $indexDic ? getNextIndex( $indexDic, $indexKey ) : "";
+  return ( $prefix . $index . $suffix );
 }
+
 
 sub addAnnovar {
   my ( $config, $def, $summary, $target_dir, $source_name, $source_pattern, $prefix, $indexDic, $indexKey, $clean_folder, $perform_splicing, $output_to_same_folder ) = @_;
-  if (not defined $prefix){
+  if ( not defined $prefix ) {
     $prefix = $source_name;
   }
 
   my $annovar_name;
-  if(defined $indexDic){
-    $annovar_name = getIndexName($prefix, "_annovar", $indexDic, $indexKey);
-  }else{
+  if ( defined $indexDic ) {
+    $annovar_name = getIndexName( $prefix, "_annovar", $indexDic, $indexKey );
+  }
+  else {
     $annovar_name = $prefix . "_annovar";
   }
 
-  my $isBed=0;
-  if(defined $source_pattern){
+  my $isBed = 0;
+  if ( defined $source_pattern ) {
     $isBed = $source_pattern =~ /.bed$/;
-  } 
+  }
 
   my $source_ref = ( defined($source_pattern) and ( $source_pattern ne "" ) ) ? [ $source_name, $source_pattern ] : $source_name;
   $config->{$annovar_name} = {
-    class      => "Annotation::Annovar",
-    perform    => 1,
-    target_dir => "${target_dir}/$annovar_name",
-    source_ref => $source_ref,
-    option     => getValue( $def, "annovar_param" ),
-    annovar_db => getValue( $def, "annovar_db" ),
-    buildver   => getValue( $def, "annovar_buildver" ),
-    annovar_gzipped => getValue( $def, "annovar_gzipped", 0 ),
-    docker_prefix => "annovar_",
-    clean_folder => $clean_folder,
-    perform_splicing => $perform_splicing,
+    class                 => "Annotation::Annovar",
+    perform               => 1,
+    target_dir            => "${target_dir}/$annovar_name",
+    source_ref            => $source_ref,
+    option                => getValue( $def, "annovar_param" ),
+    annovar_db            => getValue( $def, "annovar_db" ),
+    buildver              => getValue( $def, "annovar_buildver" ),
+    annovar_gzipped       => getValue( $def, "annovar_gzipped", 0 ),
+    docker_prefix         => "annovar_",
+    clean_folder          => $clean_folder,
+    perform_splicing      => $perform_splicing,
     output_to_same_folder => $output_to_same_folder,
-    sh_direct  => getValue($def, "annovar_sh_direct", 1),
-    isBed => $isBed,
-    isvcf      => $isBed?0:1,
-    pbs        => {
+    sh_direct             => getValue( $def, "annovar_sh_direct", 1 ),
+    isBed                 => $isBed,
+    isvcf                 => $isBed ? 0 : 1,
+    pbs                   => {
       "nodes"    => "1:ppn=8",
       "walltime" => "10",
       "mem"      => "40gb"
@@ -1402,16 +1425,17 @@ sub addAnnovar {
   push @$summary, $annovar_name;
 
   return ($annovar_name);
-}
+} ## end sub addAnnovar
+
 
 sub addAnnovarFilter {
   my ( $config, $def, $summary, $target_dir, $annovar_name, $prefix, $indexDic, $indexKey ) = @_;
-  if (not defined $prefix){
+  if ( not defined $prefix ) {
     $prefix = $annovar_name;
   }
 
-  my $annovar_filter_name = getIndexName($prefix, "_filter", $indexDic, $indexKey);
-  
+  my $annovar_filter_name = getIndexName( $prefix, "_filter", $indexDic, $indexKey );
+
   $config->{$annovar_filter_name} = {
     class               => "Annotation::FilterAnnovar",
     perform             => 1,
@@ -1419,7 +1443,7 @@ sub addAnnovarFilter {
     source_ref          => $annovar_name,
     option              => $def->{annovar_filter},
     sh_direct           => 1,
-    maximum_freq_values => getValue($def, "maximum_freq_values", "0.001,0.01,0.1,1.0"),
+    maximum_freq_values => getValue( $def, "maximum_freq_values", "0.001,0.01,0.1,1.0" ),
     filter_fq_equal_1   => $def->{filter_variants_fq_equal_1},
     pbs                 => {
       "nodes"    => "1:ppn=1",
@@ -1429,7 +1453,8 @@ sub addAnnovarFilter {
   };
   push @$summary, $annovar_filter_name;
   return ($annovar_filter_name);
-}
+} ## end sub addAnnovarFilter
+
 
 sub addAnnovarFilterGeneannotation {
   my ( $config, $def, $summary, $target_dir, $annovar_filter_name ) = @_;
@@ -1459,21 +1484,22 @@ sub addAnnovarFilterGeneannotation {
 
   push @$summary, $annovar_filter_geneannotation_name;
   return ($annovar_filter_geneannotation_name);
-}
+} ## end sub addAnnovarFilterGeneannotation
+
 
 sub addAnnovarMafReport {
   my ( $config, $def, $summary, $target_dir, $annovar_filter_name, $prefix, $indexDic, $indexKey ) = @_;
 
-  my $annovar_to_maf = $prefix . getNextIndex($indexDic, $indexKey) . "_toMAF";
+  my $annovar_to_maf = $prefix . getNextIndex( $indexDic, $indexKey ) . "_toMAF";
   $config->{$annovar_to_maf} = {
-    class      => "Annotation::Annovar2Maf",
-    perform    => 1,
-    target_dir => $target_dir . "/" . $annovar_to_maf,
-    source_ref => [ $annovar_filter_name, "\\.freq0\\..*.filtered.tsv" ],
-    refBuild   => getValue( $def, "annovar_buildver" ),
+    class         => "Annotation::Annovar2Maf",
+    perform       => 1,
+    target_dir    => $target_dir . "/" . $annovar_to_maf,
+    source_ref    => [ $annovar_filter_name, "\\.freq0\\..*.filtered.tsv" ],
+    refBuild      => getValue( $def, "annovar_buildver" ),
     docker_prefix => "mafreport_",
-    sh_direct  => 1,
-    pbs        => {
+    sh_direct     => 1,
+    pbs           => {
       "email"     => $def->{email},
       "emailType" => $def->{emailType},
       "nodes"     => "1:ppn=1",
@@ -1483,12 +1509,12 @@ sub addAnnovarMafReport {
   };
   push @$summary, $annovar_to_maf;
 
-  my $annovar_to_maf_report = $prefix . getNextIndex($indexDic, $indexKey) . "_report";
+  my $annovar_to_maf_report = $prefix . getNextIndex( $indexDic, $indexKey ) . "_report";
 
   my $re_rcode = ( defined $def->{family_info_file} ? "clinicalFeatures='" . $def->{family_info_feature} . "';" : "" );
-  if(defined $def->{annovar_buildver}){
+  if ( defined $def->{annovar_buildver} ) {
     $re_rcode = $re_rcode . "genome='" . $def->{annovar_buildver} . "'";
-  } 
+  }
 
   $config->{$annovar_to_maf_report} = {
     class                    => "CQS::UniqueR",
@@ -1502,226 +1528,231 @@ sub addAnnovarMafReport {
     parameterFile1           => $def->{family_info_file},
     sh_direct                => 1,
     rCode                    => $re_rcode,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "24",
-      "mem"       => "10gb"
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "24",
+      "mem"      => "10gb"
     },
   };
-  push (@$summary, $annovar_to_maf_report);
-  return($annovar_to_maf, $annovar_to_maf_report);
-}
+  push( @$summary, $annovar_to_maf_report );
+  return ( $annovar_to_maf, $annovar_to_maf_report );
+} ## end sub addAnnovarMafReport
+
 
 sub addFilterMafAndReport {
   my ( $config, $def, $summary, $target_dir, $mutect2call ) = @_;
 
-#  my $mutect2_index_dic = {};
-#  my $mutect2_index_key = "mafReport_Index";
-#  my $taskName = $mutect2call . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_mergeAndMafreport";
-  $mutect2call = (is_array($mutect2call) ? $mutect2call->[0] : $mutect2call);
+  #  my $mutect2_index_dic = {};
+  #  my $mutect2_index_key = "mafReport_Index";
+  #  my $taskName = $mutect2call . getNextIndex($mutect2_index_dic, $mutect2_index_key) . "_mergeAndMafreport";
+  $mutect2call = ( is_array($mutect2call) ? $mutect2call->[0] : $mutect2call );
   my $taskName = $mutect2call . "_mergeAndMafreport";
 
-  my $rCode=( defined $def->{family_info_file} ? "clinicalFeatures=" . $def->{family_info_feature} . ";" : "" );
-  $rCode=$rCode."genome=\"" . getValue($def, "annovar_buildver", "hg38") . "\";";
+  my $rCode = ( defined $def->{family_info_file} ? "clinicalFeatures=" . $def->{family_info_feature} . ";" : "" );
+  $rCode = $rCode . "genome=\"" . getValue( $def, "annovar_buildver", "hg38" ) . "\";";
 
-  $config->{$taskName}={
-    class      => "CQS::UniqueR",
-    perform    => 1,
-    target_dir => "${target_dir}/${taskName}",
-    rtemplate                  => "../CQS/muTect2MergeAndMafreport.R",
-    parameterSampleFile1_ref=> [$mutect2call, ".maf"],
+  $config->{$taskName} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${target_dir}/${taskName}",
+    rtemplate                => "../CQS/muTect2MergeAndMafreport.R",
+    parameterSampleFile1_ref => [ $mutect2call, ".maf" ],
     parameterFile1           => $def->{family_info_file},
     rCode                    => $rCode,
-    output_file_ext            => ".filter.allSamples.maf;.filter.allSamples.maf.report.html.RData",
-    docker_prefix => "mafreport_",
-    sh_direct  => 0,
-    pbs        => {
+    output_file_ext          => ".filter.allSamples.maf;.filter.allSamples.maf.report.html.RData",
+    docker_prefix            => "mafreport_",
+    sh_direct                => 0,
+    pbs                      => {
       "nodes"    => "1:ppn=8",
       "walltime" => "4",
       "mem"      => "30gb"
     }
   };
   push @$summary, $taskName;
-  return($taskName);
-}
+  return ($taskName);
+} ## end sub addFilterMafAndReport
+
 
 sub addMafToIntervals {
-  my ( $config, $def, $target_dir,$summary, $prefix, $indexDic, $indexKey,$mafResults ) = @_;
+  my ( $config, $def, $target_dir, $summary, $prefix, $indexDic, $indexKey, $mafResults ) = @_;
 
-  my $task = $prefix . getNextIndex($indexDic, $indexKey) . "_mafToIntervals";
+  my $task = $prefix . getNextIndex( $indexDic, $indexKey ) . "_mafToIntervals";
   $config->{$task} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . '/' . $task,
-      rtemplate                  => "../Variants/mafToIntervals.R",
-      parameterSampleFile1_ref   => [ $mafResults, ".maf\$" ],
-      output_to_result_directory => 1,
-      output_file                => "",
-      output_file_ext            => ".maf.intervals",
-      sh_direct                  => 1,
-      'pbs'                      => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '20gb',
-        'walltime' => '10'
-      },
-    };
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . '/' . $task,
+    rtemplate                  => "../Variants/mafToIntervals.R",
+    parameterSampleFile1_ref   => [ $mafResults, ".maf\$" ],
+    output_to_result_directory => 1,
+    output_file                => "",
+    output_file_ext            => ".maf.intervals",
+    sh_direct                  => 1,
+    'pbs'                      => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '20gb',
+      'walltime' => '10'
+    },
+  };
   push @$summary, $task;
-  return($task);
-}
+  return ($task);
+} ## end sub addMafToIntervals
 
 
 sub addAllelicCountsForClonalAnalysis {
-  my ( $config, $def, $summary,$target_dir,$AllelicCountsFiles,$mafResults,$cnvFile ) = @_;
+  my ( $config, $def, $summary, $target_dir, $AllelicCountsFiles, $mafResults, $cnvFile ) = @_;
 
-  if (!defined($def->{family_info_file}) | !defined($def->{patient_info_feature}) ) {
-    die("Need define family_info_file and patient_info_feature in def so that samples from the same patients can be extracted")
+  if ( !defined( $def->{family_info_file} ) | !defined( $def->{patient_info_feature} ) ) {
+    die("Need define family_info_file and patient_info_feature in def so that samples from the same patients can be extracted");
   }
-  my $rCode=( defined $def->{family_info_file} ? "patientFeature='" . $def->{patient_info_feature} . "';" : "" );
+  my $rCode = ( defined $def->{family_info_file} ? "patientFeature='" . $def->{patient_info_feature} . "';" : "" );
 
   my $task = "${AllelicCountsFiles}_PrepareClonalAnalysis";
   $config->{$task} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . '/' . $task,
-      rtemplate                  => "../Variants/AllelicCountsForClonalAnalysis.R",
-      parameterSampleFile1_ref   => [ $AllelicCountsFiles, ".allelicCounts.tsv\$" ],
-      parameterFile1             => getValue( $def, "family_info_file" ),
-      parameterFile2_ref         => [ $mafResults, ".maf\$" ],
-      parameterFile3_ref         => [ $cnvFile, ".seg\$" ],
-      output_to_result_directory => 1,
-      output_file                => "",
-      output_file_ext            => ".pyCloneVIInputList.txt;.sciCloneInputList.txt",
-      rCode                      => $rCode,
-      sh_direct                  => 1,
-      'pbs'                      => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '20gb',
-        'walltime' => '10'
-      },
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . '/' . $task,
+    rtemplate                  => "../Variants/AllelicCountsForClonalAnalysis.R",
+    parameterSampleFile1_ref   => [ $AllelicCountsFiles, ".allelicCounts.tsv\$" ],
+    parameterFile1             => getValue( $def, "family_info_file" ),
+    parameterFile2_ref         => [ $mafResults, ".maf\$" ],
+    parameterFile3_ref         => [ $cnvFile,    ".seg\$" ],
+    output_to_result_directory => 1,
+    output_file                => "",
+    output_file_ext            => ".pyCloneVIInputList.txt;.sciCloneInputList.txt",
+    rCode                      => $rCode,
+    sh_direct                  => 1,
+    'pbs'                      => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '20gb',
+      'walltime' => '10'
+    },
   };
   push @$summary, $task;
-  return($task);
-}
+  return ($task);
+} ## end sub addAllelicCountsForClonalAnalysis
+
 
 sub addSciCloneAndClonevol {
-  my ( $config, $def, $summary,$target_dir,$prepareClonalAnalysis ) = @_;
+  my ( $config, $def, $summary, $target_dir, $prepareClonalAnalysis ) = @_;
 
   my $task = "${prepareClonalAnalysis}_SciCloneAndClonevol";
   $config->{$task} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . '/' . $task,
-      rtemplate                  => "../Variants/sciCloneAndClonEov.R",
-      parameterFile1_ref         => [ $prepareClonalAnalysis, ".sciCloneInputList.txt\$" ],
-      output_to_result_directory => 1,
-      output_file                => "",
-      output_file_ext            => "",
-      sh_direct                  => 1,
-      'pbs'                      => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '20gb',
-        'walltime' => '10'
-      },
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . '/' . $task,
+    rtemplate                  => "../Variants/sciCloneAndClonEov.R",
+    parameterFile1_ref         => [ $prepareClonalAnalysis, ".sciCloneInputList.txt\$" ],
+    output_to_result_directory => 1,
+    output_file                => "",
+    output_file_ext            => "",
+    sh_direct                  => 1,
+    'pbs'                      => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '20gb',
+      'walltime' => '10'
+    },
   };
   push @$summary, $task;
-  return($task);
-}
+  return ($task);
+} ## end sub addSciCloneAndClonevol
+
 
 sub addPyCloneVIAndClonevol {
-  my ( $config, $def, $summary,$target_dir,$prepareClonalAnalysis ) = @_;
+  my ( $config, $def, $summary, $target_dir, $prepareClonalAnalysis ) = @_;
 
   my $task = "${prepareClonalAnalysis}_PyCloneVIAndClonevol";
   $config->{$task} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . '/' . $task,
-      rtemplate                  => "../Variants/pyCloneVIAndClonEov.R",
-      parameterFile1_ref         => [ $prepareClonalAnalysis, ".pyCloneVIInputList.txt\$" ],
-      output_to_result_directory => 1,
-      output_file                => "",
-      output_file_ext            => "",
-      sh_direct                  => 1,
-      'pbs'                      => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '20gb',
-        'walltime' => '10'
-      },
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . '/' . $task,
+    rtemplate                  => "../Variants/pyCloneVIAndClonEov.R",
+    parameterFile1_ref         => [ $prepareClonalAnalysis, ".pyCloneVIInputList.txt\$" ],
+    output_to_result_directory => 1,
+    output_file                => "",
+    output_file_ext            => "",
+    sh_direct                  => 1,
+    'pbs'                      => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '20gb',
+      'walltime' => '10'
+    },
   };
   push @$summary, $task;
-  return($task);
-}
+  return ($task);
+} ## end sub addPyCloneVIAndClonevol
+
 
 sub addApePhylogeneticTree {
-  my ( $config, $def, $summary,$target_dir,$mafResults ) = @_;
+  my ( $config, $def, $summary, $target_dir, $mafResults ) = @_;
 
-  if (!defined($def->{family_info_file}) | !defined($def->{patient_info_feature}) ) {
-    die("Need define family_info_file and patient_info_feature in def so that samples from the same patients can be extracted")
+  if ( !defined( $def->{family_info_file} ) | !defined( $def->{patient_info_feature} ) ) {
+    die("Need define family_info_file and patient_info_feature in def so that samples from the same patients can be extracted");
   }
-  my $rCode=( defined $def->{family_info_file} ? "patientFeature='" . $def->{patient_info_feature} . "';" : "" );
+  my $rCode = ( defined $def->{family_info_file} ? "patientFeature='" . $def->{patient_info_feature} . "';" : "" );
 
   my $task = "${mafResults}_ApePhylogeneticTree";
   $config->{$task} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . '/' . $task,
-      rtemplate                  => "../Variants/ApePhylogeneticTree.R.R",
-      parameterFile1             => getValue( $def, "family_info_file" ),
-      parameterFile2_ref         => [ $mafResults, ".maf\$" ],
-      output_to_result_directory => 1,
-      output_file                => "",
-      output_file_ext            => ".ApePhylogeneticTree.txt",
-      rCode                      => $rCode,
-      sh_direct                  => 1,
-      'pbs'                      => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '20gb',
-        'walltime' => '10'
-      },
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . '/' . $task,
+    rtemplate                  => "../Variants/ApePhylogeneticTree.R.R",
+    parameterFile1             => getValue( $def, "family_info_file" ),
+    parameterFile2_ref         => [ $mafResults, ".maf\$" ],
+    output_to_result_directory => 1,
+    output_file                => "",
+    output_file_ext            => ".ApePhylogeneticTree.txt",
+    rCode                      => $rCode,
+    sh_direct                  => 1,
+    'pbs'                      => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '20gb',
+      'walltime' => '10'
+    },
   };
   push @$summary, $task;
-  return($task);
-}
+  return ($task);
+} ## end sub addApePhylogeneticTree
 
 
 sub AddMothurPipeline {
-  my ( $config, $def, $summary,$target_dir, $source_def ) = @_;
+  my ( $config, $def, $summary, $target_dir, $source_def ) = @_;
 
-my $taskName="mothur_pipeline";
+  my $taskName = "mothur_pipeline";
 
-my $projectName=getValue($def, "task_name");
-my $mothurPipelineCodeFile = getValue($def, "mothurPipelineCodeFile");
-#copy mothur code to current folder and add $batch file name to the beginning 
-my $mothurPipelineCodeFileOut = "$target_dir/$taskName/result/$projectName.mothurPipeline.code";
+  my $projectName            = getValue( $def, "task_name" );
+  my $mothurPipelineCodeFile = getValue( $def, "mothurPipelineCodeFile" );
+  #copy mothur code to current folder and add $batch file name to the beginning
+  my $mothurPipelineCodeFileOut = "$target_dir/$taskName/result/$projectName.mothurPipeline.code";
 
-#softlink of
-#ln -s /scratch/cqs/zhaos/reference/mothur/silva/silva.seed_v132.pcr.align silva.v4.fasta
-#ln -s /scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/* .
-my $mothurSilvaFile = getValue($def, "mothurSilvaFile");
-my $mothurTrainsetFastaFile = getValue($def, "mothurTrainsetFastaFile");
-my $mothurTrainsetTaxFile = getValue($def, "mothurTrainsetTaxFile");
+  #softlink of
+  #ln -s /scratch/cqs/zhaos/reference/mothur/silva/silva.seed_v132.pcr.align silva.v4.fasta
+  #ln -s /scratch/cqs/zhaos/reference/mothur/trainset16_022016.pds/* .
+  my $mothurSilvaFile         = getValue( $def, "mothurSilvaFile" );
+  my $mothurTrainsetFastaFile = getValue( $def, "mothurTrainsetFastaFile" );
+  my $mothurTrainsetTaxFile   = getValue( $def, "mothurTrainsetTaxFile" );
 
-symlink ( $mothurSilvaFile, "$target_dir/$taskName/result/silva.v4.fasta" );
-symlink ( $mothurTrainsetFastaFile, "$target_dir/$taskName/result/trainset16_022016.pds.fasta" );
-symlink ( $mothurTrainsetTaxFile, "$target_dir/$taskName/result/trainset16_022016.pds.tax" );
+  symlink( $mothurSilvaFile,         "$target_dir/$taskName/result/silva.v4.fasta" );
+  symlink( $mothurTrainsetFastaFile, "$target_dir/$taskName/result/trainset16_022016.pds.fasta" );
+  symlink( $mothurTrainsetTaxFile,   "$target_dir/$taskName/result/trainset16_022016.pds.tax" );
 
-#my $stability_batch = "$target_dir/$taskName/result/stability.files";
-my $sampleToFiles = "$target_dir/$taskName/result/${projectName}.files";
+  #my $stability_batch = "$target_dir/$taskName/result/stability.files";
+  my $sampleToFiles = "$target_dir/$taskName/result/${projectName}.files";
 
-open CODESIN,"<$mothurPipelineCodeFile";
-open CODESOUT,">$mothurPipelineCodeFileOut";
-print CODESOUT "make.contigs(file='$sampleToFiles', processors=8) #make .trim.contigs";
-while(<CODESIN>) {
-  print CODESOUT $_;
-}
-close(CODESIN);
-close(CODESOUT);
+  open CODESIN,  "<$mothurPipelineCodeFile";
+  open CODESOUT, ">$mothurPipelineCodeFileOut";
+  print CODESOUT "make.contigs(file='$sampleToFiles', processors=8) #make .trim.contigs";
+  while (<CODESIN>) {
+    print CODESOUT $_;
+  }
+  close(CODESIN);
+  close(CODESOUT);
 
-$config->{$taskName} = {
-    class                 => "CQS::ProgramWrapper",
-    perform               => 1,
-    target_dir            => "$target_dir/$taskName",
+  $config->{$taskName} = {
+    class      => "CQS::ProgramWrapper",
+    perform    => 1,
+    target_dir => "$target_dir/$taskName",
     #init_command          => "",
-    option                => "
+    option => "
 rm -f ${projectName}.files
 ln -s ${projectName}__fileList1.list ${projectName}.files
 
@@ -1734,7 +1765,7 @@ mothur $mothurPipelineCodeFileOut
     check_program         => 0,
     program               => "",
     source_ref            => $source_def,
-    source_fileFirst => 0,
+    source_fileFirst      => 0,
     source_join_delimiter => "\t",
     source_arg            => "",
     output_arg            => "",
@@ -1744,48 +1775,49 @@ mothur $mothurPipelineCodeFileOut
     output_other_ext      => ".trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.0.03.cons.taxonomy",
     sh_direct             => 0,
     pbs                   => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => "24",
-      "mem"       => "40gb"
+      "nodes"    => "1:ppn=8",
+      "walltime" => "24",
+      "mem"      => "40gb"
     },
   };
-  return($taskName)
-}
+  return ($taskName);
+} ## end sub AddMothurPipeline
+
 
 sub AddMothurPipelineVis {
   my ( $config, $def, $tasks, $target_dir, $mothurPipelineTask, $groups, $fastqQC_summary ) = @_;
 
   die "mothurPipelineTask is required." if not defined $mothurPipelineTask;
-  die "fastqQC_summary is required." if not defined $fastqQC_summary;
+  die "fastqQC_summary is required."    if not defined $fastqQC_summary;
 
   my $task = "${mothurPipelineTask}_vis";
   $config->{$task} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . '/' . $task,
-      rtemplate                  => "../Microbiome/mothurPipeline.vis.R",
-      parameterSampleFile1_ref   => $groups,
-      parameterFile1_ref         => [ $mothurPipelineTask, ".shared\$" ],
-      parameterFile2_ref         => [ $mothurPipelineTask, ".taxonomy\$" ],
-      parameterFile3_ref         => [ $fastqQC_summary, ".reads.tsv\$" ],
-      output_to_result_directory => 1,
-      output_file                => "",
-      output_file_ext            => "",
-      sh_direct                  => 1,
-      'pbs'                      => {
-        'nodes'    => '1:ppn=1',
-        'mem'      => '20gb',
-        'walltime' => '10'
-      },
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . '/' . $task,
+    rtemplate                  => "../Microbiome/mothurPipeline.vis.R",
+    parameterSampleFile1_ref   => $groups,
+    parameterFile1_ref         => [ $mothurPipelineTask, ".shared\$" ],
+    parameterFile2_ref         => [ $mothurPipelineTask, ".taxonomy\$" ],
+    parameterFile3_ref         => [ $fastqQC_summary,    ".reads.tsv\$" ],
+    output_to_result_directory => 1,
+    output_file                => "",
+    output_file_ext            => "",
+    sh_direct                  => 1,
+    'pbs'                      => {
+      'nodes'    => '1:ppn=1',
+      'mem'      => '20gb',
+      'walltime' => '10'
+    },
   };
   push @$tasks, $task;
-  return($task);
-}
+  return ($task);
+} ## end sub AddMothurPipelineVis
 
 
 sub addGATK4PreprocessIntervals {
   my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, $index ) = @_;
-  if (!defined $index){
+  if ( !defined $index ) {
     $index = "";
   }
 
@@ -1793,38 +1825,41 @@ sub addGATK4PreprocessIntervals {
   if ( !defined $config->{$result} ) {
     my $interval_file;
     my $bin_option = "";
-    if (defined $def->{is_wgs}) {
-      if($def->{is_wgs}){
-        $interval_file = getValue($def, "wgs_calling_regions_file");
-        my $cnv_bin_length = getValue($def, "cnv-bin-length", 1000);
+    if ( defined $def->{is_wgs} ) {
+      if ( $def->{is_wgs} ) {
+        $interval_file = getValue( $def, "wgs_calling_regions_file" );
+        my $cnv_bin_length = getValue( $def, "cnv-bin-length", 1000 );
         $bin_option = "--bin-length $cnv_bin_length";
-      }else{
-        $interval_file = getValue($def, "covered_bed");
       }
-    }else{
-      $interval_file = getValue($def, "covered_bed");
+      else {
+        $interval_file = getValue( $def, "covered_bed" );
+      }
+    } ## end if ( defined $def->{is_wgs...})
+    else {
+      $interval_file = getValue( $def, "covered_bed" );
     }
 
     #PreprocessIntervals at summary level
     $config->{$result} = {
-      class             => "GATK4::PreprocessIntervals",
-      option            => $bin_option,
-      interval_file     => $interval_file,
-      ref_fasta_dict    => getValue( $def, "ref_fasta_dict" ),
-      ref_fasta         => getValue( $def, "ref_fasta" ),
-      'sh_direct'       => 1,
-      'perform'         => 1,
-      'target_dir'      => $target_dir . "/" . $result,
-      'pbs'             => {
+      class          => "GATK4::PreprocessIntervals",
+      option         => $bin_option,
+      interval_file  => $interval_file,
+      ref_fasta_dict => getValue( $def, "ref_fasta_dict" ),
+      ref_fasta      => getValue( $def, "ref_fasta" ),
+      'sh_direct'    => 1,
+      'perform'      => 1,
+      'target_dir'   => $target_dir . "/" . $result,
+      'pbs'          => {
         'nodes'    => '1:ppn=1',
         'mem'      => '20gb',
         'walltime' => '2'
       },
     };
     push( @$step2, $result );
-  }
+  } ## end if ( !defined $config->...)
   return ($result);
-}
+} ## end sub addGATK4PreprocessIntervals
+
 
 sub addGATK4CNVGermlineCohortAnalysis {
   my ( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6 ) = @_;
@@ -1834,7 +1869,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   my $preprocessIntervalsTask = addGATK4PreprocessIntervals( $config, $def, $target_dir, $bam_ref, $prefix, $step1, $step2, $step3, $step4, $step5, $step6, "_01" );
   $result->{interval} = $preprocessIntervalsTask;
 
-  my $chrCode = getValue($def, "has_chr_in_chromosome_name") ? ";addChr=1" : "";
+  my $chrCode = getValue( $def, "has_chr_in_chromosome_name" ) ? ";addChr=1" : "";
 
   #CollectReadCounts at sample level
   my $CollectReadCounts = $prefix . "gatk4_CNV_Germline_02_CollectReadCounts";
@@ -1842,7 +1877,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   $config->{$CollectReadCounts} = {
     class                      => "GATK4::CollectReadCounts",
     source_ref                 => $bam_ref,
-    option                     => getValue($def, "gatk4_CollectReadCounts_option", ""),
+    option                     => getValue( $def, "gatk4_CollectReadCounts_option", "" ),
     preprocessed_intervals_ref => $preprocessIntervalsTask,
     ref_fasta_dict             => getValue( $def, "ref_fasta_dict" ),
     ref_fasta                  => getValue( $def, "ref_fasta" ),
@@ -1902,17 +1937,17 @@ sub addGATK4CNVGermlineCohortAnalysis {
 
   #GermlineCNVCaller at summary level
   my $GermlineCNVCaller = $prefix . "gatk4_CNV_Germline_05_GermlineCNVCaller";
-  if ($def->{gatk4_cnv_by_scatter}){
+  if ( $def->{gatk4_cnv_by_scatter} ) {
     #scatter filter intervals
     my $ScatterIntervals = $GermlineCNVCaller . "_1_scatterIntervals";
     $config->{$ScatterIntervals} = {
-      class       => "CQS::ProgramWrapperOneToMany",
-      perform     => 1,
-      target_dir  => "$target_dir/$ScatterIntervals",
-      option      => "",
-      interpretor => "python3",
-      program     => "../GATK4/scatterIntervals.py",
-      source_ref      => $FilterIntervals,
+      class                 => "CQS::ProgramWrapperOneToMany",
+      perform               => 1,
+      target_dir            => "$target_dir/$ScatterIntervals",
+      option                => "",
+      interpretor           => "python3",
+      program               => "../GATK4/scatterIntervals.py",
+      source_ref            => $FilterIntervals,
       source_arg            => "-i",
       output_to_same_folder => 1,
       output_arg            => "-o",
@@ -1922,9 +1957,9 @@ sub addGATK4CNVGermlineCohortAnalysis {
       iteration             => $def->{gatk4_cnv_scatter_count},
       sh_direct             => 1,
       pbs                   => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "4gb"
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "4gb"
       },
     };
     push( @$step4, $ScatterIntervals );
@@ -1947,7 +1982,8 @@ sub addGATK4CNVGermlineCohortAnalysis {
     };
     push( @$step4, $GermlineCNVCaller_scatter );
     $GermlineCNVCaller = $GermlineCNVCaller_scatter;
-  }else{
+  } ## end if ( $def->{gatk4_cnv_by_scatter...})
+  else {
     $config->{$GermlineCNVCaller} = {
       class                       => "GATK4::GermlineCNVCaller",
       source_ref                  => $CollectReadCounts,
@@ -1964,7 +2000,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       },
     };
     push( @$step4, $GermlineCNVCaller );
-  }
+  } ## end else [ if ( $def->{gatk4_cnv_by_scatter...})]
   $result->{GermlineCNVCaller} = $GermlineCNVCaller;
 
   #PostprocessGermlineCNVCalls at sample level
@@ -1977,7 +2013,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
     model_shard_path_ref        => [ $GermlineCNVCaller, "model\$" ],
     option                      => "",
     contig_ploidy_calls_dir_ref => [ $DetermineGermlineContigPloidyCohortMode, "calls" ],
-    has_chr_in_chromosome_name  => getValue($def, "has_chr_in_chromosome_name"),
+    has_chr_in_chromosome_name  => getValue( $def, "has_chr_in_chromosome_name" ),
     'sh_direct'                 => 0,
     'perform'                   => 1,
     'target_dir'                => $target_dir . '/' . $PostprocessGermlineCNVCalls,
@@ -1989,7 +2025,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
   };
   push( @$step5, $PostprocessGermlineCNVCalls );
 
-  if(not $def->{is_wgs}) {
+  if ( not $def->{is_wgs} ) {
     #CombineGCNV at summary level
     my $CombineGCNV = $prefix . "gatk4_CNV_Germline_07_CombineGCNV";
     $result->{CombineGCNV} = $CombineGCNV;
@@ -2017,7 +2053,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       },
     };
     push( @$step6, $CombineGCNV );
-    
+
     my $sizeFactorTask = $prefix . "gatk4_CNV_Germline_08_SizeFactor";
     $result->{sizeFactor} = $sizeFactorTask;
     $config->{$sizeFactorTask} = {
@@ -2031,7 +2067,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       parameterFile1_arg       => "-i",
       parameterFile1           => getValue( $def, "covered_bed" ),
       parameterFile2_arg       => "-c",
-      parameterFile2_ref       => [ $CombineGCNV ],
+      parameterFile2_ref       => [$CombineGCNV],
       output_arg               => "-o",
       output_file_ext          => ".txt",
       output_other_ext         => ".txt.sizefactor",
@@ -2045,48 +2081,48 @@ sub addGATK4CNVGermlineCohortAnalysis {
     push( @$step6, $sizeFactorTask );
 
     my $cnvIndex;
-    if($def->{plotCNVGenes} && $def->{annotation_genes}){
+    if ( $def->{plotCNVGenes} && $def->{annotation_genes} ) {
       my $cnvGenes = $prefix . "gatk4_CNV_Germline_09_CNVGenesLocus";
       $result->{cnvGenes} = $cnvGenes;
       $config->{$cnvGenes} = {
-        class                    => "CQS::UniqueR",
-        perform                  => 1,
-        target_dir               => $target_dir . '/' . $cnvGenes,
-        rtemplate                => "../Annotation/getCNVGeneLocus.r",
-        rCode                    => "host=\"" . getValue($def, "biomart_host") . "\";dataset=\"" . getValue($def, "biomart_dataset") . "\";symbolKey=\"" . getValue($def, "biomart_symbolKey") . "\"" . $chrCode,
-        parameterFile1_ref       => [$CombineGCNV, ".txt"],
-        output_file_ext          => ".bed",
-        sh_direct                => 1,
-        'pbs'                    => {
+        class              => "CQS::UniqueR",
+        perform            => 1,
+        target_dir         => $target_dir . '/' . $cnvGenes,
+        rtemplate          => "../Annotation/getCNVGeneLocus.r",
+        rCode              => "host=\"" . getValue( $def, "biomart_host" ) . "\";dataset=\"" . getValue( $def, "biomart_dataset" ) . "\";symbolKey=\"" . getValue( $def, "biomart_symbolKey" ) . "\"" . $chrCode,
+        parameterFile1_ref => [ $CombineGCNV, ".txt" ],
+        output_file_ext    => ".bed",
+        sh_direct          => 1,
+        'pbs'              => {
           'nodes'    => '1:ppn=1',
           'mem'      => '40gb',
           'walltime' => '10'
         },
       };
       push( @$step6, $cnvGenes );
-      
+
       my $plotCNVgenes = $prefix . "gatk4_CNV_Germline_10_CNVGenesPlot";
       $result->{plotCNVgenes} = $plotCNVgenes;
       $config->{$plotCNVgenes} = {
-        class                 => "CQS::ProgramWrapper",
-        perform               => 1,
-        target_dir            => $def->{target_dir} . "/$plotCNVgenes",
-        option                => "",
-        interpretor           => "python3",
-        program               => "../Visualization/plotCNV.py",
-        parameterFile1_arg => "-i",
-        parameterFile1_ref => [ $cnvGenes, ".bed" ],
-        parameterFile2_arg => "-c",
-        parameterFile2_ref => [$CombineGCNV, ".txt"],
-        parameterFile3_arg => "-s",
-        parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
-        parameterSampleFile1_arg => "-b",
-        parameterSampleFile1_ref => $bam_ref,
+        class                      => "CQS::ProgramWrapper",
+        perform                    => 1,
+        target_dir                 => $def->{target_dir} . "/$plotCNVgenes",
+        option                     => "",
+        interpretor                => "python3",
+        program                    => "../Visualization/plotCNV.py",
+        parameterFile1_arg         => "-i",
+        parameterFile1_ref         => [ $cnvGenes, ".bed" ],
+        parameterFile2_arg         => "-c",
+        parameterFile2_ref         => [ $CombineGCNV, ".txt" ],
+        parameterFile3_arg         => "-s",
+        parameterFile3_ref         => [ $sizeFactorTask, ".sizefactor" ],
+        parameterSampleFile1_arg   => "-b",
+        parameterSampleFile1_ref   => $bam_ref,
         output_to_result_directory => 1,
-        output_arg            => "-o",
-        output_file_ext       => ".position.txt",
-        sh_direct             => 1,
-        pbs                   => {
+        output_arg                 => "-o",
+        output_file_ext            => ".position.txt",
+        sh_direct                  => 1,
+        pbs                        => {
           "email"     => $def->{email},
           "emailType" => $def->{emailType},
           "nodes"     => "1:ppn=1",
@@ -2096,45 +2132,47 @@ sub addGATK4CNVGermlineCohortAnalysis {
       };
 
       push( @$step6, $plotCNVgenes );
-      $cnvIndex = "11"; 
-    }else{
-      $cnvIndex = "07"; 
+      $cnvIndex = "11";
+    } ## end if ( $def->{plotCNVGenes...})
+    else {
+      $cnvIndex = "07";
     }
 
     my $annotationGenesPlot = undef;
-    if(defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"}){
-      $annotationGenesPlot = $prefix . "gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
-      $result->{annotationGenesPlot} = $annotationGenesPlot;
+    if ( defined $def->{annotation_genes} && defined $config->{"annotation_genes_locus"} ) {
+      $annotationGenesPlot            = $prefix . "gatk4_CNV_Germline_" . $cnvIndex . "_AnnotationGenesPlot";
+      $result->{annotationGenesPlot}  = $annotationGenesPlot;
       $config->{$annotationGenesPlot} = {
-        class                 => "CQS::ProgramWrapper",
-        perform               => 1,
-        target_dir            => $def->{target_dir} . "/$annotationGenesPlot",
-        option                => "",
-        interpretor           => "python3",
-        program               => "../Visualization/plotCNV.py",
-        parameterFile1_arg => "-i",
-        parameterFile1_ref => [ "annotation_genes_locus", ".bed" ],
-        parameterFile2_arg => "-c",
-        parameterFile2_ref => [$CombineGCNV, ".txt"],
-        parameterFile3_arg => "-s",
-        parameterFile3_ref => [$sizeFactorTask, ".sizefactor"],
-        parameterSampleFile1_arg => "-b",
-        parameterSampleFile1_ref => $bam_ref,
+        class                      => "CQS::ProgramWrapper",
+        perform                    => 1,
+        target_dir                 => $def->{target_dir} . "/$annotationGenesPlot",
+        option                     => "",
+        interpretor                => "python3",
+        program                    => "../Visualization/plotCNV.py",
+        parameterFile1_arg         => "-i",
+        parameterFile1_ref         => [ "annotation_genes_locus", ".bed" ],
+        parameterFile2_arg         => "-c",
+        parameterFile2_ref         => [ $CombineGCNV, ".txt" ],
+        parameterFile3_arg         => "-s",
+        parameterFile3_ref         => [ $sizeFactorTask, ".sizefactor" ],
+        parameterSampleFile1_arg   => "-b",
+        parameterSampleFile1_ref   => $bam_ref,
         output_to_result_directory => 1,
-        output_arg            => "-o",
-        output_file_ext       => ".position.txt",
-        output_other_ext      => ".position.txt.slim",
-        sh_direct             => 1,
-        pbs                   => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "10",
-          "mem"       => "10gb"
+        output_arg                 => "-o",
+        output_file_ext            => ".position.txt",
+        output_other_ext           => ".position.txt.slim",
+        sh_direct                  => 1,
+        pbs                        => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "10",
+          "mem"      => "10gb"
         },
       };
 
       push( @$step6, $annotationGenesPlot );
-    }
-  }elsif(getValue($def, "perform_gistic2", 0)){
+    } ## end if ( defined $def->{annotation_genes...})
+  } ## end if ( not $def->{is_wgs...})
+  elsif ( getValue( $def, "perform_gistic2", 0 ) ) {
     my $Gistic2SegFile = $prefix . "gatk4_CNV_Germline_07_Gistic2SegFile";
     $result->{Gistic2SegFile} = $Gistic2SegFile;
     $config->{$Gistic2SegFile} = {
@@ -2143,7 +2181,7 @@ sub addGATK4CNVGermlineCohortAnalysis {
       target_dir               => $target_dir . '/' . $Gistic2SegFile,
       interpretor              => "python3",
       program                  => "../Format/gatk2gistic_segment_file.py",
-      option                   => getValue($def, "Gistic2SegFile_option", "--no_chr --no_y"),
+      option                   => getValue( $def, "Gistic2SegFile_option", "--no_chr --no_y" ),
       parameterSampleFile1_arg => "-i",
       parameterSampleFile1_ref => [ $PostprocessGermlineCNVCalls, ".genotyped_segments.vcf.gz" ],
       parameterFile1_arg       => "-b",
@@ -2158,18 +2196,18 @@ sub addGATK4CNVGermlineCohortAnalysis {
     };
     push( @$step6, $Gistic2SegFile );
 
-    my $gistic2_sif = getValue($def, "gistic2_docker");
-    my $gistic2_refgene = getValue($def, "gistic2_refgene");
-    my $Gistic2 = $prefix . "gatk4_CNV_Germline_08_Gistic2";
+    my $gistic2_sif     = getValue( $def, "gistic2_docker" );
+    my $gistic2_refgene = getValue( $def, "gistic2_refgene" );
+    my $Gistic2         = $prefix . "gatk4_CNV_Germline_08_Gistic2";
     $result->{Gistic2} = $Gistic2;
     $config->{$Gistic2} = {
-      class                    => "CQS::ProgramWrapper",
-      perform                  => 1,
-      target_dir               => $target_dir . '/' . $Gistic2,
-      interpretor              => "",
-      program                  => "",
-      check_program            => 0,
-      option                   => "
+      class         => "CQS::ProgramWrapper",
+      perform       => 1,
+      target_dir    => $target_dir . '/' . $Gistic2,
+      interpretor   => "",
+      program       => "",
+      check_program => 0,
+      option        => "
 GISTIC_LOC=/opt/GISTIC
 DOCKER_OUTDIR=\${GISTIC_LOC}/run_result
 
@@ -2182,28 +2220,29 @@ singularity run -e --bind `pwd`:\${DOCKER_OUTDIR}  $gistic2_sif \\
 ",
       parameterFile1_arg => "-seg",
       parameterFile1_ref => $Gistic2SegFile,
-      output_arg               => "-o",
-      output_file_ext          => ".segmentation.txt",
-      sh_direct                => 1,
-      no_docker                => 1,
-      'pbs'                    => {
+      output_arg         => "-o",
+      output_file_ext    => ".segmentation.txt",
+      sh_direct          => 1,
+      no_docker          => 1,
+      'pbs'              => {
         'nodes'    => '1:ppn=1',
         'mem'      => '40gb',
         'walltime' => '10'
       },
     };
     push( @$step6, $Gistic2 );
-  }
-  
-  return($result);
-}
+  } ## end elsif ( getValue( $def, "perform_gistic2"...))
+
+  return ($result);
+} ## end sub addGATK4CNVGermlineCohortAnalysis
+
 
 sub addXHMM {
   my ( $config, $def, $target_dir, $bam_ref, $step1, $step2, $step3, $step4, $step5, $step6 ) = @_;
 
   my $gatk3_jar = getValue( $def, "gatk3_jar" );
 
-  my $interval_key = "interval_file";
+  my $interval_key   = "interval_file";
   my $interval_value = getValue( $def, "covered_bed" );
 
   my $individual = $step1;
@@ -2217,7 +2256,7 @@ sub addXHMM {
     $summary        = $step4;
     $docTask        = "XHMM_gatk4_Intervals_GATK3_DepthOfCoverage";
     $cnvTask        = "XHMM_gatk4_Intervals_CNV";
-  }
+  } ## end if ( $def->{cnv_xhmm_preprocess_intervals...})
 
   $config->{$docTask} = {
     class         => "GATK::DepthOfCoverage",
@@ -2254,26 +2293,27 @@ sub addXHMM {
   push( @$summary, $cnvTask );
 
   return ($cnvTask);
-}
+} ## end sub addXHMM
+
 
 sub do_add_gene_locus {
-  my ($config, $def, $tasks, $target_dir, $task_name, $genes_str) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $genes_str ) = @_;
   $genes_str =~ s/\s+/,/g;
   $config->{$task_name} = {
-    class      => "CQS::UniqueR",
-    perform    => 1,
-    target_dir => $target_dir . '/' . $task_name,
-    rtemplate  => "../Annotation/getGeneLocus.r",
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . '/' . $task_name,
+    rtemplate            => "../Annotation/getGeneLocus.r",
     parameterSampleFile1 => {
-      host=>getValue( $def, "biomart_host" ),
-      dataset=>getValue( $def, "biomart_dataset" ),
-      symbolKey=>getValue( $def, "biomart_symbolKey" ),
-      genesStr=> $genes_str,
-      add_chr => getValue($def, "annotation_genes_add_chr", getValue($def, "has_chr_in_chromosome_name", 0))
+      host      => getValue( $def, "biomart_host" ),
+      dataset   => getValue( $def, "biomart_dataset" ),
+      symbolKey => getValue( $def, "biomart_symbolKey" ),
+      genesStr  => $genes_str,
+      add_chr   => getValue( $def, "annotation_genes_add_chr", getValue( $def, "has_chr_in_chromosome_name", 0 ) )
     },
-    docker_prefix => "biomart_",
-    rCode => "",
-    output_file => "",
+    docker_prefix   => "biomart_",
+    rCode           => "",
+    output_file     => "",
     output_file_ext => ".bed",
     sh_direct       => 1,
     'pbs'           => {
@@ -2285,25 +2325,27 @@ sub do_add_gene_locus {
   push( @$tasks, $task_name );
 
   return ($task_name);
-}
+} ## end sub do_add_gene_locus
+
 
 sub addGeneLocus {
-  my ($config, $def, $summary, $target_dir, $gene_key) = @_;
-  if(not defined $gene_key){
+  my ( $config, $def, $summary, $target_dir, $gene_key ) = @_;
+  if ( not defined $gene_key ) {
     $gene_key = "annotation_genes";
   }
   my $geneLocus = undef;
   if ( defined $def->{$gene_key} ) {
     $geneLocus = "genes_locus";
     my $genesStr = getValue( $def, $gene_key );
-    do_add_gene_locus($config, $def, $summary, $target_dir, $geneLocus, $genesStr);
+    do_add_gene_locus( $config, $def, $summary, $target_dir, $geneLocus, $genesStr );
   }
-  
+
   return ($geneLocus);
-}
+} ## end sub addGeneLocus
+
 
 sub annotateNearestGene {
-  my ($config, $def, $summary, $target_dir, $source_file_ref) = @_;
+  my ( $config, $def, $summary, $target_dir, $source_file_ref ) = @_;
 
   my $task_name = "nearest_gene";
 
@@ -2315,7 +2357,7 @@ sub annotateNearestGene {
     output_file              => "",
     output_file_ext          => ".Category.Table.csv",
     parameterSampleFile1_ref => $source_file_ref,
-    parameterFile1           => getValue($def, "gene_bed"),
+    parameterFile1           => getValue( $def, "gene_bed" ),
     rCode                    => '',
     sh_direct                => 1,
     pbs                      => {
@@ -2327,161 +2369,166 @@ sub annotateNearestGene {
     },
   };
   push @$summary, ($task_name);
-}
+} ## end sub annotateNearestGene
+
 
 sub checkFileGroupPairNames {
-  my ($def, $groupKeys, $pairKeys, $fileKey, $remove_missing) = @_;
+  my ( $def, $groupKeys, $pairKeys, $fileKey, $remove_missing ) = @_;
 
-  if(!defined $remove_missing){
+  if ( !defined $remove_missing ) {
     $remove_missing = 0;
   }
 
   my $files = {};
-  if(!defined $fileKey){
+  if ( !defined $fileKey ) {
     $fileKey = "files";
   }
-  if(is_array($fileKey)){
-    for my $fname (@$fileKey){
+  if ( is_array($fileKey) ) {
+    for my $fname (@$fileKey) {
       $files->{$fname} = 1;
     }
-  }else{
-    $files = getValue($def, $fileKey);
+  }
+  else {
+    $files = getValue( $def, $fileKey );
   }
   my $bFailed = 0;
 
-  if (!defined $groupKeys){
+  if ( !defined $groupKeys ) {
     $groupKeys = ["groups"];
   }
 
-  if (!defined $pairKeys){
+  if ( !defined $pairKeys ) {
     $pairKeys = ["pairs"];
   }
 
   my $allGroupNames = {};
-  for my $groupKey (@$groupKeys){
-    if(defined $def->{$groupKey}){
+  for my $groupKey (@$groupKeys) {
+    if ( defined $def->{$groupKey} ) {
       my $groups = $def->{$groupKey};
-      for my $groupName (keys %$groups){
-        if ($groupName =~ /^[.]/) {
+      for my $groupName ( keys %$groups ) {
+        if ( $groupName =~ /^[.]/ ) {
           next;
         }
         my $sampleNames = $groups->{$groupName};
 
         my $newSampleNames = [];
-        for my $sampleName (@$sampleNames){
-          if (!defined $files->{$sampleName}){
-            if(!$remove_missing){
+        for my $sampleName (@$sampleNames) {
+          if ( !defined $files->{$sampleName} ) {
+            if ( !$remove_missing ) {
               print STDERR "Sample $sampleName in $groupKey $groupName is not defined in files.\n";
               $bFailed = 1;
             }
-          }else{
-            push(@$newSampleNames, $sampleName);
+          } ## end if ( !defined $files->...)
+          else {
+            push( @$newSampleNames, $sampleName );
           }
-        }
+        } ## end for my $sampleName (@$sampleNames)
 
         $groups->{$groupName} = $newSampleNames;
 
         $allGroupNames->{$groupName} = 1;
-      }
-    }
-  }
+      } ## end for my $groupName ( keys...)
+    } ## end if ( defined $def->{$groupKey...})
+  } ## end for my $groupKey (@$groupKeys)
 
-  if(scalar(keys %$allGroupNames) > 0){
-    for my $pairKey (@$pairKeys){
-      if (defined $def->{$pairKey}){
+  if ( scalar( keys %$allGroupNames ) > 0 ) {
+    for my $pairKey (@$pairKeys) {
+      if ( defined $def->{$pairKey} ) {
         my $pairs = $def->{$pairKey};
-        for my $pairName (keys %$pairs){
+        for my $pairName ( keys %$pairs ) {
           my $groupNames = $pairs->{$pairName};
-          if (is_array($groupNames)) {
-            for my $groupName (@$groupNames){
-              if (!defined $allGroupNames->{$groupName}){
+          if ( is_array($groupNames) ) {
+            for my $groupName (@$groupNames) {
+              if ( !defined $allGroupNames->{$groupName} ) {
                 print STDERR "Group $groupName in $pairKey $pairName is not defined in groups.\n";
                 $bFailed = 1;
               }
-            }
-          }
-        }
-      }
-    }
-  }
+            } ## end for my $groupName (@$groupNames)
+          } ## end if ( is_array($groupNames...))
+        } ## end for my $pairName ( keys...)
+      } ## end if ( defined $def->{$pairKey...})
+    } ## end for my $pairKey (@$pairKeys)
+  } ## end if ( scalar( keys %$allGroupNames...))
 
-  if ($bFailed){
+  if ($bFailed) {
     print("Wrong definition detected, please fix it and run again.\n");
     exit;
   }
-}
+} ## end sub checkFileGroupPairNames
+
 
 sub addStarFeaturecount {
-  my ($config, $def, $individual, $summary, $target_dir, $source_ref, $suffix) = @_;
-  my $aligner_index              = $def->{star_index} or die "Define star_index at definition first";
+  my ( $config, $def, $individual, $summary, $target_dir, $source_ref, $suffix ) = @_;
+  my $aligner_index              = $def->{star_index}     or die "Define star_index at definition first";
   my $transcript_gtf             = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
   my $star_featurecount_walltime = getValue( $def, "star_featurecount_walltime", 48 );
-  my $star_memory = getValue( $def, "star_memory", 60 );
-  my $star_option     = $def->{star_option};
+  my $star_memory                = getValue( $def, "star_memory",                60 );
+  my $star_option                = $def->{star_option};
 
-  if(not defined $suffix) {
+  if ( not defined $suffix ) {
     $suffix = "";
   }
-  my $starFolder                 = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount" . $suffix;
+  my $starFolder = $target_dir . "/" . getNextFolderIndex($def) . "star_featurecount" . $suffix;
 
   my $star_task = "star_featurecount" . $suffix;
-  
+
   $config->{$star_task} = {
-    class                     => "Alignment::STARFeatureCount",
-    perform                   => 1,
-    target_dir                => $starFolder,
-    option                    => $star_option,
-    source_ref                => $source_ref,
-    genome_dir                => $aligner_index,
-    output_sort_by_coordinate => 1,
-    use_tmp_folder            => $def->{star_use_tmp_folder},
-    output_to_same_folder     => $def->{output_bam_to_same_folder},
-    featureCount_option       => getValue( $def, "featureCount_option" ),
-    star_location             => $def->{star_location},
-    gff_file                  => $transcript_gtf,
-    is_paired_end             => is_paired_end($def),
+    class                        => "Alignment::STARFeatureCount",
+    perform                      => 1,
+    target_dir                   => $starFolder,
+    option                       => $star_option,
+    source_ref                   => $source_ref,
+    genome_dir                   => $aligner_index,
+    output_sort_by_coordinate    => 1,
+    use_tmp_folder               => $def->{star_use_tmp_folder},
+    output_to_same_folder        => $def->{output_bam_to_same_folder},
+    featureCount_option          => getValue( $def, "featureCount_option" ),
+    star_location                => $def->{star_location},
+    gff_file                     => $transcript_gtf,
+    is_paired_end                => is_paired_end($def),
     delete_star_featureCount_bam => $def->{delete_star_featureCount_bam},
-    sh_direct                 => 0,
-    pbs                       => {
-      "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => "$star_featurecount_walltime",
-      "mem"       => "${star_memory}gb"
+    sh_direct                    => 0,
+    pbs                          => {
+      "nodes"    => "1:ppn=" . $def->{max_thread},
+      "walltime" => "$star_featurecount_walltime",
+      "mem"      => "${star_memory}gb"
     },
   };
   push @$individual, ($star_task);
 
   my $bam_validation_ref = undef;
-  if(getValue($def, "perform_bam_validation", 0)){
-    add_bam_validation($config, $def, $individual, $target_dir, $star_task . "_bam_validation", [ $star_task, '_Aligned.sortedByCoord.out.bam$' ] );
+  if ( getValue( $def, "perform_bam_validation", 0 ) ) {
+    add_bam_validation( $config, $def, $individual, $target_dir, $star_task . "_bam_validation", [ $star_task, '_Aligned.sortedByCoord.out.bam$' ] );
     $bam_validation_ref = $star_task . "_bam_validation";
   }
-  
-  add_alignment_summary($config, $def, $summary, $target_dir, "${star_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png;.chromosome.csv;.chromosome.png,.gene.count.csv,.gene.count.png", [ $star_task, "_Log.final.out" ], [ $star_task, ".count.summary" ], [$star_task, ".chromosome.count"], $bam_validation_ref, [$star_task, '^(?!.*\.chromosome\.count).*\.count$'] );
 
-  return($star_task);
-};
+  add_alignment_summary( $config, $def, $summary, $target_dir, "${star_task}_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.STARSummary.csv;.STARSummary.csv.png;.chromosome.csv;.chromosome.png,.gene.count.csv,.gene.count.png", [ $star_task, "_Log.final.out" ], [ $star_task, ".count.summary" ], [ $star_task, ".chromosome.count" ], $bam_validation_ref, [ $star_task, '^(?!.*\.chromosome\.count).*\.count$' ] );
+
+  return ($star_task);
+} ## end sub addStarFeaturecount
+
 
 sub add_salmon {
-  my ($config, $def, $individual, $summary, $target_dir, $source_ref, $suffix) = @_;
-  my $aligner_index = $def->{salmon_index} or die "Define salmon_index at definition first";
-  my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+  my ( $config, $def, $individual, $summary, $target_dir, $source_ref, $suffix ) = @_;
+  my $aligner_index   = $def->{salmon_index}   or die "Define salmon_index at definition first";
+  my $transcript_gtf  = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
   my $salmon_walltime = getValue( $def, "salmon_walltime", 23 );
-  my $salmon_memory = getValue( $def, "salmon_memory", 40 );
-  my $salmon_option = getValue( $def, "salmon_option", "");
-  my $thread = getValue( $def, "max_thread", 8);
+  my $salmon_memory   = getValue( $def, "salmon_memory",   40 );
+  my $salmon_option   = getValue( $def, "salmon_option",   "" );
+  my $thread          = getValue( $def, "max_thread",      8 );
 
-  if(not defined $suffix) {
+  if ( not defined $suffix ) {
     $suffix = "";
   }
   my $salmon_folder = $target_dir . "/" . getNextFolderIndex($def) . "salmon" . $suffix;
 
   my $salmon_task = "salmon" . $suffix;
-  
+
   $config->{$salmon_task} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => $salmon_folder,
-    option                => "
+    class      => "CQS::ProgramWrapperOneToOne",
+    perform    => 1,
+    target_dir => $salmon_folder,
+    option     => "
 salmon quant -i $aligner_index \\
   --libType A \\
   -1 __FILE__ \\
@@ -2514,49 +2561,51 @@ fi
     output_to_same_folder => 0,
     output_arg            => "",
     output_file_ext       => "quant.genes.sf",
-    output_other_ext => "__NAME__.bam",
-    samplename_in_result => 0,
-    sh_direct => 0,
-    pbs                       => {
-      "nodes"     => "1:ppn=" . $thread,
-      "walltime"  => "$salmon_walltime",
-      "mem"       => "${salmon_memory}gb"
+    output_other_ext      => "__NAME__.bam",
+    samplename_in_result  => 0,
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"    => "1:ppn=" . $thread,
+      "walltime" => "$salmon_walltime",
+      "mem"      => "${salmon_memory}gb"
     },
   };
   push @$individual, ($salmon_task);
 
-  return($salmon_task);
-};
+  return ($salmon_task);
+} ## end sub add_salmon
+
 
 sub add_BWA {
-  my ($config, $def, $tasks, $target_dir, $bwa_name, $source_ref, $rg_name_regex) = @_;
+  my ( $config, $def, $tasks, $target_dir, $bwa_name, $source_ref, $rg_name_regex ) = @_;
 
-  $config->{ $bwa_name } = {
+  $config->{$bwa_name} = {
     class                 => "Alignment::BWA",
     perform               => 1,
     target_dir            => "${target_dir}/${bwa_name}",
     option                => getValue( $def, "bwa_option" ),
     bwa_index             => getValue( $def, "bwa_fasta" ),
-    output_unmapped_fastq   => getValue( $def, "bwa_output_unmapped_fastq", 0),
+    output_unmapped_fastq => getValue( $def, "bwa_output_unmapped_fastq", 0 ),
     source_ref            => $source_ref,
-    do_bam_stat => getValue($def, "bwa_do_bam_stat", 1),
+    do_bam_stat           => getValue( $def, "bwa_do_bam_stat", 1 ),
     output_to_same_folder => 1,
     rg_name_regex         => $rg_name_regex,
     sh_direct             => 0,
     pbs                   => {
-      "nodes"    => "1:ppn=" . getValue( $def, "max_thread"),
+      "nodes"    => "1:ppn=" . getValue( $def, "max_thread" ),
       "walltime" => "24",
-      "mem"      => getValue($def, "bwa_memory", "40gb")
+      "mem"      => getValue( $def, "bwa_memory", "40gb" )
     },
   };
 
-  push @$tasks, ( $bwa_name );
-}
+  push @$tasks, ($bwa_name);
+} ## end sub add_BWA
+
 
 sub add_BWA_WGS {
-  my ($config, $def, $tasks, $target_dir, $bwa_name, $source_ref, $rg_name_regex) = @_;
+  my ( $config, $def, $tasks, $target_dir, $bwa_name, $source_ref, $rg_name_regex ) = @_;
 
-  $config->{ $bwa_name } = {
+  $config->{$bwa_name} = {
     class                 => "Alignment::BWA_WGS",
     perform               => 1,
     target_dir            => "${target_dir}/${bwa_name}",
@@ -2568,68 +2617,71 @@ sub add_BWA_WGS {
     output_to_same_folder => 1,
     sh_direct             => 0,
     pbs                   => {
-      "nodes"    => "1:ppn=" . getValue( $def, "max_thread"),
-      "walltime" => getValue($def, "bwa_walltime", "24"),
-      "mem"      => getValue($def, "bwa_memory", "40gb")
+      "nodes"    => "1:ppn=" . getValue( $def, "max_thread" ),
+      "walltime" => getValue( $def, "bwa_walltime", "24" ),
+      "mem"      => getValue( $def, "bwa_memory",   "40gb" )
     },
   };
 
-  push @$tasks, ( $bwa_name );
-}
+  push @$tasks, ($bwa_name);
+} ## end sub add_BWA_WGS
+
 
 sub add_BWA_summary {
-  my ($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex) = @_;
+  my ( $config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex ) = @_;
 
-  my $bwa_do_bam_stat = getValue($def, "bwa_do_bam_stat", 1);
+  my $bwa_do_bam_stat = getValue( $def, "bwa_do_bam_stat", 1 );
 
   my $bamstat_ref = $bwa_do_bam_stat ? [ $bwa, ".bamstat" ] : undef;
 
-  $config->{ $bwa_summary } = {
-    class                 => "CQS::UniqueR",
-    perform               => 1,
-    target_dir            => "${target_dir}/${bwa_summary}",
-    option                => "",
-    rtemplate             => "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r",
-    parameterSampleFile1_ref    => $bamstat_ref,
-    parameterSampleFile2_ref    => [$bwa, ".chromosome.count"],
-    output_file           => "",
-    output_file_ext       => ".BWASummary.csv",
-    output_other_ext      => ".reads.png;.chromosome.png",
-    sh_direct             => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+  $config->{$bwa_summary} = {
+    class                    => "CQS::UniqueR",
+    perform                  => 1,
+    target_dir               => "${target_dir}/${bwa_summary}",
+    option                   => "",
+    rtemplate                => "../Alignment/AlignmentUtils.r;../Alignment/BWASummary.r",
+    parameterSampleFile1_ref => $bamstat_ref,
+    parameterSampleFile2_ref => [ $bwa, ".chromosome.count" ],
+    output_file              => "",
+    output_file_ext          => ".BWASummary.csv",
+    output_other_ext         => ".reads.png;.chromosome.png",
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
 
-  if (defined $rg_name_regex) {
-    $config->{ $bwa_summary }{rCode} = "rg_name_regex='$rg_name_regex'";
+  if ( defined $rg_name_regex ) {
+    $config->{$bwa_summary}{rCode} = "rg_name_regex='$rg_name_regex'";
   }
 
   push @$tasks, $bwa_summary;
-}
+} ## end sub add_BWA_summary
+
 
 sub add_BWA_and_summary {
-  my ($config, $def, $tasks, $target_dir, $source_ref, $rg_name_regex) = @_;
+  my ( $config, $def, $tasks, $target_dir, $source_ref, $rg_name_regex ) = @_;
 
   my $bwa = "bwa";
-  add_BWA($config, $def, $tasks, $target_dir, $bwa, $source_ref, $rg_name_regex); 
+  add_BWA( $config, $def, $tasks, $target_dir, $bwa, $source_ref, $rg_name_regex );
 
   my $bwa_summary = "bwa_summary";
-  add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex); 
+  add_BWA_summary( $config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex );
 
-  return( [$bwa, ".bam\$"], $bwa);
-}
+  return ( [ $bwa, ".bam\$" ], $bwa );
+} ## end sub add_BWA_and_summary
+
 
 sub add_merge_bam {
-  my ($config, $def, $tasks, $target_dir, $merge_name, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $merge_name, $source_ref ) = @_;
 
   $config->{$merge_name} = {
-    class                 => "CQS::ProgramWrapperManyToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$merge_name",
-    option                => "
+    class      => "CQS::ProgramWrapperManyToOne",
+    perform    => 1,
+    target_dir => "$target_dir/$merge_name",
+    option     => "
 sambamba merge -t 8 __OUTPUT__ \\
   __INPUT__ 
 ",
@@ -2643,62 +2695,64 @@ sambamba merge -t 8 __OUTPUT__ \\
     output_arg            => "-o",
     output_file_prefix    => ".bam",
     output_file_ext       => ".bam,.bam.bai",
-    use_tmp_folder => getValue($def, "merge_bam_use_tmp_folder", 0),
+    use_tmp_folder        => getValue( $def, "merge_bam_use_tmp_folder", 0 ),
     sh_direct             => 1,
     pbs                   => {
-      "nodes"     => "1:ppn=" . getValue($def, "merge_bam_threads", 8),
-      "walltime"  => "48",
-      "mem"       => "40gb"
+      "nodes"    => "1:ppn=" . getValue( $def, "merge_bam_threads", 8 ),
+      "walltime" => "48",
+      "mem"      => "40gb"
     },
   };
 
-  push @$tasks, (  $merge_name );
-}
+  push @$tasks, ($merge_name);
+} ## end sub add_merge_bam
 
-sub get_expect_trunk{
-  my ($file_map, $max_file_size_gb, $trunk_file_size_gb) = @_;
+
+sub get_expect_trunk {
+  my ( $file_map, $max_file_size_gb, $trunk_file_size_gb ) = @_;
   my $result = {};
 
-  for my $sample (sort keys %$file_map){
+  for my $sample ( sort keys %$file_map ) {
     my $files = $file_map->{$sample};
-    my $idx = 0;
+    my $idx   = 0;
     my $total = 0;
-    while ($idx < scalar(@$files)){
-      my $read1 = $files->[$idx];
+    while ( $idx < scalar(@$files) ) {
+      my $read1          = $files->[$idx];
       my $read1_filesize = -s $read1;
       $idx = $idx + 2;
-      my $read1_gb = $read1_filesize / (1024 * 1024 * 1024);
-      if ($read1_gb <= $max_file_size_gb){
+      my $read1_gb = $read1_filesize / ( 1024 * 1024 * 1024 );
+      if ( $read1_gb <= $max_file_size_gb ) {
         $total = $total + 1;
-        next
+        next;
       }
 
-      my $trunk = ceil($read1_gb / $trunk_file_size_gb);
+      my $trunk = ceil( $read1_gb / $trunk_file_size_gb );
       $total = $total + $trunk;
-    }
+    } ## end while ( $idx < scalar(@$files...))
     $result->{$sample} = $total;
-  }
+  } ## end for my $sample ( sort keys...)
 
-  return($result);
-}
+  return ($result);
+} ## end sub get_expect_trunk
+
 
 sub add_split_fastq_dynamic {
-  my ($config, $def, $tasks, $target_dir, $split_fastq, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $split_fastq, $source_ref ) = @_;
 
-  my $min_file_size_gb = getValue($def, "split_fastq_min_file_size_gb", 10);
-  my $trunk_file_size_gb = getValue($def, "split_fastq_trunk_file_size_gb", 5);
-  
-  my $options = getValue($def, "call_fastqsplitter", 1) ? "--call_fastqsplitter ":"";
-  my $no_docker = getValue($def, "fastqsplitter_by_docker", 1) ? 0 : 1;
+  my $min_file_size_gb   = getValue( $def, "split_fastq_min_file_size_gb",   10 );
+  my $trunk_file_size_gb = getValue( $def, "split_fastq_trunk_file_size_gb", 5 );
 
-  $config->{ $split_fastq } = {
-    class       => "CQS::ProgramWrapperOneToMany",
-    perform     => 1,
-    target_dir  => "$target_dir/$split_fastq",
-    interpretor => "python3",
+  my $options   = getValue( $def, "call_fastqsplitter",      1 ) ? "--call_fastqsplitter " : "";
+  my $no_docker = getValue( $def, "fastqsplitter_by_docker", 1 ) ? 0                       : 1;
+
+  $config->{$split_fastq} = {
+    class        => "CQS::ProgramWrapperOneToMany",
+    perform      => 1,
+    target_dir   => "$target_dir/$split_fastq",
+    interpretor  => "python3",
     init_command => "set -o pipefail",
-    program     => "../Format/splitFastqDynamic.py",
-    option      => $options . " \\
+    program      => "../Format/splitFastqDynamic.py",
+    option       => $options . " \\
   --min_file_size_gb $min_file_size_gb \\
   --trunk_file_size_gb $trunk_file_size_gb \\
   --fill_length 3 \\
@@ -2714,7 +2768,7 @@ else
   rm -f __NAME__.failed
 fi
 ",
-    source_ref      => $source_ref,
+    source_ref            => $source_ref,
     source_arg            => "-i",
     source_join_delimiter => ",",
     output_to_same_folder => 1,
@@ -2726,68 +2780,70 @@ fi
     iteration_arg         => "",
     iteration_fill_length => 3,
     sh_direct             => 1,
-    no_output => 1,
-    no_docker => $no_docker,
-    use_tmp_folder => 0, #for split fastq, we don't need tmp folder
+    no_output             => 1,
+    no_docker             => $no_docker,
+    use_tmp_folder        => 0,                      #for split fastq, we don't need tmp folder
     pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
 
-  my $file_map = get_raw_files($config, $split_fastq, "source");
+  my $file_map = get_raw_files( $config, $split_fastq, "source" );
 
-  my $trunk_map = get_expect_trunk($file_map, $min_file_size_gb, $trunk_file_size_gb);
+  my $trunk_map = get_expect_trunk( $file_map, $min_file_size_gb, $trunk_file_size_gb );
 
   $config->{$split_fastq}{iteration} = $trunk_map;
 
-  push @$tasks, (  $split_fastq );
-}
+  push @$tasks, ($split_fastq);
+} ## end sub add_split_fastq_dynamic
+
 
 sub add_split_fastq {
-  my ($config, $def, $tasks, $target_dir, $split_fastq, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $split_fastq, $source_ref ) = @_;
 
-  $config->{ $split_fastq } = {
-    class       => "CQS::ProgramWrapperOneToMany",
-    perform     => 1,
-    target_dir  => "$target_dir/$split_fastq",
-    option      => "",
-    interpretor => "python3",
-    program     => "../Format/splitFastq.py",
-    source_ref      => $source_ref,
-    source_arg            => "-i",
-    source_join_delimiter => ",",
+  $config->{$split_fastq} = {
+    class                    => "CQS::ProgramWrapperOneToMany",
+    perform                  => 1,
+    target_dir               => "$target_dir/$split_fastq",
+    option                   => "",
+    interpretor              => "python3",
+    program                  => "../Format/splitFastq.py",
+    source_ref               => $source_ref,
+    source_arg               => "-i",
+    source_join_delimiter    => ",",
     parameterSampleFile2_arg => "--total_reads",
-    parameterSampleFile2 => $def->{"total_reads"},
-    output_to_same_folder => 1,
-    output_arg            => "-o",
-    output_file_prefix    => "",
-    output_file_ext       => "._ITER_.1.fastq.gz",
-    output_other_ext      => "._ITER_.2.fastq.gz",
-    iteration_arg         => "--trunk",
-    iteration             => getValue($def, "aligner_scatter_count"),
-    iteration_fill_length => 3,
-    zfill_iter_in_result  => 1,
-    use_tmp_folder => getValue($def, "split_fastq_use_tmp_folder", 0),
-    sh_direct             => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+    parameterSampleFile2     => $def->{"total_reads"},
+    output_to_same_folder    => 1,
+    output_arg               => "-o",
+    output_file_prefix       => "",
+    output_file_ext          => "._ITER_.1.fastq.gz",
+    output_other_ext         => "._ITER_.2.fastq.gz",
+    iteration_arg            => "--trunk",
+    iteration                => getValue( $def, "aligner_scatter_count" ),
+    iteration_fill_length    => 3,
+    zfill_iter_in_result     => 1,
+    use_tmp_folder           => getValue( $def, "split_fastq_use_tmp_folder", 0 ),
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
 
-  push @$tasks, (  $split_fastq );
-}
+  push @$tasks, ($split_fastq);
+} ## end sub add_split_fastq
+
 
 sub add_pairedend_fastq_gather {
-  my ($config, $def, $tasks, $target_dir, $merge_fastq, $read1_ref, $read2_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $merge_fastq, $read1_ref, $read2_ref ) = @_;
   $config->{$merge_fastq} = {
-    class                 => "CQS::ProgramWrapperManyToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$merge_fastq",
-    option                => "
+    class      => "CQS::ProgramWrapperManyToOne",
+    perform    => 1,
+    target_dir => "$target_dir/$merge_fastq",
+    option     => "
 rm -f __NAME__.failed __NAME__.succeed
 
 cat __INPUT__ > __NAME__.unmapped.1.fq.gz
@@ -2810,38 +2866,39 @@ fi
 
 #__OUTPUT__
 ",
-    interpretor           => "",
-    check_program         => 0,
-    program               => "",
-    source_ref            => $read1_ref,
-    source_arg            => "",
-    source_join_delimiter => " ",
+    interpretor                         => "",
+    check_program                       => 0,
+    program                             => "",
+    source_ref                          => $read1_ref,
+    source_arg                          => "",
+    source_join_delimiter               => " ",
     parameterSampleFile2_ref            => $read2_ref,
     parameterSampleFile2_arg            => "",
     parameterSampleFile2_join_delimiter => " ",
-    output_to_same_folder => 1,
-    output_arg            => "-o",
-    output_file_prefix    => ".unmapped.1.fq.gz",
-    output_file_ext       => ".unmapped.1.fq.gz,.unmapped.2.fq.gz",
-    sh_direct             => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+    output_to_same_folder               => 1,
+    output_arg                          => "-o",
+    output_file_prefix                  => ".unmapped.1.fq.gz",
+    output_file_ext                     => ".unmapped.1.fq.gz,.unmapped.2.fq.gz",
+    sh_direct                           => 1,
+    pbs                                 => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
 
-  push(@$tasks, $merge_fastq);
-}
+  push( @$tasks, $merge_fastq );
+} ## end sub add_pairedend_fastq_gather
+
 
 sub add_pairedend_fastq_to_ubam {
-  my ($config, $def, $tasks, $target_dir, $ubam_fastq, $fastq_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $ubam_fastq, $fastq_ref ) = @_;
   $config->{$ubam_fastq} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$ubam_fastq",
-    docker_prefix         => "gatk4_",
-    option                => "
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    target_dir    => "$target_dir/$ubam_fastq",
+    docker_prefix => "gatk4_",
+    option        => "
 rm -f __NAME__.failed __NAME__.succeed
 
 gatk FastqToSam \\
@@ -2889,109 +2946,116 @@ fi
     output_file_ext       => ".unmapped.bam",
     sh_direct             => 1,
     pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
 
-  push(@$tasks, $ubam_fastq);
-}
+  push( @$tasks, $ubam_fastq );
+} ## end sub add_pairedend_fastq_to_ubam
+
 
 sub add_BWA_and_summary_scatter {
-  my ($config, $def, $tasks, $target_dir, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $source_ref ) = @_;
 
   my $bwa_key = "bwa";
 
-  my $pairend = is_paired_end( $def );
-  my $step = $pairend ? 2 : 1;
+  my $pairend = is_paired_end($def);
+  my $step    = $pairend ? 2 : 1;
 
   my $splitFastq = "bwa_00_splitFastq";
 
-  my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
-  if($perform_split_fastq eq "by_dynamic") {
-    if (is_array($source_ref)){
-      if ($source_ref->[0] ne "files"){
-        die "split fastq files can only work when source_ref is files directly, now is [" . join(',', @$source_ref) . "]";
+  my $perform_split_fastq = getValue( $def, "perform_split_fastq", 0 );
+  if ( $perform_split_fastq eq "by_dynamic" ) {
+    if ( is_array($source_ref) ) {
+      if ( $source_ref->[0] ne "files" ) {
+        die "split fastq files can only work when source_ref is files directly, now is [" . join( ',', @$source_ref ) . "]";
       }
-    }else{
-      if ($source_ref ne "files"){
+    }
+    else {
+      if ( $source_ref ne "files" ) {
         die "split fastq files can only work when source_ref is files directly, now is $source_ref";
       }
     }
-    add_split_fastq_dynamic($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
-  }elsif($perform_split_fastq eq "by_file"){
-    $config->{ $splitFastq } = {
-      class       => "CQS::FileScatterTask",
-      source_ref  => $source_ref,
-      step => $step,
+    add_split_fastq_dynamic( $config, $def, $tasks, $target_dir, $splitFastq, $source_ref );
+  } ## end if ( $perform_split_fastq...)
+  elsif ( $perform_split_fastq eq "by_file" ) {
+    $config->{$splitFastq} = {
+      class      => "CQS::FileScatterTask",
+      source_ref => $source_ref,
+      step       => $step,
     };
-  }elsif($perform_split_fastq eq "by_scatter"){
-    add_split_fastq($config, $def, $tasks, $target_dir, $splitFastq, $source_ref);
-  }else{
+  } ## end elsif ( $perform_split_fastq...)
+  elsif ( $perform_split_fastq eq "by_scatter" ) {
+    add_split_fastq( $config, $def, $tasks, $target_dir, $splitFastq, $source_ref );
+  }
+  else {
     die 'wrong perform_split_fastq value, it should be one of [ 0, "by_dynamic", "by_file", "by_scatter"]';
   }
 
-  if(getValue($def, "perform_paired_end_validation", 1)){
+  if ( getValue( $def, "perform_paired_end_validation", 1 ) ) {
     my $fastq_validator = $splitFastq . "_validation";
-    addPairendFastqValidation($config, $def, $tasks, $target_dir, $fastq_validator, $splitFastq);
+    addPairendFastqValidation( $config, $def, $tasks, $target_dir, $fastq_validator, $splitFastq );
   }
 
   my $rg_name_regex = "(.+)_ITER_";
 
   my $bwa = "bwa_01_alignment";
-  if(0){
-    add_BWA_WGS($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex);
-  }else{
-    add_BWA($config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex); 
+  if (0) {
+    add_BWA_WGS( $config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex );
+  }
+  else {
+    add_BWA( $config, $def, $tasks, $target_dir, $bwa, $splitFastq, $rg_name_regex );
     my $bwa_summary = "bwa_03_summary";
-    add_BWA_summary($config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex);
+    add_BWA_summary( $config, $def, $tasks, $target_dir, $bwa_summary, $bwa, $rg_name_regex );
   }
 
-  my $bam_section = undef;
-  my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
+  my $bam_section             = undef;
+  my $perform_mark_duplicates = getValue( $def, "perform_mark_duplicates", 1 );
   if ($perform_mark_duplicates) {
     $bam_section = "bwa_02_markduplicates";
-    addMarkduplicates_merge($config, $def, $tasks, $target_dir, $bam_section, $bwa);
-  }else{
+    addMarkduplicates_merge( $config, $def, $tasks, $target_dir, $bam_section, $bwa );
+  }
+  else {
     $bam_section = "bwa_02_merge";
-    add_merge_bam($config, $def, $tasks, $target_dir, $bam_section, $bwa); 
+    add_merge_bam( $config, $def, $tasks, $target_dir, $bam_section, $bwa );
   }
 
-  if (getValue($def, "bwa_output_unmapped_fastq", 0)){
+  if ( getValue( $def, "bwa_output_unmapped_fastq", 0 ) ) {
     my $merge_fastq = "bwa_04_unmapped_fastq";
-    add_pairedend_fastq_gather($config, $def, $tasks, $target_dir, $merge_fastq, [$bwa, ".1.fq.gz"], [$bwa, ".2.fq.gz"]);
+    add_pairedend_fastq_gather( $config, $def, $tasks, $target_dir, $merge_fastq, [ $bwa, ".1.fq.gz" ], [ $bwa, ".2.fq.gz" ] );
 
-    if (getValue($def, "bwa_output_unmapped_bam", 0)){
+    if ( getValue( $def, "bwa_output_unmapped_bam", 0 ) ) {
       my $ubam_fastq = "bwa_05_unmapped_bam";
-      add_pairedend_fastq_to_ubam($config, $def, $tasks, $target_dir, $ubam_fastq, [$merge_fastq, ".fq.gz"]);
+      add_pairedend_fastq_to_ubam( $config, $def, $tasks, $target_dir, $ubam_fastq, [ $merge_fastq, ".fq.gz" ] );
     }
-  }
-  return( [ $bam_section, ".bam\$" ], $bam_section);
-}
+  } ## end if ( getValue( $def, "bwa_output_unmapped_fastq"...))
+  return ( [ $bam_section, ".bam\$" ], $bam_section );
+} ## end sub add_BWA_and_summary_scatter
 
 
 sub addMarkduplicates_merge {
-  my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $source_ref ) = @_;
 
-  my $mem = getValue($def, "mark_duplicates_mem", "40gb");
+  my $mem = getValue( $def, "mark_duplicates_mem", "40gb" );
   #replace gb with empty and minus 2
   my $java_memory_size = $mem;
   $java_memory_size =~ s/gb//g;
   $java_memory_size = $java_memory_size - 2;
 
-  my $ref_fasta = getValue($def, "ref_fasta");
+  my $ref_fasta = getValue( $def, "ref_fasta" );
 
   #default is the location in gatk docker
-  my $picard_jar = getValue($def, "picard_jar", "/opt/picard.jar");
+  my $picard_jar = getValue( $def, "picard_jar", "/opt/picard.jar" );
 
-  my $sort_order = getValue($def, "sort_order", "coordinate");
+  my $sort_order = getValue( $def, "sort_order", "coordinate" );
 
   $config->{$task_name} = {
-    class                 => "CQS::ProgramWrapperManyToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$task_name",
-    option                => "
+    class      => "CQS::ProgramWrapperManyToOne",
+    perform    => 1,
+    target_dir => "$target_dir/$task_name",
+    option     => "
 gatk --java-options \"-Dsamjdk.compression_level=2 -Xms${java_memory_size}g\" \\
   MarkDuplicates \\
   --INPUT __INPUT__ \\
@@ -3023,27 +3087,28 @@ fi
     output_arg            => "--OUTPUT",
     output_file_prefix    => ".duplicates_marked.bam",
     output_file_ext       => ".duplicates_marked.bam,.duplicates_marked.bai",
-    use_tmp_folder => getValue($def, "mark_duplicates_use_tmp_folder", 0),
+    use_tmp_folder        => getValue( $def, "mark_duplicates_use_tmp_folder", 0 ),
     sh_direct             => 0,
-    docker_prefix        => "gatk4_",
+    docker_prefix         => "gatk4_",
     pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => getValue($def, "mark_duplicates_walltime", "48"),
-      "mem"       => getValue($def, "mark_duplicates_mem", "40gb")
+      "nodes"    => "1:ppn=1",
+      "walltime" => getValue( $def, "mark_duplicates_walltime", "48" ),
+      "mem"      => getValue( $def, "mark_duplicates_mem",      "40gb" )
     },
   };
 
-  push(@$tasks, $task_name);
-}
+  push( @$tasks, $task_name );
+} ## end sub addMarkduplicates_merge
+
 
 sub addMarkduplicates {
-  my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $source_ref ) = @_;
 
   $config->{$task_name} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$task_name",
-    option                => "
+    class      => "CQS::ProgramWrapperOneToOne",
+    perform    => 1,
+    target_dir => "$target_dir/$task_name",
+    option     => "
 sambamba markdup -p -t __THREAD__ --tmpdir tmp __FILE__ __NAME__.tmp.bam
 
 status=\$?
@@ -3070,72 +3135,74 @@ fi
     output_file_prefix    => ".duplicates_marked.bam",
     output_file_ext       => ".duplicates_marked.bam, .duplicates_marked.bam.bai",
     sh_direct             => 0,
-    use_tmp_folder => getValue($def, "mark_duplicates_use_tmp_folder", 1),
+    use_tmp_folder        => getValue( $def, "mark_duplicates_use_tmp_folder", 1 ),
     pbs                   => {
       "nodes"    => "1:ppn=8",
       "walltime" => "24",
-      "mem"      => getValue($def, "mark_duplicates_memory", "40gb")
+      "mem"      => getValue( $def, "mark_duplicates_memory", "40gb" )
     },
   };
 
-  push(@$tasks, $task_name);
-}
+  push( @$tasks, $task_name );
+} ## end sub addMarkduplicates
+
 
 sub addSequenceTask {
-  my ($config, $def, $tasks, $target_dir, $summary_tasks) = @_;
-  $config->{sequencetask} =  {
-    class      => getSequenceTaskClassname(getValue($def, "cluster")),
+  my ( $config, $def, $tasks, $target_dir, $summary_tasks ) = @_;
+  $config->{sequencetask} = {
+    class      => getSequenceTaskClassname( getValue( $def, "cluster" ) ),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
-    source     => {
-      step_1 => $tasks
-    },
-    sh_direct => 0,
-    pbs       => {
-      "nodes"     => "1:ppn=" . getValue($def, "max_thread"),
-      "walltime"  => getValue($def, "sequencetask_run_time", 48),
-      "mem"       => "40gb"
+    source     => { step_1 => $tasks },
+    sh_direct  => 0,
+    pbs        => {
+      "nodes"    => "1:ppn=" . getValue( $def, "max_thread" ),
+      "walltime" => getValue( $def, "sequencetask_run_time", 48 ),
+      "mem"      => "40gb"
     },
   };
 
-  if(defined $summary_tasks){
+  if ( defined $summary_tasks ) {
     $config->{sequencetask}{source}{step_2} = $summary_tasks;
   }
-}
+} ## end sub addSequenceTask
+
 
 sub addFilesFromSraRunTable {
-  my ($def, $filename) = @_;
+  my ( $def, $filename ) = @_;
 
-  my $sample_name_column = getValue($def, "SraRunTable_sample_name_column", 'Sample Name');
+  my $sample_name_column = getValue( $def, "SraRunTable_sample_name_column", 'Sample Name' );
 
-  my $csv = Text::CSV->new ({
-    binary    => 1,
-    auto_diag => 1,
-    sep_char  => ','    # not really needed as this is the default
-  });
+  my $csv = Text::CSV->new(
+    { binary    => 1,
+      auto_diag => 1,
+      sep_char  => ','    # not really needed as this is the default
+    }
+  );
 
   my $files = {};
-  open(my $fh, '<:encoding(utf8)', $filename) or die $!;
-  my $headers = $csv->getline( $fh );
+  open( my $fh, '<:encoding(utf8)', $filename ) or die $!;
+  my $headers           = $csv->getline($fh);
   my $sample_name_index = first_index { $_ eq $sample_name_column } @$headers;
-  if ($sample_name_index < 0){
-    die "cannot find '$sample_name_column' in '@$headers'"
+  if ( $sample_name_index < 0 ) {
+    die "cannot find '$sample_name_column' in '@$headers'";
   }
 
   #print("$sample_name_index = " . $headers->[$sample_name_index]);
-  while (my $fields = $csv->getline( $fh )) {
-    my $srr = $fields->[0];
+  while ( my $fields = $csv->getline($fh) ) {
+    my $srr  = $fields->[0];
     my $name = $fields->[$sample_name_index];
     $files->{$name} = [$srr];
   }
   close($fh);
 
   $def->{files} = $files;
-}
+} ## end sub addFilesFromSraRunTable
+
 
 sub addWebgestalt {
-  my ($config, $def, $tasks, $target_dir, $prefix, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $prefix, $source_ref ) = @_;
 
   my $webgestaltTaskName = $prefix . "_WebGestalt";
   $config->{$webgestaltTaskName} = {
@@ -3149,239 +3216,247 @@ sub addWebgestalt {
     referenceSet     => $def->{referenceSet},
     sh_direct        => 1,
     pbs              => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "23",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "23",
+      "mem"      => "10gb"
     },
   };
   push @$tasks, "$webgestaltTaskName";
 
-  return($webgestaltTaskName);
-}
+  return ($webgestaltTaskName);
+} ## end sub addWebgestalt
+
 
 sub addBamsnap {
-  my ($config, $def, $tasks, $target_dir, $task_name, $bed_ref, $bam_ref, $params) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $bed_ref, $bam_ref, $params ) = @_;
 
   my $parameterFile1_key = "parameterFile1_ref";
-  if( -e $bed_ref) {
+  if ( -e $bed_ref ) {
     $parameterFile1_key = "parameterFile1";
   }
 
-  if(not defined $params){
+  if ( not defined $params ) {
     $params = $def;
   }
 
-  my $gene_track = ($def->{bamsnap_option} =~ /no_gene_track/) ? "" : "gene";
-  my $width = getValue($def, "bamsnap_width", 2000);
-  my $height = getValue($def, "bamsnap_height", 3000);
+  my $gene_track = ( $def->{bamsnap_option} =~ /no_gene_track/ ) ? "" : "gene";
+  my $width      = getValue( $def, "bamsnap_width",  2000 );
+  my $height     = getValue( $def, "bamsnap_height", 3000 );
 
   $config->{$task_name} = {
-    class                 => "CQS::ProgramWrapper",
-    perform               => 1,
-    target_dir            => "$target_dir/$task_name",
-    docker_prefix         => "bamsnap_",
-    option                => getValue($params, "bamsnap_option", ""),
-    interpretor           => "python3",
-    check_program         => 1,
-    program               => "../Visualization/bamsnap.py",
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    target_dir               => "$target_dir/$task_name",
+    docker_prefix            => "bamsnap_",
+    option                   => getValue( $params, "bamsnap_option", "" ),
+    interpretor              => "python3",
+    check_program            => 1,
+    program                  => "../Visualization/bamsnap.py",
     parameterSampleFile1_arg => "-b",
     parameterSampleFile1_ref => $bam_ref,
     parameterSampleFile2_arg => "-c",
-    parameterSampleFile2  => getValue($params, "bamsnap_raw_option", {
-      "-width" => $width,
-      "-height" => $height
-    }),
-    parameterFile1_arg    => "-i",
-    $parameterFile1_key   => $bed_ref,
-    output_to_same_folder => 1,
-    output_arg            => "-o",
-    output_to_folder      => 0,
-    output_file_prefix    => "",
-    output_file_ext       => ".txt",
-    output_other_ext      => "",
-    sh_direct             => 1,
+    parameterSampleFile2     => getValue(
+      $params,
+      "bamsnap_raw_option",
+      { "-width"  => $width,
+        "-height" => $height
+      }
+    ),
+    parameterFile1_arg       => "-i",
+    $parameterFile1_key      => $bed_ref,
+    output_to_same_folder    => 1,
+    output_arg               => "-o",
+    output_to_folder         => 0,
+    output_file_prefix       => "",
+    output_file_ext          => ".txt",
+    output_other_ext         => "",
+    sh_direct                => 1,
     can_result_be_empty_file => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
     },
   };
   push( @$tasks, $task_name );
-}
+} ## end sub addBamsnap
+
 
 sub addGeneCoverage {
-  my ($config, $def, $tasks, $target_dir, $task_name, $gene_ref, $bam_ref, $locus_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $gene_ref, $bam_ref, $locus_ref ) = @_;
 
   my $python_script = dirname(__FILE__) . "/../Visualization/gene_coverage.py";
-  my $width = getValue($def, "coverage_width", 3000);
-  my $height = getValue($def, "coverage_height", 1500);
+  my $width         = getValue( $def, "coverage_width",  3000 );
+  my $height        = getValue( $def, "coverage_height", 1500 );
 
-  my $option =  "python3 $python_script -n __NAME__ --width $width --height $height";
+  my $option = "python3 $python_script -n __NAME__ --width $width --height $height";
 
-  my $transcript_gtf = getValue($def, "gene_coverage_gtf", "");
-  if($transcript_gtf ne ""){
+  my $transcript_gtf = getValue( $def, "gene_coverage_gtf", "" );
+  if ( $transcript_gtf ne "" ) {
     $option = $option . " --gtf $transcript_gtf";
   }
 
   $config->{$task_name} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$task_name",
-    docker_prefix         => "",
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    target_dir    => "$target_dir/$task_name",
+    docker_prefix => "",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => $option,
-    interpretor           => "",
-    check_program         => 0,
-    program               => "",
-    source_ref            => $gene_ref,
-    source_arg            => "-n",
+    option                   => $option,
+    interpretor              => "",
+    check_program            => 0,
+    program                  => "",
+    source_ref               => $gene_ref,
+    source_arg               => "-n",
     parameterSampleFile2_ref => $bam_ref,
     parameterSampleFile2_arg => "-b",
-    parameterFile1_ref => $locus_ref,
-    parameterFile1_arg => "-l",
-    output_to_same_folder => 1,
-    output_arg            => "-o",
-    output_to_folder      => 1,
-    output_file_prefix    => "",
-    output_file_ext       => ".coverage.png",
-    output_other_ext      => "",
-    use_tmp_folder        => 0,
-    sh_direct             => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "40gb"
+    parameterFile1_ref       => $locus_ref,
+    parameterFile1_arg       => "-l",
+    output_to_same_folder    => 1,
+    output_arg               => "-o",
+    output_to_folder         => 1,
+    output_file_prefix       => "",
+    output_file_ext          => ".coverage.png",
+    output_other_ext         => "",
+    use_tmp_folder           => 0,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "40gb"
     },
   };
   push( @$tasks, $task_name );
-}
+} ## end sub addGeneCoverage
 
 
 sub addLocusCoverage {
-  my ($config, $def, $tasks, $target_dir, $task_name, $locus_ref, $bam_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $locus_ref, $bam_ref ) = @_;
 
   my $python_script = dirname(__FILE__) . "/../Visualization/gene_coverage.py";
-  my $width = getValue($def, "coverage_width", 3000);
-  my $height = getValue($def, "coverage_height", 1500);
+  my $width         = getValue( $def, "coverage_width",  3000 );
+  my $height        = getValue( $def, "coverage_height", 1500 );
 
   $config->{$task_name} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$task_name",
-    docker_prefix         => "",
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    target_dir    => "$target_dir/$task_name",
+    docker_prefix => "",
     #init_command          => "ln -s __FILE__ __NAME__.bam",
-    option                => "python3 $python_script -n __NAME__ --width $width --height $height",
-    interpretor           => "",
-    check_program         => 0,
-    program               => "",
-    source_ref            => $locus_ref,
-    source_arg            => "-l",
+    option                   => "python3 $python_script -n __NAME__ --width $width --height $height",
+    interpretor              => "",
+    check_program            => 0,
+    program                  => "",
+    source_ref               => $locus_ref,
+    source_arg               => "-l",
     parameterSampleFile2_ref => $bam_ref,
     parameterSampleFile2_arg => "-b",
-    output_to_same_folder => 1,
-    output_arg            => "-o",
-    output_to_folder      => 1,
-    output_file_prefix    => "",
-    output_file_ext       => ".coverage.png",
-    output_other_ext      => "",
-    use_tmp_folder        => 0,
-    sh_direct             => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "40gb"
+    output_to_same_folder    => 1,
+    output_arg               => "-o",
+    output_to_folder         => 1,
+    output_file_prefix       => "",
+    output_file_ext          => ".coverage.png",
+    output_other_ext         => "",
+    use_tmp_folder           => 0,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "40gb"
     },
   };
   push( @$tasks, $task_name );
-}
+} ## end sub addLocusCoverage
+
 
 sub addBamsnapLocus {
-  my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $bam_ref ) = @_;
 
-  my $option = getValue($def, "bamsnap_option", "-coverage_color 000000 -coverage_vaf 2.0 -draw coordinates bamplot gene -bamplot coverage base read -width 2000 -height 3000 -margin 40");
+  my $option = getValue( $def, "bamsnap_option", "-coverage_color 000000 -coverage_vaf 2.0 -draw coordinates bamplot gene -bamplot coverage base read -width 2000 -height 3000 -margin 40" );
 
   $config->{$task_name} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$task_name",
-    docker_prefix         => "bamsnap_",
-    option                => $option . " -out __NAME__.png",
-    interpretor           => "",
-    check_program         => 0,
-    program               => "bamsnap",
-    source                => getValue($def, "bamsnap_locus"),
-    source_arg            => "-pos",
-    parameterSampleFile2_ref => $bam_ref,
-    parameterSampleFile2_arg => "\\\n  -bam",
-    parameterSampleFile2_type => "array",
-    parameterSampleFile2_join_delimiter => " \\\n       ",
-    parameterSampleFile2_name_arg => "\\\n  -title",
+    class                                    => "CQS::ProgramWrapperOneToOne",
+    perform                                  => 1,
+    target_dir                               => "$target_dir/$task_name",
+    docker_prefix                            => "bamsnap_",
+    option                                   => $option . " -out __NAME__.png",
+    interpretor                              => "",
+    check_program                            => 0,
+    program                                  => "bamsnap",
+    source                                   => getValue( $def, "bamsnap_locus" ),
+    source_arg                               => "-pos",
+    parameterSampleFile2_ref                 => $bam_ref,
+    parameterSampleFile2_arg                 => "\\\n  -bam",
+    parameterSampleFile2_type                => "array",
+    parameterSampleFile2_join_delimiter      => " \\\n       ",
+    parameterSampleFile2_name_arg            => "\\\n  -title",
     parameterSampleFile2_name_join_delimiter => '" ' . "\\\n         " . '"',
-    parameterSampleFile2_name_has_comma => 1,
-    output_to_same_folder => 1,
-    output_arg            => "-out",
-    output_to_folder      => 1,
-    output_file_prefix    => "",
-    output_file_ext       => ".png",
-    output_other_ext      => "",
-    use_tmp_folder        => 0,
-    sh_direct             => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "40gb"
+    parameterSampleFile2_name_has_comma      => 1,
+    output_to_same_folder                    => 1,
+    output_arg                               => "-out",
+    output_to_folder                         => 1,
+    output_file_prefix                       => "",
+    output_file_ext                          => ".png",
+    output_other_ext                         => "",
+    use_tmp_folder                           => 0,
+    sh_direct                                => 1,
+    pbs                                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "40gb"
     },
   };
   push( @$tasks, $task_name );
 
-  if (getValue($def, "bamsnap_coverage", 1)){
-    $config->{bamsnap_locus_list} = getValue($def, "bamsnap_locus");
+  if ( getValue( $def, "bamsnap_coverage", 1 ) ) {
+    $config->{bamsnap_locus_list} = getValue( $def, "bamsnap_locus" );
     my $coverage_task = "bamsnap_coverage";
-    addLocusCoverage($config, $def, $tasks, $target_dir, $coverage_task, "bamsnap_locus_list", $bam_ref);
+    addLocusCoverage( $config, $def, $tasks, $target_dir, $coverage_task, "bamsnap_locus_list", $bam_ref );
   }
-}
+} ## end sub addBamsnapLocus
+
 
 sub addPlotGene {
-  my ($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bed_ref, $bam_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bed_ref, $bam_ref ) = @_;
 
   my $parameterFile1_key = "parameterFile1_ref";
-  if( -e $bed_ref) {
+  if ( -e $bed_ref ) {
     $parameterFile1_key = "parameterFile1";
   }
 
   $config->{$task_name} = {
-    class                 => "CQS::ProgramWrapper",
-    perform               => 1,
-    target_dir            => $target_dir . "/$task_name",
-    option                => getValue($def, "plot_gene_option", ""),
-    interpretor           => "python3",
-    program               => "../Visualization/plotGene.py",
-    parameterFile1_arg    => "-i",
-    $parameterFile1_key   => $bed_ref,
-    parameterFile3_arg    => "-s",
-    parameterFile3_ref    => [$sizeFactorTask, ".sizefactor"],
-    parameterSampleFile1_arg => "-b",
-    parameterSampleFile1_ref => $bam_ref,
+    class                      => "CQS::ProgramWrapper",
+    perform                    => 1,
+    target_dir                 => $target_dir . "/$task_name",
+    option                     => getValue( $def, "plot_gene_option", "" ),
+    interpretor                => "python3",
+    program                    => "../Visualization/plotGene.py",
+    parameterFile1_arg         => "-i",
+    $parameterFile1_key        => $bed_ref,
+    parameterFile3_arg         => "-s",
+    parameterFile3_ref         => [ $sizeFactorTask, ".sizefactor" ],
+    parameterSampleFile1_arg   => "-b",
+    parameterSampleFile1_ref   => $bam_ref,
     output_to_result_directory => 1,
-    output_arg            => "-o",
-    output_file_ext       => ".position.txt",
-    sh_direct             => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+    output_arg                 => "-o",
+    output_file_ext            => ".position.txt",
+    sh_direct                  => 1,
+    pbs                        => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
 
   push( @$tasks, $task_name );
-}
+} ## end sub addPlotGene
+
 
 sub addSizeFactor {
-  my ($config, $def, $tasks, $target_dir, $sizeFactorTask, $bam_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $sizeFactorTask, $bam_ref ) = @_;
   $config->{$sizeFactorTask} = {
-    class                    => "CQS::ProgramWrapper",
-    perform                  => 1,
+    class   => "CQS::ProgramWrapper",
+    perform => 1,
     #docker_prefix            => "report_",
     target_dir               => $target_dir . '/' . $sizeFactorTask,
     interpretor              => "python3",
@@ -3399,154 +3474,164 @@ sub addSizeFactor {
     },
   };
   push( @$tasks, $sizeFactorTask );
-}
+} ## end sub addSizeFactor
+
 
 sub writeAnnotationLocus_bed {
-  my ($locusList, $locusFile) = @_;
-  open(my $fh, '>', $locusFile) or die "Could not open file '$locusFile' $!";
+  my ( $locusList, $locusFile ) = @_;
+  open( my $fh, '>', $locusFile ) or die "Could not open file '$locusFile' $!";
 
   my $locusName;
-  if(is_array($locusList)){
+  if ( is_array($locusList) ) {
     my $count = 0;
-    for my $locus (@$locusList){
+    for my $locus (@$locusList) {
       $count = $count + 1;
       $locus =~ s/,//g;
 
       $locusName = $locus;
-      $locusName =~ s/:/_/g; 
-      $locusName =~ s/-/_/g; 
+      $locusName =~ s/:/_/g;
+      $locusName =~ s/-/_/g;
 
-      my @parts = split /:/, $locus;
-      my $chr = $parts[0];
+      my @parts     = split /:/, $locus;
+      my $chr       = $parts[0];
       my $positions = $parts[1];
-      my @pos = split /-/, $positions;
-      my $start = $pos[0];
-      my $end = $pos[1];
+      my @pos       = split /-/, $positions;
+      my $start     = $pos[0];
+      my $end       = $pos[1];
       print $fh $chr . "\t" . $start . "\t" . $end . "\t1000\t" . $locusName . "\t+\t" . $locusName . "\n";
-    }
+    } ## end for my $locus (@$locusList)
     close($fh);
-  }elsif(is_hash($locusList)){
-    for $locusName (sort keys %$locusList){
-      my $locus = $locusList->{$locusName};
-      my @parts = split /:/, $locus;
-      my $chr = $parts[0];
+  } ## end if ( is_array($locusList...))
+  elsif ( is_hash($locusList) ) {
+    for $locusName ( sort keys %$locusList ) {
+      my $locus     = $locusList->{$locusName};
+      my @parts     = split /:/, $locus;
+      my $chr       = $parts[0];
       my $positions = $parts[1];
-      my @pos = split /-/, $positions;
-      my $start = $pos[0];
-      my $end = $pos[1];
+      my @pos       = split /-/, $positions;
+      my $start     = $pos[0];
+      my $end       = $pos[1];
       print $fh $chr . "\t" . $start . "\t" . $end . "\t1000\t" . $locusName . "\t+\t" . $locusName . "\n";
-    }
+    } ## end for $locusName ( sort keys...)
     close($fh);
-  }else{
+  } ## end elsif ( is_hash($locusList...))
+  else {
     close($fh);
     die("locus should be either array or hash");
   }
-}
+} ## end sub writeAnnotationLocus_bed
+
 
 sub writeAnnotationLocus_gff {
-  my ($locusList, $locusFile) = @_;
-  open(my $fh, '>', $locusFile) or die "Could not open file '$locusFile' $!";
+  my ( $locusList, $locusFile ) = @_;
+  open( my $fh, '>', $locusFile ) or die "Could not open file '$locusFile' $!";
 
   my $locusName;
-  if(is_array($locusList)){
+  if ( is_array($locusList) ) {
     my $count = 0;
-    for my $locus (@$locusList){
+    for my $locus (@$locusList) {
       $count = $count + 1;
       $locus =~ s/,//g;
 
       $locusName = $locus;
-      $locusName =~ s/:/_/g; 
-      $locusName =~ s/-/_/g; 
+      $locusName =~ s/:/_/g;
+      $locusName =~ s/-/_/g;
 
-      my @parts = split /:/, $locus;
-      my $chr = $parts[0];
+      my @parts     = split /:/, $locus;
+      my $chr       = $parts[0];
       my $positions = $parts[1];
-      my @pos = split /-/, $positions;
-      my $start = $pos[0];
-      my $end = $pos[1];
-      print $fh $chr . "\t" . $locusName . "\tGENE\t".  $start . "\t" . $end . "\t.\t+\t.\n";
-    }
+      my @pos       = split /-/, $positions;
+      my $start     = $pos[0];
+      my $end       = $pos[1];
+      print $fh $chr . "\t" . $locusName . "\tGENE\t" . $start . "\t" . $end . "\t.\t+\t.\n";
+    } ## end for my $locus (@$locusList)
     close($fh);
-  }elsif(is_hash($locusList)){
-    for $locusName (sort keys %$locusList){
-      my $locus = $locusList->{$locusName};
-      my @parts = split /:/, $locus;
-      my $chr = $parts[0];
+  } ## end if ( is_array($locusList...))
+  elsif ( is_hash($locusList) ) {
+    for $locusName ( sort keys %$locusList ) {
+      my $locus     = $locusList->{$locusName};
+      my @parts     = split /:/, $locus;
+      my $chr       = $parts[0];
       my $positions = $parts[1];
-      my @pos = split /-/, $positions;
-      my $start = $pos[0];
-      my $end = $pos[1];
-      print $fh $chr . "\t" . $locusName . "\tGENE\t".  $start . "\t" . $end . "\t.\t+\t.\n";
-    }
+      my @pos       = split /-/, $positions;
+      my $start     = $pos[0];
+      my $end       = $pos[1];
+      print $fh $chr . "\t" . $locusName . "\tGENE\t" . $start . "\t" . $end . "\t.\t+\t.\n";
+    } ## end for $locusName ( sort keys...)
     close($fh);
-  }else{
+  } ## end elsif ( is_hash($locusList...))
+  else {
     close($fh);
     die("locus should be either array or hash");
   }
-}
+} ## end sub writeAnnotationLocus_gff
+
 
 sub addAnnotationLocus {
-  my ($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bam_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bam_ref ) = @_;
 
   my $locusFile = $target_dir . "/annotation_locus.bed";
-  writeAnnotationLocus_bed($def->{annotation_locus}, $locusFile);
+  writeAnnotationLocus_bed( $def->{annotation_locus}, $locusFile );
 
-  if($def->{perform_bamsnap}){
+  if ( $def->{perform_bamsnap} ) {
     my $bamsnap_task = $task_name . "_bamsnap";
-    addBamsnap($config, $def, $tasks, $target_dir, $bamsnap_task, $locusFile, $bam_ref);
+    addBamsnap( $config, $def, $tasks, $target_dir, $bamsnap_task, $locusFile, $bam_ref );
   }
 
-  addPlotGene($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $locusFile, $bam_ref);
-}
+  addPlotGene( $config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $locusFile, $bam_ref );
+} ## end sub addAnnotationLocus
+
 
 sub addAnnotationGenes {
-  my ($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bam_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, $bam_ref ) = @_;
 
   my $genes_str = $def->{annotation_genes};
-  my @genes = split /[;, ]+/, $genes_str;
-  my %gene_map = map { $_ => 1 } @genes;
+  my @genes     = split /[;, ]+/, $genes_str;
+  my %gene_map  = map { $_ => 1 } @genes;
   $config->{annotation_genes} = \%gene_map;
   #print(Dumper($config->{annotation_genes}));
 
-  my $geneLocus = addGeneLocus($config, $def, $tasks, $target_dir);
+  my $geneLocus = addGeneLocus( $config, $def, $tasks, $target_dir );
 
-  if($def->{perform_bamsnap}){
+  if ( $def->{perform_bamsnap} ) {
     my $bamsnap_task = $task_name . "_bamsnap";
-    addBamsnap($config, $def, $tasks, $target_dir, $bamsnap_task, [$geneLocus, "bed"], $bam_ref);
+    addBamsnap( $config, $def, $tasks, $target_dir, $bamsnap_task, [ $geneLocus, "bed" ], $bam_ref );
   }
 
-  addPlotGene($config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, [ $geneLocus, ".bed" ], $bam_ref);
-}
+  addPlotGene( $config, $def, $tasks, $target_dir, $task_name, $sizeFactorTask, [ $geneLocus, ".bed" ], $bam_ref );
+} ## end sub addAnnotationGenes
+
 
 sub add_peak_count {
-  my ($config, $def, $tasks, $target_dir, $task_name, $callName) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $callName ) = @_;
   $config->{$task_name} = {
-    class      => "CQS::ProgramWrapper",
-    perform    => 1,
-    suffix     => "_pc",
-    target_dir => "${target_dir}/" . $task_name,
-    interpretor => "python3",
-    program    => "../Count/bedCount.py",
-    option     => "",
-    source_arg => "-i",
-    source_ref => [ $callName, ".bed\$" ],
-    output_arg => "-o",
-    output_prefix => ".txt",
-    output_ext => ".txt",
+    class                    => "CQS::ProgramWrapper",
+    perform                  => 1,
+    suffix                   => "_pc",
+    target_dir               => "${target_dir}/" . $task_name,
+    interpretor              => "python3",
+    program                  => "../Count/bedCount.py",
+    option                   => "",
+    source_arg               => "-i",
+    source_ref               => [ $callName, ".bed\$" ],
+    output_arg               => "-o",
+    output_prefix            => ".txt",
+    output_ext               => ".txt",
     can_result_be_empty_file => 1,
-    sh_direct  => 1,
-    pbs        => {
+    sh_direct                => 1,
+    pbs                      => {
       "nodes"    => "1:ppn=1",
       "walltime" => "1",
       "mem"      => "2gb"
     },
   };
   push @$tasks, ($task_name);
-  return($task_name);
-}
+  return ($task_name);
+} ## end sub add_peak_count
+
 
 sub add_alignment_summary {
-  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $read_1_ref, $read_2_ref, $read_3_ref, $read_4_ref, $read_5_ref ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $read_1_ref, $read_2_ref, $read_3_ref, $read_4_ref, $read_5_ref ) = @_;
 
   $config->{$task_name} = {
     class                    => "CQS::UniqueR",
@@ -3559,33 +3644,34 @@ sub add_alignment_summary {
     parameterSampleFile3_ref => $read_3_ref,
     parameterSampleFile4_ref => $read_4_ref,
     parameterSampleFile5_ref => $read_5_ref,
-    parameterSampleFile6 => {
-      "task_name" => getValue( $def, "task_name"),
+    parameterSampleFile6     => {
+      "task_name"         => getValue( $def, "task_name" ),
       "remove_chrM_genes" => getValue( $def, "remove_chrM_genes", 0 ),
     },
-    rtemplate                => $rtemplate,
-    output_file              => "",
-    output_file_ext          => $output_file_ext,
-    pbs                      => {
+    rtemplate       => $rtemplate,
+    output_file     => "",
+    output_file_ext => $output_file_ext,
+    pbs             => {
       "nodes"    => "1:ppn=1",
       "walltime" => "1",
       "mem"      => "5gb"
     },
   };
-  push(@$tasks, $task_name);
-  return($task_name);
-}
+  push( @$tasks, $task_name );
+  return ($task_name);
+} ## end sub add_alignment_summary
+
 
 sub add_bam_validation {
-  my ($config, $def, $tasks, $target_dir, $task_name, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $source_ref ) = @_;
 
-  my $bam_validation_option = getValue($def, "bam_validation_option", "--IGNORE_WARNINGS --SKIP_MATE_VALIDATION --VALIDATE_INDEX false --INDEX_VALIDATION_STRINGENCY NONE");
+  my $bam_validation_option = getValue( $def, "bam_validation_option", "--IGNORE_WARNINGS --SKIP_MATE_VALIDATION --VALIDATE_INDEX false --INDEX_VALIDATION_STRINGENCY NONE" );
 
   $config->{$task_name} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "$target_dir/$task_name",
-    option                => "
+    class      => "CQS::ProgramWrapperOneToOne",
+    perform    => 1,
+    target_dir => "$target_dir/$task_name",
+    option     => "
 gatk ValidateSamFile -I __FILE__ -O __NAME__.txt $bam_validation_option
     
 status=\$?
@@ -3598,102 +3684,102 @@ if [[ \$status -ne 0 ]]; then
 fi
 
 ",
-    interpretor           => "",
-    program               => "",
-    check_program         => 0,
-    source_arg            => "",
-    source_ref            => $source_ref,
-    docker_prefix         => "gatk4_",
-    output_to_same_folder => 1,
-    output_arg            => "-O",
-    output_file_prefix    => ".txt",
-    output_file_ext       => ".txt",
-    sh_direct             => 0,
+    interpretor              => "",
+    program                  => "",
+    check_program            => 0,
+    source_arg               => "",
+    source_ref               => $source_ref,
+    docker_prefix            => "gatk4_",
+    output_to_same_folder    => 1,
+    output_arg               => "-O",
+    output_file_prefix       => ".txt",
+    output_file_ext          => ".txt",
+    sh_direct                => 0,
     can_result_be_empty_file => 1,
-    pbs                   => {
+    pbs                      => {
       "nodes"    => "1:ppn=1",
-      "walltime" => getValue($def, "bam_validation_walltime", "24"),
-      "mem"      => getValue($def, "bam_validation_mem", "5gb")
+      "walltime" => getValue( $def, "bam_validation_walltime", "24" ),
+      "mem"      => getValue( $def, "bam_validation_mem",      "5gb" )
     },
   };
 
-  push(@$tasks, $task_name);
-}
+  push( @$tasks, $task_name );
+} ## end sub add_bam_validation
+
 
 sub add_unique_r {
-  my ($config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $ref_array ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $rtemplate, $output_file_ext, $ref_array ) = @_;
 
   $config->{$task_name} = {
-    class                    => "CQS::UniqueR",
-    perform                  => 1,
-    rCode                    => "",
-    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
-    option                   => "",
-    rtemplate                => $rtemplate,
-    output_file              => "",
-    output_file_ext          => $output_file_ext,
-    pbs                      => {
+    class           => "CQS::UniqueR",
+    perform         => 1,
+    rCode           => "",
+    target_dir      => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
+    option          => "",
+    rtemplate       => $rtemplate,
+    output_file     => "",
+    output_file_ext => $output_file_ext,
+    pbs             => {
       "nodes"    => "1:ppn=1",
       "walltime" => "1",
       "mem"      => "5gb"
     },
   };
 
-  for my $idx (0..scalar(@$ref_array)){
-    my $idx2 = $idx+1;
+  for my $idx ( 0 .. scalar(@$ref_array) ) {
+    my $idx2 = $idx + 1;
     $config->{$task_name}{"parameterSampleFile${idx2}_ref"} = $ref_array->[$idx];
   }
-  push(@$tasks, $task_name);
-  return($task_name);
-}
+  push( @$tasks, $task_name );
+  return ($task_name);
+} ## end sub add_unique_r
+
 
 sub add_gsea {
-  my ($config, $def, $tasks, $target_dir, $gseaTaskName, $rnk_file_ref, $keys, $suffix ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $gseaTaskName, $rnk_file_ref, $keys, $suffix ) = @_;
 
-  my $gsea_jar        = getValue($def, "gsea_jar");
-  my $gsea_db         = getValue($def, "gsea_db");
-  my $gsea_categories = getValue($def, "gsea_categories");
-  my $rCode = "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=0;";
+  my $gsea_jar        = getValue( $def, "gsea_jar" );
+  my $gsea_db         = getValue( $def, "gsea_db" );
+  my $gsea_categories = getValue( $def, "gsea_categories" );
+  my $rCode           = "gseaDb='" . $gsea_db . "'; gseaJar='" . $gsea_jar . "'; gseaCategories=c(" . $gsea_categories . "); makeReport=0;";
 
-  if(defined $def->{"gsea_chip"}){
-    my $gsea_chip = getValue($def, "gsea_chip");
-    if( ! -e $gsea_chip ){
+  if ( defined $def->{"gsea_chip"} ) {
+    my $gsea_chip = getValue( $def, "gsea_chip" );
+    if ( !-e $gsea_chip ) {
       $gsea_chip = $gsea_db . "/" . $gsea_chip;
     }
     $rCode = $rCode . "gseaChip='" . $gsea_chip . "';";
-  }
+  } ## end if ( defined $def->{"gsea_chip"...})
 
   #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
   $config->{$gseaTaskName} = {
-    class                      => "CQS::UniqueR",
-    perform                    => 1,
-    target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
-    rtemplate                  => "GSEAPerform.R",
-    parameterSampleFile1_ref   => $rnk_file_ref,
-    parameterSampleFile2   => {
-      task_name => getValue($def, "task_name")
-    },
-    output_to_result_directory => 1,
-    output_perSample_file      => "parameterSampleFile1",
+    class                        => "CQS::UniqueR",
+    perform                      => 1,
+    target_dir                   => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
+    rtemplate                    => "GSEAPerform.R",
+    parameterSampleFile1_ref     => $rnk_file_ref,
+    parameterSampleFile2         => { task_name => getValue( $def, "task_name" ) },
+    output_to_result_directory   => 1,
+    output_perSample_file        => "parameterSampleFile1",
     output_perSample_file_byName => 1,
-    output_perSample_file_regex => "(.+?)[_min5_fdr|_GSEA.rnk]",
-    output_perSample_file_ext  => ".gsea.csv;.gsea",
-    no_docker                  => getValue($def, "gsea_no_docker", 0),
+    output_perSample_file_regex  => "(.+?)[_min5_fdr|_GSEA.rnk]",
+    output_perSample_file_ext    => ".gsea.csv;.gsea",
+    no_docker                    => getValue( $def, "gsea_no_docker", 0 ),
     #has_empty_ext              => 1,
-    sh_direct                  => 1,
-    rCode                      => $rCode,
-    pbs                        => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "23",
-      "mem"       => "10gb"
+    sh_direct => 1,
+    rCode     => $rCode,
+    pbs       => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "23",
+      "mem"      => "10gb"
     },
   };
   push( @$tasks, $gseaTaskName );
 
   my @gsea_report_files = ();
   my @gsea_report_names = ();
-  my $pairs = $config->{pairs};
-  for my $key (sort keys %$pairs ) {
+  my $pairs             = $config->{pairs};
+  for my $key ( sort keys %$pairs ) {
     push( @gsea_report_files, $gseaTaskName, '/' . $key . $suffix . ".gsea.csv" );
     push( @gsea_report_names, "gsea_" . $key );
   }
@@ -3705,32 +3791,31 @@ sub add_gsea {
     target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
     rtemplate                  => "GSEAReport.R",
     rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;Functions.R,reportFunctions.R",
-    run_rmd_independent => 1,
-    rmd_ext => ".gsea.html",
+    run_rmd_independent        => 1,
+    rmd_ext                    => ".gsea.html",
     parameterSampleFile1_ref   => \@gsea_report_files,
     parameterSampleFile1_names => \@gsea_report_names,
-    parameterSampleFile2 => {
-      task_name => getValue($def, "task_name")
-    },
-    remove_empty_parameter => 1,
-    output_ext => "gsea_files.csv",
-    samplename_in_result => 0,
+    parameterSampleFile2       => { task_name => getValue( $def, "task_name" ) },
+    remove_empty_parameter     => 1,
+    output_ext                 => "gsea_files.csv",
+    samplename_in_result       => 0,
     sh_direct                  => 1,
     pbs                        => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "1",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "10gb"
     },
   };
   push( @$tasks, $gsea_report );
-}
+} ## end sub add_gsea
+
 
 sub add_maf_filter {
-  my ($config, $def, $tasks, $target_dir, $maf_filter_name, $source_ref ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $maf_filter_name, $source_ref ) = @_;
 
-  my $allele_frequency_percentage = getValue($def, "filter_variants_by_allele_frequency_percentage");
-  my $allele_frequency_maf = getValue($def, "filter_variants_by_allele_frequency_maf");
-  my $min_inbreeding_coeff = getValue($def, "filter_variants_by_min_inbreeding_coeff");
+  my $allele_frequency_percentage = getValue( $def, "filter_variants_by_allele_frequency_percentage" );
+  my $allele_frequency_maf        = getValue( $def, "filter_variants_by_allele_frequency_maf" );
+  my $min_inbreeding_coeff        = getValue( $def, "filter_variants_by_min_inbreeding_coeff" );
 
   $config->{$maf_filter_name} = {
     class                 => "CQS::ProgramWrapper",
@@ -3746,30 +3831,29 @@ sub add_maf_filter {
     output_file_ext       => ".maf_filtered.vcf.gz",
     sh_direct             => 1,
     pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     },
   };
   push @$tasks, $maf_filter_name;
-}
+} ## end sub add_maf_filter
+
 
 sub add_bowtie_index {
-  my ($config, $def, $tasks, $parent_dir, $bowtie_index_task, $fasta) = @_;
-  
+  my ( $config, $def, $tasks, $parent_dir, $bowtie_index_task, $fasta ) = @_;
+
   $config->{$bowtie_index_task} = {
-    class        => "CQS::ProgramWrapper",
-    perform      => 1,
-    target_dir   => $parent_dir . "/" . $bowtie_index_task,
-    option       => "
+    class      => "CQS::ProgramWrapper",
+    perform    => 1,
+    target_dir => $parent_dir . "/" . $bowtie_index_task,
+    option     => "
 bowtie-build $fasta __NAME__
 
 #__FILE__
 #__OUTPUT__
 ",
-    source => {
-      $def->{task_name} => [$fasta]
-    },
+    source                => { $def->{task_name} => [$fasta] },
     interpretor           => "",
     check_program         => 0,
     program               => "",
@@ -3779,70 +3863,73 @@ bowtie-build $fasta __NAME__
     output_to_same_folder => 1,
     check_file_ext        => ".4.ebwt",
     sh_direct             => 1,
-    pbs          => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "23",
-      "mem"       => "10gb"
+    pbs                   => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "23",
+      "mem"      => "10gb"
     },
   };
 
-  push(@$tasks, $bowtie_index_task);
-}
+  push( @$tasks, $bowtie_index_task );
+} ## end sub add_bowtie_index
+
 
 sub add_extract_bam_locus {
-  my ($config, $def, $tasks, $target_dir, $task_name, $locus, $bam_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $locus, $bam_ref ) = @_;
 
-  my $ref_fasta = getValue($def, "ref_fasta");
+  my $ref_fasta = getValue( $def, "ref_fasta" );
 
   $config->{$task_name} = {
-    class => "CQS::ProgramWrapperOneToOne",
-    target_dir => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
-    interpretor => "",
+    class         => "CQS::ProgramWrapperOneToOne",
+    target_dir    => $target_dir . "/" . getNextFolderIndex($def) . $task_name,
+    interpretor   => "",
     check_program => 0,
-    option => "
+    option        => "
 samtools view -b -T $ref_fasta -o __OUTPUT__ __FILE__ $locus
 samtools index __OUTPUT__
 ",
-    program => "",
-    source_ref => $bam_ref,
-    output_arg => "",
-    output_file_prefix => ".bam",
-    output_file_ext => ".bam",
+    program               => "",
+    source_ref            => $bam_ref,
+    output_arg            => "",
+    output_file_prefix    => ".bam",
+    output_file_ext       => ".bam",
     output_to_same_folder => 1,
-    sh_direct   => 1,
-    use_tmp_folder => 0,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
+    sh_direct             => 1,
+    use_tmp_folder        => 0,
+    pbs                   => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "10",
+      "mem"      => "10gb"
     }
   };
   push @$tasks, ($task_name);
-}
+} ## end sub add_extract_bam_locus
+
 
 sub has_comparison {
   my $def = shift;
-  return ((defined $def->{pairs}) || (defined $def->{pairs_config}));
+  return ( ( defined $def->{pairs} ) || ( defined $def->{pairs_config} ) );
 }
 
+
 sub add_featurecount {
-  my ($config, $def, $tasks, $target_dir, $task_name, $bam_ref, $transcript_gtf, $no_docker) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $bam_ref, $transcript_gtf, $no_docker ) = @_;
 
   my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "$task_name";
   $config->{$task_name} = {
     class         => "Count::FeatureCounts",
     perform       => 1,
     target_dir    => $featureCountFolder,
-    option        => getValue($def, "featureCounts_option", "-g gene_id -t exon"),
+    option        => getValue( $def, "featureCounts_option", "-g gene_id -t exon" ),
     source_ref    => $bam_ref,
     gff_file      => $transcript_gtf,
     is_paired_end => is_paired_end($def),
-    no_docker => $no_docker,
+    no_docker     => $no_docker,
     sh_direct     => 0,
     pbs           => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "23",
-      "mem"       => "40gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "23",
+      "mem"      => "40gb"
     },
   };
   $config->{"${task_name}_summary"} = {
@@ -3855,119 +3942,123 @@ sub add_featurecount {
     parameterSampleFile2_ref => [ $task_name, ".count.summary" ],
     sh_direct                => 1,
     pbs                      => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
     },
   };
 
   push @$tasks, $task_name;
   push @$tasks, "${task_name}_summary";
-}
+} ## end sub add_featurecount
+
 
 sub add_md5 {
-  my ($config, $def, $tasks, $target_dir, $source_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $source_ref ) = @_;
   $config->{md5} = {
-    class => "CQS::ProgramWrapperOneToOne",
-    target_dir => $target_dir . "/" . getNextFolderIndex($def) . "md5",
+    class         => "CQS::ProgramWrapperOneToOne",
+    target_dir    => $target_dir . "/" . getNextFolderIndex($def) . "md5",
     check_program => 0,
-    program => "",
-    option => "
+    program       => "",
+    option        => "
 rm -f tmp.md5
 
 md5sum __FILE__ >> tmp.md5
 
 mv tmp.md5 __OUTPUT__
 ",
-    source_arg => "",
-    source_join_delimiter => " >> tmp.md5 \nmd5sum ",
-    source_ref => $source_ref,
-    output_arg => "",
-    output_file_prefix => ".md5",
-    output_file_ext => ".md5",
-    output_to_same_folder => 1,
+    source_arg               => "",
+    source_join_delimiter    => " >> tmp.md5 \nmd5sum ",
+    source_ref               => $source_ref,
+    output_arg               => "",
+    output_file_prefix       => ".md5",
+    output_file_ext          => ".md5",
+    output_to_same_folder    => 1,
     can_result_be_empty_file => 0,
-    sh_direct   => 0,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
+    sh_direct                => 0,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
     }
   };
   push @$tasks, ("md5");
 
   $config->{md5_merge} = {
-    class => "CQS::UniqueR",
-    target_dir => $target_dir . "/" . getNextFolderIndex($def) . "md5_merge",
-    check_program => 0,
+    class                    => "CQS::UniqueR",
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "md5_merge",
+    check_program            => 0,
     rtemplate                => "../QC/validateMD5merge.r",
     parameterSampleFile1_ref => "md5",
-    output_file_ext => ".md5.txt",
-    sh_direct   => 1,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
+    output_file_ext          => ".md5.txt",
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
     }
   };
   push @$tasks, ("md5_merge");
-  return($config);
-}
+  return ($config);
+} ## end sub add_md5
+
 
 sub add_bamplot {
-  my ($config, $def, $tasks, $target_dir, $bam_ref) = @_;
-  my $gff_key = "";
+  my ( $config, $def, $tasks, $target_dir, $bam_ref ) = @_;
+  my $gff_key   = "";
   my $gff_value = "";
 
   if ( not defined $def->{bamplot_gff} ) {
-    if($def->{annotation_locus}){
-      $gff_key = "gff_file";
+    if ( $def->{annotation_locus} ) {
+      $gff_key   = "gff_file";
       $gff_value = $target_dir . "/annotation_locus.gff";
-      print("writing annotation_locus to " . $gff_value . "\n");
-      writeAnnotationLocus_gff($def->{annotation_locus}, $gff_value);
-    }else{
+      print( "writing annotation_locus to " . $gff_value . "\n" );
+      writeAnnotationLocus_gff( $def->{annotation_locus}, $gff_value );
+    } ## end if ( $def->{annotation_locus...})
+    else {
       $config->{bamplot_gene_gff} = {
-        class => "CQS::UniqueR",
-        target_dir => $target_dir . "/" . getNextFolderIndex($def) . "bamplot_gene_gff",
-        check_program => 0,
-        rtemplate => "../CQS/countTableVisFunctions.R,../Annotation/get_gene_locus.r",
-        output_file_ext => ".gff",
+        class                => "CQS::UniqueR",
+        target_dir           => $target_dir . "/" . getNextFolderIndex($def) . "bamplot_gene_gff",
+        check_program        => 0,
+        rtemplate            => "../CQS/countTableVisFunctions.R,../Annotation/get_gene_locus.r",
+        output_file_ext      => ".gff",
         parameterSampleFile1 => {
-          task_name => getValue($def, "task_name"),
-          email => getValue($def, "email"),
+          task_name => getValue( $def, "task_name" ),
+          email     => getValue( $def, "email" ),
 
-          biomart_host => getValue($def, "biomart_host"),
-          biomart_dataset   => getValue($def, "biomart_dataset"),
-          biomart_symbolKey => getValue($def, "biomart_symbolKey"),
-          biomart_add_chr => getValue($def, "biomart_add_chr"),
-          biomart_add_prefix => getValue($def, "biomart_add_prefix", ""),
+          biomart_host       => getValue( $def, "biomart_host" ),
+          biomart_dataset    => getValue( $def, "biomart_dataset" ),
+          biomart_symbolKey  => getValue( $def, "biomart_symbolKey" ),
+          biomart_add_chr    => getValue( $def, "biomart_add_chr" ),
+          biomart_add_prefix => getValue( $def, "biomart_add_prefix", "" ),
 
-          gene_names => getValue($def, "gene_names"),
-          gene_shift => getValue($def, "gene_shift", 0),
+          gene_names => getValue( $def, "gene_names" ),
+          gene_shift => getValue( $def, "gene_shift", 0 ),
 
           output_gff => 1,
         },
-        sh_direct   => 1,
-        pbs => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "2",
-          "mem"       => "10gb"
+        sh_direct => 1,
+        pbs       => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "2",
+          "mem"      => "10gb"
         }
       };
-      $gff_key = "gff_file_ref";
+      $gff_key   = "gff_file_ref";
       $gff_value = "bamplot_gene_gff";
       push( @$tasks, "bamplot_gene_gff" );
-    }
-  }else{
-    $gff_key = "gff_file";
-    $gff_value = getValue($def, "bamplot_gff");
+    } ## end else [ if ( $def->{annotation_locus...})]
+  } ## end if ( not defined $def->...)
+  else {
+    $gff_key   = "gff_file";
+    $gff_value = getValue( $def, "bamplot_gff" );
   }
 
   $config->{bamplot} = {
     class              => "Visualization::Bamplot",
     perform            => 1,
     target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
-    option             => "-g " . getValue($def, "dataset_name") . " -y uniform -r --save-temp",
+    option             => "-g " . getValue( $def, "dataset_name" ) . " -y uniform -r --save-temp",
     source_ref         => $bam_ref,
     $gff_key           => $gff_value,
     is_rainbow_color   => 0,
@@ -3975,106 +4066,108 @@ sub add_bamplot {
     is_draw_individual => 0,
     groups             => $def->{"plotgroups"},
     colors             => $def->{"colormaps"},
-    docker_prefix => "bamplot_",
+    docker_prefix      => "bamplot_",
     sh_direct          => 1,
     pbs                => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "23",
-      "mem"       => "10gb"
+      "nodes"    => "1:ppn=1",
+      "walltime" => "23",
+      "mem"      => "10gb"
     },
   };
   push( @$tasks, "bamplot" );
 
   $config->{bamplot_html} = {
-    class              => "CQS::UniqueRmd",
-    perform            => 1,
-    target_dir         => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
-    report_rmd_file => "../Visualization/bamplot.Rmd",
+    class                => "CQS::UniqueRmd",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . "bamplot",
+    report_rmd_file      => "../Visualization/bamplot.Rmd",
     additional_rmd_files => "../CQS/reportFunctions.R",
-    option => "",
+    option               => "",
     parameterSampleFile1 => {
-      task_name => getValue($def, "task_name"),
-      email => getValue($def, "email"),
-      affiliation => getValue($def, "affiliation", ""),
-      gene_shift => getValue($def, "gene_shift", 0),
+      task_name   => getValue( $def, "task_name" ),
+      email       => getValue( $def, "email" ),
+      affiliation => getValue( $def, "affiliation", "" ),
+      gene_shift  => getValue( $def, "gene_shift",  0 ),
     },
-    suffix => ".report",
-    output_file_ext => ".report.html",
+    suffix                   => ".report",
+    output_file_ext          => ".report.html",
     can_result_be_empty_file => 0,
-    sh_direct   => 1,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
     },
   };
   push( @$tasks, "bamplot_html" );
-};
+} ## end sub add_bamplot
+
 
 sub add_fastq_screen {
-  my ($config, $def, $tasks, $parent_dir, $task_name, $source_ref) = @_;
+  my ( $config, $def, $tasks, $parent_dir, $task_name, $source_ref ) = @_;
 
   my $conf = "";
-  if($def->{fastq_screen_configuration_file}){
-     $conf = "--conf " . $def->{fastq_screen_configuration_file};
+  if ( $def->{fastq_screen_configuration_file} ) {
+    $conf = "--conf " . $def->{fastq_screen_configuration_file};
   }
 
   $config->{$task_name} = {
-    class => "CQS::ProgramWrapperOneToOne",
-    target_dir => $parent_dir . "/" . getNextFolderIndex($def) . $task_name,
+    class          => "CQS::ProgramWrapperOneToOne",
+    target_dir     => $parent_dir . "/" . getNextFolderIndex($def) . $task_name,
     use_tmp_folder => 0,
-    suffix  => "_fc",
-    interpretor => "",
-    program => "",
-    check_program => 0,
-    option => "
+    suffix         => "_fc",
+    interpretor    => "",
+    program        => "",
+    check_program  => 0,
+    option         => "
 fastq_screen $conf --outdir . --threads 8 __FILE__
 
 #__OUTPUT__
 ",
-    source_arg => "",
-    source_join_delimiter => " ",
-    source_ref => $source_ref,
-    output_arg => "",
-    output_by_file => 1,
+    source_arg                    => "",
+    source_join_delimiter         => " ",
+    source_ref                    => $source_ref,
+    output_arg                    => "",
+    output_by_file                => 1,
     output_by_file_remove_pattern => ".fastq.gz",
-    output_file_prefix => "_screen.txt",
-    output_file_ext => "_screen.txt",
-    output_to_same_folder => 1,
-    can_result_be_empty_file => 1,
-    sh_direct   => 0,
-    no_docker => 1,
-    pbs => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => "24",
-      "mem"       => "20gb"
+    output_file_prefix            => "_screen.txt",
+    output_file_ext               => "_screen.txt",
+    output_to_same_folder         => 1,
+    can_result_be_empty_file      => 1,
+    sh_direct                     => 0,
+    no_docker                     => 1,
+    pbs                           => {
+      "nodes"    => "1:ppn=8",
+      "walltime" => "24",
+      "mem"      => "20gb"
     }
   };
-  push(@$tasks, $task_name);
-}
+  push( @$tasks, $task_name );
+} ## end sub add_fastq_screen
+
 
 sub add_trimmomatic {
-  my ($config, $def, $tasks, $target_dir, $trimmomatic_task, $fastqcName, $untrimed_ref) = @_;
+  my ( $config, $def, $tasks, $target_dir, $trimmomatic_task, $fastqcName, $untrimed_ref ) = @_;
 
-  my $cutruntools2_path = getValue($def, "cutruntools2_path");
-  my $extratoolsbin = $cutruntools2_path . "/install";
-  my $adapterpath = $cutruntools2_path . "/adapters";
+  my $cutruntools2_path = getValue( $def, "cutruntools2_path" );
+  my $extratoolsbin     = $cutruntools2_path . "/install";
+  my $adapterpath       = $cutruntools2_path . "/adapters";
 
   my $trimmomaticjarfile = "$extratoolsbin/trimmomatic-0.36.jar";
-  my $adapter_type = getValue($def, "adaptor_type");
+  my $adapter_type       = getValue( $def, "adaptor_type" );
 
-  my $adapter_file = $adapter_type eq "Nextera" ? "NexteraPE-PE.fa": "Truseq3.PE.fa";
+  my $adapter_file = $adapter_type eq "Nextera" ? "NexteraPE-PE.fa" : "Truseq3.PE.fa";
 
-  my $trimmomatic_option = getValue($def, "trimmomatic_option", ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50");
+  my $trimmomatic_option = getValue( $def, "trimmomatic_option", ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50" );
 
-  $config->{ $trimmomatic_task } = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$trimmomatic_task",
-    interpretor => "",
-    program => "",
+  $config->{$trimmomatic_task} = {
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    target_dir    => "${target_dir}/" . getNextFolderIndex($def) . "$trimmomatic_task",
+    interpretor   => "",
+    program       => "",
     check_program => 0,
-    option => "
+    option        => "
 rm -f *.failed *.succeed
 
 echo trimmomatic=`date`
@@ -4099,23 +4192,23 @@ echo v0.36 > __NAME__.trimmomatic.version
     source_ref            => $untrimed_ref,
     source_join_delimiter => " ",
     output_to_same_folder => 0,
-    output_file_ext => ".clipped.1.fastq.gz,.trimmomatic.version,.clipped.2.fastq.gz",
+    output_file_ext       => ".clipped.1.fastq.gz,.trimmomatic.version,.clipped.2.fastq.gz",
     sh_direct             => 0,
     no_output             => 1,
-    docker_prefix => "cutruntools2_",
+    docker_prefix         => "cutruntools2_",
     pbs                   => {
       "nodes"    => "1:ppn=8",
-      "walltime" => getValue($def, "trimmomatic_walltime", "24"),
-      "mem"      => getValue($def, "trimmomatic_mem", "40gb")
+      "walltime" => getValue( $def, "trimmomatic_walltime", "24" ),
+      "mem"      => getValue( $def, "trimmomatic_mem",      "40gb" )
     },
   };
-  push @$tasks, ( $trimmomatic_task );
+  push @$tasks, ($trimmomatic_task);
 
   if ( $def->{perform_fastqc} ) {
     addFastQC( $config, $def, $tasks, $tasks, $fastqcName, [ $trimmomatic_task, ".fastq.gz" ], $target_dir );
   }
 
-}
+} ## end sub add_trimmomatic
 
 1;
 
