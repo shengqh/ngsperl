@@ -2,9 +2,9 @@
 title: "Visium HD data - SpaceRanger summary"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  rmdformats::readthedown:
-    toc_depth: 3
-    number_sections: true
+  html_document:
+    self_contained: false
+    theme: cosmo
 ---
 
 ```{r setup, include=FALSE}
@@ -22,6 +22,12 @@ knitr::opts_chunk$set(echo=FALSE,
 ```{css, echo=FALSE}
 #content{
     max-width:1920px;
+}
+
+.main-container {
+  max-width: 1920px !important;
+  margin-left: auto;
+  margin-right: auto;
 }
 ```
 
@@ -186,13 +192,14 @@ library(fs)
 
 curwd = gsub("^/panfs/accrepfs.vampire", "", getwd())
 
-cat("\n# HTML Reports\n\n")
+cat("\n## HTML Reports {.tabset}\n\n")
 
 html_map=read_file_map("fileList3.txt", do_unlist=FALSE)
 for (fname in names(html_map)) {
   fpath=gsub("^/panfs/accrepfs.vampire", "", html_map[[fname]])
   rpath=fs::path_rel(fpath, start = curwd)
-  cat(paste0("## <a href='", rpath, "' target='_blank'>", fname, "</a>\n\n"))
+  cat("### ", fname, "\n")
+  cat(sprintf('<iframe src="%s" width="100%%" height="800px" style="border:none;"></iframe>\n\n', rpath))
 }
 ```
 
