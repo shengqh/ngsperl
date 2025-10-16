@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='S03_ClassPTC_BRAF'
-outFile='S03_ClassPTC_BRAF'
+sample_name='S01_ClassPTC_BRAF'
+outFile='S01_ClassPTC_BRAF'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,17 +9,21 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_vivian_weiss_lab/shengq2/20251014_12904_VisiumHD_cellsegment_qc/RCTD_cell/result/S03_ClassPTC_BRAF')
+setwd('/nobackup/h_vivian_weiss_lab/shengq2/20251014_12904_VisiumHD_cellsegment_qc/RCTD_Spatial.Polygons/result/S01_ClassPTC_BRAF')
 
 ### Parameter setting end ###
 
+# Load libraries in order of sf, dplyr, Seurat to avoid namespace conflicts
+library(sf)
+library(dplyr)
+library(Seurat)
+
 source("Deconvolution_functions.R")
 source("reportFunctions.R")
-library(Seurat)
-library(dplyr)
 library(spacexr) # BiocManager::install("dmcable/spacexr")
 library(hdf5r) # required to read in data file
 library(data.table)
+library(viridis)
 
 options_df=fread("fileList2.txt", header=FALSE)
 myoptions=split(options_df$V1, options_df$V2)
@@ -27,10 +31,15 @@ myoptions=split(options_df$V1, options_df$V2)
 RCTD_thread=as.numeric(myoptions$RCTD_thread)
 assay=myoptions$assay
 
+bin.size=ifelse(assay == "Spatial.Polygons", "polygons", 8)
+assay_slice=ifelse(assay == "Spatial.Polygons", "slice1.polygons", "slice1.008um")
+
+min_umi=100
+
 log_file = paste0(sample_name, ".RCTD.log")
 ignored = unlink(log_file, force=TRUE)
 
-log_msg(paste0("Starting RCTD deconvolution for sample: ", sample_name), log_file = log_file)
+log_msg(paste0("Starting RCTD deconvolution for assay ", assay, " of sample: ", sample_name), log_file = log_file)
 
 log_msg(paste0("Loading reference RDS file: ", parFile1), log_file = log_file)
 reference=readRDS(parFile1)
@@ -40,13 +49,23 @@ log_msg(paste0("Loading spatial data from: ", data_dir), log_file = log_file)
 
 if(grepl("\\.rds$", tolower(data_dir))) {
   spatial_so <- readRDS(data_dir)
+  DefaultAssay(spatial_so) <- assay
 } else {
-  spatial_so <- Seurat::Load10X_Spatial(bin.size = "polygons", data.dir = data_dir, slice = 'slice1')
+  spatial_so <- Seurat::Load10X_Spatial(bin.size = bin.size, data.dir = data_dir, slice = 'slice1')
 }
 
-DefaultAssay(spatial_so) <- assay
+log_msg(paste0("Keep the spots with at least ", min_umi, " UMIs", data_dir), log_file = log_file)
+if(assay == "Spatial.Polygons"){
+  spatial_so <- subset(spatial_so, subset = nCount_Spatial.Polygons >= min_umi)
+} else {
+  spatial_so <- subset(spatial_so, subset = nCount_Spatial.008um >= min_umi)
+}
 
 spatial_counts <- GetAssayData(spatial_so, assay=assay, layer="counts")
+
+common_genes=intersect(rownames(spatial_counts), rownames(reference@counts))
+spatial_counts=spatial_counts[common_genes,]
+reference@counts=reference@counts[common_genes,]
 
 coords <- Seurat::GetTissueCoordinates(spatial_so)
 coords <- coords[,c("x","y")] # keep x and y only
@@ -55,12 +74,14 @@ nUMI_col=paste0("nCount_", assay)
 nUMI_df <- FetchData(spatial_so, vars=nUMI_col, cells=colnames(spatial_counts))
 nUMI = setNames(nUMI_df[[1]], rownames(nUMI_df))
 
-stopifnot(ncol(spatial_counts) == length(nUMI))
-stopifnot(ncol(spatial_counts) == nrow(coords))
+stopifnot(all(colnames(spatial_counts) == names(nUMI)))
+stopifnot(all(colnames(spatial_counts) == rownames(coords)))
+
+log_msg(paste0("Total ",nrow(spatial_counts), " genes and ", ncol(spatial_counts), " cells from assay ", assay, " of sample ", sample_name, " were used in RCTD deconvolution."), log_file = log_file)
 
 spatialRNA <- spacexr::SpatialRNA(coords, spatial_counts, nUMI)
 
-rctd_rds = paste0(sample_name, ".RCTD.RDS")
+rctd_rds = paste0(sample_name, ".", assay, ".RCTD.rds")
 if(!file.exists(rctd_rds)){
   RCTD_obj <- spacexr::create.RCTD(spatialRNA, reference, max_cores = RCTD_thread)
   RCTD_obj <- run.RCTD(RCTD_obj, doublet_mode = "doublet")
@@ -72,24 +93,30 @@ if(!file.exists(rctd_rds)){
 # process the RCTD results
 results <- RCTD_obj@results
 
+log_msg(paste0("Total ",nrow(results$weights), " cells from sample ", sample_name, " were deconvoluted by RCTD."), log_file = log_file)
+
 # get the cell type proportions
 # a data frame of cell type weights for each pixel
 # sum to 1, recommended from RCTD author, https://github.com/dmcable/spacexr/issues/45
 weights_df = normalize_weights(results$weights) |> as.data.frame()  # sum as 1 for each spot
 colnames(weights_df) <- paste0("RCTD2_", colnames(weights_df))
 
-# merge the spots, exclude spolts not in RCTD
-common_spots <- intersect(colnames(spatial_so), rownames(weights_df))
-spatial_so <- subset(spatial_so, cells = common_spots)
-
-# Add weights into spatial_so meta data
-spatial_so <- AddMetaData(spatial_so, metadata = weights_df)
+meta = spatial_so@meta.data |> 
+  tibble::rownames_to_column("rowname") |> 
+  dplyr::left_join(weights_df |> tibble::rownames_to_column("rowname"), by = c("rowname" = "rowname")) 
 
 # Add results from doublet mode into spatial_so meta data
 rctd_df=results$results_df |> dplyr::select("spot_class", "first_type", "second_type")
-names(rctd_df) <- c("RCTD1_Class", "RCTD1_Label1", "RCTD1_Label2")
-spatial_so <- AddMetaData(spatial_so, metadata = rctd_df)
+names(rctd_df) <- c("RCTD1_spot_class", "RCTD1_first_type", "RCTD1_second_type")
 
-log_msg('Saving spatial_so with RCTD weights', log_file = log_file)
-saveRDS(spatial_so, file = paste0(sample_name, ".post_RCTD.RDS"))
+meta = meta |> dplyr::left_join(rctd_df |> tibble::rownames_to_column("rowname"), by = c("rowname" = "rowname")) |>
+  tibble::column_to_rownames("rowname")
 
+stopifnot(all(rownames(meta) == colnames(spatial_so)))
+
+saveRDS(meta, file = paste0(sample_name, ".", assay, ".RCTD.meta.rds"))
+
+spatial_so@meta.data <- meta
+
+log_msg('Saving obj with RCTD results', log_file = log_file)
+saveRDS(spatial_so, file = paste0(sample_name, ".", assay, ".RCTD.obj.rds"))
