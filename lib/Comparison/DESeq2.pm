@@ -18,6 +18,7 @@ our @ISA = qw(CQS::UniqueTask);
 
 my $directory;
 
+
 sub new {
   my ($class) = @_;
   my $self = $class->SUPER::new();
@@ -25,37 +26,51 @@ sub new {
   $self->{_suffix} = "_de2";
   bless $self, $class;
   return $self;
-}
+} ## end sub new
+
 
 sub getSuffix {
-  my ( $self, $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue ) = @_;
+  my ( $self, $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue, $de_biotype ) = @_;
   my $suffix = "";
+
   if ($top25only) {
     $suffix = $suffix . "_top25";
   }
+
   if ($detectedInBothGroup) {
     $suffix = $suffix . "_detectedInBothGroup";
   }
+
   if ( $minMedianInGroup > 0 ) {
     $suffix = $suffix . "_min${minMedianInGroup}";
   }
+
   if ($useRawPvalue) {
     $suffix = $suffix . "_pvalue" . $pvalue;
   }
   else {
     $suffix = $suffix . "_fdr" . $pvalue;
   }
+
+  if ($de_biotype) {
+    if ( $de_biotype ne "" ) {
+      $de_biotype =~ s/\s+/_/g;
+      $suffix = $suffix . "_" . $de_biotype;
+    }
+  } ## end if ($de_biotype)
+
   return $suffix;
-}
+} ## end sub getSuffix
+
 
 sub output_report {
   my ( $task_name, $pbs_dir, $result_dir ) = @_;
 
-  copy(dirname(__FILE__) . "/DESeq2.rmd",  "$result_dir/DESeq2.rmd");
-  copy(dirname(__FILE__) . "/../CQS/reportFunctions.R",  "$result_dir/reportFunctions.R");
+  copy( dirname(__FILE__) . "/DESeq2.rmd",               "$result_dir/DESeq2.rmd" );
+  copy( dirname(__FILE__) . "/../CQS/reportFunctions.R", "$result_dir/reportFunctions.R" );
 
   my $rmd_command = "Rscript --vanilla -e \"library('rmarkdown');rmarkdown::render('DESeq2.rmd',output_file='${task_name}.deseq2.html')\"";
-  my $report_sh = "$pbs_dir/report.sh";
+  my $report_sh   = "$pbs_dir/report.sh";
   open( my $rs, ">$report_sh" ) or die $!;
   print $rs "
 cd $result_dir
@@ -64,24 +79,25 @@ $rmd_command
 ";
   close($rs);
 
-  return($rmd_command);
-}
+  return ($rmd_command);
+} ## end sub output_report
+
 
 sub perform {
   my ( $self, $config, $section ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command ) = $self->init_parameter( $config, $section );
 
-  copy(dirname(__FILE__) . "/../CQS/countTableVisFunctions.R",  "$result_dir/countTableVisFunctions.R");
+  copy( dirname(__FILE__) . "/../CQS/countTableVisFunctions.R", "$result_dir/countTableVisFunctions.R" );
 
   #print("writeParameterSampleFile in DESeq2\n");
   writeParameterSampleFile( $config, $section, $result_dir, 1 );
 
-  my $comparisons = get_raw_files( $config, $section );
+  my $comparisons      = get_raw_files( $config, $section );
   my @comparison_names = keys %{$comparisons};
 
   my $comparisonAttributes = get_raw_files_attributes( $config, $section );
-  my $comparisonTitles = \@comparison_names;
+  my $comparisonTitles     = \@comparison_names;
   if ( defined $comparisonAttributes->{".order"} && defined $comparisonAttributes->{".col"} ) {
     $comparisonTitles = $comparisonAttributes->{".col"};
   }
@@ -99,14 +115,13 @@ sub perform {
     die "File not found : " . $rtemplate;
   }
 
-  my $showLabelInPCA    = get_option( $config, $section, "show_label_PCA",       1 );
-  my $showDEGeneCluster = get_option( $config, $section, "show_DE_gene_cluster", 0 );
-  my $pvalue            = get_option( $config, $section, "pvalue",               0.05 );
-  my $foldChange        = get_option( $config, $section, "fold_change",          2.0 );
-  my $minMedianInGroup  = get_option( $config, $section, "min_median_read",      0 );
-  my $addCountOne       = get_option( $config, $section, "add_count_one",        0 );
-  my $usePearsonInHCA   = get_option( $config, $section, "use_pearson_in_hca",   0 );
-
+  my $showLabelInPCA            = get_option( $config, $section, "show_label_PCA",               1 );
+  my $showDEGeneCluster         = get_option( $config, $section, "show_DE_gene_cluster",         0 );
+  my $pvalue                    = get_option( $config, $section, "pvalue",                       0.05 );
+  my $foldChange                = get_option( $config, $section, "fold_change",                  2.0 );
+  my $minMedianInGroup          = get_option( $config, $section, "min_median_read",              0 );
+  my $addCountOne               = get_option( $config, $section, "add_count_one",                0 );
+  my $usePearsonInHCA           = get_option( $config, $section, "use_pearson_in_hca",           0 );
   my $top25only                 = get_option( $config, $section, "top25only",                    0 );
   my $detectedInBothGroup       = get_option( $config, $section, "detected_in_both_group",       0 );
   my $performWilcox             = get_option( $config, $section, "perform_wilcox",               0 );
@@ -115,7 +130,8 @@ sub perform {
   my $transformTable            = get_option( $config, $section, "transform_table",              0 );
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
   my $cooksCutoff               = get_option( $config, $section, "cooksCutoff",                  'DEFAULT' );
-  my $independentFiltering      = get_option( $config, $section, "independentFiltering", 'TRUE' );
+  my $independentFiltering      = get_option( $config, $section, "independentFiltering",         'TRUE' );
+  my $de_biotype                = get_option( $config, $section, "de_biotype",                   "" );
 
   my $rCode = get_option( $config, $section, "rCode", "" );
 
@@ -125,7 +141,7 @@ sub perform {
     $libraryKey = get_option( $config, $section, "library_key", "TotalReads" );
   }
 
-  my $suffix = $self->getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
+  my $suffix = $self->getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue, $de_biotype );
 
   my %tpgroups = ();
   for my $group_name ( sort keys %{$groups} ) {
@@ -135,7 +151,7 @@ sub perform {
 
   my $first = 0;
 
-  my $countfiles = defined $config->{$section}{"countfile"} ? {} : get_raw_files( $config, $section, "countfile" );
+  my $countfiles        = defined $config->{$section}{"countfile"} ? {} : get_raw_files( $config, $section, "countfile" );
   my $single_count_file = 1;
   if ( ref $countfiles eq ref {} ) {
     if ( scalar( keys %$countfiles ) > 1 ) {
@@ -154,8 +170,8 @@ sub perform {
     my $comparisonTitle = $comparisonTitles->[$comparisonIndex];
     $first++;
 
-    my $covariances = {};
-    my $pairOnlyCovariant="";
+    my $covariances       = {};
+    my $pairOnlyCovariant = "";
 
     my $gNames = $comparisons->{$comparison_name};
     my @group_names;
@@ -167,10 +183,10 @@ sub perform {
         $covariances->{$key} = $gNames->{$key};
       }
 
-      if (defined $gNames->{"pairOnlyCovariant"}) {
+      if ( defined $gNames->{"pairOnlyCovariant"} ) {
         $pairOnlyCovariant = $gNames->{pairOnlyCovariant};
       }
-    }
+    } ## end if ( ref $gNames eq ref...)
     else {
       @group_names = @{$gNames};
     }
@@ -206,14 +222,14 @@ sub perform {
           push( @$values, $key . $i );
         }
         $covariances->{$key} = $values;
-      }
+      } ## end if ( $values eq "paired")
       elsif ( !( ref $values eq ref [] ) ) {
         die "Covariances of " . $key . " should be array reference!";
       }
       elsif ( scalar(@$values) != $total_sample_count ) {
         die "Number of covariance value of " . $key . " shoud be $total_sample_count !";
       }
-    }
+    } ## end for my $key ( keys %$covariances)
 
     my $filename = "${comparison_name}.design";
 
@@ -234,7 +250,7 @@ sub perform {
         }
       }
       print $cd "\n";
-    }
+    } ## end for my $i ( 0 .. $#s1 )
     for my $i ( 0 .. $#s2 ) {
       my $sname = $s2[$i];
       print $cd "${sname}\t${g2}";
@@ -244,7 +260,7 @@ sub perform {
         }
       }
       print $cd "\n";
-    }
+    } ## end for my $i ( 0 .. $#s2 )
     close $cd;
 
     my $curcountfile = $single_count_file ? $countfile : $countfiles->{$comparison_name};
@@ -256,7 +272,7 @@ sub perform {
       $curcountfile = $curcountfile->[0];
     }
     print $df "$comparison_name\t$curcountfile\t$cdfile\t$g1\t$g2\t$comparisonTitle\t$pairOnlyCovariant\n";
-  }
+  } ## end for my $comparisonIndex...
   close($df);
 
   my $rfile = $result_dir . "/${task_name}.r";
@@ -298,7 +314,7 @@ $rCode
 libraryFile<-\"$libraryFile\"
 libraryKey<-\"$libraryKey\"
 ";
-  }
+  } ## end if ( defined $libraryFile)
 
   print $rf "#predefined_condition_end\n";
 
@@ -307,7 +323,7 @@ libraryKey<-\"$libraryKey\"
       next;
     }
     last;
-  }
+  } ## end while (<$rt>)
   while (<$rt>) {
     s/\r|\n//g;
     print $rf $_, "\n";
@@ -326,18 +342,19 @@ libraryKey<-\"$libraryKey\"
 
   print $pbs "R --vanilla -f $rfile \n";
 
-  my $rmd_cmd = output_report($task_name, $pbs_dir, $result_dir);
+  my $rmd_cmd = output_report( $task_name, $pbs_dir, $result_dir );
   print $pbs "\n$rmd_cmd \n";
 
   $self->close_pbs( $pbs, $pbs_file );
-}
+} ## end sub perform
+
 
 sub result {
   my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct ) = $self->init_parameter( $config, $section, 0 );
 
-  my $comparisons = get_raw_files( $config, $section );
+  my $comparisons               = get_raw_files( $config, $section );
   my $minMedianInGroup          = get_option( $config, $section, "min_median_read",              0 );
   my $top25only                 = get_option( $config, $section, "top25only",                    0 );
   my $detectedInBothGroup       = get_option( $config, $section, "detected_in_both_group",       0 );
@@ -345,10 +362,11 @@ sub result {
   my $exportSignificantGeneName = get_option( $config, $section, "export_significant_gene_name", 0 );
   my $useRawPvalue              = get_option( $config, $section, "use_raw_p_value",              0 );
   my $pvalue                    = get_option( $config, $section, "pvalue",                       0.05 );
-  my $suffix = $self->getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue );
-  my $result = {};
+  my $de_biotype                = get_option( $config, $section, "de_biotype",                   "" );
+  my $suffix                    = $self->getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue, $de_biotype );
+  my $result                    = {};
 
-  my $tasknameFiles = [$result_dir . "/${task_name}.define.DESeq2.version"];
+  my $tasknameFiles = [ $result_dir . "/${task_name}.define.DESeq2.version" ];
   if ( scalar( keys %$comparisons ) > 1 ) {
     push @$tasknameFiles, $result_dir . "/${task_name}.define${suffix}_DESeq2_volcanoPlot.png";
   }
@@ -371,6 +389,7 @@ sub result {
     push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoEnhanced.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-heatmap.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-pca.png" );
+
     if ($exportSignificantGeneName) {
       push( @result_files, $result_dir . "/${prefix}_DESeq2_sig_genename.txt" );
     }
@@ -387,9 +406,9 @@ sub result {
     if ( scalar(@$filtered) > 0 || !$removeEmpty ) {
       $result->{$comparison_name} = $filtered;
     }
-  }
+  } ## end for my $comparison_name...
 
   return $result;
-}
+} ## end sub result
 
 1;
