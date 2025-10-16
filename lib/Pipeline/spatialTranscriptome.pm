@@ -229,20 +229,20 @@ rm -rf __NAME__/SPATIAL_RNA_COUNTER_CS \\
     $source_ref = [ $spaceranger_task, ".h5" ];
   } ## end if ( $def->{perform_space_ranger...})
 
-  if ( $def->{perform_VisiumHD_cell_segmentation_qc} ) {
+  if ( $def->{perform_VisiumHD_qc} ) {
     my $bin_size       = getValue( $def, "bin_size", "8,polygons" );
     my $bin_size_label = $bin_size;
     $bin_size_label =~ s/,/_/;
 
-    my $qc_task = "VisiumHD_cell_segmentation_qc";
+    my $qc_task = "VisiumHD_qc";
     $config->{$qc_task} = {
       class           => "CQS::IndividualRmd",
       target_dir      => "$target_dir/$qc_task",
       perform         => 1,
-      rReportTemplate => "../scRNA/VisiumHD_cell_segmentation_qc.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_plotting_functions.R",
+      rReportTemplate => "../scRNA/VisiumHD_qc.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_plotting_functions.R",
       option          => "
 
-Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_cell_segmentation_qc.Rmd', output_file='__OUTPUT__')\"
+Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd', output_file='__OUTPUT__')\"
 
 ",
       parameterSampleFile1_ref => "files",
@@ -267,37 +267,93 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_cell_se
     };
     push( @$tasks, $qc_task );
 
+    my $qc_summary_task = "${qc_task}_summary";
+    $config->{$qc_summary_task} = {
+      class                    => "CQS::UniqueRmd",
+      target_dir               => "$target_dir/$qc_summary_task",
+      perform                  => 1,
+      option                   => "",
+      report_rmd_file          => "../scRNA/VisiumHD_qc_summary.Rmd",
+      additional_rmd_files     => "../CQS/reportFunctions.R",
+      parameterSampleFile1_ref => [ $qc_task, ".html" ],
+      parameterSampleFile2     => {
+        task_name   => getValue( $def, "task_name" ),
+        email       => getValue( $def, "email" ),
+        affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+      },
+      output_file_ext  => ".VisiumHD_qc_summary.html",
+      output_other_ext => ".VisiumHD_qc_summary.html",
+      sh_direct        => 0,
+      no_docker        => getValue( $def, "no_docker", 0 ),
+      pbs              => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "8",
+        "mem"      => "40gb"
+      }
+    };
+    push( @$tasks, $qc_summary_task );
+
     if ( $def->{perform_RCTD_cell} ) {
-      my $rctd_task = "RCTD_cell";
+      # We cannot set RCTD too many thread. It is very easy to get error in cluster.
+      my $RCTD_thread = getValue( $def, "RCTD_thread", 8 );
+      my $assays      = [ 'Spatial.Polygons', 'Spatial.008um' ];
+      my $rctd_tasks  = {};
+      for my $assay ( @{$assays} ) {
+        my $rctd_task = "RCTD_$assay";
+        $config->{$rctd_task} = {
+          class                    => "CQS::IndividualR",
+          target_dir               => "$target_dir/$rctd_task",
+          perform                  => 1,
+          option                   => "",
+          rtemplate                => "reportFunctions.R,../scRNA/Deconvolution_functions.R,../scRNA/Deconvolution_RCTD_obj.r",
+          parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+          parameterSampleFile2     => {
+            "assay"       => $assay,
+            "RCTD_thread" => $RCTD_thread,
+            "email"       => getValue( $def, "email" ),
+            "affiliation" => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          },
+          parameterFile1 => getValue( $def, "reference" ),
+          sh_direct      => 0,
+          no_docker      => getValue( $def, "no_docker", 0 ),
+          output_ext     => ".$assay.RCTD.obj.rds",
+          pbs            => {
+            "nodes"    => "1:ppn=${RCTD_thread}",
+            "walltime" => "24",
+            "mem"      => "80gb"
+          }
+        };
+        push( @$tasks, $rctd_task );
+        $rctd_tasks->{$assay} = $rctd_task;
+      } ## end for my $assay ( @{$assays...})
 
-      my $RCTD_thread = getValue( $def, "RCTD_thread", 16 );
-
-      $config->{$rctd_task} = {
-        class                    => "CQS::IndividualR",
-        target_dir               => "$target_dir/$rctd_task",
+      my $comparison_task = "RCTD_comparison";
+      $config->{$comparison_task} = {
+        class                    => "CQS::IndividualRmd",
+        target_dir               => "$target_dir/$comparison_task",
         perform                  => 1,
         option                   => "",
-        rtemplate                => "reportFunctions.R,../scRNA/Deconvolution_functions.R,../scRNA/Deconvolution_RCTD_obj.r",
-        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        rReportTemplate          => "../scRNA/Deconvolution_RCTD_comparison.rmd,../scRNA/scRNA_func.r;../CQS/reportFunctions.R;../scRNA/Deconvolution_functions.R",
+        parameterSampleFile1_ref => [ $rctd_tasks->{'Spatial.Polygons'}, ".RCTD.obj.rds" ],
         parameterSampleFile2     => {
-          "assay"       => "Spatial.Polygons",
-          "RCTD_thread" => $RCTD_thread,
-          "email"       => getValue( $def, "email" ),
-          "affiliation" => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          email       => getValue( $def, "email" ),
+          affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
         },
-        parameterFile1 => getValue( $def, "reference" ),
-        sh_direct      => 0,
-        no_docker      => getValue( $def, "no_docker", 0 ),
-        output_ext     => ".post_RCTD.RDS,.post_RCTD.valid.RDS",
-        pbs            => {
-          "nodes"    => "1:ppn=${RCTD_thread}",
+        parameterSampleFile3_ref => [ $rctd_tasks->{'Spatial.008um'}, ".RCTD.obj.rds" ],
+        output_file_ext          => ".RCTD.comparison.html",
+        output_other_ext         => ".RCTD.comparison.html",
+        sh_direct                => 0,
+        no_docker                => getValue( $def, "no_docker", 0 ),
+        pbs                      => {
+          "nodes"    => "1:ppn=1",
           "walltime" => "24",
           "mem"      => "40gb"
         }
       };
-      push( @$tasks, $rctd_task );
+      push( @$tasks, $comparison_task );
+
     } ## end if ( $def->{perform_RCTD_cell...})
-  } ## end if ( $def->{perform_VisiumHD_cell_segmentation_qc...})
+  } ## end if ( $def->{perform_VisiumHD_qc...})
 
   if ( $def->{perform_joey_segment_report} ) {
     my $joey_segment_report_task = "joey_segment_report";
