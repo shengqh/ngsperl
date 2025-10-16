@@ -52,8 +52,9 @@ side_by_side_plot <- function(spatial_so, features, fno, spot_size=1.6, alpha=0.
 }
 
 log_msg <- function(message, log_file) {
-  timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-  cat(paste0("[", timestamp, "] ", message, "\n"), file = log_file, append = TRUE)
+  msg = paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", message, "\n")
+  cat(msg)
+  cat(msg, file = log_file, append = TRUE)
 }
 
 plot_double_feature <- function(object, feature1, feature2, fn_lb, top_left = "blue", bottom_right = "orange", bottom_left = "white", top_right = "#FF0000", fn_fig=NULL, dpi=300){
