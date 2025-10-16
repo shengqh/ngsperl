@@ -112,9 +112,11 @@ sub add_MethylDiffAnalysis {
   my $annovar_db       = getValue( $def, "annovar_db" );
   my $annovar_param    = getValue( $def, "annovar_param" );
 
+  my $test_method = getValue( $def, "methylDiff_test_method", "dss" );
+
   my $methylkitdiff_task = "MethylKitDiff";
   $config->{$methylkitdiff_task} = {
-    class                => "Methylation::MethylKitDiff",
+    class                => "CQS::IndividualR",
     target_dir           => "${target_dir}/" . getNextFolderIndex($def) . "$methylkitdiff_task",
     docker_prefix        => "wgbs_r_",
     rtemplate            => "../Methylation/methylkit_diff.R",
@@ -131,6 +133,7 @@ sub add_MethylDiffAnalysis {
     parameterSampleFile3_ref => "pairs",
     parameterSampleFile4_ref => "groups",
     parameterFile1_ref       => [ $methylkitcorr_task, ".filtered.cpg.meth.rds\$" ],
+    output_file_ext          => ".${test_method}.dmcpgs.tsv",
     pbs                      => {
       "nodes"    => "1:ppn=" . $ncore,
       "walltime" => getValue( $def, "MethylKitDiff_walltime", "24" ),
@@ -159,7 +162,7 @@ rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt
 ",
     docker_prefix         => "annovar_",
     output_ext            => ".dmcpgs.annovar.final.tsv",
-    source_ref            => [ $methylkitdiff_task, ".dmcpgs\$" ],
+    source_ref            => [ $methylkitdiff_task, ".dmcpgs.tsv\$" ],
     output_to_same_folder => 1,
     sh_direct             => 1,
     pbs                   => {
