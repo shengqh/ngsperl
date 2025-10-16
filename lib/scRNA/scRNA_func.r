@@ -8,6 +8,7 @@ load_install<-function(library_name, library_sources=library_name){
 
 load_install("harmony")
 load_install("cowplot")
+load_install("SeuratDisk", "mojaveazure/seurat-disk")
 load_install("SeuratData", "satijalab/seurat-data")
 load_install("SeuratWrappers", "satijalab/seurat-wrappers")
 load_install("Seurat", "satijalab/seurat")
