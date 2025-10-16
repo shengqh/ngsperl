@@ -74,7 +74,7 @@ sub perform {
     my $inputFile = $comparisons->{$sample_name}->[0];
 
     print $pbs " 
-if [[ ! -s $final_file || ! -d $final_file ]]; then
+if [[ (! -s $final_file) && (! -d $final_file) ]]; then
   cd $cur_dir 
   if [[ -f $inputFile ]]; then
     if [[ -s $inputFile ]]; then
