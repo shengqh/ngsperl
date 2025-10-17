@@ -459,6 +459,14 @@ get_packages_table=function(){
   return(packages)
 }
 
+get_affiliation<-function(myoptions){
+  affiliation=myoptions$affiliation
+  if(is.null(affiliation)){
+    affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
+  }
+  return(affiliation)
+}
+
 ###################################
 #report functions end
 ###################################
