@@ -111,7 +111,7 @@ include_graphics(reads_off_bait_bar_png)
 # Final unique reads
 
 ```{r}
-flagstat_files = meth_files |> dplyr::filter(grepl(".intervals.uniq.addqual.bam.flagstat", V1))
+flagstat_files = meth_files |> dplyr::filter(grepl(".bam.flagstat", V1))
 
 flagstat_lst = apply(flagstat_files, 1, function(row) {
   file_path = row[1]  
@@ -144,5 +144,3 @@ include_graphics(final_unique_reads_bar_png)
 ```{r include=TRUE, echo=FALSE}
 print_table(get_packages_table(), byDT=TRUE, row.names=F)
 ```
-
-
