@@ -1,5 +1,4 @@
 ---
-title: "RCTD Visium HD Visualization Report"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   rmdformats::readthedown:
@@ -47,22 +46,17 @@ load_install("htmltools")
 file_map=read_file_map('fileList1.txt', do_unlist=FALSE)
 
 myoptions=read_file_map('fileList2.txt', do_unlist=FALSE)
+task_name=myoptions$task_name
 email=myoptions$email
-affiliation=myoptions$affiliation
-
-if(!is.null(email)){
-  if(email != ""){
-    cat("
----
-author: 
-- name: ", email, "
-  affiliation: ", affiliation, "
----
-")
-  }
-}
-
+affiliation=get_affiliation(myoptions)
 ```
+
+---
+title: "RCTD Visualization Report - `r task_name`"
+author:
+- name: `r email`
+  affiliation: `r affiliation`
+---
 
 # Reports
 

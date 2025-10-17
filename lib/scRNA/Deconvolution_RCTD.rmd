@@ -58,20 +58,15 @@ pt.size.factor=to_numeric(myoptions$pt.size.factor, 10)
 legend_point_size=to_numeric(myoptions$legend.point.size, 3)
 
 email=myoptions$email
-affiliation=myoptions$affiliation
-
-if(!is.null(email)){
-  if(email != ""){
-    cat("
----
-author: 
-- name: ", email, "
-  affiliation: ", affiliation, "
----
-")
-  }
-}
+affiliation=get_affiliation(myoptions)
 ```
+
+---
+title: "RCTD - `r sample_name`"
+author:
+- name: `r email`
+  affiliation: `r affiliation`
+---
 
 # RCTD Result
 

@@ -36,9 +36,8 @@ options(future.globals.maxSize = 600000 * 1024^2)
 options(future.seed = TRUE)
 
 myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
-if(is.null(myoptions$affiliation)) {
-  myoptions$affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
-}
+email=myoptions$email
+affiliation=get_affiliation(myoptions)
 
 sample_name=fread("fileList1.txt", header=FALSE)$V2[1]
 paths_CS=fread("fileList1.txt", header=FALSE)$V1[1]
@@ -46,10 +45,10 @@ paths_8u=fread("fileList3.txt", header=FALSE)$V1[1]
 ```
 
 ---
-title: "VisiumHD data - RCTD comparison - `r sample_name`"
+title: "RCTD comparison - `r sample_name`"
 author:
-- name: `r myoptions$email`
-  affiliation: `r myoptions$affiliation`
+- name: `r email`
+  affiliation: `r affiliation`
 ---
 
 ```{r}
