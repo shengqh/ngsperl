@@ -17,6 +17,7 @@ use Data::Dumper;
 use Hash::Merge qw( merge );
 use Storable    qw(dclone);
 use scRNA::Modules;
+use Pipeline::SpaceRanger;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -46,71 +47,6 @@ sub initializeSpatialTranscriptomeDefaultOptions {
 
   return $def;
 } ## end sub initializeSpatialTranscriptomeDefaultOptions
-
-
-sub add_copy_report {
-  my ( $config, $def, $target_dir, $spaceranger_task, $tasks ) = @_;
-
-  my $copy_report_task = "${spaceranger_task}_report";
-  $config->{$copy_report_task} = {
-    class         => "CQS::ProgramWrapperOneToOne",
-    target_dir    => "$target_dir/$copy_report_task",
-    perform       => 1,
-    program       => "",
-    check_program => 0,
-    option        => "
-
-cp __FILE__ __NAME__.web_summary.html
-
-",
-    parameterSampleFile1_ref => [ $spaceranger_task, "web_summary.html" ],
-    sh_direct                => 1,
-    no_docker                => 1,
-    no_output                => 1,
-    output_ext               => ".web_summary.html",
-    pbs                      => {
-      "nodes"    => "1:ppn=1",
-      "walltime" => "1",
-      "mem"      => "2gb"
-    }
-  };
-  push( @$tasks, $copy_report_task );
-  return ($copy_report_task);
-} ## end sub add_copy_report
-
-
-sub add_spaceranger_summary {
-  my ( $config, $def, $target_dir, $spaceranger_task, $tasks, $copy_report_task ) = @_;
-
-  my $spaceranger_summary_task = "${spaceranger_task}_summary";
-  $config->{$spaceranger_summary_task} = {
-    class                    => "CQS::UniqueRmd",
-    target_dir               => "$target_dir/$spaceranger_summary_task",
-    perform                  => 1,
-    option                   => "",
-    report_rmd_file          => "../scRNA/space_ranger_summary.Rmd",
-    additional_rmd_files     => "../CQS/reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/space_ranger_summary_cell.Rmd",
-    parameterSampleFile1_ref => [ $spaceranger_task, "metrics_summary.csv" ],
-    parameterSampleFile2     => {
-      task_name   => getValue( $def, "task_name" ),
-      email       => getValue( $def, "email" ),
-      affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-    },
-    parameterSampleFile3_ref => [ $copy_report_task, ".html" ],
-    output_file_ext          => ".spaceranger.html",
-    output_other_ext         => ".spaceranger.html",
-    sh_direct                => 0,
-    no_docker                => getValue( $def, "no_docker", 0 ),
-    pbs                      => {
-      "nodes"    => "1:ppn=1",
-      "walltime" => "8",
-      "mem"      => "40gb"
-    }
-  };
-
-  push( @$tasks, $spaceranger_summary_task );
-  return $spaceranger_summary_task;
-} ## end sub add_spaceranger_summary
 
 
 sub getSpatialTranscriptome {
@@ -143,98 +79,8 @@ sub getSpatialTranscriptome {
     $config->{raw_spaceranger} = $raw_spaceranger;
 
     my $raw_spaceranger_copy_report_task = add_copy_report( $config, $def, $target_dir, "raw_spaceranger", $tasks );
-    my $raw_spaceranger_summary_task     = add_spaceranger_summary( $config, $def, $target_dir, "raw_spaceranger", $tasks, $raw_spaceranger_copy_report_task );
+    my $raw_spaceranger_summary_task     = add_SpaceRanger_summary( $config, $def, $target_dir, "raw_spaceranger", $tasks, $raw_spaceranger_copy_report_task );
   } ## end if ( defined $def->{raw_spaceranger_metrics...})
-
-  if ( $def->{perform_space_ranger} ) {
-    my $spaceranger_task          = "spaceranger";
-    my $fastq_folder              = getValue( $def, "fastq_folder" );
-    my $spaceranger_transcriptome = getValue( $def, "spaceranger_transcriptome" );
-    my $spaceranger_probe_set     = getValue( $def, "spaceranger_probe_set" );
-    my $spaceranger_jobmode       = getValue( $def, "spaceranger_jobmode", "slurm" );
-
-    $config->{files}                  = getValue( $def, "files" );
-    $config->{H_E_brightfield_images} = getValue( $def, "H_E_brightfield_images" );
-    $config->{manual_alignment_json}  = $def->{"manual_alignment_json"};
-
-    my $json_option = "";
-    if ( defined $def->{manual_alignment_json} ) {
-      $json_option = "--loupe-alignment __FILE4__";
-    }
-
-    if ( defined $def->{id_to_samples} ) {
-      $config->{id_to_samples} = getValue( $def, "id_to_samples" );
-    }
-    else {
-      my $all_samples = [];
-      for my $k ( keys %{ $config->{files} } ) {
-        push( @$all_samples, $k );
-      }
-      $config->{id_to_samples} = { map { $_ => [$_] } @$all_samples };
-    } ## end else [ if ( defined $def->{id_to_samples...})]
-
-    $config->{$spaceranger_task} = {
-      class         => "CQS::ProgramWrapperOneToOne",
-      target_dir    => "$target_dir/$spaceranger_task",
-      perform       => 1,
-      program       => "",
-      check_program => 0,
-      option        => "
-
-rm -rf __NAME__ ____NAME__.mro
-
-spaceranger count --disable-ui \\
-  --id __NAME__ \\
-  --transcriptome $spaceranger_transcriptome \\
-  --probe-set $spaceranger_probe_set \\
-  --create-bam false \\
-  --cytaimage __FILE__ \\
-  --image __FILE2__ \\
-  --sample __FILE3__ $json_option \\
-  --fastqs $fastq_folder \\
-  --jobmode $spaceranger_jobmode
-
-rm -rf __NAME__/SPATIAL_RNA_COUNTER_CS \\
-  __NAME__/extras \\
-  __NAME__/_filelist \\
-  __NAME__/_finalstate \\
-  __NAME__/_invocation \\
-  __NAME__/_jobmode \\
-  __NAME__/_mrosource \\
-  __NAME__/_perf \\
-  __NAME__/_perf._truncated_ \\
-  __NAME__/_sitecheck \\
-  __NAME__/_tags \\
-  __NAME__/_uuid \\
-  __NAME__/_vdrkill 
-
-",
-      parameterSampleFile1_ref => "files",
-      parameterSampleFile2_ref => "H_E_brightfield_images",
-      parameterSampleFile3_ref => "id_to_samples",
-      sh_direct                => 1,
-      no_docker                => 1,
-      no_output                => 1,
-      output_ext               => "__NAME__/outs/web_summary.html,__NAME__/outs/metrics_summary.csv,__NAME__/outs/segmented_outputs/filtered_feature_cell_matrix.h5",
-      pbs                      => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
-      }
-    };
-    if ( defined $def->{manual_alignment_json} ) {
-      $config->{$spaceranger_task}{parameterSampleFile4_ref} = "manual_alignment_json";
-    }
-
-    push( @$tasks, $spaceranger_task );
-
-    my $spaceranger_copy_report_task = add_copy_report( $config, $def, $target_dir, $spaceranger_task, $tasks );
-    my $spaceranger_summary_task     = add_spaceranger_summary( $config, $def, $target_dir, $spaceranger_task, $tasks, $spaceranger_copy_report_task );
-
-    # spaceranger should not be performed together with VisiumHD downstream analysis
-    $def->{perform_VisiumHD} = 0;
-    $def->{perform_RCTD}     = 0;
-  } ## end if ( $def->{perform_space_ranger...})
 
   if ( $def->{perform_VisiumHD} ) {
     my $bin_size       = getValue( $def, "bin_size", "8,polygons" );
@@ -334,30 +180,55 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
         $rctd_tasks->{$assay} = $rctd_task;
       } ## end for my $assay ( @{$assays...})
 
-      my $comparison_task = "RCTD_comparison";
-      $config->{$comparison_task} = {
+      my $vis_task = "RCTD_visualization";
+      $config->{$vis_task} = {
         class                    => "CQS::IndividualRmd",
-        target_dir               => "$target_dir/$comparison_task",
+        target_dir               => "$target_dir/$vis_task",
         perform                  => 1,
         option                   => "",
-        rReportTemplate          => "../scRNA/Deconvolution_RCTD_comparison.rmd,../scRNA/scRNA_func.r;../CQS/reportFunctions.R;../scRNA/Deconvolution_functions.R",
+        rReportTemplate          => "../scRNA/Deconvolution_RCTD_visualization.rmd,../scRNA/scRNA_func.r;../CQS/reportFunctions.R;../scRNA/Deconvolution_functions.R",
         parameterSampleFile1_ref => [ $rctd_tasks->{'Spatial.Polygons'}, ".RCTD.obj.rds" ],
         parameterSampleFile2     => {
           email       => getValue( $def, "email" ),
           affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
         },
         parameterSampleFile3_ref => [ $rctd_tasks->{'Spatial.008um'}, ".RCTD.obj.rds" ],
-        output_file_ext          => ".RCTD.comparison.html",
-        output_other_ext         => ".RCTD.comparison.html",
+        output_ext               => ".RCTD_visualization.html",
         sh_direct                => 0,
-        no_docker                => getValue( $def, "no_docker", 0 ),
+        no_docker                => getValue( $def, "no_docker", 1 ),
         pbs                      => {
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
           "mem"      => "40gb"
         }
       };
-      push( @$tasks, $comparison_task );
+      push( @$tasks, $vis_task );
+
+      my $vis_summary_task = "${vis_task}_summary";
+      $config->{$vis_summary_task} = {
+        class                    => "CQS::UniqueRmd",
+        target_dir               => "$target_dir/$vis_summary_task",
+        perform                  => 1,
+        option                   => "",
+        report_rmd_file          => "../scRNA/Deconvolution_RCTD_visualization_summary.Rmd",
+        additional_rmd_files     => "../CQS/reportFunctions.R",
+        parameterSampleFile1_ref => [ $vis_task, ".html" ],
+        parameterSampleFile2     => {
+          task_name   => getValue( $def, "task_name" ),
+          email       => getValue( $def, "email" ),
+          affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+        },
+        output_file_ext  => ".RCTD_visualization_summary.html",
+        output_other_ext => ".RCTD_visualization_summary.html",
+        sh_direct        => 0,
+        no_docker        => getValue( $def, "no_docker", 0 ),
+        pbs              => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "8",
+          "mem"      => "40gb"
+        }
+      };
+      push( @$tasks, $vis_summary_task );
 
     } ## end if ( $def->{perform_RCTD...})
   } ## end if ( $def->{perform_VisiumHD...})
