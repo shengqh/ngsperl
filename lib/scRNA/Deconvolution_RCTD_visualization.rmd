@@ -1,0 +1,337 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+library(sf)
+library(ggplot2)
+library(viridis)
+
+source("reportFunctions.R")
+source("scRNA_func.r")
+source("Deconvolution_functions.R")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+email=myoptions$email
+affiliation=get_affiliation(myoptions)
+
+sample_name=fread("fileList1.txt", header=FALSE)$V2[1]
+paths_CS=fread("fileList1.txt", header=FALSE)$V1[1]
+
+rctd_list=c("Spatial.Polygons"=paths_CS)
+if(file.exists("fileList3.txt")){
+  paths_8u=read_file_map("fileList3.txt", header=FALSE)[[sample_name]]
+  rctd_list=c(rctd_list, "Spatial.008um"=paths_8u)
+}
+```
+
+---
+title: "RCTD Visualization - `r sample_name`"
+author:
+- name: `r email`
+  affiliation: `r affiliation`
+---
+
+```{r}
+library(Seurat)
+library(ggplot2)
+library(ggrepel)
+library(ggpubr)
+library(spacexr)
+library(viridis)
+library(RColorBrewer)
+library(ggthemes)
+library(cartography)
+library(patchwork)
+
+spatial_list=lapply(rctd_list, readRDS)
+
+for(name in names(spatial_list)) {
+  spatial_list[[name]]@meta.data$RCTD1_first_type_slim = gsub("^\\d+\\s+:\\s+", "", spatial_list[[name]]$RCTD1_first_type)
+}
+
+get_compare_tbl <- function(spatial_list, feature){
+  tbl_list=lapply(names(spatial_list), function(x){
+    tbl = get_freq_table(spatial_list[[x]]@meta.data, feature) 
+    colnames(tbl)[2] = paste0(x, "_Count")  
+    return(tbl)
+  })
+  compare_tbl = purrr::reduce(tbl_list, merge, by=feature, all=TRUE)
+  compare_tbl = compare_tbl |> dplyr::arrange(desc(!!sym(names(compare_tbl)[2])))
+  return(compare_tbl)
+}
+```
+
+# Number of spots detected by RCTD
+
+## Number of categorized spots detected by RCTD
+
+By default, only the spots with at least 100 UMIs are kept for RCTD deconvolution.
+
+```{r}
+print_table(get_compare_tbl(spatial_list, "RCTD1_spot_class"), row.names=FALSE)
+```
+
+## Number of cell types detected by RCTD
+
+```{r}
+print_table(get_compare_tbl(spatial_list, "RCTD1_first_type_slim"), row.names=FALSE)
+```
+
+## Number of clustered cell types detected by RCTD
+
+```{r}
+print_table(get_compare_tbl(spatial_list, "RCTD1_first_type"), row.names=FALSE)
+```
+
+# Tissue image 
+
+```{r}
+if("Spatial.008um" %in% names(spatial_list)){
+  tissue_image = SpatialFeaturePlot(object=spatial_list[["Spatial.008um"]], 
+                            features='nCount_Spatial.008um',
+                            pt.size.factor = 10,
+                            alpha=c(0, 0),
+                            image.alpha=1)
+}else{
+  tissue_image = SpatialFeaturePlot(object=spatial_list[["Spatial.Polygons"]], 
+                            features='nCount_Spatial.Polygons',
+                            pt.size.factor = 10,
+                            alpha=c(0, 0),
+                            image.alpha=1)
+
+}
+tissue_image = tissue_image + theme(legend.position = "none",
+              plot.title = element_text(hjust = 0.5),
+              panel.border = element_rect(colour = "black", fill=NA, linewidth=1)) +
+              ggtitle(paste0("Tissue : ", sample_name))
+
+tissue_png = paste0(sample_name, ".tissue_image.png")
+ggsave(tissue_png, tissue_image, width = 4, height = 4, units = "in", dpi = 300, bg="white")
+include_graphics(tissue_png)
+```
+
+```{r}
+library(RColorBrewer)
+
+get_colors <- function(current_cell_types) {
+  # Use Set3 palette for most distinguishable colors
+  if(length(current_cell_types) <= 12) {
+    current_cell_type_colors <- brewer.pal(min(length(current_cell_types), 12), "Set3")
+  } else {
+    # For more than 12 colors, combine multiple palettes
+    pal1 <- brewer.pal(12, "Set3")
+    pal2 <- brewer.pal(min(length(current_cell_types) - 12, 8), "Dark2")
+    current_cell_type_colors <- c(pal1, pal2)
+  }
+  names(current_cell_type_colors) = current_cell_types[1:length(current_cell_type_colors)]
+  return(current_cell_type_colors)
+}
+
+first_type_names = table(unlist(lapply(spatial_list, function(x) x$RCTD1_first_type))) |> sort(decreasing=TRUE) |> names()
+first_type_colors = get_colors(first_type_names)
+
+first_type_slim_names = table(unlist(lapply(spatial_list, function(x) x$RCTD1_first_type_slim))) |> sort(decreasing=TRUE) |> names()
+first_type_slim_colors = get_colors(first_type_slim_names)
+
+for(name in names(spatial_list)) {
+  spatial_list[[name]]$RCTD1_first_type <- factor(spatial_list[[name]]$RCTD1_first_type, levels=first_type_names)
+  spatial_list[[name]]$RCTD1_first_type_slim <- factor(spatial_list[[name]]$RCTD1_first_type_slim, levels=first_type_slim_names)
+  Idents(spatial_list[[name]]) <- "RCTD1_first_type"
+}
+
+has_first_type_slim = length(first_type_names) != length(first_type_slim_names)
+```
+
+```{r}
+save_vis_png <-function(plots, sample_name, cur_cell_type_colors, cur_cell_type_col, image_type){
+  legend_ncol=ifelse(length(cur_cell_type_colors) > 13, 2, 1)
+
+  newplots = list()
+  lastplot = names(plots)[length(plots)]
+  for(name in names(plots)) {
+    if(name != lastplot) {
+      newplots[[name]] = plots[[name]] + NoLegend()
+    } else {
+      newplots[[name]] = plots[[name]]
+    }
+  }
+
+  g = wrap_plots(newplots, ncol=length(newplots), guides = "collect") & 
+    theme(legend.title = element_blank()) & 
+    guides(fill = guide_legend(ncol = legend_ncol, override.aes = list(size = 5)))
+
+  vis_png = paste0(sample_name, ".", image_type, ".", cur_cell_type_col, ".png")
+  ggsave(vis_png, g, width=4 * length(plots) + 2 * legend_ncol, height=4.5, dpi=300, units="in", bg="white")
+  return(vis_png)
+}
+```
+
+# ImageDimPlot vis
+
+```{r}
+get_image_dimplot_vis <- function(tissue_image, spatial_list, cur_cell_type_col, cur_cell_type_colors, sample_name){
+  plots <- list("Tissue Image" = tissue_image)
+  for(name in names(spatial_list)) {
+    if(grepl("Polygons", name)) {
+      fov_name <- "slice1.polygons"
+      title <- "Cell Segmentation"
+      rotation <- TRUE
+      flip_x <- TRUE
+      flip_y <- FALSE
+    } else {
+      fov_name <- "slice1.008um"
+      title <- "8uM Bin"
+      rotation <- FALSE
+      flip_x <- FALSE
+      flip_y <- TRUE
+    }
+
+    cur_obj = spatial_list[[name]]
+    Idents(cur_obj) <- cur_cell_type_col
+
+    g = ImageDimPlot( cur_obj, 
+                      fov = fov_name, 
+                      cols = cur_cell_type_colors, 
+                      border.size = NA,
+                      axes = F, 
+                      dark.background = F, 
+                      coord.fixed = T) + 
+      ggtitle(label = title) + 
+      theme(plot.title = element_text(hjust = 0.5), 
+            panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+
+    if(flip_x) {
+      g = g + scale_x_reverse()
+    }
+    if(flip_y) {
+      g = g + scale_y_reverse()
+    }
+    if(rotation) {
+      g = g + coord_flip(expand=FALSE) + theme(aspect.ratio=1)
+    }
+    plots[[name]] <- g
+  }
+
+  vis_png = save_vis_png(plots, sample_name, cur_cell_type_colors, cur_cell_type_col, "ImageDimPlot")
+  return(vis_png)
+}
+```
+
+```{r eval=has_first_type_slim}
+cat("## Summarized RCTD predicted cell types\n")
+vis_png = get_image_dimplot_vis(tissue_image, spatial_list, "RCTD1_first_type_slim",first_type_slim_colors, sample_name)
+include_graphics(vis_png)
+```
+
+## RCTD predicted cell types
+
+```{r}
+vis_png = get_image_dimplot_vis(tissue_image, spatial_list, "RCTD1_first_type", first_type_colors, sample_name)
+include_graphics(vis_png)
+```
+
+# SpatialDimPlot vis
+
+```{r}
+get_spatial_dimplot_vis <- function(tissue_image, spatial_list, cur_cell_type_col, cur_cell_type_colors, sample_name){
+  plots <- list("Tissue Image" = tissue_image)
+  name = names(spatial_list)[2]
+  for(name in names(spatial_list)) {
+    cur_obj = spatial_list[[name]]
+    Idents(cur_obj) <- cur_cell_type_col
+
+    pt.size.factor = ifelse(grepl("Polygons", name), 0.5, 12)
+
+    g = SpatialDimPlot( cur_obj, 
+                        cols = cur_cell_type_colors, 
+                        image.alpha = 1,
+                        pt.size.factor = pt.size.factor) + 
+      ggtitle(label = name) + 
+      theme(plot.title = element_text(hjust = 0.5), 
+            panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+    plots[[name]] <- g
+  }
+
+  vis_png = save_vis_png(plots, sample_name, cur_cell_type_colors, cur_cell_type_col, "SpatialDimPlot")
+  return(vis_png)
+}
+```
+
+```{r}
+cat("## Summarized RCTD predicted cell types\n")
+vis_png = get_spatial_dimplot_vis(tissue_image, spatial_list, "RCTD1_first_type_slim", first_type_slim_colors, sample_name)
+include_graphics(vis_png)
+```
+
+## RCTD predicted cell types
+
+```{r}
+vis_png = get_spatial_dimplot_vis(tissue_image, spatial_list, "RCTD1_first_type", first_type_colors, sample_name)
+include_graphics(vis_png)
+```
+
+# Features individually
+
+```{r}
+get_ImageFeaturePlot <- function(object, sample_name, assay_label){
+  feature_set = paste0("RCTD2_",levels(object@meta.data$RCTD1_first_type))
+  ncol=min(4, ceiling(sqrt(length(feature_set))))
+  nrow=ceiling(length(feature_set)/ncol)
+  width=ncol * 6.5
+  height=nrow * 5
+  
+  glist = apply()
+  g=ImageFeaturePlot(object, features = feature_set, border.size = NA) 
+  g = wrap_plots(g, ncol = ncol)
+  seg_png = paste0(sample_name, ".RCTD_celltype.", assay_label, ".png")
+  ggsave(seg_png, g, width=width, height=height, dpi=300, units="in", bg="white")
+
+  return(seg_png)
+}
+```
+
+## Cell Segmentation
+
+```{r eval=FALSE}
+cell_seg_png = get_ImageFeaturePlot(spatial_CS, sample_name, "CellSegmentation")
+include_graphics(cell_seg_png)
+```
+
+## 8um Bin
+
+```{r eval=FALSE}
+eight_um_png = get_ImageFeaturePlot(spatial_8u, sample_name, "8uBin")
+include_graphics(eight_um_png)
+```
+
+# Session Info
+
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=FALSE)
+```
