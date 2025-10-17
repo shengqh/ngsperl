@@ -41,6 +41,8 @@ sub initializeSpatialTranscriptomeDefaultOptions {
   initDefaultValue( $def, "emailType",             "FAIL" );
   initDefaultValue( $def, "cluster",               "slurm" );
   initDefaultValue( $def, "perform_preprocessing", 0 );
+  initDefaultValue( $def, "perform_VisiumHD",      1 );
+  initDefaultValue( $def, "perform_RCTD",          1 );
 
   return $def;
 } ## end sub initializeSpatialTranscriptomeDefaultOptions
@@ -120,6 +122,9 @@ sub getSpatialTranscriptome {
   my $project_name = $def->{task_name};
 
   my $email = $def->{email};
+
+  # Disable preprocessing for spatial transcriptome
+  $def->{perform_preprocessing} = 0;
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
@@ -226,10 +231,12 @@ rm -rf __NAME__/SPATIAL_RNA_COUNTER_CS \\
     my $spaceranger_copy_report_task = add_copy_report( $config, $def, $target_dir, $spaceranger_task, $tasks );
     my $spaceranger_summary_task     = add_spaceranger_summary( $config, $def, $target_dir, $spaceranger_task, $tasks, $spaceranger_copy_report_task );
 
-    $source_ref = [ $spaceranger_task, ".h5" ];
+    # spaceranger should not be performed together with VisiumHD downstream analysis
+    $def->{perform_VisiumHD} = 0;
+    $def->{perform_RCTD}     = 0;
   } ## end if ( $def->{perform_space_ranger...})
 
-  if ( $def->{perform_VisiumHD_qc} ) {
+  if ( $def->{perform_VisiumHD} ) {
     my $bin_size       = getValue( $def, "bin_size", "8,polygons" );
     my $bin_size_label = $bin_size;
     $bin_size_label =~ s/,/_/;
@@ -293,7 +300,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
     };
     push( @$tasks, $qc_summary_task );
 
-    if ( $def->{perform_RCTD_cell} ) {
+    if ( $def->{perform_RCTD} ) {
       # We cannot set RCTD too many thread. It is very easy to get error in cluster.
       my $RCTD_thread = getValue( $def, "RCTD_thread", 8 );
       my $assays      = [ 'Spatial.Polygons', 'Spatial.008um' ];
@@ -352,193 +359,142 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
       };
       push( @$tasks, $comparison_task );
 
-    } ## end if ( $def->{perform_RCTD_cell...})
-  } ## end if ( $def->{perform_VisiumHD_qc...})
+    } ## end if ( $def->{perform_RCTD...})
+  } ## end if ( $def->{perform_VisiumHD...})
 
-  if ( $def->{perform_joey_segment_report} ) {
-    my $joey_segment_report_task = "joey_segment_report";
-    $config->{$joey_segment_report_task} = {
-      class           => "CQS::IndividualRmd",
-      target_dir      => "$target_dir/$joey_segment_report_task",
-      perform         => 1,
-      program         => "",
-      check_program   => 0,
-      rReportTemplate => "../scRNA/joey_segment_report.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/joey_plotting_functions.R",
-      option          => "
+  #   if ( $def->{perform_segment_report} ) {
+  #     my $segment_report_task = "segment_report";
+  #     $config->{$segment_report_task} = {
+  #       class           => "CQS::IndividualRmd",
+  #       target_dir      => "$target_dir/$segment_report_task",
+  #       perform         => 1,
+  #       program         => "",
+  #       check_program   => 0,
+  #       rReportTemplate => "../scRNA/spaceranger_cell_individual.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spaceranger_cell_individual_func.r",
+  #       option          => "
 
-Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('joey_segment_report.Rmd', output_file='__OUTPUT__')\"
+  # Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('spaceranger_cell_individual.Rmd', output_file='__OUTPUT__')\"
 
-",
-      parameterSampleFile1_ref => $source_ref,
-      parameterSampleFile2     => {
-        email               => getValue( $def, "email" ),
-        affiliation         => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-        task_name           => getValue( $def, "task_name" ),
-        Mtpattern           => getValue( $def, "Mtpattern" ),
-        rRNApattern         => getValue( $def, "rRNApattern" ),
-        nFeature_cutoff_min => getValue( $def, "nFeature_cutoff_min" ),
-        nFeature_cutoff_max => getValue( $def, "nFeature_cutoff_max" ),
-        nCount_cutoff       => getValue( $def, "nCount_cutoff" ),
-        mt_cutoff           => getValue( $def, "mt_cutoff" ),
-        species             => getValue( $def, "species" ),
-        resolution          => getValue( $def, "resolution" ),
-        # pca_dims => getValue( $def, "pca_dims" ),
-        # by_sctransform => getValue( $def, "by_sctransform" ),
-        # use_sctransform_v2 => getValue( $def, "use_sctransform_v2", 1),
-        # markers_file => getValue( $def, "markers_file" ),
-        # curated_markers_file => getValue( $def, "curated_markers_file" ),
-        # remove_subtype => getValue( $def, "remove_subtype" ),
-        # HLA_panglao5_file => getValue( $def, "HLA_panglao5_file" ),
-        # bubblemap_file => getValue( $def, "bubblemap_file" ),
-        # celltype_predictmethod => getValue( $def, "celltype_predictmethod", "cta" ),
-      },
-      no_prefix             => 1,
-      sh_direct             => 1,
-      no_docker             => 1,
-      output_to_same_folder => 0,
-      output_file_prefix    => ".joey_segment_report.html",
-      output_ext            => ".joey_segment_report.html",
-      pbs                   => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
-      }
-    };
-    push( @$tasks, $joey_segment_report_task );
-  } ## end if ( $def->{perform_joey_segment_report...})
+  # ",
+  #       parameterSampleFile1_ref => $source_ref,
+  #       parameterSampleFile2     => {
+  #         email                  => getValue( $def, "email" ),
+  #         affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+  #         task_name              => getValue( $def, "task_name" ),
+  #         Mtpattern              => getValue( $def, "Mtpattern" ),
+  #         rRNApattern            => getValue( $def, "rRNApattern" ),
+  #         regress_by_percent_mt  => getValue( $def, "regress_by_percent_mt" ),
+  #         nFeature_cutoff_min    => getValue( $def, "nFeature_cutoff_min" ),
+  #         nFeature_cutoff_max    => getValue( $def, "nFeature_cutoff_max" ),
+  #         nCount_cutoff          => getValue( $def, "nCount_cutoff" ),
+  #         mt_cutoff              => getValue( $def, "mt_cutoff" ),
+  #         species                => getValue( $def, "species" ),
+  #         resolution             => getValue( $def, "resolution" ),
+  #         pca_dims               => getValue( $def, "pca_dims" ),
+  #         by_sctransform         => getValue( $def, "by_sctransform" ),
+  #         use_sctransform_v2     => getValue( $def, "use_sctransform_v2", 1 ),
+  #         markers_file           => getValue( $def, "markers_file" ),
+  #         curated_markers_file   => getValue( $def, "curated_markers_file" ),
+  #         remove_subtype         => getValue( $def, "remove_subtype" ),
+  #         HLA_panglao5_file      => getValue( $def, "HLA_panglao5_file" ),
+  #         bubblemap_file         => getValue( $def, "bubblemap_file" ),
+  #         celltype_predictmethod => getValue( $def, "celltype_predictmethod", "cta" ),
+  #       },
+  #       no_prefix             => 1,
+  #       sh_direct             => 1,
+  #       no_docker             => 1,
+  #       output_to_same_folder => 0,
+  #       output_file_prefix    => ".segment_report.html",
+  #       output_ext            => ".segment_report.html",
+  #       pbs                   => {
+  #         "nodes"    => "1:ppn=1",
+  #         "walltime" => "24",
+  #         "mem"      => "40gb"
+  #       }
+  #     };
+  #     push( @$tasks, $segment_report_task );
+  #   } ## end if ( $def->{perform_segment_report...})
 
-  if ( $def->{perform_segment_report} ) {
-    my $segment_report_task = "segment_report";
-    $config->{$segment_report_task} = {
-      class           => "CQS::IndividualRmd",
-      target_dir      => "$target_dir/$segment_report_task",
-      perform         => 1,
-      program         => "",
-      check_program   => 0,
-      rReportTemplate => "../scRNA/spaceranger_cell_individual.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spaceranger_cell_individual_func.r",
-      option          => "
+  # if ( $def->{perform_RCTD} ) {
+  #   my $rctd_task = "RCTD";
 
-Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('spaceranger_cell_individual.Rmd', output_file='__OUTPUT__')\"
+  #   my $binsize     = "8";
+  #   my $RCTD_thread = getValue( $def, "RCTD_thread", 16 );
 
-",
-      parameterSampleFile1_ref => $source_ref,
-      parameterSampleFile2     => {
-        email                  => getValue( $def, "email" ),
-        affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-        task_name              => getValue( $def, "task_name" ),
-        Mtpattern              => getValue( $def, "Mtpattern" ),
-        rRNApattern            => getValue( $def, "rRNApattern" ),
-        regress_by_percent_mt  => getValue( $def, "regress_by_percent_mt" ),
-        nFeature_cutoff_min    => getValue( $def, "nFeature_cutoff_min" ),
-        nFeature_cutoff_max    => getValue( $def, "nFeature_cutoff_max" ),
-        nCount_cutoff          => getValue( $def, "nCount_cutoff" ),
-        mt_cutoff              => getValue( $def, "mt_cutoff" ),
-        species                => getValue( $def, "species" ),
-        resolution             => getValue( $def, "resolution" ),
-        pca_dims               => getValue( $def, "pca_dims" ),
-        by_sctransform         => getValue( $def, "by_sctransform" ),
-        use_sctransform_v2     => getValue( $def, "use_sctransform_v2", 1 ),
-        markers_file           => getValue( $def, "markers_file" ),
-        curated_markers_file   => getValue( $def, "curated_markers_file" ),
-        remove_subtype         => getValue( $def, "remove_subtype" ),
-        HLA_panglao5_file      => getValue( $def, "HLA_panglao5_file" ),
-        bubblemap_file         => getValue( $def, "bubblemap_file" ),
-        celltype_predictmethod => getValue( $def, "celltype_predictmethod", "cta" ),
-      },
-      no_prefix             => 1,
-      sh_direct             => 1,
-      no_docker             => 1,
-      output_to_same_folder => 0,
-      output_file_prefix    => ".segment_report.html",
-      output_ext            => ".segment_report.html",
-      pbs                   => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "40gb"
-      }
-    };
-    push( @$tasks, $segment_report_task );
-  } ## end if ( $def->{perform_segment_report...})
+  #   $config->{$rctd_task} = {
+  #     class                    => "CQS::IndividualR",
+  #     target_dir               => "$target_dir/$rctd_task",
+  #     perform                  => 1,
+  #     option                   => "",
+  #     rtemplate                => "../scRNA/Deconvolution_functions.R,../scRNA/Deconvolution_RCTD.r",
+  #     rReportTemplate          => "../scRNA/Deconvolution_RCTD.rmd;reportFunctions.R",
+  #     run_rmd_independent      => 1,
+  #     rmd_ext                  => ".Deconvolution_RCTD.html",
+  #     parameterSampleFile1_ref => "files",
+  #     parameterSampleFile2     => {
+  #       "bin.size"    => $binsize,
+  #       "RCTD_thread" => $RCTD_thread,
+  #       "email"       => getValue( $def, "email" ),
+  #       "affiliation" => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+  #     },
+  #     parameterFile1 => getValue( $def, "reference" ),
+  #     sh_direct      => 0,
+  #     no_docker      => getValue( $def, "no_docker", 0 ),
+  #     output_ext     => ".post_RCTD.RDS,.post_RCTD.valid.RDS",
+  #     pbs            => {
+  #       "nodes"    => "1:ppn=${RCTD_thread}",
+  #       "walltime" => "24",
+  #       "mem"      => "40gb"
+  #     }
+  #   };
+  #   push( @$tasks, $rctd_task );
 
-  if ( $def->{perform_RCTD} ) {
-    my $rctd_task = "RCTD";
+  #   my $rctd_report_task = $rctd_task . "_report";
+  #   $config->{$rctd_report_task} = {
+  #     class                    => "CQS::UniqueRmd",
+  #     target_dir               => "$target_dir/$rctd_report_task",
+  #     perform                  => 1,
+  #     option                   => "",
+  #     report_rmd_file          => "../scRNA/Deconvolution_RCTD_report.rmd",
+  #     additional_rmd_files     => "../CQS/reportFunctions.R",
+  #     parameterSampleFile1_ref => [ $rctd_task, ".post_RCTD.RDS" ],
+  #     parameterSampleFile2     => {
+  #       task_name   => getValue( $def, "task_name" ),
+  #       email       => getValue( $def, "email" ),
+  #       affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+  #     },
+  #     output_file_ext  => ".RCTD.html",
+  #     output_other_ext => ".RCTD.html",
+  #     sh_direct        => 0,
+  #     no_docker        => getValue( $def, "no_docker", 0 ),
+  #     pbs              => {
+  #       "nodes"    => "1:ppn=1",
+  #       "walltime" => "8",
+  #       "mem"      => "40gb"
+  #     }
+  #   };
+  #   push( @$tasks, $rctd_report_task );
 
-    my $binsize     = "8";
-    my $RCTD_thread = getValue( $def, "RCTD_thread", 16 );
-
-    $config->{$rctd_task} = {
-      class                    => "CQS::IndividualR",
-      target_dir               => "$target_dir/$rctd_task",
-      perform                  => 1,
-      option                   => "",
-      rtemplate                => "../scRNA/Deconvolution_functions.R,../scRNA/Deconvolution_RCTD.r",
-      rReportTemplate          => "../scRNA/Deconvolution_RCTD.rmd;reportFunctions.R",
-      run_rmd_independent      => 1,
-      rmd_ext                  => ".Deconvolution_RCTD.html",
-      parameterSampleFile1_ref => "files",
-      parameterSampleFile2     => {
-        "bin.size"    => $binsize,
-        "RCTD_thread" => $RCTD_thread,
-        "email"       => getValue( $def, "email" ),
-        "affiliation" => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-      },
-      parameterFile1 => getValue( $def, "reference" ),
-      sh_direct      => 0,
-      no_docker      => getValue( $def, "no_docker", 0 ),
-      output_ext     => ".post_RCTD.RDS,.post_RCTD.valid.RDS",
-      pbs            => {
-        "nodes"    => "1:ppn=${RCTD_thread}",
-        "walltime" => "24",
-        "mem"      => "40gb"
-      }
-    };
-    push( @$tasks, $rctd_task );
-
-    my $rctd_report_task = $rctd_task . "_report";
-    $config->{$rctd_report_task} = {
-      class                    => "CQS::UniqueRmd",
-      target_dir               => "$target_dir/$rctd_report_task",
-      perform                  => 1,
-      option                   => "",
-      report_rmd_file          => "../scRNA/Deconvolution_RCTD_report.rmd",
-      additional_rmd_files     => "../CQS/reportFunctions.R",
-      parameterSampleFile1_ref => [ $rctd_task, ".post_RCTD.RDS" ],
-      parameterSampleFile2     => {
-        email       => getValue( $def, "email" ),
-        affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-      },
-      output_file_ext  => ".RCTD.html",
-      output_other_ext => ".RCTD.html",
-      sh_direct        => 0,
-      no_docker        => getValue( $def, "no_docker", 0 ),
-      pbs              => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "8",
-        "mem"      => "40gb"
-      }
-    };
-    push( @$tasks, $rctd_report_task );
-
-    my $singlet_task = $rctd_task . "_singlet";
-    $config->{$singlet_task} = {
-      class                    => "CQS::IndividualR",
-      target_dir               => "$target_dir/$singlet_task",
-      perform                  => 1,
-      option                   => "",
-      rtemplate                => "../scRNA/Deconvolution_RCTD_singlet.r",
-      parameterSampleFile1_ref => [ $rctd_task, ".post_RCTD.RDS" ],
-      parameterSampleFile2     => { "bin.size" => $binsize, },
-      sh_direct                => 0,
-      no_docker                => getValue( $def, "no_docker", 0 ),
-      output_ext               => ".post_RCTD.singlet.RDS",
-      pbs                      => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "4",
-        "mem"      => "20gb"
-      }
-    };
-    push( @$tasks, $singlet_task );
-  } ## end if ( $def->{perform_RCTD...})
+  #   my $singlet_task = $rctd_task . "_singlet";
+  #   $config->{$singlet_task} = {
+  #     class                    => "CQS::IndividualR",
+  #     target_dir               => "$target_dir/$singlet_task",
+  #     perform                  => 1,
+  #     option                   => "",
+  #     rtemplate                => "../scRNA/Deconvolution_RCTD_singlet.r",
+  #     parameterSampleFile1_ref => [ $rctd_task, ".post_RCTD.RDS" ],
+  #     parameterSampleFile2     => { "bin.size" => $binsize, },
+  #     sh_direct                => 0,
+  #     no_docker                => getValue( $def, "no_docker", 0 ),
+  #     output_ext               => ".post_RCTD.singlet.RDS",
+  #     pbs                      => {
+  #       "nodes"    => "1:ppn=1",
+  #       "walltime" => "4",
+  #       "mem"      => "20gb"
+  #     }
+  #   };
+  #   push( @$tasks, $singlet_task );
+  # } ## end if ( $def->{perform_RCTD...})
 
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
