@@ -1,16 +1,16 @@
 rm(list=ls()) 
-sample_name='bPlg_bPlg_vs_bPlg_unt'
-outFile='bPlg_bPlg_vs_bPlg_unt'
+sample_name='unt_bPlg_vs_unt_unt'
+outFile='unt_bPlg_vs_unt_unt'
 parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/vickers_lab/projects/20251006_13927_DNAMethyl_mm10/MethylKitCorr/result/P13927.filtered.cpg.meth.rds'
+parFile1='/nobackup/vickers_lab/projects/20251010_13927_DNAMethyl_mm10_nextflow_slurm/MethylKitCorr/result/P13927.filtered.cpg.meth.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20251006_13927_DNAMethyl_mm10/MethylKitDiff/result/bPlg_bPlg_vs_bPlg_unt')
+setwd('/nobackup/vickers_lab/projects/20251010_13927_DNAMethyl_mm10_nextflow_slurm/MethylKitDiff/result/unt_bPlg_vs_unt_unt')
 
 ### Parameter setting end ###
 
@@ -85,8 +85,14 @@ cur_prefix <- paste0(sample_name, ".", test_method)
 meth_rds = paste0(cur_prefix, ".rds")
 saveRDS(sub_diff, file = meth_rds)
 
+if(0){
+  sub_diff=readRDS(meth_rds)
+}
+
 cat("Extracting all differential methylation results for test method", test_method, "...\n")
 diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
 diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hyper_in_", treatment_group_name), paste0("hyper_in_", control_group_name))
-diff_res = diff_res |> dplyr::arrange(pvalue)
+diff_res = diff_res[order(diff_res$qvalue),,drop=FALSE ]
+
 write.table(diff_res, file = paste0(cur_prefix, ".dmcpgs.tsv"), sep = "\t", quote = F, row.names = F)
+
