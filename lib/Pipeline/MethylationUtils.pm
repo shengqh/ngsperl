@@ -42,7 +42,7 @@ sub add_MethylKitCorr {
     rReportTemplate          => "../Methylation/methylkit_corr.Rmd;../CQS/reportFunctions.R;../CQS/countTableVisFunctions.R",
     run_rmd_independent      => 1,
     rmd_ext                  => ".methylation.corr.html",
-    output_file_ext          => ".methylation.corr.html;.filtered.cpg.meth.rds",
+    output_file_ext          => ".methylation.corr.html;.methylKit.version;.filtered.cpg.meth.rds;.CpG.bvalue_hist.png;.CpG.all.PCA.png;.CpG.top10000.PCA.png;.CpG.euclidean_distance.all.MDS.png;.CpG.euclidean_distance.top10000.MDS.png;.CpG.pearson_corr.all.MDS.png;.CpG.pearson_corr.top10000.MDS.png",
     parameterSampleFile1_ref => $methylkitprep_ref,
     parameterSampleFile2     => {
       task_name        => getValue( $def, "task_name" ),
@@ -150,20 +150,35 @@ sub add_MethylDiffAnalysis {
     check_program => 0,
     target_dir    => "${target_dir}/" . getNextFolderIndex($def) . "$methylkitdiffannovar_task",
     option        => "
-perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"  \",\@F[3..(\$fileColNum-1)]);print \"\$F[0]	\$F[1]	\$F[2]	0	-	\$fileColPart\"' __FILE__ | tail -n +2 > __NAME__.avinput
+if [[ ! -s __FILE__ ]]; then
+  echo \"Input file __FILE__ not found or empty.\"
+  exit 1
+fi
 
-table_annovar.pl __NAME__.avinput $annovar_db -buildver $annovar_buildver --otherinfo -protocol refGene, -operation g --remove --thread 1 --outfile __NAME__.annovar --remove
+perl -lane 'my \$fileColNum=scalar(\@F);my \$fileColPart=join(\"___\",\@F[3..(\$fileColNum-1)]);print \"\$F[0]	\$F[1]	\$F[2]	0	-	\$fileColPart\"' __FILE__ | tail -n +2 > __NAME__.avinput
 
-echo -e \"Chr\tStart\tEnd\tRef\tAlt\tFunc.refGene\tGene.refGene\tGeneDetail.refGene\tExonicFunc.refGene\tAAChange.refGene\tstrand\tpvalue\tqvalue\tmeth.diff\tdirection\" > __NAME__.dmcpgs.annovar.final.tsv
-tail -n +2 __NAME__.annovar.${annovar_buildver}_multianno.txt | perl -pe 's/[ ]+/\\t/g' >> __NAME__.dmcpgs.annovar.final.tsv
+table_annovar.pl __NAME__.avinput $annovar_db -buildver $annovar_buildver --otherinfo -protocol refGene -operation g --remove --thread 1 --outfile __NAME__.annovar --remove
+
+status=\$?
+if [ \$status -ne 0 ]; then
+  echo \"Annovar annotation failed with exit code \$status.\"
+  exit \$status
+fi
+
+echo -e \"chr\tstart\tend\tFunc.refGene\tGene.refGene\tstrand\tpvalue\tqvalue\tmeth.diff\tdirection\" > __NAME__.dmcpgs.annovar.final.tsv
+tail -n +2 __NAME__.annovar.${annovar_buildver}_multianno.txt | cut -f1,2,3,6,7,11 | perl -pe 's/___/\\t/g' >> __NAME__.dmcpgs.annovar.final.tsv
 
 rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt 
 
+version=\$(table_annovar.pl 2>&1 | grep Version | grep -oP '\\d{4}-\\d{2}-\\d{2}')
+echo \"Annovar,v\$version\" > __NAME__.annovar.version
+
 ",
     docker_prefix         => "annovar_",
-    output_ext            => ".dmcpgs.annovar.final.tsv",
+    output_file_ext       => ".dmcpgs.annovar.final.tsv;.annovar.version",
     source_ref            => [ $methylkitdiff_task, ".dmcpgs.tsv\$" ],
     output_to_same_folder => 1,
+    no_output             => 1,
     sh_direct             => 1,
     pbs                   => {
       "nodes"    => "1:ppn=1",
@@ -194,6 +209,14 @@ rm -rf __NAME__.avinput __NAME__.annovar.${annovar_buildver}_multianno.txt
   push( @$tasks, $MethylKitDiffAnnovarGenes_task );
 
   my $webgestalt_task = addWebgestalt( $config, $def, $tasks, $target_dir, $MethylKitDiffAnnovarGenes_task, [ $MethylKitDiffAnnovarGenes_task, ".genename.txt\$" ] );
+
+  my $task_map = {
+    methylkitdiff_task             => $methylkitdiff_task,
+    methylkitdiffannovar_task      => $methylkitdiffannovar_task,
+    MethylKitDiffAnnovarGenes_task => $MethylKitDiffAnnovarGenes_task,
+    webgestalt_task                => $webgestalt_task,
+  };
+  return ($task_map);
 } ## end sub add_MethylDiffAnalysis
 
 1;
