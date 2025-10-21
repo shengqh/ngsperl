@@ -152,7 +152,7 @@ sub getConfig {
       affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
     },
     suffix                   => ".abismal",
-    output_file_ext          => ".abismal.html",
+    output_file_ext          => ".abismal.html;.reads_mapped.bar.png;.reads_off_bait.bar.png;.final_unique_reads.bar.png;.duplication_rate.png;.rrbs_rate.png",
     can_result_be_empty_file => 0,
     sh_direct                => 1,
     no_docker                => 1,
@@ -234,7 +234,11 @@ sub getConfig {
   my $webgestalt_task                = undef;
 
   if ( defined $def->{pairs} ) {
-    add_MethylDiffAnalysis( $config, $def, $tasks, $target_dir, $methylkitcorr_task );
+    my $task_map = add_MethylDiffAnalysis( $config, $def, $tasks, $target_dir, $methylkitcorr_task );
+    $methylkitdiff_task             = $task_map->{methylkitdiff_task};
+    $methylkitdiffannovar_task      = $task_map->{methylkitdiffannovar_task};
+    $MethylKitDiffAnnovarGenes_task = $task_map->{MethylKitDiffAnnovarGenes_task};
+    $webgestalt_task                = $task_map->{webgestalt_task};
 
     #  my $homer_task = "HOMER_DMR";
     #  $config->{$homer_task} = {
@@ -254,6 +258,8 @@ sub getConfig {
     #  };
     #  push(@$tasks, "HOMER_DMR");
   } ## end if ( defined $def->{pairs...})
+
+  my $version_files = get_version_files($config);
 
   my @report_files = ();
   my @report_names = ();
@@ -281,20 +287,20 @@ sub getConfig {
     push( @copy_files, $dnmtoolsannovar_task, ".annovar.final.tsv\$" );
   }
   if ( ( defined $methylkitcorr_task ) && ( defined $config->{$methylkitcorr_task} ) ) {
-    push( @copy_files, $methylkitcorr_task, ".pdf\$|.png\$|.rds\$" );
+    push( @copy_files, $methylkitcorr_task, ".png\$|.rds\$" );
   }
   if ( ( defined $methylkitdiff_task ) && ( defined $config->{$methylkitdiff_task} ) ) {
-    push( @copy_files, $methylkitdiff_task, ".dmcpgs\$" );
+    push( @copy_files, $methylkitdiff_task, ".dmcpgs.tsv\$" );
   }
   if ( ( defined $methylkitdiffannovar_task ) && ( defined $config->{$methylkitdiffannovar_task} ) ) {
     push( @copy_files, $methylkitdiffannovar_task, ".annovar.final.tsv\$" );
   }
-  if ( defined $webgestalt_task ) {
-    push( @copy_files, $webgestalt_task, "_geneontology_Biological_Process\$" );
-    push( @copy_files, $webgestalt_task, "_geneontology_Cellular_Component\$" );
-    push( @copy_files, $webgestalt_task, "_geneontology_Molecular_Function\$" );
-    push( @copy_files, $webgestalt_task, "_pathway_KEGG\$" );
-  } ## end if ( defined $webgestalt_task)
+  # if ( defined $webgestalt_task ) {
+  #   push( @copy_files, $webgestalt_task, "_geneontology_Biological_Process\$" );
+  #   push( @copy_files, $webgestalt_task, "_geneontology_Cellular_Component\$" );
+  #   push( @copy_files, $webgestalt_task, "_geneontology_Molecular_Function\$" );
+  #   push( @copy_files, $webgestalt_task, "_pathway_KEGG\$" );
+  # } ## end if ( defined $webgestalt_task)
 
   if ( $def->{perform_multiqc} ) {
     addMultiQC( $config, $def, $tasks, $target_dir, $target_dir, $dnmtools_task );
@@ -322,9 +328,9 @@ sub getConfig {
     parameterSampleFile4_ref => $webgestalt_task,
     parameterSampleFile5_ref => $abismal_task,
     parameterSampleFile6_ref => $dnmtools_task,
-    parameterSampleFile7_ref => [ $methylkitcorr_task, ".pdf\$|.png\$" ],
-    parameterSampleFile8_ref => $methylkitdiff_task,
-    parameterSampleFile9_ref => $methylkitdiffannovar_task,
+    parameterSampleFile7_ref => [ $abismal_summary_task, ".png\$", $methylkitcorr_task, ".png\$" ],
+    parameterSampleFile8_ref => [ $methylkitdiff_task,   $methylkitdiffannovar_task ],
+    parameterSampleFile9     => $version_files,
     sh_direct                => 1,
     pbs                      => {
       "nodes"    => "1:ppn=1",

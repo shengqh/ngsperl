@@ -60,9 +60,11 @@ hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
 
 hasWebGestaltAnalysis=file.exists('fileList4.txt')
 
+png_files=read.table('fileList7.txt', sep="\t", as.is=TRUE)
+get_png<-function(png_files, suffix){
+  png_files$V1[grepl(paste0(suffix, "$"), png_files$V1)]
+}
 ```
-
-<br>
 
 # Sequencing Quality
   
@@ -72,10 +74,7 @@ hasWebGestaltAnalysis=file.exists('fileList4.txt')
 check_and_include_graphics(files["fastqc_raw_per_base_sequence_quality",1])
 ```
 
-<br>
-
 ```{r fastqc_raw_per_base_sequence_quality_table, eval = hasFastqc}
-
 tableFile=gsub(".png$","",files["fastqc_raw_per_base_sequence_quality",1])
 table<-read.delim(tableFile)
 
@@ -93,36 +92,63 @@ if (any(table$Mean<=QualityMin)) { #use this as cutoff to show the quality table
 }
 ```
 
-<br>
-
 ```{r fastqc_raw_per_sequence_gc_content, eval = hasFastqc,  fig.cap=figRef("fastqc_raw_per_sequence_gc_content", "The average GC content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_per_sequence_gc_content",1]))}
 check_and_include_graphics(files["fastqc_raw_per_sequence_gc_content",1])
 ```
-
-<br>
   
 ```{r fastqc_raw_adapter_content,results='asis', eval = hasFastqc, fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(files["fastqc_raw_adapter_content",1]))}
 check_and_include_graphics(files["fastqc_raw_adapter_content",1])
 ```
-
-<br>
   
 ```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', eval = hasFastqcPosttrim, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(file_map$fastqc_post_trim_adapter_content))}
 cat("\n\n## Trimmed reads\n\n")
 check_and_include_graphics(file_map$fastqc_post_trim_adapter_content)
 ```
 
-
 # Mapping quality
 
-## Summary of mapping quality
+## Introduction to Abismal
+
+We used Abismal of dnmtools package to align the bisulfite sequencing reads to the reference genome.
+
+Abismal (A Bisulfite Sequencing Mapping Algorithm) is a specialized aligner designed for whole genome bisulfite sequencing (WGBS) data. 
+It efficiently handles the unique challenges of bisulfite-treated DNA, where unmethylated cytosines are converted to uracils during PCR amplification, appearing as thymines in the sequencing reads.
+
+Key features of Abismal:
+
+- **Bisulfite-aware alignment**: Accounts for C-to-T conversions in bisulfite-treated DNA
+- **Four-letter alphabet mapping**: Uses A, G, T, and converted C (as T) for alignment
+- **Directional mapping**: Handles both original top (OT) and original bottom (OB) strands
+- **Quality control metrics**: Provides comprehensive statistics for mapping quality assessment
+
+The mapping process involves aligning bisulfite-converted reads to a similarly converted reference genome, 
+allowing for accurate identification of methylated cytosines while accounting for bisulfite conversion artifacts.
+
+## Summary table of mapping quality
+
+- total_pairs: Total number of read pairs processed by Abismal before filtering or mapping.
+- mapped
+  - num_mapped: Total number of read pairs successfully aligned to the reference genome, including both unique and ambiguous mappings.
+  - num_unique: Number of reads that mapped uniquely to a single genomic location.
+  - num_ambiguous: Number of reads that mapped to multiple genomic locations with equal alignment scores (multi-mapped reads).
+  - percent_mapped: Percentage of total reads that were mapped to the reference genome.
+  - percent_unique: Percentage of total reads that mapped uniquely to the genome.
+  - percent_ambiguous: Percentage of total reads that were ambiguously mapped (multi-mapped).
+  - unique_error: Number of unique errors in the alignment.
+    - edits: Total number of base mismatches or edit operations (substitutions, insertions, or deletions) observed across all aligned reads compared to the reference.
+    - total_bases: Total number of nucleotide bases from all aligned reads.
+    - error_rate: Overall alignment error rate, representing the fraction of mismatched or edited bases among all aligned bases.
+- num_unmapped: Number of reads that failed to align to the reference genome.
+- num_skipped: Number of reads skipped from alignment due to quality issues, read length, or other preprocessing filters.
+- percent_unmapped: Percentage of total reads that were unmapped.
+- percent_skipped: Percentage of total reads that were skipped (not aligned due to filters or preprocessing).
 
 ```{r mapping_summary}
 files <- read.table('fileList5.txt', sep="\t")
 pat = ".mapstats"
 files = files[grepl(pat, files$V1),]
 
-DT <- list()
+tbl_list <- list()
 i=1
 for (i in 1:nrow(files) ) {
   sample = files$V2[i]
@@ -134,49 +160,69 @@ for (i in 1:nrow(files) ) {
     column_to_rownames("V1")
   info <- t(info)
   rownames(info) <- sample
-  DT[[sample]] <- info
+  tbl_list[[sample]] <- info
 }
 
-mapping_df <- Reduce(rbind, DT)
-mapping_df <- as.data.frame(mapping_df) %>% rownames_to_column("sample")
+mapping_df <- Reduce(rbind, tbl_list)
+mapping_df <- as.data.frame(mapping_df) %>% tibble::rownames_to_column("sample")
 write.csv(file=paste0(project, "/", project, ".abismal.mapping.csv"), mapping_df)
 
-mfinal <- mapping_df[,c("sample", "num_unique", "num_ambiguous", "num_unmapped")]
-colnames(mfinal) <- c("Sample", "Unique", "Ambiguous", "Unmapped")
-mfinal<-melt(mfinal, id="Sample", variable.name="Read", value.name="Count")
-mfinal$Read<-factor(mfinal$Read, levels=c("Unique", "Ambiguous", "Unmapped"))
-
-mapping_width=max(1500, 50 * ncol(mapping_df)) / 300
-mapping_height=3
-
-mapping_png=paste0(project, "/", project, ".abismal.mapping.csv.png")
-g<-ggplot(mfinal, aes(x=Sample, y=Count, fill=Read)) +
-  geom_bar(stat="identity", width=0.5) +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"),
-        axis.title.x = element_blank())
-ggsave(mapping_png, g, width=mapping_width, height=mapping_height, units="in", dpi=300, bg="white")
+print_table(mapping_df, byDT=TRUE, row.names=F)
 ```
 
-```{r fig.cap=figRef("mapping_summary", "The statistics of WGBS mapping results")}
-include_graphics(mapping_png)
+## Reads mapped to genome
+
+```{r fig.cap=figRef("reads_mapped", "The number of reads mapped to the genome")}
+include_graphics(get_png(png_files, ".reads_mapped.bar.png$"))
 ```
 
-<br>
+## Reads off the bait
 
-```{r mapping_summary_table}
-kable(mapping_df, caption="Mapping Quality Summary Table", row.names=F) %>% 
-        kable_styling()
+Off-bait reads represent the reads that fall outside of the targeted bait regions in the sequencing experiment.
+
+```{r fig.cap=figRef("reads_off_bait", "The number of reads off the bait")}
+include_graphics(get_png(png_files, ".reads_off_bait.bar.png$"))
 ```
 
-<br>
+## Duplication rate
+
+Duplicate reads are detected using the dnmtools uniq command, which identifies PCR duplicates based on mapping positions and orientations. 
+
+The duplication rate represents the proportion of duplicate reads in the sequencing data, where a value of 0.1 indicates that 10% of reads are duplicates. High duplication rates may suggest:
+
+- Excessive PCR amplification during library preparation
+- Low complexity libraries
+- Over-sequencing of the sample
+
+Typical duplication rates for WGBS data range from 5% to 20%, with higher rates potentially affecting the accuracy of downstream methylation analyses.
+
+```{r fig.cap=figRef("duplication_rate", "The duplication rate")}
+include_graphics(get_png(png_files, ".duplication_rate.png$"))
+```
+
+## Final unique reads
+
+After removing duplicates and reads out of the targeted bait regions, 
+the final unique reads represent the high-confidence reads that are used for downstream analysis.
+
+```{r fig.cap=figRef("final_unique_reads", "The number of final unique reads")}
+include_graphics(get_png(png_files, ".final_unique_reads.bar.png$"))
+```
 
 ## Summary of coverage status
 
 ### Coverage proportion of different levels
 
-<mark>Each levels are independent, so the sum of the coverage proportion of all sites would not equal to 1 for each sample.</mark>
+This section describes the coverage analysis output from dnmtools, which provides methylation coverage statistics at different cytosine contexts:
+
+- cpg sites, on either strand
+- symmetric cpg sites (strands combined)
+- cytosines, all of them, on either strand
+- the CHH context
+- the CCG context
+- the CXG context (dnmtools authors "invented" this one)
+
+Important Note: Each cytosine context level operates independently in the dnmtools framework. The coverage proportions calculated at different levels (cpg, cpg_symmetric, cytosines, chh, cxg, ccg) are computed separately and therefore do not sum to 1.0 across all contexts within a sample. This is because each level represents a different subset of cytosine sites with potentially overlapping genomic positions analyzed through different methylation contexts.
 
 ```{r coverage_summary}
 pat = ".levels"
@@ -184,7 +230,7 @@ files <- read.table('fileList6.txt', sep="\t")
 files = files[grepl(pat, files$V1),]
 samples=files$V2
 
-DT <- list()
+tbl_list <- list()
 i=1
 for (i in 1:nrow(files) ) {
   sample = files$V2[i]
@@ -200,15 +246,40 @@ for (i in 1:nrow(files) ) {
     dplyr::rename(Level = V1,
                   Stat = V3,
                   Value = V4)
-  DT[[sample]] <- info$Value
+  tbl_list[[sample]] <- info$Value
 }
 
-levels_df <- Reduce(cbind, DT)
+levels_df <- Reduce(cbind, tbl_list)
 colnames(levels_df) <- samples
 levels_df <- cbind(info[,c(1:2)], levels_df)
 
 write.csv(file=paste0(project, "/", project, ".coverage.stat.csv"), levels_df)
+```
 
+The summary statistics computed include:
+
+- total_sites the total number of sites counted for this context
+- sites_covered among the total above, those with at least one read
+- total_c among the observations in reads, how many are C
+- total_t among the observations in reads, how many are T
+- max_depth: The most coverage of any site for this context
+- mutations: Number of sites for this context marked as mutated
+- called_meth: Number of sites "called" methylated
+- called_unmeth: Number of sites "called" unmethylated
+- mean_agg: The sum of methylation levels for all sites
+- coverage: Total data informing on sites for this context
+- sites_covered_fraction: Fraction of sites covered
+- mean_depth: Among all sites, the mean coverage by reads
+- mean_depth_covered: Among all covered sites, the mean coverage
+- mean_meth: The mean of the methylation levels for covered sites
+- mean_meth_weighted: The mean weighted by coverage
+- fractional_meth: The fraction of "called" sites "called" methylated
+
+```{r}
+print_table(levels_df, byDT=TRUE, row.names=F)
+```
+
+```{r}
 mlevels <- levels_df %>%
   gather("Sample", "Value", 3:ncol(levels_df))
 
@@ -236,8 +307,6 @@ ggsave(levels_png, g1, width=levels_width, height=levels_height, units="in", dpi
 ```{r fig.cap=figRef("coverage_summary", "The coverage proportion of sites")}
 include_graphics(levels_png)
 ```
-
-<br>
 
 ### Coverage of target bases at different depths
 
@@ -288,67 +357,9 @@ ggsave(cov_png, g2, width=cov_width, height=cov_height, units="in", dpi=300, bg=
 include_graphics(cov_png)
 ```
 
-<br>
-
-## Duplication rate statistics
-
-```{r dup_summary}
-pat <- ".bam.dupstats$"
-files <- read.table('fileList5.txt', sep="\t")
-files = files[grepl(pat, files$V1),]
-stopifnot(nrow(files) > 0)
-DT <- list()
-i=1
-for (i in 1:nrow(files) ) {
-  sample = files$V2[i]
-  infile <- files$V1[i]
-  info <- read.delim(infile, header = F, sep = "", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, as.is = T)
-  info <- info %>%
-    mutate(V1 = str_replace(V1, ":", "")) %>%
-    column_to_rownames("V1")
-  info <- t(info)
-  rownames(info) <- sample
-  DT[[sample]] <- info
-}
-
-dup_df <- Reduce(rbind, DT)
-
-write.csv(file=paste0(project, "/", project, ".dup.rate.csv"), dup_df)
-
-dup_rate <- as.data.frame(dup_df) %>%
-  rownames_to_column("Sample") %>%
-  dplyr::select(c("Sample", "duplication_rate")) |>
-  mutate(duplication_rate = as.numeric(duplication_rate) / 100.0)
-
-dup_width=max(1500, 50 * nrow(files)) / 300
-dup_height=4
-
-dup_png=paste0(project, "/", project, ".dup.rate.csv.png")
-ymax=min(1.0, ceiling(max(dup_rate$duplication_rate) * 10) / 10)
-
-g3<-ggplot(dup_rate, aes(x=Sample, y=duplication_rate)) +
-  geom_bar(stat="identity", width = 0.5, fill = "blue") +
-  ylim(0,ymax) +
-  xlab("") +
-  ylab("Duplication Rate") +
-  theme_classic() +
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
-ggsave(dup_png, g3, width=dup_width, height=dup_height, units="in", dpi=300, bg="white")
-```
-
-```{r fig.cap=figRef("dup_summary", "The duplication rate")}
-include_graphics(dup_png)
-```
-
-<br>
-
 # Methylation statistics
 
 ## BS convert rate statistics 
-
-### The overall BS rate
 
 ```{r bs_summary}
 pat <- ".bsrate$"
@@ -369,7 +380,18 @@ for (i in 1:nrow(files) ) {
 bs_overall_df <- data.frame(samples, bsrate)
 
 write.csv(file=paste0(project, "/", project, ".bs.overall.rate.csv"), bs_overall_df)
+```
 
+### Bisulfite Conversion Rate
+
+The bisulfite conversion (BS) rate represents the overall efficiency of sodium bisulfite treatment in
+converting unmethylated cytosines to uracils, which are subsequently read as thymines during sequencing,
+across the entire genome. This metric, calculated using dnmtools, serves as a critical quality control
+measure for whole-genome bisulfite sequencing (WGBS) experiments. A high conversion rate (typically >95%)
+indicates successful bisulfite treatment, whereas lower rates may suggest incomplete conversion,
+potentially leading to false-positive methylation calls and reduced accuracy in methylation analysis.
+
+```{r}
 bs_width=max(1500, 50 * nrow(files)) / 300
 bs_height=4
 bs_png=paste0(project, "/", project, ".bs.overall.rate.csv.png")
@@ -389,59 +411,22 @@ ggsave(bs_png, g4, width=bs_width, height=bs_height, units="in", dpi=300, bg="wh
 include_graphics(bs_png)
 ```
 
-<br>
-
 ### The BS rates of Non-CpG and CpG sites
 
-```{r bs_cpg_summary, fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites")}
-pat <- ".rrbs_summary_metrics$"
-files <- read.table('fileList5.txt', sep="\t")
-files = files[grepl(pat, files$V1),]
-stopifnot(nrow(files) > 0)
+- **Non-CpG sites**: Measures the efficiency of bisulfite conversion at cytosines outside of CpG dinucleotides. High conversion rates (>95%) indicate successful bisulfite treatment.
+- **CpG sites**: Measures the bisulfite conversion at cytosines within CpG dinucleotides. Lower conversion rates at these sites may indicate actual DNA methylation rather than incomplete bisulfite conversion.
 
-DT <- list()
-i=1
-for (i in 1:nrow(files) ) {
-  sample = files$V2[i]
-  infile <- files$V1[i]
-  info <- read.delim(infile, header = T, sep = "\t", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, nrows = 1)
-  rownames(info) <- sample
-  DT[[sample]] <- info
-}
-
-rrbs_met_df <- bind_rows(DT)
-
-write.csv(file=paste0(project, "/", project, ".bs.CpG.rate.csv"), bs_overall_df)
-
-rrbs_final <- rrbs_met_df %>%
-  rownames_to_column("Sample") %>%
-  dplyr::select(Sample, PCT_NON_CPG_BASES_CONVERTED, PCT_CPG_BASES_CONVERTED) %>%
-  gather("Site_type", "Percentage", -Sample) %>%
-  mutate(Percentage = ifelse(Percentage <= 1, Percentage, 1-(Percentage - 1)))
-
-rate_width=max(1500, 50 * nrow(files)) / 300 + 2
-rate_height=4
-rate_png=paste0(project, "/", project, ".bs.CpG.rate.csv.png")
-
-g5<-ggplot(rrbs_final, aes(x=Sample, y=Percentage, fill = Site_type)) +
-  geom_bar(stat="identity", position=position_dodge()) +
-  xlab("") +
-  ylab("BS rate") +
-  ylim(0,1) +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
-ggsave(rate_png, g5, width=rate_width, height=rate_height, units="in", dpi=300, bg="white")
+```{r fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites")}
+include_graphics(get_png(png_files, ".rrbs_rate.png$"))
 ```
-
-```{r fig.width=rate_width, fig.height=rate_height, fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites")}
-include_graphics(rate_png)
-```
-<br>
 
 ## The statistics of methylation level
 
-### the fraction of "called" sites "called" methylated
+### The fraction of methylated CpG sites
+
+- fractional_meth: The fraction of "called" sites "called" methylated
+
+The fraction of methylated sites represents the proportion of CpG sites that are determined to be methylated among all sites with sufficient coverage for methylation calling.
 
 ```{r methy_summary1, fig.cap=figRef("methy_summary1", "The fraction of methylated sites")}
 fractional_meth <- mlevels %>%
@@ -472,8 +457,6 @@ ggsave(fra_png, g6, width=fra_width, height=fra_height, units="in", dpi=300, bg=
 include_graphics(fra_png)
 ```
 
-<br>
-
 ### the mean of the methylation levels for covered sites
 
 ```{r methy_summary2, fig.cap=figRef("methy_summary2", "The mean of the methylation levels")}
@@ -503,8 +486,6 @@ ggsave(mean_png, g7, width=mean_width, height=mean_height, units="in", dpi=300, 
 ```{r fig.width=mean_width, fig.height=mean_height, fig.cap=figRef("methy_summary2", "The mean of the methylation levels")}
 include_graphics(mean_png)
 ```
-
-<br>
 
 ### the mean of the methylation levels weighted by coverage
 
@@ -537,96 +518,117 @@ ggsave(mean_png, g8, width=mean_width, height=mean_height, units="in", dpi=300, 
 include_graphics(mean_png)
 ```
 
-<br>
+# CpG β value
 
-# MDS of β value of CpG sites 
+## Distribution
 
-## by Euclidean distance
+```{r}
+include_graphics(get_png(png_files, ".CpG.bvalue_hist.png$"))
+```
+
+## Principal Components Analysis (PCA) plot
 
 ### All CpG sites
 
 ```{r}
-knitr::include_graphics(paste0(MethylKitCorr_path, project, ".euclidean_distance.all.MDS.png"))
+include_graphics(get_png(png_files, ".CpG.all.PCA.png$"))
 ```
 
 ### Top 10000 most variable CpG sites
 
 ```{r}
-knitr::include_graphics(paste0(MethylKitCorr_path, project, ".euclidean_distance.top10000.MDS.png"))
+include_graphics(get_png(png_files, ".CpG.top10000.PCA.png$"))
 ```
 
-## by pearson correlation
+## Multi-dimensional scaling (MDS) plot
 
-### All CpG sites
+### All CpG sites by Euclidean distance
 
 ```{r}
-knitr::include_graphics(paste0(MethylKitCorr_path, project, ".pearson_corr.all.MDS.png"))
+include_graphics(get_png(png_files, ".euclidean_distance.all.MDS.png$"))
 ```
 
-### Top 10000 most variable CpG sites
+### Top 10000 most variable CpG sites by Euclidean distance
 
 ```{r}
-knitr::include_graphics(paste0(MethylKitCorr_path, project, ".pearson_corr.top10000.MDS.png"))
+include_graphics(get_png(png_files, ".euclidean_distance.top10000.MDS.png$"))
 ```
 
-<br>
+### All CpG sites by pearson correlation
+
+```{r}
+include_graphics(get_png(png_files, ".pearson_corr.all.MDS.png$"))
+```
+
+### Top 10000 most variable CpG sites by pearson correlation
+
+```{r}
+include_graphics(get_png(png_files, ".pearson_corr.top10000.MDS.png$"))
+```
 
 # Differentially methylated CpGs
 
 ## Overview
 
+- Up: number of CpG sites with increased methylation in the treatment group compared to the control group.
+- Down: number of CpG sites with decreased methylation in the treatment group compared to the control group.
+
 ```{r, include=TRUE, message = F, warning = F}
-dmcpg.pat <- ".dmcpgs$"
+dmcpg.pat <- ".dmcpgs.tsv$"
+
 files <- read.table("fileList8.txt", sep="\t", header=FALSE, stringsAsFactors = FALSE) |>
-  dplyr::rename(File=V1, ComparisonGroup=V2)
-files$Comparison=basename(dirname(files$File))
-files$Hypo_in_Group=""
-files$Hypo_meth_num=0
+  dplyr::rename(File=V1, Comparison=V2) |>
+  dplyr::filter(!grepl("version", File)) |>
+  dplyr::mutate(Treatment = str_replace(Comparison, "_vs_.*$", ""),
+                Control = str_replace(Comparison, "^.*_vs_", ""),
+                Filetype=ifelse(grepl("Annovar", File), "AnnovarFile", "DiffFile")) |>
+  dplyr::select(File, Filetype, Comparison, Treatment, Control) |>
+  tidyr::pivot_wider(names_from = Filetype, values_from = File) |>
+  as.data.frame()
 
-annovar_files=read.table("fileList9.txt", sep="\t", header=FALSE, stringsAsFactors = FALSE) |>
-  dplyr::rename(AnnovarFile=V1, ComparisonGroup=V2)
-
-files=merge(files, annovar_files, by="ComparisonGroup", all.x=TRUE)
+files$Up_in_treatment <- 0
+files$Down_in_treatment <- 0
 
 i=1
 for (i in 1:nrow(files)) {
-	#read in *.meth files
-  comparison_group=files$ComparisonGroup[i]
-	infile=files$File[i]
+	comparison <- files$Comparison[i]
+	infile=files$DiffFile[i]
 
-	comparison <- basename(dirname(infile))
-  group = gsub(paste0("^", comparison, "_"), "", comparison_group) 
-  files$Hypo_in_Group[i] <- group
-	
-	#format cpg data frame
 	DT.dmcpg <- read.table(infile, header = T, sep = "\t", stringsAsFactors = FALSE)
-	files$Hypo_meth_num[i] <- nrow(DT.dmcpg)
+	files$Up_in_treatment[i] <- sum(DT.dmcpg$meth.diff > 0)
+  files$Down_in_treatment[i] <- sum(DT.dmcpg$meth.diff < 0)
 }
 
-dmcpg_df <- files |> dplyr::select("Comparison", "Hypo_in_Group", "Hypo_meth_num")
+dmcpg_df <- files |> dplyr::select("Comparison", "Treatment", "Control", "Up_in_treatment", "Down_in_treatment")
 print_table(dmcpg_df, byDT=FALSE, row.names=FALSE)
 ```
 
 ```{r}
 dm_content = ""
 comparisons=unique(files$Comparison)
+comp=comparisons[1]
 for(comp in comparisons){
   comp_df = files[files$Comparison == comp,]
-  if(nrow(comp_df) > 0){
-    dm_content = paste0(dm_content, "## ", comp, "\n\n")
-    for(idx in 1:nrow(comp_df)) {
-      hypo= comp_df$Hypo_in_Group[idx]
-      dm_file=comp_df$File[idx]
-    	dmcpg <- read.table(dm_file, header = T, sep = "\t", stringsAsFactors = FALSE)
-      if(nrow(dmcpg) == 0) {
-        dm_content = paste0(dm_content, "### Hypomethylated CpGs in ", hypo, " (No significant CpGs found)\n\n")
-        next
-      }else{
-        dm_content = paste0(dm_content, "### Hypomethylated CpGs in ", hypo, "\n\n")
-        annovar_file=comp_df$AnnovarFile[idx]
-        dm_content = paste0(dm_content, getPagedTable(annovar_file, row.names=0))
-      }
-    }
+  dm_content = paste0(dm_content, "## ", comp, "\n\n")
+  annovar_file=comp_df$AnnovarFile[1]
+  annovar = fread(annovar_file, data.table=FALSE)
+  if(nrow(annovar) == 0) {
+    dm_content = paste0(dm_content, "\n<mark>No significant CpGs found</mark>\n\n")
+    next
+  }else{
+    annovar_count = annovar |> 
+      dplyr::group_by(Gene.refGene, direction) |>
+      dplyr::summarise(Count = n()) |>
+      dplyr::ungroup() |>
+      dplyr::arrange(desc(Count), Gene.refGene, direction)
+    annovar_count_file=paste0(project, "/", basename(annovar_file), ".count.csv")
+    write.csv(annovar_count, file=annovar_count_file, row.names=FALSE)
+
+    dm_content = paste0(dm_content, "\n### Differential methylation sites per gene\n\n")
+    dm_content = paste0(dm_content, getPagedTable(annovar_count_file, row.names=0))
+
+    dm_content = paste0(dm_content, "\n### Differential methylation sites details\n\n")
+    dm_content = paste0(dm_content, getPagedTable(annovar_file, row.names=0))
   }
 }
 dm_rmd = "dmcpg.rmd"
@@ -636,4 +638,43 @@ writeLines(dm_content, dm_rmd)
 ```{r child=dm_rmd}
 ```
 
-<br>
+# Description
+
+```{r}
+versions<-get_versions(dynamic_file="fileList9.txt", static_file="")
+print_table(versions, byDT=FALSE, row.names=FALSE)
+```
+
+```{r}
+vmap<-unlist(split(versions$Version, versions$Software))
+has_FastQC<-"FastQC" %in% names(vmap)
+has_cutadapt<-"Cutadapt" %in% names(vmap)
+```
+
+This comprehensive WGBS analysis pipeline processes bisulfite sequencing data through multiple quality control, alignment, and methylation analysis steps:
+
+- 1. Quality Control
+  - **Raw Read Quality**: FastQC analysis of sequencing quality metrics including per-base quality scores, GC content, and adapter contamination
+  - **Read Trimming**: Cutadapt removes adapter sequences and low-quality bases
+  - **Post-trim Quality**: FastQC validation of trimmed reads
+
+- 2. Bisulfite-aware Alignment
+  - **Abismal Mapping**: Specialized aligner handles C-to-T conversions in bisulfite-treated DNA
+  - **Mapping Statistics**: Comprehensive metrics including unique/ambiguous mappings, error rates, and off-target reads
+  - **Duplicate Removal**: dnmtools uniq eliminates PCR duplicates
+
+- 3. Coverage Analysis
+  - **Depth Statistics**: Coverage distribution across different genomic contexts (CpG, CHH, CXG, CCG)
+  - **Target Coverage**: Percentage of bases covered at various depth thresholds (1X, 2X, 10X, etc.)
+
+- 4. Methylation Analysis
+  - **Conversion Efficiency**: Bisulfite conversion rates for quality assessment
+  - **Methylation Statistics**: Fraction and mean methylation levels across CpG sites
+  - **β-value Distribution**: Methylation level distributions and principal component analysis
+
+- 5. Comparative Analysis
+  - **Sample Clustering**: PCA and MDS plots reveal sample relationships
+  - **Differential Methylation**: Identification of differentially methylated CpGs between conditions
+  - **Functional Annotation**: Gene-based annotation of methylation changes
+
+The pipeline integrates multiple tools including FastQC, Cutadapt, Abismal, dnmtools, and MethylKit to provide a complete methylation analysis workflow from raw sequencing data to biological insights.
