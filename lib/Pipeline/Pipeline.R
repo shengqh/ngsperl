@@ -305,8 +305,8 @@ save_gsea_rmd<-function(files, resFile, rmd_prefix="", show_comparison=TRUE){
   writeLines(result, resFile)
 }
 
-get_versions=function(){
-  files<-read.delim("fileList4.txt", header=F, stringsAsFactors = F)
+get_versions=function(dynamic_file="fileList4.txt", static_file="fileList5.txt"){
+  files<-read.delim(dynamic_file, header=F, stringsAsFactors = F)
   df<-NULL
   curfile<-files$V1[1]
   for(curfile in files$V1){
@@ -316,8 +316,8 @@ get_versions=function(){
     }
   }
 
-  if(file.exists("fileList5.txt")){
-    vers<-read.delim("fileList5.txt", header=F, stringsAsFactors = F)
+  if(file.exists(static_file)){
+    vers<-read.delim(static_file, header=F, stringsAsFactors = F)
     vers<-vers[,c(2,1)]
     colnames(vers)<-c("V1","V2")
     df<-rbind(df, vers)
@@ -329,8 +329,8 @@ get_versions=function(){
   return(df)
 }
 
-display_versions=function(){
-  df<-get_versions()
+display_versions=function(dynamic_file="fileList4.txt", static_file="fileList5.txt"){
+  df<-get_versions(dynamic_file, static_file)
   print(kable(df, caption=tabRef("versionFiles", "Software versions"), row.names=F) %>%
           kable_styling() %>%
           htmltools::HTML())
