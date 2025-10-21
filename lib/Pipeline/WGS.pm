@@ -517,7 +517,7 @@ sub add_merge {
     perform               => 1,
     target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_MergeVcfs",
     option                => "",
-    source_ref            => ["LeftTrim"],
+    source_ref            => $source,
     extension             => ".vcf.gz",
     docker_prefix         => "gatk4_",
     sh_direct             => 0,
