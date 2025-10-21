@@ -17,6 +17,8 @@ output:
 library(knitr)
 library(tibble)
 library(dplyr)
+library(stringr)
+library(tidyr)
 
 knitr::opts_chunk$set(
   echo=TRUE, 
@@ -35,18 +37,20 @@ meth_files=fread('fileList1.abismal.txt', header=FALSE, data.table=FALSE)
 myoptions = read_file_map('fileList2.abismal.txt', do_unlist=FALSE)
 task_name=myoptions$task_name
 email=myoptions$email
-affiliation=myoptions$affiliation
+affiliation=get_affiliation(myoptions)
 ```
 
 ---
-title: "`r task_name` - Abismal Summary"
-author: "`r email`"
+title: "Abismal Summary - `r task_name`"
+author:
+- name: `r email`
+  affiliation: `r affiliation`
 ---
 
-# Reads mapped
+# Reads mapped to genome
 
 ```{r}
-mapstats_files = meth_files |> dplyr::filter(grepl("mapstats", V1))
+mapstats_files = meth_files |> dplyr::filter(grepl("mapstats$", V1))
 
 mapstats_lst = apply(mapstats_files, 1, function(row) {
   file_path = row[1]  
@@ -59,7 +63,7 @@ mapstats_lst = apply(mapstats_files, 1, function(row) {
 mapstats_df = do.call(rbind, mapstats_lst) 
 ```
 
-```{r}
+```{r fig.cap=figRef("reads_mapped_summary", "Read mapping summary")}
 mapped_levels = c("num_unique", "num_ambiguous", "num_unmapped" )
 mapped = mapstats_df |> dplyr::filter(Metric %in% mapped_levels) |>
   dplyr::mutate(Metric = factor(Metric, levels=mapped_levels))
@@ -78,7 +82,9 @@ ggsave(reads_mapped_bar_png, g, width=width, height=3, units="in", dpi=300, bg="
 include_graphics(reads_mapped_bar_png)
 ```
 
-# Read on target
+# Read off bait
+
+Off-bait reads represent the reads that fall outside of the targeted bait regions in the sequencing experiment.
 
 ```{r}
 hsmetrics_files = meth_files |> dplyr::filter(grepl("hs_metrics", V1))
@@ -93,7 +99,7 @@ hsmetrics_lst = apply(hsmetrics_files, 1, function(row) {
 hsmetrics_df = do.call(rbind, hsmetrics_lst) 
 ```
 
-```{r}
+```{r fig.cap=figRef("reads_off_bait_summary", "Reads off bait summary")}
 g = ggplot(hsmetrics_df, aes(x=Sample, y=as.numeric(PCT_OFF_BAIT))) + 
   geom_bar(stat="identity", width=0.5) +
   theme_classic() +
@@ -108,7 +114,56 @@ ggsave(reads_off_bait_bar_png, g, width=width, height=2.5, units="in", dpi=300, 
 include_graphics(reads_off_bait_bar_png)
 ```
 
+# Duplication rate
+
+The duplicate reads were detected by dnmtools uniq command. 
+The duplication rate indicates the proportion of duplicate reads in the sequencing data.
+
+```{r dup_summary}
+dupstats_files = meth_files |> dplyr::filter(grepl(".bam.dupstats$", V1))
+
+dupstats_lst = apply(dupstats_files, 1, function(row) {
+  file_path = row[1]  
+  sample_name = row[2]
+  df = fread(file_path, sep=" ", header=FALSE, data.table=FALSE) |>
+    mutate(V1 = str_replace(V1, ":", "")) |>
+    dplyr::mutate(Sample=sample_name) 
+  return(df)
+})
+dup_df = do.call(rbind, dupstats_lst)
+
+write.csv(file=paste0(task_name, ".dupstats.csv"), dup_df)
+
+dup_rate <- dup_df |>
+  dplyr::filter(V1=="duplication_rate") |>
+  mutate(V2 = as.numeric(V2) / 100.0)
+
+dup_width=max(5, nrow(dup_rate) * 0.15)
+dup_height=4
+
+dup_png=paste0(task_name, ".duplication_rate.png")
+ymax=min(1.0, ceiling(max(dup_rate$V2) * 10) / 10)
+
+g3<-ggplot(dup_rate, aes(x=Sample, y=V2)) +
+  geom_bar(stat="identity", width = 0.5, fill = "blue") +
+  ylim(0,ymax) +
+  ylab("Duplication Rate") +
+  theme_classic() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"))
+ggsave(dup_png, g3, width=dup_width, height=dup_height, units="in", dpi=300, bg="white")
+```
+
+```{r fig.cap=figRef("duplication_rate_summary", "Duplication rate summary")}
+include_graphics(dup_png)
+```
+
 # Final unique reads
+
+After removing duplicates and reads out of the targeted bait regions, 
+the final unique reads represent the high-confidence reads that are used for downstream analysis.
 
 ```{r}
 flagstat_files = meth_files |> dplyr::filter(grepl(".bam.flagstat", V1))
@@ -124,7 +179,7 @@ flagstat_df = do.call(rbind, flagstat_lst) |>
   dplyr::filter(V4=="primary")
 ```
 
-```{r}
+```{r fig.cap=figRef("final_unique_reads_summary", "Final unique reads summary")}
 g = ggplot(flagstat_df, aes(x=Sample, y=as.numeric(V1))) + 
   geom_bar(stat="identity", width=0.5) +
   theme_classic() +
@@ -137,6 +192,63 @@ width=max(4, length(unique(flagstat_df$Sample))*0.2)
 final_unique_reads_bar_png=paste0(task_name, ".final_unique_reads.bar.png")
 ggsave(final_unique_reads_bar_png, g, width=width, height=2.5, units="in", dpi=300, bg="white")
 include_graphics(final_unique_reads_bar_png)
+```
+
+# The RRBS summary metrics
+
+The metrics from reduced representation bisulfite sequencing (Rrbs) data was performed using the Picard CollectRrbsMetrics tool.
+
+## RRBS summary metrics table
+
+The RRBS summary metrics provide insights into the efficiency of bisulfite conversion during the RRBS library preparation process.
+
+```{r}
+rrbs_summary_metrics_files = meth_files |> dplyr::filter(grepl(".rrbs_summary_metrics$", V1))
+
+rrbs_summary_metrics_lst = apply(rrbs_summary_metrics_files, 1, function(row) {
+  file_path = row[1]  
+  sample_name = row[2]
+  df = read.delim(file_path, header = T, sep = "\t", stringsAsFactors = FALSE, comment.char = "#", blank.lines.skip = TRUE, nrows = 1) |>
+    dplyr::mutate(Sample=sample_name) 
+  return(df)
+})
+rrbs_summary_metrics_df = do.call(rbind, rrbs_summary_metrics_lst) |>
+  dplyr::select(Sample, everything()) |>
+  dplyr::select(-SAMPLE, -LIBRARY, -READ_GROUP)
+
+write.csv(file=paste0(task_name, ".rrbs_summary_metrics.csv"), rrbs_summary_metrics_df, row.names=FALSE)
+print_table(rrbs_summary_metrics_df, byDT=TRUE, row.names=FALSE)
+```
+
+## The BS rates of Non-CpG and CpG sites
+
+- **Non-CpG sites**: Measures the efficiency of bisulfite conversion at cytosines outside of CpG dinucleotides. High conversion rates (>95%) indicate successful bisulfite treatment.
+- **CpG sites**: Measures the bisulfite conversion at cytosines within CpG dinucleotides. Lower conversion rates at these sites may indicate actual DNA methylation rather than incomplete bisulfite conversion.
+
+```{r}
+rrbs_final <- rrbs_summary_metrics_df |>
+  dplyr::select(Sample, PCT_NON_CPG_BASES_CONVERTED, PCT_CPG_BASES_CONVERTED) |>
+  tidyr::gather("Site_type", "Percentage", -Sample) |>
+  dplyr::mutate(Percentage = ifelse(Percentage <= 1, Percentage, 2-Percentage))
+
+rrbs_width=max(6, nrow(rrbs_final) * 0.2 + 1)
+rrbs_height=3.5
+rrbs_png=paste0(task_name, ".rrbs_rate.png")
+
+g<-ggplot(rrbs_final, aes(x=Sample, y=Percentage, fill = Site_type)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  xlab("") +
+  ylab("BS rate") +
+  ylim(0,1) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
+        axis.text.y = element_text(size=11, face="bold"),
+        legend.position = "top")
+ggsave(rrbs_png, g, width=rrbs_width, height=rrbs_height, units="in", dpi=300, bg="white")
+```
+
+```{r fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites")}
+include_graphics(rrbs_png)
 ```
 
 # Save the session information
