@@ -344,6 +344,11 @@ if [[ -s ${sample_name}.intervals.dnmtools_format.uniq.addqual.bam.bai && -e ${s
         ${sample_name}.intervals.dnmtools_format.uniq.bam
 fi
 
+$dnmtools_command | grep Version | cut -d ' ' -f 2 | awk '{print \"dnmtools,v\"\$1}' > ${sample_name}.dnmtools.version
+
+java -jar $picard CollectHsMetrics --version 2>&1 | grep -v 'TOOL' | awk '{print \"Picard,v\"\$1}' > ${sample_name}.Picard.version
+
+
 ";
 
     $self->close_pbs( $pbs, $pbs_file );
@@ -368,8 +373,11 @@ sub result {
   for my $sample_name ( keys %raw_files ) {
     my @result_files = ();
     push( @result_files, "${result_dir}/${sample_name}.mapstats" );
+    push( @result_files, "${result_dir}/${sample_name}.dnmtools.version" );
+    push( @result_files, "${result_dir}/${sample_name}.Picard.version" );
     push( @result_files, "${result_dir}/${sample_name}_hs_metrics.txt" );
     push( @result_files, "${result_dir}/${sample_name}.intervals.rrbs_summary_metrics" );
+    push( @result_files, "${result_dir}/${sample_name}.intervals.dnmtools_format.uniq.bam.dupstats" );
     push( @result_files, "${result_dir}/${sample_name}.intervals.dnmtools_format.uniq.addqual.bam.flagstat" );
     push( @result_files, "${result_dir}/${sample_name}.intervals.dnmtools_format.uniq.addqual.bam" );
     
