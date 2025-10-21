@@ -3845,3 +3845,120 @@ SpatialFeaturePlot_cqs<-function(object, features, max.cutoff="q98", ...) {
     ) + scale_fill_gradientn(colours = turbo(n = 256))
   return(g)
 }
+
+adjust_ImagePlot <- function(g, do_flip_x, do_flip_y, do_rotation){
+  if(do_flip_x) {
+    g = g + scale_x_reverse()
+  }
+  if(do_flip_y) {
+    g = g + scale_y_reverse()
+  }
+  if(do_rotation) {
+    g = g + coord_flip(expand=FALSE) + theme(aspect.ratio=1)
+  }
+  return(g)
+}
+
+adjust_ImagePlot_Polygons <- function(g){
+  return(adjust_ImagePlot(g, do_flip_x=TRUE, do_flip_y=FALSE, do_rotation=TRUE))
+}
+
+adjust_ImagePlot_Bins <- function(g){
+  return(adjust_ImagePlot(g, do_flip_x=FALSE, do_flip_y=TRUE, do_rotation=FALSE))
+}
+
+ImageDimPlot_cqs <- function(do_flip_x=FALSE, do_flip_y=FALSE, do_rotation=FALSE, ...){
+  return(adjust_ImagePlot(g, do_flip_x=do_flip_x, do_flip_y=do_flip_y, do_rotation=do_rotation))
+}
+
+ImageDimPlot_Polygons <- function(...){
+  g = ImageDimPlot(...)
+  return(adjust_ImagePlot_Polygons(g))
+}
+
+ImageDimPlot_Bins <- function(...){
+  g = ImageDimPlot(...)
+  return(adjust_ImagePlot_Bins(g))
+}
+
+get_colors <- function(current_cell_types) {
+  library(RColorBrewer)
+
+  # Use Set3 palette for most distinguishable colors
+  if(length(current_cell_types) <= 12) {
+    current_cell_type_colors <- brewer.pal(min(length(current_cell_types), 12), "Set3")
+  } else {
+    # For more than 12 colors, combine multiple palettes
+    pal1 <- brewer.pal(12, "Set3")
+    pal2 <- brewer.pal(8, "Dark2")
+    pal3 <- brewer.pal(8, "Accent")
+    
+    # If still need more colors, use rainbow
+    all_colors <- c(pal1, pal2, pal3)
+    if(length(current_cell_types) > length(all_colors)) {
+      additional_colors <- rainbow(length(current_cell_types) - length(all_colors))
+      current_cell_type_colors <- c(all_colors, additional_colors)
+    } else {
+      current_cell_type_colors <- all_colors[1:length(current_cell_types)]
+    }
+  }
+  current_cell_type_colors <- current_cell_type_colors[1:length(current_cell_types)]
+  names(current_cell_type_colors) = current_cell_types[1:length(current_cell_type_colors)]
+  return(current_cell_type_colors)
+}
+
+get_image_dim_plot <- function(obj, assay, group.by, colors, title=assay) {
+  is_polygons = grepl("Polygons", assay)
+  if(is_polygons) {
+    fov_name <- "slice1.polygons"
+    title <- "Cell Segmentation"
+    adjust_func <- adjust_ImagePlot_Polygons
+  } else {
+    fov_name <- "slice1.008um"
+    title <- "8uM Bin"
+    adjust_func <- adjust_ImagePlot_Bins
+  }
+
+  Idents(obj) <- group.by
+
+  g = ImageDimPlot( object = obj, 
+                    fov = fov_name, 
+                    cols = colors, 
+                    border.size = NA,
+                    axes = F, 
+                    dark.background = F, 
+                    coord.fixed = T) + 
+    ggtitle(label = assay) + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+
+  g = adjust_func(g)
+  return(g)
+}
+
+save_vis_png <-function(plots, sample_name, cur_cell_type_colors, cur_cell_type_col, image_type, legend_ncol=NULL, legend_title=FALSE){
+  if(is.null(legend_ncol)){
+    legend_ncol=ifelse(length(cur_cell_type_colors) > 13, 2, 1)
+  }
+
+  newplots = list()
+  lastplot = names(plots)[length(plots)]
+  for(name in names(plots)) {
+    if(name != lastplot) {
+      newplots[[name]] = plots[[name]] + NoLegend()
+    } else {
+      newplots[[name]] = plots[[name]]
+    }
+  }
+
+  g = wrap_plots(newplots, ncol=length(newplots), guides = "collect") & 
+    guides(fill = guide_legend(ncol = legend_ncol, override.aes = list(size = 5)))
+
+  if(!legend_title){
+    g = g & theme(legend.title = element_blank())
+  }
+
+  vis_png = paste0(sample_name, ".", image_type, ".", cur_cell_type_col, ".png")
+  ggsave(vis_png, g, width=4 * length(plots) + 2 * legend_ncol, height=4.5, dpi=300, units="in", bg="white")
+  return(vis_png)
+}
