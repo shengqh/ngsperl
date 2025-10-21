@@ -1,5 +1,4 @@
 ---
-title: "Visium HD data - QC summary"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
@@ -38,15 +37,16 @@ options(future.globals.maxSize = 600000 * 1024^2)
 options(future.seed = TRUE)
 
 myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
-if(is.null(myoptions$affiliation)) {
-  myoptions$affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
-}
+email=myoptions$email
+affiliation=get_affiliation(myoptions)
+task_name=myoptions$task_name
 ```
 
 ---
+title: "Visium HD QC summary - `r task_name`"
 author:
-- name: `r myoptions$email`
-  affiliation: `r myoptions$affiliation`
+- name: `r email`
+  affiliation: `r affiliation`
 ---
 
 ## QC reports {.tabset}
