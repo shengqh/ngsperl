@@ -770,4 +770,9 @@ sub init_parameter {
   return (get_parameter( $config, $section, $create_directory ));
 }
 
+sub get_expect_result_for_perform {
+  my ( $self, $config, $section ) = @_;
+  return ($self->result( $config, $section, "(?<!version)\$" ));
+}
+
 1;
