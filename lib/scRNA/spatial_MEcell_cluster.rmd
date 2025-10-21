@@ -1,0 +1,270 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+library('sf')
+library(Seurat)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+
+source("reportFunctions.R")
+source("scRNA_func.r")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+email=myoptions$email
+affiliation=get_affiliation(myoptions)
+assay=myoptions$assay
+species=myoptions$species
+
+resolutions=sort(as.numeric(myoptions$MEcell_resolutions))
+resolutions_str=paste0(resolutions, collapse="_")
+
+bubblemap_file=myoptions$bubblemap_file
+bubblemap_width_in=as.numeric(myoptions$bubblemap_width_in)
+
+file_map<-read_file_map("fileList1.txt", do_unlist=FALSE)
+sample_name=names(file_map)[1]
+rds_file=file_map[[sample_name]]
+```
+
+---
+title: "MEcell cluster - `r sample_name`"
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+```{r}
+ctdef<-init_celltype_markers(panglao5_file = myoptions$markers_file,
+                             species = species,
+                             curated_markers_file = myoptions$curated_markers_file,
+                             HLA_panglao5_file = myoptions$HLA_panglao5_file,
+                             layer="Layer4",
+                             remove_subtype_str = myoptions$remove_subtype,
+                             combined_celltype_file = NULL)
+
+cell_activity_database<-ctdef$cell_activity_database
+```
+
+# Load Seurat object
+
+Load data from `r rds_file` and perform MEcell clustering at resolutions: `r resolutions_str`.
+
+```{r}
+cluster_rds = paste0(sample_name, ".", assay, ".MEcell.res", resolutions_str, ".cluster.rds")
+if(file.exists(cluster_rds)){
+  obj = readRDS(cluster_rds)
+}else{
+  obj = readRDS(rds_file)
+
+  stopifnot(assay %in% names(obj@assays))
+
+  DefaultAssay(obj) <- assay
+
+  obj <- FindClusters(obj, resolution = resolutions, graph.name="MEcell")
+  saveRDS(obj, cluster_rds)
+}
+
+resolution=resolutions[1]
+for(resolution in resolutions){
+  cluster_col = paste0("MEcell_res.", resolution)
+  new_levels=as.character(sort(as.numeric(levels(obj@meta.data[[cluster_col]]))))
+  obj@meta.data[[cluster_col]] = factor(as.character(obj@meta.data[[cluster_col]]), levels=new_levels)
+}
+```
+
+```{r}
+tissue_image = SpatialPlot( object = obj, 
+                            image.alpha = 1, 
+                            alpha = c(0, 0)) + 
+              ggtitle(paste0("Tissue : ", sample_name)) +
+              theme(legend.position = "none",
+                    plot.title = element_text(hjust = 0.5),
+                    panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+```
+
+```{r}
+predict_celltypes<-function(filtered_obj, assay, cluster, cluster_cell_type, cell_activity_database){
+  data_norm=get_seurat_average_expression(filtered_obj, cluster, assay=assay)
+  
+  predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
+
+  new_cluster_ids<-paste0(colnames(data_norm), ": ", names(predict_celltype$max_cta))
+  names(new_cluster_ids)<-colnames(data_norm)
+
+  filtered_obj@meta.data[[cluster_cell_type]] = factor_by_count(new_cluster_ids[as.character(filtered_obj@meta.data[[cluster]])])
+  return(filtered_obj)
+}
+```
+
+```{r}
+cluster_content=""
+
+resolution=resolutions[1]
+for(resolution in resolutions){
+  cluster_content=paste0(cluster_content, "\n# Resolution ", resolution, "\n\n")
+  cluster_col = paste0("MEcell_res.", resolution)
+
+  cluster_counts = get_freq_table(obj@meta.data, cluster_col)
+  cluster_counts$perc = cluster_counts$count / sum(cluster_counts$count)
+  cluster_perc_filtered = cluster_counts |> 
+    dplyr::filter(perc >= 0.005) |>
+    dplyr::pull(!!sym(cluster_col))
+
+  filtered_obj = subset(obj, subset = !!sym(cluster_col) %in% cluster_perc_filtered)
+
+  cluster_cell_type=paste0(cluster_col, "_cell_type")
+
+  filtered_obj = predict_celltypes(filtered_obj, assay, cluster_col, cluster_cell_type, cell_activity_database)
+
+  cluster_cell_type_count_col = paste0(cluster_cell_type, "_count")
+  filtered_obj@meta.data = add_column_count(filtered_obj@meta.data, cluster_cell_type, cluster_cell_type_count_col, order_by_count=TRUE)
+
+  cluster_colors = get_colors(current_cell_types=unique(filtered_obj@meta.data[[cluster_cell_type_count_col]]))
+
+  Idents(filtered_obj) <- cluster_cell_type_count_col
+
+  title=paste0(assay, ": MEcell res ", resolution)
+
+  plots <- list("Tissue Image" = tissue_image)
+
+  plots[['ImageDimPlot']] = get_image_dim_plot( obj=filtered_obj, 
+                                                assay=assay, 
+                                                group.by=cluster_cell_type_count_col, 
+                                                colors=cluster_colors, 
+                                                title=title)
+
+  pt.size.factor = ifelse(grepl("Polygons", assay), 0.5, 12)
+
+  plots[['SpatialDimPlot']] = SpatialDimPlot( filtered_obj, 
+                                              cols = cluster_colors, 
+                                              image.alpha = 0.1,
+                                              pt.size.factor = pt.size.factor) + 
+    ggtitle(label = title) + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=1))     
+
+  cluster_png = save_vis_png(plots, sample_name, cluster_colors, cluster_cell_type_count_col, assay)
+
+  cluster_content=paste0(cluster_content, "\n## Spatial clusters\n\n")
+  cluster_content=paste0(cluster_content, getFigure(cluster_png))
+
+  g = ImageDimPlot( object = filtered_obj, 
+                    fov = "slice1.polygons", 
+                    split.by = cluster_cell_type_count_col,
+                    border.size = NA,
+                    axes = F, 
+                    dark.background = F, 
+                    coord.fixed = T) + 
+    ggtitle(label = paste0("Resolution : ", resolution)) + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=1),
+          legend.position = "none",
+          strip.background = element_rect(fill="white"))
+  g = adjust_ImagePlot_Polygons(g)
+  ncol = ifelse(length(cluster_colors) <= 3, length(cluster_colors), ceiling(sqrt(length(cluster_colors))))
+  nrow = ceiling(length(cluster_colors) / ncol)
+  
+  ct_individual_png = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".ct_individual.png")
+  ggsave(ct_individual_png, g, width=ncol * 2.8, height=nrow * 2.8 + 0.3, units="in", dpi=300, bg="white")
+
+  cluster_content=paste0(cluster_content, "\n## Image dim plot of each cluster\n\n")
+  cluster_content=paste0(cluster_content, getFigure(ct_individual_png))
+
+  g<-get_bubble_plot( obj = filtered_obj, 
+                      group.by = cluster_cell_type_count_col, 
+                      bubblemap_file = bubblemap_file, 
+                      assay = assay, 
+                      orderby_cluster = F,
+                      species=species)
+  bubblemap_png = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".dot.png")
+  ggsave(bubblemap_png, g, width=bubblemap_width_in, height=max(4, length(cluster_colors) * 0.3 + 2), units="in", dpi=300, bg="white")
+
+  cluster_content=paste0(cluster_content, "\n## Marker genes\n\n")
+  cluster_content=paste0(cluster_content, getFigure(bubblemap_png))
+
+  gd = FetchData(filtered_obj, c(cluster_cell_type_count_col, paste0("nCount_", assay)))
+  g=ggplot( gd, aes(x=!!sym(cluster_cell_type_count_col), y=!!sym(paste0("nCount_", assay)))) + 
+                geom_violin(scale="width") +
+                geom_boxplot(width=0.1, outliers=FALSE) +
+                theme_classic() +
+                theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5),
+                      axis.title.x=element_blank())
+  vln_png = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".vln.png")
+  ggsave(vln_png, g, width=max(5, length(cluster_colors) * 0.4 + 2), height=4, units="in", dpi=300, bg="white")
+
+  cluster_content=paste0(cluster_content, "\n## Violin plots of nCount\n\n")
+  cluster_content=paste0(cluster_content, getFigure(vln_png))
+
+  markers_rds = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".markers.rds")
+  if(file.exists(markers_rds)){
+    markers = readRDS(markers_rds)
+  }else{
+    markers = FindAllMarkers( filtered_obj, 
+                              assay = assay, 
+                              only.pos = TRUE, 
+                              min.pct = 0.25, 
+                              logfc.threshold = 0.25,
+                              group.by = cluster_cell_type_count_col)
+    saveRDS(markers, markers_rds)
+  }
+
+  top5 = markers |>
+    dplyr::filter(p_val_adj < 0.05) |>
+    dplyr::mutate(score = avg_log2FC * (pct.1 - pct.2)) |>
+    dplyr::group_by(cluster) |>
+    dplyr::slice_max(order_by = score, n = 5)
+
+  g = MyDoHeatMap( filtered_obj, 
+                  features = top5$gene, 
+                  group.by = cluster_col, 
+                  assay = assay) 
+  heatmap_png = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".heatmap.png")
+
+  width<-max(6, length(cluster_colors) * 1)
+  height<-max(3, length(top5$gene) * 0.2)
+  ggsave(heatmap_png, g, width=width, height=height, units="in", dpi=300, bg="white")
+
+  cluster_content=paste0(cluster_content, "\n## Heatmap of top 5 markers per cluster\n\n")
+  cluster_content=paste0(cluster_content, getFigure(heatmap_png))
+}
+
+cluster_rmd="cluster.rmd"
+writeLines(cluster_content, cluster_rmd)
+```
+
+```{r child=cluster_rmd}
+```
+
+# Session Info
+
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=F)
+```
