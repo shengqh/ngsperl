@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20251010_13927_DNAMethyl_mm10_nextflow_slurm/MethylKitCorr/result')
+setwd('/nobackup/vickers_lab/projects/20251006_13927_DNAMethyl_mm10/MethylKitCorr/result')
 
 ### Parameter setting end ###
 
@@ -21,6 +21,7 @@ library(dplyr)
 library(limma)
 library(minfi)
 library(matrixStats)
+library(ggrepel)
 
 params <- read.table(parSampleFile2, sep = "\t", header = F)
 params <- params %>% column_to_rownames("V2") %>% t() %>% data.frame()
@@ -96,11 +97,6 @@ if(!file.exists(rds_file)){
  filtered.cpg.meth<-readRDS(rds_file)
 }
 
-cat("PCASamples\n")
-png(paste0(project, ".CpG.pca.png"), width=8, height=8, bg="white", res=300, units="in")
-PCASamples(filtered.cpg.meth)
-dev.off()
-
 get_beta_value<-function(filtered.cpg.meth){
   mat = getData(filtered.cpg.meth)  
   cpg_bvalue_df = mat[, filtered.cpg.meth@numCs.index]/ (mat[,filtered.cpg.meth@numCs.index] + mat[,filtered.cpg.meth@numTs.index] )
@@ -114,60 +110,120 @@ get_beta_value<-function(filtered.cpg.meth){
 
 cat("get_beta_value\n")
 cpg_bvalue_df<-get_beta_value(filtered.cpg.meth)
+stopifnot(colnames(cpg_bvalue_df) == meta$sample)
 #saveRDS(cpg_bvalue_df, paste0(project, ".cpg_bvalue_df.rds"))
 
-hist_pdf=paste0(project, ".CpG.bvalue_hist.pdf")
-if(!file.exists(hist_pdf)){
-  cat("draw beta value histgram figure\n")
-  pdf(hist_pdf, width=4, height=4, bg="white", onefile=TRUE)
-  samples=colnames(cpg_bvalue_df)
-  sample=samples[1]
-  for(sample in samples){
-    svalues=cpg_bvalue_df[,sample,drop=FALSE]
-    g<-ggplot(svalues, aes(x = !!sym(sample))) +
-      geom_histogram(bins = 100) +
-      theme_bw()
-    print(g)
-  }
-  dev.off()
+# remove rows containing NA values, they might be introduced at unite step
+cpg_bvalue_df = cpg_bvalue_df[ rowSums(is.na(cpg_bvalue_df))==0, ] 
+
+cpg_bvalue_df_m = reshape2::melt(cpg_bvalue_df, value.name = "bvalue")
+hist_ncol=ceiling(sqrt(ncol(cpg_bvalue_df)))
+hist_nrow=ceiling(ncol(cpg_bvalue_df)/hist_ncol)
+
+g<-ggplot(cpg_bvalue_df_m, aes(x = bvalue)) +
+  geom_histogram(bins = 100) +
+  facet_wrap(~variable, ncol=hist_ncol) +
+  theme_bw() +
+  xlab("Beta value") +
+  ylab("CpG sites") +
+  theme(strip.background=element_rect(fill="white"))
+
+hist_png=paste0(project, ".CpG.bvalue_hist.png")
+ggsave(hist_png, g, width=hist_ncol*2, height=hist_nrow*1.5, units="in", dpi=300, bg="white")
+
+sds=rowSds(as.matrix(cpg_bvalue_df))
+
+cat("get top 10000 most variable positions ...\n")
+o <- order(sds, decreasing = TRUE)[seq_len(10000)]
+top10000_cpg_bvalue_df=cpg_bvalue_df[o,]
+
+cat("keep CpG with non-zero standard deviation ...\n")
+cpg_bvalue_df=cpg_bvalue_df[sds>0,]
+
+if(0){
+  cur_bvalue_df=cpg_bvalue_df
+  groups=meta$group
+  output_file=paste0(project, ".CpG.all.PCA.png")
+  title="CpG methylation PCA Analysis"
 }
 
-stopifnot(colnames(cpg_bvalue_df) == meta$sample)
+draw_pca_plot <- function(cur_bvalue_df, groups=NULL, output_file=NULL, title="CpG methylation PCA Analysis"){
+  cat("prcomp ...\n")
+
+  cpg_pr = prcomp(t(cur_bvalue_df),scale=TRUE,center=TRUE)
+  supca = summary(cpg_pr)$importance
+
+  fit = as.data.frame(scale(cpg_pr$x))
+  pcalabs=paste0(colnames(fit), "(", round(supca[2,] * 100), "%)")
+
+  fit = fit |> tibble::rownames_to_column("Sample") 
+
+  hasGroup = !is.null(groups)
+  if(hasGroup){
+    fit$groups = groups
+  }else{
+    fit$groups = "All"
+  }
+
+  if(nrow(fit) > 20){
+    cpg_label=NULL
+  }else{
+    cpg_label=fit$Sample
+  }
+  
+  g <- ggscatter(fit, 
+                x = "PC1", 
+                y = "PC2",
+                label = cpg_label,
+                color = "groups",
+                palette = "jco",
+                font.label = 6,
+                size = 2,
+                ellipse = F,
+                ellipse.type = "norm",
+                repel = TRUE) + 
+      xlab(pcalabs[1]) + 
+      ylab(pcalabs[2]) +
+      ggtitle(title) +
+      theme_bw() + 
+      theme(aspect.ratio=1,
+            plot.title = element_text(hjust = 0.5))
+
+  if(!is.null(output_file)){
+    ggsave(output_file, g, width=5, height=4, units="in", dpi=300, bg="white")
+  }  
+  return(g)
+}
+
+cat("plot bvalue PCA of all CpG sites ...\n")
+g = draw_pca_plot(as.matrix(cpg_bvalue_df), meta$group, paste0(project, ".CpG.all.PCA.png"))
+
+cat("plot bvalue PCA of top 10000 variable CpG sites ...\n")
+g = draw_pca_plot(as.matrix(top10000_cpg_bvalue_df), meta$group, paste0(project, ".CpG.top10000.PCA.png"))
 
 #https://www.rdocumentation.org/packages/minfi/versions/1.18.4/topics/mdsPlot
 #Use the mdsPlot function from minfi package to draw MDS plot by Euclidean distance.
+draw_mds_plot <- function(cpg_bvalue_dist, groups=NULL, output_file=NULL){
+  fit <- cmdscale(cpg_bvalue_dist) |> 
+    as.data.frame() |>
+    dplyr::rename("MDS_1" = 1, "MDS_2" = 2) |>
+    tibble::rownames_to_column("Sample")
 
-png(paste0(project, ".euclidean_distance.all.MDS.png"), width=5, height=5, bg="white", res=300, units="in")
-mdsPlot(as.matrix(cpg_bvalue_df), numPositions=nrow(cpg_bvalue_df), sampGroups=meta$group, pch=16, legendPos=mds_legendPos, legendNCol=1)
-dev.off()
+  hasGroup = !is.null(groups)
+  if(hasGroup){
+    fit$groups = groups
+  }else{
+    fit$groups = "All"
+  }
 
-png(paste0(project, ".euclidean_distance.top10000.MDS.png"), width=5, height=5, bg="white", res=300, units="in")
-mdsPlot(as.matrix(cpg_bvalue_df), numPositions=10000, sampGroups=meta$group, pch=16, legendPos=mds_legendPos, legendNCol=1)
-dev.off()
-
-draw_corr_mds_plot <- function(cpg_bvalue_df, groups, output_file=NULL){
-  cat("cor ...\n")
-  cpg_bvalue_cor <- cor(cpg_bvalue_df, method = "pearson")
-
-  cat("cmdscale ...\n")
-  cpg_bvalue_corr_mds <- (1 - cpg_bvalue_cor) %>%
-    cmdscale() %>%
-    data.frame()
-  colnames(cpg_bvalue_corr_mds) <- c("Dim.1", "Dim.2")
-
-  cpg_bvalue_corr_mds<-cpg_bvalue_corr_mds[meta$sample,]
-  cpg_bvalue_corr_mds$groups = groups
-
-  cat("plot bvalue MDS ...\n")
-  # Plot MDS
-  if(nrow(cpg_bvalue_corr_mds) > 20){
+  if(nrow(fit) > 20){
     cpg_label=NULL
   }else{
-    cpg_label=rownames(cpg_bvalue_corr_mds)
+    cpg_label=fit$Sample
   }
-  dms_plot <- ggscatter(cpg_bvalue_corr_mds, 
-                        x = "Dim.1", 
-                        y = "Dim.2",
+  dms_plot <- ggscatter(fit, 
+                        x = "MDS_1", 
+                        y = "MDS_2",
                         label = cpg_label,
                         xlab = "MDS 1",
                         ylab = "MDS 2",
@@ -177,7 +233,9 @@ draw_corr_mds_plot <- function(cpg_bvalue_df, groups, output_file=NULL){
                         size = 2,
                         ellipse = F,
                         ellipse.type = "norm",
-                        repel = TRUE) + theme_bw() + theme(aspect.ratio=1)
+                        repel = TRUE) + 
+              theme_bw() + 
+              theme(aspect.ratio=1)
 
   if(!is.null(output_file)){
     ggsave(output_file, dms_plot, width=5, height=4, units="in", dpi=300, bg="white")
@@ -185,16 +243,28 @@ draw_corr_mds_plot <- function(cpg_bvalue_df, groups, output_file=NULL){
   return(dms_plot)
 }
 
-cpg_bvalue_df = cpg_bvalue_df[,meta$sample]
+draw_euclidean_mds_plot <- function(cpg_bvalue_df, groups, output_file=NULL){
+  cpg_bvalue_dist <- dist(t(cpg_bvalue_df))
+  return(draw_mds_plot(cpg_bvalue_dist, groups, output_file))
+}
 
-cat("draw MDS plot for all CPGs ...\n")
-saved = draw_corr_mds_plot(cpg_bvalue_df, meta$group, paste0(project, ".pearson_corr.all.MDS.png"))
+draw_corr_mds_plot <- function(cpg_bvalue_df, groups, output_file=NULL){
+  cpg_bvalue_dist <- 1 - cor(cpg_bvalue_df, method = "pearson")
+  return(draw_mds_plot(cpg_bvalue_dist, groups, output_file))
+}
 
-cat("get top 10000 most variable positions ...\n")
-bvalues_vars = matrixStats::rowVars(as.matrix(cpg_bvalue_df))
-o <- order(bvalues_vars, decreasing = TRUE)[seq_len(10000)]
-top10000_cpg_bvalue_df=cpg_bvalue_df[o,]
+cat("plot bvalue MDS of all CpG sites ...\n")
+g = draw_euclidean_mds_plot(as.matrix(cpg_bvalue_df), meta$group, paste0(project, ".CpG.euclidean_distance.all.MDS.png"))
 
-cat("draw MDS plot for top 10000 CPGs ...\n")
-saved = draw_corr_mds_plot(top10000_cpg_bvalue_df, meta$group, paste0(project, ".pearson_corr.top10000.MDS.png"))
+cat("plot bvalue MDS of top 10000 variable CpG sites ...\n")
+g = draw_euclidean_mds_plot(as.matrix(top10000_cpg_bvalue_df), meta$group, paste0(project, ".CpG.euclidean_distance.top10000.MDS.png"))
+
+cat("plot bvalue MDS of all CpG sites ...\n")
+g = draw_corr_mds_plot(as.matrix(cpg_bvalue_df), meta$group, paste0(project, ".CpG.pearson_corr.all.MDS.png"))
+
+cat("plot bvalue MDS of top 10000 variable CpG sites ...\n")
+g = draw_corr_mds_plot(as.matrix(top10000_cpg_bvalue_df), meta$group, paste0(project, ".CpG.pearson_corr.top10000.MDS.png"))
+
+methykit_version <- as.character(packageVersion("methylKit"))
+writeLines(paste0("Methykit,v", methykit_version), paste0(project, ".methylKit.version"))
 

@@ -69,36 +69,44 @@ Details:
 print_table(meta, byDT=TRUE, row.names=FALSE)
 ```
 
-# PCA of bvalue of all CpGs
+# PCA of bvalue of 
+
+## All CpGs
 
 ```{r}
-include_graphics(paste0(task_name, ".CpG.pca.png"))
+include_graphics(paste0(task_name, ".CpG.all.PCA.png"))
+```
+
+## Top 10000 CpGs
+
+```{r}
+include_graphics(paste0(task_name, ".CpG.top10000.PCA.png"))
 ```
 
 # MDS by Euclidean distance of bvalue
 
-## All CPGs
+## All CpGs
 
 ```{r, fig.width=5}
-include_graphics(paste0(task_name, ".euclidean_distance.all.MDS.png"))
+include_graphics(paste0(task_name, ".CpG.euclidean_distance.all.MDS.png"))
 ```
 
 ## Top 10000 most variable CpGs
 
 ```{r, fig.width=5}
-include_graphics(paste0(task_name, ".euclidean_distance.top10000.MDS.png"))
+include_graphics(paste0(task_name, ".CpG.euclidean_distance.top10000.MDS.png"))
 ```
 
 # MDS by Pearson correlation of bvalue
 
-## All CPGs
+## All CpGs
 
 ```{r, fig.width=5}
-include_graphics(paste0(task_name, ".pearson_corr.all.MDS.png"))
+include_graphics(paste0(task_name, ".CpG.pearson_corr.all.MDS.png"))
 ```
 
 ## Top 10000 most variable CpGs
 
 ```{r, fig.width=5}
-include_graphics(paste0(task_name, ".pearson_corr.top10000.MDS.png"))
+include_graphics(paste0(task_name, ".CpG.pearson_corr.top10000.MDS.png"))
 ```
