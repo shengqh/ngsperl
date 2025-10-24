@@ -322,73 +322,6 @@ sub getScRNASeqConfig {
     my $files_def = "files";
     my $filtered_files_def = "files";
 
-
-    if(getValue($def, "is_spatial_data", 0)){
-      my $individual_spatial_object_task = "individual_spatial_object";
-      my $binsize = getValue($def, "spatial_bin_size", 8);
-      $config->{$individual_spatial_object_task} = {
-        class => "CQS::IndividualR",
-        target_dir => $def->{target_dir} . "/$individual_spatial_object_task",
-        perform => 1,
-        option => "",
-        rtemplate => "../scRNA/scRNA_func.r,../scRNA/spatial_prepare_object.r",
-        parameterSampleFile1_ref => "files",
-        parameterSampleFile2 => {
-          "bin.size" => $binsize,
-          nFeature_cutoff_min => getValue($def, "nFeature_cutoff_min", 20),
-          nFeature_cutoff_max => getValue($def, "nFeature_cutoff_max", 1000),
-          nCount_cutoff       => getValue($def, "nCount_cutoff", 40),
-          nCount_cutoff_max   => getValue($def, "nCount_cutoff_max", 10000),
-          mt_cutoff           => getValue($def, "mt_cutoff", 20),
-          Mtpattern           => getValue($def, "Mtpattern", "^MT-|^Mt-|^mt-"),
-          rRNApattern         => getValue($def, "rRNApattern", "^Rp[sl][[:digit:]]|^RP[SL][[:digit:]]"),
-          species             => getValue($def, "species", "Hs"),
-        },
-        sh_direct => 1,
-        #no_docker => 1,
-        output_ext => "_${binsize}um.full.rds;_${binsize}um.sketch.rds",
-        pbs => {
-          "nodes"    => "1:ppn=1",
-          "walltime" => "24",
-          "mem"      => "40gb"
-        }
-      };
-      push (@$tasks, $individual_spatial_object_task);
-      $files_def = [$individual_spatial_object_task, ".sketch.rds"];
-
-      if(getValue($def, "perform_MEcell", 1)){
-        my $MEcell_task = "MEcell";
-        $config->{$MEcell_task} = {
-          class => "CQS::IndividualR",
-          target_dir => $def->{target_dir} . "/$MEcell_task",
-          perform => 1,
-          option => "",
-          rtemplate => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell.r",
-          rReportTemplate => "../scRNA/spatial_MEcell.rmd;reportFunctions.R",
-          run_rmd_independent => 1,
-          rmd_ext => ".MEcell.html",
-          parameterSampleFile1_ref => [$individual_spatial_object_task, ".full.rds"],
-          parameterSampleFile2 => {
-            assay => "Spatial.008um",
-            sketch_assay => "RNA",
-          },
-          sh_direct => 0,
-          no_docker => 1,
-          output_ext => ".MEcell.html",
-          pbs => {
-            "nodes"    => "1:ppn=1",
-            "walltime" => "24",
-            "mem"      => "40gb"
-          }
-        };
-
-      }
-
-
-      $def->{"perform_cellbender"} = 0;
-      $def->{"perform_decontX"} = 0;
-    }
-
     my $perform_cellbender = getValue($def, "perform_cellbender", 0);
 
     my $perform_decontX = getValue($def, "perform_decontX", 0);
@@ -422,7 +355,7 @@ sub getScRNASeqConfig {
       $decontX_counts_ref = [$decontX_task, ".counts.rds"];
       if($remove_decontX){
         $files_def = $decontX_counts_ref;
-        $prefix = $prefix . "_decontX_";
+        $prefix = $prefix . "decontX_";
       }
     }
 
@@ -452,6 +385,13 @@ sub getScRNASeqConfig {
       $sctk_ref = [$sctk_task, ".meta.rds"];
     }
 
+    if( $def->{"perform_individual_dynamic_qc"} ){
+      my $sct_str = get_sct_str($def);
+      my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
+      if(!defined $config->{$raw_individual_dynamic_qc_task}) {
+        add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
+      }
+    }
 
     if($remove_doublets){
       my $doublets_ref = undef;
