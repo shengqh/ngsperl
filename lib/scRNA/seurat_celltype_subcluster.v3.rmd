@@ -148,12 +148,16 @@ d_tbl=reshape2::dcast(rename_tbl, Name~Key, value.var="Value", fun.aggregate=fun
 cat("\n\n# Rename/delete/move sub clusters\n\n")
 
 if('from' %in% colnames(d_tbl)){
-  d_tbl<-d_tbl |> select(-Name) |> select(from, everything())
-  if("column" %in% colnames(d_tbl)){
-    d_tbl$column[d_tbl$column==""]<-"seurat_clusters"
-    d_tbl<-d_tbl |> select(from, column, everything())
+  if(! "ACTIONS" %in% colnames(d_tbl)){
+    d_tbl<-d_tbl |> select(-Name) |> select(from, everything())
+    if("column" %in% colnames(d_tbl)){
+      d_tbl$column[d_tbl$column==""]<-"seurat_clusters"
+      d_tbl<-d_tbl |> select(from, column, everything())
+    }
+    print_table(d_tbl, row.names=F)
+  }else{
+    print_table(d_tbl, row.names=F)
   }
-  print_table(d_tbl, row.names=F)
 }else{
   print_table(rename_tbl, row.names=F)
 }
