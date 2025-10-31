@@ -219,10 +219,14 @@ MyFeaturePlot<-function(object, assay="RNA", use_scCustom=TRUE, ...){
   old_assay=DefaultAssay(object)
   DefaultAssay(object)=assay
   if(use_scCustom){
-    g=FeaturePlot_scCustom(object, ...) + theme(aspect.ratio=1)
+    g=FeaturePlot_scCustom( object, 
+                            colors_use = viridis_plasma_dark_high, 
+                            na_color = "lightgray",
+                            ...)
   }else{
-    g=FeaturePlot(object, ...) + theme(aspect.ratio=1)
+    g=FeaturePlot(object, ...)
   }
+  g = g + theme(aspect.ratio=1)
   DefaultAssay(object)=old_assay
   g
 }
@@ -826,11 +830,11 @@ sort_cell_type<-function(cts, sort_column){
   return(result)
 }
 
-plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
+plot_violin<-function(obj, features, plot_jitter=TRUE){
   library(reshape2)
   library(Seurat)
   
-  glist=VlnPlot(all_obj, features=features, combine = F)
+  glist=VlnPlot(obj, features=features, combine = F)
   
   gdata<-glist[[1]]$data
   for(idx in c(2:length(glist))){
@@ -839,16 +843,21 @@ plot_violin<-function(obj, features=c("FKBP1A", "CD79A")){
     colnames(gdata)[ncol(gdata)]=colnames(cdata)[1]
   }
   
-  mdata<-melt(gdata, id="ident")
+  mdata<-reshape2::melt(gdata, id="ident")
   
-  ggplot(mdata, aes(ident, value)) + 
+  g = ggplot(mdata, aes(ident, value)) + 
     geom_violin(aes(fill = ident), trim=TRUE, scale="width") + 
-    geom_jitter(width=0.5,size=0.5) + 
     facet_grid(rows=variable~.) + 
     theme_classic() + NoLegend() + 
-    xlab("Cluster") + ylab("Expression") +
+    ylab("Expression") +
     theme(strip.background=element_blank(),
-          strip.text.y = element_text(angle =0))
+          strip.text.y = element_text(angle=0))
+
+  if(plot_jitter){
+    g = g + geom_jitter(width=0.5,size=0.5)
+  }
+
+  return(g)
 }
 
 init_cutoffs<-function(all_samples, myoptions, filter_config_file=""){
@@ -1021,19 +1030,19 @@ preprocessing_rawobj<-function(rawobj, myoptions, prefix, filter_config_file="",
 }
 
 output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL, assay="RNA"){
-  g<-FeaturePlot_scCustom(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
+  g<-MyFeaturePlot(obj, features="percent.mt") + ggtitle("Percentage of mitochondrial genes")
   width=1700
   ncol=1
   
   if("percent.hb" %in% colnames(obj@meta.data)){
-    g2<-FeaturePlot_scCustom(obj, features="percent.hb") + ggtitle("Percentage of hemoglobin genes")
+    g2<-MyFeaturePlot(obj, features="percent.hb") + ggtitle("Percentage of hemoglobin genes")
     g<-g+g2
     width=width+1600
     ncol=ncol+1
   }
 
   if("percent.ribo" %in% colnames(obj@meta.data)){
-    g3<-FeaturePlot_scCustom(obj, features="percent.ribo") + ggtitle("Percentage of ribosomal genes")
+    g3<-MyFeaturePlot(obj, features="percent.ribo") + ggtitle("Percentage of ribosomal genes")
     g<-g+g3
     width=width+1600
     ncol=ncol+1
@@ -1092,7 +1101,7 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
   if(!is.null(qc_genes)){
     if(qc_genes != ''){
       genes<-unlist(strsplit( qc_genes, ',' ))
-      g<-FeaturePlot(obj, genes, split.by="orig.ident")
+      g<-MyFeaturePlot(obj, genes, split.by="orig.ident")
       ggsave(paste0(outFile, ".qc_genes.png"), g, width=3000, height=6000, dpi=300, units="px", bg="white")
     }
   }
@@ -1104,16 +1113,16 @@ output_integration_dimplot<-function(obj, outFile, has_batch_file, qc_genes=NULL
     adt_names=rownames(obj$ADT@counts)
     writeLines(adt_names, paste0(outFile, ".ADT.txt"))
     for(adt in adt_names){
-      g<-FeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
+      g<-MyFeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
       ggsave(paste0(outFile, ".", adt, ".png"), g, width=5, height=5, dpi=300, units="in", bg="white")
     }
 
     common_genes=intersect(adt_names, rownames(obj[["RNA"]]))
     for(adt in common_genes){
       DefaultAssay(obj)="ADT"
-      g1<-FeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
+      g1<-MyFeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " protein")) + theme(aspect.ratio=1)
       DefaultAssay(obj)="RNA"
-      g2<-FeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " RNA")) + theme(aspect.ratio=1)
+      g2<-MyFeaturePlot(obj, features=adt, cols = c("lightgrey", "red"), min.cutoff=0.01, max.cutoff=0.99, order=TRUE) + ggtitle(paste0(adt, " RNA")) + theme(aspect.ratio=1)
       g<-g1+g2+plot_layout(ncol=2)
       ggsave(paste0(outFile, ".", adt, ".common.png"), g, width=10, height=5, dpi=300, units="in", bg="white")
     }
@@ -1662,14 +1671,14 @@ draw_feature_qc<-function(prefix, rawobj, ident_name, assay="RNA") {
   }
 
   cat("draw qc violin ...\n")
-  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = ncol, raster=FALSE, assay=assay) + NoLegend() & theme(axis.title.x = element_blank())
+  g<-VlnPlot(rawobj, features = feats, pt.size = 0.1, ncol = ncol, raster=FALSE) + NoLegend() & theme(axis.title.x = element_blank())
   ggsave(paste0(prefix, ".qc.violin.png"), g, width=6000, height=height, dpi=300, units="px", bg="white")
 
   if('umap' %in% names(rawobj@reductions)){
     nfeature<-length(feats)
 
     by.col=nfeature>=nsample
-    g<-FeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col, raster=FALSE, assay=assay) +
+    g<-MyFeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col, raster=FALSE) +
       theme(aspect.ratio=1)
     if(by.col){
       width = min(50000, nsample * 700)
@@ -1691,7 +1700,7 @@ draw_feature_qc<-function(prefix, rawobj, ident_name, assay="RNA") {
   p<-p1+p2+plot_layout(ncol=2)
   ggsave(paste0(prefix, ".qc.png"), p, width=2600, height=1200, dpi=300, units="px", bg="white")
 
-  mt <- FetchData(rawobj, vars=c("percent.mt", ident_name, nFeatureCol, nCountCol), assay=assay)
+  mt <- FetchData(rawobj, vars=c("percent.mt", ident_name, nFeatureCol, nCountCol))
   mt = mt[cells,,drop=FALSE] |>
     dplyr::mutate(nFeature = log10(get(nFeatureCol)),
                   nCount = log10(get(nCountCol)),
@@ -2743,12 +2752,9 @@ fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns
   return(target_meta)
 }
 
+# back compatible wrapper
 my_FeaturePlot_scCustom <-function(seurat_object, features, ...){
-  g=FeaturePlot_scCustom( seurat_object = seurat_object, 
-                          features = features,
-                          colors_use = viridis_plasma_dark_high, 
-                          na_color = "lightgray", ...) & theme(aspect.ratio=1)
-  return(g)
+  MyFeaturePlot(object = seurat_object, features=features, ...)
 }
 
 # The default FeaturePlot function in Seurat doesn't handle the order correctly. We need to fix it.
@@ -2796,10 +2802,10 @@ get_barplot<-function(
   }
   
   alltbl=NULL
-  col_name="SignacX"
+  col_name=valid_columns[1]
   for(col_name in valid_columns){
     tbl = data.frame(table(ct_meta[,cluster_name], ct_meta[,col_name]))
-    v1 = as.numeric(as.character(tbl$Var1))
+    v1 = suppressWarnings(as.numeric(as.character(tbl$Var1)))
     if(all(is.na(v1))){
       v1 = as.character(tbl$Var1)
     }
@@ -2810,6 +2816,9 @@ get_barplot<-function(
   }
 
   alltbl$Category=factor(alltbl$Category, levels=(valid_columns))
+  if(!is.null(levels(ct_meta[[cluster_name]]))){
+    alltbl$Var1=factor(alltbl$Var1, levels=levels(ct_meta[[cluster_name]]))
+  }
 
   g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + 
     geom_bar(width=0.5, stat = "identity") + 
@@ -2827,10 +2836,14 @@ get_barplot<-function(
     # = number of chars * 11 * 4.16 * 0.6 ~= number of chars * 27.5
     # Let's use a simpler multiplier, like 25, to be safe.
     cur_label_height=max(label_height, max_str_len * 25)
-    height = max(1500, length(unique(alltbl$Var1)) * calc_height_per_cluster + cur_label_height)
-    width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + 400
 
-    ggsave(bar_file, g, width=width, height=height, dpi=300, units="px", bg="white")
+    cat_str_len=max(nchar(as.character(alltbl$Var1)))
+    cur_label_width=max(400, cat_str_len * 25)
+
+    height = max(1500, length(unique(alltbl$Var1)) * calc_height_per_cluster + cur_label_height)
+    width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + cur_label_width
+
+    ggsave(bar_file, g, width=width, height=height, dpi=300, units="px", bg="white", limitsize = FALSE)
   }
   
   return(g)
@@ -3936,7 +3949,7 @@ get_image_dim_plot <- function(obj, assay, group.by, colors, title=assay) {
   return(g)
 }
 
-save_vis_png <-function(plots, sample_name, cur_cell_type_colors, cur_cell_type_col, image_type, legend_ncol=NULL, legend_title=FALSE){
+save_vis_png <-function(plots, file_prefix, cur_cell_type_colors, cur_cell_type_col, image_type, legend_ncol=NULL, legend_title=FALSE){
   if(is.null(legend_ncol)){
     legend_ncol=ifelse(length(cur_cell_type_colors) > 13, 2, 1)
   }
@@ -3958,7 +3971,7 @@ save_vis_png <-function(plots, sample_name, cur_cell_type_colors, cur_cell_type_
     g = g & theme(legend.title = element_blank())
   }
 
-  vis_png = paste0(sample_name, ".", image_type, ".", cur_cell_type_col, ".png")
+  vis_png = paste0(file_prefix, ".", image_type, ".", cur_cell_type_col, ".png")
   ggsave(vis_png, g, width=4 * length(plots) + 2 * legend_ncol, height=4.5, dpi=300, units="in", bg="white")
   return(vis_png)
 }
