@@ -212,11 +212,17 @@ sub initializeScRNASeqDefaultOptions {
 
   initDefaultValue( $def, "perform_decontX", 0);
   initDefaultValue( $def, "remove_decontX", 0);
-  initDefaultValue( $def, "remove_decontX_by_contamination", 0);
+  initDefaultValue( $def, "remove_decontX_by_contamination", 0.25);
 
   initDefaultValue( $def, "perform_pesudo_count_correlation", 0 );
   initDefaultValue( $def, "correlation_output_to_result_dir", 1 );
 
+  if(defined($def->{bubblemap_width_in})){
+    $def->{bubblemap_width} = $def->{bubblemap_width_in} * 300;
+  }
+  if(defined($def->{bubblemap_height_in})){
+    $def->{bubblemap_height} = $def->{bubblemap_height_in} * 300;
+  }
 
   return $def;
 }
@@ -337,14 +343,6 @@ sub getScRNASeqConfig {
     my $remove_doublets = getValue($def, "remove_doublets", 0);
     my $perform_individual_qc = getValue($def, "perform_individual_qc", 1);
 
-    if($perform_cellbender){
-      my $cellbender_prefix = "cellbender";
-      my ($cellbender_clean_ref, $cellbender_raw_ref) = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, undef );
-      $files_def = $cellbender_clean_ref;
-      $raw_files_def = $cellbender_raw_ref;
-
-      $prefix = "cellbender_";
-    }
 
     my $decontX_task = undef;
     my $decontX_counts_ref = undef;
@@ -355,7 +353,28 @@ sub getScRNASeqConfig {
       $decontX_counts_ref = [$decontX_task, ".counts.rds"];
       if($remove_decontX){
         $files_def = $decontX_counts_ref;
-        $prefix = $prefix . "decontX_";
+        $prefix = "decontX_";
+      }
+    }
+
+    if($perform_cellbender){
+      my $cellbender_prefix = "cellbender";
+      my ($cellbender_clean_ref, $cellbender_raw_ref) = add_cellbender_v2($config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref );
+      $files_def = $cellbender_clean_ref;
+      $raw_files_def = $cellbender_raw_ref;
+
+      if($perform_decontX){
+        $prefix = "cellbender_decontX_";
+      }else{
+        $prefix = "cellbender_";
+      }
+    }
+
+    if( $def->{"perform_individual_dynamic_qc"} ){
+      my $sct_str = get_sct_str($def);
+      my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
+      if(!defined $config->{$raw_individual_dynamic_qc_task}) {
+        add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
       }
     }
 
@@ -383,14 +402,6 @@ sub getScRNASeqConfig {
       my $sctk_task = $prefix . "sctk";
       add_sctk($config, $def, $tasks, $target_dir, $sctk_task, $files_def);
       $sctk_ref = [$sctk_task, ".meta.rds"];
-    }
-
-    if( $def->{"perform_individual_dynamic_qc"} ){
-      my $sct_str = get_sct_str($def);
-      my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
-      if(!defined $config->{$raw_individual_dynamic_qc_task}) {
-        add_individual_dynamic_qc($config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task);
-      }
     }
 
     if($remove_doublets){
