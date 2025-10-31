@@ -13,6 +13,10 @@ if(perform_tau) stopifnot(exists("tau_file"))
 if(perform_gtex) stopifnot(exists("gtex_file"))
 if(perform_tabula) stopifnot(exists("tabula_file"))
 
+if(!exists("top_ident")){
+  top_ident="#"
+}
+
 stopifnot(exists("all_genes"))
 stopifnot(exists("all_genes_label"))
 all_genes_fn=gsub('[/:()?\ ]+', "_", all_genes_label)
@@ -61,7 +65,7 @@ dataRankTest=function(selectedGenes,alldata,universGenes=NULL,nRep=1000,returnEx
 ```
 
 ```{r eval=perform_tau}
-cat("\n# Read tau file\n\n")
+cat(paste0("\n", top_ident, " Read tau file\n\n"))
 cat("Tau file was shared by Dr. Kendall Jensen team.\n\n")
 
 tau_df=fread(tau_file, data.table=FALSE)
@@ -77,7 +81,7 @@ tau_df=tau_df[!duplicated(tau_df$gene_name),] |>
 
 print_table(head(tau_df))
 
-cat(paste0("## Overlap between tau genes and ", all_genes_label, "genes.\n\n"))
+cat(paste0("\n", top_ident, "# Overlap between tau genes and ", all_genes_label, " genes.\n\n"))
 
 genes = list(rownames(tau_df), unique(all_genes))
 names(genes)=c("Tau", all_genes_label)
@@ -90,7 +94,7 @@ include_graphics(venn_png)
 ```
 
 ```{r, eval=perform_gtex}
-cat("\n# Read protein atlas GTEx gene expression file\n\n")
+cat(paste0("\n", top_ident, " Read protein atlas GTEx gene expression file\n\n"))
 cat("\nThe file was downloaded from https://www.proteinatlas.org/download/tsv/rna_tissue_gtex.tsv.zip. (v24.0)\n\n")
 
 gtex=fread(gtex_file)
@@ -100,7 +104,7 @@ print_table(head(gtex), row.names=FALSE)
 gtex_mat=reshape2::acast(gtex, Gene_name~Tissue, fun.aggregate=sum, value.var="nTPM")
 gtex_mat=gtex_mat[rowSums(gtex_mat)>0, ]
 
-cat("\n## Overlap between GTEx genes and ", all_genes_label, " genes\n\n")
+cat(paste0("\n", top_ident, "# Overlap between GTEx genes and ", all_genes_label, " genes\n\n"))
 
 genes = list(rownames(gtex_mat), unique(all_genes))
 names(genes)=c("GTEx", all_genes_label)
@@ -113,7 +117,7 @@ include_graphics(venn_png)
 ```
 
 ```{r eval=perform_tabula}
-cat("\n# Load Tabula Sapiens snRNA dataset\n\n")
+cat(paste0("\n", top_ident, " Load Tabula Sapiens snRNA dataset\n\n"))
 cat("The tabula sapiens single cell transcriptomic data was downloaded from [cellxgene](https://datasets.cellxgene.cziscience.com/981bcf57-30cb-4a85-b905-e04373432fef.rds).\n\n")
 cat("Only the data from 10x 3' platform was used in this report.\n\n")
 cat("Read tabula sapiens data from ",basename(tabula_file), ".\n\n")
@@ -122,7 +126,7 @@ if(!exists("tabula_obj")){
   tabula_obj=readRDS(tabula_file)
 }
 
-cat("\n## Overlap between Tabula Sapiens genes and ", all_genes_label, " genes\n\n")
+cat(paste0("\n", top_ident, "# Overlap between Tabula Sapiens genes and ", all_genes_label, " genes\n\n"))
 
 genes = list(rownames(tabula_obj), unique(all_genes))
 names(genes)=c("Tabula snRNA", all_genes_label)
@@ -133,7 +137,7 @@ venn_png = paste0("tabula_", all_genes_fn, ".genes.venn.png")
 ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, bg="white")
 include_graphics(venn_png)
 
-cat("\n## Cell type UMAP\n\n")
+cat(paste0("\n", top_ident, "# Cell type UMAP\n\n"))
 cat("Only the cell types with at least 1% of total cells were shown in the UMAP plot.\n\n")
 
 perc_1_cell=nrow(tabula_obj@meta.data) * 0.01
