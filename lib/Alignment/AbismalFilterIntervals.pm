@@ -348,6 +348,7 @@ $dnmtools_command | grep Version | cut -d ' ' -f 2 | awk '{print \"dnmtools,v\"\
 
 java -jar $picard CollectHsMetrics --version 2>&1 | grep -v 'TOOL' | awk '{print \"Picard,v\"\$1}' > ${sample_name}.Picard.version
 
+exit 0
 
 ";
 
