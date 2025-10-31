@@ -156,14 +156,14 @@ print_table_from_file<-function(filepath, row.names=1, caption=NULL, description
   output_table(tbl, caption, description)
 }
 
-print_table<-function(tbl, byDT=FALSE, row.names=TRUE, round_value=0){
+print_table<-function(tbl, byDT=FALSE, row.names=TRUE, round_value=0, ...){
   if(round_value > 0){
-    tbl <- tbl %>% dplyr::mutate(across(where(is.numeric), round, round_value))
+    tbl <- tbl %>% dplyr::mutate(dplyr::across(dplyr::where(is.numeric), round, round_value))
   }
   if(byDT){
-    DT::datatable(tbl, rownames = row.names, extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv")))
+    DT::datatable(tbl, rownames = row.names, extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv"), ...))
   }else{
-    print(kable(tbl, row.names = row.names))
+    print(knitr::kable(tbl, row.names = row.names, ...))
   }
 }
 
@@ -174,7 +174,7 @@ get_table_description<-function(category, filepath, description){
   return(result)
 }
 
-output_paged_table<-function(tbl, rownames=TRUE, escape=TRUE, digits=0, nsmall=0){
+output_paged_table<-function(tbl, rownames=TRUE, escape=TRUE, digits=0, nsmall=0, ...){
   if(digits > 0){
     tbl <- tbl %>% dplyr::mutate_if(is.numeric, format, digits=digits, nsmall=nsmall)
   }
@@ -184,10 +184,11 @@ output_paged_table<-function(tbl, rownames=TRUE, escape=TRUE, digits=0, nsmall=0
                 escape = escape,
                 extensions = "Buttons", 
                 options = list( dom = "Bfrtip", 
-                                buttons = c("excel", "csv")))
+                                buttons = c("excel", "csv"),
+                                ...))
 }
 
-printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
+printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0, ...){
   if(row.names > 0){
     tbl<-data.frame(fread(filepath, check.names=F), check.names=FALSE, row.names=row.names)
   }else{
@@ -198,7 +199,8 @@ printPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0
                       rownames=row.names > 0,
                       escape=escape,
                       digits=digits, 
-                      nsmall=nsmall)
+                      nsmall=nsmall,
+                      ...)
 }
 
 getPagedTable<-function(filepath, row.names=1, escape=TRUE, digits=0, nsmall=0){
