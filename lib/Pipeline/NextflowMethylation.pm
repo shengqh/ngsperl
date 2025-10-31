@@ -142,6 +142,7 @@ ln -s $nextflow_methylseq_bismark_dir/__NAME___1_val_1_bismark_bt2_pe.deduplicat
         program                  => "",
         check_program            => 0,
         parameterSampleFile1_ref => $source_ref,
+        parameterSampleFile2_ref => $nextflow_methylseq_task, # just to make dependency
         no_prefix                => 1,
         no_output                => 1,
         output_ext               => ".bismark.cov.gz",
