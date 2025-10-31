@@ -44,6 +44,17 @@ sub initializeSpatialTranscriptomeDefaultOptions {
   initDefaultValue( $def, "perform_preprocessing", 0 );
   initDefaultValue( $def, "perform_VisiumHD",      1 );
   initDefaultValue( $def, "perform_RCTD",          1 );
+  initDefaultValue( $def, "nCount_cutoff",         100 );
+  initDefaultValue( $def, "cluster_algorithm",     4 );         #Leiden algorithm
+
+  if ( defined( $def->{bubblemap_width_in} ) ) {
+    initDefaultValue( $def, "bubblemap_width", $def->{bubblemap_width_in} * 300 );
+  }
+  elsif ( defined( $def->{bubblemap_width} ) ) {
+    initDefaultValue( $def, "bubblemap_width_in", $def->{bubblemap_width} / 300 );
+  }
+
+  initDefaultValue( $def, "MEcell_resolutions", [ 0.02, 0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5 ] );
 
   return $def;
 } ## end sub initializeSpatialTranscriptomeDefaultOptions
@@ -146,13 +157,17 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
     };
     push( @$tasks, $qc_summary_task );
 
+    my $rctd_polygons_task = undef;
     if ( $def->{perform_RCTD} ) {
+      my $rctd_tasks = {};
       # We cannot set RCTD too many thread. It is very easy to get error in cluster.
       my $RCTD_thread = getValue( $def, "RCTD_thread", 8 );
       my $assays      = [ 'Spatial.Polygons', 'Spatial.008um' ];
-      my $rctd_tasks  = {};
       for my $assay ( @{$assays} ) {
         my $rctd_task = "RCTD_$assay";
+        if ( $assay eq 'Spatial.Polygons' ) {
+          $rctd_polygons_task = $rctd_task;
+        }
         $config->{$rctd_task} = {
           class                    => "CQS::IndividualR",
           target_dir               => "$target_dir/$rctd_task",
@@ -232,23 +247,126 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
 
     } ## end if ( $def->{perform_RCTD...})
 
+    my $azimuth_task = undef;
+    if ( getValue( $def, "perform_Azimuth", 0 ) ) {
+      $azimuth_task = "Azimuth";
+      $config->{$azimuth_task} = {
+        class                    => "CQS::IndividualR",
+        target_dir               => "$target_dir/$azimuth_task",
+        perform                  => 1,
+        option                   => "",
+        rtemplate                => "../CQS/reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/spatial_azimuth.r",
+        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile2     => {
+          task_name       => getValue( $def, "task_name" ),
+          email           => getValue( $def, "email" ),
+          affiliation     => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          assay           => "Spatial.Polygons",
+          Azimuth_ref     => getValue( $def, "Azimuth_ref" ),
+          bubblemap_file  => getValue( $def, "bubblemap_file" ),
+          bubblemap_width => getValue( $def, "bubblemap_width" ),
+          nCount_cutoff   => getValue( $def, "nCount_cutoff" ),
+        },
+        sh_direct     => 0,
+        docker_prefix => "azimuth_",
+        no_docker     => 0,
+        output_ext    => ".meta.rds",
+        pbs           => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        }
+      };
+      push( @$tasks, $azimuth_task );
+    } ## end if ( getValue( $def, "perform_Azimuth"...))
+
+    my $singleR_task = undef;
+    if ( getValue( $def, "perform_SingleR", 0 ) ) {
+      $singleR_task = "SingleR";
+      $config->{$singleR_task} = {
+        class                    => "CQS::IndividualR",
+        target_dir               => "$target_dir/$singleR_task",
+        perform                  => 1,
+        option                   => "",
+        rtemplate                => "../CQS/reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/SingleR.r",
+        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile2     => {
+          task_name       => getValue( $def, "task_name" ),
+          email           => getValue( $def, "email" ),
+          affiliation     => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          assay           => "Spatial.Polygons",
+          bubblemap_file  => getValue( $def, "bubblemap_file" ),
+          bubblemap_width => getValue( $def, "bubblemap_width" ),
+          nCount_cutoff   => getValue( $def, "nCount_cutoff" ),
+          species         => getValue( $def, "species" ),
+        },
+        sh_direct     => 0,
+        docker_prefix => "singleR_",
+        no_docker     => 0,
+        output_ext    => ".meta.rds",
+        pbs           => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        }
+      };
+      push( @$tasks, $singleR_task );
+    } ## end if ( getValue( $def, "perform_SingleR"...))
+
+    my $signacx_task = undef;
+    if ( getValue( $def, "perform_SignacX", 0 ) ) {
+      $signacx_task = "SignacX";
+      $config->{$signacx_task} = {
+        class                    => "CQS::IndividualR",
+        target_dir               => "$target_dir/$signacx_task",
+        perform                  => 1,
+        option                   => "",
+        rtemplate                => "../CQS/reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
+        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile2     => {
+          task_name       => getValue( $def, "task_name" ),
+          email           => getValue( $def, "email" ),
+          affiliation     => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          assay           => "Spatial.Polygons",
+          bubblemap_file  => getValue( $def, "bubblemap_file" ),
+          bubblemap_width => getValue( $def, "bubblemap_width" ),
+          nCount_cutoff   => getValue( $def, "nCount_cutoff" ),
+          species         => getValue( $def, "species" ),
+          pca_dims        => getValue( $def, "pca_dims", 30 ),
+          reduction       => "pca",
+          by_sctransform  => 0,
+        },
+        sh_direct     => 0,
+        docker_prefix => "singleR_",
+        no_docker     => 0,
+        output_ext    => ".meta.rds",
+        pbs           => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "40gb"
+        }
+      };
+      push( @$tasks, $signacx_task );
+    } ## end if ( getValue( $def, "perform_SignacX"...))
+
     if ( getValue( $def, "perform_MEcell", 0 ) ) {
       my $MEcell_task = "MEcell";
       $config->{$MEcell_task} = {
-        class                    => "CQS::IndividualR",
-        target_dir               => "$target_dir/$MEcell_task",
-        perform                  => 1,
-        option                   => "",
-        rtemplate                => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell.r",
-        rReportTemplate          => "../scRNA/spatial_MEcell.rmd;reportFunctions.R",
-        run_rmd_independent      => 1,
-        rmd_ext                  => ".MEcell.html",
+        class      => "CQS::IndividualR",
+        target_dir => "$target_dir/$MEcell_task",
+        perform    => 1,
+        option     => "",
+        rtemplate  => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell.r",
+        # rReportTemplate          => "../scRNA/spatial_MEcell.rmd;reportFunctions.R",
+        # run_rmd_independent      => 1,
+        # rmd_ext                  => ".MEcell.html",
         parameterSampleFile1_ref => [ $qc_task, ".rds" ],
         parameterSampleFile2     => {
-          task_name   => getValue( $def, "task_name" ),
-          email       => getValue( $def, "email" ),
-          affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-          assay       => "Spatial.Polygons",
+          task_name     => getValue( $def, "task_name" ),
+          email         => getValue( $def, "email" ),
+          affiliation   => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          assay         => "Spatial.Polygons",
+          nCount_cutoff => getValue( $def, "nCount_cutoff" ),
         },
         sh_direct       => 0,
         no_docker       => 0,
@@ -261,48 +379,121 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
       };
       push( @$tasks, $MEcell_task );
 
-      my $MEcell_cluster_task = "${MEcell_task}_cluster";
-      $config->{$MEcell_cluster_task} = {
-        class           => "CQS::IndividualRmd",
-        target_dir      => "$target_dir/$MEcell_cluster_task",
-        perform         => 1,
-        rReportTemplate => "../scRNA/spatial_MEcell_cluster.rmd;reportFunctions.R;../scRNA/scRNA_func.r",
-        option          => "
+      my $MEcell_resolutions = getValue( $def, "MEcell_resolutions" );
+      if ( !is_array($MEcell_resolutions) ) {
+        stop("MEcell_resolutions should be array of float.");
+      }
+      $MEcell_resolutions = [ map { $_ + 0 } @{$MEcell_resolutions} ];
+      my $MEcell_resolutions_label = join( "_", @{$MEcell_resolutions} );
+      #print("MEcell resolutions: ", Dumper($MEcell_resolutions), "\n");
+      my $assay             = "Spatial.Polygons";
+      my $cluster_algorithm = getValue( $def, "cluster_algorithm", 4 );
+      my $cluster_algorithm_name;
+      if ( $cluster_algorithm == 1 ) {
+        $cluster_algorithm_name = 'Louvain';
+      }
+      elsif ( $cluster_algorithm == 2 ) {
+        $cluster_algorithm_name = 'LouvainRefine';
+      }
+      elsif ( $cluster_algorithm == 3 ) {
+        $cluster_algorithm_name = 'SLM';
+      }
+      elsif ( $cluster_algorithm == 4 ) {
+        $cluster_algorithm_name = 'Leiden';
+      }
+      else {
+        die "Unsupported cluster_algorithm $cluster_algorithm. Supported values are 1 (Louvain), 2 (LouvainRefine), 3 (SLM), 4 (Leiden).";
+      }
 
-Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('spatial_MEcell_cluster.Rmd', output_file='__OUTPUT__')\"
+      my $MEcell_cluster_tasks = [];
+      for ( my $i = 0; $i < scalar( @{$MEcell_resolutions} ); $i++ ) {
+        my $cur_resolution = $MEcell_resolutions->[$i];
 
-",
+        my $MEcell_cluster_task = "${MEcell_task}_cluster_${cluster_algorithm_name}_res.${cur_resolution}";
+        $config->{$MEcell_cluster_task} = {
+          class                    => "CQS::IndividualR",
+          target_dir               => "$target_dir/$MEcell_cluster_task",
+          perform                  => 1,
+          rtemplate                => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_MEcell_one_cluster.r",
+          option                   => "",
+          parameterSampleFile1_ref => [ $MEcell_task, ".rds" ],
+          parameterSampleFile2     => {
+            email                  => getValue( $def, "email" ),
+            affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+            assay                  => $assay,
+            markers_file           => getValue( $def, "markers_file" ),
+            curated_markers_file   => getValue( $def, "curated_markers_file" ),
+            summary_layer_file     => getValue( $def, "summary_layer_file" ),
+            remove_subtype         => getValue( $def, "remove_subtype" ),
+            HLA_panglao5_file      => getValue( $def, "HLA_panglao5_file" ),
+            bubblemap_file         => getValue( $def, "bubblemap_file" ),
+            bubblemap_width_in     => getValue( $def, "bubblemap_width_in", 8 ),
+            MEcell_resolution      => $cur_resolution,
+            species                => getValue( $def, "species" ),
+            cluster_algorithm      => $cluster_algorithm,
+            cluster_algorithm_name => $cluster_algorithm_name,
+          },
+          parameterSampleFile3_ref => $azimuth_task,
+          parameterSampleFile4_ref => $rctd_polygons_task,
+          no_prefix                => 1,
+          sh_direct                => 0,
+          no_docker                => getValue( $def, "no_docker", 0 ),
+          output_to_same_folder    => 0,
+          output_ext               => ".$assay.MEcell.res.$cur_resolution.$cluster_algorithm_name.meta.rds",
+          #output_other_ext         => ".MEcell_cluster.html",
+          pbs => {
+            "nodes"    => "1:ppn=1",
+            "walltime" => "48",
+            "mem"      => "40gb"
+          }
+        };
+        push( @$tasks,                $MEcell_cluster_task );
+        push( @$MEcell_cluster_tasks, $MEcell_cluster_task );
+      } ## end for ( my $i = 0; $i < scalar...)
+
+      my $MEcell_cluster_report_task = "${MEcell_task}_cluster_${cluster_algorithm_name}_report";
+      $config->{$MEcell_cluster_report_task} = {
+        class                    => "CQS::IndividualRmd",
+        target_dir               => "$target_dir/$MEcell_cluster_report_task",
+        perform                  => 1,
+        rReportTemplate          => "../scRNA/spatial_MEcell_cluster.rmd;reportFunctions.R;../scRNA/scRNA_func.r",
+        option                   => "",
         parameterSampleFile1_ref => [ $MEcell_task, ".rds" ],
         parameterSampleFile2     => {
-          email                => getValue( $def, "email" ),
-          affiliation          => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-          assay                => "Spatial.Polygons",
-          markers_file         => getValue( $def, "markers_file" ),
-          curated_markers_file => getValue( $def, "curated_markers_file" ),
-          summary_layer_file   => getValue( $def, "summary_layer_file" ),
-          remove_subtype       => getValue( $def, "remove_subtype" ),
-          HLA_panglao5_file    => getValue( $def, "HLA_panglao5_file" ),
-          bubblemap_file       => getValue( $def, "bubblemap_file" ),
-          bubblemap_width_in   => getValue( $def, "bubblemap_width_in", 8 ),
-          MEcell_resolutions   => getValue( $def, "MEcell_resolutions", "0.1,0.2,0.3,0.4,0.5" ),
-          species              => getValue( $def, "species" ),
+          email                  => getValue( $def, "email" ),
+          affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          assay                  => $assay,
+          markers_file           => getValue( $def, "markers_file" ),
+          curated_markers_file   => getValue( $def, "curated_markers_file" ),
+          summary_layer_file     => getValue( $def, "summary_layer_file" ),
+          remove_subtype         => getValue( $def, "remove_subtype" ),
+          HLA_panglao5_file      => getValue( $def, "HLA_panglao5_file" ),
+          bubblemap_file         => getValue( $def, "bubblemap_file" ),
+          bubblemap_width_in     => getValue( $def, "bubblemap_width_in", 8 ),
+          MEcell_resolutions     => $MEcell_resolutions,
+          species                => getValue( $def, "species" ),
+          cluster_algorithm      => $cluster_algorithm,
+          cluster_algorithm_name => $cluster_algorithm_name,
         },
-        no_prefix             => 1,
-        sh_direct             => 0,
-        no_docker             => getValue( $def, "no_docker", 0 ),
-        output_to_same_folder => 0,
-        output_file_prefix    => ".MEcell_cluster.html",
-        output_ext            => ".MEcell_cluster.html",
-        output_other_ext      => ".MEcell_cluster.rds",
-        pbs                   => {
+        parameterSampleFile3_ref => $MEcell_cluster_tasks,
+        parameterSampleFile4_ref => $azimuth_task,
+        parameterSampleFile5_ref => $rctd_polygons_task,
+        parameterSampleFile6_ref => $singleR_task,
+        parameterSampleFile7_ref => $signacx_task,
+        no_prefix                => 1,
+        sh_direct                => 0,
+        no_docker                => getValue( $def, "no_docker", 0 ),
+        output_to_same_folder    => 0,
+        output_ext               => ".MEcell_cluster.html",
+        pbs                      => {
           "nodes"    => "1:ppn=1",
           "walltime" => "48",
           "mem"      => "40gb"
         }
       };
-      push( @$tasks, $MEcell_cluster_task );
+      push( @$tasks, $MEcell_cluster_report_task );
 
-      my $MEcell_cluster_summary_task = "${MEcell_cluster_task}_summary";
+      my $MEcell_cluster_summary_task = "${MEcell_cluster_report_task}_summary";
       $config->{$MEcell_cluster_summary_task} = {
         class                    => "CQS::UniqueRmd",
         target_dir               => "$target_dir/$MEcell_cluster_summary_task",
@@ -310,7 +501,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('spatial_MEcell_c
         option                   => "",
         report_rmd_file          => "../scRNA/spatial_MEcell_cluster_summary.Rmd",
         additional_rmd_files     => "../CQS/reportFunctions.R",
-        parameterSampleFile1_ref => [ $MEcell_cluster_task, ".html" ],
+        parameterSampleFile1_ref => [ $MEcell_cluster_report_task, ".html" ],
         parameterSampleFile2     => {
           task_name   => getValue( $def, "task_name" ),
           email       => getValue( $def, "email" ),
@@ -330,35 +521,6 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('spatial_MEcell_c
 
     } ## end if ( getValue( $def, "perform_MEcell"...))
 
-    if ( getValue( $def, "perform_Azimuth", 0 ) ) {
-      my $azimuth_task = "Azimuth";
-      $config->{$azimuth_task} = {
-        class                    => "CQS::IndividualR",
-        target_dir               => "$target_dir/$azimuth_task",
-        perform                  => 1,
-        option                   => "",
-        rtemplate                => "../CQS/reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/spatial_azimuth.r",
-        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
-        parameterSampleFile2     => {
-          task_name      => getValue( $def, "task_name" ),
-          email          => getValue( $def, "email" ),
-          affiliation    => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-          assay          => "Spatial.Polygons",
-          Azimuth_ref    => getValue( $def, "Azimuth_ref" ),
-          bubblemap_file => getValue( $def, "bubblemap_file" ),
-        },
-        sh_direct     => 0,
-        docker_prefix => "azimuth_",
-        no_docker     => 0,
-        output_ext    => ".meta.rds",
-        pbs           => {
-          "nodes"    => "1:ppn=1",
-          "walltime" => "24",
-          "mem"      => "40gb"
-        }
-      };
-      push( @$tasks, $azimuth_task );
-    } ## end if ( getValue( $def, "perform_Azimuth"...))
   } ## end if ( $def->{perform_VisiumHD...})
 
   #   if ( $def->{perform_segment_report} ) {
