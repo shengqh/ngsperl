@@ -46,12 +46,23 @@ species=myoptions$species
 resolutions=sort(as.numeric(myoptions$MEcell_resolutions))
 resolutions_str=paste0(resolutions, collapse="_")
 
+algorithm_name=myoptions$cluster_algorithm_name
+
 bubblemap_file=myoptions$bubblemap_file
 bubblemap_width_in=as.numeric(myoptions$bubblemap_width_in)
 
 file_map<-read_file_map("fileList1.txt", do_unlist=FALSE)
 sample_name=names(file_map)[1]
 rds_file=file_map[[sample_name]]
+
+cluster_map=read_file_map("fileList3.txt", do_unlist=FALSE)
+cluster_files=cluster_map[[sample_name]]
+
+detail_folder="details"
+if(!dir.exists(detail_folder)){
+  dir.create(detail_folder)
+}
+
 ```
 
 ---
@@ -71,32 +82,77 @@ ctdef<-init_celltype_markers(panglao5_file = myoptions$markers_file,
                              combined_celltype_file = NULL)
 
 cell_activity_database<-ctdef$cell_activity_database
+
+predict_celltypes<-function(filtered_obj, assay, cluster, cluster_cell_type, cell_activity_database){
+  data_norm=get_seurat_average_expression(filtered_obj, cluster, assay=assay)
+  
+  predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
+
+  new_cluster_ids<-paste0(colnames(data_norm), ": ", names(predict_celltype$max_cta))
+  names(new_cluster_ids)<-colnames(data_norm)
+
+  filtered_obj@meta.data[[cluster_cell_type]] = factor_by_count(new_cluster_ids[as.character(filtered_obj@meta.data[[cluster]])])
+  return(filtered_obj)
+}
 ```
 
 # Load Seurat object
 
-Load data from `r rds_file` and perform MEcell clustering at resolutions: `r resolutions_str`.
+Load data from `r rds_file` and perform MEcell clustering at resolutions: `r resolutions_str` using algorithm: `r algorithm_name`.
 
 ```{r}
-cluster_rds = paste0(sample_name, ".", assay, ".MEcell.res", resolutions_str, ".cluster.rds")
-if(file.exists(cluster_rds)){
-  obj = readRDS(cluster_rds)
-}else{
-  obj = readRDS(rds_file)
+obj = readRDS(rds_file)
 
-  stopifnot(assay %in% names(obj@assays))
-
-  DefaultAssay(obj) <- assay
-
-  obj <- FindClusters(obj, resolution = resolutions, graph.name="MEcell")
-  saveRDS(obj, cluster_rds)
+cfile = cluster_files[1]
+for(cfile in cluster_files){
+  cmeta = readRDS(cfile)
+  stopifnot(all(rownames(cmeta) == rownames(obj@meta.data)))
+  cluster_col = grep("MEcell_res.", colnames(cmeta), value=TRUE)
+  cur_col=cluster_col[1]
+  for(cur_col in cluster_col){
+    #somehow, the leiden will generate more than 100 clusters, 
+    #and the names are not ordered by number of cells.
+    #we need to rename them here.
+    cur_tbl=table(cmeta[[cur_col]])
+    cur_tbl=cur_tbl[order(-cur_tbl)]
+    rename_map = setNames(seq_along(cur_tbl), names(cur_tbl))
+    cmeta[[cur_col]] = rename_map[as.character(cmeta[[cur_col]])]
+    obj@meta.data[[cur_col]] = factor_by_count(cmeta[[cur_col]])
+  }
 }
+```
 
-resolution=resolutions[1]
-for(resolution in resolutions){
-  cluster_col = paste0("MEcell_res.", resolution)
-  new_levels=as.character(sort(as.numeric(levels(obj@meta.data[[cluster_col]]))))
-  obj@meta.data[[cluster_col]] = factor(as.character(obj@meta.data[[cluster_col]]), levels=new_levels)
+```{r}
+hasAzimuth=file.exists('fileList4.txt')
+if(hasAzimuth){
+  azimuth_file_map=read_file_map("fileList4.txt", do_unlist=FALSE)
+  azimuth_file=azimuth_file_map[[sample_name]]
+  azimuth_meta=readRDS(azimuth_file)
+  stopifnot(all(rownames(azimuth_meta) == rownames(obj@meta.data)))
+  obj@meta.data[["Azimuth"]] = azimuth_meta$Azimuth_finest
+}
+```
+
+```{r}
+hasRCTD=file.exists('fileList5.txt')
+if(hasRCTD){
+  rctd_file_map=read_file_map("fileList5.txt", do_unlist=FALSE)
+  rctd_file=rctd_file_map[[sample_name]]
+  rctd_obj=readRDS(rctd_file)
+  stopifnot(all(rownames(rctd_obj@meta.data) == rownames(obj@meta.data)))
+  obj@meta.data[["RCTD1"]] = rctd_obj@meta.data[["RCTD1_spot_class"]]
+  obj@meta.data[["RCTD1_first_type"]] = rctd_obj@meta.data[["RCTD1_first_type"]]
+}
+```
+
+```{r}
+hasSingleR=file.exists('fileList6.txt')
+if(hasSingleR){
+  singleR_file_map=read_file_map("fileList6.txt", do_unlist=FALSE)
+  singleR_file=singleR_file_map[[sample_name]]
+  singleR_meta=readRDS(singleR_file)
+  stopifnot(all(rownames(singleR_meta) == rownames(obj@meta.data)))
+  obj@meta.data[["SingleR"]] = singleR_meta[["SingleR_major_labels"]]
 }
 ```
 
@@ -111,26 +167,27 @@ tissue_image = SpatialPlot( object = obj,
 ```
 
 ```{r}
-predict_celltypes<-function(filtered_obj, assay, cluster, cluster_cell_type, cell_activity_database){
-  data_norm=get_seurat_average_expression(filtered_obj, cluster, assay=assay)
-  
-  predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
-
-  new_cluster_ids<-paste0(colnames(data_norm), ": ", names(predict_celltype$max_cta))
-  names(new_cluster_ids)<-colnames(data_norm)
-
-  filtered_obj@meta.data[[cluster_cell_type]] = factor_by_count(new_cluster_ids[as.character(filtered_obj@meta.data[[cluster]])])
-  return(filtered_obj)
+validation_columns = c()
+if(hasRCTD){
+  validation_columns = c(validation_columns, "RCTD1", "RCTD1_first_type")
+}
+if(hasAzimuth){
+  validation_columns = c(validation_columns, "Azimuth")
+}
+if(hasSingleR){
+  validation_columns = c(validation_columns, "SingleR")
 }
 ```
 
 ```{r}
 cluster_content=""
 
-resolution=resolutions[1]
-for(resolution in resolutions){
-  cluster_content=paste0(cluster_content, "\n# Resolution ", resolution, "\n\n")
-  cluster_col = paste0("MEcell_res.", resolution)
+cur_res=resolutions[1]
+for(cur_res in resolutions){
+  cluster_content=paste0(cluster_content, "\n# Resolution ", cur_res, "\n\n")
+  cluster_col = paste0("MEcell_res.", cur_res)
+
+  file_prefix = paste0(detail_folder, "/", sample_name, ".", assay, ".MEcell_res.", cur_res)
 
   cluster_counts = get_freq_table(obj@meta.data, cluster_col)
   cluster_counts$perc = cluster_counts$count / sum(cluster_counts$count)
@@ -151,7 +208,7 @@ for(resolution in resolutions){
 
   Idents(filtered_obj) <- cluster_cell_type_count_col
 
-  title=paste0(assay, ": MEcell res ", resolution)
+  title=paste0(assay, ": MEcell res ", cur_res)
 
   plots <- list("Tissue Image" = tissue_image)
 
@@ -171,7 +228,7 @@ for(resolution in resolutions){
     theme(plot.title = element_text(hjust = 0.5), 
           panel.border = element_rect(colour = "black", fill=NA, linewidth=1))     
 
-  cluster_png = save_vis_png(plots, sample_name, cluster_colors, cluster_cell_type_count_col, assay)
+  cluster_png = save_vis_png(plots, file_prefix, cluster_colors, cluster_cell_type_count_col, assay)
 
   cluster_content=paste0(cluster_content, "\n## Spatial clusters\n\n")
   cluster_content=paste0(cluster_content, getFigure(cluster_png))
@@ -183,7 +240,7 @@ for(resolution in resolutions){
                     axes = F, 
                     dark.background = F, 
                     coord.fixed = T) + 
-    ggtitle(label = paste0("Resolution : ", resolution)) + 
+    ggtitle(label = paste0("Resolution : ", cur_res)) + 
     theme(plot.title = element_text(hjust = 0.5), 
           panel.border = element_rect(colour = "black", fill=NA, linewidth=1),
           legend.position = "none",
@@ -192,7 +249,7 @@ for(resolution in resolutions){
   ncol = ifelse(length(cluster_colors) <= 3, length(cluster_colors), ceiling(sqrt(length(cluster_colors))))
   nrow = ceiling(length(cluster_colors) / ncol)
   
-  ct_individual_png = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".ct_individual.png")
+  ct_individual_png = paste0(file_prefix, ".ct_individual.png")
   ggsave(ct_individual_png, g, width=ncol * 2.8, height=nrow * 2.8 + 0.3, units="in", dpi=300, bg="white")
 
   cluster_content=paste0(cluster_content, "\n## Image dim plot of each cluster\n\n")
@@ -204,11 +261,24 @@ for(resolution in resolutions){
                       assay = assay, 
                       orderby_cluster = F,
                       species=species)
-  bubblemap_png = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".dot.png")
-  ggsave(bubblemap_png, g, width=bubblemap_width_in, height=max(4, length(cluster_colors) * 0.3 + 2), units="in", dpi=300, bg="white")
+  bubblemap_png = paste0(file_prefix, ".dot.png")
+  ggsave(bubblemap_png, g, width=bubblemap_width_in, height=max(4, length(cluster_colors) * 0.3 + 2), units="in", dpi=300, bg="white", limitsize = FALSE)
 
   cluster_content=paste0(cluster_content, "\n## Marker genes\n\n")
   cluster_content=paste0(cluster_content, getFigure(bubblemap_png))
+
+  if(length(validation_columns) > 0){
+    bar_file= paste0(file_prefix, ".", assay, ".MEcell_res.", cur_res, ".validation_barplot.png")
+    g<-get_barplot( ct_meta=filtered_obj@meta.data, 
+                    bar_file=bar_file,
+                    cluster_name=cluster_cell_type_count_col, 
+                    validation_columns=validation_columns,
+                    calc_height_per_cluster=200, 
+                    calc_width_per_cell=50)
+
+    cluster_content=paste0(cluster_content, "\n## Validation barplot\n\n")
+    cluster_content=paste0(cluster_content, getFigure(bar_file))
+  }
 
   gd = FetchData(filtered_obj, c(cluster_cell_type_count_col, paste0("nCount_", assay)))
   g=ggplot( gd, aes(x=!!sym(cluster_cell_type_count_col), y=!!sym(paste0("nCount_", assay)))) + 
@@ -217,13 +287,13 @@ for(resolution in resolutions){
                 theme_classic() +
                 theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5),
                       axis.title.x=element_blank())
-  vln_png = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".vln.png")
-  ggsave(vln_png, g, width=max(5, length(cluster_colors) * 0.4 + 2), height=4, units="in", dpi=300, bg="white")
+  vln_png = paste0(file_prefix, ".vln.png")
+  ggsave(vln_png, g, width=max(5, length(cluster_colors) * 0.4 + 2), height=4, units="in", dpi=300, bg="white", limitsize = FALSE)
 
   cluster_content=paste0(cluster_content, "\n## Violin plots of nCount\n\n")
   cluster_content=paste0(cluster_content, getFigure(vln_png))
 
-  markers_rds = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".markers.rds")
+  markers_rds = paste0(file_prefix, ".markers.rds")
   if(file.exists(markers_rds)){
     markers = readRDS(markers_rds)
   }else{
@@ -234,6 +304,10 @@ for(resolution in resolutions){
                               logfc.threshold = 0.25,
                               group.by = cluster_cell_type_count_col)
     saveRDS(markers, markers_rds)
+  }
+  if(nrow(markers) == 0){
+    cluster_content=paste0(cluster_content, "\n## No marker genes found\n\n")
+    next
   }
 
   top5 = markers |>
@@ -246,14 +320,15 @@ for(resolution in resolutions){
                   features = top5$gene, 
                   group.by = cluster_col, 
                   assay = assay) 
-  heatmap_png = paste0(sample_name, ".", assay, ".MEcell_res.", resolution, ".heatmap.png")
+  heatmap_png = paste0(file_prefix, ".heatmap.png")
 
   width<-max(6, length(cluster_colors) * 1)
   height<-max(3, length(top5$gene) * 0.2)
-  ggsave(heatmap_png, g, width=width, height=height, units="in", dpi=300, bg="white")
+  ggsave(heatmap_png, g, width=width, height=height, units="in", dpi=300, bg="white", limitsize = FALSE)
 
   cluster_content=paste0(cluster_content, "\n## Heatmap of top 5 markers per cluster\n\n")
   cluster_content=paste0(cluster_content, getFigure(heatmap_png))
+
 }
 
 cluster_rmd="cluster.rmd"
