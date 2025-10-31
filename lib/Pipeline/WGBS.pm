@@ -155,7 +155,7 @@ sub getConfig {
     output_file_ext          => ".abismal.html;.reads_mapped.bar.png;.reads_off_bait.bar.png;.final_unique_reads.bar.png;.duplication_rate.png;.rrbs_rate.png",
     can_result_be_empty_file => 0,
     sh_direct                => 1,
-    no_docker                => 1,
+    no_docker                => 0,
     pbs                      => {
       "nodes"    => "1:ppn=1",
       "walltime" => "10",
