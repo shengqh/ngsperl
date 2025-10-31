@@ -352,14 +352,11 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
     if ( getValue( $def, "perform_MEcell", 0 ) ) {
       my $MEcell_task = "MEcell";
       $config->{$MEcell_task} = {
-        class      => "CQS::IndividualR",
-        target_dir => "$target_dir/$MEcell_task",
-        perform    => 1,
-        option     => "",
-        rtemplate  => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell.r",
-        # rReportTemplate          => "../scRNA/spatial_MEcell.rmd;reportFunctions.R",
-        # run_rmd_independent      => 1,
-        # rmd_ext                  => ".MEcell.html",
+        class                    => "CQS::IndividualR",
+        target_dir               => "$target_dir/$MEcell_task",
+        perform                  => 1,
+        option                   => "",
+        rtemplate                => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell.r",
         parameterSampleFile1_ref => [ $qc_task, ".rds" ],
         parameterSampleFile2     => {
           task_name     => getValue( $def, "task_name" ),
@@ -385,9 +382,8 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
       }
       $MEcell_resolutions = [ map { $_ + 0 } @{$MEcell_resolutions} ];
       my $MEcell_resolutions_label = join( "_", @{$MEcell_resolutions} );
-      #print("MEcell resolutions: ", Dumper($MEcell_resolutions), "\n");
-      my $assay             = "Spatial.Polygons";
-      my $cluster_algorithm = getValue( $def, "cluster_algorithm", 4 );
+      my $assay                    = "Spatial.Polygons";
+      my $cluster_algorithm        = getValue( $def, "cluster_algorithm", 4 );
       my $cluster_algorithm_name;
       if ( $cluster_algorithm == 1 ) {
         $cluster_algorithm_name = 'Louvain';
