@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='cvd_10a'
-outFile='cvd_10a'
+sample_name='S01_ClassPTC_BRAF'
+outFile='S01_ClassPTC_BRAF'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,16 +9,21 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20250219_T04_snRNA_hg38/raw_qc_sct2_SignacX/result/cvd_10a')
+setwd('/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20251014_12904_VisiumHD_cellsegment/SignacX/result/S01_ClassPTC_BRAF')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
+source("reportFunctions.R")
+library(sf)
 library(SignacX)
 library(Seurat)
 library(ggplot2)
 library(patchwork)
 library(data.table)
+library(logger)
+
+log_appender(appender_tee(paste0(sample_name, ".log")))
 
 options(Seurat.object.assay.version = 'v3')
 options(future.globals.maxSize= 10779361280)
@@ -29,6 +34,9 @@ myoptions<-split(options_table$V1, options_table$V2)
 pca_dims=1:as.numeric(myoptions$pca_dims)
 reduction=myoptions$reduction
 by_sctransform<-ifelse(myoptions$by_sctransform == "0", FALSE, TRUE)
+
+assay=myoptions$assay
+is_polygons=assay == "Spatial.Polygons"
 
 bubblemap_width=to_numeric(myoptions$bubblemap_width, 4000)
 bubblemap_height=to_numeric(myoptions$bubblemap_height, 2000)
@@ -58,6 +66,13 @@ if(!exists("obj")){
 
 DefaultAssay(obj) <- assay
 
+if(is_polygons){
+  min_umi=as.numeric(myoptions$nCount_cutoff)
+  log_info(paste0("Subsetting polygons with min UMIs ", min_umi, " ..."))
+  DefaultAssay(obj) <- "Spatial.Polygons"
+  obj <- subset(obj, subset = nCount_Spatial.Polygons >= min_umi)
+}
+
 #SignacX doesn't support V5 object, we have to convert it to V3
 if(is_seurat_5_plus(obj)){
   if(DefaultAssay(obj) == "integrated"){
@@ -75,26 +90,46 @@ if(is_seurat_5_plus(obj)){
 
   # Create a new object with default assay
   newobj=CreateSeuratObject(counts, assay=assay)
+  if(is_polygons){
+    log_info("Normalizing polygons data ...")
+    newobj = NormalizeData(newobj)
+    log_info("Finding variable features ...")
+    newobj = FindVariableFeatures(newobj)
+    log_info("Scaling data ...")
+    newobj = ScaleData(newobj)
+    log_info("Running PCA ...")
+    newobj = RunPCA(newobj)
 
-  # Copy other slots
-  newobj[[assay]]$data = MyGetAssayData(obj, assay, slot="data")
-  newobj[[assay]]$scale.data = MyGetAssayData(obj, assay, slot="scale.data")
+    reduction="pca"
+    by_sctransform=FALSE
+  }else{
+    log_info("Copying data from original object ...")
+    newobj[[assay]]$data = MyGetAssayData(obj, assay, slot="data")
+    newobj[[assay]]$scale.data = MyGetAssayData(obj, assay, slot="scale.data")
+    newobj@reductions <- obj@reductions
+  }
 
   # Copy other information
   newobj@meta.data=obj@meta.data
-  newobj@reductions <- obj@reductions
 
   # Copy graphs, it is required for SignacX
   newobj@graphs <- obj@graphs
 
   # If the original object doesn't have graphs, we need to find neighbors
   if(length(newobj@graphs) == 0){
+    log_info("Finding neighbors for SignacX ...")
     newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
   }
+  log_info("Running Signac ...")
   labels <- Signac(E=newobj, R=R)
+
+  log_info("Generating labels ...")
   celltypes = GenerateLabels(labels, E = newobj)
 }else{
+  log_info("Running Signac ...")
   labels <- Signac(E=obj, R=R)
+
+  log_info("Generating labels ...")
   celltypes = GenerateLabels(labels, E = obj)
 }
 
@@ -140,4 +175,3 @@ rm(major_obj)
 unlink('.cache', recursive = TRUE, force = TRUE)
 
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
-

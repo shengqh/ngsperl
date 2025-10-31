@@ -1,6 +1,6 @@
-rm(list=ls()) 
-sample_name='DMSO_F_1513'
-outFile='DMSO_F_1513'
+rm(list=ls())
+sample_name='S01_ClassPTC_BRAF'
+outFile='S01_ClassPTC_BRAF'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,16 +9,21 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20231130_scRNA_8870_mouse_redo_cellbender/raw_qc_sct2_SingleR/result/DMSO_F_1513')
+setwd('/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20251014_12904_VisiumHD_cellsegment/SingleR/result/S01_ClassPTC_BRAF')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
+library(sf)
 library(SingleR)
 library(Seurat)
 library(ggplot2)
 library(patchwork)
 library(celldex)
+library(logger)
+
+source("scRNA_func.r")
+
+log_appender(appender_tee(paste0(sample_name, ".log")))
 
 cp = as.character(packageVersion("celldex"))
 
@@ -42,12 +47,15 @@ bubblemap_width=to_numeric(myoptions$bubblemap_width, 4000)
 bubblemap_height=to_numeric(myoptions$bubblemap_height, 2000)
 bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
 
+assay=myoptions$assay
+is_polygons=assay == "Spatial.Polygons"
+
 if(myoptions$species == "Mm"){
   ct_ref = MouseRNAseqData()
 }else if (myoptions$species == "Hs") {
   ct_ref <- HumanPrimaryCellAtlasData()
 }else{
-  warning(paste0("Cannot find singleR ref db for species ", myoptions$species, ", use HumanPrimaryCellAtlasData"))
+  log_warn(paste0("Cannot find singleR ref db for species ", myoptions$species, ", use HumanPrimaryCellAtlasData"))
   ct_ref <- HumanPrimaryCellAtlasData()
 }
 
@@ -55,14 +63,21 @@ if(!exists("obj")){
   obj=read_object_from_file_list(parSampleFile1)
 }
 
+if(is_polygons){
+  min_umi=as.numeric(myoptions$nCount_cutoff)
+  log_info(paste0("Subsetting polygons with min UMIs ", min_umi, " ..."))
+  DefaultAssay(obj) <- "Spatial.Polygons"
+  obj <- subset(obj, subset = nCount_Spatial.Polygons >= min_umi)
+}
+
 force=TRUE
 rds_file=paste0(outFile, ".SingleR.rds")
 if(file.exists(rds_file) & !force){
   labels<-readRDS(rds_file)
 }else{
-  cat("Converting to SingleCellExperiment object...\n")
+  log_info("Converting to SingleCellExperiment object...")
   sce=as.SingleCellExperiment(DietSeurat(obj))
-  cat("Running SingleR...\n")
+  log_info("Running SingleR...")
   labels<-SingleR(sce, ref=ct_ref, assay.type.test=1, labels=ct_ref$label.main)
   rm(sce)
 
@@ -87,7 +102,7 @@ obj <- AddMetaData(obj, metadata = labels$major_labels, col.name = "SingleR_majo
 ct_name="SingleR_labels"
 obj <- AddMetaData(obj, metadata = labels$pruned.labels, col.name = ct_name)
 
-cat("Saving meta data...\n")
+log_info("Saving meta data...")
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
 
 df<-data.frame("SingleR"=obj$SingleR_labels, "Sample"=obj$orig.ident)
@@ -104,17 +119,24 @@ major_obj=get_category_with_min_percentage(major_obj, ct_name, 0.01)
 ct_name_count = paste0(ct_name, "_count")
 major_obj@meta.data = add_column_count(major_obj@meta.data, ct_name, ct_name_count)
 
-cat("Visualizing...\n")
-g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
-ggsave(paste0(outFile, ".SingleR.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
+log_info("Visualizing...")
+if("umap" %in% names(major_obj@reductions)){
+  g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
+  ggsave(paste0(outFile, ".SingleR.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
+}
 
 if(has_bubblemap){
+  if(is_polygons){
+    assay="Spatial.Polygons"
+  }else{
+    assay="RNA"
+  }
   g<-get_bubble_plot(
     obj=major_obj, 
     cur_res=NA, 
     cur_celltype=ct_name_count, 
     bubblemap_file, 
-    assay="RNA", 
+    assay=assay, 
     species=myoptions$species,
     dot.scale=4)
   ggsave(paste0(outFile, ".SingleR.dot.png"), g, width=bubblemap_width, height=bubblemap_height, units=bubblemap_unit, dpi=300, bg="white")
@@ -134,4 +156,4 @@ png(paste0(outFile, ".score.png"), width=4000, height=3000, res=300)
 plotScoreHeatmap(slim_labels)
 dev.off()
 
-cat("Done.\n")
+log_info("Done.\n")
