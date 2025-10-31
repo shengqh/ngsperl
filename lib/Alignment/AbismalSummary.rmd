@@ -38,6 +38,25 @@ myoptions = read_file_map('fileList2.abismal.txt', do_unlist=FALSE)
 task_name=myoptions$task_name
 email=myoptions$email
 affiliation=get_affiliation(myoptions)
+
+x_axis_angle = ifelse(is.null(myoptions$x_axis_angle), 45, as.numeric(myoptions$x_axis_angle))
+
+get_bar_width_no_legend = function(nsample) {
+  return (max(5, 0.25 * nsample))
+}
+
+get_bar_width_with_legend = function(nsample) {
+  get_bar_width_no_legend(nsample) + 1.5
+}
+
+mytheme = function(...) {
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = x_axis_angle, hjust = 1),
+        ...)
+}
+
+bar_height = 4
 ```
 
 ---
@@ -72,13 +91,11 @@ g = ggplot(mapped, aes(x=Sample, y=as.numeric(Value), fill=Metric)) +
   geom_bar(stat="identity", position = "stack", width=0.5) +
   theme_classic() +
   labs(y="Number of reads", title="Read mapping summary") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank())
+  mytheme()
 
-width=max(6, length(unique(mapped$Sample))*0.3)
+width=get_bar_width_with_legend(length(unique(mapped$Sample)))
 reads_mapped_bar_png=paste0(task_name, ".reads_mapped.bar.png")
-ggsave(reads_mapped_bar_png, g, width=width, height=3, units="in", dpi=300, bg="white")
+ggsave(reads_mapped_bar_png, g, width=width, height=bar_height, units="in", dpi=300, bg="white")
 include_graphics(reads_mapped_bar_png)
 ```
 
@@ -103,14 +120,13 @@ hsmetrics_df = do.call(rbind, hsmetrics_lst)
 g = ggplot(hsmetrics_df, aes(x=Sample, y=as.numeric(PCT_OFF_BAIT))) + 
   geom_bar(stat="identity", width=0.5) +
   theme_classic() +
+  scale_y_continuous(labels = scales::percent) +  
   labs(y="PCT_OFF_BAIT", title="Reads off bait") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank())
+  mytheme()
 
-width=max(4, length(unique(hsmetrics_df$Sample))*0.2)
+width=get_bar_width_no_legend(length(unique(hsmetrics_df$Sample)))
 reads_off_bait_bar_png=paste0(task_name, ".reads_off_bait.bar.png")
-ggsave(reads_off_bait_bar_png, g, width=width, height=2.5, units="in", dpi=300, bg="white")
+ggsave(reads_off_bait_bar_png, g, width=width, height=bar_height, units="in", dpi=300, bg="white")
 include_graphics(reads_off_bait_bar_png)
 ```
 
@@ -138,22 +154,18 @@ dup_rate <- dup_df |>
   dplyr::filter(V1=="duplication_rate") |>
   mutate(V2 = as.numeric(V2) / 100.0)
 
-dup_width=max(5, nrow(dup_rate) * 0.15)
-dup_height=4
+dup_width=get_bar_width_no_legend(nrow(dup_rate$Sample))
 
 dup_png=paste0(task_name, ".duplication_rate.png")
 ymax=min(1.0, ceiling(max(dup_rate$V2) * 10) / 10)
 
 g3<-ggplot(dup_rate, aes(x=Sample, y=V2)) +
-  geom_bar(stat="identity", width = 0.5, fill = "blue") +
-  ylim(0,ymax) +
+  geom_bar(stat="identity", width = 0.5) +
   ylab("Duplication Rate") +
+  scale_y_continuous(labels = scales::percent) +  
   theme_classic() +
-  theme(legend.position = "none",
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
-ggsave(dup_png, g3, width=dup_width, height=dup_height, units="in", dpi=300, bg="white")
+  mytheme()
+ggsave(dup_png, g3, width=dup_width, height=bar_height, units="in", dpi=300, bg="white")
 ```
 
 ```{r fig.cap=figRef("duplication_rate_summary", "Duplication rate summary")}
@@ -184,13 +196,11 @@ g = ggplot(flagstat_df, aes(x=Sample, y=as.numeric(V1))) +
   geom_bar(stat="identity", width=0.5) +
   theme_classic() +
   labs(y="Unique reads", title="Final unique reads") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.title = element_text(hjust = 0.5),
-        axis.title.x=element_blank())
+  mytheme()
 
-width=max(4, length(unique(flagstat_df$Sample))*0.2)
+width=get_bar_width_no_legend(length(unique(flagstat_df$Sample)))
 final_unique_reads_bar_png=paste0(task_name, ".final_unique_reads.bar.png")
-ggsave(final_unique_reads_bar_png, g, width=width, height=2.5, units="in", dpi=300, bg="white")
+ggsave(final_unique_reads_bar_png, g, width=width, height=bar_height, units="in", dpi=300, bg="white")
 include_graphics(final_unique_reads_bar_png)
 ```
 
@@ -231,20 +241,16 @@ rrbs_final <- rrbs_summary_metrics_df |>
   tidyr::gather("Site_type", "Percentage", -Sample) |>
   dplyr::mutate(Percentage = ifelse(Percentage <= 1, Percentage, 2-Percentage))
 
-rrbs_width=max(6, nrow(rrbs_final) * 0.2 + 1)
-rrbs_height=3.5
+rrbs_width=get_bar_width_with_legend(nrow(rrbs_final$Sample))
 rrbs_png=paste0(task_name, ".rrbs_rate.png")
 
 g<-ggplot(rrbs_final, aes(x=Sample, y=Percentage, fill = Site_type)) +
   geom_bar(stat="identity", position=position_dodge()) +
-  xlab("") +
   ylab("BS rate") +
-  ylim(0,1) +
+  scale_y_continuous(labels = scales::percent) +  
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"),
-        legend.position = "top")
-ggsave(rrbs_png, g, width=rrbs_width, height=rrbs_height, units="in", dpi=300, bg="white")
+  mytheme(legend.position = "top")
+ggsave(rrbs_png, g, width=rrbs_width, height=4, units="in", dpi=300, bg="white")
 ```
 
 ```{r fig.cap=figRef("bs_cpg_summary", "The BS convert rates of Non-CpG and CpG sites")}
