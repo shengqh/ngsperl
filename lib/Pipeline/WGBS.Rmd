@@ -64,6 +64,25 @@ png_files=read.table('fileList7.txt', sep="\t", as.is=TRUE)
 get_png<-function(png_files, suffix){
   png_files$V1[grepl(paste0(suffix, "$"), png_files$V1)]
 }
+
+x_axis_angle = ifelse(is.null(myoptions$x_axis_angle), 45, as.numeric(myoptions$x_axis_angle))
+
+get_bar_width_no_legend = function(nsample) {
+  return (max(5, 0.25 * nsample))
+}
+
+get_bar_width_with_legend = function(nsample) {
+  get_bar_width_no_legend(nsample) + 1.5
+}
+
+mytheme = function(...) {
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = x_axis_angle, hjust = 1),
+        ...)
+}
+
+bar_height = 4
 ```
 
 # Sequencing Quality
@@ -276,8 +295,15 @@ The summary statistics computed include:
 - fractional_meth: The fraction of "called" sites "called" methylated
 
 ```{r}
-print_table(levels_df, byDT=TRUE, row.names=F)
+levels=unique(levels_df$Level)
+for(level in levels){
+  level_df = levels_df |> dplyr::filter(Level == level)
+  cat("\n#### Level: ", level, "\n\n")
+  print(htmltools::tagList(print_table(level_df, byDT=TRUE, row.names=F, pageLength = 20)))
+}
 ```
+
+### Coverage proportion of sites at different levels
 
 ```{r}
 mlevels <- levels_df %>%
@@ -296,11 +322,10 @@ levels_png=paste0(project, "/", project, ".coverage.stat.csv.png")
 
 g1<-ggplot(site_cov_perc, aes(x=Sample, y=Value, fill=Level)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
-  xlab("") +
   ylab("Coverage proportion") +
+  scale_y_continuous(labels = scales::percent) +  
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
+  mytheme()
 ggsave(levels_png, g1, width=levels_width, height=levels_height, units="in", dpi=300, bg="white")
 ```
 
@@ -330,26 +355,26 @@ hs_met_df <- bind_rows(DT)
 hs_met_df <- hs_met_df[, c(58, 1:54)]
 
 write.csv(file=paste0(project, "/", project, ".HS.matrics.csv"), hs_met_df)
+```
 
+```{r}
 cov_perc_depth <- hs_met_df %>%
   dplyr::select(c("sample", starts_with("PCT_TARGET_BASES"))) %>%
   gather("Depth", "Percentage", -sample) %>%
   mutate( Depth = gsub("PCT_TARGET_BASES_(.+)", "\\1", Depth),
-          Depth = factor(Depth, levels = c("1X", "2X", "10X", "20X", "30X", "40X", "50X", "100X")),
-          Percentage = Percentage * 100)
+          Depth = factor(Depth, levels = c("1X", "2X", "10X", "20X", "30X", "40X", "50X", "100X")))
 
-cov_width=max(1500, 50 * nrow(files)) / 300
-cov_height=4
+cov_width = get_bar_width_with_legend(length(unique(cov_perc_depth$sample)))
+cov_height = 4
 cov_png = paste0(project, "/", project, ".coverage.depth.perc.csv.png")
 
 g2<-ggplot(cov_perc_depth, aes(x=sample, y=Percentage, group = Depth, colour=Depth)) +
   geom_line(size = 1.5) +
   geom_point() +
-  xlab("") +
   ylab("Coverage percentage") +
+  scale_y_continuous(labels = scales::percent) +  
   theme_classic() +
-  theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
+  mytheme()
 ggsave(cov_png, g2, width=cov_width, height=cov_height, units="in", dpi=300, bg="white")
 ```
 
@@ -392,18 +417,16 @@ indicates successful bisulfite treatment, whereas lower rates may suggest incomp
 potentially leading to false-positive methylation calls and reduced accuracy in methylation analysis.
 
 ```{r}
-bs_width=max(1500, 50 * nrow(files)) / 300
+bs_width=get_bar_width_no_legend(nrow(files))
 bs_height=4
 bs_png=paste0(project, "/", project, ".bs.overall.rate.csv.png")
 
 g4<-ggplot(bs_overall_df, aes(x=samples, y=bsrate)) +
-  geom_bar(stat="identity", width = 0.5, fill = "blue") +
-  xlab("") +
-  ylab("BS Rate") +
+  geom_bar(stat="identity", width = 0.5) +
+  ylab("Bisulfite Conversion Rate") +
+  scale_y_continuous(labels = scales::percent) +  
   theme_classic() +
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
+  mytheme()
 ggsave(bs_png, g4, width=bs_width, height=bs_height, units="in", dpi=300, bg="white")
 ```
 
@@ -422,44 +445,38 @@ include_graphics(get_png(png_files, ".rrbs_rate.png$"))
 
 ## The statistics of methylation level
 
-### The fraction of methylated CpG sites
+### The percentage of methylated CpG sites (fractional_meth)
 
-- fractional_meth: The fraction of "called" sites "called" methylated
+The percentage of methylated sites represents the percentage of CpG sites that are determined to be methylated among all sites with sufficient coverage for methylation calling.
 
-The fraction of methylated sites represents the proportion of CpG sites that are determined to be methylated among all sites with sufficient coverage for methylation calling.
-
-```{r methy_summary1, fig.cap=figRef("methy_summary1", "The fraction of methylated sites")}
-fractional_meth <- mlevels %>%
-  dplyr::filter(Stat == "fractional_meth") %>%
-  mutate(Level = factor(Level, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
+```{r}
+fractional_meth <- mlevels |> 
+  dplyr::filter(Stat == "fractional_meth") |>
   dplyr::filter(Level == "cpg")
 
 nsample = length(unique(fractional_meth$Sample))
 
-fra_width=max(1500, 50 * nsample) / 300
+fra_width=get_bar_width_no_legend(nsample)
 fra_height=4
 fra_png=paste0(project, "/", project, ".fractional_meth.csv.png")
 
 g6<-ggplot(fractional_meth, aes(x=Sample, y=Value, fill=Level)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
-  xlab("") +
-  ylab("The fraction of methylated sites") +
-  ylim(0,1) +
+  ylab("The % of methylated CpG sites") +
   theme_classic() +
-  theme(legend.position="none",
-        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
+  scale_y_continuous(labels = scales::percent) +  
+  mytheme(legend.position="none")
 
 ggsave(fra_png, g6, width=fra_width, height=fra_height, units="in", dpi=300, bg="white")
 ```
 
-```{r fig.cap=figRef("methy_summary1", "The fraction of methylated sites")}
+```{r fig.cap=figRef("methy_summary1", "The percentage of methylated sites")}
 include_graphics(fra_png)
 ```
 
-### the mean of the methylation levels for covered sites
+### the mean of the methylation levels for covered sites (mean_meth)
 
-```{r methy_summary2, fig.cap=figRef("methy_summary2", "The mean of the methylation levels")}
+```{r}
 mean_meth <- mlevels %>%
   dplyr::filter(Stat == "mean_meth") %>%
   mutate(Level = factor(Level, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
@@ -467,19 +484,16 @@ mean_meth <- mlevels %>%
 
 nsample = length(unique(mean_meth$Sample))
 
-mean_width=max(1500, 50 * nsample) / 300
+mean_width=get_bar_width_no_legend(nsample)
 mean_height=4
 mean_png=paste0(project, "/", project, ".mean_meth.csv.png")
 
 g7 <- ggplot(mean_meth, aes(x=Sample, y=Value, fill=Level)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
-  xlab("") +
   ylab("The mean of the methylation levels") +
-  ylim(0,1) +
+  scale_y_continuous(labels = scales::percent) +  
   theme_classic() +
-  theme(legend.position="none",
-        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
+  mytheme(legend.position="none")
 ggsave(mean_png, g7, width=mean_width, height=mean_height, units="in", dpi=300, bg="white")
 ```
 
@@ -487,9 +501,9 @@ ggsave(mean_png, g7, width=mean_width, height=mean_height, units="in", dpi=300, 
 include_graphics(mean_png)
 ```
 
-### the mean of the methylation levels weighted by coverage
+### the mean of the methylation levels weighted by coverage (mean_meth_weighted)
 
-```{r methy_summary3, fig.cap=figRef("methy_summary3", "The mean of the methylation levels weighted by coverage")}
+```{r}
 mean_meth_weighted <- mlevels %>%
   dplyr::filter(Stat == "mean_meth_weighted") %>%
   mutate(Level = factor(Level, levels = c("cpg", "cpg_symmetric", "cytosines", "chh", "cxg", "ccg"))) %>%
@@ -497,19 +511,16 @@ mean_meth_weighted <- mlevels %>%
 
 nsample = length(unique(mean_meth_weighted$Sample))
 
-mean_width=max(1500, 50 * nsample) / 300
+mean_width=get_bar_width_no_legend(nsample)
 mean_height=4
 mean_png=paste0(project, "/", project, ".mean_meth_weighted.csv.png")
 
 g8 <- ggplot(mean_meth_weighted, aes(x=Sample, y=Value, fill=Level)) +
   geom_bar(stat="identity", width=0.5, position=position_dodge()) +
-  xlab("") +
   ylab("mean_meth_weighted") +
-  ylim(0,1) +
+  scale_y_continuous(labels = scales::percent) +  
   theme_classic() +
-  theme(legend.position="none",
-        axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=0.95, face="bold"),
-        axis.text.y = element_text(size=11, face="bold"))
+  mytheme(legend.position="none")
 
 ggsave(mean_png, g8, width=mean_width, height=mean_height, units="in", dpi=300, bg="white")
 ```
@@ -520,7 +531,16 @@ include_graphics(mean_png)
 
 # CpG β value
 
+The CpG β value represents the fraction of methylated reads among all reads covering a CpG site, calculated as the ratio of methylated cytosines to the total number of cytosines (methylated + unmethylated) observed at that site.
+
 ## Distribution
+
+CpG β value closing to 0 indicates low methylation, while values near 1 indicate high methylation.
+
+We should observe two peaks in the histogram, one near 0 (unmethylated) and another near 1 (methylated), 
+reflecting the bimodal distribution of DNA methylation in mammalian genomes.
+
+If you do not see this expected pattern, it may indicate potential issues with the bisulfite conversion efficiency, sequencing quality, or data processing steps.
 
 ```{r}
 include_graphics(get_png(png_files, ".CpG.bvalue_hist.png$"))
