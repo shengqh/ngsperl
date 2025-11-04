@@ -416,16 +416,16 @@ cluster_dotplot<-function(gdata, column1="features.plot", column2="id", value_co
   return(gdata)
 }
 
-summary_tableby = function(dat, formula, test=F, total=T) {
+summary_tableby = function(dat, formula, test=F, total=T, digits=1, digits.p=2, digit.pct=0) {
   library(arsenal)
   mycontrols  <- tableby.control( test=test, 
                                   total=total,
                                   numeric.stats=c("Nmiss","median","q1q3","range"),
                                   cat.stats=c("Nmiss","countpct"),
                                   stats.labels=list(Nmiss='Missing', median='Median', range='Range'),
-                                  digits=1, 
-                                  digits.p=2, 
-                                  digits.pct=0)
+                                  digits=digits, 
+                                  digits.p=digits.p, 
+                                  digits.pct=digit.pct)
 
   result = arsenal::tableby(formula, data = dat, control=mycontrols)
   summary(result, title = "", width = 3, pfootnote = TRUE)  
