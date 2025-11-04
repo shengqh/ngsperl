@@ -26,6 +26,25 @@ if(!exists("top_ident")){
   top_ident="##"
 }
 
+if(!exists("top_n_celltype")){
+  top_n_celltype=100
+}
+
+if(!exists("show_title")){
+  show_title=TRUE
+}
+
+if(!exists("target_name")){
+  target_name = ""
+}
+
+if(show_title){
+  if(nchar(target_name) == 0){
+    stop("show_title is TRUE but target_name is empty.")
+  }
+}
+
+column_title=ifelse(show_title, target_name, character(0))
 ```
 
 ```{r eval=perform_tau}
@@ -35,7 +54,7 @@ genes_tau = tau_df[intersect(target_genes, rownames(tau_df)), ] |>
   dplyr::filter(tau > tau_threshold) |>
   dplyr::select(-tau)
 
-cat("\nIn order to make the figure more readable, we only show ", nrow(genes_tau), " genes with tau > ", tau_threshold, ".")
+cat("\nIn order to make the figure more readable, we only show ", nrow(genes_tau), " out of ", length(target_genes), " genes with tau > ", tau_threshold, ".")
 
 if(tau_filter_tissue){
   cat(paste0(" We also filter out tissues without any gene with tau > ", tau_threshold, ".\n"))
@@ -61,7 +80,8 @@ ignored = draw_heatmap_png(heatmap_png,
   cluster_columns=TRUE,
   show_column_dend=TRUE,
   save_rds=FALSE,
-  add_height_inch=1)
+  add_height_inch=1,
+  column_title=column_title)
 include_graphics(heatmap_png)
 ```
 
@@ -108,7 +128,7 @@ cat(paste0("\n", top_ident, " Protein Atlas GTEx heatmap\n\n"))
 genes_gtex = gtex_mat[intersect(target_genes, rownames(gtex_mat)), ]
 
 if(nrow(genes_gtex) >= 30){
-  cat("In order to make the figure more readable, we only show ", nrow(genes_gtex), " genes with max nTPM > 10.\n")
+  cat("In order to make the figure more readable, we only show ", nrow(genes_gtex), " genes out of ", length(target_genes), " with max nTPM > 10.\n")
   genes_gtex = genes_gtex[apply(genes_gtex, 1, max) > 10,,drop=FALSE ]
 }
 
@@ -129,7 +149,8 @@ ignored = draw_heatmap_png(heatmap_png,
   cluster_columns=TRUE,
   show_column_dend=TRUE,
   save_rds=FALSE,
-  add_height_inch=2)
+  add_height_inch=2,
+  column_title=column_title)
 include_graphics(heatmap_png)
 ```
 
@@ -142,7 +163,7 @@ df = dataRankTest(selectedGenes=target_genes,
 print_table(df, byDT=TRUE, row.names=TRUE)
 ```
 
-```{r}
+```{r eval=perform_tabula}
 cat(paste0("\n", top_ident, " Tabula Sapiens Activity Score\n\n"))
 cat("Now calculated the gene activity score using Seurat function `AddModuleScore`.\n")
 
@@ -170,8 +191,15 @@ g=FeaturePlot_scCustom(score_obj,
             aspect_ratio=1,
             min.cutoff=quantile(score_obj@meta.data$ActivityScore1, 0.01),
             max.cutoff=quantile(score_obj@meta.data$ActivityScore1, 0.99)) +
-            xlab("UMAP_1") + ylab("UMAP_2") + 
-            theme(plot.title=element_blank())
+            xlab("UMAP_1") + ylab("UMAP_2")
+
+if (show_title) {
+  g = g + ggtitle(target_name) +
+      theme(plot.title = element_text(hjust = 0.5))
+}else{
+  g = g + theme(plot.title = element_blank())
+}
+
 ActivityScore_png=paste0(file_prefix, ".tabula.umap.png")
 ggsave(ActivityScore_png, g, width=5, height=5, units="in", dpi=300, bg="white")
 include_graphics(ActivityScore_png)
@@ -189,8 +217,14 @@ g=ggplot(gd, aes(x=tissue, y=ActivityScore1)) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         axis.title.x=element_blank(),
-        plot.title = element_blank(),
         legend.position = "none")
+
+if (show_title) {
+  g = g + ggtitle(target_name) +
+      theme(plot.title = element_text(hjust = 0.5))
+}else{
+  g = g + theme(plot.title = element_blank())
+}
 
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.tissue.png")
 ggsave(ActivityScore_png, g, width=5, height=3, units="in", dpi=300, bg="white")
@@ -200,7 +234,16 @@ cat(paste0("\n", top_ident, "# Violin plot by cell type ranked by median activit
 
 gd=FetchData(score_obj, c("cell_type", "ActivityScore1"))
 
-gd$cell_type=factor(gd$cell_type, levels=rev(names(sort(tapply(gd[,"ActivityScore1"], gd$cell_type, median)))))
+vln_width=15
+cts=names(sort(tapply(gd[,"ActivityScore1"], gd$cell_type, median), decreasing=TRUE))
+if(length(cts) > top_n_celltype){
+  cts=cts[1:top_n_celltype]
+  cat("Showing top ", top_n_celltype, " cell types with highest median activity score.\n")
+  gd=gd[gd$cell_type %in% cts,,drop=FALSE]
+  vln_width=min(15, max(6, top_n_celltype * 0.3))
+}
+
+gd$cell_type=factor(gd$cell_type, levels=cts)
 
 g=ggplot(gd, aes(x=cell_type, y=ActivityScore1)) +
   geom_violin(scale="width") + 
@@ -210,11 +253,17 @@ g=ggplot(gd, aes(x=cell_type, y=ActivityScore1)) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
         axis.title.x=element_blank(),
-        plot.title = element_blank(),
         legend.position = "none")
 
+if (show_title) {
+  g = g + ggtitle(target_name) +
+      theme(plot.title = element_text(hjust = 0.5))
+}else{
+  g = g + theme(plot.title = element_blank())
+}
+
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.cell_type.png")
-ggsave(ActivityScore_png, g, width=15, height=7, units="in", dpi=300, limitsize=FALSE, bg="white")
+ggsave(ActivityScore_png, g, width=vln_width, height=5, units="in", dpi=300, limitsize=FALSE, bg="white")
 include_graphics(ActivityScore_png)
 
 cat(paste0("\n", top_ident, "# UMAP of Activity score and cell types\n\n"))
