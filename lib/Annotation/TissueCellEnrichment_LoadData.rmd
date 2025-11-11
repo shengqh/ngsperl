@@ -138,6 +138,15 @@ ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, b
 include_graphics(venn_png)
 
 cat(paste0("\n", top_ident, "# Cell type UMAP\n\n"))
+
+if(exists("merge_fast_slow_muscle_cell")){
+  if(merge_fast_slow_muscle_cell){
+    cat("\n265 fast muscle cell and 111 slow muscle cell are combined as fast/slow muscle cell since they are overlapped at UMAP and hard to distinguish.\n")
+    tabula_obj$cell_type[tabula_obj$cell_type=="fast muscle cell"] = "fast/slow muscle cell"
+    tabula_obj$cell_type[tabula_obj$cell_type=="slow muscle cell"] = "fast/slow muscle cell"
+  }
+}
+
 cat("Only the cell types with at least 1% of total cells were shown in the UMAP plot.\n\n")
 
 perc_1_cell=nrow(tabula_obj@meta.data) * 0.01
