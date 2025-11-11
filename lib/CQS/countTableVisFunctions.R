@@ -1080,6 +1080,8 @@ draw_heatmap_png<-function( filepath,
                             row_names_gp=gpar(fontface = "bold"),
                             column_names_gp=gpar(fontface = "bold"),
                             legend_gp=gpar(fontface = "bold"),
+                            heatmap_legend_param=NULL,
+                            heatmap_legend_side="right",
                             show_row_names, 
                             show_column_names,
                             ...){
@@ -1104,6 +1106,11 @@ draw_heatmap_png<-function( filepath,
 
   possible_height = unit(as.numeric(init_size$heatmap_height) + add_height_inch, "inch")
 
+  if(is.null(heatmap_legend_param)){
+    heatmap_legend_param=list(title_gp=legend_gp)
+  }else if(!is.null(legend_gp)){
+    heatmap_legend_param[["title_gp"]]=legend_gp
+  }
   ht<-Heatmap(htdata,
               show_row_names=show_row_names,
               show_column_names=show_column_names,
@@ -1113,7 +1120,7 @@ draw_heatmap_png<-function( filepath,
               heatmap_height=possible_height,
               row_names_gp = row_names_gp,
               column_names_gp = column_names_gp,
-              heatmap_legend_param = list(title_gp = legend_gp),
+              heatmap_legend_param = heatmap_legend_param,
               ...)
 
   ss = calc_ht_size(ht, merge_legends=TRUE )
@@ -1122,13 +1129,13 @@ draw_heatmap_png<-function( filepath,
   final_width=min(50, ss[1]) 
   final_height=min(50, ss[2])
   png(filepath, width=final_width, height=final_height, units="in", res=300)
-  draw(ht, merge_legends=TRUE)
+  draw(ht, merge_legends=TRUE, heatmap_legend_side=heatmap_legend_side)
   ignored=dev.off()
 
   if(save_pdf){
     pdf_file=gsub(".png$", ".pdf", filepath)
     pdf(pdf_file, width=final_width, height=final_height)
-    draw(ht, merge_legends=TRUE)
+    draw(ht, merge_legends=TRUE, heatmap_legend_side=heatmap_legend_side)
     ignored=dev.off()
   }
 
