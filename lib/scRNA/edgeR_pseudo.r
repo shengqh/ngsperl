@@ -31,6 +31,7 @@ foldChange<-as.numeric(myoptions$foldChange)
 useRawPvalue<-is_one(myoptions$useRawPvalue)
 cluster_name=myoptions$cluster_name
 min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
+min_count_per_sample=as.numeric(myoptions$filter_min_count_per_sample)
 
 group_column=myoptions$group_column
 
@@ -271,7 +272,8 @@ for(idx in c(1:nrow(designMatrix))){
     dge_all <- DGEList(counts=counts, group=groups)
 
     #for DE analysis, we need to filter the genes with low counts
-    keep <- filterByExpr(dge_all, group=groups)
+    cat("  filterByExpr with min.count=", min_count_per_sample, "\n")
+    keep <- filterByExpr(dge_all, group=groups, min.count=min_count_per_sample)
     dge <- dge_all[keep, , keep.lib.sizes=FALSE]
     
     cat("  calcNormFactors", "\n")

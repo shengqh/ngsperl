@@ -1577,6 +1577,7 @@ sub addEdgeRTask {
     }
     else {
       $rCodeDic->{"filter_min_cell_per_sample"} = getValue( $def, "DE_by_sample_min_cell_per_sample" );
+      $rCodeDic->{"filter_min_count_per_sample"} = getValue( $def, "DE_by_sample_min_count_per_sample", 10 );
       $edgeRtaskname                            = $edgeRtaskname . "_bySample";
       $edgeRscript                              = "../scRNA/edgeR_pseudo.r";
       $edgeR_suffix                             = ".edgeR_by_sample";
