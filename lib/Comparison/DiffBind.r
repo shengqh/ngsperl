@@ -119,13 +119,15 @@ if(nrow(overlapsheet) > 0){
     samples = mb1$sample$SampleID[masks]
     cat("  samples = ", samples, "\n")
 
-    png(paste0(outputPrefix, ".", condition, ".overlap.venn.png"), width=2000, height=2000, res=300)
-    dba.plotVenn(mb1, masks)
-    dev.off()
-    
-    pdf(paste0(outputPrefix, ".", condition, ".overlap.venn.pdf"))
-    dba.plotVenn(mb1, masks)
-    dev.off()
+    if(length(samples) < 5){
+      png(paste0(outputPrefix, ".", condition, ".overlap.venn.png"), width=2000, height=2000, res=300)
+      dba.plotVenn(mb1, masks)
+      dev.off()
+
+      pdf(paste0(outputPrefix, ".", condition, ".overlap.venn.pdf"))
+      dba.plotVenn(mb1, masks)
+      dev.off()
+    }    
     
     c_peak <- dba.peakset(mb1, masks, minOverlap=minOverlap, bRetrieve=TRUE)
     cat("  number of peaks = ", length(c_peak), "\n")
