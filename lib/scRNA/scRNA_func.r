@@ -318,12 +318,20 @@ read_tiers<-function(HLA_panglao5_file, remove_subtype_str = NULL){
   if(!is.null(remove_subtype_str)) {
     remove_subtype_list<-unique(unlist(strsplit(remove_subtype_str, ",")))
     if(length(remove_subtype_list) > 0){
-      celltype_map = get_celltype_map(remove_subtype_list, HLA_panglao5_file)
-      celltype_map = celltype_map[names(celltype_map) != celltype_map]
+      celltype_map = get_celltype_map(root_celltypes=remove_subtype_list, 
+                                      HLA_panglao5_file=HLA_panglao5_file)
+
       tiers = update_tiers(tiers, celltype_map)
+
+      for(ct in intersect(remove_subtype_list, rownames(tiers))){
+        for(col in c("Layer3", "Layer4")){
+          tiers[ct, col] = ct
+        }
+      }
     }
   }
 
+  tiers=tiers[order(rownames(tiers)),]
   return(tiers)
 }
 
@@ -339,7 +347,8 @@ get_summary_layer<-function(tiers, layer, remove_subtype_str=NULL){
 }
 
 init_celltype_markers<-function(panglao5_file, species, curated_markers_file=NULL, HLA_panglao5_file, layer="Layer4", remove_subtype_str=NULL, combined_celltype_file=NULL){
-  tiers<-read_tiers(HLA_panglao5_file, remove_subtype_str)
+  tiers<-read_tiers(HLA_panglao5_file=HLA_panglao5_file, 
+                    remove_subtype_str=remove_subtype_str)
 
   cell_activity_database<-read_cell_markers_file(panglao5_file=panglao5_file, 
                                                  species=species, 
@@ -3673,7 +3682,7 @@ process_move=function(move_formula, move_parts, cur_meta){
     # even the cells are moved before, we still need to move them again if it is not deleted
     # For example, we move cells to T cells by SingleR, 
     # then we want to move some of them to B cells by Azimuth.
-    final_move = is_move & cur_meta$seurat_clusters[is_move] >= -1
+    final_move = is_move & (cur_meta$seurat_clusters[is_move] >= -1)
   }
 
   move_cells=sum(final_move)
@@ -3773,6 +3782,7 @@ process_merge=function(action_formula, action_parts, cur_meta) {
 process_rename=function(action_formula, 
                         action_parts, 
                         cur_meta, 
+                        is_choose,
                         condition_column) {
   if(length(action_parts) != 2){
     stop(paste0("  rename formula should be RENAME:cluster:name, now we get", action_formula))
@@ -3782,10 +3792,22 @@ process_rename=function(action_formula,
   rename_clusters=unlist(strsplit(rename_cluster, ","))
   rename_name=action_parts[2]
 
-  if(all(rename_clusters == "-1" | rename_clusters == "*")){
-    is_rename = !cur_meta$is_moved
-  } else {
-    is_rename = (cur_meta[,condition_column] %in% rename_clusters) & !cur_meta$is_moved
+  if(is_choose){
+    # For choose task, we don't consider the move between cell types, 
+    # so we don't need to check is_moved here.
+    if(all(rename_clusters == "-1" | rename_clusters == "*")){
+      is_rename = rep(TRUE, nrow(cur_meta))
+    } else {
+      is_rename = cur_meta[,condition_column] %in% rename_clusters
+    }
+  }else{
+    # For subclustering task, the move happens between cell types.
+    # For cells moved, we don't rename them.
+    if(all(rename_clusters == "-1" | rename_clusters == "*")){
+      is_rename = !cur_meta$is_moved
+    } else {
+      is_rename = (cur_meta[,condition_column] %in% rename_clusters) & !cur_meta$is_moved
+    }
   }
 
   rename_cells=sum(is_rename)
@@ -3797,7 +3819,7 @@ process_rename=function(action_formula,
   return(cur_meta)
 }
 
-process_actions=function(ct_tbl, cur_meta, condition_column="seurat_clusters_str"){
+process_actions=function(ct_tbl, cur_meta, is_choose, condition_column="seurat_clusters_str"){
   if(nrow(cur_meta) == 0){
     stop("cur_meta is empty")
   }
@@ -3828,6 +3850,7 @@ process_actions=function(ct_tbl, cur_meta, condition_column="seurat_clusters_str
         cur_meta=process_rename(action_formula, 
                                 action_parts, 
                                 cur_meta, 
+                                is_choose=is_choose,
                                 condition_column)
       }else{
         stop(paste0("wrong action type:", action_type))
