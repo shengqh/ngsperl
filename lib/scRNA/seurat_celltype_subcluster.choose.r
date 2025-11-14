@@ -280,7 +280,7 @@ for(pct in previous_celltypes){
       cur_meta$seurat_clusters=0
       cur_meta$seurat_clusters_str="0"
 
-      cur_meta=process_actions(ct_tbl, cur_meta)
+      cur_meta=process_actions(ct_tbl, cur_meta, is_choose=TRUE)
 
       meta[rownames(cur_meta), "seurat_clusters"]=cur_meta$seurat_clusters + cluster_index
     }else{
@@ -312,7 +312,7 @@ for(pct in previous_celltypes){
       no_action_ct_tbl=ct_tbl |> dplyr::filter(V2 != "ACTIONS")
 
       ct_tbl=ct_tbl |> dplyr::filter(V2 == "ACTIONS")
-      cur_meta=process_actions(ct_tbl, cur_meta, condition_column=best_res)
+      cur_meta=process_actions(ct_tbl, cur_meta, , is_choose=TRUE, condition_column=best_res)
 
       if(nrow(no_action_ct_tbl) > 0) { #not actions, old definition
         ct_tbl = no_action_ct_tbl
@@ -387,7 +387,7 @@ for(pct in previous_celltypes){
     ct_tbl$V1<-as.character(ct_tbl$V1)
     ct_tbl$V2<-as.character(ct_tbl$V2)
 
-    cur_meta = process_actions(ct_tbl, cur_meta)
+    cur_meta = process_actions(ct_tbl, cur_meta, is_choose=TRUE)
   }
   
   cur_meta=reorder_seurat_clusters(cur_meta)

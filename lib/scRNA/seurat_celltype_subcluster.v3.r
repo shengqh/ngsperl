@@ -244,7 +244,7 @@ if(!is_file_empty(parSampleFile3)){
         print(ct)
         ct_tbl=move_ct_tbl |> dplyr::filter(V3 == ct)
         cur_meta = meta[meta$cur_layer == ct,]
-        cur_meta = process_actions(ct_tbl, cur_meta)
+        cur_meta = process_actions(ct_tbl, cur_meta, is_choose=FALSE)
         meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
       }
     }
@@ -257,7 +257,7 @@ if(!is_file_empty(parSampleFile3)){
         print(ct)
         ct_tbl=other_ct_tbl |> dplyr::filter(V3 == ct)
         cur_meta = meta[meta$cur_layer == ct,]
-        cur_meta = process_actions(ct_tbl, cur_meta)
+        cur_meta = process_actions(ct_tbl, cur_meta, is_choose=FALSE)
         cur_meta[cur_meta$seurat_clusters < 0, "cur_layer"] = "DELETE"
         meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
       }
