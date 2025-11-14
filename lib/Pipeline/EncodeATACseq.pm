@@ -23,6 +23,7 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+
 sub initializeDefaultOptions {
   my $def = shift;
 
@@ -40,30 +41,31 @@ sub initializeDefaultOptions {
     #initDefaultValue( $def, "adapter", "CTGTCTCTTATA" );
     initDefaultValue( $def, "min_read_length", 30 );
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
-    initDefaultValue( $def, "trim_polyA", 0 );
-  }
+    initDefaultValue( $def, "trim_polyA",      0 );
+  } ## end if ( getValue( $def, "perform_cutadapt"...))
 
   if ( !defined $def->{"treatments"} ) {
-    my $files = getValue( $def, "files" );
+    my $files  = getValue( $def, "files" );
     my $groups = {};
     for my $sample_name ( sort keys %$files ) {
       $groups->{$sample_name} = [$sample_name];
     }
     $def->{"treatments"} = $groups;
-  }
+  } ## end if ( !defined $def->{"treatments"...})
 
   initDefaultValue( $def, "perform_croo_qc", 0 );
 
   initDefaultValue( $def, "perform_report", 0 );
-  initDefaultValue( $def, "encode_option", "" );
-  initDefaultValue( $def, "caper_backend", "local" );
+  initDefaultValue( $def, "encode_option",  "" );
+  initDefaultValue( $def, "caper_backend",  "local" );
   #$def->{encode_option} = "-b slurm"; #or empty to use local
 
-  initDefaultValue( $def, "perform_comparison", 0 );
-  initDefaultValue( $def, "perform_comparison_homer", 1 );
+  initDefaultValue( $def, "perform_diffbind", 0 );
+  initDefaultValue( $def, "perform_homer",    0 );
 
   return $def;
-}
+} ## end sub initializeDefaultOptions
+
 
 sub getConfig {
   my ($def) = @_;
@@ -81,29 +83,35 @@ sub getConfig {
   $def->{replicates} = $config->{groups};
 
   $def->{adapter} = "";
-  
-  my $croo_task = addEncodeATACseq($config, $def, $tasks, $target_dir, $source_ref, "encode_atacseq");
 
-  if($def->{perform_NFR_filter}){
-    $config->{croo_bam} = {
-      class => "Encode::FindBamTask",
-      source_ref => [ $croo_task ],
-      replicates => $def->{groups},
-    };
+  my $croo_task = addEncodeATACseq( $config, $def, $tasks, $target_dir, $source_ref, "encode_atacseq" );
 
-    my $macs2_genome = getValue($def, "macs2_genome");
-    my $wdl = $def->{"wdl"};
-    my $encode_atac_folder = dirname($wdl->{local}{encode_atacseq}{wdl_file});
-    print($encode_atac_folder . "\n");
+  $config->{croo_bam} = {
+    class      => "Encode::FindBamTask",
+    source_ref => [$croo_task],
+    replicates => $def->{groups},
+  };
+
+  $config->{croo_peak} = {
+    class      => "Encode::FindPeakTask",
+    source_ref => [$croo_task],
+    replicates => $def->{groups},
+  };
+
+  if ( $def->{perform_NFR_filter} ) {
+    my $macs2_genome       = getValue( $def, "macs2_genome" );
+    my $wdl                = $def->{"wdl"};
+    my $encode_atac_folder = dirname( $wdl->{local}{encode_atacseq}{wdl_file} );
+    print( $encode_atac_folder . "\n" );
 
     my $nfr_task = $croo_task . "_NFR_filter";
     $config->{$nfr_task} = {
-      class                    => "CQS::ProgramWrapperOneToOne",
-      perform                  => 1,
-      target_dir               => $target_dir . "/" . $nfr_task,
-      program => "",
+      class         => "CQS::ProgramWrapperOneToOne",
+      perform       => 1,
+      target_dir    => $target_dir . "/" . $nfr_task,
+      program       => "",
       check_program => 0,
-      option => "
+      option        => "
 echo samtools view -h -b -e 'tlen < 150 && tlen > -150' -o __NAME__.NFR_filtered.bam __FILE__ 
 samtools view -h -b -e 'tlen < 150 && tlen > -150' -o __NAME__.NFR_filtered.bam __FILE__ 
 samtools index __NAME__.NFR_filtered.bam
@@ -119,24 +127,33 @@ makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format 
 
 #__OUTPUT__
 ",
-      source_ref               => [ "croo_bam" ],
-      output_file_ext          => ".NFR_filtered.bam,.NFR_filtered.tn5.tagAlign.gz",
-      output_to_result_dir     => 1,
+      source_ref            => ["croo_bam"],
+      output_file_ext       => ".NFR_filtered.bam,.NFR_filtered.tn5.tagAlign.gz",
+      output_to_result_dir  => 1,
       output_to_same_folder => 0,
-      sh_direct                => 0,
-      pbs                      => {
-        "nodes"     => "1:ppn=8",
+      sh_direct             => 0,
+      pbs                   => {
+        "nodes"    => "1:ppn=8",
         "walltime" => "10",
         "mem"      => "10G"
       }
     };
-    push (@$tasks, $nfr_task);
-  }
+    push( @$tasks, $nfr_task );
+  } ## end if ( $def->{perform_NFR_filter...})
 
-  addSequenceTask($config, $def, $tasks, $target_dir, $summary);
+  if ( $def->{perform_diffbind} ) {
+    my $bindName = $croo_task . "_diffbind";
+    addDiffbind( $config, $def, $tasks, $target_dir, $bindName, "croo_bam", "croo_peak" );
+    if ( getValue( $def, "perform_homer" ) ) {
+      my $diffbind_homer = addHomerAnnotation( $config, $def, $tasks, $target_dir, $bindName, ".sig.bed" );
+    }
+  } ## end if ( $def->{perform_diffbind...})
 
-  return($config);
-}
+  addSequenceTask( $config, $def, $tasks, $target_dir, $summary );
+
+  return ($config);
+} ## end sub getConfig
+
 
 sub performEncodeATACseq {
   my ( $def, $perform ) = @_;
@@ -153,7 +170,8 @@ sub performEncodeATACseq {
     performConfig($config);
   }
   return $config;
-}
+} ## end sub performEncodeATACseq
+
 
 sub performEncodeATACseqTask {
   my ( $def, $task ) = @_;
@@ -162,6 +180,6 @@ sub performEncodeATACseqTask {
   performTask( $config, $task );
 
   return $config;
-}
+} ## end sub performEncodeATACseqTask
 
 1;
