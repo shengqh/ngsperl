@@ -1579,7 +1579,7 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
 }
   
 read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
-  if(file_ext(obj_file) == "rds" | file_ext(obj_file) == "RDS"){
+  if(tolower(file_ext(obj_file)) == "rds"){
     obj=readRDS(obj_file)
   }else{
     counts=read_scrna_data(obj_file)$counts
@@ -1611,9 +1611,11 @@ read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
 
   if(!is.null(meta_rds)){
     if (meta_rds != ""){
-      if(file_ext(meta_rds) == "rds"){
+      if(tolower(file_ext(meta_rds)) == "rds"){
         meta.data=readRDS(meta_rds)
-        if(any(colnames(obj) != rownames(meta.data))){
+        if(nrow(meta.data) != ncol(obj)){
+          obj=subset(obj, cells=rownames(meta.data))
+        }else if(any(colnames(obj) != rownames(meta.data))){
           obj=subset(obj, cells=rownames(meta.data))
         }
         if(all(colnames(obj@meta.data) %in% colnames(meta.data))){
@@ -3641,7 +3643,8 @@ process_move=function(move_formula, move_parts, cur_meta){
   }
 
   move_cluster=move_parts[1]
-  cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str==move_cluster])
+  move_clusters=unlist(strsplit(move_cluster, ","))
+  cur_name=unique(cur_meta$cur_layer[cur_meta$seurat_clusters_str %in% move_clusters])
   move_column=move_parts[2]
   move_celltypes_str=move_parts[3]
   move_celltypes=unlist(strsplit(move_celltypes_str, ","))
@@ -3655,11 +3658,13 @@ process_move=function(move_formula, move_parts, cur_meta){
   }
 
   cat("    moving", move_celltypes_str, "annotated by", move_column, "from cluster", move_cluster, "to", to_cluster, "\n")
-  if(!move_column %in% colnames(cur_meta)){
-    stop(paste0("column ", move_column, " not exists"))
-  }
 
   move_all=move_celltypes_str == "-1" | move_celltypes_str == "*"
+  if(!move_all){
+    if(!move_column %in% colnames(cur_meta)){
+      stop(paste0("column ", move_column, " not exists"))
+    }
+  }
 
   if(move_cluster == "-1" | move_cluster == "*"){
     if (move_all){
@@ -3669,9 +3674,9 @@ process_move=function(move_formula, move_parts, cur_meta){
     }
   }else{
     if (move_all){
-      is_move = cur_meta$seurat_clusters_str==move_cluster
+      is_move = cur_meta$seurat_clusters_str %in% move_clusters
     }else{
-      is_move = cur_meta$seurat_clusters_str==move_cluster & cur_meta[,move_column] %in% move_celltypes
+      is_move = (cur_meta$seurat_clusters_str %in% move_clusters) & (cur_meta[,move_column] %in% move_celltypes)
     }
   }
 
@@ -3682,7 +3687,7 @@ process_move=function(move_formula, move_parts, cur_meta){
     # even the cells are moved before, we still need to move them again if it is not deleted
     # For example, we move cells to T cells by SingleR, 
     # then we want to move some of them to B cells by Azimuth.
-    final_move = is_move & (cur_meta$seurat_clusters[is_move] >= -1)
+    final_move = is_move & (cur_meta$seurat_clusters >= -1)
   }
 
   move_cells=sum(final_move)
