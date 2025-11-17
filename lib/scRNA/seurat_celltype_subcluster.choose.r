@@ -1,15 +1,15 @@
 rm(list=ls()) 
-outFile='CosMx'
+outFile='Aorta_Progeria'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/nd_seurat_fastmnn/result/CosMx.final.rds'
-parFile2='/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/nd_seurat_fastmnn_dr0.5_2_subcluster/result/CosMx.meta.rds'
-parFile3='/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/essential_genes/result/CosMx.txt'
-parFile4='/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/nd_seurat_fastmnn_dr0.5_2_subcluster/result/CosMx.files.csv'
+parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn/result/Aorta_Progeria.final.rds'
+parFile2='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_2_subcluster/result/Aorta_Progeria.meta.rds'
+parFile3='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/essential_genes/result/Aorta_Progeria.txt'
+parFile4='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_2_subcluster/result/Aorta_Progeria.files.csv'
 
 
-setwd('/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_analysis_v2/nd_seurat_fastmnn_dr0.5_3_choose/result')
+setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_3_choose/result')
 
 ### Parameter setting end ###
 
@@ -72,7 +72,8 @@ bubble_width <-ifelse(is.null(myoptions$bubble_width), 4000, as.numeric(myoption
 prefix<-outFile
 
 if(!exists("obj")){
-  obj<-read_object(parFile1, parFile2)
+  obj<-read_object( obj_file=parFile1, 
+                    meta_rds=parFile2)
 
   renamed_layer=paste0(previous_layer, "_renamed")
   if(renamed_layer %in% colnames(obj@meta.data)){
@@ -429,8 +430,8 @@ map_df=data.frame(old_clusters, new_clusters)
 meta$seurat_clusters = map_df$new_clusters[match(meta$seurat_clusters, map_df$old_clusters)]
 
 meta[,seurat_output_layer] = paste0(meta$seurat_clusters, ": ", meta[,output_layer])
-ct<-meta[!duplicated(meta$seurat_cluster),]
-ct<-ct[order(ct$seurat_cluster),]
+ct<-meta[!duplicated(meta$seurat_clusters),]
+ct<-ct[order(ct$seurat_clusters),]
 
 meta[,output_layer] =factor(meta[,output_layer], levels=unique(ct[,output_layer]))
 meta[,seurat_output_layer] =factor(meta[,seurat_output_layer], levels=ct[,seurat_output_layer])
