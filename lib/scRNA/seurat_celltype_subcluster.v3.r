@@ -1,17 +1,16 @@
 rm(list=ls()) 
-outFile='PH_scRNA'
+outFile='Aorta_Progeria'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/seurat_merge/result/PH_scRNA.final.rds'
-parFile2='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/seurat_merge_dr0.5_1_call/result/PH_scRNA.scDynamic.meta.rds'
-parFile3='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/essential_genes/result/PH_scRNA.txt'
+parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn/result/Aorta_Progeria.final.rds'
+parFile2='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_1_call/result/Aorta_Progeria.scDynamic.meta.rds'
+parFile3='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/essential_genes/result/Aorta_Progeria.txt'
 
 
-setwd('/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/seurat_merge_dr0.5_2_subcluster/result')
+setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -213,16 +212,17 @@ if(!is_file_empty(parSampleFile3)){
   draw_dim_plot(obj, previous_layer, paste0(outFile, ".pre_rename.umap.png"))
 
   rename_map = read.table(parSampleFile3, sep="\t", header=F)
-
-  old_layer = previous_layer
-  previous_layer=paste0(old_layer, "_renamed")
-
-  meta[,previous_layer]<-as.character(meta[,old_layer])
-  if(any(is.na(meta[,previous_layer]))){
-    meta[is.na(meta[,previous_layer]),previous_layer] = "DELETE"
+  if(!exists("renamed_layer")){
+    #for debug purpose, avoid to append _renamed multiple times
+    renamed_layer = paste0(previous_layer, "_renamed")
+  }
+  
+  meta[,renamed_layer]<-as.character(meta[,previous_layer])
+  if(any(is.na(meta[,renamed_layer]))){
+    meta[is.na(meta[,renamed_layer]),renamed_layer] = "DELETE"
   }
 
-  meta$cur_layer = meta[[previous_layer]]
+  meta$cur_layer = meta[[renamed_layer]]
   meta$seurat_clusters = meta[[previous_cluster]]
 
   all_ct_tbl=rename_map |>
@@ -230,10 +230,10 @@ if(!is_file_empty(parSampleFile3)){
  
   if(nrow(all_ct_tbl) > 0) {
     all_cts = unique(all_ct_tbl$V3)
-    missed_cts = setdiff(all_cts, unique(unlist(meta[,previous_layer])))
+    missed_cts = setdiff(all_cts, unique(unlist(meta[,renamed_layer])))
     if(length(missed_cts) > 0){
-      current_cts = unique(unlist(meta[,previous_layer]))
-      stop(paste0("Cannot find cell types ", paste0(missed_cts, collapse = "/"), " in obj cell type layer ", previous_layer, ": ", paste0(current_cts, collapse = "/")))
+      current_cts = unique(unlist(meta[,renamed_layer]))
+      stop(paste0("Cannot find cell types ", paste0(missed_cts, collapse = "/"), " in obj cell type layer ", renamed_layer, ": ", paste0(current_cts, collapse = "/")))
     }
 
     move_ct_tbl=all_ct_tbl |> dplyr::filter(grepl("^MOVE", V1))
@@ -245,21 +245,38 @@ if(!is_file_empty(parSampleFile3)){
         ct_tbl=move_ct_tbl |> dplyr::filter(V3 == ct)
         cur_meta = meta[meta$cur_layer == ct,]
         cur_meta = process_actions(ct_tbl, cur_meta, is_choose=FALSE)
-        meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+
+        is_moved_meta = cur_meta[cur_meta$is_moved,]
+        meta[rownames(is_moved_meta),renamed_layer] = is_moved_meta$cur_layer
+
+        # for the moved cells, the old seurat cluster would be set to 10000 since it is not valid for new cell type.
+        meta[rownames(is_moved_meta),"seurat_clusters"] = 10000
+        meta[rownames(is_moved_meta),"seurat_clusters_str"] = "10000"
+
+        # everytime after updating renamed_layer, we need to update cur_layer
+        meta$cur_layer = meta[[renamed_layer]]
+
+        changed_meta = meta[meta[[renamed_layer]] != meta[[previous_layer]],,drop=FALSE]
+        print(table(as.character(changed_meta[[previous_layer]]), as.character(changed_meta[[renamed_layer]])))
       }
     }
 
     other_ct_tbl=all_ct_tbl |> dplyr::filter(!grepl("^MOVE", V1))
     if(nrow(other_ct_tbl) > 0){
-      ct=other_ct_tbl$V3[1]
       other_cts=sort(unique(other_ct_tbl$V3))
+      ct=other_cts[3]
       for(ct in other_cts){
         print(ct)
         ct_tbl=other_ct_tbl |> dplyr::filter(V3 == ct)
         cur_meta = meta[meta$cur_layer == ct,]
         cur_meta = process_actions(ct_tbl, cur_meta, is_choose=FALSE)
         cur_meta[cur_meta$seurat_clusters < 0, "cur_layer"] = "DELETE"
-        meta[rownames(cur_meta),previous_layer] = cur_meta$cur_layer
+        meta[rownames(cur_meta),renamed_layer] = cur_meta$cur_layer
+        # everytime after updating renamed_layer, we need to update cur_layer
+        meta$cur_layer = meta[[renamed_layer]]
+
+        changed_meta = meta[meta[[renamed_layer]] != meta[[previous_layer]],,drop=FALSE]
+        print(table(as.character(changed_meta[[previous_layer]]), as.character(changed_meta[[renamed_layer]])))
       }
     }
     
@@ -276,10 +293,10 @@ if(!is_file_empty(parSampleFile3)){
       cat("renaming", rname, "\n")
       rmap = rename_map[rename_map$V3 == rname,]
       from = rmap$V1[rmap$V2=="from"]
-      if(!(from %in% unique(unlist(meta[,previous_layer])))){
-        stop(paste0("Cannot find ", from, " in obj cell type layer ", previous_layer))
+      if(!(from %in% unique(unlist(meta[,renamed_layer])))){
+        stop(paste0("Cannot find ", from, " in obj cell type layer ", renamed_layer))
       }
-      submeta<-meta[meta[,previous_layer] == from,]
+      submeta<-meta[meta[,renamed_layer] == from,]
 
       cluster = rmap$V1[rmap$V2=="cluster"]
       to = rmap$V1[rmap$V2=="to"]
@@ -287,7 +304,7 @@ if(!is_file_empty(parSampleFile3)){
       if(all(cluster == "-1")){
         cells<-rownames(submeta)
       }else{
-        cluster_column = ifelse('column' %in% rmap$V2, rmap$V1[rmap$V2=="column"], previous_cluster)
+        cluster_column = ifelse('column' %in% rmap$V2, rmap$V1[rmap$V2=="column"], renamed_layer)
         if(!(cluster_column %in% colnames(submeta))){
           stop(paste0("Cannot find column ", cluster_column, " in rename configuration key=", rname))
         }
@@ -300,8 +317,14 @@ if(!is_file_empty(parSampleFile3)){
 
         cells<-rownames(submeta)[submeta[,cluster_column] %in% cluster]
       }
-      meta[cells,previous_layer]<-to
+      meta[cells,renamed_layer]<-to
+      # everytime after updating previous_layer, we need to update cur_layer
+      meta$cur_layer = meta[[renamed_layer]]
+
       cat("renaming", rname, "done\n")
+
+      changed_meta = meta[meta[[renamed_layer]] != meta[[previous_layer]],,drop=FALSE]
+      print(table(as.character(changed_meta[[previous_layer]]), as.character(changed_meta[[renamed_layer]])))
     }
   }else{
     rname = keys[1]
@@ -310,12 +333,15 @@ if(!is_file_empty(parSampleFile3)){
       cluster = rmap$V1[rmap$V2=="cluster"]
       to = rmap$V1[rmap$V2=="to"]
 
-      if(!(cluster %in% unlist(meta[,previous_cluster]))){
-        stop(paste0("Cannot find cluster ", cluster, " in obj cell type cluster ", previous_cluster))
+      if(!(cluster %in% unlist(meta[,renamed_layer]))){
+        stop(paste0("Cannot find cluster ", cluster, " in obj cell type cluster ", renamed_layer))
       }
 
       cells<-rownames(meta)[meta[,previous_cluster]==cluster]
-      meta[cells,previous_layer]<-to
+      meta[cells,renamed_layer]<-to
+
+      changed_meta = meta[meta[[renamed_layer]] != meta[[previous_layer]],,drop=FALSE]
+      print(table(as.character(changed_meta[[previous_layer]]), as.character(changed_meta[[renamed_layer]])))
     }
   }
 
@@ -323,15 +349,17 @@ if(!is_file_empty(parSampleFile3)){
 
   obj@meta.data<-meta
   
-  if("DELETE" %in% meta[,previous_layer]){
-    cells = rownames(meta)[meta[,previous_layer] != "DELETE"]
+  if("DELETE" %in% meta[,renamed_layer]){
+    cells = rownames(meta)[meta[,renamed_layer] != "DELETE"]
     obj = subset(obj, cells=cells)
   }
   meta=obj@meta.data
-  meta[,previous_layer]<-factor_by_count(meta[,previous_layer])
+  meta[,renamed_layer]<-factor_by_count(meta[,renamed_layer])
   obj@meta.data = meta
 
-  draw_dim_plot(obj, previous_layer, paste0(outFile, ".post_rename.umap.png"))
+  draw_dim_plot(obj, renamed_layer, paste0(outFile, ".post_rename.umap.png"))
+
+  previous_layer = renamed_layer
 }
 
 saveRDS(meta, paste0(outFile, ".meta.rds"))
@@ -684,4 +712,3 @@ rm(obj)
 cat("final memory used:", lobstr_mem_used(), "\n")
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
-
