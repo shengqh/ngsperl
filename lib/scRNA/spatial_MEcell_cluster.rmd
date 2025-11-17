@@ -101,10 +101,19 @@ predict_celltypes<-function(filtered_obj, assay, cluster, cluster_cell_type, cel
 Load data from `r rds_file` and perform MEcell clustering at resolutions: `r resolutions_str` using algorithm: `r algorithm_name`.
 
 ```{r}
+if(!file.exists(rds_file)){
+  stop(paste0("RDS file not found: ", rds_file))
+}
+
 obj = readRDS(rds_file)
 
 cfile = cluster_files[1]
 for(cfile in cluster_files){
+  if(!file.exists(cfile)){
+    cat(paste0("Warning: Cluster file not found: ", cfile, "\n"))
+    next
+  }
+
   cmeta = readRDS(cfile)
   stopifnot(all(rownames(cmeta) == rownames(obj@meta.data)))
   cluster_col = grep("MEcell_res.", colnames(cmeta), value=TRUE)
@@ -186,6 +195,11 @@ cur_res=resolutions[1]
 for(cur_res in resolutions){
   cluster_content=paste0(cluster_content, "\n# Resolution ", cur_res, "\n\n")
   cluster_col = paste0("MEcell_res.", cur_res)
+
+  if(!(cluster_col %in% colnames(obj@meta.data))){
+    # no such cluster column, which means no clustering done at this resolution, ignore
+    next
+  }
 
   file_prefix = paste0(detail_folder, "/", sample_name, ".", assay, ".MEcell_res.", cur_res)
 
