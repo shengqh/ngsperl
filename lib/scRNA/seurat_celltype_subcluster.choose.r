@@ -313,7 +313,7 @@ for(pct in previous_celltypes){
       no_action_ct_tbl=ct_tbl |> dplyr::filter(V2 != "ACTIONS")
 
       ct_tbl=ct_tbl |> dplyr::filter(V2 == "ACTIONS")
-      cur_meta=process_actions(ct_tbl, cur_meta, , is_choose=TRUE, condition_column=best_res)
+      cur_meta=process_actions(ct_tbl, cur_meta, is_choose=TRUE, condition_column=best_res)
 
       if(nrow(no_action_ct_tbl) > 0) { #not actions, old definition
         ct_tbl = no_action_ct_tbl
