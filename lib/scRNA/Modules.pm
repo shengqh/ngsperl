@@ -1577,7 +1577,7 @@ sub addEdgeRTask {
     }
     else {
       $rCodeDic->{"filter_min_cell_per_sample"} = getValue( $def, "DE_by_sample_min_cell_per_sample" );
-      $rCodeDic->{"filter_min_count_per_sample"} = getValue( $def, "DE_by_sample_min_count_per_sample", 10 );
+      $rCodeDic->{"filter_min_count_per_sample"} = getValue( $def, "DE_by_sample_min_count_per_sample", 5 );
       $edgeRtaskname                            = $edgeRtaskname . "_bySample";
       $edgeRscript                              = "../scRNA/edgeR_pseudo.r";
       $edgeR_suffix                             = ".edgeR_by_sample";
@@ -1818,6 +1818,7 @@ sub addEdgeRTask {
           "affiliation"  => $def->{"affiliation"},
           "task_name"    => getValue( $def, "task_name" ),
           "edgeR_suffix" => $edgeR_suffix,
+          "species"      => getValue( $def, "gsea_species", $use_mouse_gsea_db ? "Mus musculus" : "Homo sapiens" ),
         },
         remove_empty_parameter => 1,
         output_ext             => "gsea_files.csv",
