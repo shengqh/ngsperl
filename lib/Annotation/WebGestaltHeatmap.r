@@ -1,8 +1,27 @@
+rm(list=ls()) 
+outFile='JZ13972'
+parSampleFile1='fileList1.txt'
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
+parFile1=''
+parFile2=''
+parFile3=''
+outputDirectory='.'
+
+
+setwd('/nobackup/h_vangard_1/wangy67/PI_Yang/20251113_bulkRNAseq_mouse_13972JZ/deseq2_proteincoding_genetable_WebGestalt_heatmap_deseq2/result')
+
+### Parameter setting end ###
+
+source("WebGestaltReportFunctions.r")
 ###############################################################
 #make heatmap for genes in each category of WebGestalt result
 ###############################################################
 
-usePearsonInHCA<-TRUE
+# Since in this task, the absolute gene expression values matter more than relative patterns between samples, 
+# we switch to Euclidean distance for clustering.
+usePearsonInHCA<-FALSE
 hmcols <- colorRampPalette(c("green", "black", "red"))(256)
 maxCategory=20 #max 20 heatmap (categories)
 if (!exists("fileTypePrefix")) { #to add in file name, GOID+fileTypePrefix.png
@@ -35,6 +54,7 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
     }
     
     filePrefix<-paste0(prefix, fileTypePrefix)
+    format=outputFormat[1]
     for(format in outputFormat){
       openPlot(filePrefix, format, 10, 10, 3000, 3000, "HCA")
       if(usePearsonInHCA){
@@ -42,25 +62,27 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, conditionColors, gnam
                  col = hmcols, 
                  ColSideColors = gsColors, 
                  margins=margins, 
-                 scale="r", 
+                 scale="row", 
                  labRow=labRow,
                  showRowDendro=showRowDendro,
                  main=main,  
                  cexCol=cexCol, 
                  useRaster=FALSE,
+                 method="ward.D2",
                  legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
       }else{
         heatmap3(rldselect, 
                  col = hmcols, 
                  ColSideColors = gsColors, 
                  margins=margins, 
-                 scale="r", 
-                 distfun=dist, 
+                 scale="row", 
+                 distfunC=dist, # use Euclidean distance for samples while use pearson for genes
                  labRow=labRow,
                  showRowDendro=showRowDendro,
                  main=main,  
                  cexCol=cexCol, 
                  useRaster=FALSE,
+                 method="ward.D2",
                  legendfun=function() showLegend(legend=paste0("Group ", gnames), col=c("red","blue"),cex=1.0,x="center"))
       }
       dev.off()
@@ -79,8 +101,6 @@ openPlot<-function(filePrefix, format, pdfWidth, pdfHeight, otherWidth, otherHei
   }
   cat("saving", figureName, "to ", fileName, "\n")
 }
-
-
 
 annoFiles<-read.table(parSampleFile1, header=F, sep="\t", stringsAsFactors = F)
 deseq2Files<-read.table(parSampleFile2, header=F, sep="\t", stringsAsFactors = F)
@@ -105,9 +125,6 @@ for (comparison in comparisons){
     targetFolder=paste0("./",comparison,"/",basename(compAnnoFile),"/")
     dir.create(targetFolder,showWarnings=FALSE)
     
-    currentWd=getwd()
-    setwd(targetFolder)
-    
     category <- gsub(paste0(".*?", comparison,"_"), "", basename(compAnnoFile) )
     category <- gsub(".txt", "", category )
     category <- gsub("_", " ", category )
@@ -128,11 +145,12 @@ for (comparison in comparisons){
     
     #geneExpression<-read.csv(deseq2VsdFile, header=T, row.names=1, stringsAsFactors = F)
     geneExpression<-readFilesAndFormat(deseq2VsdFile)
+    geneExpression[] <- lapply(geneExpression, as.numeric)
     
     designData<-read.delim(deseq2DesignFile, header=T,  stringsAsFactors = F,check.names=F)
     conditionColors=as.matrix(data.frame(Group=c("red", "blue")[as.factor(designData[,2])]))
     gnames=levels(as.factor(designData[,2]))
-    
+
     rowCount<-min(maxCategory,nrow(enriched))
     idx<-1
     for(idx in c(1:rowCount)){
@@ -143,13 +161,16 @@ for (comparison in comparisons){
       entryTable<-geneExpression[row.names(deseq2)[which(deseq2[,geneCol] %in% userIds)],]
       row.names(entryTable)=make.unique(deseq2[which(deseq2[,geneCol] %in% userIds),geneCol])
       
-      drawHCA(prefix=make.names(enriched[idx,1]), rldselect=entryTable, ispaired=FALSE, designData=deseq2Design, 
-                   conditionColors=conditionColors, gnames=gnames, outputFormat="PNG",
-              main=paste(enriched[idx,1:2],collapse=", "),labRow=row.names(entryTable),fileTypePrefix=fileTypePrefix)
-        
+      drawHCA(prefix=paste0(targetFolder, make.names(enriched[idx,1])), 
+              rldselect=as.matrix(entryTable),
+              ispaired=FALSE, 
+              designData=designData, 
+              conditionColors=conditionColors, 
+              gnames=gnames, 
+              outputFormat="PNG",
+              main=paste(enriched[idx,1:2],collapse=", "),
+              labRow=row.names(entryTable),
+              fileTypePrefix=fileTypePrefix)
     }
-    setwd(currentWd)
   }
 }
-
-
