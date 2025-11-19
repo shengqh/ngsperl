@@ -113,7 +113,7 @@ fi
       parameterSampleFile1_suffix         => ",",
       no_prefix                           => 1,
       no_output                           => 1,
-      output_ext                          => "bismark/summary/bismark_summary_report.html",
+      output_ext                          => "multiqc/bismark/multiqc_report.html",
       samplename_in_result                => 0,
       output_to_same_folder               => 1,
       sh_direct                           => $sh_direct,
@@ -142,7 +142,7 @@ ln -s $nextflow_methylseq_bismark_dir/__NAME___1_val_1_bismark_bt2_pe.deduplicat
         program                  => "",
         check_program            => 0,
         parameterSampleFile1_ref => $source_ref,
-        parameterSampleFile2_ref => $nextflow_methylseq_task, # just to make dependency
+        parameterSampleFile2_ref => $nextflow_methylseq_task,    # just to make dependency
         no_prefix                => 1,
         no_output                => 1,
         output_ext               => ".bismark.cov.gz",
@@ -222,9 +222,70 @@ fi
     my $methy_age_task = add_MethylAgeEstimation( $config, $def, $tasks, $target_dir, "dnaMethyAge", $methylkitcorr_task );
   }
 
-  if ( $def->{pairs} ) {
-    add_MethylDiffAnalysis( $config, $def, $tasks, $target_dir, $methylkitcorr_task );
-  }
+  my $methylkitdiff_task             = undef;
+  my $methylkitdiffannovar_task      = undef;
+  my $MethylKitDiffAnnovarGenes_task = undef;
+  my $webgestalt_task                = undef;
+
+  if ( defined $def->{pairs} ) {
+    my $task_map = add_MethylDiffAnalysis( $config, $def, $tasks, $target_dir, $methylkitcorr_task );
+
+    #print(Dumper($task_map));
+
+    $methylkitdiff_task             = $task_map->{methylkitdiff_task};
+    $methylkitdiffannovar_task      = $task_map->{methylkitdiffannovar_task};
+    $MethylKitDiffAnnovarGenes_task = $task_map->{MethylKitDiffAnnovarGenes_task};
+    $webgestalt_task                = $task_map->{webgestalt_task};
+  } ## end if ( defined $def->{pairs...})
+
+  # print("methylkitdiff_task=", $methylkitdiff_task, "\n");
+  # print("methylkitdiffannovar_task=", $methylkitdiffannovar_task, "\n");
+  # print("MethylKitDiffAnnovarGenes_task=", $MethylKitDiffAnnovarGenes_task, "\n");
+  # print("webgestalt_task=", $webgestalt_task, "\n");
+
+  my $MethylKitCorr_path = $config->{$methylkitcorr_task}{target_dir} . "/result/";
+  my $MethylKitDiff_path = ( defined $methylkitdiff_task ) ? $config->{$methylkitdiff_task}{target_dir} . "/result/" : undef;
+  #print("MethylKitDiff_path=", $MethylKitDiff_path, "\n");
+
+  my $version_files = get_version_files($config);
+
+  my @report_files = ();
+  my @report_names = ();
+  my @copy_files   = ();
+  push( @copy_files,   "nextflow_methylseq", ".html" );
+  push( @report_files, "nextflow_methylseq", ".html" );
+  push( @report_names, "nextflow_methylseq_report" );
+
+  $config->{report} = {
+    class      => "CQS::BuildReport",
+    perform    => 1,
+    target_dir => "$target_dir/report",
+    #docker_command             => "singularity exec -c -e -B /home,/gpfs51,/gpfs52,/panfs,/data,/dors,/nobackup,/tmp -H `pwd` /data/cqs/softwares/singularity/wgbs_r.1.1.sif ",
+    docker_prefix              => "wgbs_r_",
+    report_rmd_file            => "../Pipeline/NextflowMethylation.Rmd",
+    additional_rmd_files       => "../Pipeline/Pipeline.R;reportFunctions.R",
+    parameterSampleFile1_ref   => \@report_files,
+    parameterSampleFile1_names => \@report_names,
+    parameterSampleFile2       => {
+      task_name          => $task_name,
+      email              => $def->{email},
+      affiliation        => $def->{affiliation},
+      MethylKitCorr_path => $MethylKitCorr_path,
+      MethylKitDiff_path => $MethylKitDiff_path,
+    },
+    parameterSampleFile3_ref => \@copy_files,
+    copy_to_root_folder      => 1,
+    parameterSampleFile7_ref => [ $methylkitcorr_task, ".png" ],
+    parameterSampleFile8_ref => [ $methylkitdiff_task, $methylkitdiffannovar_task ],
+    parameterSampleFile9     => $version_files,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "40gb"
+    },
+  };
+  push( @$tasks, "report" );
 
   $config->{"sequencetask"} = {
     class      => getSequenceTaskClassname($cluster),

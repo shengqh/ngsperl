@@ -113,25 +113,26 @@ sub perform {
   if(has_raw_files($config, $section, "parameterSampleFile3")){
     my $copy_file_list = get_raw_file_list( $config, $section, "parameterSampleFile3" );
     if ( scalar(@$copy_file_list) > 0 ) {
-      my $report_folder = create_directory_or_die("$result_dir/$task_name");
+      my $copy_to_root_folder = get_option( $config, $section, "copy_to_root_folder", 0 );
+
+      my $report_folder = $copy_to_root_folder ? $result_dir : create_directory_or_die("$result_dir/$task_name");
+      my $default_folder = $copy_to_root_folder ? "." : "$task_name";
 
       for my $copy_file ( sort @$copy_file_list ) {
-        my $to_folder = $task_name;
+        my $to_folder = $default_folder;
         #print($copy_file . "\n");
         if ( $copy_file =~ /.txt.html/ ) {
-          $to_folder = $task_name;
-          #print("  " . $to_folder . "\n");
         } elsif ( $copy_file =~ /_WebGestalt/ ) {
           create_directory_or_die("$report_folder/webGestalt");
-          $to_folder = "$task_name/webGestalt";
+          $to_folder = "$to_folder/webGestalt";
         } elsif ( $copy_file =~ /_GSEA/ & $copy_file !~ /_GSEA.rnk$/ ) {
           create_directory_or_die("$report_folder/gsea");
-          $to_folder = ("$task_name/gsea");
+          $to_folder = ("$to_folder/gsea");
         } elsif ( $copy_file =~ /_homer/ ) {
           my $treatment=basename(dirname($copy_file));
           create_directory_or_die("$report_folder/homer");
           create_directory_or_die("$report_folder/homer/$treatment");
-          $to_folder = ("$task_name/homer/$treatment");
+          $to_folder = ("$to_folder/homer/$treatment");
         }
         print $final "cp -r -u $copy_file $to_folder \n";
       }

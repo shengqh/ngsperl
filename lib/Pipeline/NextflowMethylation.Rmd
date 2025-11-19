@@ -1,0 +1,226 @@
+---
+title: "Whole Genome Bisulfite Sequencing Data Analysis Report"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
+
+```{r setup, include=FALSE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(data.table)
+library(stringr)
+library(ggpubr)
+library(purrr)
+library(tibble)
+
+source("Pipeline.R")
+source("reportFunctions.R")
+
+knitr::opts_chunk$set(
+  tidy = TRUE,
+  tidy.opts = list(width.cutoff = 120),
+  message = FALSE,
+  warning = FALSE,
+  echo=FALSE,
+  results='asis', 
+  fig.align="center"
+)
+
+option_tbl<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
+myoptions<-split(option_tbl$V1, option_tbl$V2)
+
+project <- myoptions$task_name
+
+if(!dir.exists(project)) {
+  dir.create(project)
+}
+
+MethylKitCorr_path <- myoptions$MethylKitCorr_path
+MethylKitDiff_path <- myoptions$MethylKitDiff_path
+
+files<-read.table("fileList1.txt", sep="\t", header=FALSE, as.is=TRUE)
+rownames(files)<-files$V2
+
+file_map=split(files$V1, files$V2)
+
+report_html=file_map[["nextflow_methylseq_report"]]
+multiqc_png_folder=paste0(dirname(report_html), "/multiqc_plots/png/")
+
+png_files=read.table('fileList7.txt', sep="\t", as.is=TRUE)
+get_png<-function(png_files, suffix){
+  png_files$V1[grepl(paste0(suffix, "$"), png_files$V1)]
+}
+
+x_axis_angle = ifelse(is.null(myoptions$x_axis_angle), 45, as.numeric(myoptions$x_axis_angle))
+
+get_bar_width_no_legend = function(nsample) {
+  return (max(5, 0.25 * nsample))
+}
+
+get_bar_width_with_legend = function(nsample) {
+  get_bar_width_no_legend(nsample) + 1.5
+}
+
+mytheme = function(...) {
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = x_axis_angle, hjust = 1),
+        ...)
+}
+
+bar_height = 4
+```
+
+# MultiQC report
+
+<mark>Click to open MultiQC report with QC, Alignment and Methylation calling result</mark>: <a href="multiqc_report.html" target="_blank">MultiQC report</a>
+
+# Sample correlation analysis
+
+## Principal Components Analysis (PCA) plot
+
+### All CpG sites
+
+```{r}
+include_graphics(get_png(png_files, ".CpG.all.PCA.png$"))
+```
+
+### Top 10000 most variable CpG sites
+
+```{r}
+include_graphics(get_png(png_files, ".CpG.top10000.PCA.png$"))
+```
+
+## Multi-dimensional scaling (MDS) plot
+
+### All CpG sites by Euclidean distance
+
+```{r}
+include_graphics(get_png(png_files, ".euclidean_distance.all.MDS.png$"))
+```
+
+### Top 10000 most variable CpG sites by Euclidean distance
+
+```{r}
+include_graphics(get_png(png_files, ".euclidean_distance.top10000.MDS.png$"))
+```
+
+### All CpG sites by pearson correlation
+
+```{r}
+include_graphics(get_png(png_files, ".pearson_corr.all.MDS.png$"))
+```
+
+### Top 10000 most variable CpG sites by pearson correlation
+
+```{r}
+include_graphics(get_png(png_files, ".pearson_corr.top10000.MDS.png$"))
+```
+
+# Differentially methylated CpGs
+
+## Overview
+
+- Up: number of CpG sites with increased methylation in the treatment group compared to the control group.
+- Down: number of CpG sites with decreased methylation in the treatment group compared to the control group.
+
+```{r, include=TRUE, message = F, warning = F}
+dmcpg.pat <- ".dmcpgs.tsv$"
+
+files <- read.table("fileList8.txt", sep="\t", header=FALSE, stringsAsFactors = FALSE) |>
+  dplyr::rename(File=V1, Comparison=V2) |>
+  dplyr::filter(!grepl("version", File)) |>
+  dplyr::mutate(Treatment = str_replace(Comparison, "_vs_.*$", ""),
+                Control = str_replace(Comparison, "^.*_vs_", ""),
+                Filetype=ifelse(grepl("Annovar", File), "AnnovarFile", "DiffFile")) |>
+  dplyr::select(File, Filetype, Comparison, Treatment, Control) |>
+  tidyr::pivot_wider(names_from = Filetype, values_from = File) |>
+  as.data.frame()
+
+files$Up_in_treatment <- 0
+files$Down_in_treatment <- 0
+
+i=1
+for (i in 1:nrow(files)) {
+	comparison <- files$Comparison[i]
+	infile=files$DiffFile[i]
+
+	DT.dmcpg <- read.table(infile, header = T, sep = "\t", stringsAsFactors = FALSE)
+	files$Up_in_treatment[i] <- sum(DT.dmcpg$meth.diff > 0)
+  files$Down_in_treatment[i] <- sum(DT.dmcpg$meth.diff < 0)
+}
+
+dmcpg_df <- files |> dplyr::select("Comparison", "Treatment", "Control", "Up_in_treatment", "Down_in_treatment")
+print_table(dmcpg_df, byDT=FALSE, row.names=FALSE)
+```
+
+```{r}
+dm_content = ""
+comparisons=unique(files$Comparison)
+comp=comparisons[1]
+for(comp in comparisons){
+  comp_df = files[files$Comparison == comp,]
+  dm_content = paste0(dm_content, "## ", comp, "\n\n")
+  annovar_file=comp_df$AnnovarFile[1]
+  annovar = fread(annovar_file, data.table=FALSE)
+  if(nrow(annovar) == 0) {
+    dm_content = paste0(dm_content, "\n<mark>No significant CpGs found</mark>\n\n")
+    next
+  }else{
+    annovar_count = annovar |> 
+      dplyr::group_by(Gene.refGene, direction) |>
+      dplyr::summarise(Count = n()) |>
+      dplyr::ungroup() |>
+      dplyr::arrange(desc(Count), Gene.refGene, direction)
+    annovar_count_file=paste0(project, "/", basename(annovar_file), ".count.csv")
+    write.csv(annovar_count, file=annovar_count_file, row.names=FALSE)
+
+    dm_content = paste0(dm_content, "\n### Differential methylation sites per gene\n\n")
+    dm_content = paste0(dm_content, getPagedTable(annovar_count_file, row.names=0))
+
+    dm_content = paste0(dm_content, "\n### Differential methylation sites details\n\n")
+    dm_content = paste0(dm_content, getPagedTable(annovar_file, row.names=0))
+  }
+}
+dm_rmd = "dmcpg.rmd"
+writeLines(dm_content, dm_rmd)
+```
+
+```{r child=dm_rmd}
+```
+
+# Description
+
+```{r}
+versions<-get_versions(dynamic_file="fileList9.txt", static_file="")
+print_table(versions, byDT=FALSE, row.names=FALSE)
+```
+
+```{r}
+vmap<-unlist(split(versions$Version, versions$Software))
+has_FastQC<-"FastQC" %in% names(vmap)
+has_cutadapt<-"Cutadapt" %in% names(vmap)
+```
+
+This comprehensive methylation analysis pipeline processes bisulfite sequencing data through multiple quality control, alignment, and methylation analysis steps:
+
+- 1. Quality Control, Bisulfite-aware Alignment and Methylation calling were performed using nextflow-methyseq pipeline.
+
+- 2. Comparative Analysis
+  - **Sample Clustering**: PCA and MDS plots reveal sample relationships
+  - **Differential Methylation**: Identification of differentially methylated CpGs between conditions
+  - **Functional Annotation**: Gene-based annotation of methylation changes
