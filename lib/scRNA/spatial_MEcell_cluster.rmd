@@ -107,10 +107,12 @@ if(!file.exists(rds_file)){
 
 obj = readRDS(rds_file)
 
+bMiss=FALSE
 cfile = cluster_files[1]
 for(cfile in cluster_files){
   if(!file.exists(cfile)){
     cat(paste0("Warning: Cluster file not found: ", cfile, "\n"))
+    bMiss=TRUE
     next
   }
 
@@ -164,6 +166,14 @@ if(hasSingleR){
   obj@meta.data[["SingleR"]] = singleR_meta[["SingleR_major_labels"]]
 }
 ```
+
+
+```{r}
+if(!bMiss){
+  cat("\n# Save object\n")
+  saveRDS(obj, paste0(sample_name, ".", assay, ".MEcell_clustered.rds"))
+}
+
 
 ```{r}
 tissue_image = SpatialPlot( object = obj, 
