@@ -1266,8 +1266,12 @@ get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRU
   assaydata=MyGetAssayData(obj, assay=assay, slot="data")
   if(!all(genes %in% rownames(assaydata))){
     missed_genes = genes[!(genes %in% rownames(assaydata))]
-    missed_genes=missed_genes[c(1:min(5, length(missed_genes)))]
-    stop(paste0("some genes are not in ", assay, " assay, here is the first few:", paste0(missed_genes, collapse = ",")))
+
+    missed_genes = missed_genes[!missed_genes %in% colnames(obj@meta.data)]
+    if(length(missed_genes) > 0){
+      missed_genes=missed_genes[c(1:min(5, length(missed_genes)))]
+      stop(paste0("some genes are not in ", assay, " assay, here is the first few:", paste0(missed_genes, collapse = ",")))
+    }
   }
 
   g<-DotPlot(obj, features=genes, assay=assay, group.by=group.by)
