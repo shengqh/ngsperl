@@ -81,6 +81,8 @@ tau_df=tau_df[!duplicated(tau_df$gene_name),] |>
 
 print_table(head(tau_df))
 
+cat("\nThere are total", nrow(tau_df), "genes and", ncol(tau_df), "tissues in the tau file.\n\n")
+
 cat(paste0("\n", top_ident, "# Overlap between tau genes and ", all_genes_label, " genes.\n\n"))
 
 genes = list(rownames(tau_df), unique(all_genes))
@@ -125,6 +127,8 @@ cat("Read tabula sapiens data from ",basename(tabula_file), ".\n\n")
 if(!exists("tabula_obj")){
   tabula_obj=readRDS(tabula_file)
 }
+
+cat("\nThere are total", nrow(tabula_obj), "genes and", ncol(tabula_obj), "cells in the Tabula Sapiens snRNA dataset.\n\n")
 
 cat(paste0("\n", top_ident, "# Overlap between Tabula Sapiens genes and ", all_genes_label, " genes\n\n"))
 
