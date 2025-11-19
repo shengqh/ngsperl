@@ -8,7 +8,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_byCell_GSEA_Hs_report/result')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_bySample_GSEA_Hs_report/result')
 
 ### Parameter setting end ###
 
@@ -21,8 +21,6 @@ library(reshape2)
 library(DT)
 library(RCurl)
 library(htmltools)
-library(knitr)
-library(kableExtra)
 
 source('Pipeline.R')
 
@@ -56,6 +54,10 @@ if(nrow(files) == 1 & files$V2[1] == outFile){
 
 mytbl=read.table(parSampleFile2, header=FALSE, as.is=TRUE, sep="\t")
 myoptions=split(mytbl$V1, mytbl$V2)
+species=myoptions$gsea_species
+if(is.null(species)){
+  species="Homo sapiens"
+}
 
 if(is.null(myoptions$edgeR_suffix)){
   gsea_folder = paste0(outFile, ".gsea/")
@@ -64,5 +66,10 @@ if(is.null(myoptions$edgeR_suffix)){
 }
 dir.create(gsea_folder, showWarnings = FALSE)
 
-vfiles = display_gsea(files, gsea_folder, print_rmd = FALSE)
+vfiles = display_gsea(files=files, 
+  target_folder=gsea_folder, 
+  gsea_prefix="#", 
+  print_rmd=FALSE,
+  species=species)
+
 write.csv(vfiles, paste0("gsea_files.csv"))

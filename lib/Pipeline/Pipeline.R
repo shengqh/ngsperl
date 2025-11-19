@@ -50,9 +50,11 @@ display_webgestalt=function(files) {
   }
 }
 
-processGseaTable=function(gseaTableFile, maxCategoryFdr=0.05) {
+processGseaTable=function(gseaTableFile, maxCategoryFdr=0.05, species="Homo sapiens") {
   if(require('msigdbr')){
-    gs<-msigdbr:::msigdbr_genesets
+    gs <- msigdbr(species = species) |> 
+      dplyr::select(gs_name, gs_description) |>
+      dplyr::distinct()
     gsd_map=split(gs$gs_description, gs$gs_name)
   }else{
     gsd_map=list()
@@ -116,7 +118,7 @@ processGseaTable=function(gseaTableFile, maxCategoryFdr=0.05) {
   return(rawTable)
 }
 
-parse_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
+parse_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive, species="Homo sapiens") {
   pstr = ifelse(is_positive, "pos", "neg")
   title = ifelse(is_positive, "Positive-regulated", "Negative-regulated")
   pattern = paste0("gsea_report_for_na_", pstr, '_\\d+\\.(tsv|xls)$')
@@ -127,8 +129,8 @@ parse_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
     warning(paste("Can't find ", title, "GSEA table file in", resultDirSub))
     return(NULL)
   }
-  
-  rawTable<-processGseaTable(gseaTableFile)
+
+  rawTable<-processGseaTable(gseaTableFile, species=species)
   if(is.null(rawTable)){
     warning(paste("Can't find significant", title, "GSEA gene set in", resultDirSub))
     return(NULL)
@@ -136,7 +138,7 @@ parse_gsea_subfolder=function(resultDirSub, gname, gseaCategory, is_positive){
   return(rawTable)
 }
 
-display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) {
+display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE, species="Homo sapiens") {
   if(print_rmd){
     cat(paste0("\n\n", gsea_prefix, "# GSEA\n\n"))
   }
@@ -193,8 +195,8 @@ display_gsea=function(files, target_folder="", gsea_prefix="#", print_rmd=TRUE) 
           cat("  ", gseaCategory, "\n")
         }
 
-        pos = parse_gsea_subfolder(resultDirSub, gname, gseaCategory, TRUE)
-        neg = parse_gsea_subfolder(resultDirSub, gname, gseaCategory, FALSE)
+        pos = parse_gsea_subfolder(resultDirSub, gname, gseaCategory, is_positive=TRUE, species=species)
+        neg = parse_gsea_subfolder(resultDirSub, gname, gseaCategory, is_positive=FALSE, species=species)
 
         if (is.null(pos) & is.null(neg)){
           next
