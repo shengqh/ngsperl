@@ -812,7 +812,7 @@ for(countfile_index in c(1:length(countfiles))){
     }
     
     assayvsd<-assay(vsd)
-    write.csv(format(assayvsd, digits=3), file=paste0(prefix, "_DESeq2-vsd.csv"))
+    write.csv(assayvsd, file=paste0(prefix, "_DESeq2-vsd.csv"))
     
     rldmatrix=as.matrix(assayvsd)
 
