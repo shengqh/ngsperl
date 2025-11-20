@@ -14,10 +14,12 @@ load_install<-function(library_name, library_sources=library_name){
   library(library_name, character.only = T)
 }
 
-load_install("org.Hs.eg.db")
 load_install("ComplexHeatmap")
 load_install("clusterProfiler")
 load_install("ReactomePA")
+
+stopifnot(exists("OrgDb"))
+load_install(OrgDb)
 
 if(!exists("lib_folder")){
   lib_folder="https://raw.githubusercontent.com/shengqh/ngsperl/master/lib"
@@ -49,7 +51,6 @@ stopifnot(exists("prefix"))
 stopifnot(exists("target_genes"))
 stopifnot(exists("background_genes"))
 stopifnot(exists("organism"))
-stopifnot(exists("OrgDb"))
 
 #Options 
 stopifnot(exists("pathway_analysis_sets"))
