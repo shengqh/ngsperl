@@ -2509,10 +2509,11 @@ get_group_colors_from_designdata<-function(designdata){
   return(groupColors)
 }
 
-get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell=TRUE, is_between_cluster=FALSE, log_cpm=NULL){
-  groupColors<-get_group_colors_from_designdata(designdata)
-  display_group_levels<-names(groupColors)
-
+get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell=TRUE, is_between_cluster=FALSE, log_cpm=NULL, group_colors=NULL){
+  if(is.null(group_colors)){
+    group_colors<-get_group_colors_from_designdata(designdata)
+  }
+  display_group_levels<-names(group_colors)
   if(!is_between_cluster){
     ddata<-designdata[!duplicated(designdata$Sample),]
 
@@ -2538,16 +2539,24 @@ get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell
   title<-paste0(sig_gene, ' : logFC = ', round(logFC, 2), ", FDR = ", formatC(FDR, format = "e", digits = 2))
   
   if(is_between_cluster){
-    p0<-ggplot(geneexp, aes(x=Group, y=Gene, col=Group)) + geom_violin() + geom_jitter(width = 0.2)
+    p0<-ggplot(geneexp, aes(x=Group, y=Gene, color=Group)) + 
+      geom_violin() + 
+      geom_jitter(width = 0.2)
 
     if(length(unique(geneexp$Sample)) > 1){
       p0 = p0 + facet_grid(rows=~Sample)
     }
-    p0 = p0 + theme_bw3() + 
-      scale_color_manual(values = groupColors) +
-      NoLegend() + xlab("") + ylab("Gene Expression")
+    p0 = p0 + 
+      theme_bw3() + 
+      scale_color_manual(values = group_colors) +
+      NoLegend() + 
+      ylab("Gene Expression") +
+      theme(axis.title.x=element_blank())
     
-    p1<-MyDimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + NoLegend() + ggtitle("Cluster") + theme(plot.title = element_text(hjust=0.5)) + xlim(xlim) + ylim(ylim)
+    p1<-MyDimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + 
+      NoLegend() + 
+      ggtitle("Cluster") + 
+      theme(plot.title = element_text(hjust=0.5))
     
     p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T, raster=FALSE, pt.size=0.5)
     p<-p0+p1+p2+plot_layout(design="AA
@@ -2583,7 +2592,7 @@ BCCCC")
 B")
     }
   }
-  p<-p+ plot_annotation(title=title)
+  p<-p+ plot_annotation(title=title, theme = theme(plot.title = element_text(hjust = 0.5, size = 16)))
   return(p)
 }
 
