@@ -741,7 +741,7 @@ show_pathway<-function( dataForPlotList,
                         prefix="pathway",
                         qvalueCut=0.05,
                         pathway_width=6, 
-                        pathway_height=6, 
+                        pathway_height=4, 
                         y="Coverage", 
                         ylab="Geneset coverage (%)",
                         plot_type="bar"){
@@ -761,13 +761,11 @@ show_pathway<-function( dataForPlotList,
     dp=dataForPlotList
   }
 
-  fig_height=ifelse(nrow(tbl$res_tbl) >= 15, pathway_height * 1.5, pathway_height)
-  
   fig=get_pathway_figure(
     dp=dp, 
     png_file=paste0(prefix_name, ".png"), 
     fig_width=pathway_width, 
-    fig_height=fig_height, 
+    fig_height=pathway_height, 
     pname=pname,
     y=y, 
     ylab=ylab,
