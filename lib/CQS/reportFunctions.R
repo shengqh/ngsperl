@@ -58,6 +58,10 @@ addLinkTag<-function(text,link) {
   return(result)
 }
 
+add_img <- function(fno, width_inch, inch_to_px=72){
+  cat("\n\n![](", fno, "){ width=", width_inch * inch_to_px, " }\n\n", sep = "")
+}
+
 figRef <- local({
   tag <- numeric()
   created <- logical()
@@ -166,7 +170,6 @@ print_table<-function(tbl, byDT=FALSE, row.names=TRUE, round_value=0, ...){
     print(knitr::kable(tbl, row.names = row.names, ...))
   }
 }
-
 
 get_table_description<-function(category, filepath, description){
   result = "\n```{r,echo=FALSE,results='asis'}\n"
@@ -464,6 +467,9 @@ get_packages_table=function(){
 get_affiliation<-function(myoptions){
   affiliation=myoptions$affiliation
   if(is.null(affiliation)){
+    affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
+  }
+  if(affiliation == ""){
     affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
   }
   return(affiliation)
