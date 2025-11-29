@@ -11,12 +11,12 @@ parFile2='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRN
 parFile3='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge_dr0.5_1_call/result/PH_scRNA.iter_png.csv'
 
 
-setwd('/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge_dr0.5_1_call_validation/result')
+setwd('/nobackup/h_cqs/ciara_shaver_projects/20251121_MP_13667_scRNA/T04_scRNA/nd_seurat_sct2_fastmnn_dr0.5_1_call_validation/result')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 library(Seurat)
+source("scRNA_func.r")
 
 options(future.globals.maxSize=1024^3*100) #100G
 
@@ -239,10 +239,27 @@ for(ct in cts){
 
     cat("  decontX plot\n")
     g1<-MyFeaturePlot(ct_obj, features = "decontX") + xlab("") + theme_bw3(TRUE) + theme(aspect.ratio=1) + ggtitle("")
-    g2<-VlnPlot(ct_obj, features = "decontX", group.by=celltype_cluster_column) + xlab("") + theme_bw3(TRUE) + ggtitle("") + NoLegend()
+
+    #somehow, the vlnplot does not show all clusters. I guess it might related to the loading order of the libraries.
+    #let's use ggplot directly
+    gdata<-VlnPlot(ct_obj, features = "decontX", group.by=celltype_cluster_column)$data
+    if("0" %in% gdata$ident){
+      gdata$ident = factor(gdata$ident, levels = sort(as.numeric(levels(gdata$ident))))
+    }
+    g2=ggplot(gdata, aes(x=ident, y=decontX, fill=ident)) + 
+        geom_violin(scale="width") + 
+        geom_jitter(width=0.5, size=0.1, alpha=0.9) +
+        ylab("decontX") + 
+        theme_bw3(TRUE) + 
+        theme(axis.title.x=element_blank(),
+              axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),
+              plot.title=element_blank(),
+              legend.position="none")
     if("DF" %in% colnames(ct_obj@meta.data)){
-      g2$data$DF = ct_obj@meta.data[rownames(g2$data), "DF"]
-      g2<-g2 + facet_grid(rows=DF~.)
+      if(length(unique(ct_obj@meta.data$DF)) > 1){
+        g2$data$DF = ct_obj@meta.data[rownames(g2$data), "DF"]
+        g2<-g2 + facet_grid(rows=DF~.)
+      }
     }
     g<-g1+g2+plot_layout(design="ABBB")
     ggsave(paste0(file_prefix, ".", pct, ".decontX.png"), g, width=4400, height=1600, units="px", dpi=300, bg="white")
