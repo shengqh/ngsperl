@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='Arota_Progeria'
+outFile='P9061'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/brown_lab/projects/20250513_Arota_Progeria_scRNA_mouse/cellbender_nd_seurat_rawdata/result/Arota_Progeria.rawobj.rds'
-parFile2='/nobackup/brown_lab/projects/20250513_Arota_Progeria_scRNA_mouse/essential_genes/result/Arota_Progeria.txt'
+parFile1='/nobackup/vickers_lab/projects/20251128_9061_scRNA_mm10_cellbender_redo/cellbender_scDblFinder_seurat_rawdata/result/P9061.rawobj.rds'
+parFile2='/nobackup/vickers_lab/projects/20251128_9061_scRNA_mm10_cellbender_redo/essential_genes/result/P9061.txt'
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20250513_Arota_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn/result')
+setwd('/nobackup/vickers_lab/projects/20251128_9061_scRNA_mm10_cellbender_redo/cellbender_scDblFinder_seurat_fastmnn/result')
 
 ### Parameter setting end ###
 
@@ -187,6 +187,12 @@ saveRDS(finalList, file=finalListFile)
 rm(finalList)
 
 cat("output_integration_dimplot ... \n")
-output_integration_dimplot(obj, detail_prefix, FALSE, myoptions$qc_genes)
+output_integration_dimplot(
+  obj=obj, 
+  outFile=detail_prefix, 
+  has_batch_file=FALSE, 
+  qc_genes=myoptions$qc_genes, 
+  assay="RNA")
 
 unlink(integrated_obj_file)
+
