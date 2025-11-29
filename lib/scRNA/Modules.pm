@@ -105,16 +105,17 @@ our %EXPORT_TAGS = (
         add_fragment_cells
 
         add_cellbender
-
         add_cellbender_v2
-
         add_cellbender_with_expected_cells
-
+        add_cellbender_default
+        
         add_dcats
 
         add_cell_chat
 
         add_miloR_miloDE
+
+        add_sccomp
     )
   ]
 );
@@ -338,15 +339,18 @@ sub add_seurat {
       conda_env                 => $def->{conda_env},
       ignore_variable_gene_file => $def->{ignore_variable_gene_file},
     },
-    parameterSampleFile2 => $def->{"batch_for_integration_groups"},
-    output_file_ext      => ".final.rds",
-    sh_direct            => 1,
-    pbs                  => {
+    output_file_ext => ".final.rds",
+    sh_direct       => 1,
+    pbs             => {
       "nodes"    => "1:ppn=$integration_thread",
       "walltime" => getValue( $def, "seurat_walltime" ),
       "mem"      => getValue( $def, "seurat_mem" ),
     },
   };
+
+  if ( $def->{"batch_for_integration_groups"} ) {
+    $config->{$seurat_task}{parameterSampleFile2} = $def->{"batch_for_integration_groups"};
+  }
 
   push( @$summary, $seurat_task );
   return ( $seurat_task, $reduction );
@@ -749,7 +753,7 @@ sub add_signacx {
     class                    => $class,
     perform                  => 1,
     target_dir               => $target_dir . "/" . $task_name,
-    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
+    rtemplate                => "reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
     parameterSampleFile1_ref => $obj_ref,
     parameterSampleFile2     => {
       species                => getValue( $def, "species" ),
@@ -787,7 +791,7 @@ sub add_singleR {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . "/" . $singleR_task,
-    rtemplate            => "../scRNA/scRNA_func.r,../scRNA/SingleR.r",
+    rtemplate            => "reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/SingleR.r",
     parameterFile1_ref   => $obj_ref,
     parameterFile2_ref   => $meta_ref,
     parameterSampleFile1 => merge_hash_left_precedent(
@@ -827,7 +831,7 @@ sub add_singleR_cell {
     perform                  => 1,
     target_dir               => $target_folder,
     init_command             => "",
-    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/SingleR.r",
+    rtemplate                => "reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/SingleR.r",
     parameterSampleFile1_ref => $obj_ref,
     parameterSampleFile2     => merge_hash_left_precedent(
       $cur_options,
@@ -1576,11 +1580,11 @@ sub addEdgeRTask {
       $edgeRtaskname                       = $edgeRtaskname . "_byCell";
     }
     else {
-      $rCodeDic->{"filter_min_cell_per_sample"} = getValue( $def, "DE_by_sample_min_cell_per_sample" );
+      $rCodeDic->{"filter_min_cell_per_sample"}  = getValue( $def, "DE_by_sample_min_cell_per_sample" );
       $rCodeDic->{"filter_min_count_per_sample"} = getValue( $def, "DE_by_sample_min_count_per_sample", 5 );
-      $edgeRtaskname                            = $edgeRtaskname . "_bySample";
-      $edgeRscript                              = "../scRNA/edgeR_pseudo.r";
-      $edgeR_suffix                             = ".edgeR_by_sample";
+      $edgeRtaskname                             = $edgeRtaskname . "_bySample";
+      $edgeRscript                               = "../scRNA/edgeR_pseudo.r";
+      $edgeR_suffix                              = ".edgeR_by_sample";
     } ## end else [ if ($DE_by_cell) ]
 
     $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
@@ -3425,7 +3429,7 @@ sub add_bubble_plots {
 
 
 sub add_individual_qc_tasks {
-  my ( $config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, $doublet_finder_ref ) = @_;
+  my ( $config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, $doublet_finder_ref, $decontX_ref ) = @_;
 
   my $sct_str                = get_sct_str($def);
   my $raw_individual_qc_task = "${prefix}raw_qc${sct_str}";
@@ -3464,12 +3468,13 @@ sub add_individual_qc_tasks {
     #print($config->{$azimuth_task});
   } ## end if ( getValue( $def, "perform_Azimuth"...))
 
-  my $decontX_ref = undef;
-  if ( getValue( $def, "perform_decontX", 0 ) && !getValue( $def, "remove_decontX", 0 ) ) {
-    my $decontX_task = $raw_individual_qc_task . "_decontX";
-    add_decontX( $config, $def, $summary, $target_dir, $decontX_task, $raw_individual_qc_task, $raw_files_def, {}, 1 );
-    $decontX_ref = [ $decontX_task, ".meta.rds" ];
-  }
+  if ( !defined $decontX_ref ) {
+    if ( getValue( $def, "perform_decontX", 0 ) && !getValue( $def, "remove_decontX", 0 ) ) {
+      my $decontX_task = $raw_individual_qc_task . "_decontX";
+      add_decontX( $config, $def, $summary, $target_dir, $decontX_task, $raw_individual_qc_task, $raw_files_def, {}, 1 );
+      $decontX_ref = [ $decontX_task, ".meta.rds" ];
+    }
+  } ## end if ( !defined $decontX_ref)
 
   my $qc_report_task = $raw_individual_qc_task . "_report";
   my $rmd_ext        = ".${prefix}qc.html";
@@ -3612,6 +3617,86 @@ sub add_fragment_cells {
   push( @$tasks, $fragment_cells_task );
 } ## end sub add_fragment_cells
 
+sub add_cellbender_default {
+  my ( $config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref ) = @_;
+
+  if ( $def->{cellbender_extract_gene_expression_h5} ) {
+    my $cellbender_extract_gene_expression_task = $cellbender_prefix . "_00_extract_gene_expression_h5";
+    my $suffix                                  = ".raw_gex_feature_bc_matrix.h5";
+    $config->{$cellbender_extract_gene_expression_task} = {
+      class                    => "CQS::IndividualR",
+      perform                  => 1,
+      target_dir               => "${target_dir}/$cellbender_extract_gene_expression_task",
+      rtemplate                => "reportFunctions.R;../scRNA/extract_gene_expression_h5.r",
+      parameterSampleFile1_ref => $raw_files_def,
+      parameterSampleFile2     => { suffix => $suffix },
+      output_file_ext          => ".raw_gex_feature_bc_matrix.h5",
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push( @$tasks, $cellbender_extract_gene_expression_task );
+    $raw_files_def = [ $cellbender_extract_gene_expression_task, ".raw_gex_feature_bc_matrix.h5" ];
+  } ## end if ( $def->{cellbender_extract_gene_expression_h5...})
+
+  my $cellbender_task = $cellbender_prefix . "_01_call";
+  my $cellbender_cpu  = getValue( $def, "cellbender_cpu", 12 );
+  $config->{$cellbender_task} = {
+    class         => "CQS::ProgramWrapperOneToOne",
+    target_dir    => "${target_dir}/$cellbender_task",
+    program       => "",
+    check_program => 0,
+    option        => "
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+
+rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
+
+",
+    docker_prefix            => "cellbender_",
+    parameterSampleFile1_ref => $raw_files_def,
+    output_to_same_folder    => 0,
+    no_output                => 1,
+    output_file_ext          => ".cellbender_filtered.h5,.cellbender.h5",
+    pbs                      => {
+      "nodes"    => "1:ppn=$cellbender_cpu",
+      "walltime" => "48",
+      "mem"      => "40gb"
+    }
+  };
+  push( @$tasks, $cellbender_task );
+
+  my $cellbender_clean_task = $cellbender_prefix . "_02_clean";
+  if ( defined $decontX_counts_ref ) {
+    $cellbender_clean_task .= "_decontX";
+  }
+  my $output_other_ext = getValue( $def, "has_demultiplex", 0 ) ? ".cellbender_filtered.clean.adt.counts.h5" : undef;
+  $config->{$cellbender_clean_task} = {
+    class                    => "CQS::IndividualR",
+    perform                  => 1,
+    target_dir               => "${target_dir}/$cellbender_clean_task",
+    rtemplate                => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/cellbender_clean.r",
+    parameterSampleFile1_ref => $filtered_files_def,
+    output_file_ext          => ".txt",
+    parameterSampleFile1_ref => [ $cellbender_task, ".cellbender_filtered.h5" ],
+    parameterSampleFile2_ref => $filtered_files_def,
+    parameterSampleFile3_ref => $decontX_counts_ref,
+    output_to_same_folder    => 0,
+    output_file_ext          => ".cellbender_filtered.clean.h5",
+    output_other_ext         => $output_other_ext,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "10gb"
+    }
+  };
+  push( @$tasks, $cellbender_clean_task );
+
+  return ( $cellbender_clean_task, [ $cellbender_task, ".cellbender.h5" ] );
+} ## end sub add_cellbender_v2
+
 
 sub add_cellbender_v2 {
   my ( $config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref ) = @_;
@@ -3638,16 +3723,22 @@ sub add_cellbender_v2 {
     $raw_files_def = [ $cellbender_extract_gene_expression_task, ".raw_gex_feature_bc_matrix.h5" ];
   } ## end if ( $def->{cellbender_extract_gene_expression_h5...})
 
-  my $expect_cells_task = $cellbender_prefix . "_01_expect_cells";
+  my $cellbender_expected_cells_ratio = getValue( $def, "cellbender_expected_cells_ratio", 1.0 );
+  my $ratio_prefix                    = $cellbender_prefix . ".ratio" . $cellbender_expected_cells_ratio;
+
+  my $expect_cells_task = $ratio_prefix . "_01_expect_cells";
   $config->{$expect_cells_task} = {
     class                    => "CQS::IndividualR",
     perform                  => 1,
     target_dir               => "${target_dir}/$expect_cells_task",
     rtemplate                => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/cellbender_expect_cell.r",
     parameterSampleFile1_ref => $filtered_files_def,
-    output_file_ext          => ".num_cells.txt",
-    sh_direct                => 1,
-    pbs                      => {
+    parameterSampleFile2     => {                                                                              #
+      ratio => $cellbender_expected_cells_ratio
+    },
+    output_file_ext => ".num_cells.txt",
+    sh_direct       => 1,
+    pbs             => {
       "nodes"    => "1:ppn=1",
       "walltime" => "1",
       "mem"      => "10gb"
@@ -3655,7 +3746,7 @@ sub add_cellbender_v2 {
   };
   push( @$tasks, $expect_cells_task );
 
-  my $cellbender_task = $cellbender_prefix . "_02_call";
+  my $cellbender_task = $ratio_prefix . "_02_call";
   my $cellbender_cpu  = getValue( $def, "cellbender_cpu", 12 );
   $config->{$cellbender_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
@@ -3696,7 +3787,7 @@ rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
   };
   push( @$tasks, $cellbender_task );
 
-  my $cellbender_clean_task = $cellbender_prefix . "_03_clean";
+  my $cellbender_clean_task = $ratio_prefix . "_03_clean";
   if ( defined $decontX_counts_ref ) {
     $cellbender_clean_task .= "_decontX";
   }
@@ -4051,6 +4142,43 @@ sub add_miloR_miloDE {
 
   push( @$tasks, $milo_report_task );
 } ## end sub add_miloR_miloDE
+
+
+sub add_sccomp {
+  my ( $config, $def, $tasks, $target_dir, $sccomp_task, $meta_ref ) = @_;
+
+  initDefaultValue( $def, "sccomp_groups", $def->{groups} );
+  initDefaultValue( $def, "sccomp_pairs",  $def->{pairs} );
+
+  my $target_folder = $target_dir . "/" . $sccomp_task;
+  $config->{$sccomp_task} = {
+    class                    => "CQS::UniqueRmd",
+    target_dir               => $target_dir . "/" . $sccomp_task,
+    report_rmd_file          => "../scRNA/sccomp.rmd",
+    additional_rmd_files     => "../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
+    option                   => "",
+    parameterSampleFile1_ref => $meta_ref,
+    parameterSampleFile2     => {
+      task_name         => getValue( $def, "task_name" ),
+      email             => getValue( $def, "email" ),
+      affiliation       => $def->{"affiliation"},
+      cell_group_column => getValue( $def, "sccomp_cell_group_column" ),
+    },
+    parameterSampleFile3     => getValue( $def, "sccomp_groups" ),
+    parameterSampleFile4     => getValue( $def, "sccomp_pairs" ),
+    suffix                   => "",
+    output_file_ext          => ".sccomp.html",
+    can_result_be_empty_file => 0,
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
+    },
+  };
+
+  push( @$tasks, $sccomp_task );
+} ## end sub add_sccomp
 
 1;
 
