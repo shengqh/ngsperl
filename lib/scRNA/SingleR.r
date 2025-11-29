@@ -1,6 +1,6 @@
-rm(list=ls())
-sample_name='S01_ClassPTC_BRAF'
-outFile='S01_ClassPTC_BRAF'
+rm(list=ls()) 
+sample_name='ice_12h_5'
+outFile='ice_12h_5'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,10 +9,12 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20251014_12904_VisiumHD_cellsegment/SingleR/result/S01_ClassPTC_BRAF')
+setwd('/nobackup/h_cqs/ciara_shaver_projects/20251121_MP_13667_scRNA/raw_qc_sct2_SingleR/result/ice_12h_5')
 
 ### Parameter setting end ###
 
+source("scRNA_func.r")
+source("reportFunctions.R")
 library(sf)
 library(SingleR)
 library(Seurat)
@@ -20,8 +22,6 @@ library(ggplot2)
 library(patchwork)
 library(celldex)
 library(logger)
-
-source("scRNA_func.r")
 
 log_appender(appender_tee(paste0(sample_name, ".log")))
 
@@ -40,14 +40,17 @@ if(cpv[1,1] == "1" && as.numeric(cpv[1,2]) < 13){
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
-options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
-myoptions<-split(options_table$V1, options_table$V2)
+myoptions<-read_file_map(parSampleFile2, do_unlist=FALSE)
 
 bubblemap_width=to_numeric(myoptions$bubblemap_width, 4000)
 bubblemap_height=to_numeric(myoptions$bubblemap_height, 2000)
 bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
 
-assay=myoptions$assay
+if("assay" %in% names(myoptions)){
+  assay=myoptions$assay
+}else{
+  assay="RNA"
+}
 is_polygons=assay == "Spatial.Polygons"
 
 if(myoptions$species == "Mm"){
