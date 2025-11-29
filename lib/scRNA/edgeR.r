@@ -1,19 +1,19 @@
 rm(list=ls()) 
-outFile='combined'
+outFile='MP_13667'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.final.rds'
-parFile2='/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose/result/combined.meta.rds'
+parFile1='/nobackup/h_cqs/ciara_shaver_projects/20251121_MP_13667_scRNA/T04_scRNA/nd_seurat_sct2_fastmnn_dr0.5_3_choose/result/MP_13667.final.rds'
+parFile2='/nobackup/h_cqs/ciara_shaver_projects/20251121_MP_13667_scRNA/T04_scRNA/nd_seurat_sct2_fastmnn_dr0.5_3_choose/result/MP_13667.meta.rds'
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20230501_combined_scRNA_hg38_fastmnn/seurat_fastmnn_dr0.5_3_choose_edgeR_inCluster_byCell/result')
+setwd('/nobackup/h_cqs/ciara_shaver_projects/20251121_MP_13667_scRNA/T04_scRNA/nd_seurat_sct2_fastmnn_dr0.5_3_choose_edgeR_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
-source("countTableVisFunctions.R")
 source("scRNA_func.r")
+source("countTableVisFunctions.R")
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -53,11 +53,9 @@ if(!dir.exists(detail_folder)){
 detail_prefix = paste0(detail_folder, outFile)
 
 meta<-obj@meta.data
-# if("seurat_cell_type" %in% colnames(meta)){
-#   mt<-data.frame(table(meta$seurat_cell_type, meta$orig.ident))
-# }else{
+
 mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
-# }
+
 colnames(mt)<-c("cell_type", "sample", "num_cell")
 write.csv(mt, paste0(detail_prefix, ".num_cell.csv"), row.names=F)
 
@@ -426,3 +424,4 @@ for(idx in c(1:nrow(designMatrix))){
 
 cat("all done\n")
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
+
