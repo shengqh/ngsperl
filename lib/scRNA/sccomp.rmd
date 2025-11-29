@@ -1,0 +1,163 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+
+.main-container {
+  max-width: 1920px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+source("scRNA_func.r")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+cell_group_column=myoptions$cell_group_column
+
+affiliation=get_affiliation(myoptions)
+
+prefix = paste0(myoptions$task_name, ".sccomp")
+```
+
+---
+title: `r myoptions$task_name` - Cell composition comparison
+author:
+- name: `r myoptions$email`
+  affiliation: `r affiliation`
+---
+
+```{r}
+library(dplyr)
+library(sccomp)
+
+source("reportFunctions.R")
+
+meta_file=fread("fileList1.txt", header=FALSE)$V1[1]
+```
+
+# Overview boxplot
+
+We performed sccomp analysis to compare cell type compositions across different conditions.
+
+```{r, echo=FALSE}
+meta <- readRDS(meta_file) |>
+  dplyr::mutate(sample=orig.ident,
+                cell_group=!!sym(cell_group_column)) |>
+  dplyr::select(sample, cell_group) |>
+  dplyr::group_by(sample, cell_group) |>
+  dplyr::summarise(count=n()) |>
+  dplyr::ungroup() |>
+  as.data.frame() 
+
+sample_group = fread("fileList3.txt", header=FALSE, data.table=FALSE) |>
+  dplyr::rename(sample=V1, type=V2)
+
+meta = meta |>
+  dplyr::left_join(sample_group, by="sample") |>
+  tibble::as_tibble()
+```
+
+```{r results='hide'}
+all_estimate_rds = paste0(prefix, ".all.estimate.rds")
+if(file.exists(all_estimate_rds)){
+  all_estimate = readRDS(all_estimate_rds)
+} else {
+  all_estimate = sccomp_estimate( 
+    meta,
+    ~0 + type, # we want to use contrasts, so no intercept
+    ~1,
+    "sample", 
+    "cell_group",
+    "count",
+    bimodal_mean_variability_association = TRUE,
+    verbose = FALSE
+  ) 
+  saveRDS(all_estimate, all_estimate_rds)
+}
+
+all_sccomp_result = all_estimate |>
+                sccomp_remove_outliers(max_sampling_iterations = 2000, verbose=FALSE) |> # Optional
+                sccomp_test()
+g = all_sccomp_result |> 
+  sccomp_boxplot(factor = "type", remove_unwanted_effects=TRUE) +
+  theme(legend.position="right")  
+```
+
+```{r}
+box_png = paste0(prefix, ".boxplot.png")
+ggsave(box_png, g, width=6, height=6, units="in", dpi=300, bg="white")
+include_graphics(box_png)
+```
+
+The significant differences of comparisons are shown in the following credible intervals plot.
+
+```{r}
+comp_tbl=fread("fileList4.txt", header=FALSE, data.table=FALSE)
+
+res <- comp_tbl |>
+  dplyr::group_by(V2) |>
+  dplyr::summarise(values = list(V1)) 
+
+complist <- setNames(res$values, res$V2)            # convert to named list
+
+comp_name= names(complist)[1]
+for(comp_name in names(complist)){
+  cat("\n# ", comp_name, "\n\n")
+
+  comp_file=gsub(" ", "_", comp_name)
+  groups=complist[[comp_name]]
+
+  contrast=paste0("type", groups[2], "-type", groups[1])
+
+  sccomp_result = all_estimate |>
+                  sccomp_remove_outliers(max_sampling_iterations = 2000, verbose=FALSE) |> # Optional
+                  sccomp_test(contrasts= c(contrast))
+
+  vis_res = sccomp_result |> 
+    as.data.frame() |>
+    dplyr::select(-parameter, -factor, -c_rhat, -c_ess_bulk, -c_ess_tail)
+
+  print(kable(vis_res))
+
+  plots = plot(sccomp_result)
+
+  g = plots$credible_intervals_1D + theme(axis.title.y=element_blank())
+  credible_intervals_1D_png = paste0(prefix, ".", comp_file, ".credible_intervals_1D.contrast.png")
+  ggsave(credible_intervals_1D_png, g, width=8, height=4, units="in", dpi=300, bg="white")
+
+  add_img(credible_intervals_1D_png, width_inch=12)
+}
+```
+
+# Session Info
+
+```{r}
+package_tbl=get_packages_table()
+print_table(package_tbl, byDT=TRUE, row.names=TRUE)
+```
