@@ -108,7 +108,7 @@ our %EXPORT_TAGS = (
         add_cellbender_v2
         add_cellbender_with_expected_cells
         add_cellbender_default
-        
+
         add_dcats
 
         add_cell_chat
@@ -3617,6 +3617,7 @@ sub add_fragment_cells {
   push( @$tasks, $fragment_cells_task );
 } ## end sub add_fragment_cells
 
+
 sub add_cellbender_default {
   my ( $config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref ) = @_;
 
@@ -3642,15 +3643,25 @@ sub add_cellbender_default {
     $raw_files_def = [ $cellbender_extract_gene_expression_task, ".raw_gex_feature_bc_matrix.h5" ];
   } ## end if ( $def->{cellbender_extract_gene_expression_h5...})
 
+  my $cellbender_cpu = getValue( $def, "cellbender_cpu", 12 );
+  my $cpu_gpu        = "--cpu-threads $cellbender_cpu";
+  my $sh_direct      = 0;
+
+  my $use_gpu = getValue( $def, "cellbender_use_gpu", 0 );
+  if ($use_gpu) {
+    $sh_direct      = 1;
+    $cellbender_cpu = 1;
+    $cpu_gpu        = "--cuda";
+  }
+
   my $cellbender_task = $cellbender_prefix . "_01_call";
-  my $cellbender_cpu  = getValue( $def, "cellbender_cpu", 12 );
   $config->{$cellbender_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
     target_dir    => "${target_dir}/$cellbender_task",
     program       => "",
     check_program => 0,
     option        => "
-cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 $cpu_gpu
 
 rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
 
@@ -3660,6 +3671,8 @@ rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
     output_to_same_folder    => 0,
     no_output                => 1,
     output_file_ext          => ".cellbender_filtered.h5,.cellbender.h5",
+    use_gpu                  => $use_gpu,
+    sh_direct                => $sh_direct,
     pbs                      => {
       "nodes"    => "1:ppn=$cellbender_cpu",
       "walltime" => "48",
@@ -3695,7 +3708,7 @@ rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
   push( @$tasks, $cellbender_clean_task );
 
   return ( $cellbender_clean_task, [ $cellbender_task, ".cellbender.h5" ] );
-} ## end sub add_cellbender_v2
+} ## end sub add_cellbender_default
 
 
 sub add_cellbender_v2 {

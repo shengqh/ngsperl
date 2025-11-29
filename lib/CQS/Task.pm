@@ -27,6 +27,7 @@ sub new {
     _localize_to_local_folder => 0,
     _final_file_in_last => 1,
     _docker_shell => "bash",
+    _use_gpu => 0,
   };
   bless $self, $class;
   return $self;
@@ -650,6 +651,10 @@ echo working in $result_dir ...
     }
 
     my $sing = "singularity exec -e";
+    if($self->{_use_gpu}){
+      $sing = "singularity exec --nv -e";
+    }
+
     if (substr($docker_command, 0, length($sing)) eq $sing) {
       my $additional = "";
       if($docker_command !~ / -H /) {
@@ -742,6 +747,7 @@ sub get_java_option {
 sub init_parameter {
   my ( $self, $config, $section, $create_directory ) = @_;
 
+  $self->{_use_gpu} = get_option( $config, $section, "use_gpu", 0 );
   $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
