@@ -44,6 +44,7 @@ sub initializeSpatialTranscriptomeDefaultOptions {
   initDefaultValue( $def, "perform_preprocessing", 0 );
   initDefaultValue( $def, "perform_VisiumHD",      1 );
   initDefaultValue( $def, "perform_RCTD",          1 );
+  initDefaultValue( $def, "perform_SpaGene",       0 );
   initDefaultValue( $def, "nCount_cutoff",         100 );
   initDefaultValue( $def, "cluster_algorithm",     4 );         #Leiden algorithm
 
@@ -156,6 +157,34 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
       }
     };
     push( @$tasks, $qc_summary_task );
+
+    my $spagene_task = undef;
+    if ( $def->{perform_SpaGene} ) {
+      $spagene_task = "SpaGene";
+      $config->{$spagene_task} = {
+        class                    => "CQS::IndividualR",
+        target_dir               => "$target_dir/$spagene_task",
+        perform                  => 1,
+        option                   => "",
+        rtemplate                => "reportFunctions.R,../scRNA/SpaGene.r",
+        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile2     => {
+          "email"         => getValue( $def, "email" ),
+          "affiliation"   => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          "nCount_cutoff" => getValue( $def, "nCount_cutoff" ),
+          "LRpair_file"   => getValue( $def, "SpaGene_LRpair_file" ),
+        },
+        sh_direct  => 0,
+        no_docker  => getValue( $def, "SpaGene_no_docker", 1 ),
+        output_ext => ".spa.rds,.spa_pattern.rds,.spa_lr.rds",
+        pbs        => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "300gb"
+        }
+      };
+      push( @$tasks, $spagene_task );
+    } ## end if ( $def->{perform_SpaGene...})
 
     my $rctd_polygons_task = undef;
     if ( $def->{perform_RCTD} ) {
