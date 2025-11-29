@@ -64,6 +64,8 @@ sub perform {
 
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command, $sh_log ) = $self->init_parameter( $config, $section );
 
+  #print("use_gpu=" . $self->{_use_gpu} . "\n");
+
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   my $task_suffix = get_option( $config, $section, "suffix", "" );
   $self->{_task_suffix} = $task_suffix;

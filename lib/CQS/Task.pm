@@ -650,12 +650,14 @@ echo working in $result_dir ...
       $docker_init = "";
     }
 
-    my $sing = "singularity exec -e";
-    if($self->{_use_gpu}){
-      $sing = "singularity exec --nv -e";
-    }
+    my $sing = "singularity exec";
 
     if (substr($docker_command, 0, length($sing)) eq $sing) {
+      my $other = substr($docker_command, length($sing));
+      if($self->{_use_gpu}){
+        $sing = $sing . " --nv";
+      }
+
       my $additional = "";
       if($docker_command !~ / -H /) {
         $additional = " -H $result_dir ";
@@ -663,8 +665,9 @@ echo working in $result_dir ...
       if ($docker_command !~ / -B /) {
         $additional = $additional . " -B `pwd` -B /home ";
       }
-      $docker_command = $sing . $additional . substr($docker_command, length($sing));
+      $docker_command = $sing . $additional . $other;
     }
+    #print("docker_command=" . $docker_command . "\n");
 
     my $sh_file = $pbs_file . ".sh";
     my $sh_base_file = basename($sh_file);
