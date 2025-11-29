@@ -1366,7 +1366,7 @@ get_bubble_plot<-function(obj,
                           group.by=NULL, 
                           use_blue_yellow_red=TRUE, 
                           species="Hs",
-                          dot.scale=6){
+                          dot.scale=4){
                             
   old_assay = DefaultAssay(obj)
   DefaultAssay(obj) = assay
@@ -1693,7 +1693,16 @@ draw_feature_qc<-function(prefix, rawobj, ident_name, assay="RNA") {
     nfeature<-length(feats)
 
     by.col=nfeature>=nsample
-    g<-MyFeaturePlot(rawobj, feats, split.by=ident_name, reduction="umap", order=T, by.col=by.col, raster=FALSE) +
+    g<-MyFeaturePlot(
+      object=rawobj, 
+      assay=assay, 
+      use_scCustom=FALSE,
+      features=feats, 
+      split.by=ident_name, 
+      reduction="umap", 
+      order=T, 
+      by.col=by.col, 
+      raster=FALSE) +
       theme(aspect.ratio=1)
     if(by.col){
       width = min(50000, nsample * 700)
@@ -2566,7 +2575,7 @@ BC")
     p0<-ggplot(geneexp, aes(x=Sample, y=Gene, color=Group)) + 
       geom_violin() + geom_jitter(width = 0.2) + 
       theme_bw3() + theme_rotate_x_axis_label() +
-      scale_color_manual(values = groupColors) +
+      scale_color_manual(values = group_colors) +
       xlab("") + ylab("Gene Expression")
     
     if("subumap" %in% names(cell_obj@reductions)){
