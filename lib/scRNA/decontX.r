@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='Adipose_9240'
-outFile='Adipose_9240'
+sample_name='DM_1'
+outFile='DM_1'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20241224_combined_scRNA_hg38_cellbender_fastmnn/cellbender_raw_qc_decontX/result/Adipose_9240')
+setwd('/nobackup/vickers_lab/projects/20251128_9061_scRNA_mm10_cellbender_redo/cellbender_decontX/result/DM_1')
 
 ### Parameter setting end ###
 
@@ -105,7 +105,36 @@ sce <- decontX(sce, background = sce.raw, z=clusters)
 draw_umap(sce, paste0(sample_name, ".decontX.png"))
 
 meta=colData(sce)
-saveRDS(meta, paste0(sample_name, ".decontX.meta.rds"))
+
+meta_rds=paste0(sample_name, ".decontX.meta.rds")
+saveRDS(meta, meta_rds)
+
+meta=readRDS(meta_rds)
+
+obj=CreateSeuratObject(counts = counts(sce), meta.data = as.data.frame(meta))
+
+obj@meta.data$log10_nCount <- log10(obj@meta.data$nCount_RNA)
+obj@meta.data$log10_nFeature <- log10(obj@meta.data$nFeature_RNA)
+
+g1<-ggplot(obj@meta.data, aes(y=decontX_contamination,x=nCount_RNA)) +
+  geom_bin2d(bins = 70) + 
+  scale_fill_continuous(type = "viridis") + 
+  ylab("Percentage of contamination") + 
+  xlab("number of reads") +
+  scale_x_log10() +
+  theme_bw() +
+  theme(aspect.ratio = 1)
+
+g2<-ggplot(obj@meta.data, aes(y=decontX_contamination,x=nFeature_RNA)) +
+  geom_bin2d(bins = 70) + 
+  scale_fill_continuous(type = "viridis") + 
+  ylab("Percentage of contamination") + xlab("number of genes") +
+  scale_x_log10() +
+  theme_bw() +
+  theme(aspect.ratio = 1)
+
+g=g1+g2+plot_layout(ncol=2)
+ggsave(paste0(sample_name, ".qc.png"), g, width=8, height=3.5, dpi=300, units="in", bg="white")
 
 if(myoptions$remove_decontX & (myoptions$remove_decontX_by_contamination > 0)){
   cat("  remove cells with contamination > ", myoptions$remove_decontX_by_contamination, "\n")
@@ -123,4 +152,3 @@ if(myoptions$remove_decontX & (myoptions$remove_decontX_by_contamination > 0)){
   counts = ceiling(decontXcounts(sce))
 }
 saveRDS(counts, paste0(sample_name, ".decontX.counts.rds"))
-
