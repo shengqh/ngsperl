@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='rehab_hf_hlma'
-parSampleFile1=''
+outFile='P10940'
+parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/shah_lab/shengq2/20250908_rehab_hf/20250930_HLMA_DE/20250930_T1_DataPreparation/20250930.hlma_de.snRNA.rds'
-parFile2=''
+parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.final.rds'
+parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.meta.rds'
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20250908_rehab_hf/20250930_HLMA_DE/20250930_T2_DE_pseudobulk_all/files_edgeR_inCluster_bySample/result')
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -48,6 +48,7 @@ if(ncol(comparisons) == 3){
 comparisonNames<-unique(comparisons$Comparison)
 
 if(!exists('obj')){
+  cat("load object from ", parFile1, "\n")
   obj<-read_object(parFile1, parFile2, cluster_name)
   if(!cluster_name %in% colnames(obj@meta.data)){
     if(cluster_name == "bulk"){
@@ -105,7 +106,7 @@ if(1){
   cat("get design matrix ...\n")
   designMatrix<-NULL
 
-  comp <-comparisonNames[1]
+  comp <-comparisonNames[2]
   for (comp in comparisonNames){
     comp_groups<-comparisons[comparisons$Comparison==comp,]
     comp_options = split(comp_groups$Value, comp_groups$Key)
@@ -141,20 +142,38 @@ if(1){
       sample_names<-as.numeric(comp_options$sample_clusters)
       sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
     }
-    
+
     if("covariances" %in% names(comp_options)){
+      cat("Should use covariates instead of covariances in comparison design, converted.\n")
+      comp_options[["covariates"]] = comp_options[["covariances"]]
+      comp_options = comp_options[names(comp_options) != "covariances"]
+    }
+    
+    if("covariant" %in% names(comp_options)){
+      cat("Should use covariates instead of covariant in comparison design, converted.\n")
+      comp_options[["covariates"]] = comp_options[["covariant"]]
+      comp_options = comp_options[names(comp_options) != "covariant"]
+    }
+    
+    if("covariates" %in% names(comp_options)){
+      cat("Find covariates in comparison ", comp, ":", paste0(comp_options$covariates, collapse=", "), "\n")
       if(file.exists(myoptions$covariance_file)){
-        covariances_tbl<-data.frame(fread(myoptions$covariance_file, stringsAsFactors = F, header=T), row.names=1)
-        assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
-        covariances=comp_options$covariances
+        covariate_tbl<-data.frame(fread(myoptions$covariance_file, stringsAsFactors = F, header=T), row.names=1)
+        assert(all(comp_options$covariates %in% colnames(covariate_tbl)))
+        covariates=comp_options$covariates
       }else{
-        assert(all(comp_options$covariances %in% colnames(obj@meta.data)))
-        covariances_tbl<-unique(obj@meta.data[,c("orig.ident", comp_options$covariances)])
-        rownames(covariances_tbl)<-covariances_tbl$orig.ident
-        covariances=comp_options$covariances
+        assert(all(comp_options$covariates %in% colnames(obj@meta.data)))
+        covariate_tbl<-unique(obj@meta.data[,c("orig.ident", comp_options$covariates)])
+        rownames(covariate_tbl)<-covariate_tbl$orig.ident
+        covariates=comp_options$covariates
       }
     }else{
-      covariances=NULL
+      covariates=NULL
+    }
+
+    other_names=setdiff(names(comp_options), c("groups", "covariates"))
+    if(length(other_names) > 0){
+      stop("Unknown options in comparison ", comp, ": ", paste0(other_names, collapse=", "), "\n")
     }
 
     idx<-1
@@ -180,9 +199,9 @@ if(1){
       design_data<-data.frame("Group"=c(rep("control", length(cts_control_names)), rep("sample", length(cts_sample_names))),
                               "Sample"=c(cts_control_names,cts_sample_names),
                               "DisplayGroup"=c(rep(controlGroup, length(cts_control_names)), rep(sampleGroup, length(cts_sample_names))))
-      if(!is.null(covariances)){
-        for(cov_name in covariances){
-          design_data[,cov_name] = unlist(covariances_tbl[design_data$Sample, cov_name])
+      if(!is.null(covariates)){
+        for(cov_name in covariates){
+          design_data[,cov_name] = unlist(covariate_tbl[design_data$Sample, cov_name])
         }
       }
 
@@ -240,7 +259,7 @@ for(idx in c(1:nrow(designMatrix))){
 
   design_data<-read.csv(design_file, stringsAsFactors = F)
 
-  covariances=colnames(design_data)[!(colnames(design_data) %in% c("Group", "Sample", "DisplayGroup"))]
+  covariates=colnames(design_data)[!(colnames(design_data) %in% c("Group", "Sample", "DisplayGroup"))]
 
   design_groups=unique(design_data[,c("Group", "DisplayGroup")])
   group_colors=c("blue", "red")
@@ -249,8 +268,8 @@ for(idx in c(1:nrow(designMatrix))){
   names(sample_colors)=design_data$Sample
 
   while(TRUE){
-    if(length(covariances) > 0){
-      variables = c(covariances, "Group")
+    if(length(covariates) > 0){
+      variables = c(covariates, "Group")
     }else{
       variables = c("Group")
     }
@@ -316,11 +335,11 @@ for(idx in c(1:nrow(designMatrix))){
       }
     }
 
-    if(length(covariances) == 0){
+    if(length(covariates) == 0){
       stop("estimateDisp failed")
     }
 
-    covariances = c()
+    covariates = c()
     cat("  redo estimateDisp without covariates\n")
     design_data = design_data[,colnames(design_data) %in% c("Group", "Sample", "DisplayGroup")]
     write.csv(design_data, design_file, row.names=FALSE)
@@ -375,10 +394,8 @@ for(idx in c(1:nrow(designMatrix))){
     ct_cells<-rownames(ct_meta)[ct_meta$orig.ident %in% design_data$Sample]
     cell_obj<-subset(obj, cells=ct_cells)
 
-    g<-get_sig_gene_figure(cell_obj, sigout, design_data, sig_gene, DE_by_cell=FALSE, is_between_cluster=FALSE, log_cpm=log_cpm)
-    png(paste0(prefix, ".top_1_gene.png"), width=3000, height=2500, res=300)
-    print(g)
-    dev.off()
+    g<-get_sig_gene_figure(cell_obj, sigout, design_data, sig_gene, DE_by_cell=FALSE, is_between_cluster=FALSE, log_cpm=log_cpm, group_colors=group_colors)
+    ggsave(paste0(prefix, ".top_1_gene.png"), g, width=3000, height=2500, dpi=300, units="px", bg="white")
   }
 
   gseaFile = write_gsea_rnk_by_loose_criteria(dge_all, groups, design, prefix)
