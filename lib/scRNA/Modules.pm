@@ -919,7 +919,7 @@ sub add_decontX {
   my $remove_decontX                  = getValue( $def, "remove_decontX" );
   my $remove_decontX_by_contamination = getValue( $def, "remove_decontX_by_contamination" );
 
-  my $output_file_ext = ".decontX.meta.rds;.decontX.counts.rds;.decontX.png";
+  my $output_file_ext = ".decontX.meta.rds;.decontX.counts.rds;.qc.png;.decontX.png";
   if ( $remove_decontX && $remove_decontX_by_contamination > 0 ) {
     $output_file_ext = $output_file_ext . ";.decontX.after.png;.decontX.filtered.csv";
   }
@@ -957,7 +957,7 @@ sub add_decontX {
       class                => "CQS::UniqueRmd",
       target_dir           => $target_dir . "/" . $decontX_summary_task,
       report_rmd_file      => "../scRNA/decontX_summary.rmd",
-      additional_rmd_files => "../scRNA/scRNA_func.r;reportFunctions.R",
+      additional_rmd_files => "../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
       option               => "",
       parameterSampleFile1 => {
         outFile                         => getValue( $def, "task_name" ),
@@ -3514,7 +3514,7 @@ sub add_individual_qc_tasks {
 
   push( @$summary, $qc_report_task );
 
-  return ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref );
+  return ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref );
 } ## end sub add_individual_qc_tasks
 
 
@@ -3737,7 +3737,9 @@ sub add_cellbender_v2 {
   } ## end if ( $def->{cellbender_extract_gene_expression_h5...})
 
   my $cellbender_expected_cells_ratio = getValue( $def, "cellbender_expected_cells_ratio", 1.0 );
-  my $ratio_prefix                    = $cellbender_prefix . ".ratio" . $cellbender_expected_cells_ratio;
+
+  #my $ratio_prefix                    = $cellbender_prefix . ".ratio" . $cellbender_expected_cells_ratio;
+  my $ratio_prefix = $cellbender_prefix;
 
   my $expect_cells_task = $ratio_prefix . "_01_expect_cells";
   $config->{$expect_cells_task} = {
