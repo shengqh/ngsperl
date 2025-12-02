@@ -235,6 +235,14 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_sccomp",           0 );
   initDefaultValue( $def, "sccomp_cell_group_column", "seurat_cell_type" );
 
+  initDefaultValue( $def, "perform_individual_dynamic_qc", 0 );
+  initDefaultValue( $def, "perform_scDblFinder",           0 );
+  initDefaultValue( $def, "scDblFinder_by_dynamic_qc",     0 );
+
+  if ( $def->{perform_scDblFinder} && $def->{scDblFinder_by_dynamic_qc} ) {
+    $def->{perform_individual_dynamic_qc} = 1;
+  }
+
   return $def;
 } ## end sub initializeScRNASeqDefaultOptions
 
@@ -341,9 +349,19 @@ sub getScRNASeqConfig {
 
     my $perform_cellbender = getValue( $def, "perform_cellbender", 0 );
 
-    my $perform_decontX                 = getValue( $def, "perform_decontX", 0 );
-    my $remove_decontX                  = $perform_decontX && getValue( $def, "remove_decontX", 0 );
+    my $perform_decontX                  = getValue( $def, "perform_decontX",                  0 );
+    my $perform_decontX_after_cellbender = getValue( $def, "perform_decontX_after_cellbender", 0 );
+
+    my $remove_decontX                  = ( $perform_decontX_after_cellbender | $perform_decontX ) && getValue( $def, "remove_decontX", 0 );
     my $remove_decontX_by_contamination = getValue( $def, "remove_decontX_by_contamination", 0.25 );
+
+    if ( !$perform_cellbender ) {
+      $perform_decontX_after_cellbender = 0;
+    }
+
+    if ($perform_decontX_after_cellbender) {
+      $perform_decontX = 0;
+    }
 
     my $prefix = "";
 
@@ -368,12 +386,13 @@ sub getScRNASeqConfig {
     } ## end if ($perform_decontX)
 
     if ($perform_cellbender) {
-      my $cellbender_prefix = "cellbender";
+      my $cellbender_prefix    = "cellbender";
       my $cellbender_clean_ref = undef;
       my $cellbender_raw_ref   = undef;
-      if($def->{cellbender_by_default}) {
+      if ( $def->{cellbender_by_default} ) {
         ( $cellbender_clean_ref, $cellbender_raw_ref ) = add_cellbender_default( $config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref );
-      }else{
+      }
+      else {
         ( $cellbender_clean_ref, $cellbender_raw_ref ) = add_cellbender_v2( $config, $def, $tasks, $target_dir, $cellbender_prefix, $filtered_files_def, $raw_files_def, $decontX_counts_ref );
       }
       $files_def     = $cellbender_clean_ref;
@@ -391,12 +410,19 @@ sub getScRNASeqConfig {
         add_decontX( $config, $def, $tasks, $target_dir, $decontX_after_cellbender_task, $files_def, $raw_files_def, {}, 1 );
         $decontX_ref        = [ $decontX_after_cellbender_task, ".meta.rds" ];
         $decontX_counts_ref = [ $decontX_after_cellbender_task, ".counts.rds" ];
+
+        print( "remove_decontX=" . $remove_decontX . "\n" );
+        if ($remove_decontX) {
+          $files_def = $decontX_counts_ref;
+          $prefix    = "cellbender_decontX_";
+        }
       } ## end if ( $def->{perform_decontX_after_cellbender...})
     } ## end if ($perform_cellbender)
 
+    my $raw_individual_dynamic_qc_task = undef;
     if ( $def->{"perform_individual_dynamic_qc"} ) {
-      my $sct_str                        = get_sct_str($def);
-      my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
+      my $sct_str = get_sct_str($def);
+      $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
       if ( !defined $config->{$raw_individual_dynamic_qc_task} ) {
         add_individual_dynamic_qc( $config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task );
       }
@@ -408,13 +434,10 @@ sub getScRNASeqConfig {
       my $cluster_column = undef;
 
       if ( getValue( $def, "scDblFinder_by_dynamic_qc", 0 ) ) {
-        my $sct_str                        = get_sct_str($def);
-        my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
-        add_individual_dynamic_qc( $config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task );
         $cluster_ref      = [ $raw_individual_dynamic_qc_task, ".meta.rds" ];
         $cluster_column   = "layer4";
         $scDblFinder_task = $raw_individual_dynamic_qc_task . "_scDblFinder";
-      } ## end if ( getValue( $def, "scDblFinder_by_dynamic_qc"...))
+      }
       else {
         $scDblFinder_task = $prefix . "scDblFinder";
       }
