@@ -4,6 +4,7 @@ date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
     toc_depth: 2
+    number_sections: true
 ---
 
 ```{r setup, include=FALSE}
@@ -42,6 +43,7 @@ sample<-samples[1]
 for(sample in samples){
   sample_map = file_map[file_map$V2 == sample,]
   cell_file = sample_map[sample_map$basename == paste0(sample, ".decontX.filtered.csv"), "V1"]
+  qc_png = sample_map[sample_map$basename == paste0(sample, ".qc.png"), "V1"]
   pre_png = sample_map[sample_map$basename == paste0(sample, ".decontX.png"), "V1"]
   post_png = sample_map[sample_map$basename == paste0(sample, ".decontX.after.png"), "V1"]
 
@@ -50,6 +52,8 @@ for(sample in samples){
   cell_tbl = rbind(cell_tbl, cells)
 
   result<-paste0(result, "\n\n## ", sample, "\n\n")
+  result<-paste0(result, "### QC plot\n\n")
+  result<-paste0(result, getFigure(qc_png))
   result<-paste0(result, "### Pre filtering UMAP\n\n")
   result<-paste0(result, getFigure(pre_png))
   result<-paste0(result, "### Post filtering UMAP\n\n")

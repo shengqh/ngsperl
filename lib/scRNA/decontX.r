@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20251128_9061_scRNA_mm10_cellbender_redo/cellbender_decontX/result/DM_1')
+setwd('/nobackup/vickers_lab/projects/20251128_9061_scRNA_mm10_cellbender_default_redo/cellbender_decontX/result/DM_1')
 
 ### Parameter setting end ###
 
@@ -109,7 +109,10 @@ meta=colData(sce)
 meta_rds=paste0(sample_name, ".decontX.meta.rds")
 saveRDS(meta, meta_rds)
 
-meta=readRDS(meta_rds)
+if(0){
+  meta=readRDS(meta_rds)
+  colData(sce)=meta
+}
 
 obj=CreateSeuratObject(counts = counts(sce), meta.data = as.data.frame(meta))
 
@@ -137,7 +140,7 @@ g=g1+g2+plot_layout(ncol=2)
 ggsave(paste0(sample_name, ".qc.png"), g, width=8, height=3.5, dpi=300, units="in", bg="white")
 
 if(myoptions$remove_decontX & (myoptions$remove_decontX_by_contamination > 0)){
-  cat("  remove cells with contamination > ", myoptions$remove_decontX_by_contamination, "\n")
+  cat("  remove cells with contamination > ", myoptions$remove_decontX_by_contamination, ", but not change the gene read counts\n")
   decontX_sce = sce[, sce@metadata$decontX$estimates$all_cells$contamination < myoptions$remove_decontX_by_contamination]
 
   draw_umap(decontX_sce, paste0(sample_name, ".decontX.after.png"))
@@ -148,7 +151,8 @@ if(myoptions$remove_decontX & (myoptions$remove_decontX_by_contamination > 0)){
   #we only remove the cells but not change the gene read counts
   counts = counts(decontX_sce)
 }else{
-  #update the gene read count
+  cat("  update the gene read count\n")
   counts = ceiling(decontXcounts(sce))
 }
 saveRDS(counts, paste0(sample_name, ".decontX.counts.rds"))
+
