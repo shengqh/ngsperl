@@ -1583,7 +1583,7 @@ find_best_resolution<-function(subobj, clusters, min.pct, logfc.threshold, min_m
 }
   
 read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
-  if(tolower(file_ext(obj_file)) == "rds"){
+  if(tolower(file_ext(obj_file)) == "rds" && !grepl(".counts.rds$", obj_file)){
     obj=readRDS(obj_file)
   }else{
     counts=read_scrna_data(obj_file)$counts
@@ -2592,7 +2592,7 @@ BC")
       melt_cpm$Group = factor(unlist(gdismap[rownames(melt_cpm)]), levels=display_group_levels)
       g0<-ggplot(melt_cpm, aes(x=Group, y=CPM, color=Group)) + geom_violin() + geom_boxplot(width=0.2) + geom_jitter(width = 0.1) +  
         theme_bw3() +
-        scale_color_manual(values = groupColors) +
+        scale_color_manual(values = group_colors) +
         xlab("") + ylab("CPM") + NoLegend()
       p<-p0+g0+p1+plot_layout(design="AAAAA
 BCCCC")
