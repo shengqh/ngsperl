@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='KA_0001'
-outFile='KA_0001'
+sample_name='DM_1'
+outFile='DM_1'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/shah_lab/shengq2/20241030_Kaushik_Amancherla_snRNAseq/20241030_T01_cellbender/cellbender_raw_dynamic_qc_sct2_scDblFinder/result/KA_0001')
+setwd('/nobackup/vickers_lab/projects/20251128_9061_scRNA_mm10_cellbender_default_redo/cellbender_decontX_scDblFinder/result/DM_1')
 
 ### Parameter setting end ###
 
@@ -38,7 +38,7 @@ if(file.exists(parSampleFile2)){
     dplyr::pull(V1)
   cat("clusters=", clusters, "\n")
 }else{
-    clusters = NULL
+  clusters = NULL
 }
 
 sce <- as.SingleCellExperiment(obj)
@@ -56,4 +56,4 @@ write.csv(table(obj$scDblFinder.class, obj$orig.ident), paste0(outFile, ".scDblF
 
 singlet <- subset(obj, subset = scDblFinder.class == "singlet")
 saveRDS(singlet, paste0(outFile, ".scDblFinder.singlet_object.rds"))
-writeLines(capture.output(sessionInfo()), 'sessionInfo.txt')
+
