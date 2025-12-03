@@ -57,6 +57,35 @@ sub getDragenMethylationConfig {
 
   my $target_dir = $def->{target_dir};
 
+  my $multiqc_task = undef;
+  if ( $def->{dragen_stats_folder} ) {
+    my $dragen_stats_folder = $def->{dragen_stats_folder};
+    $multiqc_task = "dragen_multiqc";
+    $config->{$multiqc_task} = {
+      class         => "CQS::ProgramWrapper",
+      perform       => 1,
+      target_dir    => "$target_dir/$multiqc_task",
+      interpretor   => "",
+      program       => "",
+      check_program => 0,
+      option        => "multiqc __FILE__
+",
+      parameterSampleFile1      => { $task_name => [$dragen_stats_folder] },
+      parameterSampleFile1_type => "array",
+      no_output                 => 1,
+      samplename_in_result      => 0,
+      output_file_ext           => "multiqc_report.html",
+      docker_prefix             => "multiqc_",
+      sh_direct                 => 0,
+      pbs                       => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "12",
+        "mem"      => "40"
+      },
+    };
+    push( @$tasks, $multiqc_task );
+  } ## end if ( $def->{dragen_stats_folder...})
+
   my $convert_task = "dragen_to_bismark";
   $config->{$convert_task} = {
     class       => "CQS::ProgramWrapperOneToOne",
@@ -118,6 +147,11 @@ exit \$status
   my @report_files = ();
   my @report_names = ();
   my @copy_files   = ();
+
+  if ( defined $multiqc_task ) {
+    push( @report_files, $multiqc_task );
+    push( @report_names, "multiqc_report_html" );
+  }
 
   $config->{report} = {
     class      => "CQS::BuildReport",

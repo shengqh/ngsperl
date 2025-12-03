@@ -40,6 +40,18 @@ knitr::opts_chunk$set(
   fig.align="center"
 )
 
+fileList1_content <- readLines("fileList1.txt")
+if(length(fileList1_content) > 0){
+
+}
+fileList1_exists <- file.exists("fileList1.txt")
+fileList1_empty <- FALSE
+if(fileList1_exists) {
+  dragen_multi_qc_html=fread("fileList1.txt", header=FALSE)$V1[1]
+}else{
+  dragen_multi_qc_html=NULL
+}
+
 option_tbl<-read.table("fileList2.txt", sep="\t", header=FALSE, as.is=TRUE)
 myoptions<-split(option_tbl$V1, option_tbl$V2)
 
@@ -57,9 +69,11 @@ if(is.null(dragen_qc_file)){
   dragen_qc_file=""
 }
 
-dragen_multi_qc_html <- myoptions$dragen_multi_qc_html
 if(is.null(dragen_multi_qc_html)){
-  dragen_multi_qc_html=""
+  dragen_multi_qc_html <- myoptions$dragen_multi_qc_html
+  if(is.null(dragen_multi_qc_html)){
+    dragen_multi_qc_html=""
+  }
 }
 
 png_files=read.table('fileList7.txt', sep="\t", as.is=TRUE)
