@@ -7,10 +7,10 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-parFile4='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/covariance.txt'
+parFile4='/nobackup/shah_lab/shengq2/2024_Emeli_Mouse_IRI_cardiac_EVs/20251203_ECa6_ECa9_mm10//covariance.txt'
 
 
-setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_3_choose_pesudo_count_correlation/result')
+setwd('/nobackup/shah_lab/shengq2/2024_Emeli_Mouse_IRI_cardiac_EVs/20251203_ECa6_ECa9_mm10/genetable/result')
 
 ### Parameter setting end ###
 
@@ -31,6 +31,7 @@ library(ggplot2)
 library(tibble)
 library(cowplot)
 library(EnhancedVolcano)
+library(viridis)
 
 suppressPackageStartupMessages(library("ComplexHeatmap"))
 
@@ -354,8 +355,10 @@ for (i in 1:nrow(countTableFileAll)) {
         rownames(bcounts)[rownames(bcounts)==""] = "unknown"
         bperc = t(t(bcounts) / colSums(bcounts) * 100)
         bperc_max = apply(bperc, 1, max)
-        cats = bperc_max[bperc_max > 1]
-        cats = cats[order(cats, decreasing = T)]
+        bperc_max = bperc_max[order(bperc_max, decreasing=T)]
+        
+        # get the top 7 + other for scale_fill_brewer
+        cats = bperc_max[1:7]
         cat_perc = bperc[names(cats),]
         other_perc = colSums(bperc[!rownames(bperc) %in% names(cats),])
         tperc = rbind(cat_perc, "other"=other_perc)
@@ -367,6 +370,7 @@ for (i in 1:nrow(countTableFileAll)) {
         mperc$Sample = factor(mperc$Sample, levels=colnames(validCountNum))
 
         g=ggplot(mperc, aes(x=Sample, y=Percentage, fill=Biotype)) + 
+          scale_fill_brewer(palette = "Set1") +
           geom_bar(stat="identity") + 
           theme_classic() + 
           theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
@@ -792,4 +796,3 @@ if(length(missed_count_tables) == 0){
 }
 
 writeLines(prefix_list, "prefix_list.txt")
-
