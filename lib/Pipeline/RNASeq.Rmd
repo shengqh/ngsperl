@@ -54,15 +54,6 @@ hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
 hasSTAR<-any(grepl("STAR_", rownames(files)))
 hasFeatureCount<-any(grepl("featureCounts_", rownames(files)))
 
-if("all_correlation_heatmap" %in% names(file_map)){
-  heatmap_png=file_map$all_correlation_heatmap
-  biotype_png = gsub(".heatmap.png", ".biotype_perc.png", gsub(".proteincoding.count", ".count", heatmap_png))
-  has_biotype_png = file.exists(biotype_png)
-}else{
-  biotype_png=""
-  has_biotype_png = FALSE
-}
-
 hasFusion<-any(grepl("star_fusion", rownames(files)))
 
 has_star_chromosome_png="STAR_chromosome_png" %in% names(file_map)
@@ -235,7 +226,6 @@ if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
 ```
 
 ```{r,echo=FALSE,results='asis', eval = hasFeatureCount, fig.align="center", fig.cap=figRef("gene_reads", "The number of reads assigned to genes in uniquely mapped reads")}
-cat("\n### Read assignment bar plot\n")
 # For featureCounts, unassigned_unmapped -> 
 #                    unassigned_mappingquality -> 
 #                    unassigned_fragmentlength -> 
@@ -250,7 +240,6 @@ include_graphics(file_map$featureCounts_table_png)
 ```
 
 ```{r echo=FALSE,results='asis', eval = hasFeatureCount}
-cat("\n### Read assignment table\n")
 table<-read.csv(file_map$featureCounts_table, check.names=F)
 readsUsed = "reads"
 if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
@@ -275,7 +264,6 @@ print(kable(table, caption=tabRef("geneSummary", paste0("The summary of ", reads
 ```
 
 ```{r, echo=FALSE,results='asis', eval=has_feature_chromosome_png, fig.align="center", fig.align="center", fig.cap=figRef("feature_chromosome_png", "The reads mapped to genes in each chromosome in each sample")}
-cat("\n### Gene reads by chromosome\n")
 include_graphics(file_map$feature_chromosome_png)
 ```
 
@@ -286,13 +274,7 @@ include_graphics(no_chrM_png)
 ```
 
 ```{r, echo=FALSE,results='asis', eval=has_feature_gene_png, fig.align="center", fig.align="center", fig.cap=figRef("has_feature_gene_png", "The number of genes detected in each sample")}
-cat("\n### Genes detected in sample\n")
 include_graphics(file_map$featureCounts_gene_png)
-```
-
-```{r, echo=FALSE,results='asis', eval=has_biotype_png, fig.align="center", fig.align="center", fig.cap=figRef("has_biotype_png", "Gene biotype distribution of each sample")}
-cat("\n### Gene biotype distribution\n")
-include_graphics(biotype_png)
 ```
 
 ## Expression density of samples
@@ -305,32 +287,28 @@ check_and_include_graphics(file_map$all_correlation_density)
 
 `r gene_filter`
 
-```{r, include=FALSE}
-corrFile<-"corr.Rmd"
-figureRmd<-function(file_map, corNames, section, hca_gene_used){
-  result<-""
-  for(i in c(1:length(corNames))){
-    name=corNames[i]
-    heatmap<-paste0(name, "_correlation_heatmap")
-    pca<-paste0(name, "_correlation_PCA")
+```{r result="asis"}
+for(i in c(1:length(corNames))){
+  name=corNames[i]
+  heatmap<-paste0(name, "_correlation_heatmap")
+  pca<-paste0(name, "_correlation_PCA")
 
-    result<-paste0(result, "\n\n", section, " ", name, " samples\n\n", 
-                  get_figure_description(heatmap, file_map[heatmap], paste0(heatmap, hca_gene_used)), 
-                  get_figure_description(pca, file_map[pca], pca) )
+  heatmap_png = file_map[heatmap]
 
-    heatmap_png = file_map[heatmap]
-
-    corr_heatmap<-gsub(".heatmap.png", ".Correlation.png", heatmap_png)
-    if(file.exists(corr_heatmap)){
-      result<-paste0(result, get_figure_description(basename(corr_heatmap), corr_heatmap, paste(name, "sample correlation")))
-    }
+  biotype_png = gsub(".heatmap.png", ".biotype_perc.png", gsub(".proteincoding.count", ".count", heatmap_png))
+  if(file.exists(biotype_png)){
+    add_img(biotype_png, 7)
   }
-  return(result)
-}
-cat(figureRmd(file_map, corNames, "###", hca_gene_used), file=corrFile)
-```
 
-```{r, child="corr.Rmd"} 
+  cat("\n\n###", name, " samples\n\n", 
+                get_figure_description(heatmap, file_map[heatmap], paste0(heatmap, hca_gene_used)), 
+                get_figure_description(pca, file_map[pca], pca) )
+
+  corr_heatmap<-gsub(".heatmap.png", ".Correlation.png", heatmap_png)
+  if(file.exists(corr_heatmap)){
+    add_img(corr_heatmap, 7)
+  }
+}
 ```
 
 ```{r include=FALSE, eval=hasDEseq2}
@@ -353,13 +331,6 @@ if(DE_min_median_read > 1){
 }
 
 result = paste0(result, "\nDifferential expression analysis criteria:", deseq2criteria, "\n\n", deseq2filter, "\n\n")
-result = paste0(result, "\n## Volcano plot\n\n")
-
-if(file.exists(file_map$deseq2_volcano_plot)){
-  result = paste0(result, get_figure_description("Volcano_plot", file_map$deseq2_volcano_plot, "Volcano plot for all comparisons" ))
-}
-
-result = paste0(result, "\n## Summary of differential analysis\n\n")
 
 DESeq2_files<-files[grep("DESeq2_sig", files[,1]),]
 DESeq2_files<-DESeq2_files[order(DESeq2_files$V2),]
@@ -396,16 +367,39 @@ if (ncol(output_table3)==2) {
   colnames(output_table3)<-c("Comparison", "Number of DEGs","Up-regulated DEGs","Down-regulated DEGs")
 }
 
-result = paste0(result, "\n### Overall table\n\n")
+result = paste0(result, "\n## Overall table\n\n")
 html_tbl = output_table(output_table3, "deseq2_table", paste0("DEG numbers under FC > ", rnaseqOptions["DE_fold_change", 1], " & ",pValueText," < ", rnaseqOptions["DE_pvalue", 1]))
 result = paste0(result, print(html_tbl))
 
+result = paste0(result, "\n## Volcano plot\n\n")
+
+if(file.exists(file_map$deseq2_volcano_plot)){
+  result = paste0(result, get_figure_description("Volcano_plot", file_map$deseq2_volcano_plot, "Volcano plot for all comparisons" ))
+}
+
+i=1
 for (i in 1:nrow(DESeq2_files)){
-  comparisonName<-DESeq2_files[i,2]
-  #cat(comparisonName, "\n")
+  de_file=DESeq2_files[i,1]
+  comparisonName<-gsub("^deseq2_", "", DESeq2_files[i,2])
+
+  result = paste0(result, "\n## ", comparisonName, "\n\n")
+
+  design_file=file.path(dirname(de_file), paste0(comparisonName, ".design"))
+
+  result=paste0(result, "\n### Design table\n\n", getPagedTable(design_file, row.names=0, escape=TRUE, digits=3, nsmall=2))
+
+  pca_png=gsub("DESeq2_sig.csv", "geneAll_DESeq2-vsd-pca.png",de_file)
+  result = paste0(result, "\n### PCA plot\n\n", get_figure_description(paste(comparisonName, "pca_png"), pca_png, paste("PCA plot of", comparisonName)))
+
+  heatmap_png=gsub("DESeq2_sig.csv", "geneAll_DESeq2-vsd-heatmap.png",de_file)
+  result = paste0(result, "\n### Heatmap plot\n\n", get_figure_description(paste(comparisonName, "heatmap_png"), heatmap_png, paste("PCA plot of", comparisonName)))
+
+  volcano_png=gsub("DESeq2_sig.csv", "DESeq2_volcanoEnhanced.png",de_file)
+  result = paste0(result, "\n### Volcano plot\n\n", get_figure_description(paste(comparisonName, "volcano_png"), volcano_png, paste("Heatmap plot of", comparisonName)))
 
   deseq2<-DESeq2_list[[i]]
   
+  result = paste0(result, "\n### DE gene table\n\n")
   if(nrow(deseq2) > 0){
     cnames<-c("log2FoldChange","lfcSE", "stat", "pvalue", "padj", "FoldChange")
     hasGroupBaseMean=grepl("baseMean_", colnames(deseq2))
@@ -421,8 +415,9 @@ for (i in 1:nrow(DESeq2_files)){
     deseq2_file = paste0(comparisonName, ".deseq2.csv")
     write.csv(deseq2table, deseq2_file)
 
-    result = paste0(result, "\n### ", comparisonName, "\n\n")
     result = paste0(result, getPagedTable(deseq2_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
+  }else{
+    result = paste0(result, "No differentially expressed genes were detected in this comparison.\n\n")
   }
 }
 
