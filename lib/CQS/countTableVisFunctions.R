@@ -7,6 +7,7 @@ library(ggplot2)
 library(reshape2)
 library(patchwork)
 library(cowplot)
+library(ggrepel)
 
 ###############################################################################
 # Functions in pipeline
@@ -1250,7 +1251,7 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
     
     if(showLabelInPCA){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
-        geom_text(vjust=-0.6, size=label_size)
+        ggrepel::geom_text_repel(size=label_size, max.overlaps=Inf)
     }else{
       g <- ggplot(pcadata, aes(x=PC1, y=PC2)) +
         theme(legend.position="top")
