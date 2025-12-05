@@ -1300,6 +1300,11 @@ sub writeDesignTable {
         my $factor    = getValue( $entryMap,   "Factor", $defaultNameTissue );
         my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
         my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
+
+        if( !defined $peaksfiles->{$sampleName} ) {
+          my $cur_sample_names= join(", ", sort keys %$peaksfiles);
+          die "Peaks file for sample $sampleName is not defined, double check your design table and make sure the sample names match. Available samples: $cur_sample_names";
+        }
         my $peakFile  = $peaksfiles->{$sampleName}->[0];
 
         my $sampleId   = $treatments->{$sampleName}->[0];
