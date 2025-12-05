@@ -51,6 +51,7 @@ sub perform {
   my $check_output_file_pattern = get_option( $config, $section, "check_output_file_pattern", "" );
 
   my $use_caper = get_option( $config, $section, "use_caper", 0 );
+  my $caper_conda_env = get_option( $config, $section, "caper_conda_env", "" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
 
@@ -330,6 +331,11 @@ fi
 rm -f $final_dir/${sample_name}.failed
 ";
     if($use_caper){
+      if($caper_conda_env ne ""){
+        print $pbs "
+conda activate $caper_conda_env
+";
+      }
       print $pbs "
 caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metadata.json
     

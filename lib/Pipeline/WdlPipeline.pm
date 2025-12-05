@@ -662,6 +662,7 @@ sub addEncodeATACseq {
     check_output_file_pattern => "qc.html",
     output_file_ext => "atac/",
     use_caper => 1,
+    caper_conda_env => $def->{caper_conda_env},
     sh_direct   => $sh_direct,
     fastq_ref => $files_ref,
     pbs=> {
