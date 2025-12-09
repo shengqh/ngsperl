@@ -96,11 +96,11 @@ if("perform_proteincoding_gene" %in% row.names(rnaseqOptions)){
 }
 
 if(proteincoding_gene_only & remove_chrM_genes){
-  gene_filter = "Genes on mitochondrial chromosome (chrM) were removed and only protein coding genes were used in the down-stream analysis."
+  gene_filter = "Genes on mitochondrial chromosome (chrM) were removed and only protein coding genes were used in the down-stream PCA/Heatmap/Differential expression analysis."
 }else if(proteincoding_gene_only){
-  gene_filter = "Only protein coding genes were used in the down-stream analysis."
+  gene_filter = "Only protein coding genes were used in the down-stream PCA/Heatmap/Differential expression analysis."
 }else if(remove_chrM_genes){
-  gene_filter = "Genes on mitochondrial chromosome (chrM) were removed from the down-stream analysis."
+  gene_filter = "Genes on mitochondrial chromosome (chrM) were removed from the down-stream PCA/Heatmap/Differential expression analysis."
 }else{
   gene_filter = ""
 }
@@ -185,6 +185,7 @@ check_and_include_graphics(file_map$fastqc_post_trim_reads)
 ```{r STAR_summary,echo=FALSE,results='asis', eval = hasSTAR, fig.align="center", fig.cap=figRef("STAR_summary", "The statistics of RNAseq mapping results")}
 cat("\n# Mapping quality\n\n")
 cat("\n## Summary of mapping quality\n\n")
+cat("\n### The statistics of RNAseq mapping results\n\n")
 include_graphics(file_map$STAR_summary)
 ```
 
@@ -194,6 +195,7 @@ output_table1<-data.frame(table[,c(1,2,3,4,5)], table[,3]/table[,2], (table[,3]+
 colnames(output_table1)<-c("Sample", "Input reads", "Uniquely mapped reads", "Mapped to multiple loci", "Mapped to too many loci", "Uniquely mapped ratio", "Mapped ratio")
 
 box_stats<-boxplot(output_table1$`Uniquely mapped ratio`, plot=FALSE)$stats
+cat("\n### The summary of RNAseq mapping results\n\n")
 print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq mapping results"), row.names=F) %>% 
           kable_styling() %>%
           row_spec(which(output_table1$`Uniquely mapped ratio` > box_stats[5]), color = "black", background = "bisque") %>% 
@@ -203,6 +205,7 @@ cat("**Uniquely mapped ratio** = Uniquely mapped / Input reads\n\n**Mapped ratio
 ```
 
 ```{r, echo=FALSE,results='asis', eval=has_star_chromosome_png, fig.align="center", fig.align="center", fig.cap=figRef("STAR_chromosome_png", "The reads mapped to each chromosome in each sample")}
+cat("\n### The reads mapped to each chromosome in each sample\n\n")
 include_graphics(file_map$STAR_chromosome_png)
 csv_file=gsub(".png$", ".csv", file_map$STAR_chromosome_png)
 chrom_counts=fread(csv_file)
@@ -236,6 +239,7 @@ if(rnaseqOptions["featureCounts_UseMultiMappingReads", 1] == "FALSE"){
 #                    unassigned_junction_condition ->
 #                    assigned
 # So, we cannot get how many unique mapped reads from the featureCounts summary.
+cat("\n### The reads assigned to genes in uniquely mapped reads\n\n")
 include_graphics(file_map$featureCounts_table_png)
 ```
 
@@ -255,6 +259,7 @@ if(has_feature_gene_png){
 table=table |>
   dplyr::rename("Assigned_Ratio"="Percent_Assigned")
 
+cat("\n### The summary of ", readsUsed, " assignment to genes\n\n")
 box_stats<-boxplot(table$Assigned_Ratio, plot=FALSE)$stats
 print(kable(table, caption=tabRef("geneSummary", paste0("The summary of ", readsUsed, " assignment to genes")), row.names=F)%>% 
           kable_styling() %>%
@@ -264,16 +269,19 @@ print(kable(table, caption=tabRef("geneSummary", paste0("The summary of ", reads
 ```
 
 ```{r, echo=FALSE,results='asis', eval=has_feature_chromosome_png, fig.align="center", fig.align="center", fig.cap=figRef("feature_chromosome_png", "The reads mapped to genes in each chromosome in each sample")}
+cat("\n### The reads mapped to genes in each chromosome in each sample\n\n")
 include_graphics(file_map$feature_chromosome_png)
 ```
 
 ```{r, eval=remove_chrM_genes, fig.align="center", fig.align="center", fig.cap=figRef("feature_no_chrM_chromosome_png", "The reads mapped to genes in each chromosome (no chrM) in each sample")}
+cat("\n### The reads mapped to genes in each chromosome (no chrM) in each sample\n\n")
 cat("\n\n<mark>Genes on mitochondrial chromosome (chrM) were removed from the down-stream analysis.</mark>\n\n")
 no_chrM_png = gsub(".chromosome.png", ".no_chrM.chromosome.png", file_map$feature_chromosome_png)
 include_graphics(no_chrM_png)
 ```
 
 ```{r, echo=FALSE,results='asis', eval=has_feature_gene_png, fig.align="center", fig.align="center", fig.cap=figRef("has_feature_gene_png", "The number of genes detected in each sample")}
+cat("\n### The number of genes detected in each sample\n\n")
 include_graphics(file_map$featureCounts_gene_png)
 ```
 
@@ -285,30 +293,43 @@ check_and_include_graphics(file_map$all_correlation_density)
 
 ## Similarity between samples
 
-`r gene_filter`
+```{r}
+similarity_content=""
+only_one=(length(corNames) == 1)
+indent=ifelse(only_one, "###", "####")
 
-```{r result="asis"}
 for(i in c(1:length(corNames))){
   name=corNames[i]
+
+  if(!only_one){
+    similarity_content = paste0(similarity_content, "\n\n", indent, name, " samples\n\n")
+  }
+
   heatmap<-paste0(name, "_correlation_heatmap")
   pca<-paste0(name, "_correlation_PCA")
 
   heatmap_png = file_map[heatmap]
+  pca_png = file_map[pca]
 
   biotype_png = gsub(".heatmap.png", ".biotype_perc.png", gsub(".proteincoding.count", ".count", heatmap_png))
   if(file.exists(biotype_png)){
-    add_img(biotype_png, 7)
+    similarity_content = paste0(similarity_content, "\n", indent, " Gene biotype distribution\n\n", get_figure_description(paste(name, "biotype_png"), biotype_png, paste("Biotype distribution of", name, "samples")))
   }
 
-  cat("\n\n###", name, " samples\n\n", 
-                get_figure_description(heatmap, file_map[heatmap], paste0(heatmap, hca_gene_used)), 
-                get_figure_description(pca, file_map[pca], pca) )
+  similarity_content = paste0(similarity_content, "\n", gene_filter, "\n\n")
 
+  similarity_content = paste0(similarity_content, "\n", indent, " Heatmap\n\n", get_figure_description(paste(name, "heatmap_png"), heatmap_png, paste("Heatmap of", name, "samples")))
+  similarity_content = paste0(similarity_content, "\n", indent, " PCA\n\n", get_figure_description(paste(name, "pca_png"), pca_png, paste("PCA plot of", name, "samples")))
   corr_heatmap<-gsub(".heatmap.png", ".Correlation.png", heatmap_png)
   if(file.exists(corr_heatmap)){
-    add_img(corr_heatmap, 7)
+    similarity_content = paste0(similarity_content, "\n", indent, " Correlation\n\n", get_figure_description(paste(name, "correlation_png"), corr_heatmap, paste("Correlation plot of", name, "samples")))
   }
 }
+similarity_rmd="similarity.rmd"
+writeLines(similarity_content, similarity_rmd)
+```
+
+```{r, child=similarity_rmd}
 ```
 
 ```{r include=FALSE, eval=hasDEseq2}
@@ -387,6 +408,12 @@ for (i in 1:nrow(DESeq2_files)){
   design_file=file.path(dirname(de_file), paste0(comparisonName, ".design"))
 
   result=paste0(result, "\n### Design table\n\n", getPagedTable(design_file, row.names=0, escape=TRUE, digits=3, nsmall=2))
+
+  design_data=fread(design_file)
+  covariates=colnames(design_data)[colnames(design_data) != "Sample" & colnames(design_data) != "Condition"]
+  if(length(covariates) > 0){
+    result = paste0(result, "\nCovariates included in the differential expression analysis: ", paste(covariates, collapse=", "), "\n\n")
+  }
 
   pca_png=gsub("DESeq2_sig.csv", "geneAll_DESeq2-vsd-pca.png",de_file)
   result = paste0(result, "\n### PCA plot\n\n", get_figure_description(paste(comparisonName, "pca_png"), pca_png, paste("PCA plot of", comparisonName)))
