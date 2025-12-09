@@ -25,6 +25,7 @@ load_install("rlang")
 load_install("scCustomize")
 load_install("BiocParallel")
 load_install("viridis")
+load_install("stringr")
 
 #https://github.com/r-lib/lobstr/blob/main/R/mem.R
 lobstr_node_size <- function() {
@@ -425,6 +426,15 @@ get_selfdefinedCelltype <- function(file, finalLayer="layer3"){
 toMouseGeneSymbol<-function(x){
   result=paste0(toupper(substr(x,1,1)),tolower(substr(x,2,nchar(x))))
   return(result)
+}
+
+convert_human_to_mouse <- function(human_genes) {
+  library(homologene)
+
+  df = homologene(human_genes, inTax = 9606, outTax = 10090)
+  df = merge(data.frame("9606"=human_genes, check.names=F), df, by="9606", all.x=TRUE)
+  df$"10090"[is.na(df$"10090")] = toMouseGeneSymbol(df$"9606"[is.na(df$"10090")])
+  return(df$"10090")
 }
 
 read_cell_cluster_file<-function(fileName, sort_cluster_name="seurat_clusters", display_cluster_name=sort_cluster_name, prefix=""){
@@ -1186,7 +1196,11 @@ do_read_bubble_genes<-function(bubblemap_file, allgenes=c(), species="Hs"){
 
   #for some excel file, multiple genes are in same row but seperated by ',', 
   #use sepearte_rows to put them in different rows.
-  genes<-data.frame(separate_rows(genes, gene, sep="[, ]+"))
+  genes<-data.frame(separate_rows(genes, gene, sep="[,;]+"))
+  #print(genes)
+
+  genes$gene = str_trim(genes$gene)
+
   genes<-genes[genes$gene != "",]
 
   gene_names=genes$gene
@@ -1372,6 +1386,8 @@ get_bubble_plot<-function(obj,
   DefaultAssay(obj) = assay
   allgenes=rownames(obj)
   DefaultAssay(obj) = old_assay
+
+  allgenes=c(allgenes, colnames(obj@meta.data))
   
   if(assay=="ADT"){
     genes_df <- read_bubble_genes(bubblemap_file, allgenes, species=NULL)
@@ -1385,12 +1401,15 @@ get_bubble_plot<-function(obj,
     }
   }
 
-  genes_df=genes_df[genes_df$gene %in% rownames(obj),,drop=FALSE]
+  #print(genes_df)
+  genes_df=genes_df[genes_df$gene %in% rownames(obj) | genes_df$gene %in% colnames(obj@meta.data),,drop=FALSE]
+  #print(genes_df)
 
   #incase some cell types have no genes after filtering
   genes_df$cell_type=factor(genes_df$cell_type, levels=unique(genes_df$cell_type))
   
   gene_groups=split(genes_df$gene, genes_df$cell_type)
+  #print(gene_groups)
 
   if(is.null(group.by)){
     if(is.null(cur_celltype)){
