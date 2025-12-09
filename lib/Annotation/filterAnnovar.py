@@ -75,6 +75,19 @@ with open(outputFile, 'wt') as sw:
       g1000Index = headers.index(args.g1000_key) if args.g1000_key in headers else -1
       gnomadIndex = headers.index(args.gnomad_key) if args.gnomad_key in headers else -1
       topmedIndex = headers.index(args.topmed_key) if args.topmed_key in headers else -1
+
+      if exacIndex == -1:
+        print("Warning: ExAC key '%s' not found in header!" % (args.exac_key))
+
+      if g1000Index == -1:
+        print("Warning: 1000G key '%s' not found in header!" % (args.g1000_key))
+
+      if gnomadIndex == -1:
+        print("Warning: gnomAD key '%s' not found in header!" % (args.gnomad_key))
+
+      if topmedIndex == -1:
+        print("Warning: TOPMed key '%s' not found in header!" % (args.topmed_key))
+
       sampleCount = len(sampleIndecies)
   
       print("sampleCount=%d" % (sampleCount))
