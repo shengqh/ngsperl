@@ -333,7 +333,7 @@ rm -f $final_dir/${sample_name}.failed
     if($use_caper){
       if($caper_conda_env ne ""){
         print $pbs "
-conda activate $caper_conda_env
+source activate $caper_conda_env
 ";
       }
       print $pbs "
