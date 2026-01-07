@@ -1,0 +1,99 @@
+---
+title: "NuXL Visualization"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  error=FALSE,
+  results="asis"
+)
+```
+
+# Introduction
+
+This report is to visualize NuXL results.
+
+```{r}
+source('reportFunctions.R')
+
+outfile=readLines('source_file.txt')[1]
+```
+
+# Extract result
+
+Read file from `r outfile`.
+
+```{r}
+df_all=fread(outfile, data.table=FALSE, sep="\t", fill=TRUE)
+```
+
+There are total `r nrow(df_all)` rows in the data.
+
+```{r}
+isxl=table(df_all$NuXL_isXL, df_all$target_decoy)
+# Convert to data frame with proper structure
+isxl_df <- as.data.frame.matrix(isxl) |>
+  tibble::rownames_to_column(var="isXL")
+print_table(isxl_df, row.names=FALSE)
+```
+
+Remove the data matched with both target and decoy.
+
+```{r}
+df_all = df_all |>
+  dplyr::filter(target_decoy != "target+decoy")
+```
+
+# Non-XL Peptide identification score distribution 
+
+```{r fig.width=12, fig.height=6}
+notXL = df_all |>
+  dplyr::filter(NuXL_isXL == 0) 
+
+g1 = g=ggplot(notXL, aes(x=score, color=target_decoy)) +
+  geom_freqpoly(bins=100, linewidth=1) +
+  labs(title="Score Distribution",
+       x="Score",
+       y="Count") +       
+  theme_classic()
+g2 = g1 + facet_grid(target_decoy~., scales="free_y")
+
+g=g1+g2
+print(g) 
+```
+
+# XL Peptide identification score distribution
+
+```{r fig.width=12, fig.height=6}
+  XL=df_all |>
+    dplyr::filter(NuXL_isXL == 1) 
+
+g1 = g=ggplot(XL, aes(x=score, color=target_decoy)) +
+  geom_freqpoly(bins=100, linewidth=1) +
+  labs(title="Score Distribution",
+       x="Score",
+       y="Count") +       
+  theme_classic()
+g2 = g1 + facet_grid(target_decoy~., scales="free_y")
+
+g=g1+g2
+print(g) 
+```
