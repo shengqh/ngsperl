@@ -1,5 +1,6 @@
-rootdir<-"/nobackup/shah_lab/shengq2/20250113_APD_Wora_Project/20250113_12615_hg38/deseq2_genetable/result"
-inputfile<-"APD_Wora.define" 
+
+rootdir<-"/nobackup/shah_lab/shengq2/Emeli_Mouse_IRI_cardiac_EVs/20251219_ECa6_ECa9_mm10_SMARTerPicov2/deseq2_proteincoding_genetable/result"
+inputfile<-"Mouse_IRI_cardiac_EVs.define" 
 
 pvalue<-0.1
 useRawPvalue<-0
@@ -7,8 +8,8 @@ foldChange<-1.2
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
-showLabelInPCA<-0
-showDEGeneCluster<-1
+showLabelInPCA<-1
+showDEGeneCluster<-0
 addCountOne<-0
 usePearsonInHCA<-1
 top25only<-0
@@ -364,6 +365,7 @@ de_biotype=NA
 selectLab=NULL
 
 DE_combatseq = 0
+DE_combatseq_nocovariates = 0
 
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
@@ -395,6 +397,7 @@ if(file.exists("fileList1.txt")){
   }
 
   DE_combatseq = is_one(myoptions$DE_combatseq)
+  DE_combatseq_nocovariates = is_one(myoptions$DE_combatseq_nocovariates)
 }
 
 if(!is.na(de_biotype)){
@@ -581,18 +584,22 @@ for(countfile_index in c(1:length(countfiles))){
     if("batch" %in% colnames(designData) & DE_combatseq){
       library(sva)
       cat("CombatSeq: ", comparisonName, "\n")
-      if(ncol(designData) > 3){
-        cat("Data with covariances!\n")
+      if(ncol(designData) > 3 & !DE_combatseq_nocovariates){
+        cat("  CombatSeq with covariances!\n")
         covar_mod=designData |>
           dplyr::select(-Sample, -Condition, -batch)
       }else{
-        cat("Data without covariances!\n")
+        cat("  CombatSeq without covariances!\n")
         covar_mod=NULL
       }
-      comparisonData <- ComBat_seq(comparisonData, batch=designData$batch, group=designData$Condition, covar_mod=covar_mod)
-      write.csv(comparisonData, file=paste0(comparisonName, "_combatseq.csv"))
-      cat("Remove batch from the design matrix\n")
+      combatData <- ComBat_seq( counts=as.matrix(comparisonData), 
+                                batch=as.character(designData$batch), 
+                                group=as.character(designData$Condition), 
+                                covar_mod=covar_mod)
+      write.csv(combatData, file=paste0(comparisonName, "_combatseq.csv"))
+      cat("  Remove batch from the design matrix\n")
       designData<-designData |> dplyr::select(-batch)
+      comparisonData=combatData
     }
     
     if(ncol(designData) >= 3){
