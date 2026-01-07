@@ -635,6 +635,7 @@ sub addDEseq2 {
       "de_biotype"                               => $de_biotype,
       "showLabelInVolcano"                       => getValue( $def, "DE_showLabelInVolcano", 1 ),
       "DE_combatseq"                             => getValue( $def, "DE_combatseq",          0 ),
+      "DE_combatseq_nocovariates"                => getValue( $def, "DE_combatseq_nocovariates", 0 ),
     },
     pbs => {
       "nodes"    => "1:ppn=" . $def->{max_thread},
