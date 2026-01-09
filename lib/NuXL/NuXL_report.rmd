@@ -1,0 +1,183 @@
+---
+title: "NuXL Visualization"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  error=FALSE,
+  results="asis"
+)
+```
+
+```{r}
+source('reportFunctions.R')
+raw_file_map=read_file_map('fileList1.txt')
+peptide_file_map=read_file_map('fileList3.txt')
+XL_file_map=read_file_map('fileList4.txt')
+```
+
+# PSM count distribution 
+
+Read non-cross-link (nonXL) / cross-link (XL) Peptide-Spectrum-Match (PSM) result and 
+remove all PSMs matched to both target and decoy database.
+```{r}
+samples=names(raw_file_map)
+sample=samples[1]
+raw_psm=lapply(samples, function(sample){
+  fread(raw_file_map[[sample]]) |> 
+    dplyr::rename(database = target_decoy) |>
+    dplyr::filter(database != "target+decoy") 
+
+})
+names(raw_psm) = samples
+```
+
+## PSM count table
+
+```{r}
+isxl_list=lapply(samples, function(sample){
+  df_all=raw_psm[[sample]]
+  table(df_all$NuXL_isXL, df_all$database) |>
+    as.data.frame.matrix() |>
+    tibble::rownames_to_column(var="isXL") |>
+    dplyr::mutate(PSM_Type=ifelse(isXL=="1", "XL PSM", "nonXL PSM")) |>
+    dplyr::mutate(Sample=sample) |>
+    dplyr::select(Sample, PSM_Type, target, decoy)
+})
+isxl_df=do.call(rbind, isxl_list)
+
+print_table(isxl_df, byDT=TRUE, row.names=FALSE)
+```
+
+## PSM bar plot
+
+```{r}
+isxl_long <- isxl_df |> 
+  tidyr::pivot_longer(cols = -c("Sample", "PSM_Type"), 
+                      names_to = "database", 
+                      values_to = "count")
+
+g=ggplot(isxl_long, aes(x=Sample, y=count, fill=database)) +
+  geom_col(position="dodge") +
+  facet_grid(PSM_Type~., scale="free_y") +
+  theme_bw3() +
+  theme(axis.text.x=element_text(face="bold", angle=90, hjust=1, vjust=0.5),
+        axis.title.x=element_blank())
+
+bar_png="xl_bar.png"
+width=length(samples) * 0.2 + 1
+ggsave(bar_png, g, width=width, height=4, units="in", dpi=300, bg="white")
+include_graphics(bar_png)
+```
+
+# PSM by peptide
+
+```{r}
+get_target_protein = function(names) {
+  cur_names = unlist(strsplit(names, ', '))
+  cur_names = cur_names[grepl('sp\\|', cur_names)]
+  cur_names = gsub("sp\\|.+?\\|", "", cur_names)
+  return(paste0(cur_names, collapse="/"))
+}
+
+read_xml_filtered = function(file_map_file) {
+  file_map=read_file_map(file_map_file)
+  result=NULL
+  fname=names(file_map)[1]
+  for(fname in names(file_map)){
+    cur_psm=fread(file_map[[fname]], data.table=FALSE) |>
+      dplyr::select(-target_decoy, -NuXL_isXL, -fragment_annotation) |>
+      dplyr::filter(grepl("sp\\|", protein)) 
+      
+    if(nrow(cur_psm) > 0){
+      cur_psm$sequence = gsub("\\(.+?\\)", "", cur_psm$sequence) # remove modification info
+      cur_psm$Sample = fname
+      cur_psm$protein_name = unlist(lapply(cur_psm$protein, get_target_protein)) # remove contamination proteins
+      result = rbind(result, cur_psm)
+    }
+  }
+  result=result |> dplyr::select(Sample, protein_name, sequence, score)
+  return(result)
+}
+
+file_map_file='fileList3.txt'
+nonXL_psm=read_xml_filtered('fileList3.txt')
+XL_psm=read_xml_filtered('fileList4.txt')
+
+all_psm=rbind(nonXL_psm |> dplyr::mutate(PSM_Type="nonXL PSM"),
+              XL_psm |> dplyr::mutate(PSM_Type="XL PSM"))
+
+peptide_tbl=all_psm |>
+  dplyr::group_by(Sample, protein_name, PSM_Type, sequence) |>
+  dplyr::summarize(PSM_count=n(), .groups = 'drop') |>
+  dplyr::ungroup() |> as.data.frame() |>
+  dplyr::select(Sample, PSM_Type, protein_name, sequence, PSM_count) |>
+  dplyr::arrange(Sample, PSM_Type, sequence, desc(PSM_count))
+
+peptide_csv='psm_by_peptide.csv'
+write.csv(peptide_tbl, peptide_csv, row.names=FALSE)
+print_table(peptide_tbl, byDT=TRUE, row.names=FALSE)
+```
+
+peptides has been saved to `r peptide_csv`.
+
+# PSM by protein
+
+```{r}
+protein_tbl=all_psm |>
+  dplyr::group_by(Sample, protein_name, PSM_Type) |>
+  dplyr::summarize(PSM_count=n(), .groups = 'drop') |>
+  dplyr::ungroup() |> as.data.frame() |>
+  dplyr::select(Sample, PSM_Type, protein_name, PSM_count) |>
+  dplyr::arrange(Sample, PSM_Type, desc(PSM_count))
+
+protein_tbl_count=protein_tbl |>
+  tidyr::pivot_wider(id_cols=c(Sample, PSM_Type), names_from="protein_name", values_from="PSM_count", values_fill=0)
+
+sorted_cols <- sort(names(protein_tbl_count)[!names(protein_tbl_count) %in% c("Sample", "PSM_Type")])
+protein_tbl_count <- protein_tbl_count |>
+  dplyr::select(Sample, PSM_Type, dplyr::all_of(sorted_cols))
+
+print_table(protein_tbl_count, byDT=TRUE, row.names=FALSE)
+```
+
+# PSM score distribution 
+
+```{r}
+for(sample in samples) {
+  sample_df = raw_psm[[sample]] |> 
+    dplyr::select(-fragment_annotation) |>
+    dplyr::mutate(PSM_Type=ifelse(NuXL_isXL=="1", "XL PSM", "nonXL PSM"))
+
+  g=ggplot(sample_df, aes(x=score, color=database)) +
+    geom_freqpoly(bins=100, linewidth=1) +
+    labs(title=paste0(sample, ": PSM Score Distribution"),
+        x="Score",
+        y="Count") +       
+    theme_bw3() +
+    facet_grid(PSM_Type~., scales="free_y")
+  
+  score_png=paste0(sample, ".score.png")
+  ggsave(score_png, g, width=6, height=5, units="in", dpi=300, bg="white")
+  cat("\n##", sample, "\n\n")
+  add_img(score_png, width_in=8)
+}
+```
