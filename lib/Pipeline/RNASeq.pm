@@ -673,7 +673,7 @@ STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusio
 
   if ( getValue( $def, "perform_combatseq", 0 ) ) {
     my $combatseq_task  = "genetable_combatseq";
-    my $output_file_ext = ".combatseq.count";
+    my $output_file_ext = ".combatseq.count,.sva.version";
     if ( scalar(@$count_file_ref) == 4 ) {    #has both count and proteincoding.count
       $output_file_ext = $output_file_ext . ",.combatseq.proteincoding.count";
     }
@@ -1624,41 +1624,49 @@ fi
       push( @report_names, "genetable_fpkm" );
     } ## end if ( defined $config->...)
 
+    if ( defined $config->{genetable_combatseq} ) {
+      push( @copy_files, "genetable_combatseq", ".count\$" );
+    }
+
     if ( defined $config->{star_fusion_summary} ) {
       push( @report_files, "star_fusion_summary", ".fusion_count.png" );
       push( @report_names, "star_fusion_png" );
     }
 
-    if ( defined $config->{genetable_correlation} ) {
-      my $suffix = $config->{genetable_correlation}{suffix};
-      if ( !defined $suffix ) {
-        $suffix = "";
-      }
-      my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : ".count";
+    my @corr_tasks = ( "genetable_correlation", "genetable_combatseq_correlation" );
+    foreach my $cur_corr_task (@corr_tasks) {
+      if ( defined $config->{$cur_corr_task} ) {
+        my $suffix = $config->{$cur_corr_task}{suffix};
+        if ( !defined $suffix ) {
+          $suffix = "";
+        }
+        my $pcoding = $def->{perform_proteincoding_gene} ? ".proteincoding.count" : ".count";
 
-      my $titles = { "all" => "" };
-      if ( is_not_array($count_file_ref) ) {    #count file directly
-        $titles->{all} = basename($count_file_ref);
-        $pcoding = "";
-      }
-      if ( defined $config->{genetable_correlation}{parameterSampleFile2} ) {
-        my $correlationGroups = $config->{genetable_correlation}{parameterSampleFile2};
-        for my $correlationTitle ( keys %$correlationGroups ) {
-          my $groups = $correlationGroups->{$correlationTitle};
-          if ( is_hash($groups) ) {
-            if ( $correlationTitle ne "all" ) {
-              $correlationTitle =~ s/\\s+/_/g;
-              $titles->{$correlationTitle} = "." . $correlationTitle;
-            }
-          } ## end if ( is_hash($groups) )
-        } ## end for my $correlationTitle...
+        my $titles = { "all" => "" };
+        if ( is_not_array($count_file_ref) ) {    #count file directly
+          $titles->{all} = basename($count_file_ref);
+          $pcoding = "";
+        }
+        if ( defined $config->{$cur_corr_task}{parameterSampleFile2} ) {
+          my $correlationGroups = $config->{$cur_corr_task}{parameterSampleFile2};
+          for my $correlationTitle ( keys %$correlationGroups ) {
+            my $groups = $correlationGroups->{$correlationTitle};
+            if ( is_hash($groups) ) {
+              if ( $correlationTitle ne "all" ) {
+                $correlationTitle =~ s/\\s+/_/g;
+                $titles->{$correlationTitle} = "." . $correlationTitle;
+              }
+            } ## end if ( is_hash($groups) )
+          } ## end for my $correlationTitle...
+        } ## end if ( defined $config->...)
+
+        for my $title ( keys %$titles ) {
+          my $title_prefix = defined $config->{genetable_combatseq} ? $cur_corr_task . "." . $title : $title;
+          push( @report_files, $cur_corr_task, $pcoding . $suffix . $titles->{$title} . ".density.png", $cur_corr_task, $pcoding . $suffix . $titles->{$title} . ".heatmap.png", $cur_corr_task, $pcoding . $suffix . $titles->{$title} . ".PCA.png" );
+          push( @report_names, $title_prefix . "_correlation_density", $title_prefix . "_correlation_heatmap", $title_prefix . "_correlation_PCA" );
+        }
       } ## end if ( defined $config->...)
-
-      for my $title ( keys %$titles ) {
-        push( @report_files, "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".density.png", "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".heatmap.png", "genetable_correlation", $pcoding . $suffix . $titles->{$title} . ".PCA.png" );
-        push( @report_names, $title . "_correlation_density", $title . "_correlation_heatmap", $title . "_correlation_PCA" );
-      }
-    } ## end if ( defined $config->...)
+    } ## end foreach my $cur_corr_task (...)
 
     if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
       my $suffix = getDeseq2Suffix( $config, $def, $deseq2taskname );
@@ -1761,8 +1769,11 @@ fi
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping],
       "top25cv_in_hca"                     => [ getValue( $def, "top25cv_in_hca" ) ? "TRUE" : "FALSE" ],
       "task_name"                          => $taskName,
-      "out.width"                          => getValue( $def, "report.out.width",  "80%" ),
-      "remove_chrM_genes"                  => getValue( $def, "remove_chrM_genes", 0 ),
+      "out.width"                          => getValue( $def, "report.out.width",    "80%" ),
+      "remove_chrM_genes"                  => getValue( $def, "remove_chrM_genes",   0 ),
+      "adapter"                            => getValue( $def, "adapter",             "" ),
+      "cutadapt_option"                    => getValue( $def, "cutadapt_option",     "" ),
+      "featureCount_option"                => getValue( $def, "featureCount_option", "" )
     };
 
     if ( $def->{introduction_rmd} ) {
