@@ -81,7 +81,7 @@ tau_df=tau_df[!duplicated(tau_df$gene_name),] |>
 
 print_table(head(tau_df))
 
-cat("\nThere are total", nrow(tau_df), "genes and", ncol(tau_df), "tissues in the tau file.\n\n")
+cat("\n<mark>There are total", nrow(tau_df), "genes and", ncol(tau_df), "tissues in the tau file.</mark>\n\n")
 
 cat(paste0("\n", top_ident, "# Overlap between tau genes and ", all_genes_label, " genes.\n\n"))
 
@@ -93,6 +93,9 @@ g=ggvenn(genes)
 venn_png = paste0("tau_", all_genes_fn, "genes.venn.png")
 ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, bg="white")
 include_graphics(venn_png)
+
+tau_overlap= intersect(rownames(tau_df), unique(all_genes))
+cat(paste0("\n<mark>Among the ", length(all_genes), " genes in ", all_genes_label, ", ", length(tau_overlap), " were found to overlap with the Tau database, which comprises ", nrow(tau_df), " genes.</mark>\n\n"))
 ```
 
 ```{r, eval=perform_gtex}
@@ -116,6 +119,9 @@ g=ggvenn(genes)
 venn_png = paste0("gtex_", all_genes_fn, ".genes.venn.png")
 ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, bg="white")
 include_graphics(venn_png)
+
+gtex_overlap= intersect(rownames(gtex_mat), unique(all_genes))
+cat(paste0("\n<mark>Among the ", length(all_genes), " proteins identified in the physical functional proteome, ", length(gtex_overlap), " were found to overlap with the GTEx dataset, which comprises ", nrow(gtex_mat), " genes.</mark>\n\n"))
 ```
 
 ```{r eval=perform_tabula}
@@ -128,7 +134,7 @@ if(!exists("tabula_obj")){
   tabula_obj=readRDS(tabula_file)
 }
 
-cat("\nThere are total", nrow(tabula_obj), "genes and", ncol(tabula_obj), "cells in the Tabula Sapiens snRNA dataset.\n\n")
+cat("\n<mark>There are total", nrow(tabula_obj), "genes and", ncol(tabula_obj), "cells in the Tabula Sapiens snRNA dataset.</mark>\n\n")
 
 cat(paste0("\n", top_ident, "# Overlap between Tabula Sapiens genes and ", all_genes_label, " genes\n\n"))
 
@@ -140,6 +146,9 @@ g=ggvenn(genes)
 venn_png = paste0("tabula_", all_genes_fn, ".genes.venn.png")
 ggsave(venn_png, g, width=venn_width, height=venn_height, units="in", dpi=300, bg="white")
 include_graphics(venn_png)
+
+tabula_overlap= intersect(rownames(tabula_obj), unique(all_genes))
+cat(paste0("\n<mark>Among the ", length(all_genes), " proteins identified in the physical functional proteome, ", length(tabula_overlap), " were found to overlap with the Tabula Sapiens dataset, which comprises ", nrow(tabula_obj), " genes.</mark>\n\n"))
 
 cat(paste0("\n", top_ident, "# Cell type UMAP\n\n"))
 
