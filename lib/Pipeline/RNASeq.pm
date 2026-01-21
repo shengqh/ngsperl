@@ -128,8 +128,14 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "DE_min_median_read",              5 );
   initDefaultValue( $def, "DE_cooksCutoff",                  "TRUE" );
   initDefaultValue( $def, "DE_independentFiltering",         "TRUE" );
-
-  initDefaultValue( $def, "DE_combatseq", 0);
+  initDefaultValue( $def, "perform_combatseq",         0 );
+  
+  # If we perform_combatseq on count table already, we don't need to perform combatseq in DE analysis.
+  if( $def->{perform_combatseq} ) {
+    $def->{"DE_combatseq"} = 0;
+  }else{
+    initDefaultValue( $def, "DE_combatseq", 0);
+  }
   
   initDefaultValue( $def, "perform_DE_proteincoding_gene",   1 );
   initDefaultValue( $def, "perform_proteincoding_gene",      getValue( $def, "perform_DE_proteincoding_gene" ) );
@@ -654,6 +660,45 @@ STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusio
     }
   }
 
+  # perform correlation before possible combatseq
+  if ( $def->{perform_correlation} ) {
+    my $cor_dir = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
+    add_table_correlation($config, $def, $tasks, "genetable_correlation", $cor_dir, $count_file_ref);
+  }
+
+  if(getValue($def, "perform_combatseq", 0)){
+    my $combatseq_task = "genetable_combatseq";
+    my $output_file_ext = ".combatseq.count";
+    if(scalar(@$count_file_ref) == 4){ #has both count and proteincoding.count
+      $output_file_ext = $output_file_ext . ",.combatseq.proteincoding.count";
+    }
+    $config->{$combatseq_task} = {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $combatseq_task,
+      option                   => "",
+      rtemplate                => "../Count/combatseq.r",
+      output_file_ext          => $output_file_ext,
+      parameterSampleFile1_ref => $count_file_ref,
+      parameterFile2           => $def->{covariance_file},
+      docker_prefix            => "correlation_",
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "2",
+        "mem"       => "10gb"
+      },
+    };
+    push @$tasks, $combatseq_task;
+
+    if ( $def->{perform_correlation} ) {
+      my $cor_dir = $config->{$combatseq_task}{target_dir};
+      my $cor_task = $combatseq_task . "_correlation";
+      add_table_correlation($config, $def, $tasks, $cor_task, $cor_dir, [$combatseq_task, ".count"]);
+    }
+
+    $count_file_ref = [ $combatseq_task, ".count\$" ];
+  }
 
   if(getValue($def, "perform_transposable_element", 0)){
     my $star_index =  $def->{star_index} or die "Define star_index at definition first";
@@ -910,11 +955,6 @@ export NUMEXPR_MAX_THREADS=12
     push (@$tasks, $merge_task);
   }
 
-  if ( $def->{perform_correlation} ) {
-    my $cor_dir = ( defined $config->{genetable} ) ? $config->{genetable}{target_dir} : $target_dir . "/" . getNextFolderIndex($def) . "genetable_correlation";
-    add_table_correlation($config, $def, $tasks, "genetable_correlation", $cor_dir, $count_file_ref);
-  }
-
   my $deseq2taskname;
   my $webgestaltTaskName;
   my $gseaTaskName;
@@ -924,13 +964,24 @@ export NUMEXPR_MAX_THREADS=12
     my $de_prefix;
     my $de_source=$count_file_ref;
     if ( $def->{perform_proteincoding_gene} ) {
-      $de_prefix="proteincoding_genetable";
-      if(defined $config->{genetable}){
-        $de_source=[ "genetable", ".proteincoding.count\$" ];
+      if ($def->{perform_combatseq}) {
+        $de_prefix="combatseq_proteincoding_genetable";
+        if(defined $config->{genetable}){
+          $de_source=[ "genetable_combatseq", ".proteincoding.count\$" ];
+        }
+      }else{
+        $de_prefix="proteincoding_genetable";
+        if(defined $config->{genetable}){
+          $de_source=[ "genetable", ".proteincoding.count\$" ];
+        }
       }
     }
     else {
-      $de_prefix="genetable";
+      if ($def->{perform_combatseq}) {
+        $de_prefix="combatseq_genetable";
+      }else{
+        $de_prefix="genetable";
+      }
     }
     $deseq2taskname = addDEseq2( $config, $def, $tasks, $de_prefix, $de_source, $def->{target_dir}, $def->{DE_min_median_read} );
 
