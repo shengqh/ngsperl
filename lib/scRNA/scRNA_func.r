@@ -667,15 +667,16 @@ has_data<-function(obj, assay, slot){
   }
 }
 
+# Use layer by default. Assume using Seurat 5+ by default.
 MyGetAssayData<-function(obj, assay, slot){
-  if(is_seurat_5_plus(obj)){
+  #if(is_seurat_5_plus(obj)){
     return(GetAssayData(obj, assay=assay, layer=slot))
   # if(is_assay_5_plus(obj, assay)){
   #   cur_assay=obj[[assay]]
   #   return(LayerData(cur_assay, layer=slot))
-  }else{
-    return(GetAssayData(obj, assay=assay, slot=slot))
-  }
+  # }else{
+  #   return(GetAssayData(obj, assay=assay, slot=slot))
+  # }
 }
 
 do_normalization<-function( obj, 
