@@ -1035,16 +1035,16 @@ sub add_celltype_validation {
 sub addCellRangerCount {
   my ( $config, $def, $tasks, $target_dir, $task_name, $fastq_folder, $count_source, $count_reference, $jobmode, $chemistry, $create_bam ) = @_;
 
+  if ( !defined $create_bam ) {
+    $create_bam = "true";
+  }
+
   my $create_bam_arg = "";
   if ( ( defined $create_bam ) and ( $create_bam ne "" ) ) {
     $create_bam_arg = "--create-bam=$create_bam";
   }
   else {
     $create_bam_arg = "--create-bam=true";
-  }
-
-  if ( !defined $create_bam ) {
-    $create_bam = "true";
   }
 
   my $chemistry_arg = "";
