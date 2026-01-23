@@ -1033,7 +1033,19 @@ sub add_celltype_validation {
 
 
 sub addCellRangerCount {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $fastq_folder, $count_source, $count_reference, $jobmode, $chemistry ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $fastq_folder, $count_source, $count_reference, $jobmode, $chemistry, $create_bam ) = @_;
+
+  my $create_bam_arg = "";
+  if ( ( defined $create_bam ) and ( $create_bam ne "" ) ) {
+    $create_bam_arg = "--create-bam=$create_bam";
+  }
+  else {
+    $create_bam_arg = "--create-bam=true";
+  }
+
+  if ( !defined $create_bam ) {
+    $create_bam = "true";
+  }
 
   my $chemistry_arg = "";
   if ( ( defined $chemistry ) and ( $chemistry ne "" ) ) {
@@ -1066,7 +1078,7 @@ sub addCellRangerCount {
     docker_prefix => "cellranger_",
     program       => "cellranger",
     check_program => 0,
-    option        => " count --disable-ui --id=__NAME__ --transcriptome=$count_reference --fastqs=__FILE2__ --sample=__FILE__ $job_arg $chemistry_arg $cellranger_option
+    option        => " count --disable-ui --id=__NAME__ --transcriptome=$count_reference --fastqs=__FILE2__ --sample=__FILE__ $job_arg $chemistry_arg $create_bam_arg $cellranger_option
 
 if [[ -s __NAME__/outs ]]; then
   rm -rf __NAME__/SC_RNA_COUNTER_CS
@@ -1076,7 +1088,6 @@ if [[ -s __NAME__/outs ]]; then
   rm -rf __NAME__/outs
 fi
 
-#__OUTPUT__
 ",
     source_arg               => "",
     source_ref               => $count_source,
@@ -1085,6 +1096,7 @@ fi
     output_file_prefix       => "/filtered_feature_bc_matrix.h5",
     output_file_ext          => "/filtered_feature_bc_matrix.h5,/metrics_summary.csv,/web_summary.html",
     output_to_same_folder    => 1,
+    no_output                => 1,
     can_result_be_empty_file => 0,
     sh_direct                => $sh_direct,
     pbs                      => {
