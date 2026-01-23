@@ -549,18 +549,15 @@ STAR-Fusion --version | grep version | cut -d ':' -f2 | awk '{print \"STAR-Fusio
 
     my $dexseq_count_table = "dexseq_count_table";
     $config->{$dexseq_count_table} = {
-      class           => "CQS::ProgramWrapper",
-      perform         => 1,
-      target_dir      => $target_dir . "/" . getNextFolderIndex($def) . "$dexseq_count_table",
-      interpretor     => "python3",
-      program         => "../Count/count_table.py",
-      option          => "-p ENS --noheader",
-      source_arg      => "-i",
-      source_ref      => $dexseq_count,
-      output_arg      => "-o",
-      output_file_ext => ".count",
-      sh_direct       => 1,
-      pbs             => {
+      class                    => "CQS::UniqueR",
+      perform                  => 1,
+      target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "$dexseq_count_table",
+      rtemplate                => "../Count/dexseq_count_table.r",
+      parameterSampleFile1_ref => $dexseq_count,
+      parameterFile1           => getValue( $def, "name_map_file" ),
+      output_file_ext          => ".exon.count",
+      sh_direct                => 1,
+      pbs                      => {
         "nodes"    => "1:ppn=1",
         "walltime" => "10",
         "mem"      => "20gb"
