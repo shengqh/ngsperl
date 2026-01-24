@@ -29,6 +29,8 @@ our %EXPORT_TAGS = (
       addCollectAllelicCounts
       addEncodeATACseq
       addEncodeHic
+
+      add_WGS_Wdl
     )
   ]
 );
@@ -919,6 +921,79 @@ sub addEncodeHic {
   push @$individual, $croo_task;
 
   return ($task);
+}
+
+sub add_WGS_Wdl {
+  my ($config, $def, $tasks, $target_dir, $wgs_prefix, $fastq_files) = @_;
+
+  my $server_key = getValue($def, "wdl_key", "slurm");
+  my $wdl = $def->{"wdl"};
+  my $server = $wdl->{$server_key};
+
+  my $fastq_to_cram_task = $wgs_prefix . "_" . getNextIndex($def, $wgs_prefix) . "_fastq_to_cram_wdl";
+  my $cram_pipeline = $server->{"VUMCFastqToAlignedCram"};
+  $config->{$fastq_to_cram_task} = {     
+    "class" => "CQS::Wdl",
+    "target_dir" => "${target_dir}/$fastq_to_cram_task",
+    "source_ref" => $fastq_files,
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $cram_pipeline->{"wdl_file"},
+    "input_json_file" => $cram_pipeline->{"input_file"},
+    "output_file_ext" => ".cram",
+    "output_other_ext" => ".crai",
+    "use_filename_in_result" => 1,
+    "input_parameters" => {
+      "VUMCFastqToAlignedCramNoBamQCFast.fastq_1_ref" => [$fastq_files, "_R1_001.fastq.gz"],
+      "VUMCFastqToAlignedCramNoBamQCFast.fastq_2_ref" => [$fastq_files, "_R2_001.fastq.gz"],
+      "VUMCFastqToAlignedCramNoBamQCFast.sample_name" => "SAMPLE_NAME",
+      "VUMCFastqToAlignedCramNoBamQCFast.readgroup_name" => "SAMPLE_NAME",
+      "VUMCFastqToAlignedCramNoBamQCFast.library_name" => "SAMPLE_NAME",
+      "VUMCFastqToAlignedCramNoBamQCFast.platform_unit" => "ILLUMINA",
+      "VUMCFastqToAlignedCramNoBamQCFast.platform_name" => "ILLUMINA",
+      "VUMCFastqToAlignedCramNoBamQCFast.sequencing_center" => "VANTAGE"
+    },
+    "input_single" => {},
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => "100gb"
+    },
+  };
+
+  push @$tasks, $fastq_to_cram_task;
+
+  my $cram_to_gvcf_task = $wgs_prefix . "_" . getNextIndex($def, $wgs_prefix) . "_cram_to_gvcf_wdl";
+  my $call_pipeline = $server->{"VUMCVariantCalling"};
+  $config->{$cram_to_gvcf_task} = {     
+    "class" => "CQS::Wdl",
+    "target_dir" => "${target_dir}/$cram_to_gvcf_task",
+    "source_ref" => $fastq_files,
+    "cromwell_jar" => $wdl->{"cromwell_jar"},
+    "input_option_file" => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file" => $server->{"cromwell_config_file"},
+    "wdl_file" => $call_pipeline->{"wdl_file"},
+    "input_json_file" => $call_pipeline->{"input_file"},
+    "output_file_ext" => ".g.vcf.gz",
+    "output_other_ext" => ".g.vcf.gz.tbi",
+    "use_filename_in_result" => 1,
+    "input_parameters" => {
+      "VUMCVariantCalling.input_cram_ref" => [$fastq_to_cram_task, ".cram"],
+      "VUMCVariantCalling.input_cram_index_ref" => [$fastq_to_cram_task, ".crai"],
+      "VUMCVariantCalling.base_file_name" => "SAMPLE_NAME",
+      "VUMCVariantCalling.gatk_docker" => getValue($def, "gatk_docker")
+    },
+    "input_single" => {},
+    pbs=> {
+      "nodes"     => "1:ppn=8",
+      "walltime"  => "24",
+      "mem"       => "100gb"
+    },
+  };
+  push @$tasks, $cram_to_gvcf_task;
+    
+  return ($config);
 }
 
 1;
