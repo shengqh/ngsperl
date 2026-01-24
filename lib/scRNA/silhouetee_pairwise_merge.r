@@ -1,9 +1,9 @@
-rm(list=ls()) 
+rm(list=ls())
 outFile='Aorta_Progeria'
 parSampleFile1='fileList1.txt'
-parSampleFile2='fileList2.txt'
+parSampleFile2=''
 parSampleFile3=''
-parFile1=''
+parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/20260120_silhouetee_pairwise/silhouette_pairwise_prepare_data/result/Aorta_Progeria.obj_data.rds'
 parFile2=''
 parFile3=''
 
@@ -12,33 +12,27 @@ setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/20260120
 
 ### Parameter setting end ###
 
-library(Seurat)
+library(data.table)
 
 file_tbl=read.table(parSampleFile1, header=FALSE, sep="\t")
 
-myoptions=read.table(parSampleFile2, header=FALSE, sep="\t")
+for(cur_file in file_tbl$V1){
+  if(!file.exists(cur_file)) {
+    stop(paste0("File does not exist:", cur_file, "\n"))
+  }
+}
 
-obj_file=myoptions[myoptions$V2==outFile, 1]
-cluster=myoptions[myoptions$V2=="cluster", 1]
+obj_data_lst=readRDS(parFile1)
+cluster=obj_data_lst$clusters
+coords=obj_data_lst$coords
 
-cat("Reading object file:", obj_file, "\n")
-obj=readRDS(obj_file)
-
-sil.data=data.frame(cluster=FetchData(obj, vars = cluster)[, 1], neighbor=100, sil_width=100)
-rownames(sil.data)=colnames(obj)
+sil.data=data.frame(cluster=cluster, neighbor=100, sil_width=100)
+rownames(sil.data)=rownames(coords)
 
 cur_file=file_tbl$V1[2]
 for(cur_file in file_tbl$V1){
-  if(!file.exists(cur_file)) {
-    cat("File does not exist:", cur_file, "\n")
-    next
-  }
-
   cat("Reading silhouette file:", cur_file, "\n")
-  sil_list=readRDS(cur_file)
-  i = sil_list$i
-  j = sil_list$j
-  sil = sil_list$silhouette
+  sil=data.frame(fread(cur_file), row.names=1)
 
   #combine sil with sil.data only if the sil_width in sil less than sil_width in sil.data
 
