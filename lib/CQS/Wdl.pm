@@ -32,6 +32,68 @@ sub can_use_docker(){
   return(0);
 }
 
+use strict;
+use warnings;
+use Data::Dumper;
+
+sub has_json_path {
+  my ($json_dic, $path) = @_;
+
+  # 1. Split the path into individual keys
+  # We use '/' as the delimiter as requested
+  my @keys = split(/\//, $path);
+
+  my $current = $json_dic;
+  foreach my $key (@keys) {
+    $current = $current->{$key};
+    if(!defined $current) {
+      return(0);
+    }
+  }
+  return(1);
+}
+
+sub json_value_is_array {
+  my ($json_dic, $path) = @_;
+
+  # 1. Split the path into individual keys
+  # We use '/' as the delimiter as requested
+  my @keys = split(/\//, $path);
+
+  my $current = $json_dic;
+  foreach my $key (@keys) {
+    $current = $current->{$key};
+    if(!defined $current) {
+      return(0)
+    }
+  }
+
+  return is_array($current);
+}
+
+sub set_json_path_value {
+  my ($json_dic, $path, $value) = @_;
+
+  # 1. Split the path into individual keys
+  # We use '/' as the delimiter as requested
+  my @keys = split(/\//, $path);
+
+  # 2. Extract the last key to use for the final assignment
+  my $last_key = pop @keys;
+
+  # 3. Traverse (or create) the nested hash levels
+  my $current = $json_dic;
+  foreach my $key (@keys) {
+    # If the key doesn't exist, Perl creates a new hash ref here
+    $current = $current->{$key} //= {};
+  }
+
+  # 4. Assign the value to the final destination
+  $current->{$last_key} = $value;
+
+  return $json_dic;
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -182,15 +244,14 @@ sub perform {
   
   my $json_dic = read_json($input_json_file);
   for my $input_key (keys %$replace_dics){
-    if (!defined $json_dic->{$input_key}){
-  #    die "Cannot find " . $input_key . " in json file";
+    if (!has_json_path($json_dic, $input_key)){
       warnings::warn("Cannot find " . $input_key . " in json file");
     }
   }
   
   my @json_keys_toSampleNames=();
   for my $replace_key (keys %$replace_values){
-    $json_dic->{$replace_key} = $replace_values->{$replace_key};
+    $json_dic = set_json_path_value($json_dic, $replace_key, $replace_values->{$replace_key});
     if ($replace_values->{$replace_key} eq "SAMPLE_NAME") {
       push @json_keys_toSampleNames,$replace_key;
     }
@@ -249,30 +310,25 @@ fi
 
     my $log_desc = $cluster->get_log_description($log);
     
-    # for my $json_key (keys %$json_dic){
-    #   if ($json_dic->{$json_key} =~ /SAMPLE_NAME/){
-    #     $json_dic->{$json_key} =~ s/SAMPLE_NAME/$sample_name/g;
-    #   }
-    # }
     if (scalar(@json_keys_toSampleNames) != 0) {
       my $cur_sample_name = $sample_name;
       if ($sample_name_regex ne ""){
         $cur_sample_name = $1 if ($sample_name =~ /$sample_name_regex/);
       }
       foreach my $json_key_toSampleNames (@json_keys_toSampleNames) {
-        $json_dic->{$json_key_toSampleNames} = $cur_sample_name;
+        $json_dic = set_json_path_value($json_dic, $json_key_toSampleNames, $cur_sample_name);
       }
     }
     
     for my $input_key (keys %$replace_dics){
       my $input_values = $replace_dics->{$input_key}{$sample_name};
-      if (is_array($json_dic->{$input_key})){
-        $json_dic->{$input_key} = $input_values;
+      if (json_value_is_array($json_dic, $input_key)){
+        $json_dic = set_json_path_value($json_dic, $input_key, $input_values);
       }else{
         if($input_parameters_is_vector->{$input_key}){
-          $json_dic->{$input_key} = $input_values;
+          $json_dic = set_json_path_value($json_dic, $input_key, $input_values);
         }else{
-          $json_dic->{$input_key} = $input_values->[0];
+          $json_dic = set_json_path_value($json_dic, $input_key, $input_values->[0]);
         }
       }
     }
