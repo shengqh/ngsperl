@@ -96,7 +96,7 @@ our %EXPORT_TAGS = (
         add_peak_count
         add_alignment_summary
         add_bam_validation
-        
+
         add_gsea
         add_fgsea
 
@@ -636,8 +636,8 @@ sub addDEseq2 {
       "heatmap_column_name_fontsize"             => getValue( $def, "heatmap_column_name_fontsize",             18 ),
       "n_first"                                  => $n_first,
       "de_biotype"                               => $de_biotype,
-      "showLabelInVolcano"                       => getValue( $def, "DE_showLabelInVolcano", 1 ),
-      "DE_combatseq"                             => getValue( $def, "DE_combatseq",          0 ),
+      "showLabelInVolcano"                       => getValue( $def, "DE_showLabelInVolcano",     1 ),
+      "DE_combatseq"                             => getValue( $def, "DE_combatseq",              0 ),
       "DE_combatseq_nocovariates"                => getValue( $def, "DE_combatseq_nocovariates", 0 ),
     },
     pbs => {
@@ -1305,11 +1305,11 @@ sub writeDesignTable {
         my $condition = $entryMap->{Condition} or die "Define Condition for $sampleName in designtable of section $section";
         my $replicate = $entryMap->{Replicate} or die "Define Replicate for $sampleName in designtable of section $section";
 
-        if( !defined $peaksfiles->{$sampleName} ) {
-          my $cur_sample_names= join(", ", sort keys %$peaksfiles);
+        if ( !defined $peaksfiles->{$sampleName} ) {
+          my $cur_sample_names = join( ", ", sort keys %$peaksfiles );
           die "Peaks file for sample $sampleName is not defined, double check your design table and make sure the sample names match. Available samples: $cur_sample_names";
         }
-        my $peakFile  = $peaksfiles->{$sampleName}->[0];
+        my $peakFile = $peaksfiles->{$sampleName}->[0];
 
         my $sampleId   = $treatments->{$sampleName}->[0];
         my $bamReads   = $bamfiles->{$sampleId}[0];
@@ -3818,69 +3818,37 @@ sub add_gsea {
   push( @$tasks, $gsea_report );
 } ## end sub add_gsea
 
+
 sub add_fgsea {
-  my ( $config, $def, $tasks, $target_dir, $gseaTaskName, $rnk_file_ref, $keys, $suffix ) = @_;
-
-  my $gsea_categories = getValue( $def, "gsea_categories" );
-
-  #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
-  $config->{$gseaTaskName} = {
-    class                        => "CQS::UniqueR",
-    perform                      => 1,
-    target_dir                   => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
-    rtemplate                    => "../Annotation/fgsea.r",
-    parameterSampleFile1_ref     => $rnk_file_ref,
-    parameterSampleFile2         => { 
-      task_name => getValue( $def, "task_name" ) #
+  my ( $config, $def, $tasks, $target_dir, $fgsea_task, $rnk_file_ref, $keys, $suffix ) = @_;
+  $config->{$fgsea_task} = {
+    class                => "CQS::UniqueRmd",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $fgsea_task,
+    docker_prefix        => "fgsea_",
+    report_rmd_file      => "../Annotation/fgsea_bulk.rmd",
+    additional_rmd_files => "../CQS/reportFunctions.R",
+    suffix               => ".fgsea",
+    output_file_ext      => ".fgsea.html,.fgsea.files.csv",
+    parameterSampleFile1 => {
+      "email"           => getValue( $def, "email" ),
+      "affiliation"     => $def->{"affiliation"},
+      "task_name"       => getValue( $def, "task_name" ),
+      "edgeR_suffix"    => $edgeR_suffix,
+      "msigdbr_species" => getValue( $def, "msigdbr_species" ),
     },
-    output_to_result_directory   => 1,
-    output_perSample_file        => "parameterSampleFile1",
-    output_perSample_file_byName => 1,
-    output_perSample_file_regex  => "(.+?)[_min5_fdr|_GSEA.rnk]",
-    output_perSample_file_ext    => ".gsea.csv;.gsea",
-    no_docker                    => getValue( $def, "gsea_no_docker", 0 ),
-    #has_empty_ext              => 1,
-    sh_direct => 1,
-    pbs       => {
+    parameterSampleFile2_ref => $rnk_file_ref,
+    no_docker                => getValue( $def, "fgsea_no_docker", 0 ),
+    sh_direct                => 1,
+    pbs                      => {
       "nodes"    => "1:ppn=1",
       "walltime" => "23",
       "mem"      => "10gb"
     },
   };
-  push( @$tasks, $gseaTaskName );
+  push( @$summary, $fgsea_task );
+} ## end sub add_fgsea
 
-  my @gsea_report_files = ();
-  my @gsea_report_names = ();
-  my $pairs             = $config->{pairs};
-  for my $key ( sort keys %$pairs ) {
-    push( @gsea_report_files, $gseaTaskName, '/' . $key . $suffix . ".gsea.csv" );
-    push( @gsea_report_names, "gsea_" . $key );
-  }
-
-  my $gsea_report = $gseaTaskName . "_report";
-  $config->{$gsea_report} = {
-    class                      => "CQS::UniqueR",
-    perform                    => 1,
-    target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
-    rtemplate                  => "GSEAReport.R",
-    rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;Functions.R,reportFunctions.R",
-    run_rmd_independent        => 1,
-    rmd_ext                    => ".gsea.html",
-    parameterSampleFile1_ref   => \@gsea_report_files,
-    parameterSampleFile1_names => \@gsea_report_names,
-    parameterSampleFile2       => { task_name => getValue( $def, "task_name" ) },
-    remove_empty_parameter     => 1,
-    output_ext                 => "gsea_files.csv",
-    samplename_in_result       => 0,
-    sh_direct                  => 1,
-    pbs                        => {
-      "nodes"    => "1:ppn=1",
-      "walltime" => "1",
-      "mem"      => "10gb"
-    },
-  };
-  push( @$tasks, $gsea_report );
-} ## end sub add_gsea
 
 sub add_maf_filter {
   my ( $config, $def, $tasks, $target_dir, $maf_filter_name, $source_ref ) = @_;
