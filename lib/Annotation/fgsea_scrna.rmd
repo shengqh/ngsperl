@@ -1,0 +1,161 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: yes
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+
+```{r setup, echo=FALSE, results='hide'}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+library(msigdbr)
+library(fgsea)
+
+source("reportFunctions.R")
+
+option_tbl=fread("fileList1.fgsea.txt", data.table=FALSE)
+myoptions=split(option_tbl$V1, option_tbl$V2)
+msigdbr_species=myoptions$msigdbr_species
+task_name=myoptions$task_name
+email=myoptions$email
+affiliation=get_affiliation(myoptions)
+
+file_tbl=fread("fileList2.fgsea.txt", data.table=FALSE, header=FALSE)
+de_list_file=file_tbl$V1[1]
+```
+
+---
+title: "FGSEA analysis of scRNA-seq DE results - `r task_name`"
+author:
+  email: "`r email`"
+  affiliation: "`r affiliation`"
+---
+
+# Hallmark Gene Set Enrichment Analysis
+
+`r msigdbr_species` is used for the analysis.
+
+```{r}
+hallmark_sets <- msigdbr(species = msigdbr_species, collection = "H")
+hallmark_list <- split(hallmark_sets$gene_symbol, hallmark_sets$gs_name)
+
+de_files=fread(de_list_file, data.table=FALSE)
+de_files$prefix=basename(de_files$prefix)
+de_files$gseaFile=file.path(dirname(de_list_file), de_files$gseaFile)
+de_map=split(de_files$gseaFile, de_files$prefix)
+```
+
+## Preranked gene list
+
+```{r}
+print_table(de_files |> dplyr::select(prefix, gseaFile), row.names=F)
+```
+
+## fgsea results
+
+```{r}
+set.seed(20260125)
+
+gsea_content=""
+gsea_files=NULL
+prefix=names(de_map)[1]
+for(prefix in names(de_map)){
+  gsea_content=paste0(gsea_content, "### ", prefix, "\n\n")
+
+  gsea_file=de_map[[prefix]][1]
+  gsea_rnk=fread(gsea_file) |> dplyr::rename(gene=V1, sigfvalue=V2)
+
+  # Create ranked gene list
+  ranks <- setNames(gsea_rnk$sigfvalue, gsea_rnk$gene)
+
+  # Run fgsea
+  fgsea_results <- fgsea( pathways = hallmark_list, 
+                          stats = ranks,
+                          minSize = 15,
+                          maxSize = 500)
+
+  # Sort by NES
+  fgsea_results <- fgsea_results |> 
+    as.data.frame() |> 
+    dplyr::arrange(desc(NES)) |> 
+    dplyr::mutate(core=sapply(leadingEdge, length),
+                  negLog10Padj = -log10(padj),
+                  leadingEdgeGenes = sapply(leadingEdge, function(genes) paste(genes, collapse = ":"))) |>
+    dplyr::select(-leadingEdge)
+
+  # Save results
+  fgsea_file <- paste0(prefix, ".fgsea_hallmark.csv")
+  write.csv(fgsea_results, file = fgsea_file, quote = FALSE, row.names = FALSE)
+
+  gsea_content=paste0(gsea_content, getPagedTable(fgsea_file), "\n\n")
+
+  # Display significant pathways
+  sig_pathways <- fgsea_results |> dplyr::filter(padj < 0.05)
+  if(nrow(sig_pathways) == 0){
+    gsea_content=paste0(gsea_content, "\nNo significant enriched hallmark geneset found\n")
+    cur_df=data.frame(prefix=prefix, fgsea_file=fgsea_file, fgsea_png=NA)
+  }else{
+    gsea_content=paste0(gsea_content, "\nThere are ", nrow(sig_pathways), " significant enriched hallmark genesets. We will show top 10 postively and top 10 negatively associated gene sets.\n")
+
+    pos_sig=sig_pathways |> dplyr::filter(NES > 0)
+    neg_sig=sig_pathways |> dplyr::filter(NES < 0)
+
+    final <- rbind( head(pos_sig, min(10, nrow(pos_sig))),
+                    head(neg_sig, min(10, nrow(neg_sig))))
+
+    final<-final[order(final$NES, decreasing=T),]
+    final$NAME<-factor(final$pathway, levels=final$pathway)
+    g<-ggplot(final, aes(NES, NAME)) + 
+      geom_point(aes(size=core, color=negLog10Padj)) + 
+      geom_vline(xintercept=0) + 
+      theme_bw() + 
+      xlab("Normalized enrichment score") +
+      theme(axis.title.y=element_blank())
+
+    height=max(1000, 3000/40*nrow(final))
+    ncharmax=max(nchar(as.character(final$NAME)))
+    width=max(2000, ncharmax * 20 + 1000)
+
+    fgsea_png <- paste0(prefix, ".fgsea_hallmark.png")
+    ggsave(fgsea_png, g, width=width, height=height, units="px", dpi=300, bg="white")
+    gsea_content=paste0(gsea_content, getFigure(fgsea_png), "\n\n")
+
+    cur_df=data.frame(prefix=prefix, fgsea_file=fgsea_file, fgsea_png=fgsea_png)
+  }
+  gsea_files=rbind(gsea_files, cur_df)
+}
+write.csv(gsea_files, file=paste0(task_name, ".fgsea.files.csv"), quote=FALSE, row.names=FALSE)
+
+fgsea_rmd="fgsea_results.rmd"
+writeLines(gsea_content, con=fgsea_rmd)
+```
+
+```{r child=fgsea_rmd}
+```
+
+# Session Info
+
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=FALSE)
+```

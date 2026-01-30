@@ -1907,6 +1907,65 @@ sub addEdgeRTask {
     } ## end else [ if ( getValue( $def, "perform_gsea_by_comparison"...))]
   } ## end if ( getValue( $def, "perform_gsea"...))
 
+  if ( getValue( $def, "perform_fgsea" ) ) {
+    my $fgsea_task = $edgeRtaskname . "_fgsea";
+    $config->{$fgsea_task} = {
+      class                => "CQS::UniqueRmd",
+      perform              => 1,
+      target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $fgsea_task,
+      docker_prefix        => "fgsea_",
+      report_rmd_file      => "../Annotation/fgsea_scrna.rmd",
+      additional_rmd_files => "../CQS/reportFunctions.R",
+      suffix               => ".fgsea",
+      output_file_ext      => ".fgsea.html,.fgsea.files.csv",
+      parameterSampleFile1 => {
+        "email"           => getValue( $def, "email" ),
+        "affiliation"     => $def->{"affiliation"},
+        "task_name"       => getValue( $def, "task_name" ),
+        "edgeR_suffix"    => $edgeR_suffix,
+        "msigdbr_species" => getValue( $def, "msigdbr_species" ),
+      },
+      parameterSampleFile2_ref => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
+      no_docker => getValue( $def, "fgsea_no_docker", 0 ),
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "23",
+        "mem"      => "10gb"
+      },
+    };
+    push( @$summary, $fgsea_task );
+
+    my $gsea_report = $fgsea_task . "_report";
+    $config->{$gsea_report} = {
+      class                      => "CQS::UniqueR",
+      perform                    => 1,
+      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
+      rtemplate                  => "GSEAReport.R",
+      rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;reportFunctions.R",
+      run_rmd_independent        => 1,
+      rmd_ext                    => "${edgeR_suffix}.gsea.html",
+      parameterSampleFile1_ref   => [$fgsea_task],
+      parameterSampleFile1_names => ["gsea"],
+      parameterSampleFile2       => {
+        "email"        => getValue( $def, "email" ),
+        "affiliation"  => $def->{"affiliation"},
+        "task_name"    => getValue( $def, "task_name" ),
+        "edgeR_suffix" => $edgeR_suffix,
+      },
+      remove_empty_parameter => 1,
+      output_ext             => "gsea_files.csv",
+      samplename_in_result   => 0,
+      sh_direct              => 1,
+      pbs                    => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "1",
+        "mem"      => "10gb"
+      },
+    };
+    push( @$summary, $gsea_report );
+  } ## end if ( getValue( $def, "perform_fgsea"...))
+
   return ($edgeRtaskname);
 } ## end sub addEdgeRTask
 
@@ -4190,6 +4249,7 @@ sub add_sccomp {
       email             => getValue( $def, "email" ),
       affiliation       => $def->{"affiliation"},
       cell_group_column => getValue( $def, "sccomp_cell_group_column" ),
+      group_column => getValue( $def, "sccomp_group_column" ),
     },
     parameterSampleFile3     => getValue( $def, "sccomp_groups" ),
     parameterSampleFile4     => getValue( $def, "sccomp_pairs" ),

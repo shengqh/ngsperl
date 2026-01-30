@@ -96,7 +96,10 @@ our %EXPORT_TAGS = (
         add_peak_count
         add_alignment_summary
         add_bam_validation
+        
         add_gsea
+        add_fgsea
+
         add_unique_r
         add_maf_filter
         add_bowtie_index
@@ -3815,6 +3818,69 @@ sub add_gsea {
   push( @$tasks, $gsea_report );
 } ## end sub add_gsea
 
+sub add_fgsea {
+  my ( $config, $def, $tasks, $target_dir, $gseaTaskName, $rnk_file_ref, $keys, $suffix ) = @_;
+
+  my $gsea_categories = getValue( $def, "gsea_categories" );
+
+  #my $gseaCategories = "'h.all.v6.1.symbols.gmt','c2.all.v6.1.symbols.gmt','c5.all.v6.1.symbols.gmt','c6.all.v6.1.symbols.gmt','c7.all.v6.1.symbols.gmt'";
+  $config->{$gseaTaskName} = {
+    class                        => "CQS::UniqueR",
+    perform                      => 1,
+    target_dir                   => $target_dir . "/" . getNextFolderIndex($def) . $gseaTaskName,
+    rtemplate                    => "../Annotation/fgsea.r",
+    parameterSampleFile1_ref     => $rnk_file_ref,
+    parameterSampleFile2         => { 
+      task_name => getValue( $def, "task_name" ) #
+    },
+    output_to_result_directory   => 1,
+    output_perSample_file        => "parameterSampleFile1",
+    output_perSample_file_byName => 1,
+    output_perSample_file_regex  => "(.+?)[_min5_fdr|_GSEA.rnk]",
+    output_perSample_file_ext    => ".gsea.csv;.gsea",
+    no_docker                    => getValue( $def, "gsea_no_docker", 0 ),
+    #has_empty_ext              => 1,
+    sh_direct => 1,
+    pbs       => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "23",
+      "mem"      => "10gb"
+    },
+  };
+  push( @$tasks, $gseaTaskName );
+
+  my @gsea_report_files = ();
+  my @gsea_report_names = ();
+  my $pairs             = $config->{pairs};
+  for my $key ( sort keys %$pairs ) {
+    push( @gsea_report_files, $gseaTaskName, '/' . $key . $suffix . ".gsea.csv" );
+    push( @gsea_report_names, "gsea_" . $key );
+  }
+
+  my $gsea_report = $gseaTaskName . "_report";
+  $config->{$gsea_report} = {
+    class                      => "CQS::UniqueR",
+    perform                    => 1,
+    target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
+    rtemplate                  => "GSEAReport.R",
+    rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;Functions.R,reportFunctions.R",
+    run_rmd_independent        => 1,
+    rmd_ext                    => ".gsea.html",
+    parameterSampleFile1_ref   => \@gsea_report_files,
+    parameterSampleFile1_names => \@gsea_report_names,
+    parameterSampleFile2       => { task_name => getValue( $def, "task_name" ) },
+    remove_empty_parameter     => 1,
+    output_ext                 => "gsea_files.csv",
+    samplename_in_result       => 0,
+    sh_direct                  => 1,
+    pbs                        => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "1",
+      "mem"      => "10gb"
+    },
+  };
+  push( @$tasks, $gsea_report );
+} ## end sub add_gsea
 
 sub add_maf_filter {
   my ( $config, $def, $tasks, $target_dir, $maf_filter_name, $source_ref ) = @_;
