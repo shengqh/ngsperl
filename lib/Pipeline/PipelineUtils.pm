@@ -3834,7 +3834,6 @@ sub add_fgsea {
       "email"           => getValue( $def, "email" ),
       "affiliation"     => $def->{"affiliation"},
       "task_name"       => getValue( $def, "task_name" ),
-      "edgeR_suffix"    => $edgeR_suffix,
       "msigdbr_species" => getValue( $def, "msigdbr_species" ),
     },
     parameterSampleFile2_ref => $rnk_file_ref,
@@ -3846,7 +3845,7 @@ sub add_fgsea {
       "mem"      => "10gb"
     },
   };
-  push( @$summary, $fgsea_task );
+  push( @$tasks, $fgsea_task );
 } ## end sub add_fgsea
 
 
