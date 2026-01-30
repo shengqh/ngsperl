@@ -1045,8 +1045,8 @@ umi_tools extract $umitools_extract_option -I __FILE__ -S __OUTPUT__ --read2-out
   }
 
   if ($run_cutadapt) {
-    my $cutadapt_task;
-    ($source_ref, $cutadapt_task)  = addCutadapt($config, $def, $individual, $summary, "cutadapt", "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
+    my $cutadapt_task = $def->{perform_umitools}? "umitools_extract_cutadapt":"cutadapt";
+    ($source_ref, $cutadapt_task)  = addCutadapt($config, $def, $individual, $summary, $cutadapt_task, "fastqc_post_trim", $intermediate_dir, $preprocessing_dir, $source_ref, $is_pairend, $cluster);
     if(getValue($def, "perform_fastq_len", 1)){
       addFastqLen($config, $def, $individual, $summary, "fastq_len", $preprocessing_dir, [$cutadapt_task, ".gz"], $cluster );
     }

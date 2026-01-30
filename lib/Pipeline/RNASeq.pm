@@ -255,7 +255,7 @@ sub getRNASeqConfig {
   #print(Dumper($def->{correlation_groups}));
 
   my $groups_ref      = defined $def->{groups} ? "groups" : undef;
-  my $aligner         = $def->{aligner};
+  my $aligner         = getValue( $def, "aligner" );
   my $star_option     = $def->{star_option};
   my $count_table_ref = "files";
 
@@ -333,7 +333,7 @@ sub getRNASeqConfig {
           };
 
           $source_ref = [ "star", "_Aligned.sortedByCoord.out.bam\$" ];
-          push @$tasks, ("star_summary");
+          push @$tasks, ( "star", "star_summary" );
         } ## end if ( $aligner eq "star")
         else {
           $configAlignment = {
@@ -354,6 +354,7 @@ sub getRNASeqConfig {
             },
           };
           $source_ref = [ "hisat2", ".bam\$" ];
+          push @$tasks, "hisat2";
         } ## end else [ if ( $aligner eq "star")]
 
         $config = merge_hash_right_precedent( $config, $configAlignment );
@@ -361,7 +362,7 @@ sub getRNASeqConfig {
 
         $multiqc_depedents = $source_ref;
         if ( $def->{perform_umitools} ) {
-          my $dedup_task   = "umitools_dedup";
+          my $dedup_task   = $aligner . "_umitools_dedup";
           my $dedup_option = getValue( $def, "unitools_dedup_option", "--method=unique" );
 
           my $pairend_option = is_paired_end($def) ? "--paired" : "";
@@ -1089,6 +1090,16 @@ export NUMEXPR_MAX_THREADS=12
 
       add_gsea( $config, $def, $tasks, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, "" );
     } ## end if ( getValue( $def, "perform_gsea"...))
+
+    if ( getValue( $def, "perform_fgsea" ) ) {
+      $gseaTaskName = $deseq2taskname . "_fgsea";
+
+      my $pairs = $config->{pairs};
+      my $keys  = [ keys %$pairs ];
+      #my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
+
+      add_fgsea( $config, $def, $tasks, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, "" );
+    } ## end if ( getValue( $def, "perform_fgsea"...))
 
     if ( $def->{perform_keggprofile} ) {
       my $keggprofile_useRawPValue;
