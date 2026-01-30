@@ -398,13 +398,18 @@ caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metad
 ";
     }else{
       my $input_option_file = get_option_file( $config, $section, "input_option_file" );
+      my $db_url="$cur_dir/${sample_name}.db";
       
       print $pbs "
 java -Dconfig.file=$cromwell_config_file \\
+  -Ddatabase.db.url=\"jdbc:hsqldb:file:${db_url};shutdown=true;hsqldb.tx=mvcc\" \\
+  -Dworkflow-options.revisit-attributes-on-failed-call-caching=true \\
+  -Dcall-caching.enabled=true \\
   -jar $cromwell_jar \\
   run $wdl_file $option \\
   --inputs $input_file \\
-  --options $input_option_file
+  --options $input_option_file \\
+  --metadata-output ${sample_name}.metadata.json
 ";
     }
 
