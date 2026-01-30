@@ -529,9 +529,9 @@ add_celltype<-function(obj, celltype_df, celltype_column){
   return(obj)
 }
 
-run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction="pca"){
+run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction="pca", algorithm=4){
   object <- FindNeighbors(object = object, reduction=reduction, dims=pca_dims, verbose=FALSE)
-  object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution)
+  object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution, algorithm=algorithm)
   return(object)
 }
 
@@ -2230,7 +2230,8 @@ sub_cluster<-function(subobj,
                      redo_fastmnn = FALSE,
                      thread=1,
                      detail_prefix=NULL,
-                     ignore_variable_genes=NULL){
+                     ignore_variable_genes=NULL,
+                     algorithm=4){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
     cur_npcs = n_half_cell
@@ -2353,7 +2354,8 @@ sub_cluster<-function(subobj,
   subobj<-FindClusters( object=subobj, 
                         random.seed=random.seed, 
                         resolution=resolutions, 
-                        verbose=FALSE)
+                        verbose=FALSE,
+                        algorithm=algorithm)
 
   if(do_umap){
     cat(key, "RunUMAP\n")
@@ -3015,7 +3017,8 @@ iterate_celltype<-function(obj,
                            essential_genes,
                            species="Hs",
                            reduction="pca",
-                           ignore_variable_genes=NULL){
+                           ignore_variable_genes=NULL,
+                           cluster_algorithm=4){
   meta = obj@meta.data
   
   assay=ifelse(by_sctransform, "SCT", "RNA")
@@ -3067,7 +3070,7 @@ iterate_celltype<-function(obj,
       subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
 
       cat(key, "FindClusters\n")
-      subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolution, verbose=FALSE)
+      subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolution, verbose=FALSE, algorithm=cluster_algorithm)
     }else{      
       if(reduction != "pca"){
         curreduction=reduction
