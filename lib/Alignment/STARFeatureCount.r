@@ -20,6 +20,8 @@ options(bitmapType='cairo')
 library(reshape2)
 library(ggplot2)
 
+fontsize_inch = theme_get()$text$size / 72
+
 if (parSampleFile3 != '') {
   draw_chromosome_count(parSampleFile3, outFile)
   if(exists('parSampleFile6')){
@@ -50,8 +52,6 @@ if (parSampleFile1 != '') {
   }
   
   write.csv(file=paste0(outputPrefix, ".details.csv"), final)
-
-  fontsize_inch = GeomLabel$default_aes$size * 0.0393701
   
   reads=final[c("Number of input reads", "Uniquely mapped reads number", "Number of reads mapped to multiple loci", "Number of reads mapped to too many loci"),]
   rownames(reads)=c("Total", "Unique", "Multiple1", "Multiple2")
