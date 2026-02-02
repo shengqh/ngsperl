@@ -358,8 +358,6 @@ sub getRNASeqConfig {
         } ## end else [ if ( $aligner eq "star")]
 
         $config = merge_hash_right_precedent( $config, $configAlignment );
-        push @$tasks, $aligner;
-
         $multiqc_depedents = $source_ref;
         if ( $def->{perform_umitools} ) {
           my $dedup_task   = $aligner . "_umitools_dedup";
@@ -1759,8 +1757,10 @@ fi
       }
 
       my $gsea_report_task = $gseaTaskName . "_report";
-      push( @report_files, $gsea_report_task, "gsea_files.csv" );
-      push( @report_names, "report_gsea" );
+      if($config->{$gsea_report_task}) {
+        push( @report_files, $gsea_report_task, "gsea_files.csv" );
+        push( @report_names, "report_gsea" );
+      }
 
       $hasFunctionalEnrichment = 1;
     } ## end if ( defined $gseaTaskName)
