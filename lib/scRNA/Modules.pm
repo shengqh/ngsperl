@@ -234,9 +234,6 @@ sub add_seurat_merge_object {
 sub add_seurat {
   my ( $config, $def, $summary, $target_dir, $seurat_rawdata, $essential_gene_task, $no_doublets, $is_preprocessed, $prefix, $qc_filter_config_file ) = @_;
 
-  my $seurat_task;
-  my $reduction;
-
   my @sample_names       = keys %{ $def->{files} };
   my $nsamples           = scalar(@sample_names);
   my $by_integration     = $nsamples > 1 ? getValue( $def, "by_integration" ) : 0;
@@ -247,56 +244,54 @@ sub add_seurat {
   my $rmd_ext            = $by_sctransform ? ( $use_sctransform_v2 ? ".sct2" : ".sct" ) : "";
 
   my $preprocessing_rscript;
+  my $method = "";
   if ($by_integration) {
     if ( $def->{"integration_by_method_v5"} ) {
-      $reduction = $def->{"integration_by_method_v5"};
-      $reduction =~ s/Integration//g;
-      $reduction = lc($reduction);
-
-      $seurat_task           = "${prefix}seurat${sct_str}_" . $reduction;
-      $preprocessing_rscript = "../scRNA/seurat_integration_v5.r";
-      $rmd_ext               = $rmd_ext . "." . $reduction;
-    } ## end if ( $def->{"integration_by_method_v5"...})
+      $method = $def->{"integration_by_method_v5"};
+    }
     else {
       if ( !defined $def->{integration_by_method} ) {
         if ( getValue( $def, "integration_by_fastmnn", 1 ) ) {
-          $def->{integration_by_method} = "fastmnn";
+          $method = "FastMNNIntegration";
         }
         elsif ( getValue( $def, "integration_by_harmony", 0 ) ) {
-          $def->{integration_by_method} = "harmony";
+          $method = "HarmonyIntegration";
         }
         else {
-          $def->{integration_by_method} = "seurat";
+          $method = "CCAIntegration";
         }
       } ## end if ( !defined $def->{integration_by_method...})
-
-      if ( $def->{integration_by_method} eq "fastmnn" ) {
-        $seurat_task           = "${prefix}seurat${sct_str}_fastmnn";
-        $preprocessing_rscript = "../scRNA/seurat_fastmnn.r";
-        $reduction             = "fastmnn";
-        $rmd_ext               = $rmd_ext . ".fastmnn";
-      } ## end if ( $def->{integration_by_method...})
-      elsif ( $def->{integration_by_method} eq "harmony" ) {
-        $seurat_task           = "${prefix}seurat${sct_str}_harmony";
-        $preprocessing_rscript = "../scRNA/seurat_harmony.r";
-        $reduction             = "harmony";
-        $rmd_ext               = $rmd_ext . ".harmony";
-      } ## end elsif ( $def->{integration_by_method...})
       else {
-        $seurat_task           = "${prefix}seurat${sct_str}_integration";
-        $preprocessing_rscript = "../scRNA/seurat_integration.r";
-        $reduction             = "pca";
-        $rmd_ext               = $rmd_ext . ".integration";
-      } ## end else [ if ( $def->{integration_by_method...})]
+        if ( $def->{integration_by_method} eq "fastmnn" ) {
+          $method = "FastMNNIntegration";
+        }
+        elsif ( $def->{integration_by_method} eq "harmony" ) {
+          $method = "HarmonyIntegration";
+        }
+        else {
+          $method = "CCAIntegration";
+        }
+      } ## end else [ if ( !defined $def->{integration_by_method...})]
     } ## end else [ if ( $def->{"integration_by_method_v5"...})]
   } ## end if ($by_integration)
   else {
-    $seurat_task           = "${prefix}seurat${sct_str}_merge";
-    $preprocessing_rscript = "../scRNA/seurat_merge.r";
+    $method = "merge";
+  }
+
+  my $reduction = $method;
+  $method =~ s/Integration//g;
+  $method = lc($method);
+
+  my $seurat_task = "${prefix}seurat${sct_str}_" . $method;
+  $rmd_ext     = $rmd_ext . "." . $method . ".html";
+  if ( $method eq "merge" ) {
     $reduction             = "pca";
-    $rmd_ext               = $rmd_ext . ".merge";
-  } ## end else [ if ($by_integration) ]
-  $rmd_ext = $rmd_ext . ".html";
+    $preprocessing_rscript = "../scRNA/seurat_merge.r";
+  }
+  else {
+    $reduction             = $method;
+    $preprocessing_rscript = "../scRNA/seurat_integration_v5.r";
+  }
 
   $config->{$seurat_task} = {
     class                => "CQS::UniqueR",
@@ -347,12 +342,12 @@ sub add_seurat {
       "mem"      => getValue( $def, "seurat_mem" ),
     },
   };
+  push( @$summary, $seurat_task );
 
   if ( $def->{"batch_for_integration_groups"} ) {
     $config->{$seurat_task}{parameterSampleFile2} = $def->{"batch_for_integration_groups"};
   }
 
-  push( @$summary, $seurat_task );
   return ( $seurat_task, $reduction );
 } ## end sub add_seurat
 
@@ -1926,7 +1921,7 @@ sub addEdgeRTask {
         "msigdbr_species" => getValue( $def, "msigdbr_species" ),
       },
       parameterSampleFile2_ref => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
-      no_docker => getValue( $def, "fgsea_no_docker", 0 ),
+      no_docker                => getValue( $def, "fgsea_no_docker", 0 ),
       sh_direct                => 1,
       pbs                      => {
         "nodes"    => "1:ppn=1",
@@ -3833,7 +3828,10 @@ sub add_cellbender_v2 {
   push( @$tasks, $expect_cells_task );
 
   my $cellbender_task = $ratio_prefix . "_02_call";
-  my $cellbender_cpu  = getValue( $def, "cellbender_cpu", 12 );
+
+  my $cellbender_use_gpu = getValue( $def, "cellbender_use_gpu", 0 );
+  my $cellbender_cpu     = $cellbender_use_gpu ? 1 : getValue( $def, "cellbender_cpu", 12 );
+  my $cellbender_option  = $cellbender_use_gpu ? "--cuda" : "--cpu-threads $cellbender_cpu";
   $config->{$cellbender_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
     target_dir    => "${target_dir}/$cellbender_task",
@@ -3854,7 +3852,7 @@ else
 fi
 echo total_droplets_included=\$total_droplets_included
 
-cellbender remove-background --input __FILE2__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 --cpu-threads $cellbender_cpu
+cellbender remove-background --input __FILE2__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 $cellbender_option
 
 rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
 
@@ -3865,6 +3863,7 @@ rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
     output_to_same_folder    => 0,
     no_output                => 1,
     output_file_ext          => ".cellbender_filtered.h5,.cellbender.h5",
+    use_gpu                  => $cellbender_use_gpu,
     pbs                      => {
       "nodes"    => "1:ppn=$cellbender_cpu",
       "walltime" => "48",
@@ -4249,7 +4248,7 @@ sub add_sccomp {
       email             => getValue( $def, "email" ),
       affiliation       => $def->{"affiliation"},
       cell_group_column => getValue( $def, "sccomp_cell_group_column" ),
-      group_column => getValue( $def, "sccomp_group_column" ),
+      group_column      => getValue( $def, "sccomp_group_column" ),
     },
     parameterSampleFile3     => getValue( $def, "sccomp_groups" ),
     parameterSampleFile4     => getValue( $def, "sccomp_pairs" ),
