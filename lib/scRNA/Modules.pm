@@ -3827,6 +3827,8 @@ sub add_cellbender_v2 {
   my $cellbender_use_gpu = getValue( $def, "cellbender_use_gpu", 0 );
   my $cellbender_cpu     = $cellbender_use_gpu ? 1 : getValue( $def, "cellbender_cpu", 12 );
   my $cellbender_option  = $cellbender_use_gpu ? "--cuda" : "--cpu-threads $cellbender_cpu";
+  my $sh_direct          = $cellbender_use_gpu ? 1 : 0;
+
   $config->{$cellbender_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
     target_dir    => "${target_dir}/$cellbender_task",
@@ -3859,6 +3861,7 @@ rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
     no_output                => 1,
     output_file_ext          => ".cellbender_filtered.h5,.cellbender.h5",
     use_gpu                  => $cellbender_use_gpu,
+    sh_direct                => $sh_direct,
     pbs                      => {
       "nodes"    => "1:ppn=$cellbender_cpu",
       "walltime" => "48",
