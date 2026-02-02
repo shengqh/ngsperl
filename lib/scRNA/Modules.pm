@@ -3709,16 +3709,11 @@ sub add_cellbender_default {
     $raw_files_def = [ $cellbender_extract_gene_expression_task, ".raw_gex_feature_bc_matrix.h5" ];
   } ## end if ( $def->{cellbender_extract_gene_expression_h5...})
 
-  my $cellbender_cpu = getValue( $def, "cellbender_cpu", 12 );
-  my $cpu_gpu        = "--cpu-threads $cellbender_cpu";
-  my $sh_direct      = 0;
 
-  my $use_gpu = getValue( $def, "cellbender_use_gpu", 0 );
-  if ($use_gpu) {
-    $sh_direct      = 1;
-    $cellbender_cpu = 1;
-    $cpu_gpu        = "--cuda";
-  }
+  my $cellbender_use_gpu = getValue( $def, "cellbender_use_gpu", 0 );
+  my $cellbender_cpu     = $cellbender_use_gpu ? 1 : getValue( $def, "cellbender_cpu", 12 );
+  my $cellbender_option  = $cellbender_use_gpu ? "--cuda" : "--cpu-threads $cellbender_cpu";
+  my $sh_direct          = $cellbender_use_gpu ? 1 : 0;
 
   my $cellbender_task = $cellbender_prefix . "_01_call";
   $config->{$cellbender_task} = {
@@ -3727,7 +3722,7 @@ sub add_cellbender_default {
     program       => "",
     check_program => 0,
     option        => "
-cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 $cpu_gpu
+cellbender remove-background --input __FILE__ --output __NAME__.cellbender.h5 --checkpoint-mins 100000 $cellbender_option
 
 rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
 
@@ -3737,7 +3732,7 @@ rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
     output_to_same_folder    => 0,
     no_output                => 1,
     output_file_ext          => ".cellbender_filtered.h5,.cellbender.h5",
-    use_gpu                  => $use_gpu,
+    use_gpu                  => $cellbender_use_gpu,
     sh_direct                => $sh_direct,
     pbs                      => {
       "nodes"    => "1:ppn=$cellbender_cpu",
