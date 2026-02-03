@@ -54,6 +54,7 @@ sub perform {
 
     my $final_file = $gather_name . ".bam";
     my $final_index = $gather_name . ".bai";
+    my $final_expected_index = $gather_name . ".bam.bai";
 
     print $sh "
 if [[ ! -s $final_file ]]; then
@@ -78,6 +79,7 @@ if [[ \$status -ne 0 ]]; then
 else
   touch $final_file.succeed
   rm -f $final_file.failed
+  mv $final_index $final_expected_index
 fi
 ";
     
