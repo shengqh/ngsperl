@@ -63,8 +63,10 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command );
 
+    my $other_exts = $sample_files[0] =~ /.cram$/ ? [".crai"] : [".bai"];
+
     my $localized_files = [];
-    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, [".bai"])};
+    @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files, $other_exts)};
     my $sampleFile    = $sample_files[0];
 
     my $cur_option;
