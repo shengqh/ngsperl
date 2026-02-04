@@ -458,6 +458,16 @@ sub localize_files {
       $other_exts = \@unique_words;
     }
 
+    if($sample_files->[0] =~ /.cram$/){
+      if(defined $other_exts){
+        push(@$other_exts, ".crai");
+      }else{
+        $other_exts = [".crai"];
+      }
+      my @unique_words = uniq @$other_exts;
+      $other_exts = \@unique_words;
+    }
+
     my $result = [];
     print $pbs "
 echo localize start at `date`
