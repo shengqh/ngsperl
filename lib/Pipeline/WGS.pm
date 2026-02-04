@@ -174,9 +174,6 @@ sub add_bam_recalibration {
 
   my $to_cram = getValue($def, "GatherSortedBamFiles_cram", 0);
 
-  my $bam_suffix = $to_cram ? ".cram": ".bam";
-  my $bam_index_suffix = $to_cram ? ".cram.crai": ".bai";
-
   my $bam_recalibration = {
     BaseRecalibratorScatter => {
       class             => "GATK4::BaseRecalibratorScatter",
@@ -258,11 +255,10 @@ sub add_bam_recalibration {
       check_program => 0,
       source_ref => "GatherSortedBamFiles",
       option => "
-echo sort_bam_to_cram=`date`
-samtools sort -m 5G \\
-  --output-fmt CRAM \\
+echo bam_to_cram=`date`
+samtools view -C \\
   --reference $ref_fasta \\
-  --threads 8 \\
+  --threads 16 \\
   --write-index \\
   -o tmp.__OUTPUT__ __FILE__
 
@@ -284,7 +280,7 @@ fi
       use_tmp_folder => 0,
       sh_direct          => 0,
       pbs                => {
-        "nodes"     => "1:ppn=8",
+        "nodes"     => "1:ppn=16",
         "walltime"  => "24",
         "mem"       => "40gb"
       },
@@ -325,7 +321,7 @@ sub add_recalibrated_bam_to_gvcf {
       sh_direct         => 0,
       pbs               => {
         "nodes"    => "1:ppn=8",
-        "walltime" => "24",
+        "walltime" => "4",
         "mem"      => "40gb"
       },
     },
