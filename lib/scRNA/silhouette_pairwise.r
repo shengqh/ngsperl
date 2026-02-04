@@ -75,7 +75,7 @@ if(length(subset_indices) < max_cells) {
   sil = rbind(sil_i, sil_j)
 }
 
-sil_csv=paste0(outFile, ".", i, "_", j, ".silhouetee.csv")
+sil_csv=paste0(outFile, ".", i, "_", j, ".silhouette.csv")
 cat("Saving silhouette to:", sil_csv, "\n")
 write.csv(sil, sil_csv, row.names=TRUE, quote=FALSE)
 

@@ -1,26 +1,20 @@
-rm(list=ls())
+rm(list=ls()) 
 outFile='Aorta_Progeria'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/20260120_silhouetee_pairwise/silhouette_pairwise_prepare_data/result/Aorta_Progeria.obj_data.rds'
+parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/20260203_silhouette_pairwise/silhouette_pairwise_prepare_data/result/Aorta_Progeria.obj_data.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/20260120_silhouetee_pairwise/silhouette_pairwise_merge/result')
+setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/20260203_silhouette_pairwise/silhouette_pairwise_merge/result')
 
 ### Parameter setting end ###
 
 library(data.table)
 
 file_tbl=read.table(parSampleFile1, header=FALSE, sep="\t")
-
-for(cur_file in file_tbl$V1){
-  if(!file.exists(cur_file)) {
-    stop(paste0("File does not exist:", cur_file, "\n"))
-  }
-}
 
 obj_data_lst=readRDS(parFile1)
 cluster=obj_data_lst$clusters
@@ -32,6 +26,14 @@ rownames(sil.data)=rownames(coords)
 cur_file=file_tbl$V1[2]
 for(cur_file in file_tbl$V1){
   cat("Reading silhouette file:", cur_file, "\n")
+  if(!file.exists(cur_file)) {
+    old_file=gsub("silhouette.csv$", "silhouetee.csv", cur_file)
+    if(file.exists(old_file)){
+      cur_file=old_file
+    }else{
+      stop(paste0("File does not exist:", cur_file, "\n"))
+    }
+  }
   sil=data.frame(fread(cur_file), row.names=1)
 
   #combine sil with sil.data only if the sil_width in sil less than sil_width in sil.data
@@ -49,5 +51,6 @@ for(cur_file in file_tbl$V1){
 }
 
 sil.data$closest <- factor(ifelse(sil.data$sil_width > 0, sil.data$cluster, sil.data$neighbor))
-sil.data_rds <- paste0(outFile, ".silhouetee.rds")
+sil.data_rds <- paste0(outFile, ".silhouette.rds")
 saveRDS(sil.data, sil.data_rds)
+
