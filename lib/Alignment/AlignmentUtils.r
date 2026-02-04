@@ -53,9 +53,13 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA, remov
     subdata=subdata[subdata$Chrom != '*',]
     subdata$Sample=filename
 
-    chrdata=subdata[str_length(subdata$Chrom) < 6,]
-    mediancount<-median(chrdata$Reads)
-    sdata<-subdata[str_length(subdata$Chrom) < 6 | subdata$Reads > mediancount,]
+    if(all(grepl("^NC_", subdata$Chrom) | grepl("^NW_", subdata$Chrom))){
+      sdata=subdata[grepl("^NC_", subdata$Chrom),]
+    }else{
+      chrdata=subdata[str_length(subdata$Chrom) < 6,]
+      mediancount<-median(chrdata$Reads)
+      sdata<-subdata[str_length(subdata$Chrom) < 6 | subdata$Reads > mediancount,]
+    }
     all_chroms<-c(all_chroms, sdata$Chrom)
     final=rbind(final, subdata)
   }
@@ -81,12 +85,17 @@ draw_chromosome_count<-function(listFile, outFilePrefix, rg_name_regex=NA, remov
     write.csv(file=paste0(chromosomeFilePrefix, ".csv"), final, row.names=F)
   }
 
-  chroms=paste0("chr", c(1:22,'X','Y','M', 'MT'))
-  if(!any(all_chroms %in% chroms)){
-    chroms=paste0("", c(1:22,'X','Y','M', 'MT'))
+  if(!all(grepl("^NC_", all_chroms))){
+    #reorder chromosomes
+    chroms=paste0("chr", c(1:22,'X','Y','M', 'MT'))
+    if(!any(all_chroms %in% chroms)){
+      chroms=paste0("", c(1:22,'X','Y','M', 'MT'))
+    }
+    chroms=chroms[chroms %in% all_chroms]
+    chroms<-c(chroms, all_chroms[!(all_chroms %in% chroms)])
+  }else{
+    chroms=sort(all_chroms)
   }
-  chroms=chroms[chroms %in% all_chroms]
-  chroms<-c(chroms, all_chroms[!(all_chroms %in% chroms)])
 
   fc<-reshape2::dcast(final, "Sample ~ Chrom", value.var="Reads", fill=0)
   final<-reshape2::melt(fc, id="Sample")
