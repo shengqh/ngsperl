@@ -1203,11 +1203,19 @@ sub addCellRangerMulti {
     $job_arg = "--jobmode=$jobmode";
   }
 
-  my $csv_files = writeCellRangerMultiConig( $def, $files_name, $target_dir, $config_template );
+  my $cpu = $jobmode && $jobmode =~ /slurm/ ? 1 : getValue( $def, "cellranger_multi_cpu", 8 );
+  my $mem = $jobmode && $jobmode =~ /slurm/ ? "10gb" : getValue( $def, "cellranger_multi_mem", "40gb" );
+
+  my $csv_files;
+  if($def->{is_files_config}) {
+    $csv_files = $def->{files};
+  } else {
+    $csv_files = writeCellRangerMultiConig( $def, $files_name, $target_dir, $config_template );
+  }
 
   my $cellranger_option = getValue( $def, "cellranger_option", "" );
 
-  my $sh_direct = $job_arg =~ /slurm/;
+  #my $sh_direct = $job_arg =~ /slurm/;
   $config->{$task_name} = {
     class         => "CQS::ProgramWrapperOneToOne",
     target_dir    => "${target_dir}/$task_name",
@@ -1244,11 +1252,11 @@ fi
     samplename_in_result     => 1,
     can_result_be_empty_file => 0,
     no_output                => 1,
-    sh_direct                => $sh_direct,
+    sh_direct                => 0,
     pbs                      => {
-      "nodes"    => "1:ppn=" . getValue( $def, "cellranger_count_cpu", 8 ),
+      "nodes"    => "1:ppn=" . $cpu,
       "walltime" => getValue( $def, "cellranger_count_walltime", 48 ),
-      "mem"      => getValue( $def, "cellranger_count_mem",      "40gb" ),
+      "mem"      => $mem,
     },
   };
 
@@ -1930,35 +1938,6 @@ sub addEdgeRTask {
       },
     };
     push( @$summary, $fgsea_task );
-
-    my $gsea_report = $fgsea_task . "_report";
-    $config->{$gsea_report} = {
-      class                      => "CQS::UniqueR",
-      perform                    => 1,
-      target_dir                 => $target_dir . "/" . getNextFolderIndex($def) . $gsea_report,
-      rtemplate                  => "GSEAReport.R",
-      rReportTemplate            => "GSEAReport.Rmd;../Pipeline/Pipeline.R;reportFunctions.R",
-      run_rmd_independent        => 1,
-      rmd_ext                    => "${edgeR_suffix}.gsea.html",
-      parameterSampleFile1_ref   => [$fgsea_task],
-      parameterSampleFile1_names => ["gsea"],
-      parameterSampleFile2       => {
-        "email"        => getValue( $def, "email" ),
-        "affiliation"  => $def->{"affiliation"},
-        "task_name"    => getValue( $def, "task_name" ),
-        "edgeR_suffix" => $edgeR_suffix,
-      },
-      remove_empty_parameter => 1,
-      output_ext             => "gsea_files.csv",
-      samplename_in_result   => 0,
-      sh_direct              => 1,
-      pbs                    => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "1",
-        "mem"      => "10gb"
-      },
-    };
-    push( @$summary, $gsea_report );
   } ## end if ( getValue( $def, "perform_fgsea"...))
 
   return ($edgeRtaskname);
