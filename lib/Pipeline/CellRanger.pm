@@ -58,16 +58,19 @@ sub getConfig {
 
   my $count_task_name;
 
-  if(defined $def->{multi_files} && getValue($def, "cellranger_multi_mode", 1)){
+  if(getValue($def, "cellranger_multi_mode", 1) && (defined $def->{multi_files} || $def->{is_files_config})){
     my $multi_jobmode = getValue($def, "multi_jobmode", "local");
     $count_task_name = "multi_${multi_jobmode}";
+
+    my $filenames_ref = $def->{is_files_config} ? undef : "multi_files";
+    my $csv_config = $def->{is_files_config} ? undef : getValue($def, "csv_config");
     addCellRangerMulti($config, 
       $def, 
       $summary, 
       $target_dir, 
       $count_task_name, 
-      "multi_files", 
-      getValue($def, "csv_config"),
+      $filenames_ref, 
+      $csv_config,
       $multi_jobmode);  
   }
 
