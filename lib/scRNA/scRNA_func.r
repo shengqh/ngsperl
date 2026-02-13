@@ -1262,10 +1262,10 @@ find_number_of_reduction<-function(obj, reduction="pca"){
 }
 
 get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
-  dd=MyGetAssayData(SCLC, assay=assay, slot="data")
+  dd=GetAssayData(SCLC, assay=assay, layer="data")
   dobj=CreateSeuratObject(counts=dd)
-  dobj$seurat_clusters=SCLC[[cluster_name]]
-  result<-AverageExpression(dobj, slot="counts", group.by="seurat_clusters" )[[1]]
+  dobj@meta.data$seurat_clusters=as.character(unlist(SCLC[[cluster_name]]))
+  result<-AverageExpression(dobj, layer="counts", group.by="seurat_clusters" )[[1]]
 
   cnames = unique(dobj$seurat_clusters)
   cnames = cnames[order(cnames)]

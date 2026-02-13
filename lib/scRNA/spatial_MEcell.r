@@ -41,7 +41,7 @@ if(grepl("\\.rds$", tolower(data_dir))) {
   object <- readRDS(data_dir)
   DefaultAssay(object) <- assay
 } else {
-  log_info(paste0("Loading 10X Spatial data from:", data_dir, "...\n"))
+  log_info(paste0("Loading 10X Spatial data from: ", data_dir, "...\n"))
   object <- Seurat::Load10X_Spatial(bin.size = bin.size, data.dir = data_dir, slice = 'slice1')
 }
 
@@ -52,7 +52,7 @@ if(is_polygons){
   object <- subset(object, subset = nCount_Spatial.008um >= min_umi)
 }
 
-log_info(paste0("There are", nrow(object), "genes and", ncol(object), "spots\n"))
+log_info(paste0("There are ", nrow(object), " genes and ", ncol(object), " spots\n"))
 
 log_info("Normalizing data")
 object <- NormalizeData(object)
@@ -71,5 +71,14 @@ object <- MEcell(object, usepca=TRUE)
 
 log_info(paste0("Save Seurat object with MEcell results to ", outFile, ".MEcell.rds"))
 saveRDS(object, file=paste0(outFile, ".MEcell.rds"))
+
+mtx_file = paste0(outFile, ".MEcell.mtx")
+log_info(paste0("Save MEcell to ", mtx_file, ".gz ..."))
+mecell = object$MEcell
+sparse_mtx = as(mecell, "dgCMatrix")
+ignored = writeMM(obj = sparse_mtx, file = mtx_file)
+system(paste0("gzip -f ", mtx_file))
+
+writeLines(rownames(mecell), paste0(outFile, ".MEcell.cells.txt"))
 
 log_info("Done.")

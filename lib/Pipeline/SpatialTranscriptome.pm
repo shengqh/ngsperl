@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-package Pipeline::spatialTranscriptome;
+package Pipeline::SpatialTranscriptome;
 
 use strict;
 use warnings;
@@ -95,6 +95,42 @@ sub getSpatialTranscriptome {
   } ## end if ( defined $def->{raw_spaceranger_metrics...})
 
   if ( $def->{perform_VisiumHD} ) {
+    my $VisiumHD_image_features_task = undef;
+    if ( $def->{extract_visiumhd_image_features} ) {
+      $VisiumHD_image_features_task = "VisiumHD_cell_image_features";
+
+      my $image_features_script = dirname(__FILE__) . "/../scRNA/extract_visiumhd_image_features.py";
+      $config->{$VisiumHD_image_features_task} = {
+        class         => "CQS::ProgramWrapperOneToOne",
+        perform       => 1,
+        target_dir    => "${target_dir}/$VisiumHD_image_features_task",
+        program       => "",
+        check_program => 0,
+        option        => "
+python3 $image_features_script \\
+  --cell_geojson '__FILE__' \\
+  --nucleus_geojson '__FILE2__' \\
+  --scales '__FILE3__' \\
+  --image '__FILE4__' \\
+  --output '__NAME__.resnet_features.parquet' 
+",
+        parameterSampleFile1 => getValue($def, "cell_geojson_files"),
+        parameterSampleFile2 => getValue($def, "nucleus_geojson_files"),
+        parameterSampleFile3 => getValue($def, "scales_files"),
+        parameterSampleFile4 => getValue($def, "image_files"),
+        output_ext               => ".resnet_features.parquet",
+        docker_prefix            => "visiumhd_",
+        no_output                => 1,
+        sh_direct                => 0,
+        pbs                      => {
+          "nodes"    => "1:ppn=4",
+          "walltime" => "10:00:00",
+          "mem"      => "80gb"
+        },
+      };
+      push( @$tasks, $VisiumHD_image_features_task );
+    } ## end if ( $def->{extract_visiumhd_image_features...})
+
     my $bin_size       = getValue( $def, "bin_size", "8,polygons" );
     my $bin_size_label = $bin_size;
     $bin_size_label =~ s/,/_/;
@@ -112,10 +148,13 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
 ",
       parameterSampleFile1_ref => "files",
       parameterSampleFile2     => {
-        "email"       => getValue( $def, "email" ),
-        "affiliation" => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-        "Mtpattern"   => "^MT-|^Mt-|^mt-",
-        "bin_size"    => $bin_size,
+        "email"           => getValue( $def, "email" ),
+        "affiliation"     => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+        "Mtpattern"       => "^MT-|^Mt-|^mt-",
+        "bin_size"        => $bin_size,
+        "nCount_cutoff"   => getValue( $def, "nCount_cutoff" ),
+        "nFeature_cutoff" => getValue( $def, "nFeature_cutoff" ),
+        "mt_cutoff"       => getValue( $def, "mt_cutoff" ),
       },
       no_prefix             => 1,
       sh_direct             => 0,
@@ -158,6 +197,41 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
     };
     push( @$tasks, $qc_summary_task );
 
+    my $filter_task = "VisiumHD_filter_cellonly";
+    $config->{$filter_task} = {
+      class           => "CQS::IndividualRmd",
+      target_dir      => "$target_dir/$filter_task",
+      perform         => 1,
+      rReportTemplate => "../scRNA/VisiumHD_filter.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_plotting_functions.R",
+      option          => "
+
+Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.Rmd', output_file='__OUTPUT__')\"
+
+",
+      parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+      parameterSampleFile2     => {
+        "email"           => getValue( $def, "email" ),
+        "affiliation"     => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+        "nCount_cutoff"   => getValue( $def, "nCount_cutoff" ),
+        "nFeature_cutoff" => getValue( $def, "nFeature_cutoff" ),
+        "mt_cutoff"       => getValue( $def, "mt_cutoff" ),
+        "bin_size"        => "Spatial.Polygons",
+      },
+      no_prefix             => 1,
+      sh_direct             => 0,
+      no_docker             => getValue( $def, "no_docker", 0 ),
+      output_to_same_folder => 0,
+      output_file_prefix    => ".filtered.html",
+      output_ext            => ".filtered.html",
+      output_other_ext      => ".filtered.rds",
+      pbs                   => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "24",
+        "mem"      => "40gb"
+      }
+    };
+    push( @$tasks, $filter_task );
+
     my $spagene_task = undef;
     if ( $def->{perform_SpaGene} ) {
       $spagene_task = "SpaGene";
@@ -167,7 +241,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
         perform                  => 1,
         option                   => "",
         rtemplate                => "reportFunctions.R,../scRNA/SpaGene.r",
-        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile1_ref => [ $filter_task, ".rds" ],
         parameterSampleFile2     => {
           "email"         => getValue( $def, "email" ),
           "affiliation"   => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
@@ -191,7 +265,9 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
       my $rctd_tasks = {};
       # We cannot set RCTD too many thread. It is very easy to get error in cluster.
       my $RCTD_thread = getValue( $def, "RCTD_thread", 8 );
-      my $assays      = [ 'Spatial.Polygons', 'Spatial.008um' ];
+      #my $assays      = [ 'Spatial.Polygons', 'Spatial.008um' ];
+      # we will focus on Polygons only
+      my $assays = ['Spatial.Polygons'];
       for my $assay ( @{$assays} ) {
         my $rctd_task = "RCTD_$assay";
         if ( $assay eq 'Spatial.Polygons' ) {
@@ -203,7 +279,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
           perform                  => 1,
           option                   => "",
           rtemplate                => "reportFunctions.R,../scRNA/Deconvolution_functions.R,../scRNA/Deconvolution_RCTD_obj.r",
-          parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+          parameterSampleFile1_ref => [ $filter_task, ".rds" ],
           parameterSampleFile2     => {
             "assay"       => $assay,
             "RCTD_thread" => $RCTD_thread,
@@ -236,16 +312,18 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
           email       => getValue( $def, "email" ),
           affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
         },
-        parameterSampleFile3_ref => [ $rctd_tasks->{'Spatial.008um'}, ".RCTD.obj.rds" ],
-        output_ext               => ".RCTD_visualization.html",
-        sh_direct                => 0,
-        no_docker                => getValue( $def, "no_docker", 0 ),
-        pbs                      => {
+        output_ext => ".RCTD_visualization.html",
+        sh_direct  => 0,
+        no_docker  => getValue( $def, "no_docker", 0 ),
+        pbs        => {
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
           "mem"      => "40gb"
         }
       };
+      if ( $rctd_tasks->{'Spatial.008um'} ) {
+        $config->{$vis_task}->{parameterSampleFile3_ref} = [ $rctd_tasks->{'Spatial.008um'}, ".RCTD.obj.rds" ];
+      }
       push( @$tasks, $vis_task );
 
       my $vis_summary_task = "${vis_task}_summary";
@@ -285,7 +363,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
         perform                  => 1,
         option                   => "",
         rtemplate                => "../CQS/reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/spatial_azimuth.r",
-        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile1_ref => [ $filter_task, ".rds" ],
         parameterSampleFile2     => {
           task_name       => getValue( $def, "task_name" ),
           email           => getValue( $def, "email" ),
@@ -318,7 +396,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
         perform                  => 1,
         option                   => "",
         rtemplate                => "../CQS/reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/SingleR.r",
-        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile1_ref => [ $filter_task, ".rds" ],
         parameterSampleFile2     => {
           task_name       => getValue( $def, "task_name" ),
           email           => getValue( $def, "email" ),
@@ -351,7 +429,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
         perform                  => 1,
         option                   => "",
         rtemplate                => "../CQS/reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
-        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile1_ref => [ $filter_task, ".rds" ],
         parameterSampleFile2     => {
           task_name       => getValue( $def, "task_name" ),
           email           => getValue( $def, "email" ),
@@ -366,9 +444,9 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
           by_sctransform  => 0,
         },
         sh_direct     => 0,
-        docker_prefix => "singleR_",
+        docker_prefix => "signacX_",
         no_docker     => 0,
-        output_ext    => ".meta.rds",
+        output_ext    => ".SignacX.rds",
         pbs           => {
           "nodes"    => "1:ppn=1",
           "walltime" => "24",
@@ -386,7 +464,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
         perform                  => 1,
         option                   => "",
         rtemplate                => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell.r",
-        parameterSampleFile1_ref => [ $qc_task, ".rds" ],
+        parameterSampleFile1_ref => [ $filter_task, ".rds" ],
         parameterSampleFile2     => {
           task_name     => getValue( $def, "task_name" ),
           email         => getValue( $def, "email" ),
@@ -394,16 +472,43 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
           assay         => "Spatial.Polygons",
           nCount_cutoff => getValue( $def, "nCount_cutoff" ),
         },
-        sh_direct       => 0,
-        no_docker       => 0,
-        output_file_ext => ".MEcell.rds",
-        pbs             => {
+        sh_direct        => 0,
+        no_docker        => 0,
+        output_file_ext  => ".MEcell.rds",
+        output_other_ext => ".MEcell.mtx.gz",
+        pbs              => {
           "nodes"    => "1:ppn=1",
           "walltime" => "48",
           "mem"      => "40gb"
         }
       };
       push( @$tasks, $MEcell_task );
+
+      my $MEcell_umap_task = "MEcell_umap";
+      $config->{$MEcell_umap_task} = {
+        class                    => "CQS::IndividualR",
+        target_dir               => "$target_dir/$MEcell_umap_task",
+        perform                  => 1,
+        option                   => "",
+        rtemplate                => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell_umap_graph.r",
+        parameterSampleFile1_ref => [ $MEcell_task, ".rds" ],
+        parameterSampleFile2     => {
+          task_name   => getValue( $def, "task_name" ),
+          email       => getValue( $def, "email" ),
+          affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          assay       => "Spatial.Polygons",
+          min_neighbors => getValue( $def, "MEcell_umap_min_neighbors" ),
+        },
+        sh_direct       => 0,
+        no_docker       => 0,
+        output_file_ext => ".MEcell_umap.rds",
+        pbs             => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "48",
+          "mem"      => "40gb"
+        }
+      };
+      push( @$tasks, $MEcell_umap_task );
 
       my $MEcell_resolutions = getValue( $def, "MEcell_resolutions" );
       if ( !is_array($MEcell_resolutions) ) {
@@ -505,6 +610,8 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
         parameterSampleFile5_ref => $rctd_polygons_task,
         parameterSampleFile6_ref => $singleR_task,
         parameterSampleFile7_ref => $signacx_task,
+        parameterSampleFile8_ref => $MEcell_umap_task,
+        parameterSampleFile9_ref => $VisiumHD_image_features_task,
         no_prefix                => 1,
         sh_direct                => 0,
         no_docker                => getValue( $def, "no_docker", 0 ),

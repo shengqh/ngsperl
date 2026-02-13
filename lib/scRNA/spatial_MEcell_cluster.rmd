@@ -106,6 +106,7 @@ if(!file.exists(rds_file)){
 }
 
 obj = readRDS(rds_file)
+obj = UpdateSeuratObject(obj)
 
 bMiss=FALSE
 cfile = cluster_files[1]
@@ -166,6 +167,65 @@ if(hasSingleR){
   obj@meta.data[["SingleR"]] = singleR_meta[["SingleR_major_labels"]]
 }
 ```
+```{r}
+hasSignacX=file.exists('fileList7.txt')
+if(hasSignacX){
+  signacX_file_map=read_file_map("fileList7.txt", do_unlist=FALSE)
+  signacX_file=signacX_file_map[[sample_name]]
+  signacX_meta=readRDS(signacX_file)
+  stopifnot(all(rownames(signacX_meta) == rownames(obj@meta.data)))
+  obj@meta.data[["SignacX"]] = signacX_meta[["CellStates"]]
+}
+```
+
+```{r}
+hasUMAP=file.exists('fileList8.txt')
+if(hasUMAP){
+  umap_file_map=read_file_map("fileList8.txt", do_unlist=FALSE)
+  umap_file=umap_file_map[[sample_name]]
+  umap_results=readRDS(umap_file)
+  
+  missed_cells=setdiff(rownames(umap_results), rownames(obj@meta.data))
+  if(length(missed_cells) > 0) {
+    cat("\n\n<mark>There are", length(missed_cells), "cells discarded in UMAP due to number of neighbors limitation. Those cells will not be used in downstream analysis.</mark>\n\n" )
+    obj=subset(obj, cells=rownames(umap_results))
+  }else{
+    stopifnot(all(rownames(umap_results) == rownames(obj@meta.data)))
+  }
+
+  obj[["umap"]] <- CreateDimReducObject(
+    embeddings = as.matrix(umap_results),
+    key = "UMAP_",
+    assay = DefaultAssay(obj)
+  )
+}
+```
+
+
+```{r}
+hasImageFeatures=file.exists('fileList9.txt')
+if(hasImageFeatures){
+  library(arrow)
+  
+  image_file_map=read_file_map("fileList9.txt", do_unlist=FALSE)
+  image_file=image_file_map[[sample_name]]
+
+  obj@meta.data$cell_id=as.numeric(gsub("cellid_", "", gsub("\\-1","",colnames(obj))))
+
+  image_df <- read_parquet(image_file, 
+                            col_select = c("cell_id","cell_area_um2","cell_perimeter_um","cell_circularity","nucleus_area_um2","nucleus_perimeter_um","nucleus_circularity")) |>
+                            as.data.frame() |>
+                            dplyr::mutate(cell_id = as.numeric(cell_id))
+  rownames(image_df) <- image_df$cell_id
+
+  stopifnot(all(obj$cell_id %in% image_df$cell_id))
+
+  obj_image_df=image_df[as.character(obj$cell_id), ]
+  stopifnot(all(obj$cell_id == obj_image_df$cell_id))
+
+  obj@meta.data = cbind(obj@meta.data, obj_image_df[, -1])
+}
+```
 
 
 ```{r}
@@ -173,7 +233,7 @@ if(!bMiss){
   cat("\n# Save object\n")
   saveRDS(obj, paste0(sample_name, ".", assay, ".MEcell_clustered.rds"))
 }
-
+```
 
 ```{r}
 tissue_image = SpatialPlot( object = obj, 
@@ -195,6 +255,9 @@ if(hasAzimuth){
 }
 if(hasSingleR){
   validation_columns = c(validation_columns, "SingleR")
+}
+if(hasSignacX){
+  validation_columns = c(validation_columns, "SignacX")
 }
 ```
 
@@ -220,6 +283,7 @@ for(cur_res in resolutions){
     dplyr::pull(!!sym(cluster_col))
 
   filtered_obj = subset(obj, subset = !!sym(cluster_col) %in% cluster_perc_filtered)
+  filtered_obj@meta.data[[cluster_col]] = factor_by_count(filtered_obj@meta.data[[cluster_col]])
 
   cluster_cell_type=paste0(cluster_col, "_cell_type")
 
@@ -229,7 +293,6 @@ for(cur_res in resolutions){
   filtered_obj@meta.data = add_column_count(filtered_obj@meta.data, cluster_cell_type, cluster_cell_type_count_col, order_by_count=TRUE)
 
   cluster_colors = get_colors(current_cell_types=unique(filtered_obj@meta.data[[cluster_cell_type_count_col]]))
-
   Idents(filtered_obj) <- cluster_cell_type_count_col
 
   title=paste0(assay, ": MEcell res ", cur_res)
@@ -252,10 +315,23 @@ for(cur_res in resolutions){
     theme(plot.title = element_text(hjust = 0.5), 
           panel.border = element_rect(colour = "black", fill=NA, linewidth=1))     
 
+
   cluster_png = save_vis_png(plots, file_prefix, cluster_colors, cluster_cell_type_count_col, assay)
 
   cluster_content=paste0(cluster_content, "\n## Spatial clusters\n\n")
   cluster_content=paste0(cluster_content, getFigure(cluster_png))
+
+  if(hasUMAP) {
+    scolors=cluster_colors
+    names(scolors)=levels(filtered_obj@meta.data[[cluster_col]])
+    g = get_dim_plot(filtered_obj, reduction='umap', group.by=cluster_col, label.by=cluster_cell_type_count_col, scolors=scolors) + 
+      ggtitle("UMAP") + theme(plot.title = element_text(hjust = 0.5))
+    umap_png = paste0(file_prefix, ".umap.png")    
+    width=ifelse(length(cluster_colors) > 17, 12, 9)
+    ggsave(umap_png, g, width=width, height=6, units="in", dpi=300, bg="white")
+    cluster_content=paste0(cluster_content, "\n## UMAP\n\n")
+    cluster_content=paste0(cluster_content, getFigure(umap_png))
+  }
 
   g = ImageDimPlot( object = filtered_obj, 
                     fov = "slice1.polygons", 
@@ -316,6 +392,37 @@ for(cur_res in resolutions){
 
   cluster_content=paste0(cluster_content, "\n## Violin plots of nCount\n\n")
   cluster_content=paste0(cluster_content, getFigure(vln_png))
+
+  if(hasImageFeatures){
+    obj_image_df=filtered_obj@meta.data |>
+      dplyr::select(cell_id, !!sym(cluster_cell_type_count_col), cell_area_um2, cell_perimeter_um, cell_circularity, nucleus_area_um2, nucleus_perimeter_um, nucleus_circularity) |>
+      dplyr::mutate(area_ratio = nucleus_area_um2 / cell_area_um2,
+                    perimeter_ratio = nucleus_perimeter_um / cell_perimeter_um ) |>
+      tibble::rownames_to_column('cell') |>
+      dplyr::rename(Subcluster_count = !!sym(cluster_cell_type_count_col)) |>
+      dplyr::select(cell, cell_id, everything())
+
+    melt_df=reshape2::melt(obj_image_df, id.vars=c('cell', 'cell_id', 'Subcluster_count'))
+    melt_df$sample=sample_name
+    melt_df$variable=factor(melt_df$variable, levels=c("cell_area_um2", "nucleus_area_um2", "cell_perimeter_um", "nucleus_perimeter_um", "cell_circularity", "nucleus_circularity", "area_ratio", "perimeter_ratio"))
+
+    g=ggplot(melt_df, aes(x=Subcluster_count, y=value)) +
+      geom_boxplot(outliers=FALSE, width=0.5) +
+      facet_wrap(~variable, ncol=2, scales="free_y") +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5),
+            plot.title = element_text(hjust = 0.5),
+            axis.title.x = element_blank(),
+            axis.title.y = element_blank(),
+            legend.position="none",
+            strip.background = element_blank())
+
+    feature_png = paste0(file_prefix, ".image_features.png")
+    ggsave(feature_png, g, width=max(5, length(cluster_colors) * 0.8 + 2), height=8, units="in", dpi=300, bg="white", limitsize = FALSE)
+
+    cluster_content=paste0(cluster_content, "\n## Box plots of image features\n\n")
+    cluster_content=paste0(cluster_content, getFigure(feature_png))
+  }
 
   markers_rds = paste0(file_prefix, ".markers.rds")
   if(file.exists(markers_rds)){

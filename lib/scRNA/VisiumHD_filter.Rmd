@@ -1,0 +1,90 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r data, echo = FALSE}
+library('sf')
+library(Seurat)
+library(data.table)
+library(dplyr)
+library(ggplot2)
+
+source("reportFunctions.R")
+source("scRNA_func.r")
+source("spatial_plotting_functions.R")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+if(is.null(myoptions$affiliation)) {
+  myoptions$affiliation=gsub(".org|.edu", "", gsub(".*@", "", myoptions$email))
+}
+
+mt_cutoff=as.numeric(myoptions$mt_cutoff)
+nCount_cutoff=as.numeric(myoptions$nCount_cutoff)
+nFeature_cutoff=as.numeric(myoptions$nFeature_cutoff)
+
+obj_map<-read_file_map("fileList1.txt", do_unlist=FALSE)
+sample_name=names(obj_map)[1]
+obj_file=obj_map[[sample_name]]
+```
+
+---
+title: "VisiumHD data filtering - `r sample_name`"
+author:
+- name: `r myoptions$email`
+  affiliation: `r myoptions$affiliation`
+---
+
+# Build Seurat object
+
+Load data from `r obj_file`.
+
+```{r}
+rawobj = readRDS(obj_file)
+rawobj = UpdateSeuratObject(rawobj)
+```
+
+# Filter cells
+
+```{r}
+cell_obj=subset(rawobj, nCount_Spatial.Polygons > nCount_cutoff & nFeature_Spatial.Polygons > nFeature_cutoff & percent.mt < mt_cutoff)
+```
+
+There are `r ncol(cell_obj)` cells passed the QC filtering.
+
+# Save object 
+
+```{r}
+rds_file = paste0(sample_name, ".filtered.rds")
+saveRDS(cell_obj, rds_file)
+```
+
+# Session Info
+
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=F)
+```
