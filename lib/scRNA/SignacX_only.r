@@ -1,6 +1,6 @@
-rm(list=ls()) 
-sample_name='S01_ClassPTC_BRAF'
-outFile='S01_ClassPTC_BRAF'
+rm(list=ls())
+sample_name='S4'
+outFile='S4'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20251014_12904_VisiumHD_cellsegment/SignacX/result/S01_ClassPTC_BRAF')
+setwd('/nobackup/h_cqs/shengq2/pipelines/20260213_cosmx/result/SignacX/result/S4')
 
 ### Parameter setting end ###
 
@@ -105,20 +105,27 @@ if(is_seurat_5_plus(obj)){
   }else{
     log_info("Copying data from original object ...")
     newobj[[assay]]$data = MyGetAssayData(obj, assay, slot="data")
-    newobj[[assay]]$scale.data = MyGetAssayData(obj, assay, slot="scale.data")
+    scale.data = MyGetAssayData(obj, assay, slot="scale.data")
+    if(dim(scale.data)[1] == 0){
+      log_info("Scaling data ...")
+      newobj = ScaleData(newobj)
+    }else{
+      newobj[[assay]]$scale.data = scale.data
+    }
     newobj@reductions <- obj@reductions
   }
 
   # Copy other information
   newobj@meta.data=obj@meta.data
 
-  # Copy graphs, it is required for SignacX
-  newobj@graphs <- obj@graphs
-
   # If the original object doesn't have graphs, we need to find neighbors
-  if(length(newobj@graphs) == 0){
+  required_graphs=paste0(assay, "_nn")
+  if(!required_graphs %in% names(obj@graphs)){
     log_info("Finding neighbors for SignacX ...")
     newobj<-FindNeighbors(object = newobj, reduction=reduction, dims=pca_dims, verbose=FALSE)
+  }else{
+    # Copy graphs, it is required for SignacX
+    newobj@graphs <- obj@graphs
   }
   log_info("Running Signac ...")
   labels <- Signac(E=newobj, R=R)
@@ -137,6 +144,7 @@ saveRDS(celltypes, file=paste0(outFile, ".SignacX.rds"))
 
 ct_name="signacx_CellStates"
 obj <- AddMetaData(obj, metadata = celltypes$CellStates, col.name = ct_name)
+obj@meta.data$orig.ident=sample_name
 
 ct<-data.frame("SignacX"=obj$signacx_CellStates, "Sample"=obj$orig.ident)
 ct_tbl<-table(ct$SignacX,ct$Sample)

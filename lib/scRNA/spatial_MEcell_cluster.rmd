@@ -58,6 +58,13 @@ rds_file=file_map[[sample_name]]
 cluster_map=read_file_map("fileList3.txt", do_unlist=FALSE)
 cluster_files=cluster_map[[sample_name]]
 
+if(file.exists("fileList10.txt")) {
+  image_map=read_file_map("fileList10.txt", do_unlist=FALSE)
+  image_slide=image_map[[sample_name]]
+}else{
+  image_slide=NULL
+}
+
 detail_folder="details"
 if(!dir.exists(detail_folder)){
   dir.create(detail_folder)
@@ -140,8 +147,11 @@ if(hasAzimuth){
   azimuth_file_map=read_file_map("fileList4.txt", do_unlist=FALSE)
   azimuth_file=azimuth_file_map[[sample_name]]
   azimuth_meta=readRDS(azimuth_file)
-  stopifnot(all(rownames(azimuth_meta) == rownames(obj@meta.data)))
-  obj@meta.data[["Azimuth"]] = azimuth_meta$Azimuth_finest
+
+  stopifnot(all(rownames(azimuth_meta) %in% rownames(obj@meta.data)))
+
+  obj@meta.data[["Azimuth"]]="Unassigned"
+  obj@meta.data[rownames(azimuth_meta), "Azimuth"] = azimuth_meta$Azimuth_finest
 }
 ```
 
@@ -303,6 +313,7 @@ for(cur_res in resolutions){
                                                 assay=assay, 
                                                 group.by=cluster_cell_type_count_col, 
                                                 colors=cluster_colors, 
+                                                fov_name=image_slide,
                                                 title=title)
 
   pt.size.factor = ifelse(grepl("Polygons", assay), 0.5, 12)
@@ -314,7 +325,6 @@ for(cur_res in resolutions){
     ggtitle(label = title) + 
     theme(plot.title = element_text(hjust = 0.5), 
           panel.border = element_rect(colour = "black", fill=NA, linewidth=1))     
-
 
   cluster_png = save_vis_png(plots, file_prefix, cluster_colors, cluster_cell_type_count_col, assay)
 
@@ -334,7 +344,7 @@ for(cur_res in resolutions){
   }
 
   g = ImageDimPlot( object = filtered_obj, 
-                    fov = "slice1.polygons", 
+                    fov = image_slide, 
                     split.by = cluster_cell_type_count_col,
                     border.size = NA,
                     axes = F, 

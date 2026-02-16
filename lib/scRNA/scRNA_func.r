@@ -3993,16 +3993,22 @@ get_colors <- function(current_cell_types) {
   return(current_cell_type_colors)
 }
 
-get_image_dim_plot <- function(obj, assay, group.by, colors, title=assay) {
+get_image_dim_plot <- function(obj, assay, group.by, colors, fov_name=NULL, title=assay) {
   is_polygons = grepl("Polygons", assay)
-  if(is_polygons) {
+  if(grepl("Polygons", assay)) {
     fov_name <- "slice1.polygons"
     title <- "Cell Segmentation"
     adjust_func <- adjust_ImagePlot_Polygons
-  } else {
+  } else if(grepl("8um", assay)) {
     fov_name <- "slice1.008um"
     title <- "8uM Bin"
     adjust_func <- adjust_ImagePlot_Bins
+  } else{
+    if(is.null(fov_name)) {
+      stop(paste0("fov_name is required for assay ", assay))
+    }
+    title <- assay
+    adjust_func <- NULL
   }
 
   Idents(obj) <- group.by
@@ -4018,7 +4024,10 @@ get_image_dim_plot <- function(obj, assay, group.by, colors, title=assay) {
     theme(plot.title = element_text(hjust = 0.5), 
           panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
 
-  g = adjust_func(g)
+  if(!is.null(adjust_func)) {
+    g = adjust_func(g)
+  }
+
   return(g)
 }
 

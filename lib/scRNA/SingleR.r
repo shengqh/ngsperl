@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='ice_12h_5'
-outFile='ice_12h_5'
+sample_name='S4'
+outFile='S4'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,7 +9,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/ciara_shaver_projects/20251121_MP_13667_scRNA/raw_qc_sct2_SingleR/result/ice_12h_5')
+setwd('/nobackup/h_cqs/shengq2/pipelines/20260213_cosmx/SingleR/result/S4')
 
 ### Parameter setting end ###
 
@@ -72,6 +72,7 @@ if(is_polygons){
   DefaultAssay(obj) <- "Spatial.Polygons"
   obj <- subset(obj, subset = nCount_Spatial.Polygons >= min_umi)
 }
+DefaultAssay(obj) <- assay
 
 force=TRUE
 rds_file=paste0(outFile, ".SingleR.rds")
@@ -160,3 +161,4 @@ plotScoreHeatmap(slim_labels)
 dev.off()
 
 log_info("Done.\n")
+
