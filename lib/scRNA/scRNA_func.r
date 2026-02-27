@@ -1262,18 +1262,17 @@ find_number_of_reduction<-function(obj, reduction="pca"){
 }
 
 get_seurat_average_expression<-function(SCLC, cluster_name, assay="RNA"){
-  dd=GetAssayData(SCLC, assay=assay, layer="data")
-  dobj=CreateSeuratObject(counts=dd)
-  dobj@meta.data$seurat_clusters=as.character(unlist(SCLC[[cluster_name]]))
-  result<-AverageExpression(dobj, layer="counts", group.by="seurat_clusters" )[[1]]
+  data.return = AverageExpression(SCLC, assays=assay, group.by=cluster_name)[[1]]
+  data.return = data.frame(data.return)
 
-  cnames = unique(dobj$seurat_clusters)
-  cnames = cnames[order(cnames)]
-  colnames(result) <- cnames
+  data <- FetchData(object = SCLC, vars = cluster_name) |>
+    dplyr::rename(group = !!cluster_name)
 
-  rm(dd)
-  rm(dobj)
-  return(result)
+  data$group <- as.factor(data$group)
+  
+  colnames(data.return) <- levels(data$group)
+
+  return(data.return)
 }
 
 get_dot_plot<-function(obj, group.by, gene_groups, assay="RNA", rotate.title=TRUE, use_blue_yellow_red=TRUE, dot.scale=6, panel.spacing.lines=NULL){
@@ -3105,7 +3104,7 @@ iterate_celltype<-function(obj,
     cur_cts<-subobj[[previous_layer]]
 
     cluster<-"seurat_clusters"
-    data_norm=get_seurat_average_expression(subobj, cluster)
+    data_norm=get_seurat_average_expression(subobj, cluster, assay=assay)
     
     predict_celltype<-ORA_celltype(data_norm,cell_activity_database$cellType,cell_activity_database$weight)
     
