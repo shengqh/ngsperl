@@ -529,9 +529,19 @@ add_celltype<-function(obj, celltype_df, celltype_column){
   return(obj)
 }
 
+reset_seurat_clusters<-function(object, cluster_name){
+  if(min(as.numeric(object@meta.data[,cluster_name])) == 1){
+    object@meta.data[,cluster_name] <- as.numeric(object@meta.data[,cluster_name]) - 1
+    levels=sort(unique(object@meta.data[,cluster_name]))
+    object@meta.data[,cluster_name] <- factor(object@meta.data[,cluster_name], levels=levels)
+  }
+  return(object)
+}
+
 run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction="pca", algorithm=4){
   object <- FindNeighbors(object = object, reduction=reduction, dims=pca_dims, verbose=FALSE)
   object <- FindClusters(object=object, verbose=FALSE, random.seed=random.seed, resolution=resolution, algorithm=algorithm)
+  object <- reset_seurat_clusters(object, "seurat_clusters")
   return(object)
 }
 
@@ -3099,6 +3109,7 @@ iterate_celltype<-function(obj,
                             detail_prefix = curprefix,
                             ignore_variable_genes = ignore_variable_genes)
     }
+    subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
     
     cat(key, "Cell type annotation\n")
     cur_cts<-subobj[[previous_layer]]
@@ -4056,3 +4067,33 @@ save_vis_png <-function(plots, file_prefix, cur_cell_type_colors, cur_cell_type_
   ggsave(vis_png, g, width=4 * length(plots) + 2 * legend_ncol, height=4.5, dpi=300, units="in", bg="white")
   return(vis_png)
 }
+
+# Convert mouse gene symbols to human gene symbols
+mouse_symbol_to_human_symbol <- function(mouse_symbols) {
+  # install.packages(c("homologene", "AnnotationDbi"))
+  # BiocManager::install(c("org.Mm.eg.db","org.Hs.eg.db"))
+  library(homologene)
+  library(AnnotationDbi)
+  library(org.Mm.eg.db)
+  library(org.Hs.eg.db)
+
+  # Mouse SYMBOL -> Entrez
+  mm_entrez <- mapIds(org.Mm.eg.db, keys = mouse_symbols, keytype = "SYMBOL",
+                      column = "ENTREZID", multiVals = "first")
+
+  stopifnot(all(names(mm_entrez) %in% mouse_symbols))
+
+  # Mouse Entrez -> Human Entrez via homologene
+  hmap <- homologene(mm_entrez, inTax = 10090, outTax = 9606)  # mouse->human
+
+  fullmap = merge(data.frame(mm_symbol=names(mm_entrez), mm_ID=mm_entrez), hmap, by.y="10090_ID", by.x="mm_ID", all.x=TRUE)
+
+  mapped = fullmap |> dplyr::filter(!is.na(`9606_ID`))
+  
+  # De-duplicate to 1:1
+  orth <- mapped[!duplicated(mapped$mm_symbol) & !duplicated(mapped$`9606`), ]
+  mm2hs <- setNames(orth$`9606`, orth$`mm_symbol`)
+
+  return(mm2hs)
+}
+

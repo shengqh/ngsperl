@@ -484,7 +484,10 @@ preprocess<-function( SampleInfo,
     npcs=min(50, ndim)
     subobj <- RunPCA(subobj, assay=assay, features = var.genes, npcs=npcs)
     subobj <- FindNeighbors(subobj, dims = 1:ndim)
-    subobj <- FindClusters(subobj, resolution = resolution)
+    subobj <- FindClusters(subobj, resolution = resolution, algorithm = 4) # use leiden algorithm
+
+    #For leiden algorithm, the cluster number would be 1-based, we will convert it to 0-based
+    subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
 
     n.neighbors=min(30, ndim-1)
     subobj <- RunUMAP(subobj, dims = 1:ndim, n.neighbors=n.neighbors)

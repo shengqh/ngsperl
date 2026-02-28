@@ -542,12 +542,14 @@ for(pct in previous_celltypes){
     filelist = check_cell_type(subobj, "Azimuth", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
     validation_columns = c(validation_columns, "Azimuth")
   }
-   
+
   cluster = clusters[10]
   markers_map = list()
   for(cluster in clusters){
     cat("  ", cluster, "\n")
-    
+
+    subobj <- reset_seurat_clusters(subobj, cluster)
+
     Idents(subobj)<-cluster
     if(length(unique(Idents(subobj))) == 1){#only 1 cluster
       cat("    only one cluster, pass\n")
