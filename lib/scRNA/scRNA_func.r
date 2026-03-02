@@ -4057,3 +4057,29 @@ save_vis_png <-function(plots, file_prefix, cur_cell_type_colors, cur_cell_type_
   ggsave(vis_png, g, width=4 * length(plots) + 2 * legend_ncol, height=4.5, dpi=300, units="in", bg="white")
   return(vis_png)
 }
+
+add_arrows <- function(plot, label_x = "UMAP 1", label_y = "UMAP 2", length = 0.15) {
+  # 1. Extract the data and ranges from the existing plot
+  gb <- ggplot_build(plot)
+  xlims <- gb$layout$panel_params[[1]]$x.range
+  ylims <- gb$layout$panel_params[[1]]$y.range
+  
+  # 2. Calculate arrow endpoints (based on a % of the total range)
+  arrow_x_end <- xlims[1] + (diff(xlims) * length)
+  arrow_y_end <- ylims[1] + (diff(ylims) * length)
+  
+  # 3. Add the layers
+  plot +
+    theme_void() +
+    annotate("segment", x = xlims[1], xend = arrow_x_end, 
+             y = ylims[1], yend = ylims[1],
+             arrow = arrow(length = unit(0.2, "cm"), type = "closed"), color = "black") +
+    annotate("segment", x = xlims[1], xend = xlims[1], 
+             y = ylims[1], yend = arrow_y_end,
+             arrow = arrow(length = unit(0.2, "cm"), type = "closed"), color = "black") +
+    annotate("text", x = xlims[1] + (diff(xlims) * length/2), y = ylims[1], 
+             label = label_x, size = 3, vjust = 1.5) +
+    annotate("text", x = xlims[1] - 1.1, y = ylims[1] + (diff(ylims) * length/2), 
+             label = label_y, size = 3, angle = 90, vjust = 1.5) +
+    theme(plot.margin = margin(10, 10, 10, 10)) # Add padding so arrows aren't cut off
+}
