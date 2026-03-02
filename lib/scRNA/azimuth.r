@@ -56,7 +56,42 @@ if(!exists("obj")){
   obj=read_object_from_file_list(parSampleFile1)
 }
 
-obj <- RunAzimuth(query = obj, reference = Azimuth_ref)
+if(myoptions$species == "Mm") {
+  if(require('homologene')) {
+    cat("Source data is mouse, convert to human gene symbols\n")
+    mm2hs = mouse_symbol_to_human_symbol(rownames(obj))
+
+    # Rename and (optionally) collapse duplicates
+    common <- intersect(rownames(obj), names(mm2hs))
+
+    cat("Common genes: ", length(common), "\n")
+
+    # --- 0) Prep
+    library(Seurat)
+    library(Matrix)
+
+    mat <- GetAssayData(obj, layer = "counts")
+
+    # Determine which genes can be renamed
+    common <- intersect(rownames(mat), names(mm2hs))
+    mat <- mat[common, ]
+    rownames(mat) = mm2hs[common]
+
+    new_obj <- CreateSeuratObject(counts = mat)
+    # must add one more column to meta.data, otherwise, scTransform will fail.
+    new_obj <- AddMetaData(new_obj, metadata = "azimuth", col.name = "project")
+    new_obj <- SCTransform(new_obj, verbose = FALSE)
+
+    new_obj <- RunAzimuth(query = new_obj, reference = Azimuth_ref)
+    obj@meta.data <- cbind(obj@meta.data, new_obj@meta.data |> dplyr::select(-orig.ident, -project))
+    obj[["ref.umap"]] <- new_obj[["ref.umap"]]
+  }else{
+    cat("homologene is not installed, will not convert mouse symbols to human gene symbols, can use RNA assay only.\n")
+    obj <- RunAzimuth(query = obj, reference = Azimuth_ref, assay="RNA")
+  }
+} else {
+  obj <- RunAzimuth(query = obj, reference = Azimuth_ref)
+}
 
 anno_columns=grep('predicted.+\\d$', colnames(obj@meta.data), value=TRUE)
 azimuth_cols = c()

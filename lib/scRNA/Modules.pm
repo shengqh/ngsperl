@@ -887,8 +887,8 @@ sub add_azimuth {
     parameterSampleFile3 => $def->{Azimuth_ref_dict},
     output_file_ext      => ".azimuth.png;.azimuth.rds;.meta.rds",
     post_command         => "rm -rf .cache",
-    no_docker            => 0,
-    sh_direct            => 0,
+    no_docker            => getValue($def, "azimuth_no_docker", 0),
+    sh_direct            => getValue($def, "azimuth_sh_direct", 0),
     pbs                  => {
       "nodes"    => "1:ppn=1",
       "walltime" => getValue( $def, "Azimuth_walltime", "10" ),
