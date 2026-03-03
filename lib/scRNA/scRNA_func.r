@@ -530,8 +530,8 @@ add_celltype<-function(obj, celltype_df, celltype_column){
 }
 
 reset_seurat_clusters<-function(object, cluster_name){
-  if(min(as.numeric(object@meta.data[,cluster_name])) == 1){
-    object@meta.data[,cluster_name] <- as.numeric(object@meta.data[,cluster_name]) - 1
+  if(min(as.numeric(as.character(object@meta.data[,cluster_name]))) == 1){
+    object@meta.data[,cluster_name] <- as.numeric(as.character(object@meta.data[,cluster_name])) - 1
     levels=sort(unique(object@meta.data[,cluster_name]))
     object@meta.data[,cluster_name] <- factor(object@meta.data[,cluster_name], levels=levels)
   }
