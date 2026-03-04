@@ -282,7 +282,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
     my $RCTD_thread = getValue( $def, "RCTD_thread", 8 );
     #my $assays      = [ 'Spatial.Polygons', 'Spatial.008um' ];
     # we will focus on Polygons only
-    my $assays = ['Spatial.Polygons'];
+    my $assays = [$source_assay];
     for my $assay ( @{$assays} ) {
       my $rctd_task = "RCTD_$assay";
       if ( $assay eq 'Spatial.Polygons' ) {
@@ -322,7 +322,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       perform                  => 1,
       option                   => "",
       rReportTemplate          => "../scRNA/Deconvolution_RCTD_visualization.rmd,../scRNA/scRNA_func.r;../CQS/reportFunctions.R;../scRNA/Deconvolution_functions.R",
-      parameterSampleFile1_ref => [ $rctd_tasks->{'Spatial.Polygons'}, ".RCTD.obj.rds" ],
+      parameterSampleFile1_ref => [ $rctd_tasks->{$source_assay}, ".RCTD.obj.rds" ],
       parameterSampleFile2     => {
         email       => getValue( $def, "email" ),
         affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
