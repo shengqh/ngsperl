@@ -87,7 +87,11 @@ sub getSpatialTranscriptome {
   if ($def->{perform_cosmx}){
     $source_def = "files";
     $source_assay = "RNA";
-    $source_image_assay = getValue($def, "image_assay_dict");
+    if($def->{image_assay_dict}){
+      $source_image_assay = getValue($def, "image_assay_dict");
+    }else{
+      $source_image_assay = getValue($def, "image_assay", "slice1.RNA")
+    }
   }
 
   my $VisiumHD_image_features_task = undef;
