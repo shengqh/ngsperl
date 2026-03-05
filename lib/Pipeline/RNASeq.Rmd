@@ -49,6 +49,9 @@ rownames(files)<-files$V2
 file_map=split(files$V1, files$V2)
 
 hasFastqc<-any(grepl("fastqc_", rownames(files)))
+
+hasFastqLen<-any(grepl("fastq_len_", rownames(files)))
+
 hasFastqcPosttrim<-any(grepl("fastqc_post_trim_", rownames(files)))
 
 hasSTAR<-any(grepl("STAR_", rownames(files)))
@@ -176,7 +179,11 @@ if (any(gcSampleInd)) { #use this as cutoff to show GC distribution
 ```{r fastqc_raw_adapter_content,echo=FALSE,results='asis', eval = hasFastqc, fig.align="center", fig.cap=figRef("fastqc_raw_adapter_content", "Adapter content of sequencing reads", trunk.eval=file.exists(file_map$fastqc_raw_adapter_content))}
 check_and_include_graphics(file_map$fastqc_raw_adapter_content)
 ```
-  
+
+```{r hasFastqLen, eval=hasFastqLen, fig.align="center", fig.cap=figRef("fastqc_len_distribution", "The length distribution of sequencing reads", trunk.eval=file.exists(file_map$fastq_len_vis))}
+check_and_include_graphics(file_map$fastq_len_vis)
+```
+
 ```{r fastqc_post_trim_adapter_content,echo=FALSE,results='asis', eval = hasFastqcPosttrim, fig.align="center", fig.cap=figRef("fastqc_post_trim_adapter_content", "Adapter content of sequencing reads after cutadapt", trunk.eval=file.exists(file_map$fastqc_post_trim_adapter_content))}
 cat("\n\n## Trimmed reads\n\n")
 check_and_include_graphics(file_map$fastqc_post_trim_adapter_content)

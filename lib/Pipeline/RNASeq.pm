@@ -287,6 +287,69 @@ sub getRNASeqConfig {
         $count_table_column      = 4;
         $def->{perform_counting} = 0;
       } ## end if ( $aligner eq "salmon")
+      elsif ( $aligner eq "minimap2" ) {
+        my $ref_fasta = getValue($def, "fasta_file");
+        $config->{"fastq2fasta"} = {
+          class                 => "CQS::ProgramWrapperOneToOne",
+          perform               => 1,
+          target_dir            => "$target_dir/fastq2fasta",
+          interpretor           => "",
+          check_program         => 0,
+          program               => "",
+          option                => "
+module load seqkit/2.5.1
+
+seqkit fq2fa __FILE__ -o __NAME__.fasta.gz
+
+",
+          source_ref            => $source_ref,
+          no_output             => 1,
+          output_to_same_folder => 1, 
+          output_ext            => ".fasta.gz",
+          sh_direct             => 1,
+          use_tmp_folder        => 0,
+          no_docker => 1,
+          pbs                   => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "40gb"
+          },
+        };
+
+        $config->{"minimap2"} = {
+          class                 => "CQS::ProgramWrapperOneToOne",
+          perform               => 1,
+          target_dir            => "$target_dir/minimap2",
+          interpretor           => "",
+          check_program         => 0,
+          program               => "",
+          option                => "
+
+minimap2 -ax splice -uf -k14 -o __NAME__.sam $ref_fasta __FILE__
+
+samtools sort -o __NAME__.sorted.bam __NAME__.sam
+samtools index __NAME__.sorted.bam
+
+rm -f __NAME__.sam
+
+",
+          source_ref            => "fastq2fasta",
+          no_output             => 1,
+          output_to_same_folder => 1, 
+          output_ext            => ".sorted.bam",
+          sh_direct             => 1,
+          use_tmp_folder        => 0,
+          no_docker => 1,
+          pbs                   => {
+            "nodes"     => "1:ppn=1",
+            "walltime"  => "10",
+            "mem"       => "40gb"
+          },
+        };
+
+        $source_ref = [ "minimap2", ".sorted.bam\$" ];
+        push @$tasks, ( "fastq2fasta", "minimap2" );
+      }
       else {
         my $aligner_index;
         if ( $aligner eq "star" ) {
@@ -1578,6 +1641,11 @@ fi
       push( @report_files, "fastqc_raw_summary", ".FastQC.adapter.tsv.png" );
       push( @report_names, "fastqc_raw_per_base_sequence_quality", "fastqc_raw_per_sequence_gc_content", "fastqc_raw_adapter_content" );
     } ## end if ( defined $config->...)
+
+    if ( defined $config->{fastq_len_vis} ) {
+      push( @report_files, "fastq_len_vis", ".lengthDistribution.png" );
+      push( @report_names, "fastq_len_vis" );
+    }
 
     if ( defined $config->{fastqc_post_trim_summary} ) {
       push( @report_files, "fastqc_post_trim_summary", ".FastQC.baseQuality.tsv.png" );
