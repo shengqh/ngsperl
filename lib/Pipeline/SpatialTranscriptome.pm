@@ -83,12 +83,13 @@ sub getSpatialTranscriptome {
   my $source_def = undef;
   my $source_assay = undef;
   my $source_image_assay = undef;
+  my $source_image_assay_dict = undef;
 
   if ($def->{perform_cosmx}){
     $source_def = "files";
     $source_assay = "RNA";
     if($def->{image_assay_dict}){
-      $source_image_assay = getValue($def, "image_assay_dict");
+      $source_image_assay_dict = getValue($def, "image_assay_dict");
     }else{
       $source_image_assay = getValue($def, "image_assay", "slice1.RNA")
     }
@@ -580,10 +581,11 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
           species                => getValue( $def, "species" ),
           cluster_algorithm      => $cluster_algorithm,
           cluster_algorithm_name => $cluster_algorithm_name,
+          image_assay            => $source_image_assay,
         },
         parameterSampleFile3_ref => $azimuth_task,
         parameterSampleFile4_ref => $rctd_polygons_task,
-        parameterSampleFile5     => $source_image_assay,
+        parameterSampleFile5     => $source_image_assay_dict,
         no_prefix                => 1,
         sh_direct                => 0,
         no_docker                => getValue( $def, "no_docker", 0 ),
