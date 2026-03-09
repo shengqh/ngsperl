@@ -4094,6 +4094,7 @@ add_arrows <- function(plot, label_x = "UMAP 1", label_y = "UMAP 2", length = 0.
     theme(plot.margin = margin(10, 10, 10, 10)) # Add padding so arrows aren't cut off
 }
 
+
 get_data_type <- function(dataObj) {
   
   if (!inherits(dataObj, "Seurat")) {
@@ -4169,4 +4170,33 @@ get_data_type <- function(dataObj) {
   # ---------------------------------------------------------
   
   return("Unknown")
+}
+
+# Convert mouse gene symbols to human gene symbols
+mouse_symbol_to_human_symbol <- function(mouse_symbols) {
+  # install.packages(c("homologene", "AnnotationDbi"))
+  # BiocManager::install(c("org.Mm.eg.db","org.Hs.eg.db"))
+  library(homologene)
+  library(AnnotationDbi)
+  library(org.Mm.eg.db)
+  library(org.Hs.eg.db)
+
+  # Mouse SYMBOL -> Entrez
+  mm_entrez <- mapIds(org.Mm.eg.db, keys = mouse_symbols, keytype = "SYMBOL",
+                      column = "ENTREZID", multiVals = "first")
+
+  stopifnot(all(names(mm_entrez) %in% mouse_symbols))
+
+  # Mouse Entrez -> Human Entrez via homologene
+  hmap <- homologene(mm_entrez, inTax = 10090, outTax = 9606)  # mouse->human
+
+  fullmap = merge(data.frame(mm_symbol=names(mm_entrez), mm_ID=mm_entrez), hmap, by.y="10090_ID", by.x="mm_ID", all.x=TRUE)
+
+  mapped = fullmap |> dplyr::filter(!is.na(`9606_ID`))
+  
+  # De-duplicate to 1:1
+  orth <- mapped[!duplicated(mapped$mm_symbol) & !duplicated(mapped$`9606`), ]
+  mm2hs <- setNames(orth$`9606`, orth$`mm_symbol`)
+
+  return(mm2hs)
 }
