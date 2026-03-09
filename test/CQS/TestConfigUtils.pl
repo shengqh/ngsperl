@@ -726,4 +726,15 @@ is_deeply( $cov_map, $cov_expect );
         );
 }
 
+
+{
+  my $config = {
+    test => {
+      interval_list_file => "/nobackup/h_cqs/shengq2/program/ngsperl/test/CQS/sequence_grouping.txt",
+    }
+  };
+  my $map = get_interval_file_map($config, "test");
+  print(Dumper($map));
+}
+
 1;
