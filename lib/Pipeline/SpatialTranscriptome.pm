@@ -290,7 +290,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
     my $assays = [$source_assay];
     for my $assay ( @{$assays} ) {
       my $rctd_task = "RCTD_$assay";
-      if ( $assay eq 'Spatial.Polygons' ) {
+      if ( $assay eq 'Spatial.Polygons' or $assay eq 'RNA') {
         $rctd_polygons_task = $rctd_task;
       }
       $config->{$rctd_task} = {
@@ -467,7 +467,8 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       sh_direct     => 0,
       docker_prefix => "signacX_",
       no_docker     => 0,
-      output_ext    => ".SignacX.rds",
+      #output_ext    => ".SignacX.rds",
+      output_ext    => ".meta.rds",
       pbs           => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
