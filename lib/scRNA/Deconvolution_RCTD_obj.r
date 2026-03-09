@@ -32,7 +32,13 @@ RCTD_thread=as.numeric(myoptions$RCTD_thread)
 assay=myoptions$assay
 
 bin.size=ifelse(assay == "Spatial.Polygons", "polygons", 8)
-assay_slice=ifelse(assay == "Spatial.Polygons", "slice1.polygons", "slice1.008um")
+if (assay=="Spatial.Polygons") {
+  assay_slice="slice1.polygons"
+} else if (assay=="RNA") {
+  assay_slice="RNA"
+} else {
+  assay_slice="slice1.008um"
+}
 
 min_umi=100
 
@@ -55,11 +61,14 @@ if(grepl("\\.rds$", tolower(data_dir))) {
 }
 
 log_msg(paste0("Keep the spots with at least ", min_umi, " UMIs", data_dir), log_file = log_file)
-if(assay == "Spatial.Polygons"){
-  spatial_so <- subset(spatial_so, subset = nCount_Spatial.Polygons >= min_umi)
-} else {
-  spatial_so <- subset(spatial_so, subset = nCount_Spatial.008um >= min_umi)
-}
+#if(assay == "Spatial.Polygons"){
+#  spatial_so <- subset(spatial_so, subset = nCount_Spatial.Polygons >= min_umi)
+#} else {
+#  spatial_so <- subset(spatial_so, subset = nCount_Spatial.008um >= min_umi)
+#}
+nCount_col=paste0("nCount_", assay)
+keep_cells <- rownames(spatial_so@meta.data)[spatial_so[[nCount_col]] >= min_umi]
+spatial_so <- subset(spatial_so, cells = keep_cells)
 
 spatial_counts <- GetAssayData(spatial_so, assay=assay, layer="counts")
 
@@ -69,6 +78,7 @@ reference@counts=reference@counts[common_genes,]
 
 coords <- Seurat::GetTissueCoordinates(spatial_so)
 coords <- coords[,c("x","y")] # keep x and y only
+row.names(coords) <- colnames(spatial_so)
 
 nUMI_col=paste0("nCount_", assay)
 nUMI_df <- FetchData(spatial_so, vars=nUMI_col, cells=colnames(spatial_counts))

@@ -4015,7 +4015,7 @@ get_image_dim_plot <- function(obj, assay, group.by, colors, fov_name=NULL, titl
     adjust_func <- adjust_ImagePlot_Bins
   } else{
     if(is.null(fov_name)) {
-      stop(paste0("fov_name is required for assay ", assay))
+      warning(paste0("fov_name is required for assay ", assay,". Otherwise all fov will be plotted"))
     }
     title <- assay
     adjust_func <- NULL
@@ -4092,4 +4092,81 @@ add_arrows <- function(plot, label_x = "UMAP 1", label_y = "UMAP 2", length = 0.
     annotate("text", x = xlims[1] - 1.1, y = ylims[1] + (diff(ylims) * length/2), 
              label = label_y, size = 3, angle = 90, vjust = 1.5) +
     theme(plot.margin = margin(10, 10, 10, 10)) # Add padding so arrows aren't cut off
+}
+
+get_data_type <- function(dataObj) {
+  
+  if (!inherits(dataObj, "Seurat")) {
+    stop("Input must be a Seurat object")
+  }
+  
+  assays <- Assays(dataObj)
+  has_spatial_assay <- "Spatial" %in% assays
+  has_rna_assay <- "RNA" %in% assays
+  
+  # ---------------------------------------------------------
+  # 1. Check if spatial object
+  # ---------------------------------------------------------
+  if (length(Images(dataObj)) > 0 || has_spatial_assay) {
+    
+    # Try to detect Visium / VisiumHD
+    img <- tryCatch(dataObj@images[[1]], error = function(e) NULL)
+    
+    if (!is.null(img)) {
+      sf <- tryCatch(img@scale.factors, error = function(e) NULL)
+      
+      if (!is.null(sf)) {
+        
+        # Heuristic: VisiumHD typically has smaller spot diameter
+        # and higher resolution images
+        if (!is.null(sf$spot) && sf$spot < 50) {
+          return("VisiumHD")
+        } else {
+          return("Visium")
+        }
+      }
+    }
+    
+    # If spatial assay exists but no Visium structure → likely CosMx or other spatial
+    coords <- tryCatch(GetTissueCoordinates(dataObj), error = function(e) NULL)
+    
+    if (!is.null(coords)) {
+      
+      # CosMx often has cell-level segmentation (many irregular cell names)
+      barcodes <- colnames(dataObj)
+      
+      if (mean(grepl("_", barcodes)) > 0.5) {
+        return("CosMx")
+      } else {
+        return("Spatial_Unknown")
+      }
+    }
+  }
+  
+  # ---------------------------------------------------------
+  # 2. Check scRNA 10x style
+  # ---------------------------------------------------------
+  
+  barcodes <- colnames(dataObj)
+  
+  # 10x-like barcode pattern
+  pct_dash1 <- mean(grepl("-1$", barcodes))
+  
+  if (pct_dash1 > 0.8 && has_rna_assay) {
+    return("scRNA_10x")
+  }
+  
+  # ---------------------------------------------------------
+  # 3. Check ATAC / Multiome
+  # ---------------------------------------------------------
+  
+  if ("ATAC" %in% assays) {
+    return("Multiome_or_scATAC")
+  }
+  
+  # ---------------------------------------------------------
+  # 4. Fallback
+  # ---------------------------------------------------------
+  
+  return("Unknown")
 }
