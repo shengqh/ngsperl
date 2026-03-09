@@ -63,6 +63,11 @@ sub perform {
 
     for my $scatter_name (sort keys %$scatter_map) {
       my $interval_file = $scatter_map->{$scatter_name};
+
+      # interval_file can be a file or a list of files, or a list of intervals.
+      my $interval_file_str = $interval_file;
+      $interval_file_str =~ s/\s+/ -L /g;
+            
       my $prefix = get_key_name($sample_name, $scatter_name);
       my $final_file = $prefix . ".recalibrated$bam_suffix";
       my $final_index = $prefix . ".recalibrated$bam_index_suffix";
@@ -87,7 +92,7 @@ gatk --java-options \"$java_option\" \\
   --use-original-qualities \\
   -O $final_file \\
   -bqsr ${recalibration_report} \\
-  -L ${interval_file}
+  -L ${interval_file_str}
 
 status=\$?
 if [[ \$status -ne 0 ]]; then

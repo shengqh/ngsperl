@@ -43,8 +43,7 @@ sub perform {
 
   #my $java_option = $self->get_java_option($config, $section, $memory);
   # use the java option from wdl.
-  my $java_option = '-XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -XX:+PrintFlagsFinal \
-  -Xloggc:gc_log.log -Xmx35g';
+  my $java_option = '-XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -XX:+PrintFlagsFinal -Xloggc:gc_log.log -Xmx35g';
 
   #$self->get_docker_value(0);
 

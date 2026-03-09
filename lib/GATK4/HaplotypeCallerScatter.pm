@@ -71,6 +71,11 @@ sub perform {
 
     for my $scatter_name (sort keys %$scatter_map) {
       my $interval_file = $scatter_map->{$scatter_name};
+
+      # interval_file can be a file or a list of files, or a list of intervals.
+      my $interval_file_str = $interval_file;
+      $interval_file_str =~ s/\s+/ -L /g;
+            
       my $prefix = get_key_name($sample_name, $scatter_name);
       my $snvOut = $prefix . $extension;
       my $snvTmp = $prefix . ".tmp". $extension;
@@ -100,7 +105,7 @@ fi
       print $pbs "
 gatk --java-options \"$java_option\" \\
   HaplotypeCaller $option \\
-  -L $interval_file $blacklist_intervals_option \\
+  -L $interval_file_str $blacklist_intervals_option \\
   --native-pair-hmm-threads $thread \\
   -R $faFile \\
   -I $bam_file \\
