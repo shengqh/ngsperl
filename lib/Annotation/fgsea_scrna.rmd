@@ -104,6 +104,8 @@ for(prefix in names(de_map)){
                   leadingEdgeGenes = sapply(leadingEdge, function(genes) paste(genes, collapse = ":"))) |>
     dplyr::select(-leadingEdge)
 
+  fgsea_results$pathway = gsub("HALLMARK_", "", fgsea_results$pathway)
+
   # Save results
   fgsea_file <- paste0(prefix, ".fgsea_hallmark.csv")
   write.csv(fgsea_results, file = fgsea_file, quote = FALSE, row.names = FALSE)
