@@ -1557,7 +1557,8 @@ sub addEdgeRTask {
     "sample_column"   => $def->{sample_column},
     "group_column"    => $def->{group_column},
     "reduction"       => $reduction,
-    "discard_samples" => $def->{discard_samples}
+    "discard_samples" => $def->{discard_samples},
+    "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison}
   };
 
   my $edgeRtaskname         = defined $celltype_task ? $celltype_task . "_edgeR" : $cluster_task . "_edgeR";
@@ -4226,12 +4227,14 @@ sub add_sccomp {
       affiliation       => $def->{"affiliation"},
       cell_group_column => getValue( $def, "sccomp_cell_group_column" ),
       group_column      => getValue( $def, "sccomp_group_column" ),
+      sccomp_stan_models_cache_dir => getValue( $def, "sccomp_stan_models_cache_dir" ),
     },
     parameterSampleFile3     => getValue( $def, "sccomp_groups" ),
     parameterSampleFile4     => getValue( $def, "sccomp_pairs" ),
     suffix                   => "",
     output_file_ext          => ".sccomp.html",
     can_result_be_empty_file => 0,
+    no_docker => 1, # I didn't find solution to avoid compiling model error.
     sh_direct                => 1,
     pbs                      => {
       "nodes"    => "1:ppn=1",
