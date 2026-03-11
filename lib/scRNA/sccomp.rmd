@@ -57,6 +57,10 @@ author:
 library(dplyr)
 library(sccomp)
 
+# sccomp_boxplot will call internal function which will check the cache directory, 
+# so we need to set the cache directory before calling sccomp_boxplot.
+utils::assignInNamespace("sccomp_stan_models_cache_dir", cache_stan_model_dir, ns="sccomp")
+
 meta_file=fread("fileList1.txt", header=FALSE)$V1[1]
 ```
 
@@ -69,9 +73,9 @@ all_meta = readRDS(meta_file)
 
 meta <- all_meta |>
   dplyr::mutate(sample=orig.ident,
-                cell_group=!!sym(cell_group_column)) |>
-  dplyr::select(sample, cell_group) |>
-  dplyr::group_by(sample, cell_group) |>
+                old_cell_group=!!sym(cell_group_column)) |>
+  dplyr::select(sample, old_cell_group) |>
+  dplyr::group_by(sample, old_cell_group) |>
   dplyr::summarise(count=n()) |>
   dplyr::ungroup() |>
   as.data.frame() 
@@ -90,47 +94,58 @@ if("group_column" %in% names(myoptions)){
 
 meta = meta |>
   # 1. Sanitize names (spaces and special characters can break formulas)
-  mutate(cell_group = gsub("[: ]+", "_", cell_group)) |>
+  dplyr::mutate(cell_group = gsub("[: ]+", "_", old_cell_group)) |>
   # 2. Complete the grid: Every sample gets every cell_group
   # This ensures sccomp doesn't fail during the internal 'spread'
   tidyr::complete(sample, cell_group, fill = list(count = 0)) |>
   dplyr::left_join(sample_group, by="sample") |>
-  dplyr::mutate(sample=factor(sample),
-                cell_group=factor(cell_group),
-                type=factor(type)) |>
-  as.data.frame()
+  dplyr::arrange(sample, old_cell_group)
+
+cg_map = meta |>
+  dplyr::select(old_cell_group, cell_group) |>
+  dplyr::distinct() |>
+  as.data.frame()  
+
+meta$sample=factor(meta$sample)  
+meta$cell_group=factor(meta$cell_group, levels=unique(meta$cell_group))  
+meta$type=factor(meta$type)  
+
+meta = meta |> as.data.frame()
 
 print_table(meta, byDT=TRUE, row.names=FALSE)
 ```
 
 ```{r results='hide'}
+# This rmd only work if the sccomp was installed locally, otherwise, 
+# the stan model will be failed to compile due to the lack of permission to write in the cache directory of sccomp package.
+
 all_estimate = sccomp_estimate( 
   meta,
   formula_composition = ~0 + type, # we want to use contrasts, so no intercept
   formula_variability = ~1,
-  .sample = "sample", 
-  .cell_group = "cell_group",
-  .abundance  = "count",
-  cache_stan_model = cache_stan_model_dir,
+  sample = "sample", 
+  cell_group = "cell_group",
+  abundance  = "count",
   bimodal_mean_variability_association = TRUE,
   verbose = FALSE
 ) 
 
-all_sccomp_result = all_estimate |>
-                sccomp_remove_outliers( max_sampling_iterations = 2000, 
-                                        cache_stan_model=cache_stan_model_dir,
-                                        verbose=FALSE) |> # Optional
+no_outlier_estimate = all_estimate |>
+                  sccomp_remove_outliers(max_sampling_iterations = 2000, 
+                  verbose=FALSE)
+
+all_sccomp_result = no_outlier_estimate |>
                 sccomp_test()
 
 all_test_rds = paste0(prefix, ".all.test.rds")
 saveRDS(all_sccomp_result, file=all_test_rds)
-```
 
-```{r}
 g = all_sccomp_result |> 
   sccomp_boxplot(factor = "type", remove_unwanted_effects=TRUE) +
   theme(legend.position="right")  
+```
 
+```{r}
 box_png = paste0(prefix, ".boxplot.png")
 ggsave(box_png, g, width=8, height=6, units="in", dpi=300, bg="white")
 include_graphics(box_png)
@@ -138,7 +153,7 @@ include_graphics(box_png)
 
 The significant differences of comparisons are shown in the following credible intervals plot.
 
-```{r}
+```{r, results="hide"}
 comp_tbl=fread("fileList4.txt", header=FALSE, data.table=FALSE) |>
   dplyr::filter(V2 != "covariates")
 
@@ -155,25 +170,39 @@ res <- comp_tbl |>
 complist <- setNames(res$values, res$V2)            # convert to named list
 
 comp_name= names(complist)[1]
+comp_content=""
 for(comp_name in names(complist)){
-  cat("\n# ", comp_name, "\n\n")
+  comp_content=paste0(comp_content, "\n# ", comp_name, "\n\n")
 
   comp_file=gsub(" ", "_", comp_name)
   groups=complist[[comp_name]]
 
   contrast=paste0("type", groups[2], "-type", groups[1])
 
-  sccomp_result = all_estimate |>
-                  sccomp_remove_outliers(max_sampling_iterations = 2000, 
-                  cache_stan_model=cache_stan_model_dir,
-                  verbose=FALSE) |> # Optional
+  sccomp_result = no_outlier_estimate |>
                   sccomp_test(contrasts= c(contrast))
 
+  pchange <- sccomp_proportional_fold_change(
+    no_outlier_estimate,
+    formula_composition = ~ type,
+    from = groups[1],
+    to = groups[2]
+  ) |> as.data.frame()
+                    
   vis_res = sccomp_result |> 
+    dplyr::select(cell_group, c_lower, c_effect, c_upper, c_pH0, c_FDR) |>
     as.data.frame() |>
-    dplyr::select(-parameter, -factor, -c_rhat, -c_ess_bulk, -c_ess_tail)
+    dplyr::left_join(pchange, by=c("cell_group")) |>
+    dplyr::left_join(cg_map, by=c("cell_group")) |>
+    dplyr::select(-cell_group) |>
+    dplyr::rename(cell_group=old_cell_group) |>
+    dplyr::select(cell_group, everything()) |>
+    dplyr::arrange(cell_group)
+  
+  result_csv=paste0(prefix, ".", comp_file, ".result.csv")
+  write.csv(vis_res, result_csv, row.names=TRUE)
 
-  print(kable(vis_res))
+  comp_content=paste(comp_content, getPagedTable(result_csv))
 
   plots = plot(sccomp_result)
 
@@ -181,8 +210,13 @@ for(comp_name in names(complist)){
   credible_intervals_1D_png = paste0(prefix, ".", comp_file, ".credible_intervals_1D.contrast.png")
   ggsave(credible_intervals_1D_png, g, width=8, height=4, units="in", dpi=300, bg="white")
 
-  add_img(credible_intervals_1D_png, width_inch=12)
+  comp_content=paste(comp_content, getFigure(credible_intervals_1D_png))
 }
+comp_rmd="comp.rmd"
+writeLines(comp_content, comp_rmd)
+```
+
+```{r child=comp_rmd}
 ```
 
 # Session Info
