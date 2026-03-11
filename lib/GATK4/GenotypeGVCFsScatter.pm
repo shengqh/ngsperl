@@ -55,11 +55,15 @@ sub perform {
 
   for my $scatter_name ( sort keys %$import_folders ) {
     my $WORKSPACE = $import_folders->{$scatter_name}[0];
-    my $interval = $task_interval_files->{$scatter_name};
+    my $interval_file = $task_interval_files->{$scatter_name};
 
-    if (not defined $interval){
+    if (not defined $interval_file){
       die "$scatter_name not in task_interval_files " . Dumper($task_interval_files);
     }
+
+    # interval_file can be a file or a list of files, or a list of intervals.
+    my $interval_file_str = $interval_file;
+    $interval_file_str =~ s/\s+/ -L /g;
 
     my $output_vcf_filename    = $scatter_name . ".g.vcf.gz";
     my $output_vcf_filename_index = $output_vcf_filename . ".tbi";
@@ -88,7 +92,7 @@ gatk --java-options \"-Xms8g -Xmx40g\" \\
   -G StandardAnnotation -G AS_StandardAnnotation \\
   --only-output-calls-starting-in-intervals \\
   -V gendb://$WORKSPACE \\
-  -L ${interval} \\
+  -L ${interval_file_str} \\
   --merge-input-intervals
 
 status=\$?
