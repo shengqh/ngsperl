@@ -4234,7 +4234,7 @@ sub add_sccomp {
     suffix                   => "",
     output_file_ext          => ".sccomp.html",
     can_result_be_empty_file => 0,
-    no_docker => 1, # I didn't find solution to avoid compiling model error.
+    no_docker                => getValue($def, "perform_sccomp_by_docker", 1) ? 0 : 1, 
     sh_direct                => 1,
     pbs                      => {
       "nodes"    => "1:ppn=1",
