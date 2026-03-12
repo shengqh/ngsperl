@@ -78,7 +78,13 @@ meta <- all_meta |>
   dplyr::group_by(sample, old_cell_group) |>
   dplyr::summarise(count=n()) |>
   dplyr::ungroup() |>
+  dplyr::mutate(cell_group = gsub("[: ]+", "_", old_cell_group)) |>
   as.data.frame() 
+
+cg_map = meta |>
+  dplyr::select(old_cell_group, cell_group) |>
+  dplyr::distinct() |>
+  as.data.frame()  
 
 if("group_column" %in% names(myoptions)){
   sample_group = all_meta |>
@@ -94,17 +100,11 @@ if("group_column" %in% names(myoptions)){
 
 meta = meta |>
   # 1. Sanitize names (spaces and special characters can break formulas)
-  dplyr::mutate(cell_group = gsub("[: ]+", "_", old_cell_group)) |>
   # 2. Complete the grid: Every sample gets every cell_group
   # This ensures sccomp doesn't fail during the internal 'spread'
   tidyr::complete(sample, cell_group, fill = list(count = 0)) |>
   dplyr::left_join(sample_group, by="sample") |>
   dplyr::arrange(sample, old_cell_group)
-
-cg_map = meta |>
-  dplyr::select(old_cell_group, cell_group) |>
-  dplyr::distinct() |>
-  as.data.frame()  
 
 meta$sample=factor(meta$sample)  
 meta$cell_group=factor(meta$cell_group, levels=unique(meta$cell_group))  
@@ -200,7 +200,7 @@ for(comp_name in names(complist)){
     dplyr::arrange(cell_group)
   
   result_csv=paste0(prefix, ".", comp_file, ".result.csv")
-  write.csv(vis_res, result_csv, row.names=TRUE)
+  write.csv(vis_res, result_csv, row.names=FALSE)
 
   comp_content=paste(comp_content, getPagedTable(result_csv))
 
@@ -223,5 +223,5 @@ writeLines(comp_content, comp_rmd)
 
 ```{r}
 package_tbl=get_packages_table()
-print_table(package_tbl, byDT=TRUE, row.names=TRUE)
+print_table(package_tbl, byDT=TRUE, row.names=FALSE)
 ```
