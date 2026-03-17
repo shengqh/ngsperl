@@ -641,6 +641,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       no_docker                => getValue( $def, "no_docker", 0 ),
       output_to_same_folder    => 0,
       output_ext               => ".MEcell_cluster.html",
+      output_other_ext         => ".${source_assay}.MEcell_clustered.rds",
       pbs                      => {
         "nodes"    => "1:ppn=1",
         "walltime" => "48",
@@ -675,6 +676,46 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
     };
     push( @$tasks, $MEcell_cluster_summary_task );
 
+    if($def->{perform_subcluster}) {
+      my $subcluster_task = "${MEcell_cluster_report_task}_subcluster";
+      $config->{$subcluster_task} = {
+        class                    => "CQS::IndividualR",
+        target_dir               => "$target_dir/$subcluster_task",
+        perform                  => 1,
+        rtemplate                => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_MEcell_sub_cluster.r",
+        option                   => "",
+        parameterSampleFile1_ref => [ $MEcell_cluster_report_task, ".rds" ],
+        parameterSampleFile2     => {
+          email                  => getValue( $def, "email" ),
+          affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          assay                  => $source_assay,
+          markers_file           => getValue( $def, "markers_file" ),
+          curated_markers_file   => getValue( $def, "curated_markers_file" ),
+          summary_layer_file     => getValue( $def, "summary_layer_file" ),
+          remove_subtype         => getValue( $def, "remove_subtype" ),
+          HLA_panglao5_file      => getValue( $def, "HLA_panglao5_file" ),
+          bubblemap_file         => getValue( $def, "bubblemap_file" ),
+          bubblemap_width_in     => getValue( $def, "bubblemap_width_in", 8 ),
+          species                => getValue( $def, "species" ),
+          cluster_algorithm      => $cluster_algorithm,
+          cluster_algorithm_name => $cluster_algorithm_name,
+          image_assay            => $source_image_assay,
+        },
+        parameterSampleFile3     => getValue($def, "dynamic_rename_map"),
+        no_prefix                => 1,
+        sh_direct                => 0,
+        no_docker                => getValue( $def, "no_docker", 0 ),
+        output_to_same_folder    => 0,
+        output_ext               => ".$source_assay.MEcell.subcluster.meta.rds",
+        #output_other_ext         => ".MEcell_cluster.html",
+        pbs => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => getValue($def, "MEcell_cluster_hour", 48),
+          "mem"      => "40gb"
+        }
+      };
+      push( @$tasks,                $subcluster_task );
+    } ## end for ( my $i = 0; $i < scalar...)
   } ## end if ( getValue( $def, "perform_MEcell"...))
 
   #   if ( $def->{perform_segment_report} ) {
