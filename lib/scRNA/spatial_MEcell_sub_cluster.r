@@ -37,6 +37,11 @@ file_map<-read_file_map("fileList1.txt", do_unlist=FALSE)
 sample_name=names(file_map)[1]
 rds_file=file_map[[sample_name]]
 
+meta_rds=paste0(sample_name, ".meta.rds")
+if(file.exists(meta_rds)){
+  quit(save="no")
+}
+
 cluster_map<-fread("fileList3.txt", sep="\t", header=FALSE, fill=TRUE)
 sub_resolutions=cluster_map |> dplyr::filter(V2=="resolutions") |> dplyr::pull(V1) |> as.numeric()
 
@@ -81,7 +86,7 @@ obj@meta.data$previous_clusters=obj@meta.data[,resolution_col]
 obj@meta.data$previous_celltype="Unknown"
 obj@meta.data = obj@meta.data |> dplyr::select(!starts_with("MEcell_"))
 for(celltype in celltypes){
-  ct_name = gsub("[\\/\\s]+", "", celltype)
+  ct_name = gsub("\\s+","_", gsub("[\\/]+", "_", celltype))
   ct_clusters=rename_map |> dplyr::filter(V2==celltype) |> dplyr::pull(V1)
   if(length(ct_clusters) == 1 && ct_clusters[1] == 0) {
     all_others=rename_map |> dplyr::filter(V2!=celltype) |> dplyr::pull(V1)
@@ -110,7 +115,7 @@ for(celltype in celltypes){
   }
 }
 
-saveRDS(obj@meta.data, paste0(sample_name, ".meta.rds"))
+saveRDS(obj@meta.data, meta_rds)
 
 write.csv(res_tbl, paste0(sample_name, ".", algorithm_name, ".subcluster.files.csv"), row.names=FALSE)
 
