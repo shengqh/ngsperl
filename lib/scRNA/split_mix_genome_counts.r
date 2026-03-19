@@ -21,8 +21,11 @@ myoptions=fread('fileList2.txt', header=FALSE)
 species=myoptions |> dplyr::filter(V2=="species") |> dplyr::pull(V1)
 
 barcodes_file=fread('fileList1.txt', header=FALSE)$V1[1]
-barcodes=fread(barcodes_file, header=FALSE) |>
+barcodes=fread(barcodes_file, header=FALSE, data.table=FALSE) |>
   dplyr::rename(Species = V1, Cell=V2)
+
+# There might be some cells annotated as both, delete them.
+barcodes=barcodes[!duplicated(barcodes$Cell),,drop=FALSE]
 
 if(!(species %in% barcodes$Species)) {
   stop(paste("Species", species, "not found in barcodes"))

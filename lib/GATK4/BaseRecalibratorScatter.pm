@@ -41,7 +41,9 @@ sub perform {
     $known_indels_sites_VCFs_option = " \\\n  --known-sites " . join(" \\\n  --known-sites ", @$known_indels_sites_VCFs);
   }
 
-  my $java_option = $self->get_java_option($config, $section, $memory);
+  #my $java_option = $self->get_java_option($config, $section, $memory);
+  # use the java option from wdl.
+  my $java_option = '-XX:GCTimeLimit=50 -XX:GCHeapFreeLimit=10 -XX:+PrintFlagsFinal -Xloggc:gc_log.log -Xmx35g';
 
   #$self->get_docker_value(0);
 
@@ -59,6 +61,11 @@ sub perform {
 
     for my $scatter_name (sort keys %$scatter_map) {
       my $interval_file = $scatter_map->{$scatter_name};
+
+      # interval_file can be a file or a list of files, or a list of intervals.
+      my $interval_file_str = $interval_file;
+      $interval_file_str =~ s/\s+/ -L /g;
+      
       my $prefix = get_key_name($sample_name, $scatter_name);
       my $recalibration_report_filename = $prefix . ".recal_data.csv";
       
@@ -74,13 +81,14 @@ fi
       my $log_desc = $cluster->get_log_description($log);
       my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $recalibration_report_filename );
       print $pbs "
+
 gatk --java-options \"$java_option\" \\
   BaseRecalibrator \\
   -R ${ref_fasta} \\
   -I ${input_bam} \\
   --use-original-qualities \\
   -O ${recalibration_report_filename} \\
-  -L ${interval_file} \\
+  -L ${interval_file_str} \\
   --known-sites ${dbsnp_vcf} $known_indels_sites_VCFs_option
 
 status=\$?

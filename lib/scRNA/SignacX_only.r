@@ -63,6 +63,7 @@ if(is.null(SignacX_reference_file)){
 if(!exists("obj")){
   obj=read_object_from_file_list(file_list_path=parSampleFile1)
 }
+dataType=get_data_type(obj) #decide if this is a Visium, VisiumHD, or CosMx
 
 DefaultAssay(obj) <- assay
 
@@ -71,6 +72,21 @@ if(is_polygons){
   log_info(paste0("Subsetting polygons with min UMIs ", min_umi, " ..."))
   DefaultAssay(obj) <- "Spatial.Polygons"
   obj <- subset(obj, subset = nCount_Spatial.Polygons >= min_umi)
+} else if (dataType=="CosMx") {
+  # Handle CosMx specific subsetting
+  min_umi=as.numeric(myoptions$nCount_cutoff)
+  # need to check if still more than 46340 cells, beacuse R's 32 bit interger index can't handle it #sqrt(2^31 − 1) ≈ 46340.95
+  nCellAfterFilter=length(which(obj@meta.data$nCount_RNA>=min_umi))
+  if (nCellAfterFilter > 46300) {
+    #select top 46000 cells with highest nCount_RNA
+    log_info(paste0("Subsetting CosMx data with min UMIs ", min_umi, " and 46,300 cells with highest nCount_RNA ..."))
+    top_cells=order(obj@meta.data$nCount_RNA, decreasing=TRUE)[1:46300]
+    obj <- subset(obj, cells=top_cells)
+  } else {
+    log_info(paste0("Subsetting CosMx data with min UMIs ", min_umi, " ..."))
+    obj <- subset(obj, subset = nCount_RNA >= min_umi)
+  }
+
 }
 
 #SignacX doesn't support V5 object, we have to convert it to V3
@@ -157,6 +173,10 @@ major_obj=get_category_with_min_percentage(obj, ct_name, 0.01)
 ct_name_count = paste0(ct_name, "_count")
 major_obj@meta.data = add_column_count(major_obj@meta.data, ct_name, ct_name_count)
 
+if (!("umap" %in% names(major_obj@reductions))) {
+  log_info("Running UMAP ...")
+  major_obj <- RunUMAP(major_obj, reduction = reduction, dims = pca_dims)
+}
 g=get_dim_plot_labelby(major_obj, label.by = ct_name, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
 ggsave(paste0(outFile, ".SignacX.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
 

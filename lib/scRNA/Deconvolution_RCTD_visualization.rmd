@@ -65,6 +65,16 @@ library(ggpubr)
 library(patchwork)
 
 spatial_list=lapply(rctd_list, readRDS)
+#change list names since some are not Spatial.Polygons
+for (i in 1:length(spatial_list)) {
+    if (!("Spatial" %in% Assays(spatial_list[[i]]))) {
+      if ("RNA" %in% Assays(spatial_list[[i]])) {
+        names(spatial_list)[[i]] <- "RNA"
+      } else {
+        stop("No Spatial or RNA assay found")
+      }
+    }
+}
 
 for(name in names(spatial_list)) {
   spatial_list[[name]]@meta.data$RCTD1_first_type_slim = gsub("^\\d+\\s+:\\s+", "", spatial_list[[name]]$RCTD1_first_type)
@@ -107,17 +117,29 @@ print_table(get_compare_tbl(spatial_list, "RCTD1_first_type"), row.names=FALSE)
 ```{r}
 if("Spatial.008um" %in% names(spatial_list)){
   cur_obj = spatial_list[["Spatial.008um"]]
-}else{
+}else if ("Spatial.Polygons" %in% names(spatial_list)) {
   cur_obj = spatial_list[["Spatial.Polygons"]]
+} else if ("RNA" %in% names(spatial_list)) {
+  cur_obj = spatial_list[["RNA"]]
+} else {
+  stop("No Spatial.008um or Spatial.Polygons or RNA assay found")
 }
-
-tissue_image = SpatialPlot( object = cur_obj, 
+if ("Spatial" %in% Assays(cur_obj)) { #10X
+  tissue_image = SpatialPlot( object = cur_obj, 
                             image.alpha = 1, 
                             alpha = c(0, 0)) + 
               ggtitle(paste0("Tissue : ", sample_name)) +
               theme(legend.position = "none",
                     plot.title = element_text(hjust = 0.5),
                     panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+} else { #Other types
+  tissue_image = ImageDimPlot( object = cur_obj) + 
+              ggtitle(paste0("Tissue : ", sample_name)) +
+              theme(legend.position = "none",
+                    plot.title = element_text(hjust = 0.5),
+                    panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+}
+
 
 first_type_names = table(unlist(lapply(spatial_list, function(x) x$RCTD1_first_type))) |> sort(decreasing=TRUE) |> names()
 first_type_colors = get_colors(first_type_names)
@@ -211,8 +233,12 @@ include_graphics(vis_png)
 ## RCTD predicted cell types
 
 ```{r}
-vis_png = get_spatial_dimplot_vis(tissue_image, spatial_list, "RCTD1_first_type", first_type_colors, sample_name)
-include_graphics(vis_png)
+if (("Spatial.Polygons" %in% names(spatial_list)) | ("Spatial.008um" %in% names(spatial_list))) { #10X data
+  vis_png = get_spatial_dimplot_vis(tissue_image, spatial_list, "RCTD1_first_type", first_type_colors, sample_name)
+  include_graphics(vis_png)
+}
+
+
 ```
 
 # Individual RCTD predicted cell type
@@ -232,15 +258,20 @@ for(feature in feature_set){
   plots <- list("Tissue Image" = tissue_image)
   for(name in names(spatial_list)) {
     #cat("name: ", name, "\n")
-    is_polygons = grepl("Polygons", name)
-    if(is_polygons) {
+    if(grepl("Polygons", name)) { #is_polygons
       fov_name <- "slice1.polygons"
       title <- "Cell Segmentation"
       adjust_func <- adjust_ImagePlot_Polygons
-    } else {
+    } else if (grepl("008", name)) {
       fov_name <- "slice1.008um"
       title <- "8uM Bin"
       adjust_func <- adjust_ImagePlot_Bins
+    } else if (grepl("RNA", name)) {
+      fov_name <- NULL
+      title <- "Cell"
+      adjust_func <- adjust_ImagePlot_Polygons
+    } else {
+      stop("Unknown spatial data type")
     }
 
     cur_obj = spatial_list[[name]]

@@ -289,6 +289,7 @@ sub getRNASeqConfig {
       } ## end if ( $aligner eq "salmon")
       elsif ( $aligner eq "minimap2" ) {
         my $ref_fasta = getValue($def, "fasta_file");
+        my $minimap2_bed = getValue($def, "minimap2_bed_file");
         $config->{"fastq2fasta"} = {
           class                 => "CQS::ProgramWrapperOneToOne",
           perform               => 1,
@@ -325,7 +326,7 @@ seqkit fq2fa __FILE__ -o __NAME__.fasta.gz
           program               => "",
           option                => "
 
-minimap2 -ax splice -uf -k14 -o __NAME__.sam $ref_fasta __FILE__
+minimap2 -ax splice --junc-bed $minimap2_bed -uf -k14 -o __NAME__.sam $ref_fasta __FILE__
 
 samtools sort -o __NAME__.sorted.bam __NAME__.sam
 samtools index __NAME__.sorted.bam

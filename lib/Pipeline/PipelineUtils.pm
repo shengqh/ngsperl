@@ -2306,7 +2306,11 @@ sub addXHMM {
 
 
 sub do_add_gene_locus {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $genes_str ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $genes_str, $output_gff ) = @_;
+  if ( !defined $output_gff ) {
+    $output_gff = 0;
+  }
+
   $genes_str =~ s/\s+/,/g;
   $config->{$task_name} = {
     class                => "CQS::UniqueR",
@@ -2314,10 +2318,19 @@ sub do_add_gene_locus {
     target_dir           => $target_dir . '/' . $task_name,
     rtemplate            => "../Annotation/getGeneLocus.r",
     parameterSampleFile1 => {
+      task_name => getValue( $def, "task_name" ),
+      email     => getValue( $def, "email" ),
+
+      output_gff => $output_gff,
+
+      genesStr  => $genes_str,
+
       host      => getValue( $def, "biomart_host" ),
       dataset   => getValue( $def, "biomart_dataset" ),
       symbolKey => getValue( $def, "biomart_symbolKey" ),
-      genesStr  => $genes_str,
+      add_prefix => getValue( $def, "biomart_add_prefix", "" ),
+      gene_shift => getValue( $def, "biomart_gene_shift", 0 ),
+
       add_chr   => getValue( $def, "annotation_genes_add_chr", getValue( $def, "has_chr_in_chromosome_name", 0 ) )
     },
     docker_prefix   => "biomart_",
@@ -2339,7 +2352,7 @@ sub do_add_gene_locus {
 
 sub addGeneLocus {
   my ( $config, $def, $summary, $target_dir, $gene_key ) = @_;
-  if ( not defined $gene_key ) {
+  if ( !defined $gene_key ) {
     $gene_key = "annotation_genes";
   }
   my $geneLocus = undef;
@@ -4055,34 +4068,11 @@ sub add_bamplot {
       writeAnnotationLocus_gff( $def->{annotation_locus}, $gff_value );
     } ## end if ( $def->{annotation_locus...})
     else {
-      $config->{bamplot_gene_gff} = {
-        class                => "CQS::UniqueR",
-        target_dir           => $target_dir . "/" . getNextFolderIndex($def) . "bamplot_gene_gff",
-        check_program        => 0,
-        rtemplate            => "../CQS/countTableVisFunctions.R,../Annotation/get_gene_locus.r",
-        output_file_ext      => ".gff",
-        parameterSampleFile1 => {
-          task_name => getValue( $def, "task_name" ),
-          email     => getValue( $def, "email" ),
-
-          biomart_host       => getValue( $def, "biomart_host" ),
-          biomart_dataset    => getValue( $def, "biomart_dataset" ),
-          biomart_symbolKey  => getValue( $def, "biomart_symbolKey" ),
-          biomart_add_chr    => getValue( $def, "biomart_add_chr" ),
-          biomart_add_prefix => getValue( $def, "biomart_add_prefix", "" ),
-
-          gene_names => getValue( $def, "gene_names" ),
-          gene_shift => getValue( $def, "gene_shift", 0 ),
-
-          output_gff => 1,
-        },
-        sh_direct => 1,
-        pbs       => {
-          "nodes"    => "1:ppn=1",
-          "walltime" => "2",
-          "mem"      => "10gb"
-        }
-      };
+      if(!defined $def->{bamplot_genes} && ! defined $def->{annotation_genes}){
+        stop("Neither bamplot_genes nor annotation_genes is defined for bamplot.\n");
+      }
+      my $genes_str = getValue( $def, "bamplot_genes", getValue( $def, "annotation_genes" ));
+      do_add_gene_locus( $config, $def, $tasks, $target_dir, "bamplot_gene_gff", $genes_str, 1 );
       $gff_key   = "gff_file_ref";
       $gff_value = "bamplot_gene_gff";
       push( @$tasks, "bamplot_gene_gff" );

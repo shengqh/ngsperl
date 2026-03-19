@@ -114,6 +114,7 @@ if(!file.exists(rds_file)){
 
 obj = readRDS(rds_file)
 obj = UpdateSeuratObject(obj)
+dataType=get_data_type(obj) #decide if this is a Visium, VisiumHD, or CosMx
 
 bMiss=FALSE
 cfile = cluster_files[1]
@@ -161,9 +162,11 @@ if(hasRCTD){
   rctd_file_map=read_file_map("fileList5.txt", do_unlist=FALSE)
   rctd_file=rctd_file_map[[sample_name]]
   rctd_obj=readRDS(rctd_file)
-  stopifnot(all(rownames(rctd_obj@meta.data) == rownames(obj@meta.data)))
-  obj@meta.data[["RCTD1"]] = rctd_obj@meta.data[["RCTD1_spot_class"]]
-  obj@meta.data[["RCTD1_first_type"]] = rctd_obj@meta.data[["RCTD1_first_type"]]
+  #stopifnot(all(rownames(rctd_obj@meta.data) == rownames(obj@meta.data)))
+  #obj@meta.data[["RCTD1"]] = rctd_obj@meta.data[["RCTD1_spot_class"]]
+  #obj@meta.data[["RCTD1_first_type"]] = rctd_obj@meta.data[["RCTD1_first_type"]]
+  obj@meta.data[["RCTD1"]] = rctd_obj@meta.data[row.names(obj@meta.data),"RCTD1_spot_class"]
+  obj@meta.data[["RCTD1_first_type"]] = rctd_obj@meta.data[row.names(obj@meta.data),"RCTD1_first_type"]
 }
 ```
 
@@ -183,8 +186,9 @@ if(hasSignacX){
   signacX_file_map=read_file_map("fileList7.txt", do_unlist=FALSE)
   signacX_file=signacX_file_map[[sample_name]]
   signacX_meta=readRDS(signacX_file)
-  stopifnot(all(rownames(signacX_meta) == rownames(obj@meta.data)))
-  obj@meta.data[["SignacX"]] = signacX_meta[["CellStates"]]
+  #stopifnot(all(rownames(signacX_meta) == rownames(obj@meta.data)))
+  #obj@meta.data[["SignacX"]] = signacX_meta[["CellStates"]]
+  obj@meta.data[["SignacX"]] = signacX_meta[row.names(obj@meta.data),"CellStates"]
 }
 ```
 
@@ -246,9 +250,7 @@ if(!bMiss){
 ```
 
 ```{r}
-tissue_image = SpatialPlot( object = obj, 
-                            image.alpha = 1, 
-                            alpha = c(0, 0)) + 
+tissue_image = ImageDimPlot (object = obj) + 
               ggtitle(paste0("Tissue : ", sample_name)) +
               theme(legend.position = "none",
                     plot.title = element_text(hjust = 0.5),
@@ -318,14 +320,16 @@ for(cur_res in resolutions){
 
   pt.size.factor = ifelse(grepl("Polygons", assay), 0.5, 12)
 
-  plots[['SpatialDimPlot']] = SpatialDimPlot( filtered_obj, 
+  if (dataType!="CosMx") {
+    plots[['SpatialDimPlot']] = SpatialDimPlot( filtered_obj, 
                                               cols = cluster_colors, 
                                               image.alpha = 0.1,
                                               pt.size.factor = pt.size.factor) + 
     ggtitle(label = title) + 
     theme(plot.title = element_text(hjust = 0.5), 
-          panel.border = element_rect(colour = "black", fill=NA, linewidth=1))     
-
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=1))  
+  }
+   
   cluster_png = save_vis_png(plots, file_prefix, cluster_colors, cluster_cell_type_count_col, assay)
 
   cluster_content=paste0(cluster_content, "\n## Spatial clusters\n\n")

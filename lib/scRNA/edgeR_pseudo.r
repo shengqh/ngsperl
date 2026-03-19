@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='P10940'
-parSampleFile1='fileList1.txt'
+outFile='Aorta_Progeria'
+parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.final.rds'
-parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose/result/P10940.meta.rds'
+parFile1='/nobackup/brown_lab/projects/20260226_Aorta_Progeria_scRNA_mouse_no_ABE/20260305_refine_final_clusters/Aorta_Progeria.final.obj.rds'
+parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/nd_seurat_sct2_merge_dr0.2_3_choose_edgeR_inCluster_bySample/result')
+setwd('/nobackup/brown_lab/projects/20260226_Aorta_Progeria_scRNA_mouse_no_ABE/20260309_DE_pseudobulk_celltype_mincount5/files_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
@@ -32,6 +32,11 @@ useRawPvalue<-is_one(myoptions$useRawPvalue)
 cluster_name=myoptions$cluster_name
 min_cell_per_sample=as.numeric(myoptions$filter_min_cell_per_sample)
 min_count_per_sample=as.numeric(myoptions$filter_min_count_per_sample)
+if(class(myoptions$exclude_cell_types_from_comparison) == "character"){
+  exclude_cell_types_from_comparison=unlist(strsplit(myoptions$exclude_cell_types_from_comparison, ';'))
+}else{
+  exclude_cell_types_from_comparison=""
+}
 
 group_column=myoptions$group_column
 
@@ -50,6 +55,7 @@ comparisonNames<-unique(comparisons$Comparison)
 if(!exists('obj')){
   cat("load object from ", parFile1, "\n")
   obj<-read_object(parFile1, parFile2, cluster_name)
+  obj<-UpdateSeuratObject(obj)
   if(!cluster_name %in% colnames(obj@meta.data)){
     if(cluster_name == "bulk"){
       obj=AddMetaData(obj, "bulk", col.name="bulk")
@@ -58,7 +64,14 @@ if(!exists('obj')){
   if(!cluster_name %in% colnames(obj@meta.data)){
     stop(paste0("cluster_name ", cluster_name, " not found in meta.data"))
   }
-  obj@meta.data[,cluster_name]<-gsub("^\\s+", "", obj@meta.data[,cluster_name])
+
+  if(any(exclude_cell_types_from_comparison != "")){
+    cat("discard_cell_types: ", paste0(exclude_cell_types_from_comparison, collapse=", "), "\n")
+    obj@meta.data[,"FAKE"] = obj@meta.data[,cluster_name]
+    obj = subset(obj, !(FAKE %in% exclude_cell_types_from_comparison))
+  }
+
+  obj@meta.data[,cluster_name]<-gsub("^\\s+", "", as.character(obj@meta.data[,cluster_name]))
   if(!is.null(myoptions$sample_column)){
     if(myoptions$sample_column != ""){
       if(!myoptions$sample_column %in% colnames(obj@meta.data)){
@@ -409,4 +422,3 @@ for(idx in c(1:nrow(designMatrix))){
 }
 
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
-

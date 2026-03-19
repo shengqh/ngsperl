@@ -555,7 +555,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           cluster    => $cluster,
           pbs        => {
             "nodes"     => "1:ppn=1",
-            "walltime"  => "10",
+            "walltime"  => "24",
             "mem"       => "40gb"
           },
         },
@@ -1761,7 +1761,7 @@ fi
       pbs => {
         "nodes"     => "1:ppn=1",
         "walltime"  => getValue($def, "${refseq_bacteria_table}_walltime", "24"),
-        "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "100gb"),
+        "mem"       => getValue($def, "${refseq_bacteria_table}_mem", "150gb"),
       },
     };
 
@@ -1980,8 +1980,8 @@ fi
         sh_direct          => 1,
         pbs                => {
           "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
+          "walltime"  => "4",
+          "mem"       => "20gb"
         },
       };
       push( @$tasks, "nonhost_genome_count" );
@@ -2001,8 +2001,8 @@ fi
         sh_direct          => 1,
         pbs                => {
           "nodes"     => "1:ppn=1",
-          "walltime"  => "1",
-          "mem"       => "10gb"
+          "walltime"  => "4",
+          "mem"       => "20gb"
         },
       };
       push( @$tasks, "microbial_genome_count" );
@@ -2319,8 +2319,8 @@ fi
       sh_direct          => 1,
       pbs                => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "1",
-        "mem"       => "10gb"
+        "walltime"  => "4",
+        "mem"       => "20gb"
       },
     };
     push( @$tasks, "nonhost_count" );
@@ -2905,8 +2905,8 @@ fi
       'perform'                  => 1,
       'pbs'                      => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
+        "walltime"  => "4",
+        "mem"       => "20gb"
       },
     };
     push @$tasks, "bacteria_count";
