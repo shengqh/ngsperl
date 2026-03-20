@@ -1,9 +1,8 @@
 ---
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
-  html_document:
-    self_contained: false
-    theme: cosmo
+  rmdformats::readthedown:
+    toc_depth: 2
 ---
 
 ```{r setup, include=FALSE}
@@ -49,19 +48,25 @@ author:
   affiliation: `r affiliation`
 ---
 
-## QC reports {.tabset}
+# Individual Samples
 
 ```{r}
 library(fs)
 
 curwd = gsub("^/panfs/accrepfs.vampire", "", getwd())
 
+result = ""
+
 html_map=read_file_map("fileList1.txt", do_unlist=FALSE)
 for (fname in names(html_map)) {
   fpath=gsub("^/panfs/accrepfs.vampire", "", html_map[[fname]])
   rpath=fs::path_rel(fpath, start = curwd)
-  cat("### ", fname, "\n")
-  cat(sprintf('<iframe src="%s" width="100%%" height="800px" style="border:none;"></iframe>\n\n', rpath))
+  result = paste0(result, '<a href="', rpath, '" target="_blank">', fname, "</a>\n\n")
 }
+
+writeLines(result, "details.rmd")
+```
+
+```{r child="details.rmd"}
 ```
 
