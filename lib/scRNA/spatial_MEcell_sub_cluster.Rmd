@@ -104,14 +104,15 @@ if(hasSignacX){
 ```
 
 ```{r figure.width=10}
-tissue_image = ImageDimPlot (object = obj) + 
-              ggtitle(paste0("Tissue : ", sample_name)) +
-              theme(legend.position = "none",
-                    plot.title = element_text(hjust = 0.5),
-                    panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
-# tissue_png = paste0(sample_name, ".tissue_image.png")
-# ggsave(tissue_png, tissue_image, width=6, height=6, units="in", dpi=300, bg="white")
-# include_graphics(tissue_png)
+tissue_image =  ImageDimPlot (object = obj) + 
+                ggtitle(paste0("Tissue : ", sample_name)) +
+                theme(legend.position = "none",
+                      plot.title = element_text(hjust = 0.5),
+                      panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+tissue_image = adjust_ImagePlot_Polygons(tissue_image)
+tissue_png = paste0(sample_name, ".tissue_image.png")
+ggsave(tissue_png, tissue_image, width=6, height=6, units="in", dpi=300, bg="white")
+include_graphics(tissue_png)
 ```
 
 ```{r}
@@ -136,10 +137,20 @@ for(i in 1:nrow(meta_files)){
   sub_obj = subset(obj, cells=rownames(sub_meta))
   sub_obj@meta.data = sub_meta
 
+  one_cluster_outputed=FALSE
   cur_res=sub_resolutions[1]
   for(cur_res in sub_resolutions){
     cluster_content=paste0(cluster_content, "\n## Resolution ", cur_res, "\n\n")
     cluster_col = paste0("MEcell_res.", cur_res)
+    nclusters = length(unique(sub_obj@meta.data[[cluster_col]]))
+    if(nclusters == 1){
+      if(one_cluster_outputed){
+        cluster_content=paste0(cluster_content, "\nOne cluster only.\n\n")
+        next
+      } else {
+        one_cluster_outputed = TRUE
+      }
+    }
 
     file_prefix = paste0(detail_folder, "/", ct_name, ".MEcell_res.", cur_res)
 
