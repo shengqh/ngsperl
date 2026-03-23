@@ -457,8 +457,8 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
             sh_direct      => 0,
             pbs            => {
               "nodes"    => "1:ppn=1",
-              "walltime" => "10",
-              "mem"      => "10gb"
+              "walltime" => "24",
+              "mem"      => "40gb"
             }
           };
           $source_ref = $dedup_task;
