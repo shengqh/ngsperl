@@ -192,3 +192,7 @@ In your RNASeq/smallRNASeq/ChipSeq/ExomeSeq definition file, please add those li
 ```
 
 Once the scripts are generated, we can run the code to download data from SRA database. Due to port issue, we cannot submit sra2fastq to cluster. We have to process the sra2fastq tasks at local.
+
+## Links
+
+[![Hypercommit](https://img.shields.io/badge/Hypercommit-DB2475)](https://hypercommit.com/ngsperl)
