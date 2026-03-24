@@ -56,6 +56,11 @@ sub perform {
 
   for my $scatter_name (sort keys %$scatter_map) {
     my $interval_file = $scatter_map->{$scatter_name};
+
+    # interval_file can be a file or a list of files, or a list of intervals.
+    my $interval_file_str = $interval_file;
+    $interval_file_str =~ s/\s+/ -L /g;
+
     my $prefix = get_key_name($task_name, $scatter_name);
     
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $prefix );
@@ -78,7 +83,7 @@ gatk --java-options \"-Xmx8g -Xms8g\"  \\
   GenomicsDBImport \\
   --genomicsdb-workspace-path $prefix \\
   --batch-size 50 \\
-  -L $interval_file \\
+  -L $interval_file_str \\
   --sample-name-map $sample_name_map_file \\
   --reader-threads 5 \\
   --merge-input-intervals \\

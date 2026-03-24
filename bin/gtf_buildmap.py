@@ -61,7 +61,13 @@ def process_gtf(gtf_file, output_file, gene_key='gene_name'):
         
         gene_name = attributes.get(gene_key, gene_id)
 
-        gene_biotype = attributes['gene_biotype']
+        if 'gene_type' in attributes:
+          gene_biotype = attributes['gene_type']
+        elif 'gene_biotype' in attributes:
+          gene_biotype = attributes['gene_biotype']
+        else:
+          print(attributes)
+          gene_biotype = ""
         
         length = end - start + 1
         

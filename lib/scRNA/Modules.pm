@@ -531,7 +531,8 @@ sub addArcasHLA_extract {
     class        => "CQS::ProgramWrapperOneToOne",
     perform      => 1,
     target_dir   => "$target_dir/$extract_task",
-    init_command => "
+    init_command => "",
+    option => "
 if [[ ! -s __NAME__.bam ]]; then
   ln -s __FILE__ __NAME__.bam 
 fi
@@ -544,8 +545,7 @@ if [[ ! -s __NAME__.bam.bai ]]; then
     samtools index __NAME__.bam
   fi
 fi
-",
-    option => "
+
 echo arcasHLA extract -t 8 --log __NAME__.log $ispairend_option -v __NAME__.bam -o .
 arcasHLA extract -t 8 --log __NAME__.log $ispairend_option -v __NAME__.bam -o .
 
@@ -654,10 +654,18 @@ sub addArcasHLA {
     class                 => "CQS::ProgramWrapper",
     perform               => 1,
     target_dir            => "$target_dir/$merge_task",
-    option                => "merge -i $target_dir/$genotype_task/result --run $task_name -o .",
+    option                => "
+    
+arcasHLA merge -i $target_dir/$genotype_task/result --run $task_name -o .
+
+{ head -n 1 __NAME__.genotypes.tsv; sed '1d' __NAME__.genotypes.tsv | sort -k1,1; } > __NAME__.genotypes.sorted.tsv
+
+",
+
+
     interpretor           => "",
     check_program         => 0,
-    program               => "arcasHLA",
+    program               => "",
     source_ref            => $genotype_task,
     source_arg            => "-i",
     source_join_delimiter => " ",
@@ -665,7 +673,7 @@ sub addArcasHLA {
     output_to_folder      => 1,
     output_arg            => "-o",
     output_file_prefix    => "",
-    output_file_ext       => ".genotypes.tsv",
+    output_file_ext       => ".genotypes.sorted.tsv",
     docker_prefix         => "arcashla_",
     sh_direct             => 1,
     pbs                   => {
@@ -4234,7 +4242,7 @@ sub add_sccomp {
     suffix                   => "",
     output_file_ext          => ".sccomp.html",
     can_result_be_empty_file => 0,
-    no_docker => 1, # I didn't find solution to avoid compiling model error.
+    no_docker                => getValue($def, "perform_sccomp_by_docker", 1) ? 0 : 1, 
     sh_direct                => 1,
     pbs                      => {
       "nodes"    => "1:ppn=1",

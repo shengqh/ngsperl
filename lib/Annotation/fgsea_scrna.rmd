@@ -34,14 +34,14 @@ library(fgsea)
 
 source("reportFunctions.R")
 
-option_tbl=fread("fileList1.fgsea.txt", data.table=FALSE)
+option_tbl=fread("fileList1.fgsea.txt", sep="\t", data.table=FALSE, header=FALSE)
 myoptions=split(option_tbl$V1, option_tbl$V2)
 msigdbr_species=myoptions$msigdbr_species
 task_name=myoptions$task_name
 email=myoptions$email
 affiliation=get_affiliation(myoptions)
 
-file_tbl=fread("fileList2.fgsea.txt", data.table=FALSE, header=FALSE)
+file_tbl=fread("fileList2.fgsea.txt", sep="\t", data.table=FALSE, header=FALSE)
 de_list_file=file_tbl$V1[1]
 ```
 
