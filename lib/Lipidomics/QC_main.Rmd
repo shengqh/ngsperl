@@ -132,11 +132,12 @@ rm(raw_files_list, log_files_list, meta)
 
 ```{r}
 if(file.exists("fileList4.qc.txt")){
-  class_rename_map=read_file_map("fileList4.qc.txt", do_unlist=FALSE)
-  meta_sel$Class_new <- unlist(class_rename_map[meta_sel$Class])
-  meta_sel$Class_new[is.na(meta_sel$Class_new)] <- meta_sel$Class[is.na(meta_sel$Class_new)]
-  meta_sel$Class <- meta_sel$Class_new
-  meta_sel$Class_new <- NULL
+  class_rename_map=fread("fileList4.qc.txt", header=F, data.table = F)
+
+  meta_sel = merge(meta_sel, class_rename_map, by.x="Class", by.y="V2", all.x=TRUE)
+  meta_sel$V1[is.na(meta_sel$V1)] <- meta_sel$Class[is.na(meta_sel$V1)]
+  meta_sel$Class <- meta_sel$V1
+  meta_sel$V1 <- NULL
 
   cat("\n# Rename classes\n\n")
   print_table(meta_sel, byDT = TRUE, rownames = F)
