@@ -124,7 +124,13 @@ sub perform {
       $covariate_names = [];
     }elsif (is_hash($comp_def)){
       $group_names = $comp_def->{"groups"};
-      $covariate_names = $comp_def->{covariances};
+      $covariate_names = $comp_def->{"covariances"};
+      if(!defined $covariate_names){
+        $covariate_names = $comp_def->{"covariates"};
+      }
+      if(!defined $covariate_names){
+        $covariate_names = [];
+      }
       if (defined $comp_def->{"designFormula"}) {
         my $formula = $comp_def->{"designFormula"};
         if(is_array($formula)){
@@ -166,7 +172,12 @@ sub perform {
     }
     my @covariate_keys = @$covariate_names;
 
-    #print( Dumper(@group_names) );
+    if( scalar(@covariate_keys) > 0 ){
+      print( "  covariate keys: ", join(", ", @covariate_keys), "\n" );
+    }else{
+      print( "  no covariate\n" );
+    }
+    #print( Dumper($covariate_names) );
 
     my $g1 = $group_names->[0];
     my $g2 = $group_names->[1];
