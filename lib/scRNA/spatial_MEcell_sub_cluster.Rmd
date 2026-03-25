@@ -75,6 +75,15 @@ library(Seurat)
 
 obj=readRDS(obj_file)
 obj=UpdateSeuratObject(obj)
+if (is.null(dataType) || dataType=="VisiumHD") {
+  dataType=get_data_type(obj) #decide if this is a Visium, VisiumHD, or CosMx
+  if (dataType!="VisiumHD") {
+    warning(paste0("Data type not specified, inferred as ", dataType, " based on the object."))
+  }
+}
+if (dataType=="CosMx") { #set fov to NULL for CosMx data
+  image_slide=NULL
+}
 
 meta_files=fread(paste0(sample_name, ".", cluster_algorithm_name, ".subcluster.files.csv"))
 ```
