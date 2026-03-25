@@ -322,7 +322,7 @@ for(i in 1:nrow(meta_files)){
       saveRDS(markers, markers_rds)
     }
     if(nrow(markers) == 0){
-      cluster_content=paste0(cluster_content, "\n## No marker genes found\n\n")
+      cluster_content=paste0(cluster_content, "\n### No marker genes found\n\n")
       next
     }
 
