@@ -13,7 +13,7 @@ make_valid_name<-function(old_name){
 read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_groups=c("Blank", "Solvent"), not_sample_groups=c("AIS", "dBlank"), remove_lipids=c()){
   modePrefix=".*[POS|NEG]_"
 
-  header<-data.frame(t(fread(filename, nrows=5, data.table=FALSE)))
+  header<-data.frame(t(fread(filename, nrows=5, data.table=FALSE, check.names=FALSE)))
 
   nameCol=min(which("Metabolite name"==header$X5))
   rtCol=which("Average Rt(min)"==header$X5)
@@ -29,8 +29,10 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
   
   meta=header[!is.na(header$Class) & !(header$Class %in% c("", "Class")),]
   colnames(meta)[5]="Sample"
-  meta$Sample=make.names(gsub(modePrefix, "", meta$Sample))
-  meta$Class=make.names(meta$Class)
+  meta$Sample=gsub(modePrefix, "", meta$Sample)
+  # meta$Sample=make.names(gsub(modePrefix, "", meta$Sample))
+  # meta$Class=gsub("_$", "", gsub("_+", "_", gsub("\\s", "_", gsub("[()]+", "_", meta$Class))))
+  # meta$Class=make.names(meta$Class)
   meta <- meta %>% dplyr::select("Sample", everything())
 
   write.csv(meta, paste0(filePrefix, ".meta.csv"), row.names=FALSE)
@@ -38,7 +40,8 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
   all_not_sample_groups=c(qc_group, blank_groups, not_sample_groups)
   sample_meta=meta[!(meta[, "Class"] %in% all_not_sample_groups) & meta[, "File type"] == "Sample",]
 
-  sample_meta$Class_Sample <- make_valid_name(paste0(sample_meta$Class, "_", sample_meta$Sample))
+  #sample_meta$Class_Sample <- make_valid_name(paste0(sample_meta$Class, "_", sample_meta$Sample))
+  sample_meta$Class_Sample <- paste0(sample_meta$Class, ":", sample_meta$Sample)
   
   write.csv(sample_meta, paste0(filePrefix, ".sample_meta.csv"), row.names=FALSE)
 
@@ -152,9 +155,13 @@ read_lipid_tsv_and_filter<-function(filename, filePrefix, qc_group="QC", blank_g
 
 draw_pheatmap <- function(data_df, groups, annotation_colors, title, file_prefix, heatmap_width, heatmap_height, annotation_legend=FALSE, show_rownames=nrow(data_df) <= 30){
   cellheight = ifelse(show_rownames, 12, NA)
-  max_height=ifelse(show_rownames, 10, 8)
+  max_height=ifelse(show_rownames, 10, 6)
   heatmap_height = ifelse(is.na(heatmap_height), max(4, min(max_height, nrow(data_df) * 0.2 + 3)), heatmap_height)
   png_file = paste0(file_prefix, ".heatmap.png")
+
+  row_count = rowSums(data_df)
+  data_df=data_df[row_count > 0,,drop=FALSE]
+
   pheatmap::pheatmap( data_df, 
             main = title,
             scale = "row", 
