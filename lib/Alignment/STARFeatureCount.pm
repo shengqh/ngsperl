@@ -52,11 +52,7 @@ sub perform {
   my $star                    = get_option( $config, $section, "star_location",           "STAR" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
-
-  my $output_sort_by_coordinate = 1;
-  my $delete_star_featureCount_bam  = 0;
-  my $output_unsorted = 0;
-
+  
   my $output_format = "--outSAMtype BAM";
 
   #always output unsorted
@@ -104,7 +100,7 @@ sub perform {
 
     my $unsorted = $sample_name . "_Aligned.out.bam";
 
-    my $final_bam = $output_sort_by_coordinate ? $sample_name . "_Aligned.sortedByCoord.out.bam" : $unsorted;
+    my $final_bam = $sample_name . "_Aligned.sortedByCoord.out.bam";
 
     my $final_file = "${sample_name}.count";
 
@@ -112,7 +108,7 @@ sub perform {
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file );
 
-    my $chromosome_grep_command = $output_sort_by_coordinate ? getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern ) : "";
+    my $chromosome_grep_command = getChromosomeFilterCommand( $final_bam, $chromosome_grep_pattern );
 
     my $localized_files = [];
     @sample_files = @{$self->localize_files_in_tmp_folder($pbs, \@sample_files, $localized_files)};
@@ -126,48 +122,36 @@ rm -f ${sample_name}.star.failed ${sample_name}.featureCount.failed
 status=0
 
 if [[ -s $sample_file_1 ]]; then
-  if [[ ! -s $unsorted ]]; then
-    echo performing star ...
-    $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
-    status=\$?
-    if [[ \$status -eq 0 ]]; then
-      touch ${sample_name}.star.succeed
-    else
-      rm -rf $unsorted
-      echo \$status > ${sample_name}.star.failed
+  if [[ ! -s $final_bam ]]; then
+    if [[ ! -s $unsorted ]]; then
+      echo performing star ...
+      $star $option --outSAMattrRGline $rgline --runThreadN $thread --genomeDir $star_index --readFilesIn $samples $uncompress --outFileNamePrefix ${sample_name}_ $output_format
+      status=\$?
+      if [[ \$status -eq 0 ]]; then
+        touch ${sample_name}.star.succeed
+      else
+        rm -rf $unsorted
+        echo \$status > ${sample_name}.star.failed
+      fi
+    fi
+    
+    $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
+    rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
+
+    if [[ \$status -eq 0 && -s $unsorted ]]; then
+      echo bamSort=`date` 
+      rm -f ${final_bam}.succeed ${final_bam}.failed
+      samtools sort -m $sort_memory -T ${sample_name} --threads $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
+      if [[ ! -e ${final_bam}.succeed ]]; then
+        rm -f $final_bam
+      else
+        samtools index $final_bam
+        samtools idxstats $final_bam > ${final_bam}.chromosome.count
+        rm -f $unsorted 
+      fi
     fi
   fi
-  
-  $star --version | awk '{print \"STAR,v\"\$1}' > ${final_file}.star.version
-  rm -rf ${sample_name}__STARgenome ${sample_name}__STARpass1 ${sample_name}_Log.progress.out
-fi
-";
-
-  if ($output_sort_by_coordinate) {
-    print $pbs "
-if [[ \$status -eq 0 && -s $unsorted && ! -s $final_bam ]]; then
-  echo bamSort=`date` 
-  samtools sort -m $sort_memory -T ${sample_name} --threads $thread -o $final_bam $unsorted && touch ${final_bam}.succeed
-  if [[ ! -e ${final_bam}.succeed ]]; then
-    rm -rf $final_bam
-  else
-    samtools index $final_bam
-    samtools idxstats $final_bam > ${final_bam}.chromosome.count
-";
-
-    if ( !$output_unsorted ) {
-      print $pbs "
-    rm -rf $unsorted 
-";
-    }
-    
-    print $pbs "
-  fi
 fi  
-";
-  }
-
-print $pbs "
 
 if [[ \$status -eq 0 && -s $final_bam ]]; then
   $chromosome_grep_command
@@ -185,28 +169,12 @@ if [[ \$status -eq 0 && -s $final_bam ]]; then
     touch ${sample_name}.featureCount.succeed
   else
     echo \$status > ${sample_name}.featureCount.failed
-    rm -rf $final_file
+    rm -f $final_file
   fi
 
   featureCounts -v 2>\&1 | grep featureCounts | cut -d ' ' -f2 | awk '{print \"featureCounts,\"\$1}' > ${final_file}.featureCounts.version
 fi 
 ";
-
-    if ( !$output_unsorted ) {
-      print $pbs "
-if [[ -s $final_file ]]; then
-  rm -rf $unsorted 
-fi
-";
-    }
-
-    if ($delete_star_featureCount_bam){
-      print $pbs "
-if [[ -s $final_file ]]; then
-  rm -rf ${sample_name}_Aligned.out.bam ${sample_name}_Aligned.out.bam.bai ${sample_name}_SJ.out.tab ${sample_name}.splicing.bed
-fi
-";
-    }
 
     $self->clean_temp_files($pbs, $localized_files);
 
@@ -235,10 +203,6 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
 
-  my $output_sort_by_coordinate = 1;
-  my $delete_star_featureCount_bam  = 0;
-  my $output_unsorted = 0;
-
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1 );
 
   my $result = {};
@@ -251,15 +215,8 @@ sub result {
     push( @result_files, "$cur_dir/${sample_name}_Log.final.out" );
     push( @result_files, "$cur_dir/${sample_name}.bamstat" );
     push( @result_files, "$cur_dir/${sample_name}.count" );
-    if (!$delete_star_featureCount_bam) {
-      if ($output_sort_by_coordinate) {
-        push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
-        push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam.chromosome.count" );
-      }
-      if ($output_unsorted) {
-        push( @result_files, "$cur_dir/${sample_name}_Aligned.out.bam" );
-      }
-    }
+    push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam" );
+    push( @result_files, "$cur_dir/${sample_name}_Aligned.sortedByCoord.out.bam.chromosome.count" );
     push( @result_files, "$cur_dir/${sample_name}.count.star.version" );
     push( @result_files, "$cur_dir/${sample_name}.count.featureCounts.version" );
     $result->{$sample_name} = filter_array( \@result_files, $pattern );
