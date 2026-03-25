@@ -5,8 +5,8 @@ use strict;
 use warnings;
 use File::Basename;
 use Data::Dumper;
-use List::Util qw(first);
-use Storable qw(dclone);
+use List::Util  qw(first);
+use Storable    qw(dclone);
 use Hash::Merge qw( merge );
 
 use CQS::FileUtils;
@@ -25,6 +25,7 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+
 sub initializeDefaultOptions {
   my $def = shift;
 
@@ -33,10 +34,10 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "emailType", "FAIL" );
   initDefaultValue( $def, "cluster",   "slurm" );
 
-  initDefaultValue( $def, "combine_by", 'HIGHEST' ); #HIGHEST, SUM, BOTH
+  initDefaultValue( $def, "combine_by", 'HIGHEST' );    #HIGHEST, SUM, BOTH
 
-  initDefaultValue( $def, "max_thread",                '8' );
-  initDefaultValue( $def, "sequencetask_run_time",     '12' );
+  initDefaultValue( $def, "max_thread",            '8' );
+  initDefaultValue( $def, "sequencetask_run_time", '12' );
 
   initDefaultValue( $def, "checkFileGroupPairNames", 0 );
 
@@ -45,7 +46,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "DE_fold_change", 1.5 );
 
   return $def;
-}
+} ## end sub initializeDefaultOptions
+
 
 sub getLipidomicsConfig {
   my ($def) = @_;
@@ -56,127 +58,127 @@ sub getLipidomicsConfig {
   $def->{perform_preprocessing} = 0;
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
   my $task_name = $def->{task_name};
-  my $email = $def->{email};
+  my $email     = $def->{email};
 
   my $target_dir = $def->{target_dir};
-  my $tasks = [@$individual, @$summary];
+  my $tasks      = [ @$individual, @$summary ];
 
   my $preprocess_task = "preprocess";
   $config->{$preprocess_task} = {
-    class => "CQS::UniqueRmd",
-    target_dir => $target_dir . "/$preprocess_task",
-    report_rmd_file => "../Lipidomics/Preprocess_main.Rmd",
+    class                => "CQS::UniqueRmd",
+    target_dir           => $target_dir . "/$preprocess_task",
+    report_rmd_file      => "../Lipidomics/Preprocess_main.Rmd",
     additional_rmd_files => "../CQS/countTableVisFunctions.R;../CQS/reportFunctions.R;../Lipidomics/lipidomics_func.R;../Lipidomics/lipidomics_preprocessing.Rmd;../Lipidomics/lipidomics_category.Rmd",
-    option => "",
+    option               => "",
     parameterSampleFile1 => {
-      task_name => $task_name,
-      email => $email,
-      affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
-      nomenclature_file => getValue($def, "nomenclature_file"),
-      combine_by => getValue($def, "combine_by"),
-      remove_lipids => getValue($def, "remove_lipids"),
+      task_name         => $task_name,
+      email             => $email,
+      affiliation       => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+      nomenclature_file => getValue( $def, "nomenclature_file" ),
+      combine_by        => getValue( $def, "combine_by" ),
+      remove_lipids     => getValue( $def, "remove_lipids" ),
     },
     parameterSampleFile2_ref => "files",
-    suffix => ".preprocess",
-    output_file_ext => ".preprocess.html",
-    output_other_ext => ".files.txt,preprocess_result/__NAME__.pos.sample_meta.csv",
+    suffix                   => ".preprocess",
+    output_file_ext          => ".preprocess.html",
+    output_other_ext         => ".files.txt,preprocess_result/__NAME__.pos.sample_meta.csv",
     can_result_be_empty_file => 0,
-    sh_direct   => 1,
-    pbs => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "2",
-      "mem"       => "10gb"
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "2",
+      "mem"      => "10gb"
     },
   };
-  push(@$tasks, $preprocess_task);
+  push( @$tasks, $preprocess_task );
 
-  if($def->{perform_qc}){
+  if ( $def->{perform_qc} ) {
     my $qc_task = "qc";
     $config->{$qc_task} = {
-      class => "CQS::UniqueRmd",
-      target_dir => $target_dir . "/$qc_task",
-      report_rmd_file => "../Lipidomics/QC_main.Rmd",
+      class                => "CQS::UniqueRmd",
+      target_dir           => $target_dir . "/$qc_task",
+      report_rmd_file      => "../Lipidomics/QC_main.Rmd",
       additional_rmd_files => "../CQS/countTableVisFunctions.R;../CQS/reportFunctions.R;../Lipidomics/lipidomics_func.R",
-      option => "",
+      option               => "",
       parameterSampleFile1 => {
-        task_name => $task_name,
-        email => $email,
-        affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
-        remove_sample_pattern => $def->{remove_sample_pattern},
-        remove_sample_description => $def->{remove_sample_description},
-        heatmap_width => getValue($def, "qc_heatmap_width", 8),
+        task_name                 => $task_name,
+        email                     => $email,
+        affiliation               => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+        remove_sample_pattern     => $def->{qc_remove_sample_pattern},
+        remove_sample_description => $def->{qc_remove_sample_description},
+        heatmap_width             => getValue( $def, "qc_heatmap_width", 8 ),
       },
-      parameterSampleFile2_ref => ["preprocess", ".files.txt"],
-      parameterSampleFile3_ref => ["preprocess", ".pos.sample_meta.csv"],
-      suffix => ".qc",
-      output_file_ext => ".qc.html",
-      output_other_ext => ".png_files.txt",
+      parameterSampleFile2_ref => [ "preprocess", ".files.txt" ],
+      parameterSampleFile3_ref => [ "preprocess", ".pos.sample_meta.csv" ],
+      parameterSampleFile4     => $def->{qc_class_rename_map},
+      suffix                   => ".qc",
+      output_file_ext          => ".qc.html",
+      output_other_ext         => ".png_files.txt,.sample_meta.csv",
       can_result_be_empty_file => 0,
-      sh_direct   => 1,
-      pbs => {
-        "nodes"     => "1:ppn=1",
-        "walltime"  => "2",
-        "mem"       => "10gb"
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
       },
     };
-    push(@$tasks, $qc_task);
+    push( @$tasks, $qc_task );
 
-    if($def->{perform_DE_analysis}){
+    if ( $def->{perform_DE_analysis} ) {
       my $limma_task = "limma";
       $config->{$limma_task} = {
-        class => "CQS::UniqueRmd",
-        target_dir => $target_dir . "/$limma_task",
-        report_rmd_file => "../Lipidomics/limma.Rmd",
+        class                => "CQS::UniqueRmd",
+        target_dir           => $target_dir . "/$limma_task",
+        report_rmd_file      => "../Lipidomics/limma.Rmd",
         additional_rmd_files => "../CQS/countTableVisFunctions.R;../CQS/reportFunctions.R;../Lipidomics/lipidomics_func.R",
-        option => "",
+        option               => "",
         parameterSampleFile1 => {
-          task_name => $task_name,
-          email => $email,
-          affiliation => getValue($def, "affiliation", "CQS/Biostatistics, VUMC"),
-          remove_sample_pattern => $def->{remove_DE_sample_pattern},
-          remove_sample_description => $def->{remove_DE_sample_description},
-          fold_change => getValue($def, "DE_fold_change"),
-          fdr => getValue($def, "DE_pvalue"),
-          heatmap_width => getValue($def, "limma_heatmap_width", 6),
+          task_name                 => $task_name,
+          email                     => $email,
+          affiliation               => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+          remove_sample_pattern     => $def->{qc_remove_sample_pattern},
+          remove_sample_description => $def->{qc_remove_sample_description},
+          fold_change               => getValue( $def, "DE_fold_change" ),
+          fdr                       => getValue( $def, "DE_pvalue" ),
+          heatmap_width             => getValue( $def, "limma_heatmap_width", 6 ),
         },
-        parameterSampleFile2_ref => ["preprocess", ".files.txt"],
-        parameterSampleFile3_ref => ["preprocess", ".pos.sample_meta.csv"],
-        parameterSampleFile4 => getValue($def, "pairs"),
-        parameterSampleFile5_ref => ["qc", ".png_files.txt"],
-        suffix => ".limma",
-        output_file_ext => ".limma.html",
-        output_other_ext => ".files.txt",
+        parameterSampleFile2_ref => [ "preprocess", ".files.txt" ],
+        parameterSampleFile3_ref => [ "qc",         ".sample_meta.csv" ],
+        parameterSampleFile4     => getValue( $def, "pairs" ),
+        parameterSampleFile5_ref => [ "qc", ".png_files.txt" ],
+        suffix                   => ".limma",
+        output_file_ext          => ".limma.html",
+        output_other_ext         => ".files.txt",
         can_result_be_empty_file => 0,
-        sh_direct   => 1,
-        pbs => {
-          "nodes"     => "1:ppn=1",
-          "walltime"  => "24",
-          "mem"       => "20gb"
+        sh_direct                => 1,
+        pbs                      => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "24",
+          "mem"      => "20gb"
         },
       };
-      push(@$tasks, $limma_task);
-    }
-  }
+      push( @$tasks, $limma_task );
+    } ## end if ( $def->{perform_DE_analysis...})
+  } ## end if ( $def->{perform_qc...})
 
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
-    source     => {
-      tasks => $tasks,
-    },
-    sh_direct => 0,
-    cluster   => $cluster,
-    pbs       => {
-      "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => $def->{sequencetask_run_time},
-      "mem"       => "40gb"
+    source     => { tasks => $tasks, },
+    sh_direct  => 0,
+    cluster    => $cluster,
+    pbs        => {
+      "nodes"    => "1:ppn=" . $def->{max_thread},
+      "walltime" => $def->{sequencetask_run_time},
+      "mem"      => "40gb"
     },
   };
 
   return ($config);
-}
+} ## end sub getLipidomicsConfig
+
 
 sub performLipidomics {
   my ( $def, $perform ) = @_;
@@ -193,6 +195,6 @@ sub performLipidomics {
   }
 
   return $config;
-}
+} ## end sub performLipidomics
 
 1;
