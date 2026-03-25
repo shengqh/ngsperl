@@ -226,7 +226,7 @@ samples=colnames(final_anno)[7:ncol(final_anno)]
 get_box<-function(bdf, samples){
   bdf=data.frame(bdf)
   bdf$feature<-rownames(bdf)
-  mbdf<-melt(bdf,id.vars="feature")
+  mbdf<-reshape2::melt(bdf,id.vars="feature")
   mbdf<-mbdf[order(mbdf$feature),]
   
   nf=min(10, length(unique(bdf$feature)))
