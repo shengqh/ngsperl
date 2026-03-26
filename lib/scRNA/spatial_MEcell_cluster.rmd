@@ -456,7 +456,7 @@ for(cur_res in resolutions){
   }
 
   top5 = markers |>
-    dplyr::filter(p_val_adj < 0.05) |>
+    #dplyr::filter(p_val_adj < 0.05) |> #no need to filter marker here by p_val_adj as FindAllMarkers alreday filter marker by p value and this step may make no marker again
     dplyr::mutate(score = avg_log2FC * (pct.1 - pct.2)) |>
     dplyr::group_by(cluster) |>
     dplyr::slice_max(order_by = score, n = 5)
