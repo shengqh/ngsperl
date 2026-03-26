@@ -3839,7 +3839,7 @@ echo total_droplets_included=\$total_droplets_included
 
 cellbender remove-background --input __FILE2__ --output __NAME__.cellbender.h5 --expected-cells \$expected_cells --total-droplets-included \$total_droplets_included --checkpoint-mins 100000 $cellbender_option
 
-rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
+rm -rf ckpt.tar.gz .cache .config .ipython .jupyter .nv
 
 ",
     docker_prefix            => "cellbender_",
@@ -3849,6 +3849,7 @@ rm -rf ckpt.tar.gz .cache .config .ipython .jupyter
     no_output                => 1,
     output_file_ext          => ".cellbender_filtered.h5,.cellbender.h5",
     use_gpu                  => $cellbender_use_gpu,
+    num_gpus                 => getValue( $def, "cellbender_num_gpus", 1 ),
     sh_direct                => $sh_direct,
     pbs                      => {
       "nodes"    => "1:ppn=$cellbender_cpu",

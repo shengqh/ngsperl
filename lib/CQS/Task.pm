@@ -571,7 +571,7 @@ rm $rmstr
 }
 
 sub open_pbs {
-  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $can_result_be_empty_file, $input_file, $sh_command ) = @_;
+  my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $can_result_be_empty_file, $input_file, $sh_command, $pbs_index ) = @_;
 
   if ( !defined $init_command ) {
     $init_command = "";
@@ -666,6 +666,11 @@ echo working in $result_dir ...
       my $other = substr($docker_command, length($sing));
       if($self->{_use_gpu}){
         $sing = $sing . " --nv";
+        my $num_gpus = $self->{_num_gpus};
+        if($num_gpus > 1){
+          my $use_gpu_index = ($pbs_index - 1) % $num_gpus;
+          $sing = "CUDA_VISIBLE_DEVICES=" . $use_gpu_index . " " . $sing;
+        }
       }
 
       my $additional = "";
@@ -761,6 +766,7 @@ sub init_parameter {
   my ( $self, $config, $section, $create_directory ) = @_;
 
   $self->{_use_gpu} = get_option( $config, $section, "use_gpu", 0 );
+  $self->{_num_gpus} = get_option( $config, $section, "num_gpus", 1 );
   $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
   $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
   $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );

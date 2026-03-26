@@ -151,7 +151,7 @@ sub perform {
 
     my $final_file = $check_file_ext ne "" ? $sample_name . $check_file_ext : $expect_result->{$sample_name}[-1];
     #print("final file=" . $final_file . "\n");
-    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, $init_command, $can_result_be_empty_file );
+    my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, $init_command, $can_result_be_empty_file, undef, undef, $pbs_index );
 
     my $cur_sh_log = $sh_log;
     if ( $cur_sh_log =~ /__NAME__/ ) {
