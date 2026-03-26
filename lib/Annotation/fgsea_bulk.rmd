@@ -40,9 +40,6 @@ msigdbr_species=myoptions$msigdbr_species
 task_name=myoptions$task_name
 email=myoptions$email
 affiliation=get_affiliation(myoptions)
-
-file_tbl=fread("fileList2.fgsea.txt", data.table=FALSE, header=FALSE)
-de_list_file=file_tbl$V1[1]
 ```
 
 ---
@@ -60,16 +57,16 @@ author:
 hallmark_sets <- msigdbr(species = msigdbr_species, collection = "H")
 hallmark_list <- split(hallmark_sets$gene_symbol, hallmark_sets$gs_name)
 
-de_files=fread(de_list_file, data.table=FALSE)
-de_files$prefix=basename(de_files$prefix)
-de_files$gseaFile=file.path(dirname(de_list_file), de_files$gseaFile)
-de_map=split(de_files$gseaFile, de_files$prefix)
+de_files=fread("fileList2.fgsea.txt", header=FALSE, data.table=FALSE) |> 
+  dplyr::rename(comparison=V2, gseaFile=V1) |>
+  dplyr::select(comparison, gseaFile)
+de_map=split(de_files$gseaFile, de_files$comparison)
 ```
 
 ## Preranked gene list
 
 ```{r}
-print_table(de_files |> dplyr::select(prefix, gseaFile), row.names=F)
+print_table(de_files, row.names=F)
 ```
 
 ## fgsea results
@@ -85,6 +82,17 @@ for(prefix in names(de_map)){
 
   gsea_file=de_map[[prefix]][1]
   gsea_rnk=fread(gsea_file) |> dplyr::rename(gene=V1, sigfvalue=V2)
+
+  if(any(duplicated(gsea_rnk$gene))){
+    #keep the one with the largest absolute sigfvalue
+    gsea_rnk=gsea_rnk |> 
+      dplyr::mutate(abs_sigfvalue=abs(sigfvalue)) |>
+      dplyr::arrange(gene, desc(abs_sigfvalue)) |> 
+      dplyr::distinct(gene, .keep_all=TRUE) |>
+      dplyr::arrange(desc(sigfvalue))
+  }
+
+  gsea_rnk=gsea_rnk[!duplicated(gsea_rnk$gene),]
 
   # Create ranked gene list
   ranks <- setNames(gsea_rnk$sigfvalue, gsea_rnk$gene)
@@ -103,6 +111,8 @@ for(prefix in names(de_map)){
                   negLog10Padj = -log10(padj),
                   leadingEdgeGenes = sapply(leadingEdge, function(genes) paste(genes, collapse = ":"))) |>
     dplyr::select(-leadingEdge)
+
+  fgsea_results$pathway=gsub("HALLMARK_", "", fgsea_results$pathway)
 
   # Save results
   fgsea_file <- paste0(prefix, ".fgsea_hallmark.csv")
@@ -152,6 +162,16 @@ writeLines(gsea_content, con=fgsea_rmd)
 ```
 
 ```{r child=fgsea_rmd}
+```
+
+# fgsea and msigdbr version
+
+```{r}
+gsea_db=msigdbr_collections()$db_version[1]
+fgsea_version=as.character(packageVersion("fgsea"))
+df=data.frame("software"=c("fgsea", "fgsea_db"), "version"=c(fgsea_version, gsea_db))
+write.csv(df, file=paste0(task_name, ".version"), quote=FALSE, row.names=FALSE)
+print_table(df, row.names=FALSE)
 ```
 
 # Session Info

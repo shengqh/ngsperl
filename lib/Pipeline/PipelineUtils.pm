@@ -3842,7 +3842,7 @@ sub add_fgsea {
     report_rmd_file      => "../Annotation/fgsea_bulk.rmd",
     additional_rmd_files => "../CQS/reportFunctions.R",
     suffix               => ".fgsea",
-    output_file_ext      => ".fgsea.html,.fgsea.files.csv",
+    output_file_ext      => ".fgsea.html,.version,.fgsea.files.csv",
     parameterSampleFile1 => {
       "email"           => getValue( $def, "email" ),
       "affiliation"     => $def->{"affiliation"},

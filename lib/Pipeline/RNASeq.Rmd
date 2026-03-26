@@ -76,7 +76,10 @@ hasWebGestaltAnalysis<-any(grepl("WebGestalt_", rownames(files)))
 webgestalt_rmd="webgestalt.rmd"
 
 hasGseaAnalysis<-any(grepl("gsea_", rownames(files)))
-hasEnrichmentAnalysis<-hasWebGestaltAnalysis | hasGseaAnalysis
+
+hasFgseaAnalysis<-any(grepl("_fgsea", rownames(files)))
+
+hasEnrichmentAnalysis<-hasWebGestaltAnalysis | hasGseaAnalysis | hasFgseaAnalysis
 
 corNames<-gsub("_correlation_density", "", rownames(files)[grepl("_correlation_density", rownames(files))])
 corNames<-sort(corNames)
@@ -118,6 +121,7 @@ if(proteincoding_gene_only & remove_chrM_genes){
 
 deseq2_rmd="deseq2.rmd"
 gsea_rmd_file="gsea.rmd"
+fgsea_rmd_file="fgsea.rmd"
 ```
 
 ```{r, child=introduction_rmd, eval=has_introduction}
@@ -539,6 +543,32 @@ save_gsea_rmd(gsea_files, gsea_rmd_file, "##")
 ```{r, child=gsea_rmd_file, eval=hasGseaAnalysis} 
 ```
 
+
+```{r fgsea, results="asis", echo=FALSE, warning=FALSE, eval=hasFgseaAnalysis} 
+cat("## FGSEA Hallmark Gene Set Enrichment Analysis\n\n")
+fgsea_file_list = files$V1[files$V2 == "report_fgsea"]
+fgsea_files = read.csv(fgsea_file_list, row.names=1)
+if(nrow(fgsea_files) > 0){
+  fgsea_files$fgsea_file=paste0(dirname(fgsea_file_list), "/", fgsea_files$fgsea_file)
+  fgsea_files$fgsea_png=paste0(dirname(fgsea_file_list), "/", fgsea_files$fgsea_png)
+}
+
+fgsea_content=""
+i=1
+for(i in 1:nrow(fgsea_files)){
+  comparison = rownames(fgsea_files)[i]
+  fgsea_content = paste0(fgsea_content, "\n### ", comparison, "\n\n")
+  fgsea_content = paste0(fgsea_content, getPagedTable(fgsea_files$fgsea_file[i], row.names=1, escape=TRUE, digits=3, nsmall=2))
+  fgsea_content = paste0(fgsea_content, "\n\n")
+  fgsea_content = paste0(fgsea_content, get_figure_description(paste(comparison, "fgsea_png"), fgsea_files$fgsea_png[i], paste("FGSEA plot of", comparison)))
+}
+writeLines(fgsea_content, fgsea_rmd_file)
+``` 
+
+```{r, child=fgsea_rmd_file, eval=hasFgseaAnalysis} 
+```
+
+
 ```{r eval=hasFusion}
 cat("\n# Fusion gene detection\n\n")
 fusion_png = file_map[["star_fusion_png"]]
@@ -588,7 +618,13 @@ print(kable(df, caption=tabRef("resultFiles", "Result files")) %>%
 # Software versions
 
 ```{r softwareVersion, echo=FALSE, results='asis'}
-versions<-display_versions()
+versions<-get_versions("fileList4.txt", "fileList5.txt")
+
+if(any(grepl("^fgsea", versions$Software))){
+  versions=versions[!grepl("GSEA", versions$Software),,drop=FALSE]
+}
+
+print_table(versions, byDT=TRUE, row.names=FALSE)
 ```
 
 # Description
@@ -609,7 +645,6 @@ if(has_cutadapt){
 if(has_mapping){
   featureCount_option<-rnaseqOptions['featureCount_option', 1]
 }
-
 ```
 
 `r if(has_cutadapt){paste0("Reads were trimmed to remove adapter sequences using Cutadapt (", vmap['Cutadapt'], ")[1]", cutadapt_str, ".\n")}`
@@ -621,7 +656,8 @@ ComplexHeatmap [4] was used for cluster analysis and visualization.
 `r if(hasDEseq2){paste0("Significantly differential expressed genes with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[6]. ", deseq2filter)}`
 `r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[7].")}`
 `r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[8] on database (", vmap['GSEA_DB'], ").")}`
-`r if(hasFusion){paste0("Gene fusion was detected using STAR-Fusion package (", vmap['STAR-Fusion'], ")[9].")}`
+`r if(hasFgseaAnalysis){paste0("Gene set enrichment analysis was performed using fgsea package (", vmap['fgsea'], ")[9] on database (", vmap['fgsea_db'], ").")}`
+`r if(hasFusion){paste0("Gene fusion was detected using STAR-Fusion package (", vmap['STAR-Fusion'], ")[10].")}`
 
 `r if(has_cutadapt){"- [1] Martin M. Cutadapt removes adapter sequences from high-throughput sequencing reads. EMBnetjournal. 2011;17:10–12. doi: http://dx.doi.org/10.14806/ej.17.1.200.\n"}`
 `r if(has_mapping){"- [2]	Dobin A, Davis CA, Schlesinger F, Drenkow J, Zaleski C, Jha S, Batut P, Chaisson M, Gingeras TR. STAR: ultrafast universal RNA-seq aligner. Bioinformatics. 2013;29:15–21. doi: 10.1093/bioinformatics/bts635 \\\n- [3]	Liao Y, Smyth GK, Shi W. featureCounts: an efficient general purpose program for assigning sequence reads to genomic features. Bioinformatics. 2014;30:923–930. doi: 10.1093/bioinformatics/btt656 \n"}`
@@ -630,4 +666,5 @@ ComplexHeatmap [4] was used for cluster analysis and visualization.
 `r if(hasDEseq2){"- [6] Love MI, Huber W, Anders S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol. 2014;15:550. doi: 10.1186/PREACCEPT-8897612761307401\n"}` 
 `r if(hasWebGestaltAnalysis){"- [7]	Wang J, Vasaikar S, Shi Z, Greer M, Zhang B. WebGestalt 2017: a more comprehensive, powerful, flexible and interactive gene set enrichment analysis toolkit. Nucleic Acids Res. 2017;45:W130–W137. doi: 10.1093/nar/gkx356\n"}` 
 `r if(hasGseaAnalysis){"- [8]	Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, Paulovich A, Pomeroy SL, Golub TR, Lander ES, et al. Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A. 2005;102:15545–15550. doi: 10.1073/pnas.0506580102\n"}` 
-`r if(hasFusion){"- [9] Haas BJ, Dobin A, Li B, Stransky N, Pochet N, Regev A. Accuracy assessment of fusion transcript detection via read-mapping and de novo fusion transcript assembly-based methods. Genome Biol. 2019;20:213. doi: 10.1186/s13059-019-1842-9\n"}`
+`r if(hasFgseaAnalysis){"- [9] Korotkevich, Gennady, Vladimir Sukhov, Nikolay Budin, Boris Shpak, Maxim N. Artyomov, and Alexey Sergushichev. Fast Gene Set Enrichment Analysis. bioRxiv (2021): 060012. https://doi.org/10.1101/060012.\n"}` 
+`r if(hasFusion){"- [10] Haas BJ, Dobin A, Li B, Stransky N, Pochet N, Regev A. Accuracy assessment of fusion transcript detection via read-mapping and de novo fusion transcript assembly-based methods. Genome Biol. 2019;20:213. doi: 10.1186/s13059-019-1842-9\n"}`

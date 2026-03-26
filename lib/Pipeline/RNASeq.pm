@@ -1025,6 +1025,7 @@ export NUMEXPR_MAX_THREADS=12
   my $deseq2taskname;
   my $webgestaltTaskName;
   my $gseaTaskName;
+  my $fgseaTaskName;
   my $linkTaskName;
   my $webgestaltHeatmapTaskName;
   if ( defined $def->{pairs} ) {
@@ -1156,13 +1157,13 @@ export NUMEXPR_MAX_THREADS=12
     } ## end if ( getValue( $def, "perform_gsea"...))
 
     if ( getValue( $def, "perform_fgsea" ) ) {
-      $gseaTaskName = $deseq2taskname . "_fgsea";
+      $fgseaTaskName = $deseq2taskname . "_fgsea";
 
       my $pairs = $config->{pairs};
       my $keys  = [ keys %$pairs ];
       #my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
 
-      add_fgsea( $config, $def, $tasks, $target_dir, $gseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, "" );
+      add_fgsea( $config, $def, $tasks, $target_dir, $fgseaTaskName, [ $deseq2taskname, "_GSEA.rnk\$" ], $keys, "" );
     } ## end if ( getValue( $def, "perform_fgsea"...))
 
     if ( $def->{perform_keggprofile} ) {
@@ -1835,6 +1836,14 @@ fi
 
       $hasFunctionalEnrichment = 1;
     } ## end if ( defined $gseaTaskName)
+
+    if ( defined $fgseaTaskName ) {
+      my $pairs = $config->{pairs};
+      push( @report_files, $fgseaTaskName, ".fgsea.files.csv" );
+      push( @report_names, "report_fgsea" );
+
+      $hasFunctionalEnrichment = 1;
+    } ## end if ( defined $fgseaTaskName)
 
     my $fcOptions      = getValue( $def, "featureCount_option" );
     my $fcMultiMapping = ( $fcOptions =~ /-m/ ) ? "TRUE" : "FALSE";
