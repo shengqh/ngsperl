@@ -1574,11 +1574,29 @@ sub writeParameterSampleFile {
               print $list "$groupSampleNames${delimiter}${groupName}${delimiter}${sample_name}\n";
             }
           }else{
-            for my $groupSampleName (@$groupSampleNames) {
-              if($name_first){
-                print $list "${sample_name}${delimiter}${groupSampleName}${delimiter}${groupName}\n";
-              }else{
-                print $list "${groupSampleName}${delimiter}${groupName}${delimiter}${sample_name}\n";
+            my $refgroup = ref($groupSampleNames);
+            if($refgroup eq "HASH"){
+              foreach my $subgroupName ( sort keys %$groupSampleNames ) {
+                my $subgroupSampleNames = $groupSampleNames->{$subgroupName};
+                if (is_string($subgroupSampleNames)){
+                  print $list "$subgroupSampleNames${delimiter}${subgroupName}${delimiter}${groupName}${delimiter}${sample_name}\n";
+                }else{
+                  my $refsubgroup = ref($subgroupSampleNames);
+                  if($refsubgroup ne "ARRAY"){
+                    print Dumper($subgroupSampleNames);
+                    die "The subgroup has to be ARRAY for $sample_name of group $groupName, check your config file.";
+                  }
+                  my $join_values = join(',', @$subgroupSampleNames);
+                  print $list "$join_values${delimiter}${subgroupName}${delimiter}${groupName}${delimiter}${sample_name}\n";
+                }
+              }
+            }else{
+              for my $groupSampleName (@$groupSampleNames) {
+                if($name_first){
+                  print $list "${sample_name}${delimiter}${groupSampleName}${delimiter}${groupName}\n";
+                }else{
+                  print $list "${groupSampleName}${delimiter}${groupName}${delimiter}${sample_name}\n";
+                }
               }
             }
           }
