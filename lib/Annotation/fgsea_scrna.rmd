@@ -86,6 +86,15 @@ for(prefix in names(de_map)){
   gsea_file=de_map[[prefix]][1]
   gsea_rnk=fread(gsea_file) |> dplyr::rename(gene=V1, sigfvalue=V2)
 
+  if(any(duplicated(gsea_rnk$gene))){
+    #keep the one with the largest absolute sigfvalue
+    gsea_rnk=gsea_rnk |> 
+      dplyr::mutate(abs_sigfvalue=abs(sigfvalue)) |>
+      dplyr::arrange(gene, desc(abs_sigfvalue)) |> 
+      dplyr::distinct(gene, .keep_all=TRUE) |>
+      dplyr::arrange(desc(sigfvalue))
+  }
+
   # Create ranked gene list
   ranks <- setNames(gsea_rnk$sigfvalue, gsea_rnk$gene)
 
@@ -154,6 +163,16 @@ writeLines(gsea_content, con=fgsea_rmd)
 ```
 
 ```{r child=fgsea_rmd}
+```
+
+# fgsea and msigdbr version
+
+```{r}
+gsea_db=msigdbr_collections()$db_version[1]
+fgsea_version=as.character(packageVersion("fgsea"))
+df=data.frame("software"=c("fgsea", "fgsea_db"), "version"=c(fgsea_version, gsea_db))
+write.csv(df, file=paste0(task_name, ".version"), quote=FALSE, row.names=FALSE)
+print_table(df, row.names=FALSE)
 ```
 
 # Session Info
