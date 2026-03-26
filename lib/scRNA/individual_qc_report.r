@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='CosMx'
+outFile='Aorta_Progeria'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -10,7 +10,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_vangard_1/wangy67/PI_Yang/20250812_Cosmx/CosMx_S4_32203/raw_qc_report/result')
+setwd('/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/cellbender_nd_raw_qc_report/result')
 
 ### Parameter setting end ###
 
@@ -42,7 +42,7 @@ cell_types=c("seurat_cell_type")
 has_sctk<-file.exists(parSampleFile3)
 if(has_sctk){
   sctk_map<-read_file_map(parSampleFile3)
-  validation_columns<-c(validation_columns, "sctk_DF", "sctk_SDF", "sctk_scds")
+  validation_columns<-c(validation_columns, "sctk_DF", "sctk_SDF")
 }
 
 has_signacx<-exists('parSampleFile4')
@@ -146,12 +146,6 @@ for(sample_name in sample_names){
       df_column = "sctk_DF"
 
       cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, c("scDblFinder_doublet_call", "scDblFinder_class"), "sctk_SDF")
-
-      cur_meta = fill_meta_info(sample_name, sctk_meta, cur_meta, "scds_hybrid_call", "sctk_scds")
-
-      if(is.logical(cur_meta$scds)){
-        cur_meta$scds = ifelse(cur_meta$scds, "Doublet", "Singlet")
-      }
     }
   }
   
@@ -234,3 +228,4 @@ write.csv(stats_df, file.path(detail_folder, "sample_summary.csv"), row.names=F)
 ct_tb<-acast(ct_tb, "Sample~Var1",  value.var="Freq", fill=0)
 write.csv(ct_tb, file.path(detail_folder, "sample_celltype.csv"), row.names=TRUE)
 writeLines(validation_columns, file.path(detail_folder,"validation_columns.txt"))
+

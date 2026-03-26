@@ -1,22 +1,21 @@
 rm(list=ls()) 
-outFile='PH_scRNA'
+outFile='Aorta_Progeria'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
-parSampleFile4='fileList4.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge/result/PH_scRNA.final.rds'
-parFile2='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge_dr0.5_1_call/result/PH_scRNA.scDynamic.meta.rds'
-parFile3='/nobackup/h_cqs/paula_hurley_projects/20250914_reproduce_20210303_scRNA_human/T04_scRNA/cellbender_nd_seurat_sct2_merge_dr0.5_1_call/result/PH_scRNA.iter_png.csv'
+parFile1='/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/cellbender_nd_seurat_fastmnn/result/Aorta_Progeria.final.rds'
+parFile2='/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/cellbender_nd_seurat_fastmnn_dr0.5_1_call/result/Aorta_Progeria.scDynamic.meta.rds'
+parFile3='/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/cellbender_nd_seurat_fastmnn_dr0.5_1_call/result/Aorta_Progeria.iter_png.csv'
 
 
-setwd('/nobackup/h_cqs/ciara_shaver_projects/20251121_MP_13667_scRNA/T04_scRNA/nd_seurat_sct2_fastmnn_dr0.5_1_call_validation/result')
+setwd('/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/cellbender_nd_seurat_fastmnn_dr0.5_1_call_validation/result')
 
 ### Parameter setting end ###
 
-library(Seurat)
 source("scRNA_func.r")
+library(Seurat)
 
 options(future.globals.maxSize=1024^3*100) #100G
 
@@ -72,34 +71,35 @@ validation_columns=c()
 
 has_decontX = exists('parSampleFile6')
 if(has_decontX){
-  meta = fill_meta_info_list(parSampleFile6, meta, "decontX_contamination", "decontX", is_character=FALSE)
+  meta = fill_meta_info_list( source_meta_file_list=parSampleFile6, 
+                              target_meta=meta, 
+                              source_columns="decontX_contamination", 
+                              target_column="decontX", 
+                              is_character=FALSE)
 }
 
 meta$DBT<-"singlet"
 if(file.exists(parSampleFile3)){
-  meta = fill_meta_info_list(parSampleFile3, meta, "doubletFinder_doublet_label_resolution_1.5", "DF")
+  meta = fill_meta_info_list( source_meta_file_list=parSampleFile3, 
+                              target_meta=meta, 
+                              source_columns="doubletFinder_doublet_label_resolution_1.5", 
+                              target_column="DF")
   validation_columns<-c(validation_columns, "DF")
 
-  meta = fill_meta_info_list(parSampleFile3, meta, c("scDblFinder_doublet_call", "scDblFinder_class"), "SDF")
+  meta = fill_meta_info_list( source_meta_file_list=parSampleFile3, 
+                              target_meta=meta, 
+                              source_columns=c("scDblFinder_doublet_call", "scDblFinder_class"), 
+                              target_column="SDF", 
+                              is_character=FALSE)
   validation_columns<-c(validation_columns, "SDF")
-
-  meta = fill_meta_info_list(parSampleFile3, meta, "scds_hybrid_call", "scds")
-  if(is.logical(meta$scds)){
-    meta$scds = ifelse(meta$scds, "Doublet", "Singlet")
-  }
-  validation_columns<-c(validation_columns, "scds")
-
-  if(!has_decontX){
-    meta = fill_meta_info_list(parSampleFile3, meta, "decontX_contamination", "decontX", is_character=FALSE)    
-    meta[,"decontX > 0.25"] = meta[,"decontX"] > 0.25
-    has_decontX = TRUE
-    validation_columns<-c(validation_columns, "decontX > 0.25")
-  }
 }
 
 if(!("SignacX" %in% colnames(meta))){
   if(exists("parSampleFile4")){
-    meta = fill_meta_info_list(parSampleFile4, meta, "signacx_CellStates", "SignacX")
+    meta = fill_meta_info_list( source_meta_file_list=parSampleFile4, 
+                                target_meta=meta, 
+                                source_columns="signacx_CellStates", 
+                                target_column="SignacX")
     validation_columns<-c(validation_columns, "SignacX")
   }
 }else{
@@ -108,7 +108,10 @@ if(!("SignacX" %in% colnames(meta))){
 
 if(!("SingleR" %in% colnames(meta))){
   if(exists('parSampleFile5')){
-    meta = fill_meta_info_list(parSampleFile5, meta, "SingleR_labels", "SingleR")
+    meta = fill_meta_info_list( source_meta_file_list=parSampleFile5,
+                                target_meta=meta, 
+                                source_columns="SingleR_labels", 
+                                target_column="SingleR")
     validation_columns<-c(validation_columns, "SingleR")
   }
 }else{
@@ -117,7 +120,10 @@ if(!("SingleR" %in% colnames(meta))){
 
 if(!("Azimuth" %in% colnames(meta))) {
   if(exists('parSampleFile7')){
-    meta = fill_meta_info_list(parSampleFile7, meta, "Azimuth_finest", "Azimuth")
+    meta = fill_meta_info_list( source_meta_file_list=parSampleFile7, 
+                                target_meta=meta, 
+                                source_columns="Azimuth_finest", 
+                                target_column="Azimuth")
     validation_columns<-c(validation_columns, "Azimuth")
   }
 }else{
