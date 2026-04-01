@@ -1,0 +1,337 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+
+.main-container {
+  max-width: 1920px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+```
+
+```{r data, echo = FALSE}
+library(sf)
+source("reportFunctions.R")
+source("scRNA_func.r")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+email=myoptions$email
+affiliation=get_affiliation(myoptions)
+assay=myoptions$assay
+image_slide=myoptions$image_assay
+data_type=myoptions$data_type
+if(is.null(data_type)){
+  data_type="VisiumHD"
+}
+bubblemap_file=myoptions$bubblemap_file
+bubblemap_width_in=as.numeric(myoptions$bubblemap_width_in)
+species=myoptions$species
+
+file_map=fread("fileList1.txt", sep="\t", header=FALSE, col.names=c("path", "name"))
+sample_name=file_map$name[1]
+obj_file=file_map$path[1]
+```
+
+---
+title: "MEcell choose - `r sample_name`"
+author:
+- name: `r email`
+  affiliation: `r affiliation`
+---
+
+```{r}
+library(Seurat)
+
+obj=readRDS(obj_file)
+obj=UpdateSeuratObject(obj)
+
+if (data_type=="CosMx") { #set fov to NULL for CosMx data
+  image_slide=NULL
+}
+
+meta_rds=paste0(sample_name, ".all.meta.rds")
+meta=readRDS(meta_rds)
+stopifnot(all(rownames(meta) == colnames(obj)))
+
+obj@meta.data=meta
+
+deleted=sum(meta$cell_type == "DELETE")
+```
+
+There are `r deleted` cells marked as DELETE in the meta data, which will be excluded from downstream analysis.
+
+```{r}
+cells=rownames(meta)[meta$cell_type != "DELETE"]
+obj=subset(obj, cells=cells)
+obj@meta.data$cell_type=factor_by_count(obj@meta.data$cell_type)
+obj@meta.data$seurat_clusters=as.numeric(obj@meta.data$cell_type) - 1
+obj@meta.data$seurat_cell_type=paste0(obj@meta.data$seurat_clusters, ": ", obj@meta.data$cell_type)
+
+ct_levels=obj@meta.data |>
+  dplyr::select("seurat_clusters", "seurat_cell_type") |>
+  dplyr::distinct() |>
+  dplyr::arrange(seurat_clusters) |>
+  dplyr::pull(seurat_cell_type)
+obj@meta.data$seurat_cell_type=factor(obj@meta.data$seurat_cell_type, levels=ct_levels)
+
+final_meta_rds=paste0(sample_name, ".final.meta.rds")
+saveRDS(obj@meta.data, final_meta_rds)
+```
+
+```{r}
+hasAzimuth="Azimuth" %in% colnames(obj@meta.data)
+hasRCTD="RCTD1" %in% colnames(obj@meta.data)
+hasSingleR="SingleR" %in% colnames(obj@meta.data)
+hasSignacX="SignacX" %in% colnames(obj@meta.data)
+hasUMAP="umap" %in% names(obj@reductions)
+hasImageFeatures="cell_area_um2" %in% colnames(obj@meta.data)
+
+validation_columns = c()
+if(hasRCTD){
+  validation_columns = c(validation_columns, "RCTD1", "RCTD1_first_type")
+}
+if(hasAzimuth){
+  validation_columns = c(validation_columns, "Azimuth")
+}
+if(hasSingleR){
+  validation_columns = c(validation_columns, "SingleR")
+}
+if(hasSignacX){
+  validation_columns = c(validation_columns, "SignacX")
+}
+```
+
+# Cell type clusters
+
+```{r}
+ct_df=get_freq_table(obj@meta.data, "seurat_cell_type")
+print_table(ct_df, byDT=FALSE, row.names=FALSE)
+```
+
+```{r}
+detail_folder="details"
+if(!dir.exists(detail_folder)){
+  dir.create(detail_folder)
+}
+
+file_prefix = paste0(detail_folder, "/", sample_name)
+
+cluster_count_col = "seurat_cell_type_count"
+obj@meta.data = add_column_count(obj@meta.data, "seurat_cell_type", cluster_count_col, order_by_count=TRUE)
+
+cluster_colors = get_colors(current_cell_types=unique(obj@meta.data[[cluster_count_col]]))
+Idents(obj) <- cluster_count_col
+```
+
+# Spatial images
+
+```{r}
+tissue_image =  ImageDimPlot (object = obj) + 
+                ggtitle(paste0("Tissue : ", sample_name)) +
+                theme(legend.position = "none",
+                      plot.title = element_text(hjust = 0.5),
+                      panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+tissue_image = adjust_ImagePlot_Polygons(tissue_image)
+
+plots <- list("Tissue Image" = tissue_image)
+
+plots[['ImageDimPlot']] = get_image_dim_plot( obj=obj, 
+                                              assay=assay, 
+                                              group.by=cluster_count_col, 
+                                              colors=cluster_colors, 
+                                              fov_name=image_slide,
+                                              title="")
+
+if (data_type!="CosMx") {
+  pt.size.factor = ifelse(grepl("Polygons", assay), 0.5, 12)
+  Idents(obj) <- cluster_count_col
+  plots[['SpatialDimPlot']] = SpatialDimPlot( obj, 
+                                              group.by=cluster_count_col,
+                                              cols = cluster_colors, 
+                                              image.alpha = 0.1,
+                                              pt.size.factor = pt.size.factor) + 
+                              theme(plot.title = element_text(hjust = 0.5), 
+                                    panel.border = element_rect(colour = "black", fill=NA, linewidth=1))  
+}
+
+cluster_png = save_vis_png(plots, file_prefix, cluster_colors, cluster_count_col, assay)
+include_graphics(cluster_png)
+```
+
+```{r eval=hasUMAP}
+cat("\n# UMAP\n\n")
+cluster_col="seurat_clusters"
+scolors=cluster_colors
+names(scolors)=levels(obj@meta.data[[cluster_col]])
+g = get_dim_plot(obj, reduction='umap', group.by=cluster_col, label.by=cluster_count_col, scolors=scolors) + 
+  ggtitle("UMAP") + theme(plot.title = element_text(hjust = 0.5))
+umap_png = paste0(file_prefix, ".umap.png")    
+width=ifelse(length(cluster_colors) > 17, 12, 9)
+ggsave(umap_png, g, width=width, height=6, units="in", dpi=300, bg="white")
+include_graphics(umap_png)
+```
+
+# Image dim plot of each cluster
+
+```{r}
+g = ImageDimPlot( object = obj, 
+                  fov = image_slide, 
+                  split.by = cluster_count_col,
+                  border.size = NA,
+                  axes = F, 
+                  dark.background = F, 
+                  coord.fixed = T) + 
+  theme(plot.title = element_blank(), 
+        panel.border = element_rect(colour = "black", fill=NA, linewidth=1),
+        legend.position = "none",
+        strip.background = element_rect(fill="white"))
+g = adjust_ImagePlot_Polygons(g)
+ncol = ifelse(length(cluster_colors) <= 3, length(cluster_colors), ceiling(sqrt(length(cluster_colors))))
+nrow = ceiling(length(cluster_colors) / ncol)
+
+ct_individual_png = paste0(file_prefix, ".ct_individual.png")
+ggsave(ct_individual_png, g, width=ncol * 2.8, height=nrow * 2.8 + 0.3, units="in", dpi=300, bg="white")
+include_graphics(ct_individual_png)
+```
+
+# Marker genes
+
+```{r}
+g<-get_bubble_plot( obj=obj,
+                    group.by=cluster_count_col,
+                    bubblemap_file = bubblemap_file, 
+                    assay = assay, 
+                    species=species)
+bubblemap_png = paste0(file_prefix, ".dot.png")
+ggsave(bubblemap_png, g, width=bubblemap_width_in, height=max(4, length(cluster_colors) * 0.3 + 2), units="in", dpi=300, bg="white", limitsize = FALSE)
+include_graphics(bubblemap_png)
+```
+
+# Validation barplot
+
+```{r}
+bar_file= paste0(file_prefix, ".validation_barplot.png")
+g<-get_barplot( ct_meta=obj@meta.data, 
+                bar_file=bar_file,
+                cluster_name=cluster_count_col, 
+                validation_columns=validation_columns,
+                calc_height_per_cluster=200, 
+                calc_width_per_cell=50)
+include_graphics(bar_file)
+```
+
+# Violin plots of nCount
+
+```{r}
+gd = FetchData(obj, c(cluster_count_col, paste0("nCount_", assay)))
+g=ggplot( gd, aes(x=!!sym(cluster_count_col), y=!!sym(paste0("nCount_", assay)))) + 
+              geom_violin(scale="width") +
+              geom_boxplot(width=0.1, outliers=FALSE) +
+              theme_classic() +
+              theme(axis.text.x=element_text(angle=90, hjust=1, vjust=0.5),
+                    axis.title.x=element_blank())
+vln_png = paste0(file_prefix, ".vln.png")
+ggsave(vln_png, g, width=max(5, length(cluster_colors) * 0.4 + 2), height=4, units="in", dpi=300, bg="white", limitsize = FALSE)
+include_graphics(vln_png)
+```
+
+```{r, eval=hasImageFeatures}
+obj_image_df=obj@meta.data |>
+  dplyr::select(cell_id, !!sym(cluster_count_col), cell_area_um2, cell_perimeter_um, cell_circularity, nucleus_area_um2, nucleus_perimeter_um, nucleus_circularity) |>
+  dplyr::mutate(area_ratio = nucleus_area_um2 / cell_area_um2,
+                perimeter_ratio = nucleus_perimeter_um / cell_perimeter_um ) |>
+  tibble::rownames_to_column('cell') |>
+  dplyr::rename(Subcluster_count = !!sym(cluster_count_col)) |>
+  dplyr::select(cell, cell_id, everything())
+
+melt_df=reshape2::melt(obj_image_df, id.vars=c('cell', 'cell_id', 'Subcluster_count'))
+melt_df$sample=sample_name
+melt_df$variable=factor(melt_df$variable, levels=c("cell_area_um2", "nucleus_area_um2", "cell_perimeter_um", "nucleus_perimeter_um", "cell_circularity", "nucleus_circularity", "area_ratio", "perimeter_ratio"))
+
+g=ggplot(melt_df, aes(x=Subcluster_count, y=value)) +
+  geom_boxplot(outliers=FALSE, width=0.5) +
+  facet_wrap(~variable, ncol=2, scales="free_y") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5),
+        plot.title = element_text(hjust = 0.5),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position="none",
+        strip.background = element_blank())
+
+feature_png = paste0(file_prefix, ".image_features.png")
+ggsave(feature_png, g, width=max(5, length(cluster_colors) * 0.8 + 2), height=8, units="in", dpi=300, bg="white", limitsize = FALSE)
+
+cat("\n# Box plots of image features\n\n")
+include_graphics(feature_png)
+```
+
+
+```{r}
+markers_rds = paste0(file_prefix, ".markers.rds")
+if(file.exists(markers_rds)){
+  markers = readRDS(markers_rds)
+}else{
+  markers = FindAllMarkers( obj, 
+                            assay = assay, 
+                            only.pos = TRUE, 
+                            min.pct = 0.25, 
+                            logfc.threshold = 0.25,
+                            group.by = cluster_count_col)
+  saveRDS(markers, markers_rds)
+}
+has_markers = nrow(markers) > 0
+```
+
+```{r, eval=has_markers}
+heatmap_png = paste0(file_prefix, ".heatmap.png")
+if(!file.exists(heatmap_png)){
+  top5 = markers |>
+    dplyr::filter(p_val_adj < 0.05) |>
+    dplyr::mutate(score = avg_log2FC * (pct.1 - pct.2)) |>
+    dplyr::group_by(cluster) |>
+    dplyr::slice_max(order_by = score, n = 5)
+
+  g = MyDoHeatMap( obj, 
+                  features = top5$gene, 
+                  group.by = cluster_col, 
+                  assay = assay) 
+
+  width<-max(6, length(cluster_colors) * 1)
+  height<-max(3, length(top5$gene) * 0.2)
+  ggsave(heatmap_png, g, width=width, height=height, units="in", dpi=300, bg="white", limitsize = FALSE)
+}
+
+cat("\n# Heatmap of top 5 markers per cluster\n\n")
+include_graphics(heatmap_png)
+```
+
+# Session Info
+
+```{r}
+print_table(get_packages_table(), byDT=TRUE, row.names=F)
+```

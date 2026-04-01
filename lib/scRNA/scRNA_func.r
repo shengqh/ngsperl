@@ -4096,6 +4096,39 @@ add_arrows <- function(plot, label_x = "UMAP 1", label_y = "UMAP 2", length = 0.
 
 
 get_data_type <- function(dataObj) {
+  if (!inherits(dataObj, "Seurat")) {
+    stop("Input must be a Seurat object")
+  }
+  
+  if("Spatial.Polygons" %in% names(dataObj)){
+    return("VisiumHD")
+  }
+
+  if(any(grepl("Spatial.", names(dataObj)))){
+    return("Visium")
+  }
+
+  if (length(Images(dataObj)) > 0) {
+    # If spatial assay exists but no Visium structure → likely CosMx or other spatial
+    coords <- tryCatch(GetTissueCoordinates(dataObj), error = function(e) NULL)
+    
+    if (!is.null(coords)) {
+      # CosMx often has cell-level segmentation (many irregular cell names)
+      barcodes <- colnames(dataObj)
+      
+      if (mean(grepl("_", barcodes)) > 0.5) {
+        return("CosMx")
+      } else {
+        return("Spatial_Unknown")
+      }
+    }
+  }else{
+    return("Spatial_Unknown")
+  }
+}
+
+
+get_data_type_shilin <- function(dataObj) {
   
   if (!inherits(dataObj, "Seurat")) {
     stop("Input must be a Seurat object")

@@ -80,20 +80,21 @@ sub getSpatialTranscriptome {
 
   my $target_dir = getValue( $def, "target_dir" );
 
-  my $source_def = undef;
-  my $source_assay = undef;
-  my $source_image_assay = undef;
+  my $source_def              = undef;
+  my $source_assay            = undef;
+  my $source_image_assay      = undef;
   my $source_image_assay_dict = undef;
 
-  if ($def->{perform_cosmx}){
-    $source_def = "files";
+  if ( $def->{perform_cosmx} ) {
+    $source_def   = "files";
     $source_assay = "RNA";
-    if($def->{image_assay_dict}){
-      $source_image_assay_dict = getValue($def, "image_assay_dict");
-    }else{
-      $source_image_assay = getValue($def, "image_assay", "slice1.RNA")
+    if ( $def->{image_assay_dict} ) {
+      $source_image_assay_dict = getValue( $def, "image_assay_dict" );
     }
-  }
+    else {
+      $source_image_assay = getValue( $def, "image_assay", "slice1.RNA" );
+    }
+  } ## end if ( $def->{perform_cosmx...})
 
   my $VisiumHD_image_features_task = undef;
   if ( $def->{perform_VisiumHD} ) {
@@ -129,15 +130,15 @@ python3 $image_features_script \\
   --image '__FILE4__' \\
   --output '__NAME__.resnet_features.parquet' 
 ",
-        parameterSampleFile1 => getValue($def, "cell_geojson_files"),
-        parameterSampleFile2 => getValue($def, "nucleus_geojson_files"),
-        parameterSampleFile3 => getValue($def, "scales_files"),
-        parameterSampleFile4 => getValue($def, "image_files"),
-        output_ext               => ".resnet_features.parquet",
-        docker_prefix            => "visiumhd_",
-        no_output                => 1,
-        sh_direct                => 0,
-        pbs                      => {
+        parameterSampleFile1 => getValue( $def, "cell_geojson_files" ),
+        parameterSampleFile2 => getValue( $def, "nucleus_geojson_files" ),
+        parameterSampleFile3 => getValue( $def, "scales_files" ),
+        parameterSampleFile4 => getValue( $def, "image_files" ),
+        output_ext           => ".resnet_features.parquet",
+        docker_prefix        => "visiumhd_",
+        no_output            => 1,
+        sh_direct            => 0,
+        pbs                  => {
           "nodes"    => "1:ppn=4",
           "walltime" => "10:00:00",
           "mem"      => "80gb"
@@ -247,10 +248,10 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
     };
     push( @$tasks, $filter_task );
 
-    $source_def = [ $filter_task, ".rds" ];
-    $source_assay = "Spatial.Polygons";
+    $source_def         = [ $filter_task, ".rds" ];
+    $source_assay       = "Spatial.Polygons";
     $source_image_assay = "slice1.polygons";
-  }
+  } ## end if ( $def->{perform_VisiumHD...})
 
   my $spagene_task = undef;
   if ( $def->{perform_SpaGene} ) {
@@ -290,7 +291,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
     my $assays = [$source_assay];
     for my $assay ( @{$assays} ) {
       my $rctd_task = "RCTD_$assay";
-      if ( $assay eq 'Spatial.Polygons' or $assay eq 'RNA') {
+      if ( $assay eq 'Spatial.Polygons' or $assay eq 'RNA' ) {
         $rctd_polygons_task = $rctd_task;
       }
       $config->{$rctd_task} = {
@@ -451,25 +452,25 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       rtemplate                => "../CQS/reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/SignacX_only.r",
       parameterSampleFile1_ref => $source_def,
       parameterSampleFile2     => {
-        task_name       => getValue( $def, "task_name" ),
-        email           => getValue( $def, "email" ),
-        affiliation     => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-        assay           => $source_assay,
-        bubblemap_file  => getValue( $def, "bubblemap_file" ),
-        bubblemap_width => getValue( $def, "bubblemap_width" ),
-        nCount_cutoff   => getValue( $def, "nCount_cutoff" ),
-        species         => getValue( $def, "species" ),
-        pca_dims        => getValue( $def, "pca_dims", 30 ),
-        reduction       => getValue( $def, "SignacX_reduction", "pca"),
-        SignacX_reference_file => getValue( $def, "SignacX_reference_file"),
-        by_sctransform  => 0,
+        task_name              => getValue( $def, "task_name" ),
+        email                  => getValue( $def, "email" ),
+        affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+        assay                  => $source_assay,
+        bubblemap_file         => getValue( $def, "bubblemap_file" ),
+        bubblemap_width        => getValue( $def, "bubblemap_width" ),
+        nCount_cutoff          => getValue( $def, "nCount_cutoff" ),
+        species                => getValue( $def, "species" ),
+        pca_dims               => getValue( $def, "pca_dims",          30 ),
+        reduction              => getValue( $def, "SignacX_reduction", "pca" ),
+        SignacX_reference_file => getValue( $def, "SignacX_reference_file" ),
+        by_sctransform         => 0,
       },
       sh_direct     => 0,
       docker_prefix => "signacX_",
       no_docker     => 0,
       #output_ext    => ".SignacX.rds",
-      output_ext    => ".meta.rds",
-      pbs           => {
+      output_ext => ".meta.rds",
+      pbs        => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
         "mem"      => "40gb"
@@ -488,10 +489,10 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       rtemplate                => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell.r",
       parameterSampleFile1_ref => $source_def,
       parameterSampleFile2     => {
-        task_name     => getValue( $def, "task_name" ),
-        email         => getValue( $def, "email" ),
-        affiliation   => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
-        assay         => $source_assay,
+        task_name   => getValue( $def, "task_name" ),
+        email       => getValue( $def, "email" ),
+        affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+        assay       => $source_assay,
       },
       sh_direct        => 0,
       no_docker        => 0,
@@ -514,9 +515,9 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       rtemplate                => "../scRNA/scRNA_func.r,../scRNA/spatial_MEcell_umap_graph.r",
       parameterSampleFile1_ref => [ $MEcell_task, ".rds" ],
       parameterSampleFile2     => {
-        task_name   => getValue( $def, "task_name" ),
-        email       => getValue( $def, "email" ),
-        affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+        task_name     => getValue( $def, "task_name" ),
+        email         => getValue( $def, "email" ),
+        affiliation   => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
         assay         => $source_assay,
         min_neighbors => getValue( $def, "MEcell_umap_min_neighbors" ),
       },
@@ -595,7 +596,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         #output_other_ext         => ".MEcell_cluster.html",
         pbs => {
           "nodes"    => "1:ppn=1",
-          "walltime" => getValue($def, "MEcell_cluster_hour", 48),
+          "walltime" => getValue( $def, "MEcell_cluster_hour", 48 ),
           "mem"      => "40gb"
         }
       };
@@ -676,7 +677,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
     };
     push( @$tasks, $MEcell_cluster_summary_task );
 
-    if($def->{perform_subcluster}) {
+    if ( $def->{perform_subcluster} ) {
       my $subcluster_task = "${MEcell_cluster_report_task}_subcluster";
       $config->{$subcluster_task} = {
         class                    => "CQS::IndividualR",
@@ -700,11 +701,12 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
           bubblemap_file         => getValue( $def, "bubblemap_file" ),
           bubblemap_width_in     => getValue( $def, "bubblemap_width_in", 8 ),
           species                => getValue( $def, "species" ),
+          data_type              => getValue( $def, "data_type" ),
           cluster_algorithm      => $cluster_algorithm,
           cluster_algorithm_name => $cluster_algorithm_name,
           image_assay            => $source_image_assay,
         },
-        parameterSampleFile3     => getValue($def, "dynamic_rename_map"),
+        parameterSampleFile3     => getValue( $def, "dynamic_rename_map" ),
         parameterSampleFile4_ref => $azimuth_task,
         parameterSampleFile5_ref => $rctd_polygons_task,
         parameterSampleFile6_ref => $singleR_task,
@@ -714,16 +716,65 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         sh_direct                => 0,
         no_docker                => getValue( $def, "no_docker", 0 ),
         output_to_same_folder    => 0,
-        output_ext               => ".$source_assay.MEcell.subcluster.meta.rds",
+        output_ext               => ".Leiden.subcluster.files.csv",
         output_other_ext         => "../__NAME__.spatial_MEcell_sub_cluster.html",
-        pbs => {
+        pbs                      => {
           "nodes"    => "1:ppn=1",
-          "walltime" => getValue($def, "MEcell_cluster_hour", 48),
+          "walltime" => getValue( $def, "MEcell_cluster_hour", 48 ),
           "mem"      => "40gb"
         }
       };
-      push( @$tasks,                $subcluster_task );
-    } ## end for ( my $i = 0; $i < scalar...)
+      push( @$tasks, $subcluster_task );
+
+      if ( $def->{perform_dynamic_choose} ) {
+        my $choose_task = "${subcluster_task}_choose";
+        $config->{$choose_task} = {
+          class                    => "CQS::IndividualR",
+          target_dir               => "$target_dir/$choose_task",
+          perform                  => 1,
+          rtemplate                => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_MEcell_sub_cluster_choose.r",
+          rReportTemplate          => "../scRNA/spatial_MEcell_sub_cluster_choose.Rmd;reportFunctions.R",
+          run_rmd_independent      => 1,
+          rmd_ext                  => ".choose.html",
+          option                   => "",
+          parameterSampleFile1_ref => [ $MEcell_cluster_report_task, ".rds" ],
+          parameterSampleFile2     => {
+            email                  => getValue( $def, "email" ),
+            affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+            assay                  => $source_assay,
+            markers_file           => getValue( $def, "markers_file" ),
+            curated_markers_file   => getValue( $def, "curated_markers_file" ),
+            summary_layer_file     => getValue( $def, "summary_layer_file" ),
+            remove_subtype         => getValue( $def, "remove_subtype" ),
+            HLA_panglao5_file      => getValue( $def, "HLA_panglao5_file" ),
+            bubblemap_file         => getValue( $def, "bubblemap_file" ),
+            bubblemap_width_in     => getValue( $def, "bubblemap_width_in", 8 ),
+            species                => getValue( $def, "species" ),
+            data_type              => getValue( $def, "data_type" ),
+            cluster_algorithm      => $cluster_algorithm,
+            cluster_algorithm_name => $cluster_algorithm_name,
+            image_assay            => $source_image_assay,
+          },
+          parameterSampleFile3     => getValue( $def, "dynamic_subclusters_table" ),
+          parameterSampleFile4_ref => [ $subcluster_task, ".Leiden.subcluster.files.csv" ],
+          parameterSampleFile5_ref => $MEcell_umap_task,
+          no_prefix                => 1,
+          sh_direct                => 0,
+          docker_prefix            => "choose_",
+          no_docker                => getValue( $def, "no_docker", 0 ),
+          output_to_same_folder    => 0,
+          output_ext               => ".choose.rds",
+          output_other_ext         => "../__NAME__.choose.html",
+          pbs                      => {
+            "nodes"    => "1:ppn=1",
+            "walltime" => 10,
+            "mem"      => "20gb"
+          }
+        };
+        push( @$tasks, $choose_task );
+
+      } ## end if ( $def->{perform_dynamic_choose...})
+    } ## end if ( $def->{perform_subcluster...})
   } ## end if ( getValue( $def, "perform_MEcell"...))
 
   #   if ( $def->{perform_segment_report} ) {
