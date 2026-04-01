@@ -55,6 +55,7 @@ sub get_dependent_job_ids {
       open(my $idmap, ">id.map");
       print ($idmap $str);
       close($idmap);
+      $idmap=undef;
       #die "$dep_pbs is not in pbs_id_map: " . Dumper($pbs_id_map);
       die "processing $task_section, $dep_pbs is not in pbs_id_map: id.map " ;
     }
