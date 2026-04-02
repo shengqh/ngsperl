@@ -1,0 +1,68 @@
+---
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+<style type="text/css">
+    div.datatables { height: auto !important;}
+</style>
+
+```{r setup, include=FALSE}
+library(kableExtra)
+library(formatR)
+
+source("reportFunctions.R")
+
+myoptions<-read_file_map("fileList1.txt", do_unlist=FALSE)
+email=myoptions$email
+affiliation=get_affiliation(myoptions)
+task_name=myoptions$task_name
+
+knitr::opts_chunk$set(
+  echo=FALSE,  
+  message=FALSE, 
+  warning=FALSE, 
+  results = 'asis', 
+  fig.width=7, 
+  fig.height = 7,
+  tidy = TRUE, 
+  tidy.opts = list(comment = FALSE, width.cutoff = 120))
+options(knitr.graphics.rel_path = FALSE)
+```
+
+---
+title: "lcWGS ichorCNA Summary Report - `r task_name`"
+author:
+- name: `r email`
+  affiliation: `r affiliation`
+---
+
+```{r}
+seg_files<-read_file_map("fileList2.txt", do_unlist=FALSE)
+pdf_files<-read_file_map("fileList3.txt", do_unlist=FALSE)
+
+sample_content=""
+sample_names=names(seg_files)
+sample_name=sample_names[1]
+for(sample_name in sample_names) {
+  sample_content=paste0(sample_content, "# Sample: ", sample_name, "\n\n")
+  seg_file=seg_files[[sample_name]]
+  pdf_file=pdf_files[[sample_name]]
+  sample_content=paste0(sample_content, getTable(seg_file, row.names=FALSE), "\n")
+  sample_content=paste0(sample_content, "\n![](", pdf_file, "){width=100% height=500px}\n\n")
+}
+sample_rmd="sample.rmd"
+writeLines(sample_content, sample_rmd)
+```
+
+```{r, child=sample_rmd}
+```
