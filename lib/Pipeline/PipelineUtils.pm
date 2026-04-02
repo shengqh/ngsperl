@@ -2351,13 +2351,16 @@ sub do_add_gene_locus {
 
 
 sub addGeneLocus {
-  my ( $config, $def, $summary, $target_dir, $gene_key ) = @_;
+  my ( $config, $def, $summary, $target_dir, $gene_key, $task_prefix ) = @_;
   if ( !defined $gene_key ) {
     $gene_key = "annotation_genes";
   }
+  if(!defined $task_prefix){
+    $task_prefix = "";
+  }
   my $geneLocus = undef;
   if ( defined $def->{$gene_key} ) {
-    $geneLocus = "genes_locus";
+    $geneLocus = $task_prefix . "genes_locus";
     my $genesStr = getValue( $def, $gene_key );
     do_add_gene_locus( $config, $def, $summary, $target_dir, $geneLocus, $genesStr );
   }
