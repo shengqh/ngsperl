@@ -65,7 +65,8 @@ with open(args.input, "r") as fin:
           continue
 
         if not (sample_data.startswith("0/1:") or sample_data.startswith("0|1:") or sample_data.startswith("1/0:") or sample_data.startswith("1|0:") or sample_data.startswith("1/1:") or sample_data.startswith("1|1:")):
-          raise Exception('I don\'t know genotype: ' + sample_data)
+          logger.warning('Unknown genotype: ' + sample_data + ", ignored.")
+          continue
         
         parts = sample_data.split(":")
         t_depth = parts[format_DP_index]
