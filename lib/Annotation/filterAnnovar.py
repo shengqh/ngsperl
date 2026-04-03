@@ -38,6 +38,13 @@ accepted = ["frameshift deletion", "frameshift insertion", "frameshift substitut
 def getKey(item): return item[0]
 def getDicValueCount(item): return len(item[1])
 
+filtered_by_not_exonic_or_splicing = 0
+filtered_by_topmed = 0
+filtered_by_exac = 0
+filtered_by_gnomad = 0
+filtered_by_1000g = 0
+filtered_by_freq_equal_0 = 0
+filtered_by_freq_equal_1 = 0
 
 filtered = []
 genes = {}
@@ -100,88 +107,106 @@ with open(outputFile, 'wt') as sw:
   
         bAccept = ("exonic" in parts[funcIndex]) or ("splicing" in parts[funcIndex]) 
   
-        if bAccept:
-          norm_freq = -1
-            
-          if (topmedIndex != -1) and (parts[topmedIndex] != ""):
-            if norm_freq == -1:
-              norm_freq = float(parts[topmedIndex])
-            if float(parts[topmedIndex]) > threshold:
-              continue
+        if not bAccept:
+          filtered_by_not_exonic_or_splicing = filtered_by_not_exonic_or_splicing + 1
+          continue
 
-          if (exacIndex != -1) and (parts[exacIndex] != ""):
-            norm_freq = float(parts[exacIndex])
-            if float(parts[exacIndex]) > threshold:
-              continue
-            
-          if (gnomadIndex != -1) and (parts[gnomadIndex] != "") and (parts[gnomadIndex] != "."):
-            if norm_freq == -1:
-              norm_freq = float(parts[gnomadIndex])
-            if float(parts[gnomadIndex]) > threshold:
-              continue
-            
-          if (g1000Index != -1) and (parts[g1000Index] != ""):
-            if norm_freq == -1:
-              norm_freq = float(parts[g1000Index])
-            if float(parts[g1000Index]) > threshold:
-              continue
-            
-          freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/0") or parts[idx].startswith("1|0") or parts[idx].startswith("1/1") or parts[idx].startswith("1|1")])
-
-          if freq == 0:
-            continue
-  
-          if args.filter_fq_equal_1 and (freq == sampleCount):
-            continue
-
-          values = "%s\t%s\t%s\n" %("\t".join(parts[i] for i in snvHeaderIndecies), parts[formatIndex], "\t".join(parts[i] for i in sampleIndecies ))
-          sw.write(values)
-  
-          bMissense = True
-          if "splicing" not in parts[funcIndex]:
-            bMissense = parts[refIndex] in accepted
+        norm_freq = -1
           
-          if not bMissense:
+        if (topmedIndex != -1) and (parts[topmedIndex] != ""):
+          if norm_freq == -1:
+            norm_freq = float(parts[topmedIndex])
+          if float(parts[topmedIndex]) > threshold:
+            filtered_by_topmed = filtered_by_topmed + 1
             continue
 
-          swMis.write(values)
-  
-          naCount = 0
-          for idx in sampleIndecies:
-            if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/0") or parts[idx].startswith("1|0") :
-              parts[idx] = "1"
-            elif parts[idx].startswith("1/1") or parts[idx].startswith("1|1"):
-              parts[idx] = "2"
-            elif parts[idx].startswith("./.") or parts[idx].startswith(".|."):
-              parts[idx] = "NA"
-              naCount += 1
-            else:
-              parts[idx] = "0"
-  
-          freqperc = float(freq) / (sampleCount - naCount)
-          freqfold = "NA" if norm_freq == -1 else "100" if norm_freq == 0 else str(freqperc / norm_freq)
-          filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
-  
-          curgene = parts[geneIndex]
-          if len(curgene) > 0:
-            if curgene in genes:
-              curgenemap = genes[curgene]
-              for idx in sampleIndecies:
-                if (parts[idx] != "NA"):
-                  if (parts[idx] != "0"):
-                    curgenemap[idx] = "1"
-                  elif curgenemap[idx] == "NA":
-                    curgenemap[idx] = "0"
-            else:
-              curgenemap = {}
-              genes[curgene] = curgenemap
-              for idx in sampleIndecies:
-                if (parts[idx] == "NA"):
-                  curgenemap[idx] = "NA"
-                elif (parts[idx] != "0"):
+        if (exacIndex != -1) and (parts[exacIndex] != ""):
+          norm_freq = float(parts[exacIndex])
+          if float(parts[exacIndex]) > threshold:
+            filtered_by_exac = filtered_by_exac + 1
+            continue
+          
+        if (gnomadIndex != -1) and (parts[gnomadIndex] != "") and (parts[gnomadIndex] != "."):
+          if norm_freq == -1:
+            norm_freq = float(parts[gnomadIndex])
+          if float(parts[gnomadIndex]) > threshold:
+            filtered_by_gnomad = filtered_by_gnomad + 1
+            continue
+          
+        if (g1000Index != -1) and (parts[g1000Index] != ""):
+          if norm_freq == -1:
+            norm_freq = float(parts[g1000Index])
+          if float(parts[g1000Index]) > threshold:
+            filtered_by_1000g = filtered_by_1000g + 1
+            continue
+          
+        freq = len([idx for idx in sampleIndecies if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/0") or parts[idx].startswith("1|0") or parts[idx].startswith("1/1") or parts[idx].startswith("1|1")])
+
+        if freq == 0:
+          filtered_by_freq_equal_0 = filtered_by_freq_equal_0 + 1
+          continue
+
+        if args.filter_fq_equal_1 and (freq == sampleCount):
+          filtered_by_freq_equal_1 = filtered_by_freq_equal_1 + 1
+          continue
+
+        values = "%s\t%s\t%s\n" %("\t".join(parts[i] for i in snvHeaderIndecies), parts[formatIndex], "\t".join(parts[i] for i in sampleIndecies ))
+        sw.write(values)
+
+        bMissense = True
+        if "splicing" not in parts[funcIndex]:
+          bMissense = parts[refIndex] in accepted
+        
+        if not bMissense:
+          continue
+
+        swMis.write(values)
+
+        naCount = 0
+        for idx in sampleIndecies:
+          if parts[idx].startswith("0/1") or parts[idx].startswith("0|1") or parts[idx].startswith("1/0") or parts[idx].startswith("1|0") :
+            parts[idx] = "1"
+          elif parts[idx].startswith("1/1") or parts[idx].startswith("1|1"):
+            parts[idx] = "2"
+          elif parts[idx].startswith("./.") or parts[idx].startswith(".|."):
+            parts[idx] = "NA"
+            naCount += 1
+          else:
+            parts[idx] = "0"
+
+        freqperc = float(freq) / (sampleCount - naCount)
+        freqfold = "NA" if norm_freq == -1 else "100" if norm_freq == 0 else str(freqperc / norm_freq)
+        filtered.append([freqperc, "%s\t%f\t%s\t\t%s\n" % ("\t".join(parts[i] for i in snvHeaderIndecies), freqperc, freqfold, "\t".join(parts[i] for i in sampleIndecies))])
+
+        curgene = parts[geneIndex]
+        if len(curgene) > 0:
+          if curgene in genes:
+            curgenemap = genes[curgene]
+            for idx in sampleIndecies:
+              if (parts[idx] != "NA"):
+                if (parts[idx] != "0"):
                   curgenemap[idx] = "1"
-                else:
+                elif curgenemap[idx] == "NA":
                   curgenemap[idx] = "0"
+          else:
+            curgenemap = {}
+            genes[curgene] = curgenemap
+            for idx in sampleIndecies:
+              if (parts[idx] == "NA"):
+                curgenemap[idx] = "NA"
+              elif (parts[idx] != "0"):
+                curgenemap[idx] = "1"
+              else:
+                curgenemap[idx] = "0"
+
+with open(outputFile + ".filtered_stats.txt", 'wt') as sw:
+  sw.write("Filtered by not exonic or splicing: %d\n" % filtered_by_not_exonic_or_splicing)
+  sw.write("Filtered by TopMed: %d\n" % filtered_by_topmed)
+  sw.write("Filtered by ExAC: %d\n" % filtered_by_exac)
+  sw.write("Filtered by gnomAD: %d\n" % filtered_by_gnomad)
+  sw.write("Filtered by 1000G: %d\n" % filtered_by_1000g)
+  sw.write("Filtered by Frequency = 0: %d\n" % filtered_by_freq_equal_0)
+  sw.write("Filtered by Frequency = 1: %d\n" % filtered_by_freq_equal_1)
 
 fsorted = sorted(filtered, key=getKey, reverse=True)
 with open(outputprefix + ".snv.missense.tsv", 'w') as snvw:
