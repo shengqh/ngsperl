@@ -1202,6 +1202,10 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       if ( $def->{read_correlation} ) {
         push @table_for_correlation, ( "bowtie1_genome_1mm_NTA_smallRNA_table", ".rRNA.read.count\$", "bowtie1_genome_1mm_NTA_smallRNA_table", ".other.read.count\$", );
       }
+
+      if ( defined $def->{"bowtie1_genome_host_reads_table"} ) {
+        push @table_for_correlation, ( "bowtie1_genome_host_reads_table", ".count\$");
+      }
     }
 
     ##
