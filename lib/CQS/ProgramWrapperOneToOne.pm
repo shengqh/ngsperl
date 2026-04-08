@@ -149,7 +149,7 @@ sub perform {
 
     my $log_desc = $cluster->get_log_description($log);
 
-    my $final_file = $check_file_ext ne "" ? $sample_name . $check_file_ext : $expect_result->{$sample_name}[-1];
+    my $final_file = $check_file_ext ne "" ? $cur_dir . "/" . $sample_name . $check_file_ext : $expect_result->{$sample_name}[-1];
     #print("final file=" . $final_file . "\n");
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_file, $init_command, $can_result_be_empty_file, undef, undef, $pbs_index );
 
