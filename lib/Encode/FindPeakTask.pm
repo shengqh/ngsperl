@@ -26,6 +26,8 @@ sub result {
 
   my $raw_folders = get_raw_files($config, $section);
   my $replicates = get_raw_files($config, $section, "replicates");
+  my $has_cutadapt = getValue( $config->{$section}, "has_cutadapt" );
+  my $is_paired_end = getValue( $config->{$section}, "is_paired_end" );
   #print(Dumper($replicates) . "\n");
 
   my $result = {};
@@ -37,7 +39,20 @@ sub result {
     my $idx = 0;
     for my $sample_name (@$samples){
       $idx = $idx + 1;
-      my $bam_files = [$rep_folder . "peak/rep" . $idx . "/" . $sample_name . "_clipped.1.srt.nodup.no_chrM_MT.tn5.pval0.01.300K.bfilt.narrowPeak.gz"];
+      my $bam_files;
+      if ($has_cutadapt) {
+        if($is_paired_end) {
+          $bam_files = [$rep_folder . "peak/rep" . $idx . "/" . $sample_name . "_clipped.1.srt.nodup.no_chrM_MT.tn5.pval0.01.300K.bfilt.narrowPeak.gz"];
+        }else{
+          $bam_files = [$rep_folder . "peak/rep" . $idx . "/" . $sample_name . "_clipped.srt.nodup.no_chrM_MT.tn5.pval0.01.300K.bfilt.narrowPeak.gz"];
+        }
+      }else{
+        if($is_paired_end) {
+          $bam_files = [$rep_folder . "peak/rep" . $idx . "/" . $sample_name . ".1.srt.nodup.no_chrM_MT.tn5.pval0.01.300K.bfilt.narrowPeak.gz"];
+        }else{
+          $bam_files = [$rep_folder . "peak/rep" . $idx . "/" . $sample_name . ".srt.nodup.no_chrM_MT.tn5.pval0.01.300K.bfilt.narrowPeak.gz"];
+        }
+      }
       $result->{$sample_name} = filter_array( $bam_files, $pattern );
     }
   }
