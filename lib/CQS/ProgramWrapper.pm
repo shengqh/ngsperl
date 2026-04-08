@@ -130,7 +130,13 @@ sub perform {
     my $listfile = save_parameter_sample_file( $config, $section, $key, "${result_dir}/${filelist_name}" );
     if ( $listfile ne "" ) {
       $listfile = basename($listfile);
-      $option   = $option . " " . $parameterSampleFilearg . " " . $listfile;
+
+      my $param_key = "__${key}__";
+      if ($option =~ /$param_key/){
+        $option =~ s/$param_key/$listfile/g;
+      }else{
+        $option   = $option . " " . $parameterSampleFilearg . " " . $listfile;
+      }
     }
   } ## end for my $index ( 2 .. 10)
 
