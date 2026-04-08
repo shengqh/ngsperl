@@ -4,7 +4,7 @@ import os.path
 
 def get_name(filenames_str):
   filenames = filenames_str.split('|')
-  filenames = [os.path.basename(x).replace('.peaks.txt', '') for x in filenames]
+  filenames = [os.path.basename(x).replace('.peaks.txt', '').replace('.narrowPeaks', '') for x in filenames]
   result = '|'.join(filenames)
   return(result)
 
