@@ -443,45 +443,12 @@ bowtie2 --version | grep -a bowtie2 | grep -a version | cut -d ' ' -f3 | awk '{p
   }
 
   if ( getValue( $def, "perform_homer_find_peaks" ) ) {
-    my $homer_makeTagDirectory = "homer_01_makeTagDirectory";
-    my $homer_makeTagDirectory_option = getValue($def, "homer_makeTagDirectory_option", "");
-
-    $config->{ $homer_makeTagDirectory } = {
-      class                 => "CQS::ProgramWrapperOneToOne",
-      perform               => 1,
-      target_dir            => "${target_dir}/" . getNextFolderIndex($def) . "$homer_makeTagDirectory",
-      interpretor => "",
-      program => "",
-      check_program => 0,
-      option     => "
-rm -rf __NAME__.failed __NAME__.makeTagDirectory.failed __NAME__.makeTagDirectory.succeed
-
-makeTagDirectory __NAME__ $homer_makeTagDirectory_option __FILE__
-
-status=\$?
-if [[ \$status -eq 0 && -s __NAME__/tagAutocorrelation.txt && -s __NAME__/chrY.tags.tsv ]]; then
-  touch __NAME__.makeTagDirectory.succeed
-else
-  echo \$status > __NAME__.makeTagDirectory.failed
-  mv __NAME__ __NAME__.failed
-fi
-",
-      source_ref => $bam_ref,
-      check_file_ext => "/chrY.tags.tsv",
-      sh_direct  => 0,
-      no_output => 1,
-      output_file_ext => "__NAME__",
-      pbs        => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "24",
-        "mem"      => "10gb"
-      },
-    };
-    push @$summary_ref, ( $homer_makeTagDirectory );
+    my $homer_tagdirectories_task = "homer_01_makeTagDirectory";
+    add_homer_makeTagDirectory($config, $def, $tasks, $target_dir, $homer_tagdirectories_task, $bam_ref);
 
     $config->{tag_treatments} = {
       class => "CQS::GroupPickTask",
-      source_ref => $homer_makeTagDirectory,
+      source_ref => $homer_tagdirectories_task,
       groups => getValue($def, "treatments"),
     };
 
@@ -490,7 +457,7 @@ fi
     if(defined $def->{controls}){
       $config->{tag_controls} = {
         class => "CQS::GroupPickTask",
-        source_ref => $homer_makeTagDirectory,
+        source_ref => $homer_tagdirectories_task,
         groups => getValue($def, "controls"),
       };
       $control_option = "-i __FILE2__";
