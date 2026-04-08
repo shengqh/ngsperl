@@ -245,7 +245,8 @@ sub perform {
   my $json_dic = read_json($input_json_file);
   for my $input_key (keys %$replace_dics){
     if (!has_json_path($json_dic, $input_key)){
-      warnings::warn("Cannot find " . $input_key . " in json file");
+      warnings::warn("Cannot find " . $input_key . " in json file " . $input_json_file);
+      #stop("Cannot find " . $input_key . " in json file " . $input_json_file);
     }
   }
   
@@ -336,13 +337,19 @@ fi
     #print("Before deletion: " . Dumper($json_dic));
     my @keys = keys %$json_dic;
     for my $key (@keys){
-      if ($json_dic->{$key} eq ""){
+      my $value = $json_dic->{$key};
+      if(!defined $value){
         delete($json_dic->{$key});
         next;
       }
 
-      if(is_array($json_dic->{$key})){
-        my $jarray = $json_dic->{$key};
+      if ($value eq ""){
+        delete($json_dic->{$key});
+        next;
+      }
+
+      if(is_array($value)){
+        my $jarray = $value;
         if (scalar(@$jarray) == 0){
           delete($json_dic->{$key});
           next;
