@@ -9,6 +9,7 @@ use CQS::SystemUtils;
 use CQS::ConfigUtils;
 use CQS::ClassFactory;
 use Pipeline::PipelineUtils;
+use Pipeline::PeakPipelineUtils;
 use Pipeline::Preprocession;
 use Pipeline::WdlPipeline;
 use Data::Dumper;
@@ -43,6 +44,10 @@ sub initializeDefaultOptions {
     initDefaultValue( $def, "cutadapt_option", "-m " . $def->{min_read_length} );
     initDefaultValue( $def, "trim_polyA",      0 );
   } ## end if ( getValue( $def, "perform_cutadapt"...))
+  else {
+    #if no cutadapt, we need to call merge fastq to make sure the fastq files with the sample names user defined.
+    $def->{merge_fastq} = 1;
+  }
 
   if ( !defined $def->{"treatments"} ) {
     my $files  = getValue( $def, "files" );
@@ -84,18 +89,24 @@ sub getConfig {
 
   $def->{adapter} = "";
 
-  my $croo_task = addEncodeATACseq( $config, $def, $tasks, $target_dir, $source_ref, "encode_atacseq" );
+  my $croo_task     = addEncodeATACseq( $config, $def, $tasks, $target_dir, $source_ref, "encode_atacseq" );
+  my $is_paired_end = is_paired_end($def);
 
   $config->{croo_bam} = {
-    class      => "Encode::FindBamTask",
-    source_ref => [$croo_task],
-    replicates => $def->{groups},
+    class         => "Encode::FindBamTask",
+    source_ref    => [$croo_task],
+    replicates    => $def->{groups},
+    files_ref     => $untrimed_ref,
+    has_cutadapt  => getValue( $def, "perform_cutadapt" ),
+    is_paired_end => $is_paired_end,
   };
 
   $config->{croo_peak} = {
-    class      => "Encode::FindPeakTask",
-    source_ref => [$croo_task],
-    replicates => $def->{groups},
+    class         => "Encode::FindPeakTask",
+    source_ref    => [$croo_task],
+    replicates    => $def->{groups},
+    has_cutadapt  => getValue( $def, "perform_cutadapt" ),
+    is_paired_end => $is_paired_end,
   };
 
   if ( $def->{perform_NFR_filter} ) {
@@ -116,8 +127,8 @@ echo samtools view -h -b -e 'tlen < 150 && tlen > -150' -o __NAME__.NFR_filtered
 samtools view -h -b -e 'tlen < 150 && tlen > -150' -o __NAME__.NFR_filtered.bam __FILE__ 
 samtools index __NAME__.NFR_filtered.bam
 
-echo python3 $encode_atac_folder/src/encode_task_bam2ta.py __NAME__.NFR_filtered.bam --paired-end --mito-chr-name chrM --subsample 0 --mem-gb 6.008817602694035
-python3 $encode_atac_folder/src/encode_task_bam2ta.py __NAME__.NFR_filtered.bam --paired-end --mito-chr-name chrM --subsample 0 --mem-gb 6.008817602694035
+echo python3 $encode_atac_folder/src/encode_task_bam2ta.py __NAME__.NFR_filtered.bam --paired-end --mito-chr-name chrM --subsample 0 --mem-gb 6
+python3 $encode_atac_folder/src/encode_task_bam2ta.py __NAME__.NFR_filtered.bam --paired-end --mito-chr-name chrM --subsample 0 --mem-gb 6
 
 echo macs2 callpeak -t __NAME__.NFR_filtered.tn5.tagAlign.gz -f BED -n __NAME__.NFR_filtered -g $macs2_genome -p 0.01 --shift -75 --extsize 150 --nomodel -B --SPMR --keep-dup all --call-summits
 macs2 callpeak -t __NAME__.NFR_filtered.tn5.tagAlign.gz -f BED -n __NAME__.NFR_filtered -g $macs2_genome -p 0.01 --shift -75 --extsize 150 --nomodel -B --SPMR --keep-dup all --call-summits
@@ -125,14 +136,15 @@ macs2 callpeak -t __NAME__.NFR_filtered.tn5.tagAlign.gz -f BED -n __NAME__.NFR_f
 echo makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format sam
 makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format sam
 
-#__OUTPUT__
+#__OUTPUT__ __FILE2__
 ",
-      source_ref            => ["croo_bam"],
-      output_file_ext       => ".NFR_filtered.bam,.NFR_filtered.tn5.tagAlign.gz",
-      output_to_result_dir  => 1,
-      output_to_same_folder => 0,
-      sh_direct             => 0,
-      pbs                   => {
+      source_ref               => ["croo_bam"],
+      output_file_ext          => ".NFR_filtered.bam,.NFR_filtered.tn5.tagAlign.gz",
+      parameterSampleFile2_ref => $croo_task,                                          #make sure dependent on croo task.
+      output_to_result_dir     => 1,
+      output_to_same_folder    => 0,
+      sh_direct                => 0,
+      pbs                      => {
         "nodes"    => "1:ppn=8",
         "walltime" => "10",
         "mem"      => "10G"
@@ -148,6 +160,22 @@ makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format 
       my $diffbind_homer = addHomerAnnotation( $config, $def, $tasks, $target_dir, $bindName, ".sig.bed" );
     }
   } ## end if ( $def->{perform_diffbind...})
+
+  if ( $def->{perform_homer_analysis} ) {
+    my $homer_tagdirectories_task = "homer_1_tagdirectories";
+    add_homer_makeTagDirectory( $config, $def, $tasks, $target_dir, $homer_tagdirectories_task, "croo_bam", $croo_task );
+
+    my $homer_mergePeaks_task = "homer_2_mergePeaks";
+    add_homer_mergePeaks( $config, $def, $tasks, $target_dir, $homer_mergePeaks_task, "croo_peak", $croo_task );
+
+    my $homer_annotatePeaks_task = "homer_3_annotatePeaks";
+    add_homer_annotatePeaks( $config, $def, $tasks, $target_dir, $homer_annotatePeaks_task, $homer_tagdirectories_task, $homer_mergePeaks_task );
+
+    if ( defined $def->{pairs} ) {
+      my $deseq2taskname = addDEseq2( $config, $def, $tasks, "homer_peaks_raw_count", [ "homer_3_annotatePeaks", ".raw.count" ], $def->{target_dir}, $def->{DE_min_median_read} );
+    }
+
+  } ## end if ( $def->{perform_homer_analysis...})
 
   addSequenceTask( $config, $def, $tasks, $target_dir, $summary );
 
