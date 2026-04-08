@@ -788,6 +788,40 @@ sub getScRNASeqConfig {
               add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer );
             }
 
+            if ( getValue( $def, "perform_choose_cluster_silhouette", 0 ) ) {
+
+              my $silhouette_path = getValue( $def, "silhouette_path", "silhouette" );
+
+              for my $reduction ( 'fastmnn', 'pca' ) {
+                my $silhouette_task = $choose_task . "_silhouette_" . $reduction;
+                $config->{$silhouette_task} = {
+                  class                => "CQS::UniqueR",
+                  perform              => 1,
+                  target_dir           => "${target_dir}/${silhouette_task}",
+                  rtemplate            => "../scRNA/silhouette_pipeline.r",
+                  parameterSampleFile1 => {
+                    silhouette_path => $silhouette_path,
+                    cluster_col     => "seurat_clusters",
+                    reduction       => $reduction,
+                  },
+                  parameterFile1_ref => $obj_ref,
+                  option             => "",
+                  output_file        => "",
+                  output_file_ext    => ".$reduction.silhouette.closest.csv",
+                  sh_direct          => 1,
+                  no_docker          => 1,
+                  no_output          => 1,
+                  pbs                => {
+                    "nodes"    => "1:ppn=1",
+                    "walltime" => "1:00:00",
+                    "mem"      => "40gb"
+                  },
+                };
+
+                push( @$tasks, $silhouette_task );
+              } ## end for my $reduction ( 'fastmnn'...)
+            } ## end if ( getValue( $def, "perform_choose_cluster_silhouette"...))
+
             if ( getValue( $def, "perform_pesudo_count_correlation", 0 ) ) {
               my $pseudo_task = $choose_task . "_pesudo_count";
               add_pseudo_count( $config, $def, $tasks, $target_dir, $pseudo_task, $obj_ref, "seurat_cell_type" );
