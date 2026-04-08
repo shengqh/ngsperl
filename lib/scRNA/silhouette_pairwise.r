@@ -1,14 +1,14 @@
-rm(list=ls())
+rm(list=ls()) 
 outFile='Aorta_Progeria'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
-parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/20260120_silhouetee_pairwise/silhouette_pairwise_prepare_data/result/Aorta_Progeria.obj_data.rds'
+parFile1='/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/20260402_silhouette_pairwise/silhouette_pairwise_prepare_data/result/Aorta_Progeria.obj_data.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/20260120_silhouetee_pairwise/silhouette_pairwise_15_16/result')
+setwd('/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/20260402_silhouette_pairwise/silhouette_pairwise_17_18/result')
 
 ### Parameter setting end ###
 
@@ -32,10 +32,10 @@ subset_indices_j <- which(clusters == j)
 
 cat("There are", length(subset_indices_i), "cells in cluster", i, "and", length(subset_indices_j),"cells in cluster", j, ".\n")
 if(length(subset_indices_i) > max_cells) {
-  stop(paste0("Too many cells in cluster ", i, " in file ", obj_file))
+  stop(paste0("Too many cells in cluster ", i, " in file ", parFile1))
 }
 if(length(subset_indices_j) > max_cells) {
-  stop(paste0("Too many cells in cluster ", j, " in file ", obj_file))
+  stop(paste0("Too many cells in cluster ", j, " in file ", parFile1))
 }
 
 get_silhouette=function(coords, clusters, cur_indices) {
@@ -80,4 +80,3 @@ cat("Saving silhouette to:", sil_csv, "\n")
 write.csv(sil, sil_csv, row.names=TRUE, quote=FALSE)
 
 cat("Finished processing cluster:", i, "and cluster:", j, "\n")
-
