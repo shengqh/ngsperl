@@ -6,7 +6,7 @@ import logging
 import argparse
 import xml.etree.ElementTree as ET
 import subprocess
-from CountXmlUtils import readCountXmlQueryLocationInFeatures
+import pandas as pd
 
 DEBUG = False
 NOT_DEBUG= not DEBUG
@@ -47,66 +47,76 @@ def readFileList(fileName):
    
 genomeFiles = readFileList(genomeListFile)
 
-sample_names = set()
-result = {}
+# Read all genome files into DataFrames and concatenate
+genome_dfs = []
 for genomeFile in genomeFiles:
   logger.info("Parsing " + genomeFile)
-  queryMap = {}
+  df = pd.read_csv(genomeFile, sep='\t', index_col=0)
+  genome_dfs.append(df)
 
-  with open(genomeFile, "rt") as fin:
-    headers = fin.readline().rstrip().split('\t')
-    sample_names.update(headers[1:])
-    for line in fin:
-      parts = line.rstrip().split('\t')
-      query_seq = parts[0]
-      for si in range(1, len(parts)):
-        sample_name = headers[si]
-        query_count = int(parts[si])
-        result.setdefault(query_seq, {})[sample_name] = query_count
-    
+if genome_dfs:
+  # Verify all genome files have identical column names
+  ref_columns = genome_dfs[0].columns.tolist()
+  for i, df in enumerate(genome_dfs[1:], start=1):
+    if df.columns.tolist() != ref_columns:
+      raise ValueError(f"Column mismatch in genome file {genomeFiles[i]}: expected {ref_columns}, got {df.columns.tolist()}")
+  result_df = pd.concat(genome_dfs)
+else:
+  result_df = pd.DataFrame()
+
+# Parse XML for bacteria entries
 logger.info("Parsing " + databaseFile)
-tree = ET.parse(databaseFile)
-root = tree.getroot()
-queries = root.find('queries')
-for query in queries.findall('query'):
+xml_rows = []
+for event, elem in ET.iterparse(databaseFile, events=('end',)):
+  if elem.tag != 'query':
+    continue
+
   is_bacteria = False
-  for loc in query.findall('location'):
-    seqname = loc.get("seqname")
-    if seqname == "Bacteria":
+  for loc in elem.findall('location'):
+    if loc.get("seqname") == "Bacteria":
       is_bacteria = True
       break
   
   if is_bacteria:
-    query_count = int(query.get("count"))
-    query_seq = query.get("seq")
-    sample_name = query.get("sample")
-    sample_names.add(sample_name)
-    result.setdefault(query_seq, {})[sample_name] = query_count
+    xml_rows.append((elem.get("seq"), elem.get("sample"), int(elem.get("count"))))
 
-samples = sorted(sample_names)
-seq_count = [ [seq, sum(result[seq].values())] for seq in result.keys()]
+  elem.clear()
 
-def sortSecond(val): 
-    return val[1]
+if xml_rows:
+  xml_df = pd.DataFrame(xml_rows, columns=["Sequence", "Sample", "Count"])
+  logger.info("save non-host bacteria database data to db_pandas.txt for debugging")
+  xml_df.to_csv("db_pandas.txt", sep='\t', index=False)
+  xml_pivot = xml_df.pivot(index="Sequence", columns="Sample", values="Count").fillna(0).astype(int)
+  # Combine genome and XML results
+  result_df = result_df.combine_first(xml_pivot).fillna(0).astype(int)
+else:
+  logger.info("No bacteria entries found in XML.")
 
-seq_count.sort(key=sortSecond, reverse=True)
+# Remove duplicate sequences across files
+result_df = result_df[~result_df.index.duplicated(keep='first')]
 
-with open(outputFile, "wt") as fout:
-  fout.write("Sequence\t%s\n" % "\t".join(samples) )
-  for query in seq_count:
-    query_seq = query[0]
-    fout.write(query_seq)
-    count_map = result[query_seq]
-    for sample in samples:
-      fout.write("\t%d" % (count_map[sample] if sample in count_map.keys() else 0))
-    fout.write("\n")
+# Defragment after combine_first
+result_df = result_df.copy()
 
+# Sort by total count descending, then by sequence name alphabetically
+result_df['_total'] = result_df.sum(axis=1)
+result_df = result_df.reset_index()
+result_df = result_df.sort_values(by=['_total', result_df.columns[0]], ascending=[False, True])
+result_df = result_df.set_index(result_df.columns[0])
+result_df = result_df.drop(columns='_total')
+
+# Sort columns alphabetically
+result_df = result_df.reindex(sorted(result_df.columns), axis=1)
+result_df.index.name = "Sequence"
+
+# Write main output
+result_df.to_csv(outputFile, sep='\t')
+
+# Write summary
 summaryFile = outputFile + ".summary"
-with open(summaryFile, "wt") as fout:
-  fout.write("Sample\tCount\n")
-  for sample in samples:
-    sample_count = sum(result[seq][sample] if sample in result[seq].keys() else 0 for seq in result.keys())
-    fout.write("%s\t%d\n" % (sample, sample_count))
+sample_totals = result_df.sum(axis=0)
+summary_df = sample_totals.rename_axis("Sample").reset_index(name="Count")
+summary_df.to_csv(summaryFile, sep='\t', index=False)
 
 rscript = os.path.realpath(__file__) + ".R"
 target_r = os.path.basename(rscript)
