@@ -261,6 +261,9 @@ sub getScRNASeqConfig {
 
   my $tasks = [ @$individual, @$summary ];
 
+  undef $individual;
+  undef $summary;
+
   my $clono_key = "clono_index";
 
   my $target_dir      = $def->{target_dir};
@@ -807,7 +810,7 @@ sub getScRNASeqConfig {
                   parameterFile1_ref => $obj_ref,
                   option             => "",
                   output_file        => "",
-                  output_file_ext    => ".$reduction.silhouette.closest.csv",
+                  output_file_ext    => ".silhouette.closest.csv",
                   sh_direct          => 1,
                   no_docker          => 1,
                   no_output          => 1,
@@ -856,7 +859,9 @@ sub getScRNASeqConfig {
               my $immunarch_task      = addConsensusToImmunarch( $config, $def, $tasks, $target_dir, "clonotype" . get_next_index( $def, $clono_key ) . "_immunarch_tcell", $clonotype_consensus );
             } ## end if ( defined $clonotype_convert)
 
-            addComparison( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type", "subumap" );
+            if ( !defined $def->{comparison_object_file} ) {
+              addComparison( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type", "subumap" );
+            }
 
             $localization_ref = $obj_ref;
 
@@ -1559,18 +1564,13 @@ sub getScRNASeqConfig {
     } ## end if ( getValue( $def, "perform_seurat"...))
   } ## end if ( defined $def->{files...})
 
-  if ( defined $def->{seurat_object_file} ) {
+  if ( defined $def->{comparison_object_file} ) {
     if ( $def->{perform_comparison} ) {
-      if ( defined $def->{"DE_cluster_pairs"} ) {
-        if ( $DE_method eq "edgeR" ) {
-          addEdgeRTask( $config, $def, $tasks, $target_dir, $def->{seurat_object_file}, undef, undef, getValue( $def, "DE_cluster_name" ), undef, 1, 0, 1 );
-        }
-        else {
-          die("DE_method $DE_method is not supported");
-        }
-      } ## end if ( defined $def->{"DE_cluster_pairs"...})
-    } ## end if ( $def->{perform_comparison...})
-  } ## end if ( defined $def->{seurat_object_file...})
+      $config->{comparison_obj} = { $project_name => [ $def->{comparison_object_file} ] };
+      addComparison( $config, $def, $tasks, $target_dir, "comparison_obj", undef, "", "refine_cell_type", "refine_seurat_cell_type", "umap" );
+      # print(Dumper($tasks));
+    }
+  } ## end if ( defined $def->{comparison_object_file...})
 
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
