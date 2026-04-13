@@ -1,4 +1,3 @@
-import pysam
 import sys
 import gzip
 import os
