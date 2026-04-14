@@ -13,6 +13,10 @@ if((!exists('show_webgestalt_detail'))){
 if(!exists('webgestalt_intent')){
   webgestalt_intent="##"
 }
+
+if(!dir.exists("details")){
+  dir.create("details")
+}
 ```
 
 ```{r}
@@ -101,7 +105,7 @@ p=dataForPlotFrameP %>%
     axis.title = element_text(face = "bold")
   )
 
-pathway_png=paste0(plotData$prefix, ".png")
+pathway_png=paste0("details/", plotData$prefix, ".png")
 
 max_len=max(nchar(as.character(dataForPlotFrameP$description)), na.rm=TRUE)
 
