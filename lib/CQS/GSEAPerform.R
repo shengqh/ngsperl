@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='P11389_SLAMseq'
+outFile='Serpina'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -7,9 +7,9 @@ parFile1=''
 parFile2=''
 parFile3=''
 outputDirectory='.'
-gseaDb='/data/cqs/references/gsea/v2022.1.Hs'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v2022.1.Hs.symbols.gmt', 'c2.all.v2022.1.Hs.symbols.gmt', 'c5.all.v2022.1.Hs.symbols.gmt', 'c6.all.v2022.1.Hs.symbols.gmt', 'c7.all.v2022.1.Hs.symbols.gmt'); makeReport=0;gseaChip='/data/cqs/references/gsea/v2022.1.Hs/Mouse_Gene_Symbol_Remapping_Human_Orthologs_MSigDB.v2022.1.Hs.chip';
+gseaDb='/data/cqs/references/gsea/msigdb_v2025.1.Hs_GMTs'; gseaJar='gsea-cli.sh'; gseaCategories=c('h.all.v2025.1.Hs.symbols.gmt', 'c2.all.v2025.1.Hs.symbols.gmt', 'c5.all.v2025.1.Hs.symbols.gmt', 'c6.all.v2025.1.Hs.symbols.gmt', 'c7.all.v2025.1.Hs.symbols.gmt'); makeReport=0;
 
-setwd('/nobackup/brown_lab/projects/20240520_11389_SLAMseq_mm10/deseq2_tc_read_sizeFactor_GSEA_Hs/result')
+setwd('/nobackup/shah_lab/shengq2/202601_Beta_cell_EV/20260409_Serpina_rnaseq_hg38_no_lncRNA/deseq2_proteincoding_genetable_GSEA_Hs/result')
 
 ### Parameter setting end ###
 
@@ -47,7 +47,7 @@ runGSEA<-function(preRankedGeneFile,resultDir=NULL,gseaJar="gsea-cli.sh",gseaDb=
     "m5"="OntologyGeneSets",
     "m8"="CellTypeSignatureGeneSets")
   
-  gsea_name=gsub("_min\\d+_fdr.*", "", basename(preRankedGeneFile))
+  gsea_name=gsub("_min\\d+_[fdr|pvalue].*", "", basename(preRankedGeneFile))
   gsea_name=gsub("_GSEA.rnk", "", gsea_name)
   if (is.null(resultDir)) {
     gesaResultDir<-paste0(preRankedGeneFile,".gsea")
