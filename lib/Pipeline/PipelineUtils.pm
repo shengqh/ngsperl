@@ -3851,6 +3851,7 @@ sub add_fgsea {
       "affiliation"     => $def->{"affiliation"},
       "task_name"       => getValue( $def, "task_name" ),
       "msigdbr_species" => getValue( $def, "msigdbr_species" ),
+      "msigdbr_collections" => getValue( $def, "msigdbr_collections", "H;C2:CP:REACTOME;C2:CP:KEGG_LEGACY;C5:GO:BP" ),
     },
     parameterSampleFile2_ref => $rnk_file_ref,
     no_docker                => getValue( $def, "fgsea_no_docker", 0 ),

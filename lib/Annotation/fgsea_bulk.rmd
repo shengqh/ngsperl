@@ -40,22 +40,45 @@ msigdbr_species=myoptions$msigdbr_species
 task_name=myoptions$task_name
 email=myoptions$email
 affiliation=get_affiliation(myoptions)
-```
 
----
-title: "FGSEA analysis of bulkRNA-seq DE results - `r task_name`"
-author:
-  email: "`r email`"
-  affiliation: "`r affiliation`"
----
+# Parse collections parameter: semicolon-separated, e.g. "H;C2;C2:CP:KEGG"
+# Default to "H" (Hallmark) for backward compatibility
+if(!is.null(myoptions$msigdbr_collections)){
+  collections <- trimws(unlist(strsplit(myoptions$msigdbr_collections, ";")))
+} else {
+  collections <- "H"
+}
 
-# Hallmark Gene Set Enrichment Analysis
+collection_display_names <- c(
+  "H" = "Hallmark",
+  "C1" = "Positional",
+  "C2" = "Curated",
+  "C3" = "Regulatory Target",
+  "C4" = "Computational",
+  "C5" = "Ontology",
+  "C6" = "Oncogenic Signatures",
+  "C7" = "Immunologic Signatures",
+  "C8" = "Cell Type Signatures"
+)
 
-`r msigdbr_species` is used for the analysis.
-
-```{r}
-hallmark_sets <- msigdbr(species = msigdbr_species, collection = "H")
-hallmark_list <- split(hallmark_sets$gene_symbol, hallmark_sets$gs_name)
+parse_collection_spec <- function(spec) {
+  parts <- strsplit(spec, ":", fixed=TRUE)[[1]]
+  collection <- parts[1]
+  if(length(parts) > 1) {
+    subcollection <- paste(parts[-1], collapse=":")
+  } else {
+    subcollection <- NULL
+  }
+  base_name <- collection_display_names[collection]
+  if(is.na(base_name)) base_name <- collection
+  if(!is.null(subcollection)) {
+    display_name <- paste0(base_name, " (", subcollection, ")")
+  } else {
+    display_name <- base_name
+  }
+  file_key <- tolower(gsub("[: ]", "_", spec))
+  list(collection=collection, subcollection=subcollection, display_name=display_name, file_key=file_key)
+}
 
 de_files=fread("fileList2.fgsea.txt", header=FALSE, data.table=FALSE) |> 
   dplyr::rename(comparison=V2, gseaFile=V1) |>
@@ -63,97 +86,140 @@ de_files=fread("fileList2.fgsea.txt", header=FALSE, data.table=FALSE) |>
 de_map=split(de_files$gseaFile, de_files$comparison)
 ```
 
-## Preranked gene list
+---
+title: "FGSEA - `r task_name`"
+author:
+  email: "`r email`"
+  affiliation: "`r affiliation`"
+---
+
+# Preranked gene list
+
+`r msigdbr_species` is used for the analysis.
+
+Collections: `r paste(sapply(collections, function(x) parse_collection_spec(x)$display_name), collapse=", ")`
 
 ```{r}
 print_table(de_files, row.names=F)
 ```
-
-## fgsea results
 
 ```{r}
 set.seed(20260125)
 
 gsea_content=""
 gsea_files=NULL
-prefix=names(de_map)[1]
-for(prefix in names(de_map)){
-  gsea_content=paste0(gsea_content, "### ", prefix, "\n\n")
 
-  gsea_file=de_map[[prefix]][1]
-  gsea_rnk=fread(gsea_file) |> dplyr::rename(gene=V1, sigfvalue=V2)
+# Pre-process rank files once (shared across all collections)
+ranks_list <- list()
+for(prefix in names(de_map)){
+  gsea_file <- de_map[[prefix]][1]
+  gsea_rnk <- fread(gsea_file) |> dplyr::rename(gene=V1, sigfvalue=V2)
 
   if(any(duplicated(gsea_rnk$gene))){
     #keep the one with the largest absolute sigfvalue
-    gsea_rnk=gsea_rnk |> 
+    gsea_rnk <- gsea_rnk |> 
       dplyr::mutate(abs_sigfvalue=abs(sigfvalue)) |>
       dplyr::arrange(gene, desc(abs_sigfvalue)) |> 
       dplyr::distinct(gene, .keep_all=TRUE) |>
       dplyr::arrange(desc(sigfvalue))
   }
 
-  gsea_rnk=gsea_rnk[!duplicated(gsea_rnk$gene),]
+  gsea_rnk <- gsea_rnk[!duplicated(gsea_rnk$gene),]
+  ranks_list[[prefix]] <- setNames(gsea_rnk$sigfvalue, gsea_rnk$gene)
+}
 
-  # Create ranked gene list
-  ranks <- setNames(gsea_rnk$sigfvalue, gsea_rnk$gene)
+for(prefix in names(de_map)){
+  gsea_content <- paste0(gsea_content, "# ", prefix, "\n\n")
 
-  # Run fgsea
-  fgsea_results <- fgsea( pathways = hallmark_list, 
-                          stats = ranks,
-                          minSize = 15,
-                          maxSize = 500)
+  ranks <- ranks_list[[prefix]]
 
-  # Sort by NES
-  fgsea_results <- fgsea_results |> 
-    as.data.frame() |> 
-    dplyr::arrange(desc(NES)) |> 
-    dplyr::mutate(core=sapply(leadingEdge, length),
-                  negLog10Padj = -log10(padj),
-                  leadingEdgeGenes = sapply(leadingEdge, function(genes) paste(genes, collapse = ":"))) |>
-    dplyr::select(-leadingEdge)
+  # Loop over each gene set collection
+  for(coll_spec in collections){
+    coll_info <- parse_collection_spec(coll_spec)
+    coll_display <- coll_info$display_name
+    coll_display_file <- gsub("[: ()]+", "_", coll_display)
+    coll_key <- coll_info$file_key
 
-  fgsea_results$pathway=gsub("HALLMARK_", "", fgsea_results$pathway)
+    gsea_content <- paste0(gsea_content, "## ", coll_display, "\n\n")
 
-  # Save results
-  fgsea_file <- paste0(prefix, ".fgsea_hallmark.csv")
-  write.csv(fgsea_results, file = fgsea_file, quote = FALSE, row.names = FALSE)
+    # Get gene sets
+    if(!is.null(coll_info$subcollection)){
+      gene_sets <- msigdbr(species = msigdbr_species, collection = coll_info$collection, subcollection = coll_info$subcollection)
+    } else {
+      gene_sets <- msigdbr(species = msigdbr_species, collection = coll_info$collection)
+    }
+    gene_set_list <- split(gene_sets$gene_symbol, gene_sets$gs_name)
 
-  gsea_content=paste0(gsea_content, getPagedTable(fgsea_file), "\n\n")
+    gsea_content <- paste0(gsea_content, "Total gene sets in collection: ", length(gene_set_list), "\n\n")
 
-  # Display significant pathways
-  sig_pathways <- fgsea_results |> dplyr::filter(padj < 0.05)
-  if(nrow(sig_pathways) == 0){
-    gsea_content=paste0(gsea_content, "\nNo significant enriched hallmark geneset found\n")
-    cur_df=data.frame(prefix=prefix, fgsea_file=fgsea_file, fgsea_png=NA)
-  }else{
-    gsea_content=paste0(gsea_content, "\nThere are ", nrow(sig_pathways), " significant enriched hallmark genesets. We will show top 10 postively and top 10 negatively associated gene sets.\n")
+    # Run fgsea
+    fgsea_results <- fgsea(pathways = gene_set_list, 
+                           stats = ranks,
+                           minSize = 15,
+                           maxSize = 500)
 
-    pos_sig=sig_pathways |> dplyr::filter(NES > 0)
-    neg_sig=sig_pathways |> dplyr::filter(NES < 0)
+    # Sort by padj
+    fgsea_results <- fgsea_results |> 
+      as.data.frame() |> 
+      dplyr::arrange(padj) |> 
+      dplyr::mutate(Core=sapply(leadingEdge, length),
+                    negLog10Padj = -log10(padj),
+                    leadingEdgeGenes = sapply(leadingEdge, function(genes) paste(genes, collapse = ":"))) |>
+      dplyr::select(-leadingEdge)
 
-    final <- rbind( head(pos_sig, min(10, nrow(pos_sig))),
-                    head(neg_sig, min(10, nrow(neg_sig))))
+    # Save results
+    fgsea_file <- paste0(prefix, ".", coll_display_file, ".csv")
+    write.csv(fgsea_results, file = fgsea_file, quote = FALSE, row.names = FALSE)
+    gsea_files=rbind(gsea_files, data.frame(comparison=prefix, data_name=prefix, category=coll_display, file_key="gsea_file", file_path=fgsea_file))
 
-    final<-final[order(final$NES, decreasing=T),]
-    final$NAME<-factor(final$pathway, levels=final$pathway)
-    g<-ggplot(final, aes(NES, NAME)) + 
-      geom_point(aes(size=core, color=negLog10Padj)) + 
-      geom_vline(xintercept=0) + 
-      theme_bw() + 
-      xlab("Normalized enrichment score") +
-      theme(axis.title.y=element_blank())
+    gsea_content <- paste0(gsea_content, getPagedTable(fgsea_file), "\n\n")
 
-    height=max(1000, 3000/40*nrow(final))
-    ncharmax=max(nchar(as.character(final$NAME)))
-    width=max(2000, ncharmax * 20 + 1000)
+    # Display significant pathways
+    sig_pathways <- fgsea_results |> dplyr::filter(padj < 0.05)
+    if(nrow(sig_pathways) == 0){
+      gsea_content <- paste0(gsea_content, "\nNo significant enriched geneset found\n\n")
+      cur_df <- data.frame(prefix=prefix, collection=coll_display, fgsea_file=fgsea_file, fgsea_png=NA)
+    }else{
+      enriched_file <- paste0(prefix, ".", coll_display_file, ".enriched.csv")
+      write.csv(sig_pathways, file = enriched_file, quote = FALSE, row.names = FALSE)
+      gsea_files=rbind(gsea_files, data.frame(comparison=prefix, data_name=prefix, category=coll_display, file_key="enriched_file", file_path=enriched_file))
+  
+      gsea_content <- paste0(gsea_content, "\nThere are ", nrow(sig_pathways), " significant enriched genesets. We will show top 10 positively and top 10 negatively associated gene sets.\n\n")
 
-    fgsea_png <- paste0(prefix, ".fgsea_hallmark.png")
-    ggsave(fgsea_png, g, width=width, height=height, units="px", dpi=300, bg="white")
-    gsea_content=paste0(gsea_content, getFigure(fgsea_png), "\n\n")
+      pos_sig <- sig_pathways |> dplyr::filter(NES > 0)
+      neg_sig <- sig_pathways |> dplyr::filter(NES < 0)
 
-    cur_df=data.frame(prefix=prefix, fgsea_file=fgsea_file, fgsea_png=fgsea_png)
+      final <- rbind(head(pos_sig, min(10, nrow(pos_sig))),
+                     head(neg_sig, min(10, nrow(neg_sig))))
+
+      final <- final[order(final$NES, decreasing=TRUE),]
+
+      final$NAME <- gsub("HALLMARK_|REACTOME_|KEGG_|GOBP_", "", final$pathway)
+      final$NAME <- factor(final$NAME, levels=final$NAME)
+      size_breaks <- round(quantile(final$Core, probs=c(0, 0.5, 1)))
+      size_breaks <- unique(sort(size_breaks))
+
+      g <- ggplot(final, aes(NES, NAME)) + 
+        geom_point(aes(size=Core, color=negLog10Padj)) + 
+        geom_vline(xintercept=0) + 
+        scale_size_continuous(breaks=size_breaks) +
+        guides(color=guide_colorbar(barheight=unit(3, "lines"))) +
+        theme_bw() + 
+        xlab("Normalized enrichment score") +
+        labs(color="-log10(Padj)") +
+        theme(axis.title.y=element_blank())
+
+      height <- max(1000, 3000/40*nrow(final))
+      ncharmax <- max(nchar(as.character(final$NAME)))
+      width <- max(2000, ncharmax * 25 + 1000)
+
+      fgsea_png <- paste0(prefix, ".", coll_display_file, ".png")
+      ggsave(fgsea_png, g, width=width, height=height, units="px", dpi=300, bg="white")
+      gsea_files=rbind(gsea_files, data.frame(comparison=prefix, data_name=prefix, category=coll_display, file_key="enriched_png", file_path=fgsea_png))
+
+      gsea_content <- paste0(gsea_content, getFigure(fgsea_png), "\n\n")
+    }
   }
-  gsea_files=rbind(gsea_files, cur_df)
 }
 write.csv(gsea_files, file=paste0(task_name, ".fgsea.files.csv"), quote=FALSE, row.names=FALSE)
 
