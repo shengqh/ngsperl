@@ -58,14 +58,8 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "perform_trimmomatic", 0 );
   initDefaultValue( $def, "trimmomatic_option",  ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50" );
 
-  initDefaultValue( $def, "perform_fgsea", 0 );
-
-  if ( not $def->{"perform_gsea"} ) {
-    $def->{"perform_gsea"} = 0;
-  }
-  else {
-    initDefaultValue( $def, "perform_gsea", 0 );
-  }
+  initDefaultValue( $def, "perform_fgsea", 1 );
+  initDefaultValue( $def, "perform_gsea", !$def->{perform_fgsea} );
 
   #$def->{gsea_jar}        or die "Define gsea_jar at definition first";
   #$def->{gsea_db}         or die "Define gsea_db at definition first";
@@ -288,16 +282,16 @@ sub getRNASeqConfig {
         $def->{perform_counting} = 0;
       } ## end if ( $aligner eq "salmon")
       elsif ( $aligner eq "minimap2" ) {
-        my $ref_fasta = getValue($def, "fasta_file");
-        my $minimap2_bed = getValue($def, "minimap2_bed_file");
+        my $ref_fasta    = getValue( $def, "fasta_file" );
+        my $minimap2_bed = getValue( $def, "minimap2_bed_file" );
         $config->{"fastq2fasta"} = {
-          class                 => "CQS::ProgramWrapperOneToOne",
-          perform               => 1,
-          target_dir            => "$target_dir/fastq2fasta",
-          interpretor           => "",
-          check_program         => 0,
-          program               => "",
-          option                => "
+          class         => "CQS::ProgramWrapperOneToOne",
+          perform       => 1,
+          target_dir    => "$target_dir/fastq2fasta",
+          interpretor   => "",
+          check_program => 0,
+          program       => "",
+          option        => "
 module load seqkit/2.5.1
 
 seqkit fq2fa __FILE__ -o __NAME__.fasta.gz
@@ -305,26 +299,26 @@ seqkit fq2fa __FILE__ -o __NAME__.fasta.gz
 ",
           source_ref            => $source_ref,
           no_output             => 1,
-          output_to_same_folder => 1, 
+          output_to_same_folder => 1,
           output_ext            => ".fasta.gz",
           sh_direct             => 1,
           use_tmp_folder        => 0,
-          no_docker => 1,
+          no_docker             => 1,
           pbs                   => {
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "10",
-            "mem"       => "40gb"
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "40gb"
           },
         };
 
         $config->{"minimap2"} = {
-          class                 => "CQS::ProgramWrapperOneToOne",
-          perform               => 1,
-          target_dir            => "$target_dir/minimap2",
-          interpretor           => "",
-          check_program         => 0,
-          program               => "",
-          option                => "
+          class         => "CQS::ProgramWrapperOneToOne",
+          perform       => 1,
+          target_dir    => "$target_dir/minimap2",
+          interpretor   => "",
+          check_program => 0,
+          program       => "",
+          option        => "
 
 minimap2 -ax splice --junc-bed $minimap2_bed -uf -k14 -o __NAME__.sam $ref_fasta __FILE__
 
@@ -336,21 +330,21 @@ rm -f __NAME__.sam
 ",
           source_ref            => "fastq2fasta",
           no_output             => 1,
-          output_to_same_folder => 1, 
+          output_to_same_folder => 1,
           output_ext            => ".sorted.bam",
           sh_direct             => 1,
           use_tmp_folder        => 0,
-          no_docker => 1,
+          no_docker             => 1,
           pbs                   => {
-            "nodes"     => "1:ppn=1",
-            "walltime"  => "10",
-            "mem"       => "40gb"
+            "nodes"    => "1:ppn=1",
+            "walltime" => "10",
+            "mem"      => "40gb"
           },
         };
 
         $source_ref = [ "minimap2", ".sorted.bam\$" ];
         push @$tasks, ( "fastq2fasta", "minimap2" );
-      }
+      } ## end elsif ( $aligner eq "minimap2")
       else {
         my $aligner_index;
         if ( $aligner eq "star" ) {
@@ -423,7 +417,7 @@ rm -f __NAME__.sam
           push @$tasks, "hisat2";
         } ## end else [ if ( $aligner eq "star")]
 
-        $config = merge_hash_right_precedent( $config, $configAlignment );
+        $config            = merge_hash_right_precedent( $config, $configAlignment );
         $multiqc_depedents = $source_ref;
         if ( $def->{perform_umitools} ) {
           my $dedup_task   = $aligner . "_umitools_dedup";
@@ -1780,26 +1774,14 @@ fi
       push( @copy_files, $deseq2taskname, "_DESeq2.csv" );
       push( @copy_files, $deseq2taskname, "_DESeq2_sig.csv" );
       push( @copy_files, $deseq2taskname, "_DESeq2-vsd.csv" );
-
-      #push( @copy_files, $deseq2taskname, "_DESeq2_GSEA.rnk" );
-      #push( @copy_files, $deseq2taskname, "_DESeq2_sig_genename.txt" );
-      #push( @copy_files, $deseq2taskname, "heatmap.png" );
-      #push( @copy_files, $deseq2taskname, "pca.pdf" );
     } ## end if ( ( defined $deseq2taskname...))
 
     my $hasFunctionalEnrichment = 0;
     if ( defined $webgestaltTaskName ) {
-      push( @copy_files, $webgestaltTaskName, "_geneontology_Biological_Process\$" );
-      push( @copy_files, $webgestaltTaskName, "_geneontology_Cellular_Component\$" );
-      push( @copy_files, $webgestaltTaskName, "_geneontology_Molecular_Function\$" );
-      push( @copy_files, $webgestaltTaskName, "_pathway_KEGG\$" );
-
       if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
-        push( @copy_files, $linkTaskName, ".html\$" );
-
         push( @report_files, $linkTaskName, ".rds" );
         push( @report_names, "WebGestalt_deseq2" );
-      } ## end if ( defined $linkTaskName...)
+      }
       else {
         my $pairs = $config->{pairs};
         for my $key ( keys %$pairs ) {
@@ -1818,18 +1800,14 @@ fi
     } ## end if ( defined $webgestaltTaskName)
 
     if ( defined $gseaTaskName ) {
-      push( @copy_files, $gseaTaskName, ".gsea\$" );
-      #my $suffix = getDeseq2Suffix($config, $def, $deseq2taskname);
-
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
-        #push( @report_files, $gseaTaskName, "/" . $key . $suffix . "_.*gsea.csv" );
         push( @report_files, $gseaTaskName, "/" . $key . ".gsea.csv" );
         push( @report_names, "gsea_" . $key );
       }
 
       my $gsea_report_task = $gseaTaskName . "_report";
-      if($config->{$gsea_report_task}) {
+      if ( $config->{$gsea_report_task} ) {
         push( @report_files, $gsea_report_task, "gsea_files.csv" );
         push( @report_names, "report_gsea" );
       }

@@ -29,6 +29,10 @@ rownames(rnaseqOptions)<-rnaseqOptions$V2
 out.width<-rnaseqOptions["out.width", 1]
 taskName<-rnaseqOptions["task_name", 1]
 
+if(!dir.exists(taskName)) {
+  dir.create(taskName)
+}
+
 knitr::opts_chunk$set(
   echo=FALSE,  
   message=FALSE, 
@@ -478,7 +482,7 @@ for (i in 1:nrow(DESeq2_files)){
     }
 
     deseq2table<-deseq2[, cnames]
-    deseq2_file = paste0(comparisonName, ".deseq2.csv")
+    deseq2_file = paste0(taskName, "/", comparisonName, ".deseq2.csv")
     write.csv(deseq2table, deseq2_file)
 
     result = paste0(result, getPagedTable(deseq2_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
@@ -545,22 +549,34 @@ save_gsea_rmd(gsea_files, gsea_rmd_file, "##")
 
 
 ```{r fgsea, results="asis", echo=FALSE, warning=FALSE, eval=hasFgseaAnalysis} 
-cat("## FGSEA Hallmark Gene Set Enrichment Analysis\n\n")
+cat("## FGSEA\n\n")
 fgsea_file_list = files$V1[files$V2 == "report_fgsea"]
-fgsea_files = read.csv(fgsea_file_list, row.names=1)
+fgsea_files = read.csv(fgsea_file_list)
 if(nrow(fgsea_files) > 0){
-  fgsea_files$fgsea_file=paste0(dirname(fgsea_file_list), "/", fgsea_files$fgsea_file)
-  fgsea_files$fgsea_png=paste0(dirname(fgsea_file_list), "/", fgsea_files$fgsea_png)
+  fgsea_files$file_path=paste0(dirname(fgsea_file_list), "/", fgsea_files$file_path)
 }
 
 fgsea_content=""
-i=1
-for(i in 1:nrow(fgsea_files)){
-  comparison = rownames(fgsea_files)[i]
-  fgsea_content = paste0(fgsea_content, "\n### ", comparison, "\n\n")
-  fgsea_content = paste0(fgsea_content, getPagedTable(fgsea_files$fgsea_file[i], row.names=1, escape=TRUE, digits=3, nsmall=2))
-  fgsea_content = paste0(fgsea_content, "\n\n")
-  fgsea_content = paste0(fgsea_content, get_figure_description(paste(comparison, "fgsea_png"), fgsea_files$fgsea_png[i], paste("FGSEA plot of", comparison)))
+comparisons=unique(fgsea_files$comparison)
+comp=comparisons[1]
+for(comp in comparisons){
+  fgsea_content = paste0(fgsea_content, "\n### ", comp, "\n\n")
+  comp_fgsea_files = fgsea_files[fgsea_files$comparison == comp,]
+  categories=unique(comp_fgsea_files$category)
+  category=categories[1]
+  for(category in categories){
+    fgsea_content = paste0(fgsea_content, "\n#### ", category, "\n\n")
+    category_fgsea_files = comp_fgsea_files[comp_fgsea_files$category == category,]
+    if (!"enriched_file" %in% category_fgsea_files$file_key) {
+      fgsea_content = paste0(fgsea_content, "No significantly enriched gene sets were detected in this category.\n\n")
+      next
+    }
+
+    category_enriched_file = category_fgsea_files |> dplyr::filter(file_key == "enriched_file") |> dplyr::pull(file_path)
+    fgsea_content = paste0(fgsea_content, getPagedTable(category_enriched_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
+    category_enriched_png = category_fgsea_files |> dplyr::filter(file_key == "enriched_png") |> dplyr::pull(file_path)
+    fgsea_content = paste0(fgsea_content, get_figure_description(paste(comparison, category, "fgsea_png"), category_enriched_png, paste("FGSEA plot of", comparison, "in", category)))
+  }
 }
 writeLines(fgsea_content, fgsea_rmd_file)
 ``` 
