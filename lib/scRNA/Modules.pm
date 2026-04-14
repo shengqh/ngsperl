@@ -1936,6 +1936,7 @@ sub addEdgeRTask {
         "task_name"       => getValue( $def, "task_name" ),
         "edgeR_suffix"    => $edgeR_suffix,
         "msigdbr_species" => getValue( $def, "msigdbr_species" ),
+        "msigdbr_collections" => getValue( $def, "msigdbr_collections", "H;C2:REACTOME" ),
       },
       parameterSampleFile2_ref => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
       no_docker                => getValue( $def, "fgsea_no_docker", 0 ),
