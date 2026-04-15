@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='S4'
-outFile='S4'
+sample_name='S25_DSVPTC_CCND1RET'
+outFile='S25_DSVPTC_CCND1RET'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parFile1=''
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/shengq2/pipelines/20260213_cosmx/result/MEcell/result/S4')
+setwd('/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20260212_12904_VisiumHD_cellsegment/MEcell/result/S25_DSVPTC_CCND1RET')
 
 ### Parameter setting end ###
 
@@ -26,6 +26,7 @@ myoptions_tbl=fread(parSampleFile2, header=FALSE)
 myoptions=split(myoptions_tbl$V1, myoptions_tbl$V2)
 
 assay=myoptions$assay
+nthreads=as.numeric(myoptions$nthreads)
 
 data_dir <- fread(parSampleFile1, header=FALSE)$V1[1]
 
@@ -53,8 +54,8 @@ object <- ScaleData(object)
 log_info("RunPCA")
 object <- RunPCA(object)
 
-log_info("Run MEcell")
-object <- MEcell(object, usepca=TRUE)
+log_info("Run MEcell with nthreads = ", nthreads)
+object <- MEcell(object, usepca=TRUE, nthreads=nthreads)
 
 log_info(paste0("Save Seurat object with MEcell results to ", outFile, ".MEcell.rds"))
 saveRDS(object, file=paste0(outFile, ".MEcell.rds"))
@@ -69,4 +70,3 @@ system(paste0("gzip -f ", mtx_file))
 writeLines(rownames(mecell), paste0(outFile, ".MEcell.cells.txt"))
 
 log_info("Done.")
-

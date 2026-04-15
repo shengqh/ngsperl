@@ -42,6 +42,10 @@ email=myoptions$email
 affiliation=get_affiliation(myoptions)
 assay=myoptions$assay
 species=myoptions$species
+dataType=myoptions$dataType
+if(is.null(dataType)){
+  dataType="VisiumHD"
+}
 
 resolutions=sort(as.numeric(myoptions$MEcell_resolutions))
 resolutions_str=paste0(resolutions, collapse="_")
@@ -114,7 +118,9 @@ if(!file.exists(rds_file)){
 
 obj = readRDS(rds_file)
 obj = UpdateSeuratObject(obj)
-dataType=get_data_type(obj) #decide if this is a Visium, VisiumHD, or CosMx
+
+#let's get the dataType by user definition instead of guessing it.
+#dataType=get_data_type(obj) #decide if this is a Visium, VisiumHD, or CosMx
 
 bMiss=FALSE
 cfile = cluster_files[1]

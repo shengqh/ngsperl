@@ -480,7 +480,8 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
   } ## end if ( getValue( $def, "perform_SignacX"...))
 
   if ( getValue( $def, "perform_MEcell", 0 ) ) {
-    my $MEcell_task = "MEcell";
+    my $MEcell_task     = "MEcell";
+    my $MEcell_nthreads = getValue( $def, "MEcell_nthreads", 8 );
     $config->{$MEcell_task} = {
       class                    => "CQS::IndividualR",
       target_dir               => "$target_dir/$MEcell_task",
@@ -493,13 +494,15 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         email       => getValue( $def, "email" ),
         affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
         assay       => $source_assay,
+        nthreads    => $MEcell_nthreads,
       },
       sh_direct        => 0,
-      no_docker        => 0,
+      no_docker        => getValue( $def, "no_docker", 0 ),
+      docker_prefix    => "mecell_",
       output_file_ext  => ".MEcell.rds",
       output_other_ext => ".MEcell.mtx.gz",
       pbs              => {
-        "nodes"    => "1:ppn=1",
+        "nodes"    => "1:ppn=${MEcell_nthreads}",
         "walltime" => "48",
         "mem"      => "40gb"
       }
@@ -628,6 +631,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         cluster_algorithm      => $cluster_algorithm,
         cluster_algorithm_name => $cluster_algorithm_name,
         image_assay            => $source_image_assay,
+        data_type              => getValue( $def, "data_type" ),
       },
       parameterSampleFile3_ref => $MEcell_cluster_tasks,
       parameterSampleFile4_ref => $azimuth_task,
@@ -640,6 +644,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       no_prefix                => 1,
       sh_direct                => 0,
       no_docker                => getValue( $def, "no_docker", 0 ),
+      docker_prefix            => "vis_",
       output_to_same_folder    => 0,
       output_ext               => ".MEcell_cluster.html",
       output_other_ext         => ".${source_assay}.MEcell_clustered.rds",
@@ -715,6 +720,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         no_prefix                => 1,
         sh_direct                => 0,
         no_docker                => getValue( $def, "no_docker", 0 ),
+        docker_prefix            => "vis_",
         output_to_same_folder    => 0,
         output_ext               => ".Leiden.subcluster.files.csv",
         output_other_ext         => "../__NAME__.spatial_MEcell_sub_cluster.html",
@@ -760,8 +766,8 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
           parameterSampleFile5_ref => $MEcell_umap_task,
           no_prefix                => 1,
           sh_direct                => 0,
-          docker_prefix            => "choose_",
           no_docker                => getValue( $def, "no_docker", 0 ),
+          docker_prefix            => "vis_",
           output_to_same_folder    => 0,
           output_ext               => ".choose.rds",
           output_other_ext         => "../__NAME__.choose.html",
