@@ -155,7 +155,7 @@ The significant differences of comparisons are shown in the following credible i
 
 ```{r, results="hide"}
 comp_tbl=fread("fileList4.txt", header=FALSE, data.table=FALSE) |>
-  dplyr::filter(V2 != "covariates")
+  dplyr::filter(V2 != "covariates" & V2 != "covariances")
 
 if(ncol(comp_tbl) == 3) { # v3 is comparison, v2 is useless
   comp_tbl = comp_tbl |> 
