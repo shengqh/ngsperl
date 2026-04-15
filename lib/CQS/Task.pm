@@ -692,7 +692,11 @@ export R_LIBS=
 export PYTHONPATH=
 export JAVA_HOME=
  
+echo $docker_init
+
 $docker_init
+
+echo $docker_command $sh_command $sh_file 
 
 $docker_command $sh_command $sh_file 
 
