@@ -327,6 +327,13 @@ sub getScRNASeqConfig {
   my $decontX_ref        = undef;
   my $doublet_finder_ref = undef;
 
+  my $obj_task             = undef;
+  my $obj_ref              = undef;
+  my $meta_ref             = undef;
+  my $obj_cell_type        = "cell_type";
+  my $obj_seurat_cell_type = "seurat_cell_type";
+  my $obj_umap             = "umap";
+
   if ( defined $def->{files} ) {
     if ( defined $def->{atac_files} ) {
       $config->{atac_files} = $def->{atac_files};
@@ -616,7 +623,6 @@ sub getScRNASeqConfig {
     if ( getValue( $def, "perform_seurat" ) ) {
       my $seurat_task      = undef;
       my $reduction        = undef;
-      my $obj_ref          = undef;
       my $localization_ref = undef;
 
       if ( getValue( $def, "rawdata_from_object", 0 ) ) {
@@ -717,7 +723,7 @@ sub getScRNASeqConfig {
         }
         addDynamicCluster( $config, $def, $tasks, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column, $by_harmony );
 
-        my $meta_ref       = [ $scDynamic_task, ".meta.rds" ];
+        $meta_ref = [ $scDynamic_task, ".meta.rds" ];
         my $call_files_ref = [ $scDynamic_task, ".iter_png.csv" ];
 
         if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref or defined $decontX_ref ) {
@@ -783,6 +789,8 @@ sub getScRNASeqConfig {
             my $table       = getValue( $def, "dynamic_subclusters_table" );
 
             addSubClusterChoose( $config, $def, $tasks, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".dynamic_choose.html" );
+
+            $obj_task = $choose_task;
             $obj_ref  = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
@@ -824,65 +832,6 @@ sub getScRNASeqConfig {
                 push( @$tasks, $silhouette_task );
               } ## end for my $reduction ( 'fastmnn'...)
             } ## end if ( getValue( $def, "perform_choose_cluster_silhouette"...))
-
-            if ( getValue( $def, "perform_pesudo_count_correlation", 0 ) ) {
-              my $pseudo_task = $choose_task . "_pesudo_count";
-              add_pseudo_count( $config, $def, $tasks, $target_dir, $pseudo_task, $obj_ref, "seurat_cell_type" );
-
-              my $corr_task = $pseudo_task . "_correlation";
-              add_table_correlation( $config, $def, $tasks, $corr_task, $def->{target_dir} . "/" . $corr_task, [ $pseudo_task, ".list.csv" ] );
-
-              push( @$tasks, $corr_task );
-            } ## end if ( getValue( $def, "perform_pesudo_count_correlation"...))
-
-            $celltype_task = $choose_task;
-
-            if ( $def->{perform_DCATS} ) {
-              my $dcats_task = $choose_task . "_DCATS";
-              add_dcats( $config, $def, $summary, $target_dir, $dcats_task, [ $celltype_task, ".final.rds" ] );
-            }
-
-            if ( defined $def->{bubble_files} ) {
-              add_bubble_files( $config, $def, $tasks, $target_dir, $choose_task . "_bubble_files", $choose_task, undef, undef, undef, ".dynamic_choose_bubbles.html" );
-            }
-
-            if ( defined $def->{bubble_plots} ) {
-              my $bubble_task = $choose_task . "_bubblemap";
-              add_bubble_plots( $config, $def, $tasks, $target_dir, $bubble_task, $choose_task, undef, undef, undef, ".dynamic_choose_dot.html", $summary_layer );
-            }
-
-            if ( defined $clonotype_convert ) {
-              if ( getValue( $def, "perform_gliph2", 0 ) ) {
-                my $gliph2_task = add_gliph2( $config, $def, $tasks, $target_dir, $meta_ref, $clonotype_convert, $hla_merge );
-              }
-              my $clonotype_consensus = addEncloneToConsensus( $config, $def, $tasks, $target_dir, "clonotype" . get_next_index( $def, $clono_key ) . "_consensus_tcell", [ $enclone_task, ".pchain4.pcell.csv" ], [ $merge_task, ".cdr3\$" ], [ $choose_task, ".meta.csv" ] );
-              my $immunarch_task      = addConsensusToImmunarch( $config, $def, $tasks, $target_dir, "clonotype" . get_next_index( $def, $clono_key ) . "_immunarch_tcell", $clonotype_consensus );
-            } ## end if ( defined $clonotype_convert)
-
-            if ( !defined $def->{comparison_object_file} ) {
-              addComparison( $config, $def, $tasks, $target_dir, $choose_task, $choose_task, "", "cell_type", "seurat_cell_type", "subumap" );
-            }
-
-            $localization_ref = $obj_ref;
-
-            if ( getValue( $def, "perform_group_umap", 0 ) && defined $def->{groups} ) {
-              my $group_umap_task = $choose_task . "_group_umap";
-              add_group_umap( $config, $def, $tasks, $target_dir, $group_umap_task, [ $choose_task, ".final.rds" ] );
-            }
-
-            if ( defined $clonotype_convert ) {
-              addClonotypeCluster( $config, $def, $tasks, $target_dir, $clonotype_convert . "_cluster", $clonotype_convert, $meta_ref, ".clonotype.cluster.csv,.clonotype.sub.cluster.csv" );
-              addClonotypeVis( $config, $def, $tasks, $target_dir, $clonotype_convert . "_vis", $obj_ref, undef, $clonotype_convert );
-            }
-
-            if ( defined $clonotype_db ) {
-              addClonotypeCluster( $config, $def, $tasks, $target_dir, $clonotype_db . "_cluster", $clonotype_db, $meta_ref, ".clonotype.db.cluster.csv,.clonotype.sub.db.cluster.csv" );
-            }
-
-            if ( getValue( $def, "perform_sccomp" ) ) {
-              my $sccomp_task = $choose_task . "_sccomp";
-              add_sccomp( $config, $def, $tasks, $target_dir, $sccomp_task, $meta_ref );
-            }
 
             # if(defined $df_task){
             #   my $doublet_check_task = $dynamicKey . get_next_index($def, $dynamicKey) . "_doublet_check";
@@ -1564,13 +1513,75 @@ sub getScRNASeqConfig {
     } ## end if ( getValue( $def, "perform_seurat"...))
   } ## end if ( defined $def->{files...})
 
-  if ( defined $def->{comparison_object_file} ) {
-    if ( $def->{perform_comparison} ) {
-      $config->{comparison_obj} = { $project_name => [ $def->{comparison_object_file} ] };
-      addComparison( $config, $def, $tasks, $target_dir, "comparison_obj", undef, "", "refine_cell_type", "refine_seurat_cell_type", "umap" );
-      # print(Dumper($tasks));
-    }
-  } ## end if ( defined $def->{comparison_object_file...})
+  if ( $def->{final_object_file} ) {
+    $config->{final_obj}      = { $project_name => [ $def->{final_object_file} ] };
+    $config->{final_obj_meta} = { $project_name => [ $def->{final_object_meta_file} ] };
+    $obj_task                 = "final_obj";
+    $obj_ref                  = "final_obj";
+    $meta_ref                 = "final_obj_meta";
+    $obj_cell_type            = getValue( $def, "final_object_cell_type" );
+    $obj_seurat_cell_type     = getValue( $def, "final_object_seurat_cell_type", "seurat_cell_type" );
+    $obj_umap                 = getValue( $def, "final_object_umap" );
+  } ## end if ( $def->{final_object_file...})
+
+  if ( $def->{perform_comparison} ) {
+    addComparison( $config, $def, $tasks, $target_dir, $obj_task, undef, "", $obj_cell_type, $obj_seurat_cell_type, $obj_umap );
+  }
+
+  if ( $def->{perform_cellchat} ) {
+    add_cell_chat( $config, $def, $tasks, $target_dir, $obj_task . "_cellchat", $obj_ref );
+  }
+
+  if ( getValue( $def, "perform_pesudo_count_correlation", 0 ) ) {
+    my $pseudo_task = $obj_task . "_pesudo_count";
+    add_pseudo_count( $config, $def, $tasks, $target_dir, $pseudo_task, $obj_ref, $obj_seurat_cell_type );
+
+    my $corr_task = $pseudo_task . "_correlation";
+    add_table_correlation( $config, $def, $tasks, $corr_task, $def->{target_dir} . "/" . $corr_task, [ $pseudo_task, ".list.csv" ] );
+
+    push( @$tasks, $corr_task );
+  } ## end if ( getValue( $def, "perform_pesudo_count_correlation"...))
+
+  if ( $def->{perform_DCATS} ) {
+    my $dcats_task = $obj_task . "_DCATS";
+    add_dcats( $config, $def, $summary, $target_dir, $dcats_task, $obj_ref );
+  }
+
+  # if ( defined $def->{bubble_files} ) {
+  #   add_bubble_files( $config, $def, $tasks, $target_dir, $obj_task . "_bubble_files", $obj_ref, undef, undef, undef, ".dynamic_choose_bubbles.html" );
+  # }
+
+  # if ( defined $def->{bubble_plots} ) {
+  #   my $bubble_task = $obj_task . "_bubblemap";
+  #   add_bubble_plots( $config, $def, $tasks, $target_dir, $bubble_task, $obj_task, undef, undef, undef, ".dynamic_choose_dot.html", $summary_layer );
+  # }
+
+  # if ( defined $clonotype_convert ) {
+  #   if ( getValue( $def, "perform_gliph2", 0 ) ) {
+  #     my $gliph2_task = add_gliph2( $config, $def, $tasks, $target_dir, $meta_ref, $clonotype_convert, $hla_merge );
+  #   }
+  #   my $clonotype_consensus = addEncloneToConsensus( $config, $def, $tasks, $target_dir, "clonotype" . get_next_index( $def, $clono_key ) . "_consensus_tcell", [ $enclone_task, ".pchain4.pcell.csv" ], [ $merge_task, ".cdr3\$" ], [ $choose_task, ".meta.csv" ] );
+  #   my $immunarch_task      = addConsensusToImmunarch( $config, $def, $tasks, $target_dir, "clonotype" . get_next_index( $def, $clono_key ) . "_immunarch_tcell", $clonotype_consensus );
+  # } ## end if ( defined $clonotype_convert)
+
+  # if ( getValue( $def, "perform_group_umap", 0 ) && defined $def->{groups} ) {
+  #   my $group_umap_task = $choose_task . "_group_umap";
+  #   add_group_umap( $config, $def, $tasks, $target_dir, $group_umap_task, [ $choose_task, ".final.rds" ] );
+  # }
+
+  # if ( defined $clonotype_convert ) {
+  #   addClonotypeCluster( $config, $def, $tasks, $target_dir, $clonotype_convert . "_cluster", $clonotype_convert, $meta_ref, ".clonotype.cluster.csv,.clonotype.sub.cluster.csv" );
+  #   addClonotypeVis( $config, $def, $tasks, $target_dir, $clonotype_convert . "_vis", $obj_ref, undef, $clonotype_convert );
+  # }
+
+  # if ( defined $clonotype_db ) {
+  #   addClonotypeCluster( $config, $def, $tasks, $target_dir, $clonotype_db . "_cluster", $clonotype_db, $meta_ref, ".clonotype.db.cluster.csv,.clonotype.sub.db.cluster.csv" );
+  # }
+
+  if ( getValue( $def, "perform_sccomp" ) ) {
+    my $sccomp_task = $obj_task . "_sccomp";
+    add_sccomp( $config, $def, $tasks, $target_dir, $sccomp_task, $meta_ref );
+  }
 
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
