@@ -1,0 +1,214 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+
+.main-container {
+  max-width: 1920px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+source("scRNA_func.r")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+cell_group_column=myoptions$cell_group_column
+cache_stan_model_dir=myoptions$sccomp_stan_models_cache_dir
+
+affiliation=get_affiliation(myoptions)
+
+prefix = paste0(myoptions$task_name, ".sccomp")
+```
+
+---
+title: `r myoptions$task_name` - Cell composition comparison
+author:
+- name: `r myoptions$email`
+  affiliation: `r affiliation`
+---
+
+```{r}
+library(dplyr)
+library(sccomp)
+
+# sccomp_boxplot will call internal function which will check the cache directory, 
+# so we need to set the cache directory before calling sccomp_boxplot.
+utils::assignInNamespace("sccomp_stan_models_cache_dir", cache_stan_model_dir, ns="sccomp")
+
+meta_file=fread("fileList1.txt", header=FALSE)$V1[1]
+
+all_meta = readRDS(meta_file)
+
+meta <- all_meta |>
+  dplyr::mutate(sample=orig.ident,
+                old_cell_group=!!sym(cell_group_column)) |>
+  dplyr::select(sample, old_cell_group) |>
+  dplyr::group_by(sample, old_cell_group) |>
+  dplyr::summarise(count=n()) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(cell_group = gsub("[: ]+", "_", old_cell_group)) |>
+  as.data.frame() 
+
+cg_map = meta |>
+  dplyr::select(old_cell_group, cell_group) |>
+  dplyr::distinct() |>
+  as.data.frame()  
+
+if("group_column" %in% names(myoptions)){
+  sample_group = all_meta |>
+    dplyr::mutate(sample=orig.ident,
+                  type=!!sym(myoptions$group_column)) |>
+    dplyr::select(sample, type) |>
+    dplyr::distinct() |>
+    as.data.frame() 
+}else{
+  sample_group = fread("fileList3.txt", header=FALSE, data.table=FALSE) |>
+    dplyr::rename(sample=V1, type=V2)
+}
+
+meta = meta |>
+  # 1. Sanitize names (spaces and special characters can break formulas)
+  # 2. Complete the grid: Every sample gets every cell_group
+  # This ensures sccomp doesn't fail during the internal 'spread'
+  tidyr::complete(sample, cell_group, fill = list(count = 0)) |>
+  dplyr::left_join(sample_group, by="sample") |>
+  dplyr::arrange(sample, old_cell_group)
+
+meta$sample=factor(meta$sample)  
+meta$cell_group=factor(meta$cell_group, levels=unique(meta$cell_group))  
+meta$type=factor(meta$type)  
+
+meta = meta |> as.data.frame()
+```
+
+```{r, results="hide"}
+comp_tbl=fread("fileList4.txt", header=FALSE, data.table=FALSE) 
+
+if(ncol(comp_tbl) == 3) { # v3 is comparison, v2 is useless
+  has_covariates = any(comp_tbl$V2 == "covariates" | comp_tbl$V2 == "covariances")
+  colnames(comp_tbl) = c("Group", "Key", "Comparison")
+}else{
+  has_covariates = FALSE
+  colnames(comp_tbl) = c("Group", "Comparison")
+}
+
+comp_names = unique(comp_tbl$Comparison)
+
+comp_name= comp_names[1]
+comp_content=""
+for(comp_name in comp_names){
+  cur_tbl = comp_tbl |> dplyr::filter(Comparison == comp_name)
+  comp_content=paste0(comp_content, "\n# ", comp_name, "\n\n")
+
+  comp_file=gsub(" ", "_", comp_name)
+
+  if(has_covariates){
+    groups=cur_tbl |> dplyr::filter(Key == "groups") |> dplyr::pull(Group)
+    covariates=cur_tbl |> dplyr::filter(Key == "covariates" | Key == "covariances") |> dplyr::pull(Group)
+    cur_formula = as.formula(paste0("~ 0 + type + ", paste(covariates, collapse=" + ")))
+    covariates = fread(myoptions$covariance_file)
+    cur_meta = meta |> dplyr::filter(type %in% groups) |> dplyr::left_join(covariates, join_by(sample==Sample))
+  }else{
+    groups=cur_tbl |> dplyr::pull(Group)
+    cur_formula = as.formula(paste0("~ 0 + type"))
+    cur_meta = meta |> dplyr::filter(type %in% groups)
+  }
+  cur_meta$type = factor(cur_meta$type, levels=groups)
+  
+  comp_content=paste(comp_content, "\n- Formula: ", deparse(cur_formula), "\n\n")
+
+  comp_content=paste0(comp_content, "\n## Data\n\n")
+  cur_csv=paste0(prefix, ".", comp_file, ".meta.csv")
+  write.csv(cur_meta, cur_csv, row.names=FALSE)
+  comp_content=paste(comp_content, getPagedTable(cur_csv, row.names=0))
+
+  cur_estimate = sccomp_estimate( 
+    cur_meta,
+    formula_composition = cur_formula,
+    formula_variability = ~1,
+    sample = "sample", 
+    cell_group = "cell_group",
+    abundance  = "count",
+    bimodal_mean_variability_association = TRUE,
+    cache_stan_model = cache_stan_model_dir,
+    verbose = FALSE
+  ) 
+  
+  no_outlier_estimate = cur_estimate |> sccomp_remove_outliers(max_sampling_iterations = 2000, verbose=FALSE)
+
+  contrast=paste0("type", groups[2], "-type", groups[1])
+
+  sccomp_result = no_outlier_estimate |>
+                  sccomp_test(contrasts= c(contrast))
+
+  pchange <- sccomp_proportional_fold_change(
+    no_outlier_estimate,
+    formula_composition = ~ type,
+    from = groups[1],
+    to = groups[2]
+  ) |> as.data.frame()
+                    
+  vis_res = sccomp_result |> 
+    dplyr::select(cell_group, c_lower, c_effect, c_upper, c_pH0, c_FDR) |>
+    as.data.frame() |>
+    dplyr::left_join(pchange, by=c("cell_group")) |>
+    dplyr::left_join(cg_map, by=c("cell_group")) |>
+    dplyr::select(-cell_group) |>
+    dplyr::rename(cell_group=old_cell_group) |>
+    dplyr::select(cell_group, everything()) |>
+    dplyr::arrange(cell_group)
+  
+  result_csv=paste0(prefix, ".", comp_file, ".result.csv")
+  write.csv(vis_res, result_csv, row.names=FALSE)
+
+  comp_content=paste0(comp_content, "\n## Differential composition results\n\n")
+  comp_content=paste(comp_content, getPagedTable(result_csv))
+
+  plots = plot(sccomp_result)
+
+  g = plots$credible_intervals_1D + theme(axis.title.y=element_blank())
+  credible_intervals_1D_png = paste0(prefix, ".", comp_file, ".credible_intervals_1D.contrast.png")
+  ggsave(credible_intervals_1D_png, g, width=8, height=4, units="in", dpi=300, bg="white")
+
+  comp_content=paste0(comp_content, "\n## Credible Intervals Figure\n\n")
+  comp_content=paste(comp_content, getFigure(credible_intervals_1D_png))
+}
+comp_rmd="comp.rmd"
+writeLines(comp_content, comp_rmd)
+```
+
+```{r child=comp_rmd}
+```
+
+# Session Info
+
+```{r}
+package_tbl=get_packages_table()
+print_table(package_tbl, byDT=TRUE, row.names=FALSE)
+```

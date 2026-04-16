@@ -283,7 +283,7 @@ sub add_seurat {
   $method = lc($method);
 
   my $seurat_task = "${prefix}seurat${sct_str}_" . $method;
-  $rmd_ext     = $rmd_ext . "." . $method . ".html";
+  $rmd_ext = $rmd_ext . "." . $method . ".html";
   if ( $method eq "merge" ) {
     $reduction             = "pca";
     $preprocessing_rscript = "../scRNA/seurat_merge.r";
@@ -532,7 +532,7 @@ sub addArcasHLA_extract {
     perform      => 1,
     target_dir   => "$target_dir/$extract_task",
     init_command => "",
-    option => "
+    option       => "
 if [[ ! -s __NAME__.bam ]]; then
   ln -s __FILE__ __NAME__.bam 
 fi
@@ -651,17 +651,16 @@ sub addArcasHLA {
 
   my $merge_task = "${prefix}arcasHLA_3_merge";
   $config->{$merge_task} = {
-    class                 => "CQS::ProgramWrapper",
-    perform               => 1,
-    target_dir            => "$target_dir/$merge_task",
-    option                => "
+    class      => "CQS::ProgramWrapper",
+    perform    => 1,
+    target_dir => "$target_dir/$merge_task",
+    option     => "
     
 arcasHLA merge -i $target_dir/$genotype_task/result --run $task_name -o .
 
 { head -n 1 __NAME__.genotypes.tsv; sed '1d' __NAME__.genotypes.tsv | sort -k1,1; } > __NAME__.genotypes.sorted.tsv
 
 ",
-
 
     interpretor           => "",
     check_program         => 0,
@@ -895,8 +894,8 @@ sub add_azimuth {
     parameterSampleFile3 => $def->{Azimuth_ref_dict},
     output_file_ext      => ".azimuth.png;.azimuth.rds;.meta.rds",
     post_command         => "rm -rf .cache",
-    no_docker            => getValue($def, "azimuth_no_docker", 0),
-    sh_direct            => getValue($def, "azimuth_sh_direct", 0),
+    no_docker            => getValue( $def, "azimuth_no_docker", 0 ),
+    sh_direct            => getValue( $def, "azimuth_sh_direct", 0 ),
     pbs                  => {
       "nodes"    => "1:ppn=1",
       "walltime" => getValue( $def, "Azimuth_walltime", "10" ),
@@ -1211,13 +1210,14 @@ sub addCellRangerMulti {
     $job_arg = "--jobmode=$jobmode";
   }
 
-  my $cpu = $jobmode && $jobmode =~ /slurm/ ? 1 : getValue( $def, "cellranger_multi_cpu", 8 );
+  my $cpu = $jobmode && $jobmode =~ /slurm/ ? 1      : getValue( $def, "cellranger_multi_cpu", 8 );
   my $mem = $jobmode && $jobmode =~ /slurm/ ? "10gb" : getValue( $def, "cellranger_multi_mem", "40gb" );
 
   my $csv_files;
-  if($def->{is_files_config}) {
+  if ( $def->{is_files_config} ) {
     $csv_files = $def->{files};
-  } else {
+  }
+  else {
     $csv_files = writeCellRangerMultiConig( $def, $files_name, $target_dir, $config_template );
   }
 
@@ -1553,19 +1553,19 @@ sub addEdgeRTask {
   }
 
   my $rCodeDic = {
-    "email"           => getValue( $def, "email" ),
-    "affiliation"     => $def->{"affiliation"},
-    "task_name"       => getValue( $def, "task_name" ),
-    "pvalue"          => getValue( $def, "DE_pvalue" ),
-    "useRawPvalue"    => getValue( $def, "DE_use_raw_pvalue" ),
-    "foldChange"      => getValue( $def, "DE_fold_change" ),
-    "bBetweenCluster" => $bBetweenCluster,
-    "DE_by_cell"      => $DE_by_cell,
-    "covariance_file" => $def->{covariance_file},
-    "sample_column"   => $def->{sample_column},
-    "group_column"    => $def->{group_column},
-    "reduction"       => $reduction,
-    "discard_samples" => $def->{discard_samples},
+    "email"                              => getValue( $def, "email" ),
+    "affiliation"                        => $def->{"affiliation"},
+    "task_name"                          => getValue( $def, "task_name" ),
+    "pvalue"                             => getValue( $def, "DE_pvalue" ),
+    "useRawPvalue"                       => getValue( $def, "DE_use_raw_pvalue" ),
+    "foldChange"                         => getValue( $def, "DE_fold_change" ),
+    "bBetweenCluster"                    => $bBetweenCluster,
+    "DE_by_cell"                         => $DE_by_cell,
+    "covariance_file"                    => $def->{covariance_file},
+    "sample_column"                      => $def->{sample_column},
+    "group_column"                       => $def->{group_column},
+    "reduction"                          => $reduction,
+    "discard_samples"                    => $def->{discard_samples},
     "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison}
   };
 
@@ -1931,11 +1931,11 @@ sub addEdgeRTask {
       suffix               => ".fgsea",
       output_file_ext      => ".fgsea.html,.fgsea.files.csv",
       parameterSampleFile1 => {
-        "email"           => getValue( $def, "email" ),
-        "affiliation"     => $def->{"affiliation"},
-        "task_name"       => getValue( $def, "task_name" ),
-        "edgeR_suffix"    => $edgeR_suffix,
-        "msigdbr_species" => getValue( $def, "msigdbr_species" ),
+        "email"               => getValue( $def, "email" ),
+        "affiliation"         => $def->{"affiliation"},
+        "task_name"           => getValue( $def, "task_name" ),
+        "edgeR_suffix"        => $edgeR_suffix,
+        "msigdbr_species"     => getValue( $def, "msigdbr_species" ),
         "msigdbr_collections" => getValue( $def, "msigdbr_collections", "H;C2:REACTOME" ),
       },
       parameterSampleFile2_ref => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
@@ -3698,11 +3698,10 @@ sub add_cellbender_default {
     $raw_files_def = [ $cellbender_extract_gene_expression_task, ".raw_gex_feature_bc_matrix.h5" ];
   } ## end if ( $def->{cellbender_extract_gene_expression_h5...})
 
-
   my $cellbender_use_gpu = getValue( $def, "cellbender_use_gpu", 0 );
-  my $cellbender_cpu     = $cellbender_use_gpu ? 1 : getValue( $def, "cellbender_cpu", 12 );
+  my $cellbender_cpu     = $cellbender_use_gpu ? 1        : getValue( $def, "cellbender_cpu", 12 );
   my $cellbender_option  = $cellbender_use_gpu ? "--cuda" : "--cpu-threads $cellbender_cpu";
-  my $sh_direct          = $cellbender_use_gpu ? 1 : 0;
+  my $sh_direct          = $cellbender_use_gpu ? 1        : 0;
 
   my $cellbender_task = $cellbender_prefix . "_01_call";
   $config->{$cellbender_task} = {
@@ -3814,9 +3813,9 @@ sub add_cellbender_v2 {
   my $cellbender_task = $ratio_prefix . "_02_call";
 
   my $cellbender_use_gpu = getValue( $def, "cellbender_use_gpu", 0 );
-  my $cellbender_cpu     = $cellbender_use_gpu ? 1 : getValue( $def, "cellbender_cpu", 12 );
+  my $cellbender_cpu     = $cellbender_use_gpu ? 1        : getValue( $def, "cellbender_cpu", 12 );
   my $cellbender_option  = $cellbender_use_gpu ? "--cuda" : "--cpu-threads $cellbender_cpu";
-  my $sh_direct          = $cellbender_use_gpu ? 1 : 0;
+  my $sh_direct          = $cellbender_use_gpu ? 1        : 0;
 
   $config->{$cellbender_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
@@ -4023,9 +4022,9 @@ sub add_cell_chat {
     parameterSampleFile1 => getValue( $def, "cellchat_group_dict" ),
     parameterSampleFile2 => {
       prefix          => getValue( $def, "task_name" ),
-      sample_column   => getValue( $def, "cellchat_sample_column" ),
-      group_column    => getValue( $def, "cellchat_group_column" ),
-      celltype_column => getValue( $def, "cellchat_celltype_column" ),
+      sample_column   => getValue( $def, "cellchat_sample_column",   getValue( $def, "sample_column" ) ),
+      group_column    => getValue( $def, "cellchat_group_column",    getValue( $def, "group_column" ) ),
+      celltype_column => getValue( $def, "cellchat_celltype_column", getValue( $def, "final_object_seurat_cell_type" ) ),
       CellChatDB      => getValue( $def, "cellchat_CellChatDB" ),
       thread          => 4,
     },
@@ -4036,7 +4035,7 @@ sub add_cell_chat {
     pbs                => {
       "nodes"    => "4",
       "walltime" => "24",
-      "mem"      => "100gb"
+      "mem"      => getValue( $def, "cellchat_mem", "100gb" )
     },
   };
   push( @$tasks, $cellchat_task );
@@ -4227,25 +4226,27 @@ sub add_sccomp {
   $config->{$sccomp_task} = {
     class                    => "CQS::UniqueRmd",
     target_dir               => $target_dir . "/" . $sccomp_task,
-    report_rmd_file          => "../scRNA/sccomp.rmd",
+    report_rmd_file          => "../scRNA/sccomp_covariate.rmd",
     additional_rmd_files     => "../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
     option                   => "",
     parameterSampleFile1_ref => $meta_ref,
     parameterSampleFile2     => {
-      task_name         => getValue( $def, "task_name" ),
-      email             => getValue( $def, "email" ),
-      affiliation       => $def->{"affiliation"},
-      cell_group_column => getValue( $def, "sccomp_cell_group_column" ),
-      group_column      => getValue( $def, "sccomp_group_column" ),
+      task_name                    => getValue( $def, "task_name" ),
+      email                        => getValue( $def, "email" ),
+      affiliation                  => $def->{"affiliation"},
+      cell_group_column            => getValue( $def, "sccomp_cell_group_column" ),
+      group_column                 => getValue( $def, "sccomp_group_column" ),
       sccomp_stan_models_cache_dir => getValue( $def, "sccomp_stan_models_cache_dir" ),
+      covariance_file              => getValue( $def, "covariance_file", "" ),
     },
     parameterSampleFile3     => getValue( $def, "sccomp_groups" ),
     parameterSampleFile4     => getValue( $def, "sccomp_pairs" ),
     suffix                   => "",
     output_file_ext          => ".sccomp.html",
     can_result_be_empty_file => 0,
-    no_docker                => getValue($def, "perform_sccomp_by_docker", 1) ? 0 : 1, 
+    no_docker                => getValue( $def, "perform_sccomp_by_docker", 1 ) ? 0 : 1,
     sh_direct                => 1,
+    docker_prefix            => "sccomp_",
     pbs                      => {
       "nodes"    => "1:ppn=1",
       "walltime" => "2",
