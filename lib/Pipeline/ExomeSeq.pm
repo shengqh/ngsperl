@@ -19,7 +19,7 @@ use List::Util qw(max);
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(performExomeSeq performExomeSeqTask addMutect2)] );
+our %EXPORT_TAGS = ( 'all' => [qw(performExomeSeq performExomeSeqTask add_muTect2_PON addMutect2)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
