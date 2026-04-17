@@ -58,7 +58,7 @@ sub getNextflowMethylationConfig {
 
   my $target_dir = $def->{target_dir};
 
-  my $convered_bed     = getValue( $def, "convered_bed" );
+  my $convered_bed_str     =  $def->{"convered_bed"} ? "--run_targeted_sequencing --target_regions_file " . $def->{"convered_bed"} : "";
   my $igenomes_base    = getValue( $def, "igenomes_base" );
   my $genome           = getValue( $def, "genome" );
   my $aligner          = getValue( $def, "aligner" );
@@ -88,8 +88,7 @@ nextflow run $nextflow_main_nf \\
   --genome $genome \\
   --igenomes_base $igenomes_base \\
   --aligner $aligner \\
-  --run_targeted_sequencing \\
-  --target_regions_file $convered_bed \\
+  $convered_bed_str \\
   --collecthsmetrics
 
 status=\$?
@@ -176,9 +175,7 @@ nextflow run $nextflow_main_nf \\
   --genome $genome \\
   --igenomes_base $igenomes_base \\
   --aligner $aligner \\
-  --run_targeted_sequencing \\
-  --target_regions_file $convered_bed \\
-  --collecthsmetrics
+  --collecthsmetrics $convered_bed_str
 
 status=\$?
 if [ \$status -ne 0 ]; then
