@@ -306,6 +306,8 @@ sub getConfig {
     addMultiQC( $config, $def, $tasks, $target_dir, $target_dir, $dnmtools_task );
   }
 
+  my $diff_ref = defined $methylkitdiff_task ? [$methylkitdiff_task, $methylkitdiffannovar_task ] : undef;
+
   $config->{report} = {
     class      => "CQS::BuildReport",
     perform    => 1,
@@ -329,7 +331,7 @@ sub getConfig {
     parameterSampleFile5_ref => $abismal_task,
     parameterSampleFile6_ref => $dnmtools_task,
     parameterSampleFile7_ref => [ $abismal_summary_task, ".png\$", $methylkitcorr_task, ".png\$" ],
-    parameterSampleFile8_ref => [ $methylkitdiff_task,   $methylkitdiffannovar_task ],
+    parameterSampleFile8_ref => $diff_ref,
     parameterSampleFile9     => $version_files,
     sh_direct                => 1,
     pbs                      => {
