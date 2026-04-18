@@ -95,9 +95,9 @@ valid_cols = query_cols[query_cols %in% colnames(output)]
 print_table(output[,valid_cols], byDT=TRUE, row.names=F)
 ```
 
-## Reads Mapped Confidently to the Filtered Probe Set
+```{r eval="Reads Mapped Confidently to the Filtered Probe Set" %in% colnames(output)}
+cat("\n\n## Percentage of Reads Mapped to Filtered Probe Set\n\n")
 
-```{r}
 g=ggplot(output, aes(x=`Sample ID`, y=`Reads Mapped Confidently to the Filtered Probe Set` * 100)) +
   geom_bar(stat="identity", fill="steelblue") +
   labs(
