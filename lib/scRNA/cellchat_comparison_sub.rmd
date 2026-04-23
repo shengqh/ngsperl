@@ -8,31 +8,66 @@ cur_comp="HGPS_vs_WT"
 cur_tbl=comparison_tbl |> dplyr::filter(comparison == cur_comp)
 ctrl_group=cur_tbl$group[1]
 case_group=cur_tbl$group[2]
-
-print_spread<-function(cur_group){
-  label_df=as.data.frame(table(object_list[[cur_group]]@meta$labels)) |>
-    dplyr::rename(Cell_type=Var1, Spread=Freq) |>
-    dplyr::arrange(desc(Spread))
-  print_table(label_df, row.names=FALSE)
-}
 ```
 
-## Control group: `r ctrl_group`
+- Control group: `r ctrl_group`
+- Case group: `r case_group`
 
 ```{r}
-print_spread(ctrl_group)
-```
+ctrl_df=as.data.frame(table(object_list[[ctrl_group]]@meta$labels)) |>
+  dplyr::rename(Cell_type=1, Ctrl=2)
+colnames(ctrl_df)[2]=ctrl_group
 
-## Case group: `r case_group`
+case_df=as.data.frame(table(object_list[[case_group]]@meta$labels)) |>
+  dplyr::rename(Cell_type=1, Case=2)
+colnames(case_df)[2]=case_group
 
-```{r}
-print_spread(case_group)
+cell_type_df=merge(ctrl_df, case_df, by="Cell_type", all=TRUE, fill=0) 
+cell_type_df=cell_type_df[order(rowSums(cell_type_df[, c(ctrl_group, case_group)]), decreasing = TRUE),]
+print_table(cell_type_df, byDT=FALSE, row.names=FALSE)
 ```
 
 ```{r}
 cur_list=object_list[c(ctrl_group, case_group)]
 cur_cellchat <- mergeCellChat(cur_list, add.names = names(cur_list))
 ```
+
+```{r}
+weight.max <- getMaxWeight(cur_list, attribute = c("idents","count"))
+g1 = function() netVisual_circle(cur_list[[1]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(cur_list)[1]))
+g2 = function() netVisual_circle(cur_list[[2]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(cur_list)[2]))
+
+circle_png=paste0(cur_comp, ".circle.png")
+png(circle_png, width=16, height=10, units="in", res=300, bg="white")
+plot_grid(g1, g2, ncol = 2)
+ignored=grDevices::dev.off()
+include_graphics(circle_png)
+```
+
+```{r}
+num.link <- sapply(cur_list, function(x) {rowSums(x@net$count) + colSums(x@net$count)-diag(x@net$count)})
+weight.MinMax <- c(min(num.link), max(num.link)) # control the dot size in the different datasets
+gg <- list()
+x_range <- c(Inf, -Inf)
+y_range <- c(Inf, -Inf)
+for (i in 1:length(cur_list)) {
+  gg[[i]] <- netAnalysis_signalingRole_scatter( cur_list[[i]], 
+                                                title = names(cur_list)[i], 
+                                                weight.MinMax = weight.MinMax) + 
+              theme(aspect.ratio = 1)
+  built <- ggplot2::ggplot_build(gg[[i]])
+  x_tmp <- built$layout$panel_params[[1]]$x.range
+  y_tmp <- built$layout$panel_params[[1]]$y.range
+  x_range <- c(min(x_range[1], x_tmp[1]), max(x_range[2], x_tmp[2]))
+  y_range <- c(min(y_range[1], y_tmp[1]), max(y_range[2], y_tmp[2]))
+}
+gg <- lapply(gg, function(p) p + coord_cartesian(xlim = x_range, ylim = y_range))
+g = patchwork::wrap_plots(plots = gg)
+dot_png=paste0(cur_comp, ".dot_plot.png")
+ggsave(dot_png, g, width=10, height=9, units="in", dpi=300, bg="white")
+include_graphics(dot_png)
+```
+
 
 ## Compare the interactions
 
@@ -46,20 +81,19 @@ ggsave(interaction_png, g, width=6, height=3, units="in", dpi=300)
 include_graphics(interaction_png)
 ```
 
-## Differential number of Interactions
+## Differential interactions
 
-```{r, fig.show='hold', out.width='49%'}
-diff_num_count_png=paste0(cur_comp, ".diff_num_count.png")
-png(diff_num_count_png, width=7.5, height=6, units="in", res=300, bg="white")
-netVisual_diffInteraction(cur_cellchat, weight.scale = T, title.name = "Differential No. of interactions")
-ignored=dev.off()
+```{r}
+g1 = function() netVisual_diffInteraction(cur_cellchat, weight.scale = T, title.name = "Differential No. of interactions")
+g2 = function() netVisual_diffInteraction(cur_cellchat, weight.scale = T, measure = "weight", title.name = "Differential interaction strength")
 
-diff_num_weight_png=paste0(cur_comp, ".diff_num_weight.png")
-png(diff_num_weight_png, width=7.5, height=6, units="in", res=300, bg="white")
-netVisual_diffInteraction(cur_cellchat, weight.scale = T, measure = "weight", title.name = "Differential interaction strength")
-ignored=dev.off()
-knitr::include_graphics(c(diff_num_count_png, diff_num_weight_png))
+diff_interactions_png=paste0(cur_comp, ".diff_interactions.png")
+png(diff_interactions_png, width=16, height=10, units="in", res=300, bg="white")
+plot_grid(g1, g2, ncol = 2)
+ignored=grDevices::dev.off()
+include_graphics(diff_interactions_png)
 ```
+
 
 ```{r}
 gg1 <- netVisual_heatmap(cur_cellchat)
@@ -67,30 +101,10 @@ gg2 <- netVisual_heatmap(cur_cellchat, measure = "weight")
 g = gg1 + gg2
 
 interaction_heatmap_png=paste0(cur_comp, ".interaction_heatmap.png")
-png(interaction_heatmap_png, width=12, height=6, units="in", res=300, bg="white")
+png(interaction_heatmap_png, width=10, height=5, units="in", res=300, bg="white")
 print(g)
 ignored=dev.off()
 include_graphics(interaction_heatmap_png)
-```
-
-```{r}
-weight.max <- getMaxWeight(cur_list, attribute = c("idents","count"))
-par(mfrow = c(1,2), xpd=TRUE)
-for (i in 1:length(cur_list)) {
-  netVisual_circle(cur_list[[i]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(cur_list)[i]))
-}
-```
-
-```{r}
-num.link <- sapply(cur_list, function(x) {rowSums(x@net$count) + colSums(x@net$count)-diag(x@net$count)})
-weight.MinMax <- c(min(num.link), max(num.link)) # control the dot size in the different datasets
-gg <- list()
-for (i in 1:length(cur_list)) {
-  gg[[i]] <- netAnalysis_signalingRole_scatter(cur_list[[i]], 
-  title = names(cur_list)[i], weight.MinMax = weight.MinMax) 
-  #+  scale_y_continuous(limits = c(0,28)) + scale_x_continuous(limits = c(0,28))
-}
-patchwork::wrap_plots(plots = gg)
 ```
 
 ## Altered pathway signaling
@@ -104,26 +118,41 @@ include_graphics(altered_pathway_png)
 
 ## Information flow in each cell population
 
+### Outgoing signaling
+
 ```{r}
-height=35
 pathway.union <- union(cur_list[[1]]@netP$pathways, cur_list[[2]]@netP$pathways)
-ht1 = netAnalysis_signalingRole_heatmap(cur_list[[1]], pattern = "outgoing", signaling = pathway.union, title = names(cur_list)[1], width = 5, height = height)
-ht2 = netAnalysis_signalingRole_heatmap(cur_list[[2]], pattern = "outgoing", signaling = pathway.union, title = names(cur_list)[2], width = 5, height = height)
+#somehow, using height=30 can show all the labels, when creating png file, have to use height=15 to remove the extra white space.
+height=30
+width=4.5
+ht1 = netAnalysis_signalingRole_heatmap(cur_list[[1]], pattern = "outgoing", signaling = pathway.union, title = names(cur_list)[1], width = width, height = height)
+ht2 = netAnalysis_signalingRole_heatmap(cur_list[[2]], pattern = "outgoing", signaling = pathway.union, title = names(cur_list)[2], width = width, height = height)
 role_heatmap_png=paste0(cur_comp, ".role_heatmap_outgoing.png")
-png(role_heatmap_png, width=12, height=height, units="in", res=300, bg="white")
-draw(ht1 + ht2, ht_gap = unit(0.5, "cm"))
+png(role_heatmap_png, width=width*2, height=15, units="in", res=300, bg="white")
+draw(ht1 + ht2, ht_gap = unit(2, "cm"))
 ignored=dev.off()
 include_graphics(role_heatmap_png)
 ```
 
+### Incoming signaling
+
 ```{r}
-height=35
 pathway.union <- union(cur_list[[1]]@netP$pathways, cur_list[[2]]@netP$pathways)
-ht1 = netAnalysis_signalingRole_heatmap(cur_list[[1]], pattern = "incoming", signaling = pathway.union, title = names(cur_list)[1], width = 5, height = height)
-ht2 = netAnalysis_signalingRole_heatmap(cur_list[[2]], pattern = "incoming", signaling = pathway.union, title = names(cur_list)[2], width = 5, height = height)
+ht1 = netAnalysis_signalingRole_heatmap(cur_list[[1]], 
+                                        pattern = "incoming", 
+                                        signaling = pathway.union, 
+                                        title = names(cur_list)[1], 
+                                        width = width, 
+                                        height = height)
+ht2 = netAnalysis_signalingRole_heatmap(cur_list[[2]], 
+                                        pattern = "incoming", 
+                                        signaling = pathway.union, 
+                                        title = names(cur_list)[2], 
+                                        width = width, 
+                                        height = height)
 role_heatmap_png=paste0(cur_comp, ".role_heatmap_incoming.png")
-png(role_heatmap_png, width=12, height=height, units="in", res=300, bg="white")
-draw(ht1 + ht2, ht_gap = unit(0.5, "cm"))
+png(role_heatmap_png, width=width*2, height=15, units="in", res=300, bg="white")
+draw(ht1 + ht2, ht_gap = unit(2, "cm"))
 ignored=dev.off()
 include_graphics(role_heatmap_png)
 ```
