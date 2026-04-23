@@ -219,11 +219,12 @@ colnames(output_table1)<-c("Sample", "Input reads", "Uniquely mapped reads", "Ma
 
 box_stats<-boxplot(output_table1$`Uniquely mapped ratio`, plot=FALSE)$stats
 cat("\n### The summary of RNAseq mapping results\n\n")
-print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq mapping results"), row.names=F) %>% 
-          kable_styling() %>%
-          row_spec(which(output_table1$`Uniquely mapped ratio` > box_stats[5]), color = "black", background = "bisque") %>% 
-          row_spec(which(output_table1$`Uniquely mapped ratio` < box_stats[1]), color = "black", background = "honeydew") %>%
-          htmltools::HTML())
+print_table(output_table1, byDT=TRUE, row.names=FALSE)
+# print(kable(output_table1, caption=tabRef("mapSummary", "The summary of RNAseq mapping results"), row.names=F) %>% 
+#           kable_styling() %>%
+#           row_spec(which(output_table1$`Uniquely mapped ratio` > box_stats[5]), color = "black", background = "bisque") %>% 
+#           row_spec(which(output_table1$`Uniquely mapped ratio` < box_stats[1]), color = "black", background = "honeydew") %>%
+#           htmltools::HTML())
 cat("**Uniquely mapped ratio** = Uniquely mapped / Input reads\n\n**Mapped ratio** = (Uniquely mapped + Mapped to multiple loci)/ Input reads\n\n")
 ```
 
