@@ -68,6 +68,7 @@ dragen_qc_file <- myoptions$dragen_qc_file
 if(is.null(dragen_qc_file)){
   dragen_qc_file=""
 }
+dragen_qc_sample_pattern <- myoptions$dragen_qc_sample_pattern
 
 if(is.null(dragen_multi_qc_html)){
   dragen_multi_qc_html <- myoptions$dragen_multi_qc_html
@@ -110,6 +111,10 @@ if(grepl(".xlsx$", dragen_qc_file)) {
 }
 dragen_qc = dragen_qc |>
   dplyr::select(`Sample Name`, any_of(colnames(dragen_qc)[grepl("Bisulfite|^%C", colnames(dragen_qc))]), everything())
+
+if(dragen_qc_sample_pattern != "") {
+  dragen_qc = dragen_qc[grepl(dragen_qc_sample_pattern, dragen_qc$`Sample Name`),]
+}
 
 cat("\n# DRAGEN Overall QC table\n\n")
 print_table(dragen_qc, byDT=TRUE, row.names=FALSE)
