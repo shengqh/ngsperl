@@ -58,7 +58,7 @@ sub getNextflowMethylationConfig {
 
   my $target_dir = $def->{target_dir};
 
-  my $convered_bed_str     =  $def->{"convered_bed"} ? "--run_targeted_sequencing --target_regions_file " . $def->{"convered_bed"} : "";
+  my $convered_bed_str = $def->{"convered_bed"} ? "--run_targeted_sequencing --target_regions_file " . $def->{"convered_bed"} : "";
   my $igenomes_base    = getValue( $def, "igenomes_base" );
   my $genome           = getValue( $def, "genome" );
   my $aligner          = getValue( $def, "aligner" );
@@ -136,12 +136,13 @@ rm -f __NAME__.bismark.cov.gz
 
 ln -s $nextflow_methylseq_bismark_dir/__NAME___1_val_1_bismark_bt2_pe.deduplicated.bismark.cov.gz __NAME__.bismark.cov.gz
 
-# __FILE__
+#__FILE2__ __FILE__
+
 ",
         program                  => "",
         check_program            => 0,
         parameterSampleFile1_ref => $source_ref,
-        parameterSampleFile2_ref => $nextflow_methylseq_task,    # just to make dependency
+        parameterSampleFile2_ref => [ $nextflow_methylseq_task, ".html" ],    # just to make dependency
         no_prefix                => 1,
         no_output                => 1,
         output_ext               => ".bismark.cov.gz",
