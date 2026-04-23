@@ -4065,6 +4065,34 @@ sub add_cell_chat {
   };
 
   push( @$tasks, $summary_task );
+
+  if($def->{pairs}){
+    my $comparison_task = $cellchat_task . "_comparison";
+    $config->{$comparison_task} = {
+      class                => "CQS::UniqueRmd",
+      target_dir           => $target_dir . "/" . $comparison_task,
+      report_rmd_file      => "../scRNA/cellchat_comparison.rmd",
+      additional_rmd_files => "../scRNA/scRNA_func.r;../CQS/reportFunctions.R;../scRNA/cellchat_comparison_sub.rmd",
+      option               => "",
+      parameterSampleFile1 => {
+        task_name   => getValue( $def, "task_name" ),
+        email       => getValue( $def, "email" ),
+        affiliation => getValue( $def, "affiliation" ),
+      },
+      parameterSampleFile2_ref => $cellchat_task,
+      parameterSampleFile3     => $def->{pairs},
+      output_file_ext          => ".cellchat_comparison.html",
+      can_result_be_empty_file => 0,
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2",
+        "mem"      => "10gb"
+      },
+    };
+
+    push( @$tasks, $comparison_task );
+  }
 } ## end sub add_cell_chat
 
 

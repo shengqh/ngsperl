@@ -1,0 +1,130 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: yes
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(Hmisc)
+require(arsenal)
+library(gtsummary)
+library(flextable)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+date_str = format(Sys.time(), "%Y%m%d")
+
+#devtools::install_github("jinworks/CellChat")
+library(CellChat)
+
+source('reportFunctions.R')
+source('scRNA_func.r')
+```
+
+```{r}
+myoptions=read_file_map('fileList1.txt', do_unlist=FALSE)
+circle_width=to_numeric(myoptions$circle_width, 5)
+circle_height=to_numeric(myoptions$circle_height, 6)
+chord_width=to_numeric(myoptions$chord_width, 8)
+chord_height=to_numeric(myoptions$chord_height, 8.5)
+```
+
+---
+title: "`r myoptions$task_name` - CellChat"
+author: "`r myoptions$email`"
+---
+
+```{r}
+draw_circle<-function(cur_mat, cur_png, groupSize){
+  png(cur_png, width=circle_width, height=circle_height, units="in", res=300, bg="white")
+  netVisual_circle(cur_mat, 
+    vertex.weight = groupSize, 
+    weight.scale = T, 
+    label.edge= F, 
+    title.name = "Interaction weights/strength",
+    margin=c(0.2, 0, 0.5, 0))
+  ignored=dev.off()
+}
+```
+
+# Load cellchat objects
+
+Read cellchat objects and compute centrality.
+
+```{r results="hide"}
+rds_files=read_file_map('fileList2.txt', do_unlist=FALSE)
+object_list=lapply(rds_files, function(rds_file){
+  obj=readRDS(rds_file)
+  obj=netAnalysis_computeCentrality(obj, slot.name = "netP")
+  return(obj)
+})
+```
+
+Read comparison information.
+
+```{r}
+comparison_tbl=fread('fileList3.txt', header=FALSE) |>
+  dplyr::filter(V2 == "groups") |> 
+  dplyr::rename(group=V1, comparison=V3) |>
+  dplyr::select(group, comparison)
+```
+
+
+```{r}
+weight.max <- getMaxWeight(cur_list, attribute = c("idents","count"))
+par(mfrow = c(1,2), xpd=TRUE)
+for (i in 1:length(cur_list)) {
+  netVisual_circle(cur_list[[i]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(cur_list)[i]))
+}
+```
+
+```{r}
+num.link <- sapply(object_list, function(x) {rowSums(x@net$count) + colSums(x@net$count)-diag(x@net$count)})
+weight.MinMax <- c(min(num.link), max(num.link)) # control the dot size in the different datasets
+gg <- list()
+for (i in 1:length(object_list)) {
+  gg[[i]] <- netAnalysis_signalingRole_scatter(object_list[[i]], 
+  title = names(object_list)[i], weight.MinMax = weight.MinMax) 
+  #+  scale_y_continuous(limits = c(0,28)) + scale_x_continuous(limits = c(0,28))
+}
+patchwork::wrap_plots(plots = gg)
+```
+
+```{r}
+comp_content=""
+comparisons=unique(comparison_tbl$comparison)
+for(cur_comp in comparisons){
+  comp_content=paste0(comp_content, "```{r}\n")
+  comp_content=paste0(comp_content, "cur_comp='", cur_comp, "'\n")
+  comp_content=paste0(comp_content, "```\n\n")
+  comp_content=paste0(comp_content, "```{r child='cellchat_comparison_sub.rmd'}\n")
+  comp_content=paste0(comp_content, "```\n\n")
+}
+comp_rmd="comparison.rmd"
+writeLines(comp_content, comp_rmd)
+```
+
+```{r child=comp_rmd}
+```
+
+# Save the session information
+
+```{r}
+writeLines(capture.output(sessionInfo()), paste0(date_str, '.sessionInfo.txt'))
+```

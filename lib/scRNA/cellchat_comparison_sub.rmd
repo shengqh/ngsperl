@@ -1,0 +1,110 @@
+```{r eval=FALSE}
+cur_comp="HGPS_vs_WT"
+```
+
+```{r}
+cur_tbl=comparison_tbl |> dplyr::filter(comparison == cur_comp)
+
+print_spread<-function(cur_group){
+  label_df=as.data.frame(table(object_list[[cur_group]]@meta$labels)) |>
+    dplyr::rename(Cell_type=Var1, Spread=Freq) |>
+    dplyr::arrange(desc(Spread))
+  print_table(label_df, row.names=FALSE)
+}
+```
+
+# Control group: `r ctrl_group`
+
+```{r}
+ctrl_group=cur_tbl$group[1]
+print_spread(ctrl_group)
+```
+
+# Case group: `r case_group`
+
+```{r}
+case_group=cur_tbl$group[2]
+print_spread(case_group)
+```
+
+# Comparison of cell-cell communication
+
+```{r}
+cur_list=object_list[c(ctrl_group, case_group)]
+cur_cellchat <- mergeCellChat(cur_list, add.names = names(cur_list))
+```
+
+## Compare the interactions
+
+```{r}
+gg1 <- compareInteractions(cur_cellchat, show.legend = F, group = c(1,2))
+gg2 <- compareInteractions(cur_cellchat, show.legend = F, group = c(1,2), measure = "weight")
+g = gg1 + gg2
+
+interaction_png=paste0(cur_comp, ".interaction_comparison.png")
+ggsave(interaction_png, g, width=6, height=3, units="in", dpi=300)
+include_graphics(interaction_png)
+```
+
+## Differential number of Interactions
+
+```{r, fig.show='hold', out.width='49%'}
+diff_num_count_png=paste0(cur_comp, ".diff_num_count.png")
+png(diff_num_count_png, width=7.5, height=6, units="in", res=300, bg="white")
+netVisual_diffInteraction(cur_cellchat, weight.scale = T)
+ignored=dev.off()
+
+diff_num_weight_png=paste0(cur_comp, ".diff_num_weight.png")
+png(diff_num_weight_png, width=7.5, height=6, units="in", res=300, bg="white")
+netVisual_diffInteraction(cur_cellchat, weight.scale = T, measure = "weight")
+ignored=dev.off()
+
+knitr::include_graphics(c(diff_num_count_png, diff_num_weight_png))
+```
+
+```{r}
+gg1 <- netVisual_heatmap(cur_cellchat) + theme(aspect.ratio=1)
+gg2 <- netVisual_heatmap(cur_cellchat, measure = "weight") + theme(aspect.ratio=1)
+g = gg1 + gg2
+
+interaction_heatmap_png=paste0(cur_comp, ".interaction_heatmap.png")
+png(interaction_heatmap_png, width=12, height=6, units="in", res=300, bg="white")
+print(g)
+ignored=dev.off()
+include_graphics(interaction_heatmap_png)
+```
+
+## Altered pathway signaling
+
+```{r}
+gg1 <- rankNet(cur_cellchat, mode = "comparison", measure = "weight", sources.use = NULL, targets.use = NULL, stacked = T, do.stat = TRUE)
+altered_pathway_png=paste0(cur_comp, ".altered_pathway.png")
+ggsave(altered_pathway_png, gg1, width=6, height=14, units="in", dpi=300)
+include_graphics(altered_pathway_png)
+```
+
+## Information flow in each cell population
+
+```{r}
+height=35
+pathway.union <- union(cur_list[[1]]@netP$pathways, cur_list[[2]]@netP$pathways)
+ht1 = netAnalysis_signalingRole_heatmap(cur_list[[1]], pattern = "outgoing", signaling = pathway.union, title = names(cur_list)[1], width = 5, height = height)
+ht2 = netAnalysis_signalingRole_heatmap(cur_list[[2]], pattern = "outgoing", signaling = pathway.union, title = names(cur_list)[2], width = 5, height = height)
+role_heatmap_png=paste0(cur_comp, ".role_heatmap_outgoing.png")
+png(role_heatmap_png, width=12, height=height, units="in", res=300, bg="white")
+draw(ht1 + ht2, ht_gap = unit(0.5, "cm"))
+ignored=dev.off()
+include_graphics(role_heatmap_png)
+```
+
+```{r}
+height=35
+pathway.union <- union(cur_list[[1]]@netP$pathways, cur_list[[2]]@netP$pathways)
+ht1 = netAnalysis_signalingRole_heatmap(cur_list[[1]], pattern = "incoming", signaling = pathway.union, title = names(cur_list)[1], width = 5, height = height)
+ht2 = netAnalysis_signalingRole_heatmap(cur_list[[2]], pattern = "incoming", signaling = pathway.union, title = names(cur_list)[2], width = 5, height = height)
+role_heatmap_png=paste0(cur_comp, ".role_heatmap_incoming.png")
+png(role_heatmap_png, width=12, height=height, units="in", res=300, bg="white")
+draw(ht1 + ht2, ht_gap = unit(0.5, "cm"))
+ignored=dev.off()
+include_graphics(role_heatmap_png)
+```
