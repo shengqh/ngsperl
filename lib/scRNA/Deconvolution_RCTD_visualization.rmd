@@ -67,13 +67,13 @@ library(patchwork)
 spatial_list=lapply(rctd_list, readRDS)
 #change list names since some are not Spatial.Polygons
 for (i in 1:length(spatial_list)) {
-    if (!("Spatial" %in% Assays(spatial_list[[i]]))) {
-      if ("RNA" %in% Assays(spatial_list[[i]])) {
-        names(spatial_list)[[i]] <- "RNA"
-      } else {
-        stop("No Spatial or RNA assay found")
-      }
+  if (! any(grepl("Spatial", Assays(spatial_list[[i]])))) {
+    if ("RNA" %in% Assays(spatial_list[[i]])) {
+      names(spatial_list)[[i]] <- "RNA"
+    } else {
+      stop("No Spatial or RNA assay found")
     }
+  }
 }
 
 for(name in names(spatial_list)) {
@@ -115,16 +115,17 @@ print_table(get_compare_tbl(spatial_list, "RCTD1_first_type"), row.names=FALSE)
 ```
 
 ```{r}
-if("Spatial.008um" %in% names(spatial_list)){
-  cur_obj = spatial_list[["Spatial.008um"]]
-}else if ("Spatial.Polygons" %in% names(spatial_list)) {
+if ("Spatial.Polygons" %in% names(spatial_list)) {
   cur_obj = spatial_list[["Spatial.Polygons"]]
-} else if ("RNA" %in% names(spatial_list)) {
+}else if("Spatial.008um" %in% names(spatial_list)){
+  cur_obj = spatial_list[["Spatial.008um"]]
+}else if ("RNA" %in% names(spatial_list)) {
   cur_obj = spatial_list[["RNA"]]
 } else {
   stop("No Spatial.008um or Spatial.Polygons or RNA assay found")
 }
-if ("Spatial" %in% Assays(cur_obj)) { #10X
+
+if ("Spatial.Polygons" %in% Assays(cur_obj)) { #10X
   tissue_image = SpatialPlot( object = cur_obj, 
                             image.alpha = 1, 
                             alpha = c(0, 0)) + 
