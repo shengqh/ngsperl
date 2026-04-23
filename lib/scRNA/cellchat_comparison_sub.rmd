@@ -1,9 +1,13 @@
-```{r eval=FALSE}
+```{r eval=FALSE, include=FALSE}
 cur_comp="HGPS_vs_WT"
 ```
 
+# Comparison: `r cur_comp`
+
 ```{r}
 cur_tbl=comparison_tbl |> dplyr::filter(comparison == cur_comp)
+ctrl_group=cur_tbl$group[1]
+case_group=cur_tbl$group[2]
 
 print_spread<-function(cur_group){
   label_df=as.data.frame(table(object_list[[cur_group]]@meta$labels)) |>
@@ -13,21 +17,17 @@ print_spread<-function(cur_group){
 }
 ```
 
-# Control group: `r ctrl_group`
+## Control group: `r ctrl_group`
 
 ```{r}
-ctrl_group=cur_tbl$group[1]
 print_spread(ctrl_group)
 ```
 
-# Case group: `r case_group`
+## Case group: `r case_group`
 
 ```{r}
-case_group=cur_tbl$group[2]
 print_spread(case_group)
 ```
-
-# Comparison of cell-cell communication
 
 ```{r}
 cur_list=object_list[c(ctrl_group, case_group)]
@@ -51,20 +51,19 @@ include_graphics(interaction_png)
 ```{r, fig.show='hold', out.width='49%'}
 diff_num_count_png=paste0(cur_comp, ".diff_num_count.png")
 png(diff_num_count_png, width=7.5, height=6, units="in", res=300, bg="white")
-netVisual_diffInteraction(cur_cellchat, weight.scale = T)
+netVisual_diffInteraction(cur_cellchat, weight.scale = T, title.name = "Differential No. of interactions")
 ignored=dev.off()
 
 diff_num_weight_png=paste0(cur_comp, ".diff_num_weight.png")
 png(diff_num_weight_png, width=7.5, height=6, units="in", res=300, bg="white")
-netVisual_diffInteraction(cur_cellchat, weight.scale = T, measure = "weight")
+netVisual_diffInteraction(cur_cellchat, weight.scale = T, measure = "weight", title.name = "Differential interaction strength")
 ignored=dev.off()
-
 knitr::include_graphics(c(diff_num_count_png, diff_num_weight_png))
 ```
 
 ```{r}
-gg1 <- netVisual_heatmap(cur_cellchat) + theme(aspect.ratio=1)
-gg2 <- netVisual_heatmap(cur_cellchat, measure = "weight") + theme(aspect.ratio=1)
+gg1 <- netVisual_heatmap(cur_cellchat)
+gg2 <- netVisual_heatmap(cur_cellchat, measure = "weight")
 g = gg1 + gg2
 
 interaction_heatmap_png=paste0(cur_comp, ".interaction_heatmap.png")
@@ -72,6 +71,26 @@ png(interaction_heatmap_png, width=12, height=6, units="in", res=300, bg="white"
 print(g)
 ignored=dev.off()
 include_graphics(interaction_heatmap_png)
+```
+
+```{r}
+weight.max <- getMaxWeight(cur_list, attribute = c("idents","count"))
+par(mfrow = c(1,2), xpd=TRUE)
+for (i in 1:length(cur_list)) {
+  netVisual_circle(cur_list[[i]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(cur_list)[i]))
+}
+```
+
+```{r}
+num.link <- sapply(cur_list, function(x) {rowSums(x@net$count) + colSums(x@net$count)-diag(x@net$count)})
+weight.MinMax <- c(min(num.link), max(num.link)) # control the dot size in the different datasets
+gg <- list()
+for (i in 1:length(cur_list)) {
+  gg[[i]] <- netAnalysis_signalingRole_scatter(cur_list[[i]], 
+  title = names(cur_list)[i], weight.MinMax = weight.MinMax) 
+  #+  scale_y_continuous(limits = c(0,28)) + scale_x_continuous(limits = c(0,28))
+}
+patchwork::wrap_plots(plots = gg)
 ```
 
 ## Altered pathway signaling

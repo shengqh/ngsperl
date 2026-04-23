@@ -85,27 +85,6 @@ comparison_tbl=fread('fileList3.txt', header=FALSE) |>
   dplyr::select(group, comparison)
 ```
 
-
-```{r}
-weight.max <- getMaxWeight(cur_list, attribute = c("idents","count"))
-par(mfrow = c(1,2), xpd=TRUE)
-for (i in 1:length(cur_list)) {
-  netVisual_circle(cur_list[[i]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(cur_list)[i]))
-}
-```
-
-```{r}
-num.link <- sapply(object_list, function(x) {rowSums(x@net$count) + colSums(x@net$count)-diag(x@net$count)})
-weight.MinMax <- c(min(num.link), max(num.link)) # control the dot size in the different datasets
-gg <- list()
-for (i in 1:length(object_list)) {
-  gg[[i]] <- netAnalysis_signalingRole_scatter(object_list[[i]], 
-  title = names(object_list)[i], weight.MinMax = weight.MinMax) 
-  #+  scale_y_continuous(limits = c(0,28)) + scale_x_continuous(limits = c(0,28))
-}
-patchwork::wrap_plots(plots = gg)
-```
-
 ```{r}
 comp_content=""
 comparisons=unique(comparison_tbl$comparison)
