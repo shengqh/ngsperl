@@ -1,16 +1,16 @@
 rm(list=ls()) 
-sample_name='unt_bPlg_vs_unt_unt'
-outFile='unt_bPlg_vs_unt_unt'
+sample_name='bPlg_bPlg_vs_unt_unt'
+outFile='bPlg_bPlg_vs_unt_unt'
 parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/vickers_lab/projects/20251010_13927_DNAMethyl_mm10_nextflow_slurm/MethylKitCorr/result/P13927.filtered.cpg.meth.rds'
+parFile1='/nobackup/vickers_lab/projects/202511_Linton_14130_DNAMethyl_mm10/20260420_14130_DNAMethyl_mm10_WGBS_dragen/MethylKitCorr/result/P14130_WGBS_dragen.filtered.cpg.meth.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/vickers_lab/projects/20251010_13927_DNAMethyl_mm10_nextflow_slurm/MethylKitDiff/result/unt_bPlg_vs_unt_unt')
+setwd('/nobackup/vickers_lab/projects/202511_Linton_14130_DNAMethyl_mm10/20260420_14130_DNAMethyl_mm10_WGBS_dragen/MethylKitDiff/result/bPlg_bPlg_vs_unt_unt')
 
 ### Parameter setting end ###
 
@@ -30,6 +30,7 @@ ncore <- as.numeric(params$ncore)
 overdispersion <- ifelse(is.null(params$overdispersion), "MN", params$overdispersion)
 test_method <- ifelse(is.null(params$test_method), "dss", params$test_method)
 adjust <- ifelse(is.null(params$adjust), "BH", params$adjust) # fdr is alias of BH
+use_raw_pvalue <- ifelse(is.null(params$use_raw_pvalue), 0, as.numeric(params$use_raw_pvalue))
 
 cat(" Project: ", project, "\n",
     "Difference: ", difference, "\n",
@@ -37,7 +38,8 @@ cat(" Project: ", project, "\n",
     "N-core: ", ncore, "\n",
     "Overdispersion: ", overdispersion, "\n",
     "Test method: ", test_method, "\n",
-    "Adjust method: ", adjust, "\n")
+    "Adjust method: ", adjust, "\n",
+    "Use raw p-value: ", use_raw_pvalue, "\n")
 
 #read comparison
 comparisons <- read.table(parSampleFile3, sep = "\t", header = F)
@@ -89,10 +91,19 @@ if(0){
   sub_diff=readRDS(meth_rds)
 }
 
+if(use_raw_pvalue){
+  cat("Using raw p-value for DMR instead of adjusted p-value.\n")
+  sub_diff$true_qvalue <- sub_diff$qvalue
+  sub_diff$qvalue <- sub_diff$pvalue
+}
 cat("Extracting all differential methylation results for test method", test_method, "...\n")
 diff_res <- getMethylDiff(sub_diff, difference = difference, qvalue = qvalue, type = "all")
 diff_res$direction <- ifelse(diff_res$meth.diff > 0, paste0("hyper_in_", treatment_group_name), paste0("hyper_in_", control_group_name))
 diff_res = diff_res[order(diff_res$qvalue),,drop=FALSE ]
+if(use_raw_pvalue){
+  diff_res$qvalue <- diff_res$true_qvalue
+  diff_res$true_qvalue <- NULL
+}
 
 write.table(diff_res, file = paste0(cur_prefix, ".dmcpgs.tsv"), sep = "\t", quote = F, row.names = F)
 

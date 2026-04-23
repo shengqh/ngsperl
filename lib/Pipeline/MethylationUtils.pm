@@ -129,6 +129,7 @@ sub add_MethylDiffAnalysis {
       overdispersion => getValue( $def, "methylDiff_overdispersion", "MN" ),     #MN for overdispersion, Chisq-test for no overdispersion
       test_method    => getValue( $def, "methylDiff_test_method",    "dss" ),    #F, Chisq, fast.fisher and dss
       adjust         => getValue( $def, "methylDiff_adjust",         "BH" ),     #SLIM, holm, hochberg, hommel, bonferroni, BH, BY, fdr, none, qvalue
+      use_raw_pvalue => getValue( $def, "use_raw_pvalue",            0 ),        # use raw p-value for DMR instead of adjusted p-value
     },
     parameterSampleFile3_ref => "pairs",
     parameterSampleFile4_ref => "groups",
