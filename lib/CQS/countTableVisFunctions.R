@@ -1193,7 +1193,7 @@ draw_density_plot<-function(log2counts, prefix, outputFormat, width_inch=5, heig
                     plot=g)
 }
 
-drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=4, height_inch=3, point_size=3, label_size=2, scalePCs=TRUE, show_info=TRUE){
+drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=6, height_inch=4, point_size=3, label_size=2, scalePCs=TRUE, show_info=TRUE){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     pca<-prcomp(t(rldmatrix))

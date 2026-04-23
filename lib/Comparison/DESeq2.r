@@ -255,7 +255,16 @@ drawPlot<-function(filePrefix, outputFormat, width_inch, height_inch, p, figureN
   }
 }
 
-drawHCA<-function(prefix, rldselect, ispaired, designData, groupColors, gnames, outputFormat, legend_label_gp, column_names_gp){
+drawHCA<-function(prefix, 
+                  rldselect, 
+                  ispaired, 
+                  designData, 
+                  groupColors, 
+                  gnames, 
+                  outputFormat, 
+                  legend_label_gp, 
+                  column_names_gp, 
+                  ...){
   mat_scaled = t(scale(t(rldselect)))
 
   ha=HeatmapAnnotation( Group=designData$Condition,
@@ -282,7 +291,8 @@ drawHCA<-function(prefix, rldselect, ispaired, designData, groupColors, gnames, 
                     top_annotation=ha,
                     show_row_dend=FALSE,
                     column_names_gp = column_names_gp,
-                    legend_gp = legend_label_gp)
+                    legend_gp = legend_label_gp,
+                    ...)
 }
 
 myEstimateSizeFactors<-function(dds){
@@ -355,17 +365,20 @@ enhanced_volcano_red_blue_only=FALSE
 title_in_volcano=TRUE
 caption_in_volcano=TRUE
 
-heatmap_add_width_inch=2
-heatmap_add_height_inch=0
-
-heatmap_legend_label_fontsize=18
-heatmap_column_name_fontsize=18
-
 de_biotype=NA
 selectLab=NULL
 
 DE_combatseq = 0
 DE_combatseq_nocovariates = 0
+
+heatmap_add_width_inch=2
+heatmap_add_height_inch=0
+heatmap_legend_label_fontsize=16
+heatmap_column_name_fontsize=16
+heatmap_column_names_max_height_cm=6
+
+pca_width_inch=6
+pca_height_inch=4
 
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
@@ -381,9 +394,13 @@ if(file.exists("fileList1.txt")){
 
   heatmap_add_width_inch=to_numeric(myoptions$heatmap_add_width_inch, heatmap_add_width_inch)
   heatmap_add_height_inch=to_numeric(myoptions$heatmap_add_height_inch, heatmap_add_height_inch)
+  heatmap_column_names_max_height_cm=to_numeric(myoptions$heatmap_column_names_max_height_cm, heatmap_column_names_max_height_cm)
 
   heatmap_legend_label_fontsize=to_numeric(myoptions$heatmap_legend_label_fontsize, heatmap_legend_label_fontsize)
   heatmap_column_name_fontsize=to_numeric(myoptions$heatmap_column_name_fontsize, heatmap_column_name_fontsize)
+
+  pca_width_inch=to_numeric(myoptions$pca_width_inch, pca_width_inch)
+  pca_height_inch=to_numeric(myoptions$pca_height_inch, pca_height_inch)
 
   de_biotype = myoptions$de_biotype
   if(!is.na(de_biotype)){
@@ -399,6 +416,8 @@ if(file.exists("fileList1.txt")){
   DE_combatseq = is_one(myoptions$DE_combatseq)
   DE_combatseq_nocovariates = is_one(myoptions$DE_combatseq_nocovariates)
 }
+
+heatmap_column_names_max_height=unit(heatmap_column_names_max_height_cm, "cm")
 
 if(!is.na(de_biotype)){
   de_biotype_name=gsub(" ", "_", de_biotype)
@@ -832,7 +851,9 @@ for(countfile_index in c(1:length(countfiles))){
                 groups=designData$Condition, 
                 groupColors=groupColors, 
                 outputFormat=outputFormat, 
-                scalePCs=TRUE)
+                scalePCs=TRUE,
+                width_inch=pca_width_inch,
+                height_inch=pca_height_inch)
 
         if(exists("top25cvInHCA") && top25cvInHCA){
           rv<-rowVars(rldmatrix)
@@ -845,7 +866,10 @@ for(countfile_index in c(1:length(countfiles))){
                   gnames=ganems, 
                   outputFormat=outputFormat,
                   legend_label_gp=legend_label_gp,
-                  column_names_gp=column_names_gp)
+                  column_names_gp=column_names_gp,
+                  add_width_inch=heatmap_add_width_inch,
+                  add_height_inch=heatmap_add_height_inch,
+                  column_names_max_height=heatmap_column_names_max_height)
         }else{
           drawHCA(prefix=paste0(prefix,"_geneAll"), 
                   rldselect=rldmatrix, 
@@ -855,7 +879,10 @@ for(countfile_index in c(1:length(countfiles))){
                   gnames=ganems, 
                   outputFormat=outputFormat,
                   legend_label_gp=legend_label_gp,
-                  column_names_gp=column_names_gp)
+                  column_names_gp=column_names_gp,
+                  add_width_inch=heatmap_add_width_inch,
+                  add_height_inch=heatmap_add_height_inch,
+                  column_names_max_height=heatmap_column_names_max_height)
         }
       }else{
         biotype_rldmatrix=rldmatrix[rownames(rldmatrix) %in% de_features,]
@@ -865,7 +892,9 @@ for(countfile_index in c(1:length(countfiles))){
                 groups=designData$Condition, 
                 groupColors=groupColors, 
                 outputFormat=outputFormat, 
-                scalePCs=TRUE)
+                scalePCs=TRUE,
+                width_inch=pca_width_inch,
+                height_inch=pca_height_inch)
 
         drawHCA(prefix=paste0(prefix,"_", de_biotype_name), 
                 rldselect=biotype_rldmatrix, 
@@ -875,7 +904,10 @@ for(countfile_index in c(1:length(countfiles))){
                 gnames=ganems, 
                 outputFormat=outputFormat,
                 legend_label_gp=legend_label_gp,
-                column_names_gp=column_names_gp)
+                column_names_gp=column_names_gp,
+                add_width_inch=heatmap_add_width_inch,
+                add_height_inch=heatmap_add_height_inch,
+                column_names_max_height=heatmap_column_names_max_height)
       }
     }
 
@@ -1045,7 +1077,9 @@ for(countfile_index in c(1:length(countfiles))){
               groups=designData$Condition, 
               groupColors=groupColors, 
               outputFormat=outputFormat, 
-              scalePCs=TRUE)
+              scalePCs=TRUE,
+              width_inch=pca_width_inch,
+              height_inch=pca_height_inch)
 
       drawHCA(paste0(de_prefix,"_geneDE"),
               DEmatrix, 
@@ -1055,7 +1089,10 @@ for(countfile_index in c(1:length(countfiles))){
               gnames, 
               outputFormat,
               legend_label_gp=legend_label_gp,
-              column_names_gp=column_names_gp)
+              column_names_gp=column_names_gp,
+              add_width_inch=heatmap_add_width_inch,
+              add_height_inch=heatmap_add_height_inch,
+              column_names_max_height=heatmap_column_names_max_height)
       
       drawPCA(file_prefix=paste0(de_prefix,"_geneNotDE_DESeq2-vsd-pca"),
               rldmatrix=nonDEmatrix, 
@@ -1063,7 +1100,9 @@ for(countfile_index in c(1:length(countfiles))){
               groups=designData$Condition, 
               groupColors=groupColors, 
               outputFormat=outputFormat, 
-              scalePCs=TRUE)
+              scalePCs=TRUE,
+              width_inch=pca_width_inch,
+              height_inch=pca_height_inch)
 
       drawHCA(paste0(de_prefix,"_geneNotDE"), 
               nonDEmatrix, 
@@ -1073,7 +1112,10 @@ for(countfile_index in c(1:length(countfiles))){
               gnames, 
               outputFormat,
               legend_label_gp=legend_label_gp,
-              column_names_gp=column_names_gp)
+              column_names_gp=column_names_gp,
+              add_width_inch=heatmap_add_width_inch,
+              add_height_inch=heatmap_add_height_inch,
+              column_names_max_height=heatmap_column_names_max_height)
     }
     
     #Top 25 Significant genes barplot

@@ -56,8 +56,8 @@ fixColorRange = is_one(myoptions$fixColorRange, 1)
 useLeastGroups = is_one(myoptions$useLeastGroups, 1)
 totalCountKey = to_character(myoptions$totalCountKey, "None")
 
-pca_width_inch=to_numeric(myoptions$pca_width_inch, 4)
-pca_height_inch=to_numeric(myoptions$pca_height_inch, 2.5)
+pca_width_inch=to_numeric(myoptions$pca_width_inch, 6)
+pca_height_inch=to_numeric(myoptions$pca_height_inch, 4)
 pca_point_size=to_numeric(myoptions$pca_point_size, 3)
 
 heatmap_add_width_inch=to_numeric(myoptions$heatmap_add_width_inch, 2)
@@ -669,7 +669,15 @@ for (i in 1:nrow(countTableFileAll)) {
         cat("Drawing PCA for", title, "samples using", nrow(cur_counts), cur_name, "genes.\n")
         gene_suffix = ifelse(cur_name == "all", "", ".top25vars")
         
-        drawPCA(paste0(outputFilePrefix, curSuffix, gene_suffix, ".PCA"), cur_counts, showLabelInPCA, groups, colors, outputFormat, width_inch=pca_width_inch, height_inch=pca_height_inch, point_size=pca_point_size)
+        drawPCA(paste0(outputFilePrefix, curSuffix, gene_suffix, ".PCA"), 
+                cur_counts, 
+                showLabelInPCA, 
+                groups, 
+                colors, 
+                outputFormat, 
+                width_inch=pca_width_inch, 
+                height_inch=pca_height_inch, 
+                point_size=pca_point_size)
 
         mat_scaled = t(scale(t(cur_counts)))
 
