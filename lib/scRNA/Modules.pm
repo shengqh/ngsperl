@@ -4021,12 +4021,13 @@ sub add_cell_chat {
     rtemplate            => "../scRNA/scRNA_func.r,../scRNA/cellchat.r",
     parameterSampleFile1 => getValue( $def, "cellchat_group_dict" ),
     parameterSampleFile2 => {
-      prefix          => getValue( $def, "task_name" ),
-      sample_column   => getValue( $def, "cellchat_sample_column",   getValue( $def, "sample_column" ) ),
-      group_column    => getValue( $def, "cellchat_group_column",    getValue( $def, "group_column" ) ),
-      celltype_column => getValue( $def, "cellchat_celltype_column", getValue( $def, "final_object_seurat_cell_type" ) ),
-      CellChatDB      => getValue( $def, "cellchat_CellChatDB" ),
-      thread          => 4,
+      prefix           => getValue( $def, "task_name" ),
+      sample_column    => getValue( $def, "cellchat_sample_column",    getValue( $def, "sample_column" ) ),
+      group_column     => getValue( $def, "cellchat_group_column",     getValue( $def, "group_column" ) ),
+      celltype_column  => getValue( $def, "cellchat_celltype_column",  getValue( $def, "final_object_seurat_cell_type" ) ),
+      ignore_celltypes => getValue( $def, "cellchat_ignore_celltypes", "" ),
+      CellChatDB       => getValue( $def, "cellchat_CellChatDB" ),
+      thread           => 4,
     },
     parameterFile1_ref => $obj_ref,
     parameterFile2     => $def->{"cellchat_meta_file"},
@@ -4066,7 +4067,7 @@ sub add_cell_chat {
 
   push( @$tasks, $summary_task );
 
-  if($def->{pairs}){
+  if ( $def->{pairs} ) {
     my $comparison_task = $cellchat_task . "_comparison";
     $config->{$comparison_task} = {
       class                => "CQS::UniqueRmd",
@@ -4092,7 +4093,7 @@ sub add_cell_chat {
     };
 
     push( @$tasks, $comparison_task );
-  }
+  } ## end if ( $def->{pairs} )
 } ## end sub add_cell_chat
 
 

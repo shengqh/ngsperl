@@ -1,15 +1,15 @@
 rm(list=ls()) 
-sample_name='CD_Met'
-outFile='CD_Met'
+sample_name='DMSO'
+outFile='DMSO'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
-parFile1='/nobackup/h_cqs/ramirema/maureen_gannon/20240227_10940_snRNAseq_mmulatta_proteincoding_cellbender/P10940.RNA.ATAC.combined.finalnewcelltype.rds'
-parFile2='/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/P10940.final.treatment.rds'
+parFile1='/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/20260410_silhouette_refine_clusters/Aorta_Progeria.final.obj.rds'
+parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/h_cqs/maureen_gannon_projects/20240321_10940_snRNAseq_mmulatta_proteincoding_cellbender/20250428_cellchat/cellchat/result/CD_Met')
+setwd('/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/final_obj_cellchat/result/DMSO')
 
 ### Parameter setting end ###
 
@@ -43,7 +43,19 @@ obj = readRDS(parFile1)
 if(parFile2 != ""){
   obj@meta.data=readRDS(parFile2)
 }
-cells = rownames(obj@meta.data)[obj@meta.data[, myoptions$group_column] == group_value]
+
+meta=obj@meta.data
+group_meta=meta |> dplyr::filter(!!as.symbol(myoptions$group_column) == group_value)
+if(myoptions$ignore_celltypes != ""){
+  ignore_celltypes = trimws(unlist(strsplit(myoptions$ignore_celltypes, ",")))
+  if(! all(ignore_celltypes %in% unique(group_meta[, myoptions$celltype_column]))) {
+    missing_celltypes = setdiff(ignore_celltypes, unique(group_meta[, myoptions$celltype_column]))
+    stop(paste0("The following cell types in ignore_celltypes are not found in the data: ", paste(missing_celltypes, collapse=", ")))  
+  }
+  cat(paste0("Ignoring cell types: ", paste(ignore_celltypes, collapse=", "), "\n"))
+  group_meta = group_meta |> dplyr::filter(! (!!as.symbol(myoptions$celltype_column) %in% ignore_celltypes))
+}
+cells = rownames(group_meta)
 obj = subset(obj, cells=cells)
 obj = NormalizeData(obj)
 
