@@ -769,8 +769,8 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
           no_docker                => getValue( $def, "no_docker", 0 ),
           docker_prefix            => "vis_",
           output_to_same_folder    => 0,
-          output_ext               => ".choose.rds",
-          output_other_ext         => "../__NAME__.choose.html",
+          output_ext               => ".final.meta.rds",
+          output_other_ext         => ".final.cellids.csv,../__NAME__.choose.html",
           pbs                      => {
             "nodes"    => "1:ppn=1",
             "walltime" => 10,
@@ -778,6 +778,40 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
           }
         };
         push( @$tasks, $choose_task );
+
+        if ( getValue( $def, "extract_visiumhd_cell_figures", 0 ) and $source_assay eq 'Spatial.Polygons' ) {
+          my $cell_crop_script = dirname(__FILE__) . "/../scRNA/cell_image_crops_cellids.py";
+          my $cell_crops_task  = "${choose_task}_cell_figures";
+          $config->{$cell_crops_task} = {
+            class         => "CQS::ProgramWrapperOneToOne",
+            perform       => 1,
+            target_dir    => "${target_dir}/$cell_crops_task",
+            program       => "",
+            check_program => 0,
+            option        => "
+python3 $cell_crop_script \\
+  --cell_geojson '__FILE__' \\
+  --dhsr_tiff '__FILE2__' \\
+  --cellid_csv '__FILE3__' \\
+  --output_prefix '__NAME__' 
+",
+            parameterSampleFile1     => getValue( $def, "cell_geojson_files" ),
+            parameterSampleFile2     => getValue( $def, "image_files" ),
+            parameterSampleFile3_ref => [ $choose_task, ".final.cellids.csv" ],
+            #parameterSampleFile4     => getValue( $def, "nucleus_geojson_files" ),
+            output_ext               => ".figures.csv",
+            docker_prefix            => "visiumhd_",
+            no_output                => 1,
+            output_to_same_folder    => 0,
+            sh_direct                => 0,
+            pbs                      => {
+              "nodes"    => "1:ppn=4",
+              "walltime" => "10:00:00",
+              "mem"      => "80gb"
+            },
+          };
+          push( @$tasks, $cell_crops_task );
+        } ## end if ( getValue( $def, "extract_visiumhd_cell_figures"...))
 
       } ## end if ( $def->{perform_dynamic_choose...})
     } ## end if ( $def->{perform_subcluster...})

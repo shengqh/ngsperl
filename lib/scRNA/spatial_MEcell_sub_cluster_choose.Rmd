@@ -100,6 +100,9 @@ obj@meta.data$seurat_cell_type=factor(obj@meta.data$seurat_cell_type, levels=ct_
 
 final_meta_rds=paste0(sample_name, ".final.meta.rds")
 saveRDS(obj@meta.data, final_meta_rds)
+
+final_cellids_csv=paste0(sample_name, ".final.cellids.csv")
+write.csv(obj@meta.data |> dplyr::select("cell_id", "seurat_cell_type"), final_cellids_csv, row.names = FALSE, quote = FALSE)
 ```
 
 ```{r}
