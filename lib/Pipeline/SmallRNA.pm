@@ -2921,7 +2921,7 @@ fi
       $config->{$bacteria_refseq_count_task} = {
         'class'                    => 'CQS::ProgramWrapper',
         'parameterSampleFile1_arg' => '-g',
-        'parameterSampleFile1_ref' => [ $refseq_bacteria_table, '.read.count$' ],
+        'parameterSampleFile1_ref' => [ "refseq_bacteria_table", ".read.count\$" ],
         'parameterFile1_arg'       => '-t',
         'parameterFile1_ref'       => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
         'option'                   => "",
