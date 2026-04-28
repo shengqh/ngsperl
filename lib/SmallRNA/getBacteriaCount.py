@@ -3,6 +3,7 @@ import gzip
 import os
 import logging
 import argparse
+from tkinter import FALSE
 import xml.etree.ElementTree as ET
 import subprocess
 import pandas as pd
@@ -20,7 +21,7 @@ else:
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-g', '--genomeListFile', action='store', nargs='?', help='Input bacteria genome count xml list file', required=NOT_DEBUG)
-  parser.add_argument('-d', '--databaseFile', action='store', nargs='?', help="Original rRNA database count xml file", required=NOT_DEBUG)
+  parser.add_argument('-d', '--databaseFile', action='store', nargs='?', help="Original rRNA database count xml file", required=FALSE)
   parser.add_argument('-t', '--taskReadFile', action='store', nargs='?', help="Task read count file", required=NOT_DEBUG)
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output count file", required=NOT_DEBUG)
 
@@ -37,12 +38,10 @@ logger = logging.getLogger('getBacteriaCount')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
 def readFileList(fileName):
-  result = []
-  with open(fileName) as fh:
-    for line in fh:
-      filepath = line.strip().split('\t', 1)[0]
-      result.append(filepath)
-  return(result)
+  df = pd.read_csv(fileName, sep='\t', header=None, usecols=[0], dtype=str)
+  result = df[0].dropna().str.strip()
+  result = result[result != ""]
+  return result.tolist()
    
 genomeFiles = readFileList(genomeListFile)
 
@@ -64,32 +63,33 @@ else:
   result_df = pd.DataFrame()
 
 # Parse XML for bacteria entries
-logger.info("Parsing " + databaseFile)
-xml_rows = []
-for event, elem in ET.iterparse(databaseFile, events=('end',)):
-  if elem.tag != 'query':
-    continue
+if databaseFile:
+  logger.info("Parsing " + databaseFile)
+  xml_rows = []
+  for event, elem in ET.iterparse(databaseFile, events=('end',)):
+    if elem.tag != 'query':
+      continue
 
-  is_bacteria = False
-  for loc in elem.findall('location'):
-    if loc.get("seqname") == "Bacteria":
-      is_bacteria = True
-      break
-  
-  if is_bacteria:
-    xml_rows.append((elem.get("seq"), elem.get("sample"), int(elem.get("count"))))
+    is_bacteria = False
+    for loc in elem.findall('location'):
+      if loc.get("seqname") == "Bacteria":
+        is_bacteria = True
+        break
+    
+    if is_bacteria:
+      xml_rows.append((elem.get("seq"), elem.get("sample"), int(elem.get("count"))))
 
-  elem.clear()
+    elem.clear()
 
-if xml_rows:
-  xml_df = pd.DataFrame(xml_rows, columns=["Sequence", "Sample", "Count"])
-  logger.info("save non-host bacteria database data to db_pandas.txt for debugging")
-  xml_df.to_csv("db_pandas.txt", sep='\t', index=False)
-  xml_pivot = xml_df.pivot(index="Sequence", columns="Sample", values="Count").fillna(0).astype(int)
-  # Combine genome and XML results
-  result_df = result_df.combine_first(xml_pivot).fillna(0).astype(int)
-else:
-  logger.info("No bacteria entries found in XML.")
+  if xml_rows:
+    xml_df = pd.DataFrame(xml_rows, columns=["Sequence", "Sample", "Count"])
+    logger.info("save non-host bacteria database data to db_pandas.txt for debugging")
+    xml_df.to_csv("db_pandas.txt", sep='\t', index=False)
+    xml_pivot = xml_df.pivot(index="Sequence", columns="Sample", values="Count").fillna(0).astype(int)
+    # Combine genome and XML results
+    result_df = result_df.combine_first(xml_pivot).fillna(0).astype(int)
+  else:
+    logger.info("No bacteria entries found in XML.")
 
 # Remove duplicate sequences across files
 result_df = result_df[~result_df.index.duplicated(keep='first')]

@@ -2890,7 +2890,8 @@ fi
   }
 
   if ( $search_host_genome && $search_nonhost_database && $perform_bacteria_count ) {
-    $config->{bacteria_count} = {
+    my $bacteria_count_task = "bacteria_count";
+    $config->{$bacteria_count_task} = {
       'class'                    => 'CQS::ProgramWrapper',
       'parameterSampleFile1_arg' => '-g',
       'parameterSampleFile1_ref' => $bacteria_read_count,
@@ -2901,7 +2902,7 @@ fi
       'option'                   => "",
       'interpretor'              => 'python3',
       'program'                  => '../SmallRNA/getBacteriaCount.py',
-      'target_dir'               => $data_visualization_dir . "/bacteria_count",
+      'target_dir'               => $data_visualization_dir . "/$bacteria_count_task",
       'output_file_ext'          => '.tsv;.tsv.summary;.tsv.summary.png;.tsv.summary.rpm.csv',
       'output_arg'               => '-o',
       'output_to_same_folder'    => 1,
@@ -2913,9 +2914,33 @@ fi
         "mem"       => "20gb"
       },
     };
-    push @$tasks, "bacteria_count";
+    push @$tasks, "$bacteria_count_task";
 
     if(getValue($def, "search_refseq_bacteria")){
+      my $bacteria_refseq_count_task = "bacteria_refseq_count";
+      $config->{$bacteria_refseq_count_task} = {
+        'class'                    => 'CQS::ProgramWrapper',
+        'parameterSampleFile1_arg' => '-g',
+        'parameterSampleFile1_ref' => [ $refseq_bacteria_table, '.read.count$' ],
+        'parameterFile1_arg'       => '-t',
+        'parameterFile1_ref'       => [ "reads_in_tasks_pie", ".NonParallel.TaskReads.csv\$" ],
+        'option'                   => "",
+        'interpretor'              => 'python3',
+        'program'                  => '../SmallRNA/getBacteriaCount.py',
+        'target_dir'               => $data_visualization_dir . "/$bacteria_refseq_count_task",
+        'output_file_ext'          => '.tsv;.tsv.summary;.tsv.summary.png;.tsv.summary.rpm.csv',
+        'output_arg'               => '-o',
+        'output_to_same_folder'    => 1,
+        'sh_direct'                => 1,
+        'perform'                  => 1,
+        'pbs'                      => {
+          "nodes"     => "1:ppn=1",
+          "walltime"  => "4",
+          "mem"       => "20gb"
+        },
+      };
+      push @$tasks, "$bacteria_refseq_count_task";
+
       $config->{bacteria_count_summary} = {
         'class'                    => 'CQS::UniqueR',
         'parameterFile1_ref' => [ "bowtie1_bacteria_group1_pm_table", ".read.count\$" ],

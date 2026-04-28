@@ -47,7 +47,6 @@ save(counts, perc, rpm, file=paste0(outputFilePrefix, ".rdata") )
 
 textSize<-20
 xSize<-12
-width<-max(10, nrow(counts) * 0.3)
 
 p = ggplot(allFigure, aes_string(x="Sample", y="Count", fill="Category")) +
   geom_bar(width=1, stat='identity', color='black') +
@@ -65,10 +64,8 @@ p = ggplot(allFigure, aes_string(x="Sample", y="Count", fill="Category")) +
   ylab("") +
   xlab("")
 
-pdf(file=paste0(outputFilePrefix, ".pdf"), width=width, height=8, onefile=T)
-print(p)
-dev.off()
+width<-max(10, nrow(counts) * 0.15 + 1)
+ggsave(filename=paste0(outputFilePrefix, ".png"), plot=p, width=width, height=8, units="in", limitsize=FALSE)
 
-png(file=paste0(outputFilePrefix, ".png"), width=max(4000, nrow(counts) * 100), height=3200, res=300)
-print(p)
-dev.off()
+ggsave(filename=paste0(outputFilePrefix, ".pdf"), plot=p, width=width, height=8, units="in", limitsize=FALSE)
+
