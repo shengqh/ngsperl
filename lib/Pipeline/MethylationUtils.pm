@@ -209,7 +209,10 @@ echo \"Annovar,v\$version\" > __NAME__.annovar.version
   };
   push( @$tasks, $MethylKitDiffAnnovarGenes_task );
 
-  my $webgestalt_task = addWebgestalt( $config, $def, $tasks, $target_dir, $MethylKitDiffAnnovarGenes_task, [ $MethylKitDiffAnnovarGenes_task, ".genename.txt\$" ] );
+  my $webgestalt_task;
+  if (getValue( $def, "perform_webgestalt", 1 )) {
+    $webgestalt_task = addWebgestalt( $config, $def, $tasks, $target_dir, $MethylKitDiffAnnovarGenes_task, [ $MethylKitDiffAnnovarGenes_task, ".genename.txt\$" ] );
+  }
 
   my $task_map = {
     methylkitdiff_task             => $methylkitdiff_task,
