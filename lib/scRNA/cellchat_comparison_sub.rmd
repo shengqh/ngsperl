@@ -8,10 +8,22 @@ cur_comp="HGPS_vs_WT"
 cur_tbl=comparison_tbl |> dplyr::filter(comparison == cur_comp)
 ctrl_group=cur_tbl$group[1]
 case_group=cur_tbl$group[2]
+cur_list=object_list[c(ctrl_group, case_group)]
+cur_cellchat <- mergeCellChat(cur_list, add.names = names(cur_list))
+color_use=c("#00BFC4", "#F8766D")
+#somehow named color_use is not working, have to use unnamed vector.
+#names(color_use) = c(ctrl_group, case_group)
+
+if(!dir.exists("details")){
+  dir.create("details")
+}
+file_prefix=paste0("details/", cur_comp)
 ```
 
 - Control group: `r ctrl_group`
 - Case group: `r case_group`
+
+## Number of cells in each cell type
 
 ```{r}
 ctrl_df=as.data.frame(table(object_list[[ctrl_group]]@meta$labels)) |>
@@ -27,22 +39,42 @@ cell_type_df=cell_type_df[order(rowSums(cell_type_df[, c(ctrl_group, case_group)
 print_table(cell_type_df, byDT=FALSE, row.names=FALSE)
 ```
 
+## Total number of interactions and interaction strength
+
+- The number of interactions is a count of the total unique signaling pathways between cell types. 
+- The interaction strength is the ligand-receptor communication probability. 
+
 ```{r}
-cur_list=object_list[c(ctrl_group, case_group)]
-cur_cellchat <- mergeCellChat(cur_list, add.names = names(cur_list))
+gg1 <- compareInteractions(cur_cellchat, color.use=color_use, show.legend = F, group = c(1,2))
+gg2 <- compareInteractions(cur_cellchat, color.use=color_use, show.legend = F, group = c(1,2), measure = "weight")
+g = gg1 + gg2
+
+interaction_png=paste0(file_prefix, ".interaction_bar.png")
+ggsave(interaction_png, g, width=6, height=3, units="in", dpi=300)
+include_graphics(interaction_png)
 ```
+
+## Number of interactions circle plot
+
+The width of edges represent the strength of the communication.
 
 ```{r}
 weight.max <- getMaxWeight(cur_list, attribute = c("idents","count"))
 g1 = function() netVisual_circle(cur_list[[1]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(cur_list)[1]))
 g2 = function() netVisual_circle(cur_list[[2]]@net$count, weight.scale = T, label.edge= F, edge.weight.max = weight.max[2], edge.width.max = 12, title.name = paste0("Number of interactions - ", names(cur_list)[2]))
 
-circle_png=paste0(cur_comp, ".circle.png")
+circle_png=paste0(file_prefix, ".circle.png")
 png(circle_png, width=16, height=10, units="in", res=300, bg="white")
 plot_grid(g1, g2, ncol = 2)
 ignored=grDevices::dev.off()
 include_graphics(circle_png)
 ```
+
+## Outgoing and incoming interactions
+
+This scatter plot shows the dominant senders (sources/outgoing) and receivers (targets/incoming) in a 2D space. x-axis and y-axis are 
+respectively the total outgoing or incoming communication probability associated with each cell group. Dot size is
+proportional to the number of inferred links (both outgoing and incoming) associated with each cell group.
 
 ```{r}
 num.link <- sapply(cur_list, function(x) {rowSums(x@net$count) + colSums(x@net$count)-diag(x@net$count)})
@@ -63,44 +95,42 @@ for (i in 1:length(cur_list)) {
 }
 gg <- lapply(gg, function(p) p + coord_cartesian(xlim = x_range, ylim = y_range))
 g = patchwork::wrap_plots(plots = gg)
-dot_png=paste0(cur_comp, ".dot_plot.png")
-ggsave(dot_png, g, width=10, height=9, units="in", dpi=300, bg="white")
+dot_png=paste0(file_prefix, ".dot_plot.png")
+ggsave(dot_png, g, width=10, height=5, units="in", dpi=300, bg="white")
 include_graphics(dot_png)
 ```
 
+## Differential number of interactions and interaction strength in cell types
 
-## Compare the interactions
+The differential number of interactions or interaction strength in the cell-cell communication 
+network between two groups. Red and blue represent increased or decreased signaling in `r case_group` 
+comparing to `r ctrl_group`.   
 
-```{r}
-gg1 <- compareInteractions(cur_cellchat, show.legend = F, group = c(1,2))
-gg2 <- compareInteractions(cur_cellchat, show.legend = F, group = c(1,2), measure = "weight")
-g = gg1 + gg2
-
-interaction_png=paste0(cur_comp, ".interaction_comparison.png")
-ggsave(interaction_png, g, width=6, height=3, units="in", dpi=300)
-include_graphics(interaction_png)
-```
-
-## Differential interactions
+### Circle plot
 
 ```{r}
 g1 = function() netVisual_diffInteraction(cur_cellchat, weight.scale = T, title.name = "Differential No. of interactions")
 g2 = function() netVisual_diffInteraction(cur_cellchat, weight.scale = T, measure = "weight", title.name = "Differential interaction strength")
 
-diff_interactions_png=paste0(cur_comp, ".diff_interactions.png")
+diff_interactions_png=paste0(file_prefix, ".diff_interactions.png")
 png(diff_interactions_png, width=16, height=10, units="in", res=300, bg="white")
 plot_grid(g1, g2, ncol = 2)
 ignored=grDevices::dev.off()
 include_graphics(diff_interactions_png)
 ```
 
+### Heatmap plot
+
+This heatmap shows differential number of interactions and interaction strength in the cell-cell
+communication network between two groups. Red and blue represent increased or decreased signaling 
+in `r case_group` comparing to `r ctrl_group`.;
 
 ```{r}
 gg1 <- netVisual_heatmap(cur_cellchat)
 gg2 <- netVisual_heatmap(cur_cellchat, measure = "weight")
 g = gg1 + gg2
 
-interaction_heatmap_png=paste0(cur_comp, ".interaction_heatmap.png")
+interaction_heatmap_png=paste0(file_prefix, ".interaction_heatmap.png")
 png(interaction_heatmap_png, width=10, height=5, units="in", res=300, bg="white")
 print(g)
 ignored=dev.off()
@@ -109,14 +139,24 @@ include_graphics(interaction_heatmap_png)
 
 ## Altered pathway signaling
 
+Rank signaling networks based on the information flow or the number of
+interactions.
+
 ```{r}
-gg1 <- rankNet(cur_cellchat, mode = "comparison", measure = "weight", sources.use = NULL, targets.use = NULL, stacked = T, do.stat = TRUE)
-altered_pathway_png=paste0(cur_comp, ".altered_pathway.png")
+gg1 <- rankNet(cur_cellchat, mode = "comparison", color.use=color_use, measure = "weight", sources.use = NULL, targets.use = NULL, stacked = T, do.stat = TRUE)
+altered_pathway_png=paste0(file_prefix, ".altered_pathway.png")
 ggsave(altered_pathway_png, gg1, width=6, height=14, units="in", dpi=300)
 include_graphics(altered_pathway_png)
 ```
 
 ## Information flow in each cell population
+
+CellChat can also compare the outgoing (or incoming) signaling pattern between two groups, 
+allowing to identify signaling pathways/ligand-receptors that exhibit different signaling patterns. 
+The heatmap shows the contribution of signals to cell groups in terms of outgoing or incoming signaling. The colorbar represents the relative 
+signaling strength of a signaling pathway across cell groups. The top colored bar plot shows the total signaling strength of a cell group by summarizing all signaling pathways 
+displayed in the heatmap. The right grey bar plot shows the total signaling strength of a signaling pathway by 
+summarizing all cell groups displayed in the heatmap.   
 
 ### Outgoing signaling
 
@@ -127,7 +167,7 @@ height=30
 width=4.5
 ht1 = netAnalysis_signalingRole_heatmap(cur_list[[1]], pattern = "outgoing", signaling = pathway.union, title = names(cur_list)[1], width = width, height = height)
 ht2 = netAnalysis_signalingRole_heatmap(cur_list[[2]], pattern = "outgoing", signaling = pathway.union, title = names(cur_list)[2], width = width, height = height)
-role_heatmap_png=paste0(cur_comp, ".role_heatmap_outgoing.png")
+role_heatmap_png=paste0(file_prefix, ".role_heatmap_outgoing.png")
 png(role_heatmap_png, width=width*2, height=15, units="in", res=300, bg="white")
 draw(ht1 + ht2, ht_gap = unit(2, "cm"))
 ignored=dev.off()
@@ -150,9 +190,132 @@ ht2 = netAnalysis_signalingRole_heatmap(cur_list[[2]],
                                         title = names(cur_list)[2], 
                                         width = width, 
                                         height = height)
-role_heatmap_png=paste0(cur_comp, ".role_heatmap_incoming.png")
+role_heatmap_png=paste0(file_prefix, ".role_heatmap_incoming.png")
 png(role_heatmap_png, width=width*2, height=15, units="in", res=300, bg="white")
 draw(ht1 + ht2, ht_gap = unit(2, "cm"))
 ignored=dev.off()
 include_graphics(role_heatmap_png)
+```
+
+## Signaling changes in cells types
+
+```{r}
+all_celltypes <- sort(as.character(unique(c(cur_list[[1]]@idents, cur_list[[2]]@idents))))
+ct=all_celltypes[1]
+ct_content=""
+for (ct in all_celltypes){
+  ct_filename <- gsub("[ :]", "_", ct)
+  g = netAnalysis_signalingChanges_scatter(cur_cellchat, idents.use = ct, color.use=c("grey10", color_use)) + 
+    theme(aspect.ratio=1) +
+    ggtitle(paste0(ct, "(", case_group, " vs. ", ctrl_group, ")"))
+  signaling_changes_png=paste0(cur_comp, ".signaling_changes.", ct_filename, ".png")
+  ggsave(signaling_changes_png, g, width=6, height=4, units="in", dpi=300)
+  ct_content=paste0(ct_content, "\n### ", ct, "\n\n")
+  ct_content=paste0(ct_content, getFigure(signaling_changes_png))
+
+  gdata=g$data
+  ct_csv=paste0(cur_comp, ".signaling_changes.", ct_filename, ".csv")
+  write.csv(gdata, ct_csv, row.names=TRUE)
+  ct_content=paste0(ct_content, getPagedTable(ct_csv, row.names=1))
+}
+ct_rmd=paste0(cur_comp, ".signaling_changes.rmd")
+writeLines(ct_content, ct_rmd)
+```
+
+```{r child=ct_rmd}
+```
+
+```{r eval=FALSE, include=FALSE}
+## Altered signaling based on functional or structural similarity
+
+#This analysis quantifies the similarity between pathways and highligths potential alterations.   
+
+### Signaling groups based on functional similarity
+
+#High degree of functional similarity indicates major senders and receivers are similar, and it can be interpreted as the two signaling pathways or two ligand-receptor pairs exhibit similar and/or redundant roles.
+#For each group, the pathways are plotted in a UMAP.   
+
+cur_cellchat <- computeNetSimilarityPairwise(cur_cellchat, type = "functional")
+cur_cellchat <- netEmbedding(cur_cellchat, type = "functional")
+cur_cellchat <- netClustering(cur_cellchat, type = "functional")
+
+g = netVisual_embeddingPairwise(cur_cellchat, type = "functional", label.size = 3.5) + theme(aspect.ratio=1)
+functional_similarity_png=paste0(file_prefix, ".functional_similarity.png")
+ggsave(functional_similarity_png, g, width=7, height=6, units="in", dpi=300)
+include_graphics(functional_similarity_png)
+
+## Signaling groups based on structure similarity
+cur_cellchat <- computeNetSimilarityPairwise(cur_cellchat, type = "structural")
+cur_cellchat <- netEmbedding(cur_cellchat, type = "structural")
+cur_cellchat <- netClustering(cur_cellchat, type = "structural")
+
+g = netVisual_embeddingPairwise(cur_cellchat, type = "structural", label.size = 3.5) + theme(aspect.ratio=1)
+structural_similarity_png=paste0(file_prefix, ".structural_similarity.png")
+ggsave(structural_similarity_png, g, width=7, height=6, units="in", dpi=300)
+include_graphics(structural_similarity_png)
+
+### Pathway distance
+
+#This plot represents the distance difference of each pathway between the groups from previous UMAP. Larger distance implies larger difference of communication networks between the groups.   
+#Only the overlapping pathways are used in this analysis.   
+
+g = rankSimilarity(cur_cellchat, type = "functional", title = "Functional similarity")
+similarity_functional_png=paste0(file_prefix, ".functional_distance.png")
+ggsave(similarity_functional_png, g, width=6, height=12, units="in", dpi=300)
+include_graphics(similarity_functional_png)
+
+g = rankSimilarity(cur_cellchat, type = "structural", title = "Structural similarity")
+similarity_structural_png=paste0(file_prefix, ".structural_distance.png")
+ggsave(similarity_structural_png, g, width=6, height=12, units="in", dpi=300)
+include_graphics(similarity_structural_png)
+```
+
+## Identify signaling ligand-receptor pairs
+
+The bubble plot shows the overall signaling changes between these cell types.
+The p value refers to the significant communication probabilities, not comparison between the groups.   
+
+```{r}
+source_ct=all_celltypes[1]
+bubble_content=""
+for (source_ct in all_celltypes){
+  ct_filename <- gsub("[ :]", "_", source_ct)
+
+  bubble_content=paste0(bubble_content, "\n### ", source_ct, "\n\n")
+
+  g = netVisual_bubble( cur_cellchat, 
+                        sources.use = source_ct, 
+                        comparison = c(1, 2), 
+                        max.dataset = 2, 
+                        title.name = paste0("Increased signaling in ", case_group),
+                        angle.x = 45, 
+                        remove.isolate = T)
+  bubble_png=paste0(file_prefix, ".bubble.", ct_filename, ".up_in_", case_group, ".png")
+  num_names=length(unique(g$data$interaction_name_2))
+  height = min(50, num_names*0.1+5)
+  ggsave(bubble_png, g, width=9, height=height, units="in", dpi=300, limitsize = FALSE)
+
+  bubble_content=paste0(bubble_content, "\n#### Increased\n\n")
+  bubble_content=paste0(bubble_content, getFigure(bubble_png))
+
+  g = netVisual_bubble( cur_cellchat, 
+                        sources.use = source_ct, 
+`                       comparison = c(1, 2), 
+                        max.dataset = 1, 
+                        title.name = paste0("Decreased signaling in ", case_group),
+                        angle.x = 45, 
+                        remove.isolate = T)
+  bubble_png=paste0(file_prefix, ".bubble.", ct_filename, ".down_in_", case_group, ".png")
+  num_names=length(unique(g$data$interaction_name_2))
+  height = min(50, num_names*0.1+5)
+  ggsave(bubble_png, g, width=9, height=height, units="in", dpi=300, limitsize = FALSE)
+
+  bubble_content=paste0(bubble_content, "\n#### Decreased\n\n")
+  bubble_content=paste0(bubble_content, getFigure(bubble_png))
+}
+bubble_rmd=paste0(cur_comp, ".bubble_plot.rmd")
+writeLines(bubble_content, bubble_rmd)
+```
+
+```{r child=bubble_rmd}
 ```
