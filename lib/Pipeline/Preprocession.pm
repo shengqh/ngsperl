@@ -948,7 +948,19 @@ rm -rf fasterq.tmp*
       class => "CQS::ProgramWrapperOneToOne",
       target_dir => $intermediate_dir . "/" . getNextFolderIndex($def) . $umitools_task,
       option => "
-umi_tools extract $umitools_extract_option -I __FILE__ -S __OUTPUT__ --read2-out=__NAME__.umi.2.fastq.gz -L __NAME__.log
+umi_tools extract $umitools_extract_option -I __FILE__ -S __NAME__.tmp.umi.1.fastq.gz --read2-out=__NAME__.tmp.umi.2.fastq.gz -L __NAME__.log
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo umi_tools extract failed: \$status | tee __NAME__.umi_tools.failed
+  rm -f __NAME__.tmp.umi.1.fastq.gz __NAME__.tmp.umi.2.fastq.gz __NAME__.umi_tools.succeed
+  exit \$status
+else
+  touch __NAME__.umi_tools.succeed
+  rm -f __NAME__.umi_tools.failed
+  mv __NAME__.tmp.umi.1.fastq.gz __NAME__.umi.1.fastq.gz
+  mv __NAME__.tmp.umi.2.fastq.gz __NAME__.umi.2.fastq.gz
+fi
 
 umi_tools --version | cut -d ' ' -f3 | awk '{print \"UMI-tools,v\"\$1}' > __NAME__.umi_tools.version
 ",
@@ -966,10 +978,11 @@ umi_tools --version | cut -d ' ' -f3 | awk '{print \"UMI-tools,v\"\$1}' > __NAME
       docker_prefix => "umitools_",
       #no_docker => 1,
       use_tmp_folder => 0,
+      no_output => 1,
       sh_direct   => 0,
       pbs => {
         "nodes"     => "1:ppn=1",
-        "walltime"  => "10",
+        "walltime"  => "24",
         "mem"       => "10gb"
       }
     };
