@@ -1,0 +1,206 @@
+---
+title: "Cell Image Report"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: false
+params:
+  report_csv: null
+---
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+if (is.null(params$report_csv) || !nzchar(params$report_csv)) {
+  stop("Parameter 'report_csv' is required.")
+}
+
+report_csv <- normalizePath(params$report_csv, mustWork = TRUE)
+report_dir <- dirname(report_csv)
+report_df <- read.csv(
+  report_csv,
+  stringsAsFactors = FALSE,
+  check.names = FALSE,
+  colClasses = "character"
+)
+
+if (!nrow(report_df)) {
+  stop("The report CSV has no rows.")
+}
+
+required_columns <- c("cell_group", "cell_id", "cell_image", "cell_width", "cell_height")
+missing_columns <- setdiff(required_columns, colnames(report_df))
+if (length(missing_columns) > 0) {
+  stop(sprintf(
+    "Missing required columns in report CSV: %s",
+    paste(missing_columns, collapse = ", ")
+  ))
+}
+
+image_specs <- list(
+  list(title = "Cell Images", image_col = "cell_image", width_col = "cell_width", height_col = "cell_height")
+)
+
+if ("nucleus_image" %in% colnames(report_df)) {
+  nucleus_required <- c("nucleus_width", "nucleus_height")
+  missing_nucleus <- setdiff(nucleus_required, colnames(report_df))
+  if (length(missing_nucleus) > 0) {
+    stop(sprintf(
+      "Missing required nucleus columns in report CSV: %s",
+      paste(missing_nucleus, collapse = ", ")
+    ))
+  }
+
+  image_specs[[length(image_specs) + 1]] <- list(
+    title = "Nucleus Images",
+    image_col = "nucleus_image",
+    width_col = "nucleus_width",
+    height_col = "nucleus_height"
+  )
+}
+
+format_cell_id <- function(cell_id) {
+  if (is.na(cell_id)) {
+    return("")
+  }
+
+  cell_text <- as.character(cell_id)
+  if (grepl("^[0-9]+\\.0+$", cell_text)) {
+    return(sub("\\.0+$", "", cell_text))
+  }
+
+  cell_text
+}
+
+resolve_image_path <- function(image_path) {
+  if (grepl("^(/|[A-Za-z]:[/\\\\])", image_path)) {
+    return(image_path)
+  }
+
+  file.path(report_dir, image_path)
+}
+
+max_dimension <- 0
+for (spec in image_specs) {
+  max_dimension <- max(
+    max_dimension,
+    suppressWarnings(max(as.numeric(report_df[[spec$width_col]]), na.rm = TRUE)),
+    suppressWarnings(max(as.numeric(report_df[[spec$height_col]]), na.rm = TRUE))
+  )
+}
+
+if (!is.finite(max_dimension) || max_dimension <= 0) {
+  max_dimension <- 1
+}
+
+scale_factor <- if (max_dimension > 180) 180 / max_dimension else 1
+
+render_card <- function(cell_group, cell_id, image_path, section_title, image_width, image_height) {
+  resolved_path <- resolve_image_path(image_path)
+  if (!file.exists(resolved_path)) {
+    stop(sprintf("Image file not found: %s", resolved_path))
+  }
+
+  display_width <- max(1L, as.integer(round(as.numeric(image_width) * scale_factor)))
+  display_height <- max(1L, as.integer(round(as.numeric(image_height) * scale_factor)))
+  formatted_cell_id <- format_cell_id(cell_id)
+  alt_text <- htmltools::htmlEscape(sprintf("%s %s %s", cell_group, formatted_cell_id, section_title))
+  caption <- htmltools::htmlEscape(formatted_cell_id)
+  image_uri <- knitr::image_uri(resolved_path)
+
+  sprintf(
+    '<figure class="image-card"><img src="%s" alt="%s" width="%d" height="%d" /><figcaption>%s</figcaption></figure>',
+    image_uri,
+    alt_text,
+    display_width,
+    display_height,
+    caption
+  )
+}
+```
+
+<style type="text/css">
+body {
+  font-family: Arial, sans-serif;
+  margin: 24px;
+  color: #1f2933;
+}
+
+h1, h2, h3 {
+  margin-bottom: 8px;
+}
+
+p {
+  margin-top: 0;
+}
+
+.group-section {
+  margin-bottom: 32px;
+}
+
+.grid-wrapper {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(10, max-content);
+  gap: 12px;
+  align-items: start;
+}
+
+.image-card {
+  margin: 0;
+  text-align: center;
+}
+
+.image-card img {
+  display: block;
+  border: 1px solid #d2d6dc;
+  background: #ffffff;
+}
+
+.image-card figcaption {
+  margin-top: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+</style>
+
+All images are embedded directly into this HTML report. Scale factor: `r sprintf("%.3fx", scale_factor)`.
+
+```{r report, results='asis'}
+for (cell_group in sort(unique(report_df$cell_group))) {
+  group_df <- report_df[report_df$cell_group == cell_group, , drop = FALSE]
+
+  cat("#", cell_group, "\n\n")
+  group_df = group_df[order(group_df$cell_id), , drop = FALSE]
+  for (spec in image_specs) {
+    cat('<div class="grid-wrapper"><div class="image-grid">')
+    for (row_idx in seq_len(nrow(group_df))) {
+      row <- group_df[row_idx, , drop = FALSE]
+      cat(
+        render_card(
+          cell_group = row[["cell_group"]][[1]],
+          cell_id = row[["cell_id"]][[1]],
+          image_path = row[[spec$image_col]][[1]],
+          section_title = spec$title,
+          image_width = row[[spec$width_col]][[1]],
+          image_height = row[[spec$height_col]][[1]]
+        )
+      )
+    }
+
+    cat('</div></div>')
+  }
+}
+```

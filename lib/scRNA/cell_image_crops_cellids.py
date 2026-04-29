@@ -3,9 +3,9 @@
 #conda create -n spatial_311 python=3.11 pyproj geopandas numpy pandas tifffile rasterio shapely ipykernel
 
 import argparse
-import html
 import logging
 import os
+import subprocess
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -15,85 +15,53 @@ from PIL import Image
 np.random.seed(20260427)
 
 
-def format_cell_id(cell_id):
-    if pd.isna(cell_id):
-        return ""
+def render_rmarkdown_report(output_df, output_prefix, template_rmd, rscript="Rscript"):
+    output_csv = f"{output_prefix}.image_report.csv"
+    output_html = f"{output_prefix}.image_report.html"
+    output_dir = os.path.dirname(os.path.abspath(output_html))
 
-    try:
-        return str(int(cell_id))
-    except (TypeError, ValueError):
-        return str(cell_id)
+    output_df.to_csv(output_csv, index=False)
 
+    render_code = "\n".join([
+        "args <- commandArgs(trailingOnly = TRUE)",
+        "template <- normalizePath(args[1], mustWork = TRUE)",
+        "report_csv <- normalizePath(args[2], mustWork = TRUE)",
+        "output_html <- normalizePath(args[3], winslash = '/', mustWork = FALSE)",
+        "output_dir <- normalizePath(dirname(output_html), mustWork = TRUE)",
+        "rmarkdown::render(",
+        "  input = template,",
+        "  output_file = basename(output_html),",
+        "  output_dir = output_dir,",
+        "  params = list(report_csv = report_csv),",
+        "  knit_root_dir = dirname(report_csv),",
+        "  envir = new.env(parent = globalenv()),",
+        "  quiet = TRUE",
+        ")",
+    ])
 
-def write_html_report(output_df, output_html):
-    report_dir = os.path.dirname(os.path.abspath(output_html))
-    image_specs = [
-        ("Cell Images", "cell_image", "cell_width", "cell_height"),
-    ]
-    if "nucleus_image" in output_df.columns:
-        image_specs.append(("Nucleus Images", "nucleus_image", "nucleus_width", "nucleus_height"))
-
-    max_dimension = 0
-    for _, _, width_col, height_col in image_specs:
-        max_dimension = max(max_dimension, int(output_df[width_col].max()), int(output_df[height_col].max()))
-
-    scale_factor = 1.0
-    if max_dimension > 180:
-        scale_factor = 180.0 / max_dimension
-
-    html_lines = [
-        "<!DOCTYPE html>",
-        "<html lang=\"en\">",
-        "<head>",
-        "  <meta charset=\"utf-8\">",
-        "  <title>Cell Image Report</title>",
-        "  <style>",
-        "    body { font-family: Arial, sans-serif; margin: 24px; color: #1f2933; }",
-        "    h1, h2, h3 { margin-bottom: 8px; }",
-        "    p { margin-top: 0; }",
-        "    .group-section { margin-bottom: 32px; }",
-        "    .grid-wrapper { overflow-x: auto; padding-bottom: 8px; }",
-        "    .image-grid { display: grid; grid-template-columns: repeat(10, max-content); gap: 12px; align-items: start; }",
-        "    .image-card { margin: 0; text-align: center; }",
-        "    .image-card img { display: block; border: 1px solid #d2d6dc; background: #ffffff; }",
-        "    .image-card figcaption { margin-top: 4px; font-size: 12px; white-space: nowrap; }",
-        "  </style>",
-        "</head>",
-        "<body>",
-        "  <h1>Cell Image Report</h1>",
-        f"  <p>All images are displayed using the same scale factor: {scale_factor:.3f}x.</p>",
+    command = [
+        rscript,
+        "--vanilla",
+        "-e",
+        render_code,
+        os.path.abspath(template_rmd),
+        os.path.abspath(output_csv),
+        os.path.abspath(output_html),
     ]
 
-    for cell_group, group_df in output_df.groupby("cell_group", sort=True):
-        html_lines.append(f"  <section class=\"group-section\"><h2>{html.escape(str(cell_group))}</h2>")
-        html_lines.append(f"  <p>{len(group_df)} cells</p>")
+    result = subprocess.run(
+        command,
+        cwd=output_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        error_message = "\n".join(part for part in [result.stdout.strip(), result.stderr.strip()] if part)
+        raise RuntimeError(f"Failed to render R Markdown report with {rscript}:\n{error_message}")
 
-        for section_title, image_col, width_col, height_col in image_specs:
-            html_lines.append(f"  <h3>{html.escape(section_title)}</h3>")
-            html_lines.append("  <div class=\"grid-wrapper\"><div class=\"image-grid\">")
+    return output_csv, output_html
 
-            for _, row in group_df.iterrows():
-                rel_path = os.path.relpath(row[image_col], report_dir)
-                display_width = max(1, int(round(row[width_col] * scale_factor)))
-                display_height = max(1, int(round(row[height_col] * scale_factor)))
-                formatted_cell_id = format_cell_id(row["cell_id"])
-                cell_id_label = html.escape(formatted_cell_id)
-                alt_text = html.escape(f"{cell_group} {formatted_cell_id} {section_title}")
-                src_path = html.escape(rel_path)
-                html_lines.append(
-                    "    <figure class=\"image-card\">"
-                    f"<img src=\"{src_path}\" alt=\"{alt_text}\" width=\"{display_width}\" height=\"{display_height}\" loading=\"lazy\">"
-                    f"<figcaption>{cell_id_label}</figcaption></figure>"
-                )
-
-            html_lines.append("  </div></div>")
-
-        html_lines.append("  </section>")
-
-    html_lines.extend(["</body>", "</html>"])
-
-    with open(output_html, "w", encoding="utf-8") as out_handle:
-        out_handle.write("\n".join(html_lines))
 
 def extract_crop(gdf, cell_id, padding, full_image, save_file_path=""):
     idx = gdf.index[gdf.cell_id == cell_id][0]
@@ -245,16 +213,13 @@ def main():
         output_rows.append(output_row)
 
     output_df = pd.DataFrame(output_rows)
-    manifest_columns = ["cell_group", "cell_id", "cell_image"]
-    if "nucleus_image" in output_df.columns:
-        manifest_columns.append("nucleus_image")
-    manifest_df = output_df[manifest_columns]
-    output_csv = f"{args.output_prefix}.image_names.csv"
-    manifest_df.to_csv(output_csv, index=False)
-    logger.info("Saved image manifest to %s", output_csv)
 
-    output_html = f"{args.output_prefix}.image_report.html"
-    write_html_report(output_df, output_html)
+    template_rmd = f"{os.path.abspath(__file__)}.rmd"
+    if not os.path.exists(template_rmd):
+        raise FileNotFoundError(f"R Markdown template not found: {template_rmd}")
+
+    report_csv, output_html = render_rmarkdown_report(output_df, args.output_prefix, template_rmd)
+    logger.info("Saved report data to %s", report_csv)
     logger.info("Saved image report to %s", output_html)
 
 if __name__ == "__main__":
