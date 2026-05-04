@@ -104,7 +104,7 @@ sub perform {
 
   print $pbs "
 if [[ -s $final_file ]]; then
-  rm $rmlist \\
+  rm -rf $rmlist \\
     $recal_rmlist \\
     $apply_vqsr_rmlist \\
     $indels_recalibration ${indels_recalibration}.tbi $indels_tranches  \\
