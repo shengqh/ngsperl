@@ -40,9 +40,10 @@ sub perform {
   my $maxInsertSize = get_option( $config, $section, "maximum_insert_size", 0 );
   my $is_paired_end = get_is_paired_end_option( $config, $section, 1 );
 
-  my $mark_duplicates = hasMarkDuplicate( $config->{$section}, 1 );
+  my $remove_duplicates = get_option( $config, $section, "remove_duplicates", 1 );
+  my $mark_duplicates = get_option( $config, $section, "mark_duplicates", 1 );
   my $picard_jar      = "";
-  if ($mark_duplicates) {
+  if ($remove_duplicates || $mark_duplicates) {
     $picard_jar = get_param_file( $config->{$section}{picard_jar}, "picard_jar", 1, not $self->using_docker() );
   }
 
@@ -61,11 +62,16 @@ sub perform {
 
     my $redupFile = undef;
     my $finalFile = undef;
-    if ($mark_duplicates) {
+    my $remove_duplicates_option = "";
+    if($remove_duplicates){
+      $remove_duplicates_option = "REMOVE_DUPLICATES=true";
       $redupFile = $sample_name . ".rmdup.bam";
       $finalFile = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
-    }
-    else {
+    } elsif($mark_duplicates) {
+      $remove_duplicates_option = "REMOVE_DUPLICATES=false";
+      $redupFile = $sample_name . ".markeddup.bam";
+      $finalFile = $sample_name . ".markeddup.noChr" . $remove_chromosome . ".bam";
+    } else {
       $finalFile = $sample_name . ".noChr" . $remove_chromosome . ".bam";
     }
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
@@ -109,19 +115,33 @@ fi
 
     my $filterOption;
     if ( defined $blacklistfile ) {
-      $filterOption = "| samtools view -b -U $filterFile -o ${sample_name}.discard.bam -L $blacklistfile";
+      $filterOption = "| samtools view -b -U ${filterFile}.tmp.bam -o ${sample_name}.discard.bam -L $blacklistfile";
       $rmlist       = $rmlist . " ${sample_name}.discard.bam";
     }
     else {
-      $filterOption = "> $filterFile";
+      $filterOption = "> ${filterFile}.tmp.bam";
     }
 
     my $input = $sampleFile;
-    if ($mark_duplicates) {
+    if ($remove_duplicates || $mark_duplicates) {
       print $pbs "
 if [[ -s $sampleFile && ! -s ${redupFile}.bai ]]; then
-  echo RemoveDuplicate=`date` 
-  java -jar $picard_jar MarkDuplicates I=$sampleFile O=$redupFile ASSUME_SORTED=true REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
+  rm -f ${redupFile}.failed ${redupFile}.succeed
+
+  echo MarkDuplicates=`date` 
+  java -jar $picard_jar MarkDuplicates I=${sampleFile} O=${redupFile}.tmp.bam $remove_duplicates_option ASSUME_SORTED=true VALIDATION_STRINGENCY=SILENT M=${redupFile}.metrics
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    echo MarkDuplicates failed with exit code \$status
+    echo \$status > ${redupFile}.failed
+    rm -f ${redupFile}.tmp.bam*
+    exit \$status
+  else
+    mv ${redupFile}.tmp.bam ${redupFile}.failed
+    touch ${redupFile}.succeed
+  fi
+
   samtools index $redupFile
 fi
 ";
@@ -135,8 +155,22 @@ fi
       my $insertFile = $sample_name . ".insertsize.bam";
       print $pbs "
 if [[ -s $input && ! -s ${insertFile}.bai ]]; then
+  rm -f ${insertFile}.failed ${insertFile}.succeed
+
   echo FilterInsertSize=`date`
-  samtools view -h $input | awk -F '\\t' 'function abs(v) {return v < 0 ? -v : v} {if(substr(\$1,1,1) == \"\@\") {print \$0} else { if(abs(\$9) < $maxInsertSize) print \$0}}' | samtools view -b > $insertFile
+  samtools view -h $input | awk -F '\\t' 'function abs(v) {return v < 0 ? -v : v} {if(substr(\$1,1,1) == \"\@\") {print \$0} else { if(abs(\$9) < $maxInsertSize) print \$0}}' | samtools view -b > $insertFile.tmp.bam
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    echo FilterInsertSize failed with exit code \$status
+    echo \$status > ${insertFile}.failed
+    rm -f $insertFile.tmp.bam
+    exit \$status
+  else
+    mv $insertFile.tmp.bam $insertFile
+    touch ${insertFile}.succeed
+  fi
+
   samtools index $insertFile
 fi
 ";
@@ -146,16 +180,44 @@ fi
 
     print $pbs "
 if [[ -s $input && ! -s ${filterFile}.bai ]]; then 
+  rm -f ${filterFile}.failed ${filterFile}.succeed
+
   echo FilterBam=`date` 
   samtools idxstats $input | cut -f 1 | grep -v $remove_chromosome $keep_chromosome | xargs samtools view $option -b -q $minimum_maq $input $filterOption 
+
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    echo FilterBam failed with exit code \$status
+    echo \$status > ${filterFile}.failed
+    rm -f ${filterFile}.tmp.bam*
+    exit \$status
+  else
+    mv ${filterFile}.tmp.bam $filterFile
+    touch ${filterFile}.succeed
+  fi
+
   samtools index $filterFile 
 fi
 ";
     if ($is_paired_end) {
       print $pbs "
 if [[ -s ${filterFile}.bai && ! -s ${finalFile}.bai ]]; then 
+  rm -f ${finalFile}.failed ${finalFile}.succeed
+
   echo RemoveUnpaired=`date` 
-  samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o $finalFile 
+  samtools sort -n $filterFile | samtools fixmate -O bam - -| samtools view $option -b | samtools sort -T $sample_name -o ${finalFile}.tmp.bam 
+  
+  status=\$?
+  if [[ \$status -ne 0 ]]; then
+    echo RemoveUnpaired failed with exit code \$status
+    echo \$status > ${finalFile}.failed
+    rm -f ${finalFile}.tmp.bam*
+    exit \$status
+  else
+    mv ${finalFile}.tmp.bam ${finalFile}
+    touch ${finalFile}.succeed
+  fi
+
   samtools index $finalFile 
 fi
 ";
@@ -172,7 +234,7 @@ fi
 
     print $pbs "
 if [ -s ${finalFile}.stat ]; then 
-  rm $rmlist  
+  rm -f $rmlist  
 fi
 ";
 
@@ -196,11 +258,19 @@ sub result {
 
   my %raw_files = %{ get_raw_files( $config, $section ) };
   my $remove_chromosome = get_option( $config, $section, "remove_chromosome" );
-  my $mark_duplicates = hasMarkDuplicate( $config->{$section} );
+  my $remove_duplicates = get_option( $config, $section, "remove_duplicates", 1 );
+  my $mark_duplicates = get_option( $config, $section, "mark_duplicates", 1 );
 
   my $result = {};
   for my $sample_name ( keys %raw_files ) {
-    my $finalFile = $mark_duplicates ? $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam" : $sample_name . ".noChr" . $remove_chromosome . ".bam";
+    my $finalFile = undef;
+    if($remove_duplicates){
+      $finalFile = $sample_name . ".rmdup.noChr" . $remove_chromosome . ".bam";
+    } elsif($mark_duplicates) {
+      $finalFile = $sample_name . ".markeddup.noChr" . $remove_chromosome . ".bam";
+    } else {
+      $finalFile = $sample_name . ".noChr" . $remove_chromosome . ".bam";
+    }
 
     my @result_files = ();
     push( @result_files, "${result_dir}/${finalFile}" );
