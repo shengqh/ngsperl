@@ -1188,6 +1188,7 @@ sub addCleanBAM {
     minimum_insert_size     => $minimum_insert_size,
     maximum_insert_size     => $maximum_insert_size,
     blacklist_file          => $def->{blacklist_file},
+    remove_duplicates       => getValue( $def, "remove_duplicates", 1 ),
     mark_duplicates         => getValue( $def, "mark_duplicates", 1 ),
     is_paired_end           => $pairend,
     is_sorted_by_coordinate => 1,
