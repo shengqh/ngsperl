@@ -409,9 +409,6 @@ caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metad
       
       print $pbs "
 java -Dconfig.file=$cromwell_config_file \\
-  -Ddatabase.db.url=\"jdbc:hsqldb:file:${db_url};shutdown=true;hsqldb.tx=mvcc\" \\
-  -Dworkflow-options.revisit-attributes-on-failed-call-caching=true \\
-  -Dcall-caching.enabled=true \\
   -jar $cromwell_jar \\
   run $wdl_file $option \\
   --inputs $input_file \\
@@ -424,13 +421,14 @@ java -Dconfig.file=$cromwell_config_file \\
 status=\$?
 if [[ \$status -ne 0 ]]; then
   touch $final_dir/${sample_name}.failed
+else
+  rm -f $final_dir/${sample_name}.failed
 fi
 ";
 
     if( $self->{"_use_tmp_folder"}){
       print $pbs "
-rm *.simg
-rm $input_file
+rm -f *.simg $input_file
 ";
       if(not $use_caper){
       print $pbs "
