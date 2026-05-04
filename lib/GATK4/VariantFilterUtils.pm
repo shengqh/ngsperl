@@ -56,7 +56,10 @@ if [ ! -s $mergedFile ]; then
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch $chrTaskName.CombinedGVCFs.failed
-    rm $mergedFile
+    rm -f $mergedFile
+  else
+    touch $chrTaskName.CombinedGVCFs.succeed
+    rm -f $chrTaskName.CombinedGVCFs.failed
   fi
 fi
 
@@ -72,7 +75,10 @@ if [[ -s $mergedFile && ! -s $callFile ]]; then
   status=\$?
   if [[ \$status -ne 0 ]]; then
     touch $chrTaskName.GenotypeGVCFs.failed
-    rm $callFile
+    rm -f $callFile
+  else
+    touch $chrTaskName.GenotypeGVCFs.succeed
+    rm -f $chrTaskName.GenotypeGVCFs.failed
   fi
 fi
 
