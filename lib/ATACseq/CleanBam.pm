@@ -138,7 +138,8 @@ if [[ -s $sampleFile && ! -s ${redupFile}.bai ]]; then
     rm -f ${redupFile}.tmp.bam*
     exit \$status
   else
-    mv ${redupFile}.tmp.bam ${redupFile}.failed
+    mv ${redupFile}.tmp.bam ${redupFile}
+    rm -f ${redupFile}.failed
     touch ${redupFile}.succeed
   fi
 
@@ -168,6 +169,7 @@ if [[ -s $input && ! -s ${insertFile}.bai ]]; then
     exit \$status
   else
     mv $insertFile.tmp.bam $insertFile
+    rm -f ${insertFile}.failed
     touch ${insertFile}.succeed
   fi
 
@@ -193,6 +195,7 @@ if [[ -s $input && ! -s ${filterFile}.bai ]]; then
     exit \$status
   else
     mv ${filterFile}.tmp.bam $filterFile
+    rm -f ${filterFile}.failed
     touch ${filterFile}.succeed
   fi
 
@@ -215,6 +218,7 @@ if [[ -s ${filterFile}.bai && ! -s ${finalFile}.bai ]]; then
     exit \$status
   else
     mv ${finalFile}.tmp.bam ${finalFile}
+    rm -f ${finalFile}.failed
     touch ${finalFile}.succeed
   fi
 
