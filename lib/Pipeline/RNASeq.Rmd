@@ -123,6 +123,8 @@ if(proteincoding_gene_only & remove_chrM_genes){
   gene_filter = ""
 }
 
+has_svaseq_batch_correction=rnaseqOptions["DE_batch_correction_method", 1]=="svaseq" 
+
 deseq2_rmd="deseq2.rmd"
 gsea_rmd_file="gsea.rmd"
 fgsea_rmd_file="fgsea.rmd"
@@ -402,6 +404,7 @@ DESeq2_files<-DESeq2_files[order(DESeq2_files$V2),]
 DESeq2_list<-list()
 
 has_batch=FALSE
+i=1
 for (i in 1:nrow(DESeq2_files)){
   de_file=DESeq2_files[i,1]
   DESeq2_list[[i]]<-read.csv(de_file, header=TRUE, row.names=1, check.names=F)
@@ -449,7 +452,11 @@ for (i in 1:nrow(DESeq2_files)){
 
   result = paste0(result, "\n## ", comparisonName, "\n\n")
 
-  design_file=file.path(dirname(de_file), paste0(comparisonName, ".design"))
+  if(has_svaseq_batch_correction){
+    design_file=file.path(dirname(de_file), paste0(comparisonName, ".design.svaseq"))
+  }else{
+    design_file=file.path(dirname(de_file), paste0(comparisonName, ".design"))
+  }
 
   result=paste0(result, "\n### Design table\n\n", getPagedTable(design_file, row.names=0, escape=TRUE, digits=3, nsmall=2))
 
@@ -460,13 +467,24 @@ for (i in 1:nrow(DESeq2_files)){
   }
 
   pca_png=gsub("DESeq2_sig.csv", "geneAll_DESeq2-vsd-pca.png",de_file)
-  result = paste0(result, "\n### PCA plot\n\n", get_figure_description(paste(comparisonName, "pca_png"), pca_png, paste("PCA plot of", comparisonName)))
-
+  if(has_svaseq_batch_correction){
+    result = paste0(result, "\n### PCA plot before batch correction by svaseq\n\n", get_figure_description(paste(comparisonName, "before_svaseq_pca_png"), pca_png, paste("PCA plot of", comparisonName, " before batch correction by svaseq")))
+    after_svaseq_pca_png=gsub("DESeq2_sig.csv", "geneAll_svaseq_DESeq2-vsd-pca.png",de_file)
+    result = paste0(result, "\n### PCA plot after batch correction by svaseq\n\n", get_figure_description(paste(comparisonName, "after_svaseq_pca_png"), after_svaseq_pca_png, paste("PCA plot of", comparisonName, " after batch correction by svaseq")))
+  }else{
+    result = paste0(result, "\n### PCA plot\n\n", get_figure_description(paste(comparisonName, "pca_png"), pca_png, paste("PCA plot of", comparisonName)))
+  }
   heatmap_png=gsub("DESeq2_sig.csv", "geneAll_DESeq2-vsd-heatmap.png",de_file)
-  result = paste0(result, "\n### Heatmap plot\n\n", get_figure_description(paste(comparisonName, "heatmap_png"), heatmap_png, paste("PCA plot of", comparisonName)))
+  if(has_svaseq_batch_correction){
+    result = paste0(result, "\n### Heatmap plot before batch correction by svaseq\n\n", get_figure_description(paste(comparisonName, "before_svaseq_heatmap_png"), heatmap_png, paste("Heatmap plot of", comparisonName, " before batch correction by svaseq")))
+    after_svaseq_heatmap_png=gsub("DESeq2_sig.csv", "geneAll_svaseq_DESeq2-vsd-heatmap.png",de_file)
+    result = paste0(result, "\n### Heatmap plot after batch correction by svaseq\n\n", get_figure_description(paste(comparisonName, "after_svaseq_heatmap_png"), after_svaseq_heatmap_png, paste("Heatmap plot of", comparisonName, " after batch correction by svaseq")))
+  }else{
+    result = paste0(result, "\n### Heatmap plot\n\n", get_figure_description(paste(comparisonName, "heatmap_png"), heatmap_png, paste("Heatmap plot of", comparisonName)))
+  }
 
   volcano_png=gsub("DESeq2_sig.csv", "DESeq2_volcanoEnhanced.png",de_file)
-  result = paste0(result, "\n### Volcano plot\n\n", get_figure_description(paste(comparisonName, "volcano_png"), volcano_png, paste("Heatmap plot of", comparisonName)))
+  result = paste0(result, "\n### Volcano plot\n\n", get_figure_description(paste(comparisonName, "volcano_png"), volcano_png, paste("Volcano plot of", comparisonName)))
 
   deseq2<-DESeq2_list[[i]]
   
@@ -671,8 +689,9 @@ if(has_mapping){
 ComplexHeatmap [4] was used for cluster analysis and visualization.
 `r if(hasComBatSeq){paste0("ComBatSeq [5] (", vmap['sva'], ") was used to remove batch effect from raw count data.")}`
 `r if(hasDEseq2){paste0("Significantly differential expressed genes with ", deseq2criteria, " were detected by DESeq2 (", vmap['DESeq2'], ")[6]. ", deseq2filter)}`
-`r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[7].")}`
-`r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[8] on database (", vmap['GSEA_DB'], ").")}`
+`r if(has_svaseq_batch_correction){"- svaseq from sva [7] package was used to remove unwanted variation in differential expression analysis.\n"}`
+`r if(hasWebGestaltAnalysis){paste0("Genome Ontology and KEGG pathway over-representation analysis was performed on differentially expressed genes using the WebGestaltR package (", vmap['WebGestaltR'], ")[8].")}`
+`r if(hasGseaAnalysis){paste0("Gene set enrichment analysis was performed using GSEA package (", vmap['GSEA'], ")[9] on database (", vmap['GSEA_DB'], ").")}`
 `r if(hasFgseaAnalysis){paste0("Gene set enrichment analysis was performed using fgsea package (", vmap['fgsea'], ")[9] on database (", vmap['fgsea_db'], ").")}`
 `r if(hasFusion){paste0("Gene fusion was detected using STAR-Fusion package (", vmap['STAR-Fusion'], ")[10].")}`
 
@@ -681,7 +700,8 @@ ComplexHeatmap [4] was used for cluster analysis and visualization.
 - [4]	Gu, Zuguang. 2022. Complex Heatmap Visualization. iMeta 1, e43. https://doi.org/10.1002/imt2.43 
 `r if(hasComBatSeq){"- [5] Zhang Y, Parmigiani G, Johnson WE. ComBat-seq: batch effect adjustment for RNA-seq count data. NAR Genom Bioinform. 2020;2:lqaa078. doi: 10.1093/nargab/lqaa078\n"}` 
 `r if(hasDEseq2){"- [6] Love MI, Huber W, Anders S. Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. Genome Biol. 2014;15:550. doi: 10.1186/PREACCEPT-8897612761307401\n"}` 
-`r if(hasWebGestaltAnalysis){"- [7]	Wang J, Vasaikar S, Shi Z, Greer M, Zhang B. WebGestalt 2017: a more comprehensive, powerful, flexible and interactive gene set enrichment analysis toolkit. Nucleic Acids Res. 2017;45:W130–W137. doi: 10.1093/nar/gkx356\n"}` 
-`r if(hasGseaAnalysis){"- [8]	Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, Paulovich A, Pomeroy SL, Golub TR, Lander ES, et al. Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A. 2005;102:15545–15550. doi: 10.1073/pnas.0506580102\n"}` 
+`r if(has_svaseq_batch_correction){"- [7] Leek JT. svaseq: removing batch effects and other unwanted noise from sequencing data. Nucleic Acids Res. 2014 Dec 1;42(21):e161. doi: 10.1093/nar/gku864.\n"}`
+`r if(hasWebGestaltAnalysis){"- [8]	Wang J, Vasaikar S, Shi Z, Greer M, Zhang B. WebGestalt 2017: a more comprehensive, powerful, flexible and interactive gene set enrichment analysis toolkit. Nucleic Acids Res. 2017;45:W130–W137. doi: 10.1093/nar/gkx356\n"}` 
+`r if(hasGseaAnalysis){"- [9]	Subramanian A, Tamayo P, Mootha VK, Mukherjee S, Ebert BL, Gillette MA, Paulovich A, Pomeroy SL, Golub TR, Lander ES, et al. Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proc Natl Acad Sci U S A. 2005;102:15545–15550. doi: 10.1073/pnas.0506580102\n"}` 
 `r if(hasFgseaAnalysis){"- [9] Korotkevich, Gennady, Vladimir Sukhov, Nikolay Budin, Boris Shpak, Maxim N. Artyomov, and Alexey Sergushichev. Fast Gene Set Enrichment Analysis. bioRxiv (2021): 060012. https://doi.org/10.1101/060012.\n"}` 
 `r if(hasFusion){"- [10] Haas BJ, Dobin A, Li B, Stransky N, Pochet N, Regev A. Accuracy assessment of fusion transcript detection via read-mapping and de novo fusion transcript assembly-based methods. Genome Biol. 2019;20:213. doi: 10.1186/s13059-019-1842-9\n"}`

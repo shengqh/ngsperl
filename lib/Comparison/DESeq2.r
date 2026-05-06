@@ -1,14 +1,14 @@
 
-rootdir<-"/nobackup/shah_lab/shengq2/Emeli_Mouse_IRI_cardiac_EVs/20251219_ECa6_ECa9_mm10_SMARTerPicov2/deseq2_proteincoding_genetable/result"
-inputfile<-"Mouse_IRI_cardiac_EVs.define" 
+rootdir<-"/nobackup/shah_lab/shengq2/20260425_14704_GLP1_rnaseq_mm10_adipose_liver/deseq2_genetable_svaseq/result"
+inputfile<-"GLP1_14704_Adipose_Liver.define" 
 
-pvalue<-0.1
+pvalue<-0.05
 useRawPvalue<-0
-foldChange<-1.2
+foldChange<-1
 minMedianInGroup<-5
   
 detectedInBothGroup<-0
-showLabelInPCA<-1
+showLabelInPCA<-0
 showDEGeneCluster<-0
 addCountOne<-0
 usePearsonInHCA<-1
@@ -380,9 +380,14 @@ heatmap_column_names_max_height_cm=6
 pca_width_inch=6
 pca_height_inch=4
 
+DE_batch_correction_method = "none"
+
 if(file.exists("fileList1.txt")){
   options_table = read.table("fileList1.txt", sep="\t")
   myoptions = split(options_table$V1, options_table$V2)
+
+  DE_batch_correction_method = myoptions$DE_batch_correction_method
+
   feature_name_regex = myoptions$feature_name_regex
   feature_name_filter = myoptions$feature_name_filter
   enhanced_volcano_red_blue_only = myoptions$enhanced_volcano_red_blue_only == "1"
@@ -620,7 +625,7 @@ for(countfile_index in c(1:length(countfiles))){
       designData<-designData |> dplyr::select(-batch)
       comparisonData=combatData
     }
-    
+
     if(ncol(designData) >= 3){
       cat("Data with covariances!\n")
     }else{
@@ -728,6 +733,73 @@ for(countfile_index in c(1:length(countfiles))){
       warning(message)
       writeLines(message,paste0(comparisonName,".error"))
       next;
+    }
+
+    # after filtering, check if we need to do batch correction by svaseq
+    if(DE_batch_correction_method == "svaseq"){
+      #https://biodatascience.github.io/compbio/dist/sva.html
+      library(sva)
+      cat("Batch correction: ", comparisonName, " by ", DE_batch_correction_method, "\n")
+
+      dds = DESeq2::DESeqDataSetFromMatrix(
+        countData = comparisonData,
+        colData = designData,
+        design = ~ Condition
+      )
+      dds = DESeq2::estimateSizeFactors(dds)
+
+      norm_counts = DESeq2::counts(dds, normalized = TRUE)
+
+      mod = stats::model.matrix(~ Condition, data = designData)
+      mod0 = stats::model.matrix(~ 1, data = designData)
+
+      # Larger number of SV may cause iteration error: 
+      # Iteration (out of 5 ):Error in density.default(x, adjust = adj) : 'x' contains missing values
+      n_sv = min(5, sva::num.sv(norm_counts, mod, method = "leek", seed=20260505))
+
+      cat("Use", n_sv, "surrogate variable(s) from svaseq.\n")
+      sv_obj = sva::svaseq(norm_counts, mod, mod0, n.sv = n_sv)
+
+      sv_matrix = as.data.frame(sv_obj$sv)
+      colnames(sv_matrix) = paste0("SV", seq_len(ncol(sv_matrix)))
+      rownames(sv_matrix) = colnames(norm_counts)
+
+      sv_sample_tbl = cbind(designData, sv_matrix[colnames(dds), , drop = FALSE]) |>
+        dplyr::select(Sample, starts_with("SV"), Condition)
+      write.table(sv_sample_tbl, file = paste0(designFile, ".svaseq"), sep = "\t", quote = FALSE, row.names = FALSE)
+
+      cat("\nRemove batch effect from data using svaseq surrogate variables using limma::removeBatchEffect for visualization.\n")
+      vsd_after = DESeq2::vst(dds, blind = FALSE)
+      mat_after = limma::removeBatchEffect(
+        x = SummarizedExperiment::assay(vsd_after),
+        covariates = as.matrix(sv_matrix[colnames(dds), , drop = FALSE]),
+        design = mod
+      )
+
+      drawPCA(file_prefix=paste0(prefix,"_geneAll_svaseq_DESeq2-vsd-pca"),
+                rldmatrix=mat_after, 
+                showLabelInPCA=showLabelInPCA, 
+                groups=designData$Condition, 
+                groupColors=groupColors, 
+                outputFormat=outputFormat, 
+                scalePCs=TRUE,
+                width_inch=pca_width_inch,
+                height_inch=pca_height_inch)
+
+      drawHCA(prefix=paste0(prefix,"_geneAll_svaseq"), 
+              rldselect=mat_after, 
+              ispaired=ispaired, 
+              designData=designData, 
+              groupColors=groupColors, 
+              gnames=ganems, 
+              outputFormat=outputFormat,
+              legend_label_gp=legend_label_gp,
+              column_names_gp=column_names_gp,
+              add_width_inch=heatmap_add_width_inch,
+              add_height_inch=heatmap_add_height_inch,
+              column_names_max_height=heatmap_column_names_max_height)
+
+      designData=sv_sample_tbl
     }
     
     validComparisons<-c(validComparisons, comparisonName)

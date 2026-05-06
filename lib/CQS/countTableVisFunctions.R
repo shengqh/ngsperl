@@ -1227,12 +1227,14 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
       draw_plot(g1, x = 0, y = .5, width = 1, height = .5) +
       draw_plot(g2, x = 0, y = 0, width = 1, height = .5)
 
-    save_ggplot2_plot(file_prefix=paste0(file_prefix, ".bar"),
-                      outputFormat=outputFormat, 
-                      width_inch=8, 
-                      height_inch=8, 
-                      plot=g,
-                      show_info=show_info)
+    if(!is.null(file_prefix)){
+      save_ggplot2_plot(file_prefix=paste0(file_prefix, ".bar"),
+                        outputFormat=outputFormat, 
+                        width_inch=8, 
+                        height_inch=8, 
+                        plot=g,
+                        show_info=show_info)
+    }
 
     pcadata<-data.frame(pca$x)
     if (scalePCs) {
@@ -1247,8 +1249,10 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
       pcadata$group<-groups
     }
 
-    write.csv(pcadata, file=paste0(file_prefix, ".csv"), row.names=FALSE)
-    
+    if(!is.null(file_prefix)){
+      write.csv(pcadata, file=paste0(file_prefix, ".csv"), row.names=FALSE)
+    }
+
     if(showLabelInPCA){
       g <- ggplot(pcadata, aes(x=PC1, y=PC2, label=sample)) + 
         ggrepel::geom_text_repel(size=label_size, max.overlaps=Inf)
@@ -1273,12 +1277,18 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
             axis.title=element_text(face="bold"),
             legend.text=element_text(size=12, face="bold"))
     
-    save_ggplot2_plot(file_prefix=file_prefix,
-                      outputFormat=outputFormat, 
-                      width_inch=width_inch, 
-                      height_inch=height_inch, 
-                      plot=g,
-                      show_info=show_info)
+    if(!is.null(file_prefix)){
+      save_ggplot2_plot(file_prefix=file_prefix,
+                        outputFormat=outputFormat, 
+                        width_inch=width_inch, 
+                        height_inch=height_inch, 
+                        plot=g,
+                        show_info=show_info)
+    }else{
+      return(g)
+    }
+  }else{
+    return(NULL)
   }
 }
 

@@ -470,6 +470,11 @@ sub getDEseq2TaskName {
   if ( defined $def->{DE_task_suffix} ) {
     $result = $result . $def->{DE_task_suffix};
   }
+  if ( defined $def->{DE_batch_correction_method} ) {
+    if ( $def->{DE_batch_correction_method} ne "none" ) {
+      $result = $result . "_" . $def->{DE_batch_correction_method};
+    }
+  }
   return $result;
 } ## end sub getDEseq2TaskName
 
@@ -616,7 +621,8 @@ sub addDEseq2 {
     cooksCutoff                  => $def->{DE_cooksCutoff},
     covariance_file              => $def->{covariance_file},
     independentFiltering         => $def->{DE_independentFiltering},
-    covariance_name_index        => getValue( $def, "covariance_name_index", 0 ),
+    "DE_batch_correction_method" => getValue( $def, "DE_batch_correction_method", "none" ),
+    covariance_name_index        => getValue( $def, "covariance_name_index",      0 ),
     de_biotype                   => $de_biotype,
     $libraryFileKey              => $libraryFile,
     library_key                  => $libraryKey,
@@ -628,6 +634,7 @@ sub addDEseq2 {
       "enhanced_volcano_red_blue_only"           => getValue( $def, "DE_enhanced_volcano_red_blue_only",        0 ),
       "title_in_volcano"                         => getValue( $def, "DE_title_in_volcano",                      1 ),
       "caption_in_volcano"                       => getValue( $def, "DE_caption_in_volcano",                    1 ),
+      "DE_batch_correction_method"               => getValue( $def, "DE_batch_correction_method",               "none" ),
       "heatmap_add_width_inch"                   => getValue( $def, "heatmap_add_width_inch",                   2 ),
       "heatmap_add_height_inch"                  => getValue( $def, "heatmap_add_height_inch",                  0 ),
       "heatmap_column_names_max_height_cm"       => getValue( $def, "heatmap_column_names_max_height_cm",       6 ),
@@ -1189,7 +1196,7 @@ sub addCleanBAM {
     maximum_insert_size     => $maximum_insert_size,
     blacklist_file          => $def->{blacklist_file},
     remove_duplicates       => getValue( $def, "remove_duplicates", 1 ),
-    mark_duplicates         => getValue( $def, "mark_duplicates", 1 ),
+    mark_duplicates         => getValue( $def, "mark_duplicates",   1 ),
     is_paired_end           => $pairend,
     is_sorted_by_coordinate => 1,
     sh_direct               => 0,
@@ -2324,15 +2331,15 @@ sub do_add_gene_locus {
 
       output_gff => $output_gff,
 
-      genesStr  => $genes_str,
+      genesStr => $genes_str,
 
-      host      => getValue( $def, "biomart_host" ),
-      dataset   => getValue( $def, "biomart_dataset" ),
-      symbolKey => getValue( $def, "biomart_symbolKey" ),
+      host       => getValue( $def, "biomart_host" ),
+      dataset    => getValue( $def, "biomart_dataset" ),
+      symbolKey  => getValue( $def, "biomart_symbolKey" ),
       add_prefix => getValue( $def, "biomart_add_prefix", "" ),
       gene_shift => getValue( $def, "biomart_gene_shift", 0 ),
 
-      add_chr   => getValue( $def, "annotation_genes_add_chr", getValue( $def, "has_chr_in_chromosome_name", 0 ) )
+      add_chr => getValue( $def, "annotation_genes_add_chr", getValue( $def, "has_chr_in_chromosome_name", 0 ) )
     },
     docker_prefix   => "biomart_",
     rCode           => "",
@@ -2356,7 +2363,7 @@ sub addGeneLocus {
   if ( !defined $gene_key ) {
     $gene_key = "annotation_genes";
   }
-  if(!defined $task_prefix){
+  if ( !defined $task_prefix ) {
     $task_prefix = "";
   }
   my $geneLocus = undef;
@@ -3848,10 +3855,10 @@ sub add_fgsea {
     suffix               => ".fgsea",
     output_file_ext      => ".fgsea.html,.version,.fgsea.files.csv",
     parameterSampleFile1 => {
-      "email"           => getValue( $def, "email" ),
-      "affiliation"     => $def->{"affiliation"},
-      "task_name"       => getValue( $def, "task_name" ),
-      "msigdbr_species" => getValue( $def, "msigdbr_species" ),
+      "email"               => getValue( $def, "email" ),
+      "affiliation"         => $def->{"affiliation"},
+      "task_name"           => getValue( $def, "task_name" ),
+      "msigdbr_species"     => getValue( $def, "msigdbr_species" ),
       "msigdbr_collections" => getValue( $def, "msigdbr_collections", "H;C2:CP:REACTOME;C2:CP:KEGG_LEGACY;C5:GO:BP" ),
     },
     parameterSampleFile2_ref => $rnk_file_ref,
@@ -4073,10 +4080,10 @@ sub add_bamplot {
       writeAnnotationLocus_gff( $def->{annotation_locus}, $gff_value );
     } ## end if ( $def->{annotation_locus...})
     else {
-      if(!defined $def->{bamplot_genes} && ! defined $def->{annotation_genes}){
+      if ( !defined $def->{bamplot_genes} && !defined $def->{annotation_genes} ) {
         stop("Neither bamplot_genes nor annotation_genes is defined for bamplot.\n");
       }
-      my $genes_str = getValue( $def, "bamplot_genes", getValue( $def, "annotation_genes" ));
+      my $genes_str = getValue( $def, "bamplot_genes", getValue( $def, "annotation_genes" ) );
       do_add_gene_locus( $config, $def, $tasks, $target_dir, "bamplot_gene_gff", $genes_str, 1 );
       $gff_key   = "gff_file_ref";
       $gff_value = "bamplot_gene_gff";

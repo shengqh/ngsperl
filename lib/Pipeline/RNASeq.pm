@@ -1741,6 +1741,7 @@ fi
     } ## end foreach my $cur_corr_task (...)
 
     if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
+      my $DE_batch_correction_method = getValue( $def, "DE_batch_correction_method", "none" );
       my $suffix = getDeseq2Suffix( $config, $def, $deseq2taskname );
 
       my $pairs = $config->{pairs};
@@ -1770,6 +1771,14 @@ fi
 
         push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_DESeq2-vsd-pca.png" );
         push( @report_names, "deseq2_" . $key . "_pca" );
+
+        if( $DE_batch_correction_method eq "svaseq") {
+          push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_svaseq_DESeq2-vsd-heatmap.png" );
+          push( @report_names, "deseq2_" . $key . "_heatmap_svaseq" );
+
+          push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_svaseq_DESeq2-vsd-pca.png" );
+          push( @report_names, "deseq2_" . $key . "_pca_svaseq" );
+        }
       } ## end for my $key ( keys %$pairs)
       push( @copy_files, $deseq2taskname, "_DESeq2.csv" );
       push( @copy_files, $deseq2taskname, "_DESeq2_sig.csv" );
@@ -1839,7 +1848,8 @@ fi
       "remove_chrM_genes"                  => getValue( $def, "remove_chrM_genes",   0 ),
       "adapter"                            => getValue( $def, "adapter",             "" ),
       "cutadapt_option"                    => getValue( $def, "cutadapt_option",     "" ),
-      "featureCount_option"                => getValue( $def, "featureCount_option", "" )
+      "featureCount_option"                => getValue( $def, "featureCount_option", "" ),
+      "DE_batch_correction_method"         => getValue( $def, "DE_batch_correction_method", "none" ),
     };
 
     if ( $def->{introduction_rmd} ) {

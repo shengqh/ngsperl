@@ -63,6 +63,8 @@ if(!is.na(de_biotype)){
 if(!is.na(de_biotype)){
   de_biotype_name=gsub(" ", "_", de_biotype)
 }
+
+DE_batch_correction_method=myoptions$DE_batch_correction_method
 ```
 
 # DESeq2 result summary
@@ -83,8 +85,58 @@ for(comp in comparisons){
   result<-paste0(result, "\n# ", comp, "\n\n")
   design_file = design_file_map[comp]
 
-  result<-paste0(result, "\n## Comparison design\n\n")
+  if (DE_batch_correction_method == "svaseq"){
+    result<-paste0(result, "\n## Comparison design with batch correction by svaseq\n\n")
+    design_file=paste0(design_file, ".svaseq")
+  }else{
+    result<-paste0(result, "\n## Comparison design\n\n")
+  }
+
   result<-paste0(result, getTable(design_file, row.names=0))
+
+  if(is.na(de_biotype)){
+    pca_png = find_file("*_geneAll_DESeq2-vsd-pca.png", FALSE, paste0(comp, "_min"))
+    if(!is.null(pca_png)){
+      if (DE_batch_correction_method == "svaseq"){
+        result<-paste0(result, "\n## PCA plot before batch correction by svaseq\n\n")
+        result<-paste0(result, getFigure(pca_png))
+
+        pca_png = find_file("*_geneAll_svaseq_DESeq2-vsd-pca.png", FALSE, paste0(comp, "_min"))
+        result<-paste0(result, "\n## PCA plot after batch correction by svaseq\n\n")
+        result<-paste0(result, getFigure(pca_png))
+      }else{
+        result<-paste0(result, "\n## PCA plot\n\n")
+        result<-paste0(result, getFigure(pca_png))
+      }
+    }
+
+    heatmap_png = find_file("*_geneAll_DESeq2-vsd-heatmap.png", FALSE, paste0(comp, "_min"))
+    if(!is.null(heatmap_png)){
+      if (DE_batch_correction_method == "svaseq"){
+        result<-paste0(result, "\n## Heatmap plot before batch correction by svaseq\n\n")
+        result<-paste0(result, getFigure(heatmap_png))
+
+        heatmap_png = find_file("*_geneAll_svaseq_DESeq2-vsd-heatmap.png", FALSE, paste0(comp, "_min"))
+        result<-paste0(result, "\n## Heatmap plot after batch correction by svaseq\n\n")
+        result<-paste0(result, getFigure(heatmap_png))
+      }else{
+        result<-paste0(result, "\n## Heatmap plot\n\n")
+        result<-paste0(result, getFigure(heatmap_png))
+      }
+    }
+  }else{
+    pca_png = find_file(paste0("*", de_biotype_name, "_DESeq2-vsd-pca.png"), FALSE, paste0(comp, "_min"))
+    if(!is.null(pca_png)){
+      result<-paste0(result, "\n## PCA plot\n\n")
+      result<-paste0(result, getFigure(pca_png))
+    }
+
+    heatmap_png = find_file(paste0("*", de_biotype_name, "_DESeq2-vsd-heatmap.png"), FALSE, paste0(comp, "_min"))
+    if(!is.null(heatmap_png)){
+      result<-paste0(result, "\n## Heatmap plot\n\n")
+      result<-paste0(result, getFigure(heatmap_png))
+    }
+  }
 
   sig_csv = find_file("*_sig.csv", FALSE, paste0(comp, "_min"))
   result<-paste0(result, paste0("\n## Differential expressed genes\n\n"))
@@ -95,32 +147,6 @@ for(comp in comparisons){
   if(!is.null(volcanoEnhanced_png)){
     result<-paste0(result, "\n## Volcano plot\n\n")
     result<-paste0(result, getFigure(volcanoEnhanced_png))
-  }
-
-  if(is.na(de_biotype)){
-    heatmap_png = find_file("*_geneAll_DESeq2-vsd-heatmap.png", FALSE, paste0(comp, "_min"))
-    if(!is.null(heatmap_png)){
-      result<-paste0(result, "\n## Heatmap plot\n\n")
-      result<-paste0(result, getFigure(heatmap_png))
-    }
-
-    pca_png = find_file("*_geneAll_DESeq2-vsd-pca.png", FALSE, paste0(comp, "_min"))
-    if(!is.null(pca_png)){
-      result<-paste0(result, "\n## PCA plot\n\n")
-      result<-paste0(result, getFigure(pca_png))
-    }
-  }else{
-    heatmap_png = find_file(paste0("*", de_biotype_name, "_DESeq2-vsd-heatmap.png"), FALSE, paste0(comp, "_min"))
-    if(!is.null(heatmap_png)){
-      result<-paste0(result, "\n## Heatmap plot\n\n")
-      result<-paste0(result, getFigure(heatmap_png))
-    }
-
-    pca_png = find_file(paste0("*", de_biotype_name, "_DESeq2-vsd-pca.png"), FALSE, paste0(comp, "_min"))
-    if(!is.null(pca_png)){
-      result<-paste0(result, "\n## PCA plot\n\n")
-      result<-paste0(result, getFigure(pca_png))
-    }
   }
 }
 

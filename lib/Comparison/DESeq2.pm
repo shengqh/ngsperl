@@ -363,6 +363,7 @@ sub result {
   my $useRawPvalue              = get_option( $config, $section, "use_raw_p_value",              0 );
   my $pvalue                    = get_option( $config, $section, "pvalue",                       0.05 );
   my $de_biotype                = get_option( $config, $section, "de_biotype",                   "" );
+  my $DE_batch_correction_method   = get_option( $config, $section, "DE_batch_correction_method",   "none" );
   my $suffix                    = $self->getSuffix( $top25only, $detectedInBothGroup, $minMedianInGroup, $useRawPvalue, $pvalue, $de_biotype );
   my $result                    = {};
 
@@ -389,6 +390,11 @@ sub result {
     push( @result_files, $result_dir . "/${prefix}_DESeq2_volcanoEnhanced.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-heatmap.png" );
     push( @result_files, $result_dir . "/${prefix}_geneAll_DESeq2-vsd-pca.png" );
+
+    if( $DE_batch_correction_method eq "svaseq" ){
+      push( @result_files, $result_dir . "/${prefix}_geneAll_svaseq_DESeq2-vsd-heatmap.png" );
+      push( @result_files, $result_dir . "/${prefix}_geneAll_svaseq_DESeq2-vsd-pca.png" );
+    }
 
     if ($exportSignificantGeneName) {
       push( @result_files, $result_dir . "/${prefix}_DESeq2_sig_genename.txt" );
