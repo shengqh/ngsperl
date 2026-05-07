@@ -1787,7 +1787,13 @@ fi
 
     my $hasFunctionalEnrichment = 0;
     if ( defined $webgestaltTaskName ) {
+      push( @copy_files, $webgestaltTaskName, "_geneontology_Biological_Process\$" );
+      push( @copy_files, $webgestaltTaskName, "_geneontology_Cellular_Component\$" );
+      push( @copy_files, $webgestaltTaskName, "_geneontology_Molecular_Function\$" );
+      push( @copy_files, $webgestaltTaskName, "_pathway_KEGG\$" );
+
       if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
+        push( @copy_files, $linkTaskName, ".html\$" );
         push( @report_files, $linkTaskName, ".rds" );
         push( @report_names, "WebGestalt_deseq2" );
       }
@@ -1809,6 +1815,8 @@ fi
     } ## end if ( defined $webgestaltTaskName)
 
     if ( defined $gseaTaskName ) {
+      push( @copy_files, $gseaTaskName, ".gsea\$" );
+
       my $pairs = $config->{pairs};
       for my $key ( keys %$pairs ) {
         push( @report_files, $gseaTaskName, "/" . $key . ".gsea.csv" );
