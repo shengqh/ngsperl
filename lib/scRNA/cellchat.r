@@ -79,6 +79,12 @@ if(myoptions$CellChatDB == "mouse"){
   cellchat@DB <- CellChatDB.human
 }
 
+# save the ligand-receptor database for reference
+lr_db <- cellchat@DB$interaction
+lr_db = lr_db |> 
+  dplyr::select(-ligand.keyword, -ligand.location, -receptor.keyword, -receptor.location)
+write.csv(lr_db, paste0("CellChatDB.", myoptions$CellChatDB, ".lrdb.csv"), row.names=FALSE, quote=FALSE)
+
 # subset the expression data of signaling genes for saving computation cost
 cellchat <- subsetData(cellchat) # This step is necessary even if using the whole database
 
