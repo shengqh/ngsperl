@@ -76,6 +76,21 @@ object_list=lapply(rds_files, function(rds_file){
 })
 ```
 
+```{r}
+reorder_seurat_cluster_cell_type=function(cts){
+  df=data.frame(ct=cts, num=as.numeric(gsub(":.+", "", cts)))
+  df=df[order(df$num), ]
+  return(df$ct)
+}
+cts=levels(object_list[[1]]@meta$labels)
+if(all(grepl("^\\d+:", cts))){
+  reorder_cts=reorder_seurat_cluster_cell_type(cts)
+  for(i in 1:length(object_list)){
+    object_list[[i]]@meta$labels=factor(object_list[[i]]@meta$labels, levels=reorder_cts)
+  }
+}
+```
+
 Read comparison information.
 
 ```{r}
