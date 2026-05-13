@@ -26,6 +26,11 @@ library(BSgenome.Hsapiens.UCSC.hg38)
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
+# possible on dataset level instead of sample level.
+if(!exists("sample_name")){
+  sample_name=outFile
+}
+
 myoptions<-read_file_map(parSampleFile2, do_unlist=FALSE)
 nCount_cutoff=to_numeric(myoptions$nCount_cutoff, 500)
 nCount_cutoff_max=to_numeric(myoptions$nCount_cutoff_max, 200000)

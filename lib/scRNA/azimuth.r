@@ -23,6 +23,11 @@ library(patchwork)
 options(future.globals.maxSize= 10779361280)
 random.seed=20200107
 
+# possible on dataset level instead of sample level.
+if(!exists("sample_name")){
+  sample_name=outFile
+}
+
 options_table<-read.table(parSampleFile2, sep="\t", header=F, stringsAsFactors = F)
 myoptions<-split(options_table$V1, options_table$V2)
 
