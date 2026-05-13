@@ -259,6 +259,8 @@ sub getScRNASeqConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  $config->{h5ad_files} = $def->{h5ad_files} if defined $def->{h5ad_files};
+  
   my $tasks = [ @$individual, @$summary ];
 
   undef $individual;
@@ -327,6 +329,9 @@ sub getScRNASeqConfig {
   my $decontX_ref        = undef;
   my $doublet_finder_ref = undef;
 
+  my $celltypist_ref = undef;
+  my $STCAT_ref      = undef;
+
   my $obj_task             = undef;
   my $obj_ref              = undef;
   my $meta_ref             = undef;
@@ -357,10 +362,12 @@ sub getScRNASeqConfig {
     my $files_def          = "files";
     my $filtered_files_def = "files";
 
-    my $perform_cellbender = getValue( $def, "perform_cellbender", 0 );
+    my $perform_subcluster_analysis = getValue( $def, "perform_subcluster_analysis", 0 );
 
-    my $perform_decontX                  = getValue( $def, "perform_decontX",                  0 );
-    my $perform_decontX_after_cellbender = getValue( $def, "perform_decontX_after_cellbender", 0 );
+    my $perform_cellbender = getValue( $def, "perform_cellbender", 0 ) & !$perform_subcluster_analysis;
+
+    my $perform_decontX                  = getValue( $def, "perform_decontX",                  0 ) & !$perform_subcluster_analysis;
+    my $perform_decontX_after_cellbender = getValue( $def, "perform_decontX_after_cellbender", 0 ) & !$perform_subcluster_analysis;
 
     my $remove_decontX                  = ( $perform_decontX_after_cellbender | $perform_decontX ) && getValue( $def, "remove_decontX", 0 );
     my $remove_decontX_by_contamination = getValue( $def, "remove_decontX_by_contamination", 0.25 );
@@ -378,9 +385,12 @@ sub getScRNASeqConfig {
     my $raw_individual_qc_task = undef;
     my $qc_report_task         = undef;
 
-    my $perform_sctk          = getValue( $def, "perform_sctk",          0 );
-    my $remove_doublets       = getValue( $def, "remove_doublets",       0 );
-    my $perform_individual_qc = getValue( $def, "perform_individual_qc", 1 );
+    my $perform_sctk          = getValue( $def, "perform_sctk",          0 ) & !$perform_subcluster_analysis;
+    my $remove_doublets       = getValue( $def, "remove_doublets",       0 ) & !$perform_subcluster_analysis;
+    my $perform_individual_qc = getValue( $def, "perform_individual_qc", 1 ) & !$perform_subcluster_analysis;
+    my $perform_individual_dynamic_qc = getValue( $def, "perform_individual_dynamic_qc", 0 ) & !$perform_subcluster_analysis;
+    my $perform_scDblFinder           = getValue( $def, "perform_scDblFinder", 0 ) & !$perform_subcluster_analysis;
+
 
     my $decontX_task       = undef;
     my $decontX_counts_ref = undef;
@@ -415,7 +425,7 @@ sub getScRNASeqConfig {
         $prefix = "cellbender_";
       }
 
-      if ( $def->{perform_decontX_after_cellbender} ) {
+      if ( $perform_decontX_after_cellbender ) {
         my $decontX_after_cellbender_task = $prefix . "decontX";
         add_decontX( $config, $def, $tasks, $target_dir, $decontX_after_cellbender_task, $files_def, $raw_files_def, {}, 1 );
         $decontX_ref        = [ $decontX_after_cellbender_task, ".meta.rds" ];
@@ -430,7 +440,7 @@ sub getScRNASeqConfig {
     } ## end if ($perform_cellbender)
 
     my $raw_individual_dynamic_qc_task = undef;
-    if ( $def->{"perform_individual_dynamic_qc"} ) {
+    if ( $perform_individual_dynamic_qc ) {
       my $sct_str = get_sct_str($def);
       $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
       if ( !defined $config->{$raw_individual_dynamic_qc_task} ) {
@@ -439,7 +449,7 @@ sub getScRNASeqConfig {
     } ## end if ( $def->{"perform_individual_dynamic_qc"...})
 
     my $scDblFinder_task = undef;
-    if ( getValue( $def, "perform_scDblFinder", 0 ) ) {
+    if ( $perform_scDblFinder ) {
       my $cluster_ref    = undef;
       my $cluster_column = undef;
 
@@ -493,13 +503,13 @@ sub getScRNASeqConfig {
       ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref ) = add_individual_qc_tasks( $config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, undef, $decontX_ref );
     }
 
-    if ( $def->{"perform_individual_dynamic_qc"} ) {
+    if ( $perform_individual_dynamic_qc ) {
       my $sct_str                        = get_sct_str($def);
       my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
       if ( !defined $config->{$raw_individual_dynamic_qc_task} ) {
         add_individual_dynamic_qc( $config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task );
       }
-    } ## end if ( $def->{"perform_individual_dynamic_qc"...})
+    } ## end if ( $perform_individual_dynamic_qc )
 
     my $files        = $def->{files};
     my $hto_file_ref = "files";
@@ -614,7 +624,8 @@ sub getScRNASeqConfig {
       my $immunarch_task      = addConsensusToImmunarch( $config, $def, $tasks, $target_dir, "clonotype" . get_next_index( $def, $clono_key ) . "_immunarch", $clonotype_consensus );
     } ## end if ($perform_clonotype_analysis)
 
-    if ( getValue( $def, "perform_scRNABatchQC" ) ) {
+    my $perform_scRNABatchQC = getValue( $def, "perform_scRNABatchQC", 0 ) & !$perform_subcluster_analysis;
+    if ( $perform_scRNABatchQC ) {
       add_scRNABatchQC( $config, $def, $tasks, $target_dir );
     }
 
@@ -624,12 +635,14 @@ sub getScRNASeqConfig {
       my $seurat_task      = undef;
       my $reduction        = undef;
       my $localization_ref = undef;
+      my $h5ad_ref         = undef;
 
       if ( getValue( $def, "rawdata_from_object", 0 ) ) {
         $seurat_task      = "files";
-        $reduction        = "pca";
+        $reduction        = getValue( $def, "rawdata_from_object_reduction", "pca" );
         $obj_ref          = $seurat_task;
         $localization_ref = $seurat_task;
+        $h5ad_ref        = "h5ad_files";
       } ## end if ( getValue( $def, "rawdata_from_object"...))
       else {
         if ( getValue( $def, "rawdata_from_qc", 0 ) ) {
@@ -696,6 +709,30 @@ sub getScRNASeqConfig {
           $azimuth_ref = [ $azimuth_task, ".meta.rds" ];
         } ## end if ( getValue( $def, "perform_Azimuth"...))
       } ## end if ( !defined $azimuth_ref)
+
+      if ( !defined $celltypist_ref ) {
+        if ( getValue( $def, "perform_celltypist", 0 ) ) {
+          my $celltypist_task = $seurat_task . "_celltypist";
+          my $cur_options  = {
+            task_name => $def->{task_name},
+            reduction => $reduction,
+          };
+          add_celltypist( $config, $def, $tasks, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
+          $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
+        } ## end if ( getValue( $def, "perform_celltypist"...))
+      } ## end if ( !defined $celltypist_ref)
+
+      if ( !defined $STCAT_ref ) {
+        if ( getValue( $def, "perform_STCAT", 0 ) ) {
+          my $STCAT_task = $seurat_task . "_STCAT";
+          my $cur_options  = {
+            task_name => $def->{task_name},
+            reduction => $reduction,
+          };
+          add_STCAT( $config, $def, $tasks, $target_dir, $STCAT_task, $h5ad_ref, $cur_options );
+          $STCAT_ref = [ $STCAT_task, ".meta.csv" ];
+        } ## end if ( getValue( $def, "perform_STCAT"...))
+      } ## end if ( !defined $STCAT_ref)
 
       my $celltype_task = undef;
       my $celltype_name = undef;

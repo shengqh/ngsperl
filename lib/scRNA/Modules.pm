@@ -71,6 +71,9 @@ our %EXPORT_TAGS = (
 
         add_signacx
 
+        add_celltypist
+        add_STCAT
+
         add_decontX
 
         add_celltype_validation
@@ -905,6 +908,84 @@ sub add_azimuth {
 
   push( @$tasks, $azimuth_task );
 } ## end sub add_azimuth
+
+
+sub add_celltypist {
+  my ( $config, $def, $tasks, $target_dir, $celltypist_task, $obj_ref, $cur_options ) = @_;
+
+  my $model_file = getValue( $def, "celltypist_model_file" );
+  if ( !-s $model_file ) {
+    die "CellTypist model file $model_file does not exist.";
+  }
+
+  my $target_folder = $target_dir . "/" . $celltypist_task;
+  my $script        = dirname(__FILE__) . "/../scRNA/run_celltypist.py";
+  $config->{$celltypist_task} = {
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    target_dir    => $target_folder,
+    init_command  => "",
+    program       => "",
+    check_program => 0,
+    option        => "
+python $script \\
+  --model_file $model_file \\
+  --input __FILE__ \\
+  --output_prefix __NAME__
+",
+    parameterSampleFile1_ref => $obj_ref,
+    output_file_ext          => ".meta.csv",
+    post_command             => "rm -rf .cache",
+    docker_prefix            => "celltypist_",
+    no_docker                => getValue( $def, "celltypist_no_docker", 0 ),
+    sh_direct                => getValue( $def, "celltypist_sh_direct", 0 ),
+    no_output                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => getValue( $def, "celltypist_walltime", "10" ),
+      "mem"      => getValue( $def, "celltypist_mem",      getValue( $def, "seurat_mem" ) ),
+    },
+  };
+
+  push( @$tasks, $celltypist_task );
+} ## end sub add_celltypist
+
+
+sub add_STCAT {
+  my ( $config, $def, $tasks, $target_dir, $stcat_task, $obj_ref, $cur_options ) = @_;
+
+  my $target_folder = $target_dir . "/" . $stcat_task;
+  my $reduction     = getValue( $def, "stcat_reduction", "pca" );
+  my $script        = dirname(__FILE__) . "/../scRNA/run_stcat.py";
+  $config->{$stcat_task} = {
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    target_dir    => $target_folder,
+    init_command  => "",
+    program       => "",
+    check_program => 0,
+    option        => "
+python $script \\
+  --input __FILE__ \\
+  --reduction $reduction \\
+  --output_prefix __NAME__
+",
+    parameterSampleFile1_ref => $obj_ref,
+    output_file_ext          => ".meta.csv",
+    post_command             => "rm -rf .cache",
+    docker_prefix            => "stcat_",
+    no_docker                => getValue( $def, "stcat_no_docker", 0 ),
+    sh_direct                => getValue( $def, "stcat_sh_direct", 0 ),
+    no_output                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => getValue( $def, "stcat_walltime", "10" ),
+      "mem"      => getValue( $def, "stcat_mem",      getValue( $def, "seurat_mem" ) ),
+    },
+  };
+
+  push( @$tasks, $stcat_task );
+} ## end sub add_STCAT
 
 
 sub add_decontX {
