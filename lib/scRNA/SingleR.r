@@ -23,6 +23,11 @@ library(patchwork)
 library(celldex)
 library(logger)
 
+# possible on dataset level instead of sample level.
+if(!exists("sample_name")){
+  sample_name=outFile
+}
+
 log_appender(appender_tee(paste0(sample_name, ".log")))
 
 cp = as.character(packageVersion("celldex"))
