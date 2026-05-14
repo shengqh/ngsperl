@@ -743,7 +743,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
           run_rmd_independent      => 1,
           rmd_ext                  => ".choose.html",
           option                   => "",
-          parameterSampleFile1_ref => [ $MEcell_cluster_report_task, ".rds" ],
+          parameterSampleFile1     => getValue( $def, "dynamic_subclusters_table" ),
           parameterSampleFile2     => {
             email                  => getValue( $def, "email" ),
             affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
@@ -761,7 +761,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
             cluster_algorithm_name => $cluster_algorithm_name,
             image_assay            => $source_image_assay,
           },
-          parameterSampleFile3     => getValue( $def, "dynamic_subclusters_table" ),
+          parameterSampleFile3_ref => [ $MEcell_cluster_report_task, ".rds" ],
           parameterSampleFile4_ref => [ $subcluster_task, ".Leiden.subcluster.files.csv" ],
           parameterSampleFile5_ref => $MEcell_umap_task,
           no_prefix                => 1,
@@ -790,14 +790,14 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
             check_program => 0,
             option        => "
 python3 $cell_crop_script \\
-  --cell_geojson '__FILE__' \\
+  --cellid_csv '__FILE__' \\
   --dhsr_tiff '__FILE2__' \\
-  --cellid_csv '__FILE3__' \\
+  --cell_geojson '__FILE3__' \\
   --output_prefix '__NAME__' 
 ",
-            parameterSampleFile1     => getValue( $def, "cell_geojson_files" ),
+            parameterSampleFile1_ref => [ $choose_task, ".final.cellids.csv" ],
+            parameterSampleFile3     => getValue( $def, "cell_geojson_files" ),
             parameterSampleFile2     => getValue( $def, "image_files" ),
-            parameterSampleFile3_ref => [ $choose_task, ".final.cellids.csv" ],
             #parameterSampleFile4     => getValue( $def, "nucleus_geojson_files" ),
             output_ext               => ".figures.csv",
             docker_prefix            => "visiumhd_",

@@ -35,9 +35,15 @@ affiliation=get_affiliation(myoptions)
 assay=myoptions$assay
 species=myoptions$species
 
-file_map<-read_file_map("fileList1.txt", do_unlist=FALSE)
-sample_name=names(file_map)[1]
-rds_file=file_map[[sample_name]]
+cluster_map<-fread("fileList1.txt", sep="\t", header=FALSE, fill=TRUE, data.table=FALSE) 
+sample_name=cluster_map$V4[1]
+cluster_map= cluster_map |>
+  dplyr::select(-V4) |>
+  dplyr::mutate(V1=as.character(V1))
+
+rds_file<-fread("fileList3.txt", sep="\t", header=FALSE, fill=TRUE, data.table=FALSE) |>
+          dplyr::filter(V2 == sample_name) |>
+          dplyr::pull(V1)
 
 meta_rds=paste0(sample_name, ".all.meta.rds")
 # If we change the parameters, we will need to re-run the code. 
@@ -45,11 +51,6 @@ meta_rds=paste0(sample_name, ".all.meta.rds")
 # if(file.exists(meta_rds)){
 #   quit(save="no")
 # }
-
-cluster_map<-fread("fileList3.txt", sep="\t", header=FALSE, fill=TRUE, data.table=FALSE) |>
-  dplyr::filter(V4 == sample_name) |>
-  dplyr::select(-V4) |>
-  dplyr::mutate(V1=as.character(V1))
 
 meta_file_list=fread('fileList4.txt', sep="\t", header=FALSE, fill=TRUE, data.table=FALSE) |> 
   dplyr::filter(V2==sample_name) |> dplyr::pull(V1)

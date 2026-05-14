@@ -51,9 +51,13 @@ bubblemap_file=myoptions$bubblemap_file
 bubblemap_width_in=as.numeric(myoptions$bubblemap_width_in)
 species=myoptions$species
 
-file_map=fread("fileList1.txt", sep="\t", header=FALSE, col.names=c("path", "name"))
-sample_name=file_map$name[1]
-obj_file=file_map$path[1]
+
+cluster_map<-fread("fileList1.txt", sep="\t", header=FALSE, fill=TRUE, data.table=FALSE) 
+sample_name=cluster_map$V4[1]
+
+obj_file<-fread("fileList3.txt", sep="\t", header=FALSE, fill=TRUE, data.table=FALSE) |>
+          dplyr::filter(V2 == sample_name) |>
+          dplyr::pull(V1)
 ```
 
 ---
@@ -153,7 +157,8 @@ Idents(obj) <- cluster_count_col
 # Spatial images
 
 ```{r}
-tissue_image =  ImageDimPlot (object = obj) + 
+tissue_image =  ImageDimPlot (object=obj, 
+                              cols=cluster_colors) + 
                 ggtitle(paste0("Tissue : ", sample_name)) +
                 theme(legend.position = "none",
                       plot.title = element_text(hjust = 0.5),
@@ -190,7 +195,12 @@ cat("\n# UMAP\n\n")
 cluster_col="seurat_clusters"
 scolors=cluster_colors
 names(scolors)=levels(obj@meta.data[[cluster_col]])
-g = get_dim_plot(obj, reduction='umap', group.by=cluster_col, label.by=cluster_count_col, scolors=scolors) + 
+g = get_dim_plot( obj, 
+                  reduction='umap', 
+                  group.by=cluster_col, 
+                  label.by=cluster_count_col, 
+                  scolors=scolors,
+                  random_colors=FALSE) + 
   ggtitle("UMAP") + theme(plot.title = element_text(hjust = 0.5))
 umap_png = paste0(file_prefix, ".umap.png")    
 width=ifelse(length(cluster_colors) > 17, 12, 9)
@@ -202,6 +212,7 @@ include_graphics(umap_png)
 
 ```{r}
 g = ImageDimPlot( object = obj, 
+                  cols=cluster_colors,
                   fov = image_slide, 
                   split.by = cluster_count_col,
                   border.size = NA,
