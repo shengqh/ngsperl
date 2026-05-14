@@ -2810,7 +2810,11 @@ fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns
   cur_name=names(source_map)[1]
   for(cur_name in names(source_map)){
     source_meta_file=source_map[cur_name]
-    source_meta=readRDS(source_meta_file)
+    if(grepl(".csv$", source_meta_file)){
+      source_meta=read.csv(source_meta_file, row.names=1)
+    }else{
+      source_meta=readRDS(source_meta_file)
+    }
     target_meta=fill_meta_info(cur_name, source_meta, target_meta, source_columns, target_column, is_character)
   }
   return(target_meta)
@@ -2858,7 +2862,8 @@ get_barplot<-function(
   validation_columns=c("orig.ident","SignacX","SingleR"), 
   calc_height_per_cluster=200, 
   calc_width_per_cell=50,
-  label_height=500){
+  label_height=500,
+  min_percentage=0.01){
 
   valid_columns = intersect(validation_columns, colnames(ct_meta))
   if(length(valid_columns) == 0){
@@ -2869,12 +2874,16 @@ get_barplot<-function(
   col_name=valid_columns[1]
   for(col_name in valid_columns){
     tbl = data.frame(table(ct_meta[,cluster_name], ct_meta[,col_name]))
+
     v1 = suppressWarnings(as.numeric(as.character(tbl$Var1)))
     if(all(is.na(v1))){
       v1 = as.character(tbl$Var1)
     }
     tbl$Var1 = v1
     tbl$Category=col_name
+
+    # filter out the categories with very low percentage
+    tbl<-tbl %>% group_by(Var1) %>% mutate(percentage=Freq/sum(Freq)) %>% ungroup() %>% filter(percentage >= min_percentage)
 
     alltbl<-rbind(alltbl, tbl)
   }
@@ -3596,13 +3605,13 @@ convert_seurat_v5_to_v3<-function(obj){
   return(obj)
 }
 
-get_filtered_obj<-function(subobj, filter_column, ct_meta=subobj@meta.data){
+get_filtered_obj<-function(subobj, filter_column, ct_meta=subobj@meta.data, min_freq=0.01){
   ct_tbl = table(ct_meta[,filter_column])
   ct_tbl = ct_tbl[order(ct_tbl, decreasing=T)]
   top=names(ct_tbl)[1:min(10, length(ct_tbl))]
 
   ct_tbl = ct_tbl / sum(ct_tbl)
-  ct_tbl = ct_tbl[ct_tbl >= 0.01]
+  ct_tbl = ct_tbl[ct_tbl >= min_freq]
   topperc=names(ct_tbl)
 
   all_cts=unique(c(top, topperc))

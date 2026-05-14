@@ -899,6 +899,7 @@ sub add_azimuth {
     post_command         => "rm -rf .cache",
     no_docker            => getValue( $def, "azimuth_no_docker", 0 ),
     sh_direct            => getValue( $def, "azimuth_sh_direct", 0 ),
+    docker_prefix        => "azimuth_",
     pbs                  => {
       "nodes"    => "1:ppn=1",
       "walltime" => getValue( $def, "Azimuth_walltime", "10" ),
@@ -918,8 +919,9 @@ sub add_celltypist {
     die "CellTypist model file $model_file does not exist.";
   }
 
-  my $target_folder = $target_dir . "/" . $celltypist_task;
-  my $script        = dirname(__FILE__) . "/../scRNA/run_celltypist.py";
+  my $target_folder   = $target_dir . "/" . $celltypist_task;
+  my $script          = dirname(__FILE__) . "/../scRNA/run_celltypist.py";
+  my $majority_voting = getValue( $def, "celltypist_majority_voting", 0 ) ? "--majority_voting" : "";
   $config->{$celltypist_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
     perform       => 1,
@@ -929,9 +931,22 @@ sub add_celltypist {
     check_program => 0,
     option        => "
 python $script \\
-  --model_file $model_file \\
+  --model_file $model_file $majority_voting \\
   --input __FILE__ \\
   --output_prefix __NAME__
+
+status=\$?
+if [ \$status -ne 0 ]; then
+  echo \"CellTypist failed for __FILE__ with model $model_file\"
+  echo \$status > __NAME__.failed
+  rm -f __NAME__.meta.csv
+  exit \$status
+else
+  echo \"CellTypist succeeded for __FILE__ with model $model_file\"
+  rm -f __NAME__.failed
+fi
+
+rm -rf .celltypist .config
 ",
     parameterSampleFile1_ref => $obj_ref,
     output_file_ext          => ".meta.csv",
@@ -955,7 +970,7 @@ sub add_STCAT {
   my ( $config, $def, $tasks, $target_dir, $stcat_task, $obj_ref, $cur_options ) = @_;
 
   my $target_folder = $target_dir . "/" . $stcat_task;
-  my $reduction     = getValue( $def, "stcat_reduction", "pca" );
+  my $reduction     = $cur_options->{reduction};
   my $script        = dirname(__FILE__) . "/../scRNA/run_stcat.py";
   $config->{$stcat_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
@@ -969,6 +984,19 @@ python $script \\
   --input __FILE__ \\
   --reduction $reduction \\
   --output_prefix __NAME__
+
+status=\$?
+if [ \$status -ne 0 ]; then
+  echo \"STCAT failed for __FILE__\"
+  echo \$status > __NAME__.failed
+  rm -f __NAME__.meta.csv
+  exit \$status
+else
+  echo \"STCAT succeeded for __FILE__\"
+  rm -f __NAME__.failed
+fi
+
+rm -rf .config
 ",
     parameterSampleFile1_ref => $obj_ref,
     output_file_ext          => ".meta.csv",
@@ -1064,7 +1092,7 @@ sub add_decontX {
 
 
 sub add_celltype_validation {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $celltype_column, $rmd_ext, $is_choose, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $celltype_column, $rmd_ext, $is_choose, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer, $celltypist_ref, $STCAT_ref ) = @_;
 
   my $doublet_column = getValue( $def, "validation_doublet_column", getValue( $def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5" ) );
 
@@ -1081,19 +1109,21 @@ sub add_celltype_validation {
     parameterFile2_ref   => $meta_ref,
     parameterFile3_ref   => $call_files_ref,
     parameterSampleFile1 => {
-      task_name        => getValue( $def, "task_name" ),
-      pca_dims         => getValue( $def, "pca_dims" ),
-      by_sctransform   => getValue( $def, "by_sctransform" ),
-      doublet_column   => $doublet_column,
-      celltype_column  => $celltype_column,
-      rmd_ext          => $rmd_ext,
-      bubblemap_file   => getValue( $def, "bubblemap_file" ),
-      species          => getValue( $def, "species" ),
-      create_clusters  => getValue( $def, "validation_create_clusters", 0 ),
-      reduction        => $is_choose ? "subumap" : "umap",
-      summary_layer    => $summary_layer,
-      bubblemap_width  => $def->{"bubblemap_width"},
-      bubblemap_height => $def->{"bubblemap_height"},
+      task_name          => getValue( $def, "task_name" ),
+      pca_dims           => getValue( $def, "pca_dims" ),
+      by_sctransform     => getValue( $def, "by_sctransform" ),
+      sample_column      => getValue( $def, "validation_sample_column", getValue( $def, "sample_column", "orig.ident" ) ),
+      doublet_column     => $doublet_column,
+      celltype_column    => $celltype_column,
+      rmd_ext            => $rmd_ext,
+      bubblemap_file     => getValue( $def, "bubblemap_file" ),
+      species            => getValue( $def, "species" ),
+      create_clusters    => getValue( $def, "validation_create_clusters", 0 ),
+      reduction          => $is_choose ? "subumap" : "umap",
+      summary_layer      => $summary_layer,
+      bubblemap_width    => $def->{"bubblemap_width"},
+      bubblemap_height   => $def->{"bubblemap_height"},
+      bubblemap_min_freq => getValue( $def, "bubblemap_min_freq", 0.01 ),
     },
     parameterSampleFile2     => $def->{pool_sample_groups},
     parameterSampleFile3_ref => $sctk_ref,
@@ -1101,6 +1131,8 @@ sub add_celltype_validation {
     parameterSampleFile5_ref => $singleR_ref,
     parameterSampleFile6_ref => $decontX_ref,
     parameterSampleFile7_ref => $azimuth_ref,
+    parameterSampleFile8_ref => $celltypist_ref,
+    parameterSampleFile9_ref => $STCAT_ref,
     output_file_ext          => $rmd_ext,
     output_other_ext         => "",
     docker_prefix            => "scdynamic_",

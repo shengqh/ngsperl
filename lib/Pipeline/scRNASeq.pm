@@ -763,9 +763,9 @@ sub getScRNASeqConfig {
         $meta_ref = [ $scDynamic_task, ".meta.rds" ];
         my $call_files_ref = [ $scDynamic_task, ".iter_png.csv" ];
 
-        if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref or defined $decontX_ref ) {
+        if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref or defined $decontX_ref or defined $azimuth_ref or defined $celltypist_ref or defined $STCAT_ref ) {
           my $validation_task = $scDynamic_task . "_validation";
-          add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref );
+          add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, undef, $celltypist_ref, $STCAT_ref );
         }
 
         if ( defined $def->{bubble_files} ) {
@@ -831,9 +831,9 @@ sub getScRNASeqConfig {
             $obj_ref  = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
-            if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref ) {
+            if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref or defined $azimuth_ref or defined $celltypist_ref or defined $STCAT_ref ) {
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer, $celltypist_ref, $STCAT_ref );
             }
 
             if ( getValue( $def, "perform_choose_cluster_silhouette", 0 ) ) {
@@ -1016,7 +1016,7 @@ sub getScRNASeqConfig {
 
           if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref ) {
             my $validation_task = $multires_task . "_validation";
-            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref );
+            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, undef, $celltypist_ref, $STCAT_ref );
           }
 
           my $cur_options = {
@@ -1036,7 +1036,7 @@ sub getScRNASeqConfig {
 
             if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref ) {
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [ $choose_task, ".final.rds" ], [ $choose_task, "meta.rds" ], undef, "seurat_cell_type", ".multires_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, "layer4" );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [ $choose_task, ".final.rds" ], [ $choose_task, "meta.rds" ], undef, "seurat_cell_type", ".multires_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, "layer4", $celltypist_ref, $STCAT_ref );
             }
 
             $celltype_task = $choose_task;

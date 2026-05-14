@@ -38,6 +38,9 @@ option_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F) %>%
 
 myoptions<-split(option_table$Value, option_table$Parameter)
 
+validation_columns=readLines("validation_columns.txt")
+validation_columns=validation_columns[validation_columns != "decontX"]
+
 print_table(option_table, row.names=F)
 ```
 
@@ -108,8 +111,8 @@ choose_figure_rmd<-function(detail_prefix, cts){
     umap_png = paste0(detail_prefix, ".", ct_name, ".umap.png")
     result<-paste0(result, getFigure(umap_png))
 
-    tool = "SingleR"
-    for(tool in c("SingleR", "SignacX", "Azimuth")){
+    tool = validation_columns[1]
+    for(tool in validation_columns){
       tool_png = paste0(detail_prefix, ".", ct_name, ".", tool, ".png")
       if(file.exists(tool_png)){
         result<-paste0(result, paste0("\n\n## ", tool, "\n\n"))
@@ -146,52 +149,21 @@ iter_figure_rmd<-function(detail_prefix, cts, iter_png){
       dot = get_last_figure(ct_png, "dot")
       cta_png = get_last_figure(ct_png, "cta_png")
 
-      singleR_file = paste0(detail_prefix, ".", ct_name, ".SingleR.png")
-      if(file.exists(singleR_file)){
-        result<-paste0(result, paste0("\n\n## SingleR\n\n"))
-        singleR_csv = paste0(detail_prefix, ".", ct_name, ".SingleR.csv")
-        result<-paste0(result, getTable(singleR_csv))
+      tool = validation_columns[1]
+      for(tool in validation_columns){
+        tool_png = paste0(detail_prefix, ".", ct_name, ".", tool, ".png")
+        if(file.exists(tool_png)){
+          result<-paste0(result, paste0("\n\n## ", tool, "\n\n"))
+          tool_csv = paste0(detail_prefix, ".", ct_name, ".", tool, ".csv")
+          result<-paste0(result, getTable(tool_csv))
 
-        result<-paste0(result, paste0("\n\n### UMAP\n\n"))
-        result<-paste0(result, getFigure(singleR_file))
+          result<-paste0(result, paste0("\n\n### UMAP\n\n"))
+          result<-paste0(result, getFigure(tool_png))
 
-        singleR_bubble_file = paste0(detail_prefix, ".", ct_name, ".SingleR.bubble.png")
-        result<-paste0(result, paste0("\n\n### Curated marker genes\n\n"))
-        result<-paste0(result, getFigure(singleR_bubble_file))
-      }
-
-      signacX_file = paste0(detail_prefix, ".", ct_name, ".SignacX.png")
-      if(file.exists(signacX_file)){
-        result<-paste0(result, paste0("\n\n## SignacX\n\n"))
-        SignacX_csv = paste0(detail_prefix, ".", ct_name, ".SignacX.csv")
-        result<-paste0(result, getTable(SignacX_csv))
-
-        result<-paste0(result, paste0("\n\n### UMAP\n\n"))
-        result<-paste0(result, getFigure(signacX_file))
-
-        signacX_bubble_file = paste0(detail_prefix, ".", ct_name, ".SignacX.bubble.png")
-        result<-paste0(result, paste0("\n\n### Curated marker genes\n\n"))
-        result<-paste0(result, getFigure(signacX_bubble_file))
-      }
-
-      azimuth_file = paste0(detail_prefix, ".", ct_name, ".Azimuth.png")
-      if(file.exists(azimuth_file)){
-        result<-paste0(result, paste0("\n\n## Azimuth\n\n"))
-        Azimuth_csv = paste0(detail_prefix, ".", ct_name, ".Azimuth.csv")
-        result<-paste0(result, getTable(Azimuth_csv))
-
-        result<-paste0(result, paste0("\n\n### UMAP\n\n"))
-        result<-paste0(result, getFigure(azimuth_file))
-
-        Azimuth_bubble_file = paste0(detail_prefix, ".", ct_name, ".Azimuth.bubble.png")
-        result<-paste0(result, paste0("\n\n### Curated marker genes\n\n"))
-        result<-paste0(result, getFigure(Azimuth_bubble_file))
-      }
-
-      overlap_csv = paste0(detail_prefix, ".", ct_name, ".SingleR_SignacX.csv")
-      if(file.exists(overlap_csv)){
-        result<-paste0(result, paste0("\n\n## Overlap between SingleR and SignacX\n\n"))
-        result<-paste0(result, getTable(overlap_csv))
+          tool_bubble_file = paste0(detail_prefix, ".", ct_name, ".", tool, ".bubble.png")
+          result<-paste0(result, paste0("\n\n### Curated marker genes\n\n"))
+          result<-paste0(result, getFigure(tool_bubble_file))
+        }
       }
 
       result<-paste0(result, paste0("\n\n## UMAP\n\n"))

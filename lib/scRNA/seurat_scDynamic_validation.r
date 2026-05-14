@@ -21,9 +21,11 @@ options(future.globals.maxSize=1024^3*100) #100G
 
 myoptions = read_file_map(parSampleFile1, do_unlist = FALSE)
 reduction = myoptions$reduction
+sample_column = myoptions$sample_column
 doublet_column = myoptions$doublet_column
 celltype_column = myoptions$celltype_column
 bubblemap_file = myoptions$bubblemap_file
+bubblemap_min_freq = as.numeric(myoptions$bubblemap_min_freq)
 cur_assay = ifelse(is_one(myoptions$by_sctransform), "SCT", "RNA")
 species = myoptions$species
 create_clusters = is_one(myoptions$create_clusters)
@@ -36,6 +38,7 @@ if(is.na(summary_layer)){
 }
 
 cat("reduction: ", reduction, "\n")
+cat("sample_column: ", sample_column, "\n")
 cat("doublet_column: ", doublet_column, "\n")
 cat("celltype_column: ", celltype_column, "\n")
 cat("bubblemap_file: ", bubblemap_file, "\n")
@@ -69,6 +72,8 @@ stopifnot(celltype_cluster_column %in% colnames(meta))
 
 validation_columns=c()
 
+celltype_annotation_columns=c()
+
 has_decontX = exists('parSampleFile6')
 if(has_decontX){
   meta = fill_meta_info_list( source_meta_file_list=parSampleFile6, 
@@ -100,10 +105,10 @@ if(!("SignacX" %in% colnames(meta))){
                                 target_meta=meta, 
                                 source_columns="signacx_CellStates", 
                                 target_column="SignacX")
-    validation_columns<-c(validation_columns, "SignacX")
+    celltype_annotation_columns<-c(celltype_annotation_columns, "SignacX")
   }
 }else{
-  validation_columns<-c(validation_columns, "SignacX")
+  celltype_annotation_columns<-c(celltype_annotation_columns, "SignacX")
 }
 
 if(!("SingleR" %in% colnames(meta))){
@@ -112,10 +117,10 @@ if(!("SingleR" %in% colnames(meta))){
                                 target_meta=meta, 
                                 source_columns="SingleR_labels", 
                                 target_column="SingleR")
-    validation_columns<-c(validation_columns, "SingleR")
+    celltype_annotation_columns<-c(celltype_annotation_columns, "SingleR")
   }
 }else{
-  validation_columns<-c(validation_columns, "SingleR")
+  celltype_annotation_columns<-c(celltype_annotation_columns, "SingleR")
 }
 
 if(!("Azimuth" %in% colnames(meta))) {
@@ -124,19 +129,50 @@ if(!("Azimuth" %in% colnames(meta))) {
                                 target_meta=meta, 
                                 source_columns="Azimuth_finest", 
                                 target_column="Azimuth")
-    validation_columns<-c(validation_columns, "Azimuth")
+    celltype_annotation_columns<-c(celltype_annotation_columns, "Azimuth")
   }
 }else{
-  validation_columns<-c(validation_columns, "Azimuth")
+  celltype_annotation_columns<-c(celltype_annotation_columns, "Azimuth")
 }
+
+if(!("celltypist" %in% colnames(meta))) {
+  if(exists('parSampleFile8')){
+    meta = fill_meta_info_list( source_meta_file_list=parSampleFile8, 
+                                target_meta=meta, 
+                                source_columns="predicted_labels", 
+                                target_column="celltypist")
+    celltype_annotation_columns<-c(celltype_annotation_columns, "celltypist")
+  }
+}else{
+  celltype_annotation_columns<-c(celltype_annotation_columns, "celltypist")
+}
+
+if(!("STCAT" %in% colnames(meta))) {
+  if(exists('parSampleFile9')){
+    meta = fill_meta_info_list( source_meta_file_list=parSampleFile9, 
+                                target_meta=meta, 
+                                source_columns="Prediction", 
+                                target_column="STCAT")
+    celltype_annotation_columns<-c(celltype_annotation_columns, "STCAT")
+  }
+}else{
+  celltype_annotation_columns<-c(celltype_annotation_columns, "STCAT")
+}
+
+validation_columns<-c(validation_columns, celltype_annotation_columns)
+
 saveRDS(meta, paste0(file_prefix, ".meta.rds"))
 
 cat("reading object\n")
 obj<-read_object(parFile1)
 obj@meta.data = meta
 
-if(length(unique(meta$orig.ident)) > 1){
-  validation_columns<-c("orig.ident", validation_columns)
+if (!sample_column %in% colnames(meta)){
+  stop(paste0("Sample column ", sample_column, " not found in meta data, stop."))
+}
+
+if(length(unique(meta[[sample_column]])) > 1){
+  validation_columns<-c(sample_column, validation_columns)
 }
 
 do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct, reduction="umap", summary_layer="layer4"){
@@ -150,11 +186,12 @@ do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct, reduc
   g<-get_dim_plot_labelby(ct_obj, reduction=reduction, label.by=validation_column,  title=paste0(validation_column, " in UMAP")) + guides(fill=guide_legend(ncol =1))
   ggsave(paste0(file_prefix, ".", pct, ".", validation_column, ".png"), g, width=2000, height=1200, units="px", dpi=300, bg="white")
 
+  bubble_obj=get_filtered_obj(obj, validation_column, ct_meta, min_freq=bubblemap_min_freq)
   if(summary_layer %in% colnames(obj@meta.data)){
     g<-get_sub_bubble_plot(
       obj=obj, 
       obj_res=summary_layer, 
-      subobj=ct_obj, 
+      subobj=bubble_obj, 
       subobj_res=validation_column, 
       bubblemap_file=bubblemap_file, 
       add_num_cell=TRUE, 
@@ -163,15 +200,15 @@ do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct, reduc
   }else{
     validation_cell=paste0(validation_column, "_Cell")
     
-    ct_obj@meta.data = add_column_count(ct_obj@meta.data, validation_column, validation_cell)
-    g<-get_bubble_plot( ct_obj, 
+    bubble_obj@meta.data = add_column_count(bubble_obj@meta.data, validation_column, validation_cell)
+    g<-get_bubble_plot( bubble_obj, 
                         assay=cur_assay,
                         group.by=validation_cell, 
                         bubblemap_file = bubblemap_file, 
                         species=species)
   }
 
-  ggsave(paste0(file_prefix, ".", pct, ".", validation_column, ".bubble.png"), g, width=get_dot_width(g), height=get_dot_height(ct_obj, validation_column), units="px", dpi=300, bg="white")
+  ggsave(paste0(file_prefix, ".", pct, ".", validation_column, ".bubble.png"), g, width=get_dot_width(g), height=get_dot_height(bubble_obj, validation_column), units="px", dpi=300, bg="white")
 
   return(cur_ct)
 }
@@ -271,43 +308,16 @@ for(ct in cts){
     ggsave(paste0(file_prefix, ".", pct, ".decontX.png"), g, width=4400, height=1600, units="px", dpi=300, bg="white")
   }
 
-  if("SingleR" %in% validation_columns){
-    cat("  SingleR plot\n")
-    singleR_ct = do_validation( obj, 
-                                ct_meta, 
-                                "SingleR", 
-                                file_prefix, 
-                                pct,
-                                reduction=reduction,
-                                summary_layer=summary_layer)
-  }
-
-  if("SignacX" %in% validation_columns){
-    cat("  SignacX plot\n")
-    signacX_ct = do_validation( obj, 
-                                ct_meta, 
-                                validation_column = "SignacX", 
-                                file_prefix, 
-                                pct,
-                                reduction=reduction,
-                                summary_layer=summary_layer)
-  }
-
-  if("Azimuth" %in% validation_columns){
-    cat("  Azimuth plot\n")
-    azimuth_ct = do_validation( obj, 
-                                ct_meta, 
-                                "Azimuth", 
-                                file_prefix, 
-                                pct,
-                                reduction=reduction,
-                                summary_layer=summary_layer)
-  }
-
-  if(all(c("SignacX", "SingleR") %in% validation_columns)){
-    tbl = as.data.frame.matrix(table(ct_meta$SingleR, ct_meta$SignacX))
-    tbl=tbl[rownames(tbl) %in% singleR_ct, colnames(tbl) %in% signacX_ct]
-    write.csv(tbl, paste0(file_prefix, ".", pct, ".SingleR_SignacX.csv"))
+  annotation_tool = celltype_annotation_columns[1]
+  for(annotation_tool in celltype_annotation_columns) {
+    cat("  ", annotation_tool, " plot\n")
+    do_validation(obj, 
+                  ct_meta, 
+                  validation_column=annotation_tool, 
+                  file_prefix, 
+                  pct,
+                  reduction=reduction,
+                  summary_layer=summary_layer)
   }
 }
 
