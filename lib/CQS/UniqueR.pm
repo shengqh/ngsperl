@@ -65,9 +65,11 @@ sub perform {
 
   my $copy_template = get_option( $config, $section, "copy_template", 1 );
 
+  my $maxSampleFiles=20;
+
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
   my $paramSampleFiles = {};
-  for my $myidx (1..10) {
+  for my $myidx (1..$maxSampleFiles) {
     my $paramSampleFile = writeParameterSampleFile( $config, $section, $result_dir, $myidx, $removeEmpty );
     if (($paramSampleFile ne "") or ($myidx <= 3)){
       $paramSampleFiles->{"parSampleFile" . $myidx} = $paramSampleFile;
@@ -95,7 +97,7 @@ sub perform {
     $rParameter = $rParameter . $file_key . "='" . $paramSampleFiles->{$file_key} . "'\n";
   }
 
-  for my $index (1..10){
+  for my $index (1..$maxSampleFiles){
     my $key = "parameterFile" . $index;
     my $parameterFile = parse_param_file( $config, $section, $key, 0 );
     if ( !defined($parameterFile) && $index < 4 ) {

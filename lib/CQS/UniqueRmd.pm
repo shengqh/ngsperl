@@ -49,7 +49,7 @@ sub perform {
   my $rfile     = build_rmd_file($config, $section, $result_dir, $rfilename);
 
   my $removeEmpty = get_option( $config, $section, "remove_empty_parameter", 0 );
-  for my $myidx (1..10) {
+  for my $myidx (1..20) {
     writeParameterSampleFile( $config, $section, $result_dir, $myidx, $removeEmpty );
   }
   
