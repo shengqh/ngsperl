@@ -593,6 +593,10 @@ preprocess<-function( SampleInfo,
         ggsave(paste0(cur_prefix, ".heatmap.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white",
           limitsize = FALSE)
 
+        g<-MyDoHeatMap(subobj, assay=cur_assay, slot="data", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
+        ggsave(paste0(cur_prefix, ".heatmap.data.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white",
+          limitsize = FALSE)
+
         # subobj@misc$Qcluster <- EvalCluster(subobj)
         # ViewQcluster(SCLC)
         # cat("\n\n")
