@@ -145,10 +145,12 @@ check_and_include_graphics(paste0(detail_prefix, ".layer4.ct_markers.bubbleplot.
 check_and_include_graphics(paste0(detail_prefix, ".layer4.cell.png"))
 ```
 
-### Heatmap
-
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=file.exists(paste0(detail_prefix, ".layer4.heatmap.png"))}
+cat("\n### Heatmap with scaled expression\n\n")
 check_and_include_graphics(paste0(detail_prefix, ".layer4.heatmap.png"))
+
+cat("\n### Heatmap with normalized expression\n\n")
+check_and_include_graphics(paste0(detail_prefix, ".layer4.heatmap.data.png"))
 ```
 
 ```{r, include=FALSE, echo = FALSE}
