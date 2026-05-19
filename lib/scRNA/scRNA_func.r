@@ -177,7 +177,7 @@ theme_bw3 <- function (axis.x.rotate=F, angle=90, vjust=0.5, hjust=1) {
 }
 
 get_heatmap_height<-function(ngenes){
-  result<-max(3000, min(20000, ngenes * 60 + 1000))
+  result<-max(3000, min(20000, ngenes * 50 + 1000))
   return(result)
 }
 
@@ -198,9 +198,42 @@ MyDimPlot<-function(...){
   return(g)
 }
 
+
 #https://github.com/satijalab/seurat/issues/1836
 #For visualization, using sctransform data is also fine.
-MyDoHeatMap<-function(obj, max_cell=5000, features=NULL, assay=NULL, slot = "scale.data", ...){
+#Force each category has at most 200 cells
+MyDoHeatMap<-function(obj, max_cell=5000, max_cell_per_cluster=200, features=NULL, assay=NULL, slot = "scale.data", group.by = "ident", ...){
+  if(group.by == "ident"){
+    df=data.frame(cell=colnames(obj), ident=Idents(obj))
+  }else{
+    df=data.frame(cell=colnames(obj), ident=obj@meta.data[[group.by]])
+  }
+
+  df_cells=df |> 
+    dplyr::group_by(ident) |>
+    dplyr::slice_sample(n = max_cell_per_cluster, replace = FALSE) |>
+    dplyr::ungroup() |>
+    dplyr::pull(cell)
+
+  if(length(df_cells) > max_cell) {
+    df_cells = sample(df_cells, size=max_cell, replace=FALSE)
+  }
+
+  cur_obj <- subset(obj, cells = df_cells)
+
+  if(slot=="scale.data"){
+    scale_data=MyGetAssayData(cur_obj, assay=assay, slot="scale.data")
+    if(!all(features %in% rownames(scale_data))){
+      cur_obj <- ScaleData(cur_obj, features=features)
+    }
+  }
+  g<-DoHeatmap(cur_obj, features=features, assay=assay, slot=slot, ...)
+  return(g)
+}
+
+#https://github.com/satijalab/seurat/issues/1836
+#For visualization, using sctransform data is also fine.
+MyDoHeatMap_v1<-function(obj, max_cell=5000, features=NULL, assay=NULL, slot = "scale.data", ...){
   if(ncol(obj) > max_cell){
     cur_obj <- subset(obj, cells = sample(colnames(obj), size=max_cell, replace=F))
   }else{
@@ -2913,7 +2946,7 @@ get_barplot<-function(
     cat_str_len=max(nchar(as.character(alltbl$Var1)))
     cur_label_width=max(400, cat_str_len * 25)
 
-    height = max(1500, length(unique(alltbl$Var1)) * calc_height_per_cluster + cur_label_height)
+    height = max(1000, length(unique(alltbl$Var1)) * calc_height_per_cluster + cur_label_height)
     width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + cur_label_width
 
     ggsave(bar_file, g, width=width, height=height, dpi=300, units="px", bg="white", limitsize = FALSE)
@@ -3436,6 +3469,9 @@ do_analysis<-function(tmp_folder,
     width<-get_heatmap_width(length(celltypes))
     height<-get_heatmap_height(length(all_top10))
     ggsave(paste0(tmp_prefix, ".", final_layer, ".heatmap.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
+
+    g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = all_top10, slot="data", group.by = final_layer, angle = 90) + NoLegend()
+    ggsave(paste0(tmp_prefix, ".", final_layer, ".heatmap.data.png"), g, width=width, height=height, units="px", dpi=300, bg="white")
   }
   
   cat("output_celltype_figures...\n")
@@ -4241,4 +4277,60 @@ mouse_symbol_to_human_symbol <- function(mouse_symbols) {
   mm2hs <- setNames(orth$`9606`, orth$`mm_symbol`)
 
   return(mm2hs)
+}
+
+can_convert_to_numeric <- function(x) {
+  converted_class <- class(type.convert(x, as.is = TRUE))
+  return(converted_class %in% c("numeric", "integer", "double"))
+}
+
+draw_qc_box_plot <- function(meta, cluster_column, file_path) {
+  df=meta |>
+    dplyr::select(all_of(cluster_column), nCount_RNA, nFeature_RNA, percent.mt) |>
+    dplyr::rename(cluster = all_of(cluster_column), nUMI = nCount_RNA, ngene = nFeature_RNA, MtRNA = percent.mt)  
+
+  if(can_convert_to_numeric(df$cluster)){
+    df$cluster = as.numeric(df$cluster)
+    levels=as.character(sort(unique(df$cluster)))
+    df$cluster = factor(as.character(df$cluster), levels=levels)
+    height=3.5
+  }else{
+    height=4.5
+  }
+
+  nclusters=length(unique(df$cluster))
+  width=max(3, nclusters * 0.2 + 1) * 3
+
+  plot1<-ggplot(df,aes(x=cluster,y=nUMI)) +
+    geom_boxplot() +
+    scale_y_log10() + 
+    theme_bw() + 
+    ggtitle("No. UMI") +
+    scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 30)) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          plot.title = element_text(hjust = 0.5),
+          axis.title = element_blank())
+
+  plot2<-ggplot(df,aes(x=cluster,y=ngene)) +
+    geom_boxplot() + 
+    scale_y_log10() + 
+    theme_bw() + 
+    ggtitle("No. Genes") +  
+    scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 30)) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          plot.title = element_text(hjust = 0.5),
+          axis.title = element_blank())
+
+  plot3<-ggplot(df,aes(x=cluster,y=MtRNA)) +
+    geom_boxplot() + 
+    theme_bw() + 
+    ggtitle("Percent.mt") +
+    scale_x_discrete(labels = function(x) stringr::str_wrap(x, width = 30)) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          plot.title = element_text(hjust = 0.5),
+          axis.title = element_blank())
+  
+  p<-plot1+plot2+plot3+plot_layout(ncol=3)
+  
+  ggsave(file_path, width=width, height=height, units="in", dpi=300, bg="white")
 }
