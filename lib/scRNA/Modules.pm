@@ -71,7 +71,7 @@ our %EXPORT_TAGS = (
 
         add_signacx
 
-        add_celltypist
+        add_CellTypist
         add_STCAT
 
         add_decontX
@@ -911,17 +911,16 @@ sub add_azimuth {
 } ## end sub add_azimuth
 
 
-sub add_celltypist {
+sub add_CellTypist {
   my ( $config, $def, $tasks, $target_dir, $celltypist_task, $obj_ref, $cur_options ) = @_;
 
-  my $model_file = getValue( $def, "celltypist_model_file" );
+  my $model_file = getValue( $def, "CellTypist_model_file" );
   if ( !-s $model_file ) {
     die "CellTypist model file $model_file does not exist.";
   }
 
-  my $target_folder   = $target_dir . "/" . $celltypist_task;
-  my $script          = dirname(__FILE__) . "/../scRNA/run_celltypist.py";
-  my $majority_voting = getValue( $def, "celltypist_majority_voting", 0 ) ? "--majority_voting" : "";
+  my $target_folder = $target_dir . "/" . $celltypist_task;
+  my $script        = dirname(__FILE__) . "/../scRNA/run_celltypist.py";
   $config->{$celltypist_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
     perform       => 1,
@@ -931,7 +930,8 @@ sub add_celltypist {
     check_program => 0,
     option        => "
 python $script \\
-  --model_file $model_file $majority_voting \\
+  --model_file $model_file \\
+  --majority_voting \\
   --input __FILE__ \\
   --output_prefix __NAME__
 
@@ -963,7 +963,7 @@ rm -rf .celltypist .config
   };
 
   push( @$tasks, $celltypist_task );
-} ## end sub add_celltypist
+} ## end sub add_CellTypist
 
 
 sub add_STCAT {
@@ -3596,6 +3596,29 @@ sub add_bubble_plots {
 } ## end sub add_bubble_plots
 
 
+sub add_rds2h5ad {
+  my ( $config, $def, $summary, $target_dir, $h5ad_task, $rds_ref ) = @_;
+
+  $config->{$h5ad_task} = {
+    class                    => "CQS::IndividualR",
+    perform                  => 1,
+    target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $h5ad_task,
+    rtemplate                => "../scRNA/scRNA_func.r,../scRNA/rds2h5ad.r",
+    parameterSampleFile1_ref => $rds_ref,
+    output_file_ext          => ".h5ad",
+    sh_direct                => 1,
+    no_docker                => getValue( $def, "rds2h5ad_no_docker", 1 ),
+    pbs                      => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "6",
+      "mem"      => "40gb"
+    },
+  };
+
+  push( @$summary, $h5ad_task );
+} ## end sub add_rds2h5ad
+
+
 sub add_individual_qc_tasks {
   my ( $config, $def, $summary, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, $doublet_finder_ref, $decontX_ref ) = @_;
 
@@ -3633,8 +3656,22 @@ sub add_individual_qc_tasks {
     };
     add_azimuth( $config, $def, $summary, $target_dir, $azimuth_task, $raw_individual_qc_task, $cur_options, 1 );
     $azimuth_ref = [ $azimuth_task, ".meta.rds" ];
-    #print($config->{$azimuth_task});
   } ## end if ( getValue( $def, "perform_Azimuth"...))
+
+  my $celltypist_ref = undef;
+  if ( getValue( $def, "perform_CellTypist", 0 ) ) {
+    my $h5ad_task = $raw_individual_qc_task . "_h5ad";
+    add_rds2h5ad( $config, $def, $summary, $target_dir, $h5ad_task, [ $raw_individual_qc_task, '.rds$' ] );
+    my $h5ad_ref = [ $h5ad_task, ".h5ad" ];
+
+    my $celltypist_task = $raw_individual_qc_task . "_CellTypist";
+    my $cur_options     = {
+      task_name => $def->{task_name},
+      reduction => $reduction,
+    };
+    add_CellTypist( $config, $def, $summary, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
+    $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
+  } ## end if ( getValue( $def, "perform_CellTypist"...))
 
   if ( !defined $decontX_ref ) {
     if ( getValue( $def, "perform_decontX", 0 ) && !getValue( $def, "remove_decontX", 0 ) ) {
@@ -3663,6 +3700,11 @@ sub add_individual_qc_tasks {
       by_sctransform     => getValue( $def, "by_sctransform",            0 ),
       use_sctransform_v2 => getValue( $def, "use_sctransform_v2",        0 ),
       doublet_column     => getValue( $def, "validation_doublet_column", getValue( $def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5" ) ),
+      CellTypist_column  => getValue( $def, "CellTypist_column",         "majority_voting" ),
+      bubblemap_file   => getValue( $def, "bubblemap_file" ),
+      bubblemap_width  => getValue( $def, "bubblemap_width", 4500 ),
+      bubblemap_height => getValue( $def, "bubblemap_height", 1500 ),
+      bubblemap_unit   => getValue( $def, "bubblemap_unit", "px" ),
     },
     parameterSampleFile2_ref => $raw_individual_qc_task,
     parameterSampleFile3_ref => $sctk_ref,
@@ -3671,6 +3713,7 @@ sub add_individual_qc_tasks {
     parameterSampleFile6_ref => $decontX_ref,
     parameterSampleFile7_ref => $doublet_finder_ref,
     parameterSampleFile8_ref => $azimuth_ref,
+    parameterSampleFile9_ref => $celltypist_ref,
     output_file_ext          => ".${prefix}qc.html",
     sh_direct                => 1,
     pbs                      => {
@@ -3682,7 +3725,7 @@ sub add_individual_qc_tasks {
 
   push( @$summary, $qc_report_task );
 
-  return ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref );
+  return ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref, $celltypist_ref );
 } ## end sub add_individual_qc_tasks
 
 

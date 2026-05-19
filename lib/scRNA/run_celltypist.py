@@ -71,6 +71,15 @@ def celltypist_predict(args, output_file, logger):
   logger.info("reading input %s", args.input)
   adata = sc.read_h5ad(args.input)
 
+  # 1. Store raw counts in .layers if you haven't already (good practice)
+  adata.layers["counts"] = adata.X.copy()
+
+  # 2. Normalize each cell to 10,000 counts
+  sc.pp.normalize_total(adata, target_sum=1e4)
+
+  # 3. Logarithmize the data (log(x+1))
+  sc.pp.log1p(adata)
+
   logger.info(f"run celltypist using model {args.model_file} with majority_voting={args.majority_voting} ...")
   predictions = celltypist.annotate(adata, model = args.model_file, majority_voting = args.majority_voting)
   

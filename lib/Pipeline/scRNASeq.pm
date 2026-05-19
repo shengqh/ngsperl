@@ -500,7 +500,7 @@ sub getScRNASeqConfig {
     } ## end if ($remove_doublets)
 
     if ($perform_individual_qc) {
-      ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref ) = add_individual_qc_tasks( $config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, undef, $decontX_ref );
+      ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref, $celltypist_ref ) = add_individual_qc_tasks( $config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, undef, $decontX_ref );
     }
 
     if ( $perform_individual_dynamic_qc ) {
@@ -711,15 +711,15 @@ sub getScRNASeqConfig {
       } ## end if ( !defined $azimuth_ref)
 
       if ( !defined $celltypist_ref ) {
-        if ( getValue( $def, "perform_celltypist", 0 ) ) {
-          my $celltypist_task = $seurat_task . "_celltypist";
+        if ( getValue( $def, "perform_CellTypist", 0 ) ) {
+          my $celltypist_task = $seurat_task . "_CellTypist";
           my $cur_options  = {
             task_name => $def->{task_name},
             reduction => $reduction,
           };
-          add_celltypist( $config, $def, $tasks, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
+          add_CellTypist( $config, $def, $tasks, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
           $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
-        } ## end if ( getValue( $def, "perform_celltypist"...))
+        } ## end if ( getValue( $def, "perform_CellTypist"...))
       } ## end if ( !defined $celltypist_ref)
 
       if ( !defined $STCAT_ref ) {
