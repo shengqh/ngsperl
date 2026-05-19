@@ -46,19 +46,29 @@ print(kable(option_table))
 obj_map<-read_file_map('fileList2.txt')
 samples_names=names(obj_map)
 
+cell_types=c("cell_type")
 has_signacx<-file.exists('fileList4.txt')
 if(has_signacx){
   signacx_map<-read_file_map('fileList4.txt')
+  cell_types<-c(cell_types, "SignacX")
 }
 
 has_singler<-file.exists('fileList5.txt')
 if(has_singler){
   singler_map<-read_file_map('fileList5.txt')
+  cell_types<-c(cell_types, "SingleR")
 }
 
 has_azimuth<-file.exists('fileList8.txt')
 if(has_azimuth){
   azimuth_map<-read_file_map('fileList8.txt')
+  cell_types<-c(cell_types, "Azimuth")
+}
+
+has_celltypist<-file.exists('fileList9.txt')
+if(has_celltypist){
+  celltypist_map<-read_file_map('fileList9.txt')
+  cell_types<-c(cell_types, "CellTypist")
 }
 ```
 
@@ -111,23 +121,27 @@ figureRmd<-function(obj_map, samples_names){
     result = add_figure(result, paste0(sample_prefix, ".qc5.png"), "## nUMI, nGene, mtRNA, nGene and cell distribution in each cluster\n\n")
     result = add_figure(result, paste0(sample_prefix, ".qc4.png"), "## mtRNA, nGene, nUMI and PC1 in UMAP\n\n")
     result = add_figure(result, paste0(sample_prefix, ".qc6.png"), "## Cluster in PCA/UMAP\n\n")
-    result = add_figure(result, paste0(sample_prefix, ".celltype.png"), "## Cell type annotation\n\n")
-    result = add_figure(result, paste0(sample_prefix, ".qc7.png"), "## Cell type cluster annotation\n\n")
     result = add_figure(result, file.path(detail_folder, paste0(cur_sample, ".decontX.png")), "## DecontX\n\n")
-    result = add_figure(result, paste0(sample_prefix, ".cta.png"), "\n## Cell type annotation score\n\n")
-    result = add_figure(result, paste0(sample_prefix, ".heatmap.png"), "\n## Heatmap of highly expressed gene of each cluster\n\n")
-    result = add_figure(result, paste0(sample_prefix, ".bubble.png"), "\n## Expression of user defined marker genes\n\n")
+    result = add_figure(result, paste0(sample_prefix, ".cta.png"), "\n## Cluster cell type annotation score\n\n")
+    result = add_figure(result, paste0(sample_prefix, ".heatmap.png"), "\n## Heatmap of Scaled Expression\n\n")
+    result = add_figure(result, paste0(sample_prefix, ".heatmap.data.png"), "\n## Heatmap of Normalized Expression\n\n")
 
-    if(has_signacx){
-      result = add_figure(result, gsub(".meta.rds", ".SignacX.dot.png", signacx_map[[cur_sample]]), "\n### SignacX: Cell types > 1%\n\n")
-    }
+    result = paste0(result, "\n## Cell type annotation\n\n### panglaodb cluster cell type\n\n")
+    umap_png = paste0(sample_prefix, ".qc7.png")
+    result = add_figure(result, umap_png, paste0("\n#### UMAP\n\n"))
+    dot_png = paste0(sample_prefix, ".bubble.png")
+    result = add_figure(result, dot_png, paste0("\n#### Curated marker genes \n\n"))
 
-    if(has_singler){
-      result = add_figure(result, gsub(".meta.rds", ".SingleR.dot.png", singler_map[[cur_sample]]), "\n### SingleR: Cell types > 1%\n\n")
-    }
-
-    if(has_azimuth){
-      result = add_figure(result, gsub(".meta.rds", ".Azimuth.dot.png", azimuth_map[[cur_sample]]), "\n### Azimuth: Cell types > 1%\n\n")
+    for(ct_name in cell_types){
+      if(ct_name == "cell_type"){
+        result = paste0(result, "\n### panglaodb cell type\n\n")
+      }else{
+        result = paste0(result, "\n### ", ct_name, "\n\n")
+      }
+      umap_png = paste0(detail_folder, "/", cur_sample, ".", ct_name, ".umap.png")
+      result = add_figure(result, umap_png, paste0("\n#### UMAP\n\n"))
+      dot_png = paste0(detail_folder, "/", cur_sample, ".", ct_name, ".dot.png")
+      result = add_figure(result, dot_png, paste0("\n#### Curated marker genes \n\n"))
     }
 
     result = add_figure(result, paste0(detail_folder, "/", cur_sample, ".validation.png"), paste0("\n## Validation of ", cur_sample, "\n\n"))

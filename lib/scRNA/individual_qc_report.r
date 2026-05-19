@@ -1,5 +1,5 @@
 rm(list=ls()) 
-outFile='Aorta_Progeria'
+outFile='P14586'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
@@ -10,7 +10,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20260324_Aorta_Progeria_scRNA_mm10/cellbender_nd_raw_qc_report/result')
+setwd('/data/h_gelbard_lab/projects/shengq2/20260427_14586_HW/cellbender_nd_raw_qc_sct2_report/result')
 
 ### Parameter setting end ###
 
@@ -37,8 +37,6 @@ sample_names=names(obj_map)
 
 validation_columns=c()
 
-cell_types=c("seurat_cell_type")
-
 has_sctk<-file.exists(parSampleFile3)
 if(has_sctk){
   sctk_map<-read_file_map(parSampleFile3)
@@ -49,14 +47,12 @@ has_signacx<-exists('parSampleFile4')
 if(has_signacx){
   signacx_map<-read_file_map(parSampleFile4)
   validation_columns<-c(validation_columns, "SignacX")
-  cell_types<-c(cell_types, "SignacX")
 }
 
 has_singler<-exists('parSampleFile5')
 if(has_singler){
   singler_map<-read_file_map(parSampleFile5)
   validation_columns<-c(validation_columns, "SingleR")
-  cell_types<-c(cell_types, "SingleR")
 }
 
 has_decontX<-exists('parSampleFile6')
@@ -74,14 +70,53 @@ has_azimuth<-exists('parSampleFile8')
 if(has_azimuth){
   azimuth_map<-read_file_map(parSampleFile8)
   validation_columns<-c(validation_columns, "Azimuth")
-  cell_types<-c(cell_types, "Azimuth")
 }
 
-draw_figure<-function(sample_prefix, cur_meta, cur_validation_columns){
+has_celltypist<-exists('parSampleFile9')
+if(has_celltypist){
+  celltypist_map<-read_file_map(parSampleFile9)
+  validation_columns<-c(validation_columns, "CellTypist")
+}
+
+draw_figure<-function(sample_prefix, obj, cur_validation_columns, cur_cell_types){
+  cur_meta = obj@meta.data
   if(any(cur_validation_columns %in% colnames(cur_meta))){
     alltbl=NULL
 
-    col_name="SignacX"
+    ct_name="SignacX"
+    for(ct_name in cur_cell_types){
+      cat("Drawing dot and umap for ", ct_name, " ...\n")
+      major_obj=get_category_with_min_percentage(obj, ct_name, 0.01)
+      ct_name_count = paste0(ct_name, "_count")
+      major_obj@meta.data = add_column_count(major_obj@meta.data, ct_name, ct_name_count)
+
+      if("umap" %in% names(major_obj@reductions)){
+        umap_png = paste0(sample_prefix, ".", ct_name, ".umap.png")
+        g=get_dim_plot_labelby(major_obj, label.by = ct_name_count, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
+        ggsave(umap_png, g, width=8, height=4, units="in", dpi=300, bg="white")
+        cat("Saved ", umap_png, "\n")
+      }
+
+      bubblemap_file=myoptions$bubblemap_file
+      has_bubblemap <- !is.null(bubblemap_file) && file.exists(bubblemap_file)
+      if(has_bubblemap){
+        bubblemap_height=as.numeric(myoptions$bubblemap_height)
+        bubblemap_width=as.numeric(myoptions$bubblemap_width)
+        bubblemap_unit=as.character(myoptions$bubblemap_unit)
+        g<-get_bubble_plot(
+          obj=major_obj, 
+          cur_res=NA, 
+          cur_celltype=ct_name_count, 
+          bubblemap_file, 
+          assay="RNA", 
+          species=myoptions$species,
+          dot.scale=4)
+        dot_png = paste0(sample_prefix, ".", ct_name, ".dot.png")
+        ggsave(dot_png, g, width=bubblemap_width, height=bubblemap_height, units=bubblemap_unit, dpi=300, bg="white")
+        cat("Saved ", dot_png, "\n")
+      }
+    }
+
     for(col_name in cur_validation_columns){
       if(!col_name %in% colnames(cur_meta)){
         next;
@@ -134,6 +169,12 @@ for(sample_name in sample_names){
   ct_tb<-rbind(ct_tb, ct_df)
 
   cur_validation_columns = validation_columns;
+
+  # In case some of the cell type annotation is failed, but we still want to 
+  # include the successfully annotated cell type for validation and figure drawing, 
+  # we will check the existence of each annotation result file, and only add the 
+  # annotation results that exist in the current sample to the meta data and figure drawing.
+  cur_cell_types = c("cell_type")
   
   df_column = ""
   
@@ -153,7 +194,8 @@ for(sample_name in sample_names){
     signacx_file = signacx_map[[sample_name]]
     if(file.exists(signacx_file)){
       signacx_meta = readRDS(signacx_file)
-     cur_meta = fill_meta_info(sample_name, signacx_meta, cur_meta, "signacx_CellStates", "SignacX")
+      cur_meta = fill_meta_info(sample_name, signacx_meta, cur_meta, "signacx_CellStates", "SignacX")
+      cur_cell_types = c(cur_cell_types, "SignacX")
     }
   }
   
@@ -162,6 +204,7 @@ for(sample_name in sample_names){
     if(file.exists(singler_file)){
       singler_meta = readRDS(singler_file)
       cur_meta = fill_meta_info(sample_name, singler_meta, cur_meta, "SingleR_labels", "SingleR")
+      cur_cell_types = c(cur_cell_types, "SingleR")
     }
   }
   
@@ -170,6 +213,17 @@ for(sample_name in sample_names){
     if(file.exists(azimuth_file)){
       azimuth_meta = readRDS(azimuth_file)
       cur_meta = fill_meta_info(sample_name, azimuth_meta, cur_meta, "Azimuth_finest", "Azimuth")
+      cur_cell_types = c(cur_cell_types, "Azimuth")
+    }
+  }
+  
+  if(has_celltypist){
+    celltypist_column = myoptions$CellTypist_column
+    celltypist_file = celltypist_map[[sample_name]]
+    if(file.exists(celltypist_file)){
+      celltypist_meta = read.csv(celltypist_file, row.names=1)
+      cur_meta = fill_meta_info(sample_name, celltypist_meta, cur_meta, celltypist_column, "CellTypist")
+      cur_cell_types = c(cur_cell_types, "CellTypist")
     }
   }
   
@@ -210,13 +264,16 @@ for(sample_name in sample_names){
       ggsave(paste0(sample_prefix, ".decontX.png"), width=4400, height=1600, dpi=300, units="px", bg="white")
     }
   }
+
+  # draw figure first, then rename cells and save meta, 
+  # otherwise, the cells in RNA and SCT data will have different names and cause error in figure drawing.
+  cat("draw_figure ...\n")
+  obj@meta.data = cur_meta
+  draw_figure(sample_prefix, obj, cur_validation_columns, cur_cell_types)
   
   rownames(cur_meta)<-paste0(sample_name, "_", rownames(cur_meta))
   cat("save meta ...\n")
   saveRDS(cur_meta, paste0(sample_prefix, ".meta.rds"))
-
-  cat("draw_figure ...\n")
-  draw_figure(sample_prefix, cur_meta, cur_validation_columns)
 }
 
 stats_df<-stats_df[,colnames(stats_df) != "tringsAsFactors",drop=FALSE]
@@ -228,4 +285,3 @@ write.csv(stats_df, file.path(detail_folder, "sample_summary.csv"), row.names=F)
 ct_tb<-acast(ct_tb, "Sample~Var1",  value.var="Freq", fill=0)
 write.csv(ct_tb, file.path(detail_folder, "sample_celltype.csv"), row.names=TRUE)
 writeLines(validation_columns, file.path(detail_folder,"validation_columns.txt"))
-
