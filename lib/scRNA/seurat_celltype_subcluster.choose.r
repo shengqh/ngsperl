@@ -585,6 +585,15 @@ if(output_heatmap){
           units="px",
           dpi=300,
           bg="white")
+
+  g<-MyDoHeatMap(obj, max_cell=5000, assay="RNA", features = allmarkers, slot="data", group.by = seurat_output_layer, angle = 90) + NoLegend()
+  ggsave( paste0(prefix, ".top10.heatmap.data.png"), 
+          g,
+          width=get_heatmap_width(nclusters), 
+          height=get_heatmap_height(length(allmarkers)),
+          units="px",
+          dpi=300,
+          bg="white")
 }
 
 g<-get_dim_plot(obj, group.by = "seurat_clusters", label.by=seurat_output_layer, label.size = 8, legend.title="") + 
@@ -657,6 +666,16 @@ ggsave( paste0( prefix, ".cell_type.top10.heatmap.png"),
         bg="white",
         limitsize=FALSE)
 
+g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, slot="data", group.by = "cell_type", angle = 90) + NoLegend()
+ggsave( paste0( prefix, ".cell_type.top10.heatmap.data.png"), 
+        g,
+        width=get_heatmap_width(length(unique(obj$cell_type))), 
+        height=get_heatmap_height(length(top10genes)), 
+        units="px",
+        dpi=300,
+        bg="white",
+        limitsize=FALSE)
+
 g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, group.by = "seurat_cell_type", angle = 90) + NoLegend()
 ggsave( paste0( prefix, ".seurat_cell_type.top10.heatmap.png"), 
         g,
@@ -667,4 +686,13 @@ ggsave( paste0( prefix, ".seurat_cell_type.top10.heatmap.png"),
         bg="white",
         limitsize=FALSE)
 
+g<-MyDoHeatMap(obj, max_cell = 5000, assay="RNA", features = top10genes, slot="data", group.by = "seurat_cell_type", angle = 90) + NoLegend()
+ggsave( paste0( prefix, ".seurat_cell_type.top10.heatmap.data.png"), 
+        g,
+        width=get_heatmap_width(length(unique(obj$seurat_cell_type))), 
+        height=get_heatmap_height(length(top10genes)), 
+        units="px",
+        dpi=300,
+        bg="white",
+        limitsize=FALSE)
 cat("done ...\n")

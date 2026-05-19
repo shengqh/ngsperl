@@ -15,13 +15,13 @@ knitr::opts_chunk$set(echo=FALSE,  message=FALSE, warning=FALSE, results = 'asis
 source("scRNA_func.r")
 ```
 
-```{css, echo=FALSE}
+```{css}
 #content{
     max-width:1920px;
 }
 ```
 
-```{r data, include=FALSE}
+```{r data}
 source("reportFunctions.R")
 
 option_table<-read.table("fileList1.txt", sep="\t", stringsAsFactors = F) %>% 
@@ -44,7 +44,7 @@ has_cell_type_png=file.exists(paste0(detailFile, ".cell_type.umap.png"))
 
 ## Cell type UMAP
 
-```{r, echo=FALSE}
+```{r}
 check_and_include_graphics(paste0(outFile, ".pre.umap.png"))
 ```
 
@@ -52,7 +52,7 @@ check_and_include_graphics(paste0(outFile, ".pre.umap.png"))
 
 ## sub-clustering UMAP
 
-```{r, echo=FALSE}
+```{r}
 cts<-readLines(paste0(outFile, ".orig_cell_types.txt"))
 
 resFile<-"sub_umap.Rmd"
@@ -78,71 +78,94 @@ cat(figureRmd(cts), file=resFile)
 ```{r, child=resFile} 
 ```
 
-```{r, echo=FALSE, eval=has_cell_type_png}
+```{r, eval=has_cell_type_png}
 cat("\n\n## Cell type level\n\n### UMAP\n\n")
 include_graphics(paste0(detailFile, ".cell_type.umap.png"))
 ```
 
-```{r, echo=FALSE, eval=has_cell_type_png}
+```{r, eval=has_cell_type_png}
 cat("\n\n### Marker genes\n\n")
 include_graphics(paste0(detailFile, ".cell_type.dot.png"))
 ```
 
-```{r, echo=FALSE, eval=has_cell_type_png}
+```{r, eval=has_cell_type_png}
 cat("\n\n### Sample / Cell type\n\n")
 scts<-read.csv(paste0(detailFile, ".cell_type.sample_celltype.csv"), check.names=F, row.names=1)
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count", "Cell count in each cell type of each sample"))))
 ```
-```{r, echo=FALSE, eval=has_cell_type_png}
+```{r, eval=has_cell_type_png}
 include_graphics(paste0(detailFile, ".cell_type.sample_celltype.png"))
 ```
-```{r, echo=FALSE, eval=has_cell_type_png}
+```{r, eval=has_cell_type_png}
 include_graphics(paste0(detailFile, ".cell_type.celltype_sample.png"))
 ```
 
-```{r, echo=FALSE, eval=has_cell_type_png}
+```{r, eval=has_cell_type_png}
 cat("\n\n### Cell type individual UMAP\n\n")
 include_graphics(paste0(detailFile, ".cell_type.cell.png"))
 ```
 
-```{r, echo=FALSE, eval=has_cell_type_png}
+```{r, eval=has_cell_type_png}
 cat("\n\n### Cell type top 10 heatmap\n\n")
 include_graphics(paste0(outFile, ".cell_type.top10.heatmap.png"))
 ```
 
-```{r, echo=FALSE}
-cat("## Sub cluster level\n\n### UMAP\n\n")
+## Cell subtype level
+
+### UMAP
+
+```{r}
 include_graphics(paste0(detailFile, ".seurat_cell_type.umap.png"))
 ```
 
-```{r, echo=FALSE}
-cat("### Marker genes\n\n### UMAP\n\n")
+### Marker genes
+
+```{r}
 include_graphics(paste0(detailFile, ".seurat_cell_type.dot.png"))
 ```
 
-```{r, echo=FALSE, eval=file.exists(cta_file)}
+```{r, eval=file.exists(cta_file)}
 cat("\n### Cell type annotation score\n\n")
 include_graphics(cta_file)
 ```
 
-```{r, echo=FALSE}
-cat("\n### Sample / cell subtype\n\n")
+### Sample / cell subtype
+
+#### Cell count in each subtype of each sample
+
+```{r}
 scts<-read.csv(paste0(detailFile, ".seurat_cell_type.sample_celltype.csv"), check.names=F, row.names=1)
 print(kable_styling(kable(t(scts), caption=tabRef("sct_count_sub", "Cell count in each sub cluster of each sample"))))
 ```
-```{r, echo=FALSE}
+
+#### Cell of each subtype crossing samples
+
+```{r}
 include_graphics(paste0(detailFile, ".seurat_cell_type.sample_celltype.png"))
 ```
-```{r, echo=FALSE}
+
+#### Cell of each sample crossing subtypes
+
+```{r}
 include_graphics(paste0(detailFile, ".seurat_cell_type.celltype_sample.png"))
 ```
 
-```{r, echo=FALSE}
-cat("\n### Cell subtype individual UMAP\n\n")
+### Cell subtype individual UMAP
+
+```{r}
 include_graphics(paste0(detailFile, ".seurat_cell_type.cell.png"))
 ```
 
-```{r, echo=FALSE}
-cat("\n### Cell subtype top 10 heatmap\n\n")
+### Cell subtype top 10 heatmap
+
+#### Scaled expression
+
+```{r, }
 include_graphics(paste0(outFile, ".seurat_cell_type.top10.heatmap.png"))
+```
+
+#### Normalized expression
+
+```{r, }
+include_graphics(paste0(outFile, ".seurat_cell_type.top10.heatmap.data.png"))
 ```

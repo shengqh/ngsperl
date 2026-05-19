@@ -52,21 +52,19 @@ dir.create(file_dir, showWarnings=FALSE)
 file_prefix=file.path(file_dir, outFile)
 
 meta<-readRDS(parFile2)
-if(create_clusters){
-  celltype_cluster_column = paste0(celltype_column, "_clusters")
-  meta[,celltype_column]=factor_by_count(meta[,celltype_column])
-  meta[,celltype_cluster_column]=as.numeric(meta[,celltype_column])-1
+
+if(celltype_column == "seurat_cell_type"){
+  celltype_cluster_column = "seurat_clusters"
+}else if (paste0("seurat_", celltype_column) %in% colnames(meta)){
+  celltype_cluster_column = "seurat_clusters"
 }else{
-  if(celltype_column == "seurat_cell_type"){
-    celltype_cluster_column = "seurat_clusters"
-  }else if (paste0("seurat_", celltype_column) %in% colnames(meta)){
-    celltype_cluster_column = "seurat_clusters"
-  }else{
+  celltype_cluster_column = paste0(celltype_column, "_clusters")
+  if(!celltype_cluster_column %in% colnames(meta)){
     celltype_cluster_column = paste0(celltype_column, "_clusters")
+    meta[,celltype_column]=factor_by_count(meta[,celltype_column])
+    meta[,celltype_cluster_column]=as.numeric(meta[,celltype_column])-1
   }
 }
-
-stopifnot(celltype_cluster_column %in% colnames(meta))
 
 #meta[,celltype_cluster_column] <- as.character(meta[,celltype_cluster_column])
 
@@ -99,63 +97,53 @@ if(file.exists(parSampleFile3)){
   validation_columns<-c(validation_columns, "SDF")
 }
 
-if(!("SignacX" %in% colnames(meta))){
-  if(exists("parSampleFile4")){
-    meta = fill_meta_info_list( source_meta_file_list=parSampleFile4, 
-                                target_meta=meta, 
-                                source_columns="signacx_CellStates", 
-                                target_column="SignacX")
-    celltype_annotation_columns<-c(celltype_annotation_columns, "SignacX")
-  }
-}else{
+if("SignacX" %in% colnames(meta)){
+  celltype_annotation_columns<-c(celltype_annotation_columns, "SignacX")
+}else if(exists("parSampleFile4")){
+  meta = fill_meta_info_list( source_meta_file_list=parSampleFile4, 
+                              target_meta=meta, 
+                              source_columns="signacx_CellStates", 
+                              target_column="SignacX")
   celltype_annotation_columns<-c(celltype_annotation_columns, "SignacX")
 }
 
-if(!("SingleR" %in% colnames(meta))){
-  if(exists('parSampleFile5')){
-    meta = fill_meta_info_list( source_meta_file_list=parSampleFile5,
-                                target_meta=meta, 
-                                source_columns="SingleR_labels", 
-                                target_column="SingleR")
-    celltype_annotation_columns<-c(celltype_annotation_columns, "SingleR")
-  }
-}else{
+if("SingleR" %in% colnames(meta)){
+  celltype_annotation_columns<-c(celltype_annotation_columns, "SingleR")
+}else if(exists('parSampleFile5')){
+  meta = fill_meta_info_list( source_meta_file_list=parSampleFile5,
+                              target_meta=meta, 
+                              source_columns="SingleR_labels", 
+                              target_column="SingleR")
   celltype_annotation_columns<-c(celltype_annotation_columns, "SingleR")
 }
 
-if(!("Azimuth" %in% colnames(meta))) {
-  if(exists('parSampleFile7')){
-    meta = fill_meta_info_list( source_meta_file_list=parSampleFile7, 
-                                target_meta=meta, 
-                                source_columns="Azimuth_finest", 
-                                target_column="Azimuth")
-    celltype_annotation_columns<-c(celltype_annotation_columns, "Azimuth")
-  }
-}else{
+if("Azimuth" %in% colnames(meta)) {
+  celltype_annotation_columns<-c(celltype_annotation_columns, "Azimuth")
+}else if(exists('parSampleFile7')){
+  meta = fill_meta_info_list( source_meta_file_list=parSampleFile7, 
+                              target_meta=meta, 
+                              source_columns="Azimuth_finest", 
+                              target_column="Azimuth")
   celltype_annotation_columns<-c(celltype_annotation_columns, "Azimuth")
 }
 
-if(!("celltypist" %in% colnames(meta))) {
-  if(exists('parSampleFile8')){
-    meta = fill_meta_info_list( source_meta_file_list=parSampleFile8, 
-                                target_meta=meta, 
-                                source_columns="predicted_labels", 
-                                target_column="celltypist")
-    celltype_annotation_columns<-c(celltype_annotation_columns, "celltypist")
-  }
-}else{
+if("celltypist" %in% colnames(meta)) {
+  celltype_annotation_columns<-c(celltype_annotation_columns, "celltypist")
+} else if (exists('parSampleFile8')){
+  meta = fill_meta_info_list( source_meta_file_list=parSampleFile8, 
+                              target_meta=meta, 
+                              source_columns="predicted_labels", 
+                              target_column="celltypist")
   celltype_annotation_columns<-c(celltype_annotation_columns, "celltypist")
 }
 
-if(!("STCAT" %in% colnames(meta))) {
-  if(exists('parSampleFile9')){
-    meta = fill_meta_info_list( source_meta_file_list=parSampleFile9, 
-                                target_meta=meta, 
-                                source_columns="Prediction", 
-                                target_column="STCAT")
-    celltype_annotation_columns<-c(celltype_annotation_columns, "STCAT")
-  }
-}else{
+if("STCAT" %in% colnames(meta)) {
+  celltype_annotation_columns<-c(celltype_annotation_columns, "STCAT")
+}else if(exists('parSampleFile9')){
+  meta = fill_meta_info_list( source_meta_file_list=parSampleFile9, 
+                              target_meta=meta, 
+                              source_columns="Prediction", 
+                              target_column="STCAT")
   celltype_annotation_columns<-c(celltype_annotation_columns, "STCAT")
 }
 
@@ -171,6 +159,8 @@ if (!sample_column %in% colnames(meta)){
   stop(paste0("Sample column ", sample_column, " not found in meta data, stop."))
 }
 
+draw_qc_box_plot(meta, cluster_column=celltype_column, file_path=paste0(file_prefix, ".qc.box.png"))
+
 if(length(unique(meta[[sample_column]])) > 1){
   validation_columns<-c(sample_column, validation_columns)
 }
@@ -181,6 +171,9 @@ do_validation<-function(obj, ct_meta, validation_column, file_prefix, pct, reduc
   write.csv(tbl, paste0(file_prefix, ".", pct, ".", validation_column, ".csv"), row.names=FALSE)
 
   ct_obj = get_filtered_obj(obj, validation_column, ct_meta)
+
+  draw_qc_box_plot(ct_obj@meta.data, cluster_column=validation_column, file_path=paste0(file_prefix, ".", pct, ".", validation_column, ".qc.box.png"))
+
   cur_ct=unique(ct_obj@meta.data[,validation_column])
 
   g<-get_dim_plot_labelby(ct_obj, reduction=reduction, label.by=validation_column,  title=paste0(validation_column, " in UMAP")) + guides(fill=guide_legend(ncol =1))
@@ -251,6 +244,10 @@ for(ct in cts){
                   calc_height_per_cluster=200, 
                   calc_width_per_cell=50)
 
+  cat("  qc plot\n")
+  qc_file=paste0(file_prefix, ".", pct, ".qc.box.png")
+  draw_qc_box_plot(ct_meta, cluster_column=celltype_cluster_column, file_path=qc_file)
+
   cat("  highlight plot\n")
   g = Meta_Highlight_Plot(seurat_object = obj, 
                           meta_data_column = celltype_column,
@@ -310,7 +307,7 @@ for(ct in cts){
 
   annotation_tool = celltype_annotation_columns[1]
   for(annotation_tool in celltype_annotation_columns) {
-    cat("  ", annotation_tool, " plot\n")
+    cat(" ", annotation_tool, " plot\n")
     do_validation(obj, 
                   ct_meta, 
                   validation_column=annotation_tool, 
@@ -324,5 +321,7 @@ for(ct in cts){
 writeLines(validation_columns, "validation_columns.txt")
 if(file.exists(parFile3)){
   writeLines(parFile3, "iter_png.txt")
+}else{
+  writeLines(parFile1, "choose_obj.txt")
 }
 
