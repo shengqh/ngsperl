@@ -227,7 +227,7 @@ MyDoHeatMap<-function(obj, max_cell=5000, max_cell_per_cluster=200, features=NUL
       cur_obj <- ScaleData(cur_obj, features=features)
     }
   }
-  g<-DoHeatmap(cur_obj, features=features, assay=assay, slot=slot, ...)
+  g<-DoHeatmap(cur_obj, features=features, assay=assay, slot=slot, group.by=group.by, ...)
   return(g)
 }
 
