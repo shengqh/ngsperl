@@ -9,7 +9,7 @@ obj<-read_object(parFile1)
 
 groups_tbl<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F)
 groups=split(groups_tbl$V2, groups_tbl$V1)
-obj$group = unlist(groups[obj$orig.ident])
+obj@meta.data$group = unlist(groups[obj@meta.data$orig.ident])
 
 ngroup=length(unique(groups_tbl$V2))
 
@@ -32,7 +32,7 @@ for (gene in genes_tbl$V1){
   gdata<-FetchData(object = obj, gene_list)
   gdata$ratio = gdata[,gene1] - gdata[,gene2]
   coords<-data.frame(obj@reductions$umap@cell.embeddings)
-  gdata<-cbind(coords, data.frame(group=obj$group), gdata)
+  gdata<-cbind(coords, data.frame(group=obj@meta.data$group), gdata)
   gdata1<-subset(gdata, gdata$ratio == 0)
   gdata2<-subset(gdata, gdata$ratio < 0)
   gdata3<-subset(gdata, gdata$ratio > 0)

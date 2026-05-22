@@ -124,7 +124,7 @@ signacx$signacx <- unlist(lapply(signacx$signacx_CellStates, function(x){
   smap[as.character(x)]
 }))
 
-obj$signacx<-signacx$signacx
+obj@meta.data$signacx<-signacx$signacx
 
 if(has_bubblemap){
   allgenes<-rownames(obj)

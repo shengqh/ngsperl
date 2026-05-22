@@ -56,7 +56,7 @@ for(idx in c(1:length(files))){
 
   obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
 
-  obj$HTO_classification[obj$HTO_classification.global == "Doublet"] = "Doublet"
+  obj@meta.data$HTO_classification[obj@meta.data$HTO_classification.global == "Doublet"] = "Doublet"
 
   output_post_classification(obj, output_prefix)
 }

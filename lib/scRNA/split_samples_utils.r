@@ -173,12 +173,12 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
   a_hto_names=hto_names[!(hto_names %in% c("Doublet","Negative"))]
   a_hto_names=a_hto_names[order(a_hto_names)]
   hto_names=c(a_hto_names, "Negative", "Doublet")
-  obj$HTO_classification=factor(obj$HTO_classification, levels=hto_names)
+  obj@meta.data$HTO_classification=factor(obj@meta.data$HTO_classification, levels=hto_names)
 
-  tbl<-as.data.frame(table(obj$HTO_classification))
+  tbl<-as.data.frame(table(obj@meta.data$HTO_classification))
   colnames(tbl)<-c("Tagname", "Cell")
 
-  if(length(unique(obj$orig.ident)) > 1){
+  if(length(unique(obj@meta.data$orig.ident)) > 1){
     sdata<-unique(FetchData(obj, c("orig.ident", "HTO_classification")))
     if(nrow(sdata) == length(hto_names)){
       name_map = unlist(split(sdata$orig.ident, sdata$HTO_classification))
@@ -198,13 +198,13 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
     theme(axis.title.y=element_blank())
   ggsave(paste0(output_prefix, ".class.ridge.png"), g, width=nFeature * 4, height=(nIdent + 2) * 0.6, units="in", dpi=300, bg="white")
   
-  old_levels=levels(obj$HTO_classification)
-  obj$HTO_classification<-factor(obj$HTO_classification, levels=rev(old_levels))
+  old_levels=levels(obj@meta.data$HTO_classification)
+  obj@meta.data$HTO_classification<-factor(obj@meta.data$HTO_classification, levels=rev(old_levels))
 
   g = rplot(obj, assay = "HTO", features = tagnames, identName="HTO_classification")
   ggsave(paste0(output_prefix, ".class.dist.png"), g, width=nFeature * 3, height=nIdent * 1.4, units="in", dpi=300, bg="white")
 
-  obj$HTO_classification<-factor(obj$HTO_classification, levels=old_levels)
+  obj@meta.data$HTO_classification<-factor(obj@meta.data$HTO_classification, levels=old_levels)
   
   if (length(tagnames) == 2) {
     g = FeatureScatter(object = obj, feature1 = tagnames[1], feature2 = tagnames[2],group.by="HTO_classification", plot.cor=FALSE) +
@@ -216,8 +216,8 @@ output_post_classification<-function(obj, output_prefix, umap_min_dist=0.3, umap
 
   tmat=data.frame(t(data.frame(counts, check.names = F)), check.names = F)
   rownames(tmat)=colnames(obj)
-  tmat$HTO = unlist(obj$HTO_classification)
-  tmat$HTO.global = unlist(obj$HTO_classification.global)
+  tmat$HTO = unlist(obj@meta.data$HTO_classification)
+  tmat$HTO.global = unlist(obj@meta.data$HTO_classification.global)
   write.csv(tmat, file=paste0(output_prefix, ".csv"))
   
   if(length(tagnames) > 2) {
@@ -350,18 +350,18 @@ do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by="demuxmix", cu
     dmm_calls <- dmmClassify(dmm)
     toc1=toc()
 
-    obj$demuxmix <- case_when(
+    obj@meta.data$demuxmix <- case_when(
       dmm_calls$Type == "multiplet" ~ "Doublet",
       dmm_calls$Type %in% c("negative", "uncertain") ~ "Negative",
       .default = dmm_calls$HTO)
 
-    obj$demuxmix.global <- case_when(
+    obj@meta.data$demuxmix.global <- case_when(
       dmm_calls$Type == "multiplet" ~ "Doublet",
       dmm_calls$Type %in% c("negative", "uncertain") ~ "Negative",
       .default = "Singlet")
 
-    obj$HTO_classification<-obj$demuxmix
-    obj$HTO_classification.global<-obj$demuxmix.global
+    obj@meta.data$HTO_classification<-obj@meta.data$demuxmix
+    obj@meta.data$HTO_classification.global<-obj@meta.data$demuxmix.global
 
     init_column = "demuxmix";
   }else if(init_by == "HTODemux"){
@@ -369,9 +369,9 @@ do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by="demuxmix", cu
     tic()
     obj <- HTODemux(obj, assay = "HTO", positive.quantile = 0.99)
     toc1=toc()
-    obj$HTO_classification[obj$HTO_classification.global == "Doublet"] = "Doublet"
-    obj$HTODemux = obj$HTO_classification
-    obj$HTODemux.global = obj$HTO_classification.global
+    obj@meta.data$HTO_classification[obj@meta.data$HTO_classification.global == "Doublet"] = "Doublet"
+    obj@meta.data$HTODemux = obj@meta.data$HTO_classification
+    obj@meta.data$HTODemux.global = obj@meta.data$HTO_classification.global
 
     init_column = "HTODemux"
   }else{
@@ -387,11 +387,11 @@ do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by="demuxmix", cu
     obj<-demulti_cutoff(obj, output_prefix, cutoff_startval, mc.cores=nrow(obj), cutoff_list=cutoff_list)
     toc1=toc()
 
-    obj$HTO_classification<-obj$scDemultiplex_cutoff
-    obj$HTO_classification.global<-obj$scDemultiplex_cutoff.global
+    obj@meta.data$HTO_classification<-obj@meta.data$scDemultiplex_cutoff
+    obj@meta.data$HTO_classification.global<-obj@meta.data$scDemultiplex_cutoff.global
 
-    obj$scDemultiplex<-obj$scDemultiplex_cutoff
-    obj$scDemultiplex.global<-obj$scDemultiplex_cutoff.global
+    obj@meta.data$scDemultiplex<-obj@meta.data$scDemultiplex_cutoff
+    obj@meta.data$scDemultiplex.global<-obj@meta.data$scDemultiplex_cutoff.global
 
     init_column = "scDemultiplex_cutoff";
   }
@@ -407,8 +407,8 @@ do_scDemultiplex<-function(fname, rdsfile, output_prefix, init_by="demuxmix", cu
     obj<-demulti_refine(obj, paste0(output_prefix, ".", init_by), init_column=init_column, mc.cores=nrow(obj), iterations = 3)
     toc2=toc()
 
-    obj$HTO_classification<-obj$scDemultiplex
-    obj$HTO_classification.global<-obj$scDemultiplex.global
+    obj@meta.data$HTO_classification<-obj@meta.data$scDemultiplex
+    obj@meta.data$HTO_classification.global<-obj@meta.data$scDemultiplex.global
   }
   saveRDS(obj, refine_rds)
 

@@ -108,7 +108,7 @@ for(cname in names(files)){
     obj<-subset(obj, features=rownames(htos))
   }
   
-  obj$filtered<-colnames(obj) %in% colnames(htos)
+  obj@meta.data$filtered<-colnames(obj) %in% colnames(htos)
 
   tagnames=rownames(obj[["HTO"]])
 

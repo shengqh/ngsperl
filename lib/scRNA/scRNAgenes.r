@@ -67,9 +67,9 @@ clusterDf<-clusterDf[order(clusterDf$caCount, clusterDf[,cluster_name], decreasi
 
 clusters<-factor(clusters, levels=unique(clusterDf[,cluster_name]))
 
-obj$final_seurat_clusters<-clusters
+obj@meta.data$final_seurat_clusters<-clusters
 
-samples<-unique(obj$orig.ident)
+samples<-unique(obj@meta.data$orig.ident)
 
 if(!exists("dotPlotOnly")){
   dotPlotOnly<-FALSE

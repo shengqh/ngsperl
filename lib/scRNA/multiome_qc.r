@@ -154,7 +154,7 @@ obj <- FindMultiModalNeighbors(
 )
 
 obj <- FindClusters(obj, resolution = 0.5, verbose = FALSE, graph.name="wsnn")
-obj$seurat_clusters_BiMod <- obj$seurat_clusters
+obj@meta.data$seurat_clusters_BiMod <- obj@meta.data$seurat_clusters
 
 # build a joint UMAP visualization
 obj <- RunUMAP(
@@ -184,8 +184,8 @@ if(length(predict_celltype$max_cta) > 1){
 
 new_cluster_ids<-names(predict_celltype$max_cta)
 names(new_cluster_ids) = colnames(data_norm)
-obj$cell_type = unlist(new_cluster_ids[as.character(obj$seurat_clusters)])
-obj$seurat_cell_type = paste0(obj$seurat_clusters, ": ", obj$cell_type)
+obj@meta.data$cell_type = unlist(new_cluster_ids[as.character(obj@meta.data$seurat_clusters)])
+obj@meta.data$seurat_cell_type = paste0(obj@meta.data$seurat_clusters, ": ", obj@meta.data$cell_type)
 
 g1<-get_dim_plot_labelby(obj, reduction="umap", label.by="cell_type") + xlab("UMAP_1") + ylab("UMAP_2") + ggtitle("Cell type")
 png(paste0(sample_name, ".umap.cell_type.png"), width=1800, height=1500, res=300)

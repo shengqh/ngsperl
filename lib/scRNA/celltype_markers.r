@@ -27,15 +27,15 @@ if(is.list(finalList)){
   celltype=read.csv(parFile3)
   celltype$seurat_cellactivity_clusters=paste0(celltype$seurat_clusters, " : ", celltype[,myoptions$celltype_name])
   ctmap<-split(celltype$seurat_cellactivity_clusters, celltype$seurat_clusters)
-  all_obj$seurat_celltype<-unlist(ctmap[as.character(all_obj$seurat_clusters)])
-  all_obj$seurat_celltype<-factor(all_obj$seurat_celltype, levels=celltype$seurat_cellactivity_clusters)
+  all_obj@meta.data$seurat_celltype<-unlist(ctmap[as.character(all_obj@meta.data$seurat_clusters)])
+  all_obj@meta.data$seurat_celltype<-factor(all_obj@meta.data$seurat_celltype, levels=celltype$seurat_cellactivity_clusters)
 }else{
   all_obj=finalList
   celltype=all_obj@meta.data
   celltype<-unique(celltype[,c("seurat_clusters", myoptions$celltype_name)])
   colnames(celltype)<-c("seurat_clusters", "cell_type")
   seurat_colors<-hue_pal()(nrow(celltype))
-  all_obj$seurat_celltype<-all_obj[[myoptions$celltype_name]]
+  all_obj@meta.data$seurat_celltype<-all_obj@meta.data[[myoptions$celltype_name]]
 }
 
 draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_prefix, min.pct, logfc.threshold){
@@ -43,9 +43,9 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
 
   obj = subset(all_obj, seurat_clusters %in% names(new.cluster.ids))
 
-  obj$cellactivity_clusters <- unlist(new.cluster.ids[as.character(unlist(obj$seurat_clusters))])
+  obj@meta.data$cellactivity_clusters <- unlist(new.cluster.ids[as.character(unlist(obj@meta.data$seurat_clusters))])
   
-  clusterDf<-data.frame(seurat=unlist(obj[["seurat_clusters"]]), cellactivity=unlist(obj[["cellactivity_clusters"]]))
+  clusterDf<-data.frame(seurat=unlist(obj@meta.data$seurat_clusters]), cellactivity=unlist(obj@meta.data$cellactivity_clusters]))
   clusterDf$seurat_colors<-seurat_colors[clusterDf$seurat]
   clusterDf$seurat_cellactivity<-paste0(clusterDf$seurat, " : ", clusterDf$cellactivity)
   seurat_cellactivity<-clusterDf$seurat_cellactivity
@@ -58,10 +58,10 @@ draw_marker_genes<-function(all_obj, new.cluster.ids, file_prefix, celltype_pref
   seurat_cellactivity<-factor(seurat_cellactivity, levels=unique(clusterDf$seurat_cellactivity))
   seurat_cellactivity_colors<-unique(clusterDf$seurat_colors)
   
-  obj$seurat_cellactivity_clusters <-seurat_cellactivity
+  obj@meta.data$seurat_cellactivity_clusters <-seurat_cellactivity
   
-  clusters<-data.frame("cell" = c(1:length(obj$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj$seurat_clusters)), "cellactivity_clusters"=obj$cellactivity_clusters, "seurat_cellactivity_clusters"=obj$seurat_cellactivity_clusters, stringsAsFactors = F)
-  rownames(clusters)<-names(obj$seurat_clusters)
+  clusters<-data.frame("cell" = c(1:length(obj@meta.data$seurat_clusters)), "seurat_clusters"=as.numeric(as.character(obj@meta.data$seurat_clusters)), "cellactivity_clusters"=obj@meta.data$cellactivity_clusters, "seurat_cellactivity_clusters"=obj@meta.data$seurat_cellactivity_clusters, stringsAsFactors = F)
+  rownames(clusters)<-names(obj@meta.data$seurat_clusters)
   write.csv(clusters, file=paste0(file_prefix, ".cluster.csv"))
   
   uniqueClusters=unique(clusters[,c("seurat_clusters", "cellactivity_clusters")])

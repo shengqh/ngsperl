@@ -187,7 +187,7 @@ if(file.exists(parFile3)){
   obj=read_object(parFile3)
 
   idmap = split(id_tbl$seurat_cellactivity_clusters, id_tbl$seurat_clusters)
-  obj$seurat_cellactivity_clusters = unlist(idmap[as.character(obj$seurat_clusters)])
+  obj@meta.data$seurat_cellactivity_clusters = unlist(idmap[as.character(obj@meta.data$seurat_clusters)])
   
   cat("draw pictures ... ")
   
@@ -241,11 +241,11 @@ if(file.exists(parFile3)){
   if(file.exists(myoptions$summary_layer_file)){
     cat("Draw figure in summary layers\n")
     idmap<-split(id_tbl$summary_layer, id_tbl$seurat_clusters)
-    obj$summary_layer = unlist(idmap[as.character(obj$seurat_clusters)])
+    obj@meta.data$summary_layer = unlist(idmap[as.character(obj@meta.data$seurat_clusters)])
     
     draw_celltype_bar(obj, id_tbl$seurat_clusters, id_tbl$summary_layer, "Broad ", paste0(outFile, ".summary_layer"))
     
-    summary_color=color_map[unique(obj$summary_layer)]
+    summary_color=color_map[unique(obj@meta.data$summary_layer)]
     
     p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + 
       guides(colour = guide_legend(override.aes = list(size = 3), ncol=1)) +
@@ -262,7 +262,7 @@ if(file.exists(parFile3)){
       groups<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F) 
       if(length(unique(groups$V2)) > 1){
         sample_map<-split(groups$V2, groups$V1)
-        obj$group=unlist(sample_map[as.character(obj$orig.ident)])
+        obj@meta.data$group=unlist(sample_map[as.character(obj@meta.data$orig.ident)])
         
         width=2000 * length(unique(groups$V2)) + 300
         png(paste0(outFile, ".summary_layer.group.png"), width=width, height=2000, res=300)

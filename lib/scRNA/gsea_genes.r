@@ -18,7 +18,7 @@ celltype=read.csv(parFile2)
 celltype$seurat_cellactivity_clusters=paste0(celltype$seurat_clusters, " : ", celltype$cellactivity_clusters)
 ctmap=split(celltype$seurat_cellactivity_clusters, celltype$seurat_clusters)
 
-all_obj$seurat_cellactivity_clusters=unlist(ctmap[as.character(all_obj$seurat_clusters)])
+all_obj@meta.data$seurat_cellactivity_clusters=unlist(ctmap[as.character(all_obj@meta.data$seurat_clusters)])
 
 gmt<-read.table(parFile3, sep=",", fill=NA, header=F)
 

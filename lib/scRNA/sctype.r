@@ -38,7 +38,7 @@ cL_resutls = do.call("rbind", lapply(unique(obj@meta.data$seurat_clusters), func
 sctype_scores = cL_resutls %>% group_by(cluster) %>% top_n(n = 1, wt = scores)  
 #sctype_scores$type[as.numeric(as.character(sctype_scores$scores)) < sctype_scores$ncells/4] = "Unknown"
 sct=split(sctype_scores$type, sctype_scores$cluster)
-obj$sctype=unlist(sct[as.character(obj$seurat_clusters)])
+obj@meta.data$sctype=unlist(sct[as.character(obj@meta.data$seurat_clusters)])
 
 saveRDS(obj@meta.data, file=)
 

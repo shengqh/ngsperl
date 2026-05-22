@@ -860,10 +860,10 @@ do_harmony<-function(obj, by_sctransform,
 
   if(has_batch_file){
     print("Setting batch ...")
-    poolmap = get_batch_samples(batch_file, unique(obj$sample))
-    obj$batch <- unlist(poolmap[obj$sample])
+    poolmap = get_batch_samples(batch_file, unique(obj@meta.data$sample))
+    obj@meta.data$batch <- unlist(poolmap[obj@meta.data$sample])
   }else if(!("batch" %in% colnames(obj@meta.data))){
-    obj$batch <- obj$sample
+    obj@meta.data$batch <- obj@meta.data$sample
   }
 
   print("RunHarmony ...")
@@ -1505,7 +1505,7 @@ get_bubble_plot<-function(obj,
 get_sub_bubble_plot<-function(obj, obj_res, subobj, subobj_res, bubblemap_file, add_num_cell=FALSE, species=NULL, assay="RNA"){
   old_meta<-obj@meta.data
   
-  obj$fake_layer=paste0("global_", unlist(obj@meta.data[,obj_res]))
+  obj@meta.data$fake_layer=paste0("global_", unlist(obj@meta.data[,obj_res]))
 
   sr = as.character(subobj@meta.data[,subobj_res])
 
@@ -1651,7 +1651,7 @@ read_object<-function(obj_file, meta_rds=NULL, columns=NULL, sample_name=NULL){
     counts=read_scrna_data(obj_file)$counts
     obj=CreateSeuratObject(counts=counts)
     if(!is.null(sample_name)){
-      obj$orig.ident=sample_name
+      obj@meta.data$orig.ident=sample_name
     }
   }
 
@@ -1819,15 +1819,15 @@ draw_feature_qc<-function(prefix, rawobj, ident_name, assay="RNA") {
   colnames(ct)<-c("Sample","Cell")
 
   if(!("project" %in% colnames(rawobj@meta.data))){
-    rawobj$project = rawobj$orig.ident
+    rawobj@meta.data$project = rawobj@meta.data$orig.ident
   }
 
   if(!("sample" %in% colnames(rawobj@meta.data))){
-    rawobj$sample = rawobj$orig.ident
+    rawobj@meta.data$sample = rawobj@meta.data$orig.ident
   }
 
   if(ident_name == "orig.ident"){
-    if(any(rawobj$orig.ident != rawobj$sample)){
+    if(any(rawobj@meta.data$orig.ident != rawobj@meta.data$sample)){
       meta<-rawobj@meta.data
       meta$os = paste0(meta$orig.ident, ":", meta$sample)
       meta<-meta[!duplicated(meta$os),,drop=F]
@@ -2287,10 +2287,10 @@ sub_cluster<-function(subobj,
   if(redo_harmony){
     curreduction = "harmony";
     if(!("batch" %in% colnames(subobj))){
-      subobj$batch = subobj$orig.ident
+      subobj@meta.data$batch = subobj@meta.data$orig.ident
     }
 
-    if (length(unique(subobj$batch)) == 1){
+    if (length(unique(subobj@meta.data$batch)) == 1){
       cat(key, "use old harmony result\n")
     }else{
       cat(key, "redo harmony\n")
@@ -2342,7 +2342,7 @@ sub_cluster<-function(subobj,
         }else{
           cat(key, "redo FastMNN ...\n")
           if(!("batch" %in% colnames(subobj))){
-            subobj$batch = subobj$orig.ident
+            subobj@meta.data$batch = subobj@meta.data$orig.ident
           }
 
           if(assay == "RNA") {
@@ -2352,7 +2352,7 @@ sub_cluster<-function(subobj,
             #https://satijalab.org/seurat/articles/seurat5_integration
             #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
             cat(key, "split RNA by batch ...\n")
-            subobj[["RNA"]] <- split(subobj[["RNA"]], f = subobj$batch)
+            subobj[["RNA"]] <- split(subobj[["RNA"]], f = subobj@meta.data$batch)
 
             cat(key, "NormalizeData ...\n")
             subobj <- NormalizeData(subobj)
@@ -3008,7 +3008,7 @@ read_object_from_rawfile<-function(sample_name, file_path, species, ensembl_map=
     sobj<-counts
     rm(counts)
 
-    sobj$orig.ident = sample_name
+    sobj@meta.data$orig.ident = sample_name
   }else{
     rs<-rowSums(counts)
     counts<-counts[rs>0,]
@@ -3028,7 +3028,7 @@ read_object_from_rawfile<-function(sample_name, file_path, species, ensembl_map=
       counts=update_rownames(counts, toupper)
     }
     sobj = CreateSeuratObject(counts = counts, project = sample_name)
-    sobj$orig.ident <- sample_name
+    sobj@meta.data$orig.ident <- sample_name
     rm(counts)
   }
   return(sobj)
@@ -3487,7 +3487,7 @@ do_analysis<-function(tmp_folder,
 
   if(!by_individual_sample){
     #output individual sample dot plot, with global scaled average gene expression.
-    obj$sample_final<-paste0(obj$orig.ident, ":", obj@meta.data[,final_layer])
+    obj@meta.data$sample_final<-paste0(obj@meta.data$orig.ident, ":", obj@meta.data[,final_layer])
     g<-get_bubble_plot( obj = obj, 
                         cur_res = NA, 
                         cur_celltype = "sample_final", 
@@ -3510,9 +3510,9 @@ do_analysis<-function(tmp_folder,
     has_batch<-FALSE
     if("batch" %in% colnames(obj@meta.data)){
       if("sample" %in% colnames(obj@meta.data)){
-        has_batch=any(obj$batch != obj$sample)
+        has_batch=any(obj@meta.data$batch != obj@meta.data$sample)
       }else{
-        has_batch=any(obj$batch != obj$orig.ident)
+        has_batch=any(obj@meta.data$batch != obj@meta.data$orig.ident)
       }
     }
     if(has_batch){
@@ -3522,7 +3522,7 @@ do_analysis<-function(tmp_folder,
 
   final_clusters=paste0(final_layer, "_clusters")
   final_raw=paste0(final_layer, "_raw")
-  obj$seurat_final=paste0(obj@meta.data[,final_clusters], ": ", obj@meta.data[,final_raw])
+  obj@meta.data$seurat_final=paste0(obj@meta.data[,final_clusters], ": ", obj@meta.data[,final_raw])
 
   cur_celltype=final_layer
   final_celltypes=unique(obj@meta.data[,cur_celltype])

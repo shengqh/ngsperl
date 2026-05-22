@@ -88,7 +88,7 @@ if(file.exists(parFile3)){
   id_tbl$seurat_cellactivity_clusters=factor(id_tbl$seurat_cellactivity_clusters, levels=id_tbl$seurat_cellactivity_clusters)
   idmap = split(id_tbl$seurat_cellactivity_clusters, id_tbl$seurat_clusters)
   
-  obj$seurat_cellactivity_clusters = unlist(idmap[as.character(obj$seurat_clusters)])
+  obj@meta.data$seurat_cellactivity_clusters = unlist(idmap[as.character(obj@meta.data$seurat_clusters)])
   cat("draw pictures ... ")
   p1<-DimPlot(object = obj, reduction = 'umap', label=TRUE, group.by="seurat_cellactivity_clusters") + guides(colour = guide_legend(override.aes = list(size = 3), ncol=1))
   p2<-DimPlot(object = obj, reduction = 'umap', label=FALSE, group.by="orig.ident")

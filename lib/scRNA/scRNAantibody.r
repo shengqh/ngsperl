@@ -16,7 +16,7 @@ clusterDf<-clusterDf[order(clusterDf$caCount, clusterDf[,cluster_name], decreasi
 
 clusters<-factor(clusters, levels=unique(clusterDf[,cluster_name]))
 
-obj$final_seurat_clusters<-clusters
+obj@meta.data$final_seurat_clusters<-clusters
 
 adt<-obj[["ADT"]]
 genes<-rownames(adt@data)

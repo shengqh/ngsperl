@@ -32,7 +32,7 @@ clusterDf<-clusterDf[order(-clusterDf$caCount, clusterDf$seurat_cluters),]
 
 clusters<-factor(clusters, levels=unique(clusterDf[,cluster_name]))
 
-obj$final_seurat_clusters<-clusters
+obj@meta.data$final_seurat_clusters<-clusters
 
 ct<-unique(celltypes$Celltype)[1]
 for(ct in unique(celltypes$Celltype)){

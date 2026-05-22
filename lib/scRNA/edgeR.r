@@ -157,9 +157,9 @@ for (comp in comparisonNames){
     }
     
     de_obj<-subset(obj, cells=all_cells)
-    de_obj$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
-    de_obj$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
-    designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
+    de_obj@meta.data$Group<-c(rep("control", length(control_cells)), rep("sample", length(sample_cells)))
+    de_obj@meta.data$DisplayGroup<-c(rep(controlGroup, length(control_cells)), rep(sampleGroup, length(sample_cells)))
+    designdata<-data.frame("Group"=de_obj@meta.data$Group, "Cell"=colnames(de_obj), "Sample"=de_obj@meta.data$orig.ident, "DisplayGroup"=de_obj@meta.data$DisplayGroup)
     
     designfile<-paste0(file_prefix, ".design")
     write.csv(designdata, file=designfile, row.names=F, quote=F)
@@ -234,8 +234,8 @@ for (comp in comparisonNames){
       all_cells<-c(control_cells, sample_cells)
       
       de_obj<-subset(obj, cells=all_cells)
-      de_obj$Group<-ifelse(colnames(de_obj) %in% control_cells, "control", "sample")
-      de_obj$DisplayGroup<-ifelse(colnames(de_obj) %in% control_cells, controlGroup, sampleGroup)
+      de_obj@meta.data$Group<-ifelse(colnames(de_obj) %in% control_cells, "control", "sample")
+      de_obj@meta.data$DisplayGroup<-ifelse(colnames(de_obj) %in% control_cells, controlGroup, sampleGroup)
       
       designdata<-data.frame("Group"=de_obj$Group, "Cell"=colnames(de_obj), "Sample"=de_obj$orig.ident, "DisplayGroup"=de_obj$DisplayGroup)
       if(!is.null(covariances)){

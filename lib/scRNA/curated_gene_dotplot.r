@@ -37,8 +37,8 @@ hasGroup = exists("parSampleFile4")
 if(hasGroup){
   groups=read.table(parSampleFile4, sep="\t")
   gmap=split(groups$V2, groups$V1)
-  obj$group=unlist(gmap[unlist(obj$orig.ident)])
-  groupnames=unique(obj$group)
+  obj@meta.data$group=unlist(gmap[unlist(obj@meta.data$orig.ident)])
+  groupnames=unique(obj@meta.data$group)
 }
 
 drawDotPlot<-function(object, geneset_name, genes, assay="RNA", split.by=NA){

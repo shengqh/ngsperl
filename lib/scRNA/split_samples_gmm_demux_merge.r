@@ -108,7 +108,7 @@ for(idx in c(1:length(full_files))){
   obj[["HTO_classification.global"]] = full$HTO_classification.global
 
   if(has_hto_samples){
-    obj$orig.ident<-unlist(tag_sample_map[obj$HTO_classification])
+    obj@meta.data$orig.ident<-unlist(tag_sample_map[obj@meta.data$HTO_classification])
   }
 
   saveRDS(obj, file=paste0(output_prefix, ".umap.rds"))

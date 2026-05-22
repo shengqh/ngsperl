@@ -22,12 +22,12 @@ obj<-read_object(parFile1)
 if(file.exists(parSampleFile2)){
   groups_tbl<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F)
   groups=split(groups_tbl$V2, groups_tbl$V1)
-  obj$group = unlist(groups[obj$orig.ident])
+  obj@meta.data$group = unlist(groups[obj@meta.data$orig.ident])
 
   ngroup=length(unique(groups_tbl$V2))
   has_group = TRUE
 }else{
-  obj$group = "all"
+  obj@meta.data$group = "all"
   has_group = FALSE
 }
 

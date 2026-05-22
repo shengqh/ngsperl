@@ -52,9 +52,9 @@ cts=cluster_to_cell_type(clusterDf)
 cts<-sort_cell_type(cts, celltype_name)
 
 clusterDf<-clusterDf[colnames(obj),]
-clusterDf$sample<-obj$orig.ident
+clusterDf$sample<-obj@meta.data$orig.ident
 
-obj$final_seurat_clusters<-factor(clusterDf[,cluster_name], levels=cts[,cluster_name])
+obj@meta.data$final_seurat_clusters<-factor(clusterDf[,cluster_name], levels=cts[,cluster_name])
 
 if (!is.null(samples) && samples !=""){
   sample_idents = unlist(strsplit(samples, ";"))

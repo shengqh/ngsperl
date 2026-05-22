@@ -213,9 +213,9 @@ for(sample_name in sample_names) {
     rm(counts)
 
     if("" != seurat_sample_column){
-      sobj$orig.ident = unlist(sobj@meta.data[,seurat_sample_column])
+      sobj@meta.data$orig.ident = unlist(sobj@meta.data[,seurat_sample_column])
     }else{
-      sobj$orig.ident = sample_name
+      sobj@meta.data$orig.ident = sample_name
     }
   }else{
     rs<-rowSums(counts)
@@ -237,7 +237,7 @@ for(sample_name in sample_names) {
       counts=update_rownames(counts, toupper)
     }
     sobj = CreateSeuratObject(counts = counts, project = sample_name)
-    sobj$orig.ident <- sample_name
+    sobj@meta.data$orig.ident <- sample_name
     rm(counts)
   }
 
@@ -281,7 +281,7 @@ for(sample_name in sample_names){
   sobj = raw_objs[[sample_name]]
 
   if(!("orig.cell" %in% colnames(sobj@meta.data))){
-    sobj$orig.cell = colnames(sobj)
+    sobj@meta.data$orig.cell = colnames(sobj)
   }
 
   sobj<-PercentageFeatureSet(object=sobj, pattern=Mtpattern, col.name="percent.mt", assay="RNA")
@@ -307,8 +307,8 @@ for(sample_name in sample_names){
   #    without pooling:
   #      orig.ident == sample
   #################################################
-  sobj$project=sample_name    
-  sobj$sample=sample_name
+  sobj@meta.data$project=sample_name    
+  sobj@meta.data$sample=sample_name
 
   b_rename_cells = all(!startsWith(colnames(sobj), sample_name))
   if(sample_name %in% names(hto_data)) {
@@ -326,8 +326,8 @@ for(sample_name in sample_names){
       }
 
       sample_obj = subset(validobj, cells=tagcells$cell)
-      sample_obj$orig.ident = sample
-      sample_obj$sample = sample
+      sample_obj@meta.data$orig.ident = sample
+      sample_obj@meta.data$sample = sample
 
       if(b_rename_cells){
         sample_obj<-RenameCells(object=sample_obj, new.names=paste0(sample_name, "_", colnames(sample_obj)))
@@ -372,7 +372,7 @@ if(pool_sample){
     }else{
       cur_obj <- merge(cur_objs[[1]], y = unlist(cur_objs[2:length(cur_objs)]), project = "integrated")
     }
-    cur_obj$orig.ident=pool_name
+    cur_obj@meta.data$orig.ident=pool_name
     Idents(cur_obj)<-"orig.ident"
 
     for(cur_name in cur_names){

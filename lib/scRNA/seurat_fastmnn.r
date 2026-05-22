@@ -58,10 +58,10 @@ finalList$rawobj<-NULL
 
 if(has_batch_file){
   cat("Setting batch ...\n")
-  poolmap = get_batch_samples(parSampleFile2, unique(rawobj$sample))
-  rawobj$batch <- unlist(poolmap[rawobj$sample])
+  poolmap = get_batch_samples(parSampleFile2, unique(rawobj@meta.data$sample))
+  rawobj@meta.data$batch <- unlist(poolmap[rawobj@meta.data$sample])
 }else if(!("batch" %in% colnames(rawobj@meta.data))){
-  rawobj$batch <- rawobj$sample
+  rawobj@meta.data$batch <- rawobj@meta.data$sample
 }
 
 ##### Run FastMNN #####

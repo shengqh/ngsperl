@@ -78,7 +78,7 @@ if(!exists('obj')){
         stop(paste0("sample_column ", myoptions$sample_column, " not found in meta.data"))
       }
       
-      obj$orig.ident = obj@meta.data[,myoptions$sample_column]
+      obj@meta.data$orig.ident = obj@meta.data[,myoptions$sample_column]
     }
   }
 

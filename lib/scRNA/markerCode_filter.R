@@ -364,10 +364,10 @@ preprocess<-function( SampleInfo,
   }
 
   obj <- CreateSeuratObject(counts = counts, min.cells = 0, min.features=0, project=sampleid)
-  obj$orig.ident=sampleid
-  obj$sample=sampleid
+  obj@meta.data$orig.ident=sampleid
+  obj@meta.data$sample=sampleid
   if(has_hto){
-    obj$orig.ident=hto[colnames(obj), "sample"]
+    obj@meta.data$orig.ident=hto[colnames(obj), "sample"]
   }
   rm(counts)
   Idents(obj)<-"orig.ident"
@@ -375,7 +375,7 @@ preprocess<-function( SampleInfo,
   obj<-PercentageFeatureSet(object=obj, pattern=Mtpattern, col.name="percent.mt")
   obj<-PercentageFeatureSet(object=obj, pattern=rRNApattern, col.name = "percent.ribo")
 
-  samples<-unique(obj$orig.ident)
+  samples<-unique(obj@meta.data$orig.ident)
 
   cur_folder = getwd()
   if(!dir.exists("details")){

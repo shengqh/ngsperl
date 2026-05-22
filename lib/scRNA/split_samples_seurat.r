@@ -43,7 +43,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   
   #RidgePlot(obj, assay = "HTO", features = c("HEK-A", "K562-B", "KG1-A", "THP1-C"), ncol = 2)
   
-  obj$HTO_classification[obj$HTO_classification.global == "Doublet"] = "Doublet"
+  obj@meta.data$HTO_classification[obj@meta.data$HTO_classification.global == "Doublet"] = "Doublet"
 
   #Idents(obj) <- "HTO_classification"
   tagnames=rownames(obj[["HTO"]])
@@ -67,8 +67,8 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   dev.off()
   
   tmat=data.frame(t(htos))
-  tmat$HTO = obj$HTO_classification
-  tmat$HTO.global = obj$HTO_classification.global
+  tmat$HTO = obj@meta.data$HTO_classification
+  tmat$HTO.global = obj@meta.data$HTO_classification.global
   write.csv(tmat, paste0(output_prefix, ".csv"))
   
   VariableFeatures(obj)<-tagnames
@@ -94,7 +94,7 @@ split<-function(h5file, output_prefix, hashtag_regex=NA) {
   cols[['Negative']]="blue"
   cols[["Doublet"]]="red"
 
-  obj$HTO_classification=factor(obj$HTO_classification, levels=hto_names)
+  obj@meta.data$HTO_classification=factor(obj@meta.data$HTO_classification, levels=hto_names)
   png(paste0(output_prefix, ".umap.all.png"), width=1000, height=800)
   g<-MyDimPlot(obj, reduction = "umap", label=T, group.by="HTO_classification", order=c("Negative", "Doublet"))+
     scale_color_manual(values=cols)

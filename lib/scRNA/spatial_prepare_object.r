@@ -56,8 +56,8 @@ cat("sample_name:",sample_name,"; bin.size:",bin.size,"; DefaultAssay:",assay, "
 
 cat("Loading data...\n")
 obj <- Load10X_Spatial(data.dir = data_path, bin.size = c(bin.size))
-obj$orig.ident <- sample_name
-obj$sample <- sample_name
+obj@meta.data$orig.ident <- sample_name
+obj@meta.data$sample <- sample_name
 
 # combine the summary and save it as a CSV file
 summary_df <- rbind(

@@ -206,10 +206,10 @@ for (sample_name in rownames(souporcell_tb)){
   colnames(hto_final)<-c(tags, "HTO", "HTO.global")
   write.csv(hto_final, paste0(sample_name, ".HTO.csv"))
   
-  obj$souporcell<-s$souporcell
-  obj$souporcell_cutoff<-s$souporcell_cutoff
-  obj$final<-s$Final
-  obj$assignment<-s$assignment
+  obj@meta.data$souporcell<-s$souporcell
+  obj@meta.data$souporcell_cutoff<-s$souporcell_cutoff
+  obj@meta.data$final<-s$Final
+  obj@meta.data$assignment<-s$assignment
 
   write.csv(obj@meta.data, paste0(sample_name, ".meta.csv"))
   saveRDS(obj@meta.data, paste0(sample_name, ".meta.rds"))

@@ -176,7 +176,7 @@ if("ADT" %in% names(obj)){
 }
 
 if(!('batch' %in% colnames(obj@meta.data))){
-  obj$batch<-obj$orig.ident
+  obj@meta.data$batch<-obj@meta.data$orig.ident
 }
 
 if(!is_file_empty(parSampleFile2)){
@@ -408,11 +408,11 @@ writeLines(previous_celltypes, paste0(outFile, ".cell_types.txt"))
 
 DefaultAssay(obj)<-assay
 
-obj$dot<-obj[[previous_layer]]
-ctnames<-unique(obj$dot)
+obj@meta.data$dot<-obj@meta.data[[previous_layer]]
+ctnames<-unique(obj@meta.data$dot)
 ctmap=c(1:length(ctnames))
 names(ctmap)<-ctnames
-obj@meta.data$dot_cluster<-unlist(ctmap[obj$dot]) + 1000
+obj@meta.data$dot_cluster<-unlist(ctmap[obj@meta.data$dot]) + 1000
 
 cur_folder = getwd()
 tmp_folder = paste0(cur_folder, "/details/")

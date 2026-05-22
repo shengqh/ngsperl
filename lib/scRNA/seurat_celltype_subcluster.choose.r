@@ -95,8 +95,8 @@ if(file.exists(post_rename_umap)){
   g<-get_dim_plot(obj, group.by ="old_clusters", label.by="old_clusters_label", label.size = 8, legend.title="") + 
     theme(legend.text = element_text(size = 20)) + ggtitle("")
   ggsave(pre_choose_file, g, width=3200, height=2000, units="px", dpi=300, bg="white")
-  obj$old_clusters<-NULL
-  obj$old_clusters_label<-NULL
+  obj@meta.data$old_clusters<-NULL
+  obj@meta.data$old_clusters_label<-NULL
 }
 
 obj<-AddMetaData(obj, obj[[previous_layer]], col.name = output_layer)
@@ -474,7 +474,7 @@ cat("output figures ...\n")
 
 setwd(tmp_folder)
 
-obj$display_layer<-paste0(obj$sub_clusters, ": ", unlist(obj[[output_layer]]))
+obj@meta.data$display_layer<-paste0(obj@meta.data$sub_clusters, ": ", unlist(obj@meta.data[[output_layer]]))
 gdot=get_bubble_plot(obj, 
   NULL, 
   NULL, 
@@ -486,7 +486,7 @@ gdot=get_bubble_plot(obj,
   species=myoptions$species)
 galldata<-gdot$data
 
-pre_layer<-unlist(obj[[previous_layer]])
+pre_layer<-unlist(obj@meta.data[[previous_layer]])
 
 pcts<-unique(pre_layer)
 pct<-pcts[1]

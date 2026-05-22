@@ -50,10 +50,10 @@ rm(sce)
 
 saveRDS(obj@meta.data, paste0(outFile, ".scDblFinder.meta.rds"))
 
-obj$orig.ident = sample_name
+obj@meta.data$orig.ident = sample_name
 saveRDS(obj, paste0(outFile, ".scDblFinder.object.rds"))
-write.csv(table(obj$scDblFinder.class, obj$orig.ident), paste0(outFile, ".scDblFinder.class.csv"))
+write.csv(table(obj@meta.data$scDblFinder.class, obj@meta.data$orig.ident), paste0(outFile, ".scDblFinder.class.csv"))
 
-singlet <- subset(obj, subset = scDblFinder.class == "singlet")
+singlet <- subset(obj, subset = obj@meta.data$scDblFinder.class == "singlet")
 saveRDS(singlet, paste0(outFile, ".scDblFinder.singlet_object.rds"))
 

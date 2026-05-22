@@ -35,10 +35,10 @@ edgeRres<-read.csv(parFile2, stringsAsFactors = F, row.names=1)
 edgeRfolder<-dirname(parFile2)
 rownames(edgeRres)<-edgeRres$prefix
 
-df<-data.frame(c1=obj$seurat_clusters, c2=obj[[cluster_name]])
+df<-data.frame(c1=obj@meta.data$seurat_clusters, c2=obj@meta.data[[cluster_name]])
 df<-unique(df)
 df<-df[order(df$c1),]
-obj[[cluster_name]]<-factor(unlist(obj[[cluster_name]]), levels=unique(df[,cluster_name]))
+obj@meta.data[[cluster_name]]<-factor(unlist(obj@meta.data[[cluster_name]]), levels=unique(df[,cluster_name]))
 
 result<-NULL
 prefix<-rownames(edgeRres)[4]
@@ -65,7 +65,7 @@ for (comp in unique(result$comparison)) {
   compRes = result[result$comparison == comp,]
   rateMap=unlist(split(compRes$sigRate, compRes$cluster))
   
-  obj$sigRate=rateMap[as.character(unlist(obj[[cluster_name]]))]
+  obj@meta.data$sigRate=rateMap[as.character(unlist(obj@meta.data[[cluster_name]]))]
   gf<-MyFeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red")) + ggtitle(comp) + theme(plot.title = element_text(hjust=0.5))
   g<-g+gf
 }

@@ -110,8 +110,8 @@ for (comp in rownames(edgeRres)){
         cell_obj<-subset(obj, cells=rownames(designdata))
         # Using cells in subset cannot guarantee the order of cells in cell_obj is the same as in designdata
         # So we must match the order when assign Group and DisplayGroup
-        cell_obj$Group=designdata[colnames(cell_obj), "Group"]
-        cell_obj$DisplayGroup=designdata[colnames(cell_obj), "DisplayGroup"]
+        cell_obj@meta.data$Group=designdata[colnames(cell_obj), "Group"]
+        cell_obj@meta.data$DisplayGroup=designdata[colnames(cell_obj), "DisplayGroup"]
       }else{
         #pseudo_bulk
         cells<-clusterDf[clusterDf[,cluster_name] == cellType,]

@@ -65,7 +65,7 @@ for(fileTitle in names(fileMap)) {
   }   
 
   if(!('sample' %in% colnames(sobj@meta.data))){
-    sobj$sample=sobj$orig.ident
+    sobj@meta.data$sample=sobj@meta.data$orig.ident
   }
 
   rawobjs[[fileTitle]] = sobj

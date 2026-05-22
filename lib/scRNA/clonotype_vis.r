@@ -50,7 +50,7 @@ valid_cell_df<-subset(cell_df, cell_df$seurat_clusters %in% clono_clusters)
 valid_obj=subset(obj, cells=rownames(valid_cell_df))
 rm(obj)
 
-valid_obj$final_seurat_clusters=valid_cell_df$seurat_cellactivity_clusters
+valid_obj@meta.data$final_seurat_clusters=valid_cell_df$seurat_cellactivity_clusters
 
 gcell<-MyDimPlot(valid_obj, group.by="final_seurat_clusters", reduction = "umap", label=T) + theme(legend.position = "none") + ggtitle("")
 
@@ -69,7 +69,7 @@ for(idx in c(1:nrow(clonotypes))) {
     scale_color_manual(values = c("lightgrey", "red")) + ggtitle(cdr3s_aa)
   
   cobj=subset(valid_obj, cells=unlist(cdr3s_cells))
-  sc<-data.frame(cell=colnames(cobj), sample=cobj$orig.ident)
+  sc<-data.frame(cell=colnames(cobj), sample=cobj@meta.data$orig.ident)
   samplelist<-tapply(sc$cell,sc$sample,list)
   sg<-MyDimPlot(valid_obj, reduction = "umap", cells.highlight = samplelist, cols.highlight=gg_color_hue(length(samplelist)) , label=F) + theme(legend.position = "top")
   
