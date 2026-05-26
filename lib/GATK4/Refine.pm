@@ -204,8 +204,7 @@ else
       echo flagstat = `date` 
       samtools idxstats $final_file > ${final_file}.chromosome.count 
 
-      rm $result_dir/$sample_name.*.failed
-      rm $rmlist $rmdupFile $rmdupFileIndex
+      rm -f $sample_name.*.failed $rmlist $rmdupFile $rmdupFileIndex
     fi
   fi
 fi
