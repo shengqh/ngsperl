@@ -1,0 +1,226 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: yes
+---
+
+```{r, echo=FALSE}
+library(knitr)
+library(kableExtra)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+```
+
+```{r}
+source('MOFA_functions.R')
+
+library(data.table)
+
+myoptions_df=fread('fileList1.txt', header=F)
+myoptions=split(myoptions_df$V1, myoptions_df$V2)
+
+outFile=myoptions$task_name
+user_email=myoptions$email
+```
+
+---
+title: "MOFA - `r outFile`"
+author: `r user_email`
+---
+
+```{r}
+data_file_df=fread('fileList2.txt', header=F)
+data_file_map=split(data_file_df$V1, data_file_df$V2)
+
+def_df=fread('fileList3.txt', header=F)
+mod_names=unique(def_df$V3)
+
+get_cat_value = function(def_df, mod_name, cat_name){
+  res = def_df |> 
+    dplyr::filter(V3 == mod_name & V2 == cat_name) |> 
+    dplyr::pull(V1)
+  if(length(res) == 0){
+    stop(paste0("No value found for module '", mod_name, "' and category '", cat_name, "' in fileList3.txt"))
+  }
+  if(length(res) > 1){
+    stop(paste0("Multiple values found for module '", mod_name, "' and category '", cat_name, "' in fileList3.txt: ", paste(res, collapse = ", ")))
+  }
+  return(res)
+}
+
+mod_files=unlist(lapply(mod_names, function(mod_name) {
+  if(!mod_name %in% names(data_file_map)){
+    stop(paste0("No file found for module '", mod_name, "' in fileList2.txt"))
+  }
+  return(data_file_map[[mod_name]])
+}))
+
+mod_object_names=unlist(lapply(mod_names, function(mod_name) get_cat_value(def_df, mod_name, "ObjectName")))
+mod_md5sums=unlist(lapply(mod_names, function(mod_name) get_cat_value(def_df, mod_name, "md5sum")))
+
+feature_name_cols=unlist(lapply(mod_names, function(mod_name) get_cat_value(def_df, mod_name, "FeatureColumn")))
+sample_name_cols=unlist(lapply(mod_names, function(mod_name) get_cat_value(def_df, mod_name, "SampleColumn")))
+value_name_cols=unlist(lapply(mod_names, function(mod_name) get_cat_value(def_df, mod_name, "ValueColumn")))
+```
+
+# MD5 sum check
+
+```{r}
+md5_tab = data.frame(
+  Module = mod_names,
+  File = mod_files,
+  Expected_md5sum = mod_md5sums,
+  Actual_md5sum = sapply(mod_files, tools::md5sum)
+)
+md5_tab$Match = md5_tab$Expected_md5sum == md5_tab$Actual_md5sum
+rownames(md5_tab) = NULL
+
+md5_tab %>% 
+  kable(booktabs = T) %>%
+  kable_styling() %>%
+  row_spec(which(md5_tab$`Match` == FALSE), bold = T, color = "white", background = "red")
+
+if(any(md5_tab$`Match` == FALSE)){
+  cat("\n<mark>Warning: Highlighted files have mismatched MD5 sums.</mark>\n")
+}
+```
+
+# Create MOFA object and run MOFA
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results="hide"}
+load_rdata_env = function(path) {
+  env = new.env(parent = baseenv())
+  load(path, envir = env)
+  env
+}
+
+require_object = function(mod_file, object_name, sample_id_col, feature_name_col, value_col) {
+  if(grepl("\\.RData$", mod_file, ignore.case = TRUE)){
+    env = load_rdata_env(mod_file)
+
+    if (!exists(object_name, envir = env, inherits = FALSE)) {
+      stop("Expected object '", object_name, "' in ", mod_file, call. = FALSE)
+    }
+
+    df = as.data.frame(get(object_name, envir = env, inherits = FALSE))
+  } else if(grepl("\\.rds$", mod_file, ignore.case = TRUE)){ 
+    df = readRDS(mod_file)
+  } else {
+    stop(paste0("Unsupported file type for '", mod_file, "'. Only .RData and .rds files are supported."), call. = FALSE)
+  }
+
+  if(any(!c(sample_id_col, feature_name_col, value_col) %in% colnames(df))){
+    missed_cols = setdiff(c(sample_id_col, feature_name_col, value_col), colnames(df))
+    stop(
+      paste("Missed columns '", paste(missed_cols, collapse = ", "), "' in object '", object_name, "' in ", mod_file, " with colnames: ", paste(colnames(df), collapse = ", "), sep = ""),
+      call. = FALSE
+    )
+  }
+
+  df = df[, c(sample_id_col, feature_name_col, value_col), drop = FALSE] 
+  return(df)
+}
+
+named_list_of_dfs = lapply(1:length(mod_names), function(i) {
+  as.data.frame(require_object(mod_files[i], mod_object_names[i], sample_name_cols[i], feature_name_cols[i], value_name_cols[i]))
+})
+names(named_list_of_dfs) = mod_names
+
+mofa_obj = create_mofa_object_long(
+  named_list_of_dfs = named_list_of_dfs,
+  feature_name_cols = feature_name_cols,
+  sample_name_cols = sample_name_cols,
+  value_name_cols = value_name_cols
+)
+
+data_opts = get_default_data_options(mofa_obj)
+model_opts = get_default_model_options(mofa_obj)
+train_opts = get_default_training_options(mofa_obj)
+train_opts$stochastic = FALSE
+
+mofa_obj = prepare_mofa(
+  object = mofa_obj,
+  data_options = data_opts,
+  model_options = model_opts,
+  training_options = train_opts
+)
+
+output_hdf5=paste0(outFile, ".MOFA_model.hdf5")
+trained_model = run_mofa(mofa_obj, output_hdf5, use_basilisk = FALSE)
+
+output_md5=tools::md5sum(output_hdf5)
+writeLines(output_md5, paste0(output_hdf5, ".md5"))
+```
+
+MOFA model written to: `r output_hdf5`.
+
+# Factor values for each sample
+
+```{r}
+mofa_factors = as.data.frame(get_factors(trained_model)$single_group)
+factors_file = paste0(outFile, ".MOFA_Factor_Values.csv")
+write.csv(mofa_factors, factors_file, row.names = TRUE)
+
+factors_md5 = tools::md5sum(factors_file)
+writeLines(factors_md5, paste0(factors_file, ".md5"))
+
+mofa_factors %>% 
+  kable(booktabs = T) %>%
+  kable_styling()
+```
+
+# Inter-factor correlations
+
+This is showing how well each factor correlates with each other factor.
+
+```{r}
+corr_png = paste0(outFile, ".MOFA_Factor_Correlations.png")
+png(corr_png, width = 5, height = 5, units = "in", res = 300)
+plot_factor_cor(trained_model)
+ignored=dev.off()
+include_graphics(corr_png)
+```
+
+# Variance explained by each -omics data per Factor
+
+```{r}
+var_explained_factor_png = paste0(outFile, ".MOFA_Variance_Explained_Factor.png")
+png(var_explained_factor_png, width = 4, height = 4, units = "in", res = 300)
+plot_variance_explained(trained_model, max_r2=15)
+ignored=dev.off()
+include_graphics(var_explained_factor_png)
+```
+
+# Total variance explained by each -omics data
+
+```{r}
+var_explained_all_png = paste0(outFile, ".MOFA_Variance_Explained_All.png")
+png(var_explained_all_png, width = 4, height = 3, units = "in", res = 300)  
+plot_variance_explained(trained_model, plot_total = T)[[2]]
+ignored=dev.off()
+include_graphics(var_explained_all_png)
+```
+
+# Output file 
+
+```{r}
+md5_tab = data.frame(
+  File = c(output_hdf5, factors_file),
+  MD5 = c(output_md5, factors_md5)
+)
+rownames(md5_tab) = NULL
+
+md5_tab %>% 
+  kable(booktabs = T) %>%
+  kable_styling() 
+```
+
