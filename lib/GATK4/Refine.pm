@@ -152,7 +152,7 @@ echo MarkDuplicates=`date`
 gatk --java-options \"$java_option\" \\
   MarkDuplicates \\
   --INPUT $inputFile \\
-  --OUTPUT $rmdupFile \\
+  --OUTPUT ${rmdupFile}.tmp.bam \\
   --METRICS_FILE ${rmdupFile}.metrics \\
   --VALIDATION_STRINGENCY SILENT \\
   --OPTICAL_DUPLICATE_PIXEL_DISTANCE 2500 \\
@@ -163,51 +163,69 @@ gatk --java-options \"$java_option\" \\
 
 status=\$?
 if [[ \$status -ne 0 ]]; then
-  touch $sample_name.MarkDuplicates.failed
-  rm -f $rmdupFile ${rmdupFile}.metrics $rmdupFileIndex
+  echo \$status > $sample_name.MarkDuplicates.failed
+  rm -f ${rmdupFile}.tmp.bam ${rmdupFile}.metrics ${rmdupFile}.tmp.bai $sample_name.MarkDuplicates.succeed
+  exit \$status
 else
-  echo BaseRecalibrator=`date` 
-  gatk --java-options \"$java_option\" \\
-    BaseRecalibrator \\
-    -R $faFile \\
-    -I $rmdupFile \\
-    --use-original-qualities $fixMisencodedQuals \\
-    $indel_vcf \\
-    -O $recalibration_report_filename $restrict_intervals 
-
-  status=\$?
-  if [[ \$status -ne 0 ]]; then
-    touch $sample_name.BaseRecalibrator.failed
-  else
-    echo ApplyBQSR=`date`
-    gatk --java-options \"$java_option\" \\
-      ApplyBQSR \\
-      -R $faFile \\
-      -I $rmdupFile \\
-      -O $final_file \\
-      -bqsr $recalibration_report_filename \\
-      --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 \\
-      --add-output-sam-program-record \\
-      --create-output-bam-md5 \\
-      --use-original-qualities
-
-    status=\$?
-    if [[ \$status -ne 0 ]]; then
-      touch $sample_name.ApplyBQSR.failed
-    else
-      touch $sample_name.succeed
-      ln $final_file_index ${final_file}.bai
-
-      echo flagstat = `date` 
-      samtools flagstat $final_file > ${final_file}.stat 
-
-      echo flagstat = `date` 
-      samtools idxstats $final_file > ${final_file}.chromosome.count 
-
-      rm -f $sample_name.*.failed $rmlist $rmdupFile $rmdupFileIndex
-    fi
-  fi
+  mv ${rmdupFile}.tmp.bam $rmdupFile
+  mv ${rmdupFile}.tmp.bai $rmdupFileIndex
+  rm -f touch $sample_name.MarkDuplicates.failed
+  touch $sample_name.MarkDuplicates.succeed
 fi
+
+echo BaseRecalibrator=`date` 
+gatk --java-options \"$java_option\" \\
+  BaseRecalibrator \\
+  -R $faFile \\
+  -I $rmdupFile \\
+  --use-original-qualities $fixMisencodedQuals \\
+  $indel_vcf \\
+  -O ${recalibration_report_filename}.tmp.csv $restrict_intervals 
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \$status > $sample_name.BaseRecalibrator.failed
+  rm -f ${recalibration_report_filename}.tmp.csv $sample_name.BaseRecalibrator.succeed
+  exit \$status
+else
+  mv ${recalibration_report_filename}.tmp.csv ${recalibration_report_filename}
+  rm -f $sample_name.BaseRecalibrator.failed
+  touch $sample_name.BaseRecalibrator.succeed
+fi
+
+echo ApplyBQSR=`date`
+gatk --java-options \"$java_option\" \\
+  ApplyBQSR \\
+  -R $faFile \\
+  -I $rmdupFile \\
+  -O ${final_file}.tmp.bam \\
+  -bqsr $recalibration_report_filename \\
+  --static-quantized-quals 10 --static-quantized-quals 20 --static-quantized-quals 30 \\
+  --add-output-sam-program-record \\
+  --create-output-bam-md5 \\
+  --use-original-qualities
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \$status > $sample_name.ApplyBQSR.failed
+  rm -f ${final_file}.tmp.bam ${final_file}.tmp.bai $sample_name.ApplyBQSR.succeed
+  exit \$status
+else
+  mv ${final_file}.tmp.bam $final_file
+  mv ${final_file}.tmp.bai $final_file_index
+  rm -f $sample_name.ApplyBQSR.failed
+  touch $sample_name.ApplyBQSR.succeed
+fi
+
+ln $final_file_index ${final_file}.bai
+
+echo flagstat=`date` 
+samtools flagstat $final_file > ${final_file}.stat 
+
+echo idxstats=`date` 
+samtools idxstats $final_file > ${final_file}.chromosome.count 
+
+rm -f $sample_name.*.failed $rmlist $rmdupFile $rmdupFileIndex $sample_name.*.succeed
 
 ";
 
