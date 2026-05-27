@@ -1090,6 +1090,12 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
     push @table_for_shortReadSource, ( "bowtie1_genome_1mm_NTA_smallRNA_table", $task_name . ".read.count\$");
     push @name_for_shortReadSource, ( "host smallRNA");
 
+    if ( $def->{read_correlation} ) {
+      push @table_for_correlation, (
+        "bowtie1_genome_1mm_NTA_smallRNA_table", $task_name . ".read.count\$",    #all reads for correlation
+      );
+    }
+
     push @name_for_readSummary, (
       "Host miRNA",    #miRNA
     );
