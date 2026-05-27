@@ -169,7 +169,7 @@ if [[ \$status -ne 0 ]]; then
 else
   mv ${rmdupFile}.tmp.bam $rmdupFile
   mv ${rmdupFile}.tmp.bai $rmdupFileIndex
-  rm -f touch $sample_name.MarkDuplicates.failed
+  rm -f $sample_name.MarkDuplicates.failed
   touch $sample_name.MarkDuplicates.succeed
 fi
 
