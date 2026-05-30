@@ -192,6 +192,12 @@ if(file.exists(succeed_file)){
   unlink(succeed_file)
 }
 
+#normlize by total reads or VSD
+bNormalizeByCount=FALSE
+if(totalCountFile != ""){
+  bNormalizeByCount=totalCountKey != "None"
+}
+
 prefix_list=c()
 
 i<-1
@@ -224,16 +230,7 @@ for (i in 1:nrow(countTableFileAll)) {
   countTableTitle<-countTableFileAll[i,2]
   
   cat("Reading",countTableFile, "\n")
-  
-  if(n_first != -1){
-    count<-data.frame(fread(countTableFile, nrows=n_first), row.names=idIndex,check.names=FALSE)
-  }else{
-    if (grepl(".csv$",countTableFile)) {
-      count<-read.csv(countTableFile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
-    } else {
-      count<-read.delim(countTableFile,header=T,row.names=idIndex,as.is=T,check.names=FALSE)
-    }
-  }
+  count<-data.frame(fread(countTableFile), row.names=idIndex,check.names=FALSE)
   
   if(transformTable){
     count<-t(count)
@@ -270,9 +267,39 @@ for (i in 1:nrow(countTableFileAll)) {
   countNum<-round(countNum,0)
   
   #remove genes with total reads 0
-  countNum<-countNum[which(rowSums(countNum,na.rm=T)>0),]
+  non_zero_genes=which(rowSums(countNum,na.rm=T)>0)
+  countNum<-countNum[non_zero_genes,]
+  count<-count[non_zero_genes,]
+
   #remove samples with total reads 0
   countNum<-countNum[,which(colSums(countNum,na.rm=T)>0)]
+
+  if (bNormalizeByCount) { 
+    #normlize with total count *10^6, write all.RPM.txt before filtering by median reads per group.
+    cat("Normalizing by", totalCountKey, "\n")
+    totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
+    if(!(totalCountKey %in% rownames(totalCount))){
+      if(!file.exists(parFile2)){
+        stop(paste0(totalCountKey, " not exists in file ", totalCountFile))
+      }
+      totalCount<-read.csv(parFile2,header=T,as.is=T,row.names=1,check.names=FALSE)
+      if(!(totalCountKey %in% rownames(totalCount))){
+        stop(paste0(totalCountKey, " not exists in file ", totalCountFile, " and ", parFile2))
+      }
+    }
+    totalCount<-unlist(totalCount[totalCountKey,])
+    notValidSamples = colnames(countNum)[!(colnames(countNum) %in% names(totalCount))]
+    if (length(notValidSamples) > 0){
+      stop(paste0("Sample ", notValidSamples, " not found in total count table ", totalCountFile, "\n"))
+    }
+    countNumRPM<-10^6*t(t(countNum)/totalCount[colnames(countNum)])
+    write.table(countNumRPM, paste0(outputFilePrefix,".all.RPM.txt"),col.names=NA, quote=F, sep="\t")
+  }
+
+  if(n_first != -1 & nrow(countNum) > n_first){
+    countNum<-countNum[1:n_first,]
+    count<-count[1:n_first,]
+  }
 
   if (groupFileList!="") {
     sampleToGroup<-getSampleInGroup(groupFileList, colnames(countNum), useLeastGroups,onlySamplesInGroup=onlySamplesInGroup)
@@ -385,12 +412,6 @@ for (i in 1:nrow(countTableFileAll)) {
       }
     }
     
-    #normlize by total reads or VSD
-    bNormalizeByCount=FALSE
-    if(totalCountFile != ""){
-      bNormalizeByCount=totalCountKey != "None"
-    }
-
     if (bNormalizeByCount) { #normlize with total count *10^6
       cat("Normalizing by", totalCountKey, "\n")
       totalCount<-read.csv(totalCountFile,header=T,as.is=T,row.names=1,check.names=FALSE)
