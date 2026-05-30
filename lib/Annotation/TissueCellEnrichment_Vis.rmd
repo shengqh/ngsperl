@@ -185,7 +185,12 @@ if(!file.exists(score_meta_rds)){
 
 cat(paste0("\n", top_ident, "# UMAP of Activity score\n\n"))
 
-g=FeaturePlot_scCustom(score_obj, 
+# in order to make the figures matching with the overall cell type UMAP,
+# we will limit the cells to those in ct_obj with celltype > 1%, which is 
+# generated in TissueCellEnrichment_LoadData.rmd
+plot_obj=subset(score_obj, cells=colnames(ct_obj))
+
+g=FeaturePlot_scCustom(plot_obj, 
             features='ActivityScore1', 
             pt.size=0.5,
             aspect_ratio=1,
@@ -202,6 +207,7 @@ if (show_title) {
 
 ActivityScore_png=paste0(file_prefix, ".tabula.umap.png")
 ggsave(ActivityScore_png, g, width=5, height=5, units="in", dpi=300, bg="white")
+ggsave(gsub(".png", ".pdf", ActivityScore_png), g, width=5, height=5, units="in", dpi=300, bg="white")
 include_graphics(ActivityScore_png)
 
 cat(paste0("\n", top_ident, "# Violin plot by tissue ranked by median activity score\n\n"))
@@ -228,6 +234,7 @@ if (show_title) {
 
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.tissue.png")
 ggsave(ActivityScore_png, g, width=5, height=3, units="in", dpi=300, bg="white")
+ggsave(gsub(".png", ".pdf", ActivityScore_png), g, width=5, height=3, units="in", dpi=300, bg="white")
 include_graphics(ActivityScore_png)       
 
 cat(paste0("\n", top_ident, "# Violin plot by cell type ranked by median activity score\n\n"))
@@ -264,6 +271,7 @@ if (show_title) {
 
 ActivityScore_png=paste0(file_prefix, ".tabula.violin.cell_type.png")
 ggsave(ActivityScore_png, g, width=vln_width, height=5, units="in", dpi=300, limitsize=FALSE, bg="white")
+ggsave(gsub(".png", ".pdf", ActivityScore_png), g, width=vln_width, height=5, units="in", dpi=300, limitsize=FALSE, bg="white")
 include_graphics(ActivityScore_png)
 
 cat(paste0("\n", top_ident, "# UMAP of Activity score and cell types\n\n"))
@@ -294,5 +302,6 @@ g=g1+g2 + plot_layout(ncol=2) & theme(legend.position = 'right')
 
 tabula_score_celltype_umap_png=ActivityScore_png=paste0(file_prefix, ".tabula.umap.score.cell_type.png")
 ggsave(tabula_score_celltype_umap_png, g, width=20, height=6.5, units="in", dpi=300, bg="white")
+ggsave(gsub(".png", ".pdf", tabula_score_celltype_umap_png), g, width=20, height=6.5, units="in", dpi=300, bg="white")
 include_graphics(tabula_score_celltype_umap_png)
 ```
