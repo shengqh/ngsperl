@@ -38,6 +38,7 @@ XL_file_map=read_file_map('fileList4.txt')
 
 Read non-cross-link (nonXL) / cross-link (XL) Peptide-Spectrum-Match (PSM) result and 
 remove all PSMs matched to both target and decoy database.
+
 ```{r}
 samples=names(raw_file_map)
 sample=samples[1]
@@ -83,7 +84,7 @@ g=ggplot(isxl_long, aes(x=Sample, y=count, fill=database)) +
         axis.title.x=element_blank())
 
 bar_png="xl_bar.png"
-width=length(samples) * 0.2 + 1
+width=max(4, length(samples) * 0.2 + 3)
 ggsave(bar_png, g, width=width, height=4, units="in", dpi=300, bg="white")
 include_graphics(bar_png)
 ```
