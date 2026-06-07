@@ -86,7 +86,8 @@ sub getConfig {
       "count_files", 
       getValue($def, "count_reference"),
       $count_jobmode,
-      $def->{count_chemistry});
+      $def->{count_chemistry},
+      $def->{count_create_bam});
   }
 
   if (defined $def->{vdj_files}) {
