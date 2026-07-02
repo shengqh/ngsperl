@@ -50,6 +50,8 @@ genome_dfs = []
 for genomeFile in genomeFiles:
   logger.info("Parsing " + genomeFile)
   df = pd.read_csv(genomeFile, sep='\t', index_col=0)
+  #somehow, the count file might have different column order.
+  df = df.reindex(sorted(df.columns), axis=1)
   genome_dfs.append(df)
 
 if genome_dfs:
