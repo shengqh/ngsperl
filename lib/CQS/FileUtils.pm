@@ -13,7 +13,18 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw( list_directories list_files has_file create_directory_or_die change_extension change_extension_gzipped file_exists check_file_exists_command read_json)] );
+our %EXPORT_TAGS = ( 'all' => [qw( 
+  list_directories 
+  list_files 
+  has_file 
+  create_directory_or_die 
+  change_extension 
+  change_extension_gzipped 
+  file_exists 
+  check_file_exists_command 
+  read_json
+  read_gsm_list_file
+)] );
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
@@ -190,6 +201,22 @@ sub read_json {
 #  }
 
   return($result);
+}
+
+sub read_gsm_list_file {
+  my ($gsm_text_file) = @_;
+  open(my $file_in, "<", $gsm_text_file) or die "Could not open $gsm_text_file: $!";
+  my $files = {};
+  while (my $line = <$file_in>)
+  {
+    chomp $line;
+    next if $line =~ /^\s*$/;
+    my ($gsm, $sample) = split(/\t/, $line);
+    next if !defined $gsm || !defined $sample || $gsm eq '' || $sample eq '';
+    $files->{$sample} = [$gsm];
+  }
+  close $file_in;
+  return($files);
 }
 
 1;
