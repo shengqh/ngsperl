@@ -311,9 +311,9 @@ sub addMutect2Wdl {
     },
     "input_single" => {},
     pbs            => {
-      "nodes"    => "1:ppn=8",
-      "walltime" => "24",
-      "mem"      => "70gb"
+      "nodes"    => "1:ppn=" . getValue( $def, "Mutect2.nodes", "8" ),
+      "walltime" => getValue( $def, "Mutect2.walltime", "24" ),
+      "mem"      => getValue( $def, "Mutect2.mem", "80gb" ),
     },
   };
 
