@@ -103,8 +103,8 @@ def process_gtf(gtf_file, output_file, gene_key='gene_name'):
 
 def main():
   parser = argparse.ArgumentParser(description='Build gene map from GTF file')
-  parser.add_argument('-i', '--input', help='Input GTF file')
-  parser.add_argument('-o', '--output', help='Output map file')
+  parser.add_argument('-i', '--input', help='Input GTF file', required=True)
+  parser.add_argument('-o', '--output', help='Output map file', required=True)
   parser.add_argument('-k', '--gene_key', default='gene_name', help='Key for gene name in GTF attributes')
   args = parser.parse_args()
 
