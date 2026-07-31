@@ -64,6 +64,9 @@ def render_rmarkdown_report(output_df, output_prefix, template_rmd, rscript="Rsc
 
 
 def extract_crop(gdf, cell_id, padding, full_image, save_file_path=""):
+    if not cell_id in gdf.cell_id.values:
+        raise ValueError(f"Cell ID {cell_id} not found in the geojson data")
+        
     idx = gdf.index[gdf.cell_id == cell_id][0]
     minx, miny, maxx, maxy = gdf.geometry.bounds.values[idx]
 
@@ -155,21 +158,30 @@ def main():
     if args.nucleus_geojson:
         logger.info("Reading nucleus geojson data...")
         nucleus_gdf = gpd.read_file(args.nucleus_geojson, engine=args.engine)
-    
-    logger.info("Reading image data...")
-    full_image = tifffile.imread(args.dhsr_tiff)
 
     logger.info("Reading cell id information...")
-    cell_df = pd.read_csv(args.cellid_csv)
+    cell_df = pd.read_csv(args.cellid_csv, dtype={"cell_id": "Int64"})
     if cell_df.shape[1] < 2:
         raise ValueError("cellid_csv must contain at least two columns: cell_id and seurat_cell_type")
 
     cell_df = cell_df.iloc[:, :2].copy()
-    cell_df.columns = ["cell_id", "cell_group"]
+    cell_df = cell_df.set_axis(["cell_id", "cell_group"], axis="columns")
+
+    # check if all cell_df[["cell_id"]] are in cell_gdf
+    if not cell_df["cell_id"].isin(cell_gdf["cell_id"]).all():
+        not_valid_cell_ids = cell_df[~cell_df["cell_id"].isin(cell_gdf["cell_id"])]["cell_id"].tolist()
+        logging.warning(f"Some cell IDs in the CSV file are not found in the geojson data: {not_valid_cell_ids}")
+        cell_df = cell_df[cell_df["cell_id"].isin(cell_gdf["cell_id"])]
 
     if cell_df.empty:
         logger.info("No cell ids found in %s", args.cellid_csv)
         return
+
+    logger.info("Reading image data...")
+    full_image = tifffile.imread(args.dhsr_tiff)
+
+    # create folder args.output_prefix
+    os.makedirs(args.output_prefix, exist_ok=True)
 
     selected_groups = []
     for group_name, group_df in cell_df.groupby("cell_group", sort=False):
@@ -190,7 +202,7 @@ def main():
         cellgroup = row["cell_group"]
         cellid = row["cell_id"]
 
-        cell_image_name = f"{args.output_prefix}_{cellid}.cell.padding_{args.padding}.png"
+        cell_image_name = f"{args.output_prefix}/{args.output_prefix}_{cellid}.cell.padding_{args.padding}.png"
         cell_image = extract_crop(cell_gdf, cellid, args.padding, full_image, save_file_path=cell_image_name)
 
         output_row = {
