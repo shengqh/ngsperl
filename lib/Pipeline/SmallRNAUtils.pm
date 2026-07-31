@@ -516,6 +516,10 @@ sub getPrepareConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
+  if ($def->{perform_preprocessing_only}) {
+    return ( $config, $individual, $summary, $cluster, $source_ref, $preprocessing_dir, undef, undef, undef );
+  }
+
   $def = $config->{def};
 
   if(defined $def->{paired_end_validation_files}){
