@@ -360,37 +360,62 @@ for (source_ct in all_celltypes){
 
   bubble_png=paste0(file_prefix, ".bubble.", ct_filename, ".up_in_", case_group, ".png")
   if(!file.exists(bubble_png)){
-    g = netVisual_bubble( cur_cellchat, 
-                          sources.use = source_ct, 
-                          comparison = c(1, 2), 
-                          max.dataset = 2, 
-                          title.name = paste0("Increased signaling in ", case_group),
-                          angle.x = 45, 
-                          remove.isolate = T)
-    num_names=length(unique(g$data$interaction_name_2))
-    height = min(50, num_names*0.1+5)
-    ggsave(bubble_png, g, width=9, height=height, units="in", dpi=300, limitsize = FALSE)
-  }
+    g <- tryCatch(
+      netVisual_bubble( cur_cellchat, 
+                            sources.use = source_ct, 
+                            comparison = c(1, 2), 
+                            max.dataset = 2, 
+                            title.name = paste0("Increased signaling in ", case_group),
+                            angle.x = 45, 
+                            remove.isolate = T),
+      error = function(e) {
+        writeLines(paste0("\n#### Increased interaction skipped\n\nMessage:", e$message, "\n\n"), con)
+        NULL
+      }
+    )
 
-  writeLines("\n#### Increased\n\n", con)
-  writeLines(getFigure(bubble_png), con)
+    if (!is.null(g)) {
+      num_names <- length(unique(g$data$interaction_name_2))
+      height <- min(50, num_names * 0.1 + 5)
+
+      ggsave(
+        bubble_png,
+        g,
+        width = 9,
+        height = height,
+        units = "in",
+        dpi = 300,
+        limitsize = FALSE
+      )
+      writeLines("\n#### Increased\n\n", con)
+      writeLines(getFigure(bubble_png), con)
+    }    
+  }
 
   bubble_png=paste0(file_prefix, ".bubble.", ct_filename, ".down_in_", case_group, ".png")
   if(!file.exists(bubble_png)){
-    g = netVisual_bubble( cur_cellchat, 
+    g <- tryCatch(
+      netVisual_bubble( cur_cellchat, 
                           sources.use = source_ct, 
                           comparison = c(1, 2), 
                           max.dataset = 1, 
                           title.name = paste0("Decreased signaling in ", case_group),
                           angle.x = 45, 
-                          remove.isolate = T)
-    num_names=length(unique(g$data$interaction_name_2))
-    height = min(50, num_names*0.1+5)
-    ggsave(bubble_png, g, width=9, height=height, units="in", dpi=300, limitsize = FALSE)
-  }
+                          remove.isolate = T),
+      error = function(e) {
+        writeLines(paste0("\n#### Decreased interaction skipped\n\nMessage:", e$message, "\n\n"), con)
+        NULL
+      }
+    )
 
-  writeLines("\n#### Decreased\n\n", con)
-  writeLines(getFigure(bubble_png), con)
+    if (!is.null(g)) {
+      num_names=length(unique(g$data$interaction_name_2))
+      height = min(50, num_names*0.1+5)
+      ggsave(bubble_png, g, width=9, height=height, units="in", dpi=300, limitsize = FALSE)
+      writeLines("\n#### Decreased\n\n", con)
+      writeLines(getFigure(bubble_png), con)
+    }
+  }
 }
 close(con)
 ```
