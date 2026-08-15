@@ -26,6 +26,8 @@ if(!exists("lib_folder")){
 }
 source(paste0(lib_folder, "/CQS/reportFunctions.R"))
 source(paste0(lib_folder, "/Report/enrichmentByClusterProfiler.R"))
+
+writeLines(target_genes, paste0(prefix,"_target_genes.txt"))
 ```
 
 ```{r}
