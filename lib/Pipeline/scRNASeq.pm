@@ -840,7 +840,8 @@ sub getScRNASeqConfig {
 
               my $silhouette_path = getValue( $def, "silhouette_path", "silhouette" );
 
-              for my $reduction ( 'fastmnn', 'pca' ) {
+              my $silhouette_reductions = ['fastmnn']; # ['fastmnn', 'pca']
+              for my $reduction ( @$silhouette_reductions ) {
                 my $silhouette_task = $choose_task . "_silhouette_" . $reduction;
                 $config->{$silhouette_task} = {
                   class                => "CQS::UniqueR",
