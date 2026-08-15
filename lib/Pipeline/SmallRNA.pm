@@ -77,6 +77,11 @@ sub getSmallRNAConfig {
 
   my $task_name = $def->{task_name};
 
+  if ( $def->{perform_fastq_screen} ) {
+    my $fastq_screen_task = "fastq_screen";
+    add_fastq_screen( $config, $def, $tasks, $preprocessing_dir, $fastq_screen_task, $not_identical_ref );
+  }
+
   my $hasMicroRNAOnly = getValue( $def, "hasMicroRNAOnly", 0 );
   my $notMicroRNAOnly = !$hasMicroRNAOnly;
 
@@ -2460,6 +2465,11 @@ fi
         "mem"       => "40gb"
       },
     };
+
+    if( $def->{perform_fastq_screen} ) {
+      my $fastq_screen_task = "final_unmapped_reads_fastq_screen";
+      add_fastq_screen( $config, $def, $tasks, $nonhost_blast_dir, $fastq_screen_task, [ "final_unmapped_reads", ".unmapped.fastq.gz\$" ] );
+    }
 
     $identical_ref = [ "final_unmapped_reads", ".fastq.gz\$" ];
     push @$tasks,      ("final_unmapped_reads");
