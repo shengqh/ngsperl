@@ -1,5 +1,6 @@
 import gzip
 import os
+from collections import OrderedDict
 
 class MutectItem:
   def __init__(self, sampleName, line, normalIndex, tumorIndex):
@@ -16,6 +17,7 @@ class MutectItem:
     self.INFO = parts[7]
     self.FORMAT = parts[8]
     self.LOD = 0
+    self.Line = line
 
     if normalIndex != -1:
       self.NormalData = parts[normalIndex]
@@ -36,6 +38,11 @@ class MutectItem:
     result = int(ad[1])
     return(result)
 
+  def findVariantAlleleFrequency(self, parts, AF_index):
+    af = float(parts[AF_index])
+    result = af
+    return(result)
+
   def parseData(self):
     formatParts = self.FORMAT.split(':')
     tumorParts = self.TumorData.split(':')
@@ -49,6 +56,11 @@ class MutectItem:
 
     AD_index = formatParts.index("AD")
     self.TumorMinorAllele = self.findMinorAllele(tumorParts, AD_index)
+
+    AF_index = formatParts.index("AF")
+    self.TumorVariantAlleleFrequency = self.findVariantAlleleFrequency(tumorParts, AF_index)
+    if self.NormalData != None:
+      self.NormalVariantAlleleFrequency = self.findVariantAlleleFrequency(normalParts, AF_index)
     
     self.FORMAT = self.FORMAT
     if ";LOD=" in self.INFO:
@@ -65,9 +77,10 @@ class MutectItem:
 class MutectResult:
   def clear(self):
     self.Comments = []
-    self.ChromosomeItemMap = {}
+    self.ChromosomeItemMap = OrderedDict()
     self.NormalSampleName = None
     self.TumorSampleName = ""
+    self.Line = None
 
   def __init__(self):
     self.clear()
@@ -128,7 +141,7 @@ class MutectResult:
           self.Comments.append(line.rstrip())
         elif line.startswith("#CHROM"):
           if self.TumorSampleName == "":
-            raise Exception("The file is not mutect format, I cannot find ##GATKCommandLine in %s" % args.input)
+            raise Exception("The file is not mutect format, I cannot find ##GATKCommandLine in %s" % filePath)
           parts = line.rstrip().split("\t")
           tumorIndex = parts.index(self.TumorSampleName)
           if self.NormalSampleName != None:
