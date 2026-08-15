@@ -5,16 +5,20 @@ import os
 import errno
 import gzip
 
-from Mutect import MultiMutectItem
+from Mutect import MutectResult
 
 def check_file_exists(file):
   if not os.path.exists(file):
     raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
 
-def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, minMinorAlleleDepth): 
-  check_file_exists(inputFile) 
+def filterMutect(logger, fileName, filePath, outputFile, minNormalDepth, minTumorDepth, minMinorAlleleDepth, minVariantAlleleFrequency): 
+  check_file_exists(filePath) 
 
-  logger.info("Processing %s ..." % inputFile)
+  logger.info("Processing %s : %s ..." % (fileName, filePath))
+
+  mutect = MutectResult()
+  mutect.readFromFile(logger, fileName, filePath)  
+  comments = mutect.Comments
 
   lineCount = 0
   passedCount = 0
@@ -22,40 +26,21 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
 
   tmpFile = outputFile + ".tmp.vcf"
   with open(tmpFile, "wt") as fout:
-    if inputFile.endswith(".gz"):
-      fin = gzip.open(inputFile,'rt')
-    else:
-      fin = open(inputFile, "rt")
-
-    with fin:
-      for line in fin:
-        if line.startswith("#"):
-          fout.write(line)
-          continue
-
-        lineCount += 1
-        if lineCount % 100000 == 0:
-          logger.info("%d" % lineCount)
-
-        item = MultiMutectItem(line)
-
+    for items in mutect.ChromosomeItemMap.values():
+      for item in items:
         passed = False
-        for sample in item.Samples:
-          if sample.NormalDepth is None:
-            if sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
-              passed = True
-              break
-          else:
-            if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
-              passed = True
-              break
+        if item.NormalDepth is None:
+          if item.TumorDepth >= minTumorDepth and item.TumorMinorAllele >= minMinorAlleleDepth and item.TumorVariantAlleleFrequency >= minVariantAlleleFrequency:
+            passed = True
+        else:
+          if item.NormalDepth >= minNormalDepth and item.TumorDepth >= minTumorDepth and item.TumorMinorAllele >= minMinorAlleleDepth and item.TumorVariantAlleleFrequency >= minVariantAlleleFrequency:
+            passed = True
 
         if passed:
-          fout.write(line)
+          fout.write(item.Line)
           passedCount += 1
         else:
           failedCount += 1
-      #  logger.info("Discarded:" + item.Line)
       
   with open(outputFile + ".stat", "wt") as fout:
     fout.write("minNormalDepth\t%d\n" % minNormalDepth)
@@ -78,9 +63,11 @@ def main():
                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input vcf file', required=NotDEBUG)
+  parser.add_argument('-n', '--sample_name', action='store', nargs='?', help='Input sample name', required=NotDEBUG)
   parser.add_argument('--min_normal_depth', action='store', type=int, default=8, help='Input minimum depth in normal sample')
   parser.add_argument('--min_tumor_depth', action='store', type=int, default=10, help='Input minimum depth in tumor sample')
   parser.add_argument('--min_minor_allele', action='store', type=int, default=3, help='Input minimum minor allele depth in tumor sample')
+  parser.add_argument('--min_variant_allele_frequency', action='store', type=float, default=0.05, help='Input minimum variant allele frequency in tumor sample')
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output vcf file", required=NotDEBUG)
 
   args = parser.parse_args()
@@ -92,7 +79,7 @@ def main():
   logger = logging.getLogger('filterMutect')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-  filterMutect(logger, args.input, args.output, args.min_normal_depth, args.min_tumor_depth, args.min_minor_allele)
+  filterMutect(logger, args.sample_name, args.input, args.output, args.min_normal_depth, args.min_tumor_depth, args.min_minor_allele, args.min_variant_allele_frequency)
 
   logger.info("done.")
 

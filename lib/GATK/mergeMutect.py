@@ -1,11 +1,9 @@
 import argparse
-import sys
 import logging
 import os
 import errno
-import gzip
-from asyncore import read
-from Mutect import MutectItem, MutectResult
+
+from Mutect import MutectResult
 
 def check_file_exists(file):
   if not os.path.exists(file):
