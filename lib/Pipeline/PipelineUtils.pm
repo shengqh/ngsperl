@@ -4161,7 +4161,7 @@ sub add_fastq_screen {
     program        => "",
     check_program  => 0,
     option         => "
-fastq_screen $conf --outdir . --threads 8 __FILE__
+fastq_screen $conf --aligner bowtie2 --outdir . --threads 8 __FILE__
 
 #__OUTPUT__
 ",
@@ -4175,6 +4175,7 @@ fastq_screen $conf --outdir . --threads 8 __FILE__
     output_file_ext               => "_screen.txt",
     output_to_same_folder         => 1,
     can_result_be_empty_file      => 1,
+    docker_prefix                 => "fastq_screen_",
     sh_direct                     => 0,
     no_docker                     => 1,
     pbs                           => {
