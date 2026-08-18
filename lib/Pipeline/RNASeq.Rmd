@@ -326,7 +326,7 @@ check_and_include_graphics(file_map$genetable_correlation.all_correlation_densit
 ```{r}
 similarity_content=""
 only_one=(length(corNames) == 1)
-indent="###"
+indent=ifelse(only_one, "##", "###")
 
 i=1
 for(i in c(1:length(corNames))){
@@ -594,7 +594,7 @@ for(comp in comparisons){
     category_enriched_file = category_fgsea_files |> dplyr::filter(file_key == "enriched_file") |> dplyr::pull(file_path)
     fgsea_content = paste0(fgsea_content, getPagedTable(category_enriched_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
     category_enriched_png = category_fgsea_files |> dplyr::filter(file_key == "enriched_png") |> dplyr::pull(file_path)
-    fgsea_content = paste0(fgsea_content, get_figure_description(paste(comparison, category, "fgsea_png"), category_enriched_png, paste("FGSEA plot of", comparison, "in", category)))
+    fgsea_content = paste0(fgsea_content, get_figure_description(paste(comp, category, "fgsea_png"), category_enriched_png, paste("FGSEA plot of", comp, "in", category)))
   }
 }
 writeLines(fgsea_content, fgsea_rmd_file)
