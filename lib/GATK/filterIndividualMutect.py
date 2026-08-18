@@ -11,7 +11,7 @@ def check_file_exists(file):
   if not os.path.exists(file):
     raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
 
-def filterMutect(logger, fileName, filePath, outputFile, minNormalDepth, minTumorDepth, minMinorAlleleDepth, minVariantAlleleFrequency): 
+def filterMutect(logger, fileName, filePath, outputFile, minNormalDepth, minTumorDepth, minAltAlleleDepth, minAltAlleleFrequency): 
   check_file_exists(filePath) 
 
   logger.info("Processing %s : %s ..." % (fileName, filePath))
@@ -30,10 +30,10 @@ def filterMutect(logger, fileName, filePath, outputFile, minNormalDepth, minTumo
       for item in items:
         passed = False
         if item.NormalDepth is None:
-          if item.TumorDepth >= minTumorDepth and item.TumorMinorAllele >= minMinorAlleleDepth and item.TumorVariantAlleleFrequency >= minVariantAlleleFrequency:
+          if item.TumorDepth >= minTumorDepth and item.TumorAltAlleleDepth >= minAltAlleleDepth and item.TumorAltAlleleFrequency >= minVariantAlleleFrequency:
             passed = True
         else:
-          if item.NormalDepth >= minNormalDepth and item.TumorDepth >= minTumorDepth and item.TumorMinorAllele >= minMinorAlleleDepth and item.TumorVariantAlleleFrequency >= minVariantAlleleFrequency:
+          if item.NormalDepth >= minNormalDepth and item.TumorDepth >= minTumorDepth and item.TumorAltAlleleDepth >= minAltAlleleDepth and item.TumorAltAlleleFrequency >= minVariantAlleleFrequency:
             passed = True
 
         if passed:
@@ -45,7 +45,8 @@ def filterMutect(logger, fileName, filePath, outputFile, minNormalDepth, minTumo
   with open(outputFile + ".stat", "wt") as fout:
     fout.write("minNormalDepth\t%d\n" % minNormalDepth)
     fout.write("minTumorDepth\t%d\n" % minTumorDepth)
-    fout.write("minMinorAlleleDepth\t%d\n" % minMinorAlleleDepth)
+    fout.write("minAltAlleleDepth\t%d\n" % minAltAlleleDepth)
+    fout.write("minAltAlleleFrequency\t%f\n" % minAltAlleleFrequency)
     fout.write("Passed\t%d\n" % passedCount)
     fout.write("Failed\t%d\n" % failedCount)
 
@@ -66,8 +67,8 @@ def main():
   parser.add_argument('-n', '--sample_name', action='store', nargs='?', help='Input sample name', required=NotDEBUG)
   parser.add_argument('--min_normal_depth', action='store', type=int, default=8, help='Input minimum depth in normal sample')
   parser.add_argument('--min_tumor_depth', action='store', type=int, default=10, help='Input minimum depth in tumor sample')
-  parser.add_argument('--min_minor_allele', action='store', type=int, default=3, help='Input minimum minor allele depth in tumor sample')
-  parser.add_argument('--min_variant_allele_frequency', action='store', type=float, default=0.05, help='Input minimum variant allele frequency in tumor sample')
+  parser.add_argument('--min_alt_allele_depth', action='store', type=int, default=3, help='Input minimum alt allele depth in tumor sample')
+  parser.add_argument('--min_alt_allele_frequency', action='store', type=float, default=0.05, help='Input minimum alt allele frequency in tumor sample')
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output vcf file", required=NotDEBUG)
 
   args = parser.parse_args()
@@ -79,7 +80,7 @@ def main():
   logger = logging.getLogger('filterMutect')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-  filterMutect(logger, args.sample_name, args.input, args.output, args.min_normal_depth, args.min_tumor_depth, args.min_minor_allele, args.min_variant_allele_frequency)
+  filterMutect(logger, args.sample_name, args.input, args.output, args.min_normal_depth, args.min_tumor_depth, args.min_alt_allele_depth, args.min_alt_allele_frequency)
 
   logger.info("done.")
 

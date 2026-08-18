@@ -33,14 +33,17 @@ class MutectItem:
     result = int(parts[DP_index])
     return(result)
 
-  def findMinorAllele(self, parts, AD_index):
+  def findAltAlleleDepth(self, parts, AD_index):
+    ##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+    ##The first value is the depth of the reference allele, and the second value is the depth of the alternate allele. 
     ad = parts[AD_index].split(',')
     result = int(ad[1])
     return(result)
 
-  def findVariantAlleleFrequency(self, parts, AF_index):
-    af = float(parts[AF_index])
-    result = af
+  def findAltAlleleFrequency(self, parts, AF_index):
+    ##FORMAT=<ID=AF,Number=A,Type=Float,Description="Allele fractions of alternate alleles in the tumor">
+    af = parts[AF_index].split(',')
+    result = float(af[0])
     return(result)
 
   def parseData(self):
@@ -55,12 +58,12 @@ class MutectItem:
       self.NormalDepth = self.findDepth(normalParts, DP_index)
 
     AD_index = formatParts.index("AD")
-    self.TumorMinorAllele = self.findMinorAllele(tumorParts, AD_index)
+    self.TumorAltAlleleDepth = self.findAltAlleleDepth(tumorParts, AD_index)
 
     AF_index = formatParts.index("AF")
-    self.TumorVariantAlleleFrequency = self.findVariantAlleleFrequency(tumorParts, AF_index)
+    self.TumorAltAlleleFrequency = self.findAltAlleleFrequency(tumorParts, AF_index)
     if self.NormalData != None:
-      self.NormalVariantAlleleFrequency = self.findVariantAlleleFrequency(normalParts, AF_index)
+      self.NormalAltAlleleFrequency = self.findAltAlleleFrequency(normalParts, AF_index)
     
     self.FORMAT = self.FORMAT
     if ";LOD=" in self.INFO:
@@ -153,12 +156,12 @@ class MutectResult:
             self.ChromosomeItemMap.setdefault(item.CHROM, []).append(item)
 
 class MutectSampleItem:
-  def __init__(self, data, normalDepth, tumorDepth, majorAlleleDepth, minorAlleleDepth):
+  def __init__(self, data, normalDepth, tumorDepth, refAlleleDepth, altAlleleDepth):
     self.Data = data
     self.NormalDepth = normalDepth
     self.TumorDepth = tumorDepth
-    self.MajorAlleleDepth = majorAlleleDepth
-    self.MinorAlleleDepth = minorAlleleDepth
+    self.RefAlleleDepth = refAlleleDepth
+    self.AltAlleleDepth = altAlleleDepth
 
 class MultiMutectItem:
   def __init__(self, line):
@@ -190,7 +193,7 @@ class MultiMutectItem:
         normalDepth = None
       tumorDepth = int(sampleParts[DP_index])
       alleleParts = sampleParts[AD_index].split(',')
-      majorAlleleDepth = int(alleleParts[0])
-      minorAlleleDepth = int(alleleParts[1])
+      refAlleleDepth = int(alleleParts[0])
+      altAlleleDepth = int(alleleParts[1])
 
-      self.Samples.append(MutectSampleItem(sampleData, normalDepth, tumorDepth, majorAlleleDepth, minorAlleleDepth))
+      self.Samples.append(MutectSampleItem(sampleData, normalDepth, tumorDepth, refAlleleDepth, altAlleleDepth))

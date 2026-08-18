@@ -11,7 +11,7 @@ def check_file_exists(file):
   if not os.path.exists(file):
     raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
 
-def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, minMinorAlleleDepth): 
+def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, minAltAlleleDepth): 
   check_file_exists(inputFile) 
 
   logger.info("Processing %s ..." % inputFile)
@@ -42,11 +42,11 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
         passed = False
         for sample in item.Samples:
           if sample.NormalDepth is None:
-            if sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
+            if sample.TumorDepth >= minTumorDepth and sample.AltAlleleDepth >= minAltAlleleDepth:
               passed = True
               break
           else:
-            if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.MinorAlleleDepth >= minMinorAlleleDepth:
+            if sample.NormalDepth >= minNormalDepth and sample.TumorDepth >= minTumorDepth and sample.AltAlleleDepth >= minAltAlleleDepth:
               passed = True
               break
 
@@ -60,7 +60,7 @@ def filterMutect(logger, inputFile, outputFile, minNormalDepth, minTumorDepth, m
   with open(outputFile + ".stat", "wt") as fout:
     fout.write("minNormalDepth\t%d\n" % minNormalDepth)
     fout.write("minTumorDepth\t%d\n" % minTumorDepth)
-    fout.write("minMinorAlleleDepth\t%d\n" % minMinorAlleleDepth)
+    fout.write("minAltAlleleDepth\t%d\n" % minAltAlleleDepth)
     fout.write("Passed\t%d\n" % passedCount)
     fout.write("Failed\t%d\n" % failedCount)
 
@@ -80,7 +80,7 @@ def main():
   parser.add_argument('-i', '--input', action='store', nargs='?', help='Input vcf file', required=NotDEBUG)
   parser.add_argument('--min_normal_depth', action='store', type=int, default=8, help='Input minimum depth in normal sample')
   parser.add_argument('--min_tumor_depth', action='store', type=int, default=10, help='Input minimum depth in tumor sample')
-  parser.add_argument('--min_minor_allele', action='store', type=int, default=3, help='Input minimum minor allele depth in tumor sample')
+  parser.add_argument('--min_alt_allele_depth', action='store', type=int, default=3, help='Input minimum alt allele depth in tumor sample')
   parser.add_argument('-o', '--output', action='store', nargs='?', help="Output vcf file", required=NotDEBUG)
 
   args = parser.parse_args()
@@ -92,7 +92,7 @@ def main():
   logger = logging.getLogger('filterMutect')
   logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)-8s - %(message)s')
 
-  filterMutect(logger, args.input, args.output, args.min_normal_depth, args.min_tumor_depth, args.min_minor_allele)
+  filterMutect(logger, args.input, args.output, args.min_normal_depth, args.min_tumor_depth, args.min_alt_allele_depth)
 
   logger.info("done.")
 
