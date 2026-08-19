@@ -94,10 +94,17 @@ if(all(grepl("^\\d+:", cts))){
 Read comparison information.
 
 ```{r}
-comparison_tbl=fread('fileList3.txt', header=FALSE) |>
-  dplyr::filter(V2 == "groups") |> 
-  dplyr::rename(group=V1, comparison=V3) |>
-  dplyr::select(group, comparison)
+comparison_tbl=fread('fileList3.txt', header=FALSE)
+if("V3" %in% colnames(comparison_tbl)){
+  comparison_tbl=comparison_tbl |>
+    dplyr::filter(V2 == "groups") |> 
+    dplyr::rename(group=V1, comparison=V3) |>
+    dplyr::select(group, comparison)
+}else{
+  comparison_tbl=comparison_tbl |>
+    dplyr::rename(group=V1, comparison=V2) |>
+    dplyr::select(group, comparison)
+}
 ```
 
 ```{r}
