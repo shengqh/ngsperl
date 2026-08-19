@@ -87,8 +87,11 @@ our %EXPORT_TAGS = (
         addAntibody
         addMarkerGenes
         addGeneTask
+
         addEdgeRTask
+        addGLIMESTask
         addComparison
+
         addDynamicCluster
         addSubDynamicCluster
         addSubCluster
@@ -2067,6 +2070,108 @@ sub addEdgeRTask {
 } ## end sub addEdgeRTask
 
 
+sub addGLIMESTask {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $reduction ) = @_;
+
+  if ( !defined $reduction ) {
+    $reduction = "umap";
+  }
+
+  my $rCodeDic = {
+    "email"                              => getValue( $def, "email" ),
+    "affiliation"                        => $def->{"affiliation"},
+    "task_name"                          => getValue( $def, "task_name" ),
+    "pvalue"                             => getValue( $def, "DE_pvalue" ),
+    "useRawPvalue"                       => getValue( $def, "DE_use_raw_pvalue" ),
+    "foldChange"                         => getValue( $def, "DE_fold_change" ),
+    "bBetweenCluster"                    => $bBetweenCluster,
+    "covariance_file"                    => $def->{covariance_file},
+    "sample_column"                      => $def->{sample_column},
+    "group_column"                       => $def->{group_column},
+    "reduction"                          => $reduction,
+    "discard_samples"                    => $def->{discard_samples},
+    "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison}
+  };
+
+  my $GLIMETaskname         = defined $celltype_task ? $celltype_task . "_GLIMES" : $cluster_task . "_GLIMES";
+  my $groups                = undef;
+  my $pairs                 = undef;
+  my $curClusterName        = undef;
+  my $curClusterDisplayName = undef;
+
+  my $GLIMESRscript = "../scRNA/GLIMES.r";
+  my $GLIMESRmd     = "../scRNA/GLIMES.rmd";
+
+  my $GLIMES_suffix = ".GLIMES_by_cell";
+  if ($bBetweenCluster) {
+    $GLIMETaskname                       = $GLIMETaskname . "_betweenCluster_byCell";
+    $curClusterName                      = getValue( $def, "DE_cluster_name" );
+    $curClusterDisplayName               = getValue( $def, "DE_cluster_display_name", $curClusterName );
+    $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
+    $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
+    $groups                              = getValue( $def, "DE_cluster_groups", {} );
+    $pairs                               = getValue( $def, "DE_cluster_pairs" );
+  } ## end if ($bBetweenCluster)
+  else {
+    if ($DE_by_celltype) {
+      $curClusterName = $celltype_name;
+      $GLIMETaskname  = $GLIMETaskname . "_inCelltype";
+    }
+    else {
+      $curClusterName = $cluster_name;
+      $GLIMETaskname  = $GLIMETaskname . "_inCluster";
+    }
+
+    $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
+    $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
+    $GLIMETaskname                       = $GLIMETaskname . "_byCell";
+
+    $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
+
+    if ( !defined $def->{group_column} ) {
+      $groups = getValue( $def, "groups" );
+    }
+    $pairs = getValue( $def, "pairs" );
+  } ## end else [ if ($bBetweenCluster) ]
+  $rCodeDic->{"cluster_name"} = $curClusterName;
+  my $rmd_ext = "${GLIMES_suffix}.html";
+
+  $config->{$GLIMETaskname} = {
+    class      => "CQS::UniqueR",
+    perform    => 1,
+    target_dir => $target_dir . "/" . getNextFolderIndex($def) . $GLIMETaskname,
+    rtemplate  => "../CQS/countTableVisFunctions.R,../scRNA/scRNA_func.r,${GLIMESRscript}",
+    #rReportTemplate      => "$GLIMESRmd,reportFunctions.R",
+    rmd_ext              => $rmd_ext,
+    run_rmd_independent  => 1,
+    parameterSampleFile1 => $groups,
+    parameterSampleFile2 => $pairs,
+    parameterSampleFile3 => $rCodeDic,
+    output_file_ext      => ".GLIMES.files.csv",
+    no_docker            => getValue( $def, "no_docker", 0 ),
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "24",
+      "mem"      => getValue( $def, "seurat_mem" )
+    },
+  };
+
+  if ( !defined $config->{$cluster_task} && -e $cluster_task ) {
+    $config->{$GLIMETaskname}{parameterFile1} = $cluster_task;
+  }
+  else {
+    $config->{$GLIMETaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
+    if ( defined $celltype_task ) {
+      $config->{$GLIMETaskname}{parameterFile2_ref} = [ $celltype_task, $celltype_cluster_file ];
+    }
+  } ## end else [ if ( !defined $config->...)]
+  push( @$summary, $GLIMETaskname );
+
+  return ($GLIMETaskname);
+} ## end sub addGLIMESTask
+
+
 sub addComparison {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $reduction ) = @_;
   my $perform_comparison = getValue( $def, "perform_comparison", 0 );
@@ -2101,6 +2206,9 @@ sub addComparison {
       my $DE_by_celltype = $deByOption eq "DE_by_celltype";
       if ( $DE_method eq "edgeR" ) {
         addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
+      }
+      elsif ( $DE_method eq "GLIMES" ) {
+        addGLIMESTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $reduction );
       }
       else {
         addSeuratDETask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
@@ -3701,10 +3809,10 @@ sub add_individual_qc_tasks {
       use_sctransform_v2 => getValue( $def, "use_sctransform_v2",        0 ),
       doublet_column     => getValue( $def, "validation_doublet_column", getValue( $def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5" ) ),
       CellTypist_column  => getValue( $def, "CellTypist_column",         "majority_voting" ),
-      bubblemap_file   => getValue( $def, "bubblemap_file" ),
-      bubblemap_width  => getValue( $def, "bubblemap_width", 4500 ),
-      bubblemap_height => getValue( $def, "bubblemap_height", 1500 ),
-      bubblemap_unit   => getValue( $def, "bubblemap_unit", "px" ),
+      bubblemap_file     => getValue( $def, "bubblemap_file" ),
+      bubblemap_width    => getValue( $def, "bubblemap_width",  4500 ),
+      bubblemap_height   => getValue( $def, "bubblemap_height", 1500 ),
+      bubblemap_unit     => getValue( $def, "bubblemap_unit",   "px" ),
     },
     parameterSampleFile2_ref => $raw_individual_qc_task,
     parameterSampleFile3_ref => $sctk_ref,
@@ -4178,9 +4286,9 @@ sub add_cell_chat {
     parameterSampleFile1 => getValue( $def, "cellchat_group_dict" ),
     parameterSampleFile2 => {
       prefix           => getValue( $def, "task_name" ),
-      sample_column    => getValue( $def, "cellchat_sample_column",    getValue( $def, "sample_column" ) ),
-      group_column     => getValue( $def, "cellchat_group_column",     getValue( $def, "group_column" ) ),
-      celltype_column  => getValue( $def, "cellchat_celltype_column",  getValue( $def, "final_object_seurat_cell_type" ) ),
+      sample_column    => getValue( $def, [ "cellchat_sample_column",   "final_object_sample_column" ] ),
+      group_column     => getValue( $def, [ "cellchat_group_column",    "final_object_group_column" ] ),
+      celltype_column  => getValue( $def, [ "cellchat_celltype_column", "final_object_seurat_cell_type" ] ),
       ignore_celltypes => getValue( $def, "cellchat_ignore_celltypes", "" ),
       CellChatDB       => getValue( $def, "cellchat_CellChatDB" ),
       thread           => 4,
@@ -4404,8 +4512,8 @@ sub add_miloR_miloDE {
 sub add_sccomp {
   my ( $config, $def, $tasks, $target_dir, $sccomp_task, $meta_ref ) = @_;
 
-  initDefaultValue( $def, "sccomp_groups", $def->{groups} );
-  initDefaultValue( $def, "sccomp_pairs",  $def->{pairs} );
+  initDefaultValue( $def, "sccomp_groups", getValue( $def, "groups", {} ) );
+  initDefaultValue( $def, "sccomp_pairs", getValue( $def, "pairs" ) );
 
   my $target_folder = $target_dir . "/" . $sccomp_task;
   $config->{$sccomp_task} = {
@@ -4419,8 +4527,8 @@ sub add_sccomp {
       task_name                    => getValue( $def, "task_name" ),
       email                        => getValue( $def, "email" ),
       affiliation                  => $def->{"affiliation"},
-      cell_group_column            => getValue( $def, "sccomp_cell_group_column" ),
-      group_column                 => getValue( $def, "sccomp_group_column" ),
+      cell_group_column            => getValue( $def, [ "sccomp_cell_group_column", "final_object_seurat_cell_type" ] ),
+      group_column                 => getValue( $def, [ "sccomp_group_column",      "final_object_group_column" ] ),
       sccomp_stan_models_cache_dir => getValue( $def, "sccomp_stan_models_cache_dir" ),
       covariance_file              => getValue( $def, "covariance_file", "" ),
     },
