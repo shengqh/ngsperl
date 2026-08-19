@@ -233,7 +233,6 @@ sub initializeScRNASeqDefaultOptions {
   }
 
   initDefaultValue( $def, "perform_sccomp",           0 );
-  initDefaultValue( $def, "sccomp_cell_group_column", "seurat_cell_type" );
 
   initDefaultValue( $def, "perform_individual_dynamic_qc", 0 );
   initDefaultValue( $def, "perform_scDblFinder",           0 );
