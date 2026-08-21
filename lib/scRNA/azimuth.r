@@ -99,6 +99,12 @@ if(myoptions$species == "Mm") {
 }
 
 anno_columns=grep('predicted.+\\d$', colnames(obj@meta.data), value=TRUE)
+if(length(anno_columns) == 0){
+  anno_columns=grep('predicted.celltype$', colnames(obj@meta.data), value=TRUE)
+}
+if(length(anno_columns) == 0){
+  stop("No Azimuth annotation columns found in the Seurat object meta.data")
+}
 azimuth_cols = c()
 idx=1
 for(idx in 1:length(anno_columns)){
