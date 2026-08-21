@@ -752,7 +752,7 @@ exit \$exitcode
 
   close $pbs;
 
-  `chmod 755 $pbs_file`;
+  chmod 0755, $pbs_file;
 
   print "$pbs_file created. \n";
 }
