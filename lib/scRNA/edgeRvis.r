@@ -246,6 +246,8 @@ if(!bBetweenCluster){
     p2<-MyFeaturePlot(obj, feature="sigRate", cols=c("lightgrey", "red"), raster=FALSE) + ggtitle("Percentage of DE genes in each cluster") + theme(plot.title = element_text(hjust=0.5))
     g<-ggarrange(p1, p2, ncol = 2, labels = c("A", "B"))
     ggsave(paste0(detail_folder, outFile, ".", comp, ".sigGenePerc.png"), g, width=14, height=7, dpi=300, units="in", bg="white")
+
+    saveRDS(p2, file=paste0(detail_folder, outFile, ".", comp, ".sigGenePerc.rds"))
   }
 }
 
