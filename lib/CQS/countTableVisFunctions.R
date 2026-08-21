@@ -1263,8 +1263,10 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
     if(has_group){
       g<-g+geom_point(aes(col=group), size=point_size) + 
         scale_colour_manual(name="",values = groupColors)
+      cur_width_inch = width_inch
     }else{
       g<-g+geom_point(size=point_size) 
+      cur_width_inch = height_inch
     }
     g<-g+scale_x_continuous(limits=c(min(pcadata$PC1) * 1.2,max(pcadata$PC1) * 1.2)) +
       scale_y_continuous(limits=c(min(pcadata$PC2) * 1.2,max(pcadata$PC2) * 1.2)) + 
@@ -1280,7 +1282,7 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
     if(!is.null(file_prefix)){
       save_ggplot2_plot(file_prefix=file_prefix,
                         outputFormat=outputFormat, 
-                        width_inch=width_inch, 
+                        width_inch=cur_width_inch, 
                         height_inch=height_inch, 
                         plot=g,
                         show_info=show_info)
