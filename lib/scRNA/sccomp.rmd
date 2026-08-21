@@ -182,6 +182,8 @@ for(comp_name in names(complist)){
   sccomp_result = no_outlier_estimate |>
                   sccomp_test(contrasts= c(contrast))
 
+  saveRDS(sccomp_result, file=paste0(prefix, ".", comp_file, ".sccomp.rds"))
+
   pchange <- sccomp_proportional_fold_change(
     no_outlier_estimate,
     formula_composition = ~ type,
