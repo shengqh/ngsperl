@@ -3,6 +3,7 @@ package scRNA::Modules;
 
 use strict;
 use warnings;
+use Carp qw<longmess>;
 require Exporter;
 use File::Basename;
 use File::Slurp;
@@ -1660,114 +1661,8 @@ sub addSeuratDETask {
   push( @$summary, $DEtaskname );
 } ## end sub addSeuratDETask
 
-
-sub addEdgeRTask {
-  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
-
-  if ( !defined $reduction ) {
-    $reduction = "umap";
-  }
-
-  my $rCodeDic = {
-    "email"                              => getValue( $def, "email" ),
-    "affiliation"                        => $def->{"affiliation"},
-    "task_name"                          => getValue( $def, "task_name" ),
-    "pvalue"                             => getValue( $def, "DE_pvalue" ),
-    "useRawPvalue"                       => getValue( $def, "DE_use_raw_pvalue" ),
-    "foldChange"                         => getValue( $def, "DE_fold_change" ),
-    "bBetweenCluster"                    => $bBetweenCluster,
-    "DE_by_cell"                         => $DE_by_cell,
-    "covariance_file"                    => $def->{covariance_file},
-    "sample_column"                      => $def->{sample_column},
-    "group_column"                       => $def->{group_column},
-    "reduction"                          => $reduction,
-    "discard_samples"                    => $def->{discard_samples},
-    "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison}
-  };
-
-  my $edgeRtaskname         = defined $celltype_task ? $celltype_task . "_edgeR" : $cluster_task . "_edgeR";
-  my $groups                = undef;
-  my $pairs                 = undef;
-  my $curClusterName        = undef;
-  my $curClusterDisplayName = undef;
-
-  my $edgeRscript = "../scRNA/edgeR.r";
-  my $edgeRmd     = "../scRNA/edgeR.rmd";
-
-  my $edgeR_suffix = ".edgeR_by_cell";
-  if ($bBetweenCluster) {
-    $edgeRtaskname                       = $edgeRtaskname . "_betweenCluster_byCell";
-    $curClusterName                      = getValue( $def, "DE_cluster_name" );
-    $curClusterDisplayName               = getValue( $def, "DE_cluster_display_name", $curClusterName );
-    $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
-    $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
-    $groups                              = getValue( $def, "DE_cluster_groups", {} );
-    $pairs                               = getValue( $def, "DE_cluster_pairs" );
-  } ## end if ($bBetweenCluster)
-  else {
-    if ($DE_by_celltype) {
-      $curClusterName = $celltype_name;
-      $edgeRtaskname  = $edgeRtaskname . "_inCelltype";
-    }
-    else {
-      $curClusterName = $cluster_name;
-      $edgeRtaskname  = $edgeRtaskname . "_inCluster";
-    }
-
-    if ($DE_by_cell) {
-      $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
-      $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
-      $edgeRtaskname                       = $edgeRtaskname . "_byCell";
-    }
-    else {
-      $rCodeDic->{"filter_min_cell_per_sample"}  = getValue( $def, "DE_by_sample_min_cell_per_sample" );
-      $rCodeDic->{"filter_min_count_per_sample"} = getValue( $def, "DE_by_sample_min_count_per_sample", 5 );
-      $edgeRtaskname                             = $edgeRtaskname . "_bySample";
-      $edgeRscript                               = "../scRNA/edgeR_pseudo.r";
-      $edgeR_suffix                              = ".edgeR_by_sample";
-    } ## end else [ if ($DE_by_cell) ]
-
-    $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
-
-    if ( !defined $def->{group_column} ) {
-      $groups = getValue( $def, "groups" );
-    }
-    $pairs = getValue( $def, "pairs" );
-  } ## end else [ if ($bBetweenCluster) ]
-  $rCodeDic->{"cluster_name"} = $curClusterName;
-  my $rmd_ext = "${edgeR_suffix}.html";
-
-  $config->{$edgeRtaskname} = {
-    class                => "CQS::UniqueR",
-    perform              => 1,
-    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $edgeRtaskname,
-    rtemplate            => "../CQS/countTableVisFunctions.R,../scRNA/scRNA_func.r,${edgeRscript}",
-    rReportTemplate      => "$edgeRmd,reportFunctions.R",
-    rmd_ext              => $rmd_ext,
-    run_rmd_independent  => 1,
-    parameterSampleFile1 => $groups,
-    parameterSampleFile2 => $pairs,
-    parameterSampleFile3 => $rCodeDic,
-    output_file_ext      => ".edgeR.files.csv",
-    no_docker            => getValue( $def, "no_docker", 0 ),
-    sh_direct            => 1,
-    pbs                  => {
-      "nodes"    => "1:ppn=1",
-      "walltime" => "24",
-      "mem"      => getValue( $def, "seurat_mem" )
-    },
-  };
-
-  if ( !defined $config->{$cluster_task} && -e $cluster_task ) {
-    $config->{$edgeRtaskname}{parameterFile1} = $cluster_task;
-  }
-  else {
-    $config->{$edgeRtaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
-    if ( defined $celltype_task ) {
-      $config->{$edgeRtaskname}{parameterFile2_ref} = [ $celltype_task, $celltype_cluster_file ];
-    }
-  } ## end else [ if ( !defined $config->...)]
-  push( @$summary, $edgeRtaskname );
+sub addPostDEAnalsyis {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction, $edgeRtaskname, $rmd_ext, $edgeR_suffix, $curClusterName ) = @_;
 
   my $vistaskname = $edgeRtaskname . "_vis";
   my $vis_rmd_txt = $rmd_ext;
@@ -1811,38 +1706,38 @@ sub addEdgeRTask {
 
   push( @$summary, $vistaskname );
 
-  if ($bBetweenCluster) {
-    my $vistaskname2 = $edgeRtaskname . "_dotplot";
-    $config->{$vistaskname2} = {
-      class                => "CQS::UniqueR",
-      perform              => 1,
-      target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname2,
-      rtemplate            => "../scRNA/scRNA_func.r;../scRNA/edgeRdotplot.r",
-      parameterFile2_ref   => [$edgeRtaskname],
-      parameterSampleFile1 => {
-        cluster_name         => getValue( $def, "DE_clusters_name",         $curClusterName ),
-        display_cluster_name => getValue( $def, "DE_clusters_display_name", $curClusterDisplayName ),
-        gene_number          => getValue( $def, "DE_dotplot_gene_number",   20 ),
-      },
-      output_file_ext => ".edgeRvis2.files.csv",
-      rCode           => "",
-      sh_direct       => 1,
-      pbs             => {
-        "nodes"    => "1:ppn=1",
-        "walltime" => "10",
-        "mem"      => getValue( $def, "seurat_mem" )
-      },
-    };
-    if ( -e $cluster_task ) {
-      $config->{$vistaskname2}{parameterFile1} = $cluster_task;
-    }
-    else {
-      $config->{$vistaskname2}{parameterFile1_ref} = [ $cluster_task,  ".final.rds" ];
-      $config->{$vistaskname2}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
-    }
+  # if ($bBetweenCluster) {
+  #   my $vistaskname2 = $edgeRtaskname . "_dotplot";
+  #   $config->{$vistaskname2} = {
+  #     class                => "CQS::UniqueR",
+  #     perform              => 1,
+  #     target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $vistaskname2,
+  #     rtemplate            => "../scRNA/scRNA_func.r;../scRNA/edgeRdotplot.r",
+  #     parameterFile2_ref   => [$edgeRtaskname],
+  #     parameterSampleFile1 => {
+  #       cluster_name         => getValue( $def, "DE_clusters_name",         $curClusterName ),
+  #       display_cluster_name => getValue( $def, "DE_clusters_display_name", $curClusterDisplayName ),
+  #       gene_number          => getValue( $def, "DE_dotplot_gene_number",   20 ),
+  #     },
+  #     output_file_ext => ".edgeRvis2.files.csv",
+  #     rCode           => "",
+  #     sh_direct       => 1,
+  #     pbs             => {
+  #       "nodes"    => "1:ppn=1",
+  #       "walltime" => "10",
+  #       "mem"      => getValue( $def, "seurat_mem" )
+  #     },
+  #   };
+  #   if ( -e $cluster_task ) {
+  #     $config->{$vistaskname2}{parameterFile1} = $cluster_task;
+  #   }
+  #   else {
+  #     $config->{$vistaskname2}{parameterFile1_ref} = [ $cluster_task,  ".final.rds" ];
+  #     $config->{$vistaskname2}{parameterFile3_ref} = [ $celltype_task, $celltype_cluster_file ];
+  #   }
 
-    push( @$summary, $vistaskname2 );
-  } ## end if ($bBetweenCluster)
+  #   push( @$summary, $vistaskname2 );
+  # } ## end if ($bBetweenCluster)
 
   if ( getValue( $def, "perform_webgestalt" ) ) {
     my $webgestaltTaskName = $edgeRtaskname . "_WebGestalt";
@@ -1926,7 +1821,7 @@ sub addEdgeRTask {
         rtemplate                  => "GSEAPerform.R",
         output_to_result_directory => 1,
         output_file_ext            => ".gsea.files.csv",
-        parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
+        parameterFile1_ref         => [ $edgeRtaskname, ".files.csv\$" ],
         parameterSampleFile1       => $def->{pairs},
         parameterSampleFile2       => {
           "email"        => getValue( $def, "email" ),
@@ -1985,7 +1880,7 @@ sub addEdgeRTask {
         rtemplate                  => "GSEAPerform.R",
         output_to_result_directory => 1,
         output_file_ext            => ".gsea.files.csv",
-        parameterFile1_ref         => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
+        parameterFile1_ref         => [ $edgeRtaskname, ".files.csv\$" ],
         parameterSampleFile2       => {
           "email"        => getValue( $def, "email" ),
           "affiliation"  => $def->{"affiliation"},
@@ -2054,7 +1949,7 @@ sub addEdgeRTask {
         "msigdbr_species"     => getValue( $def, "msigdbr_species" ),
         "msigdbr_collections" => getValue( $def, "msigdbr_collections", "H;C2:REACTOME" ),
       },
-      parameterSampleFile2_ref => [ $edgeRtaskname, ".edgeR.files.csv\$" ],
+      parameterSampleFile2_ref => [ $edgeRtaskname, ".files.csv\$" ],
       no_docker                => getValue( $def, "fgsea_no_docker", 0 ),
       sh_direct                => 1,
       pbs                      => {
@@ -2065,10 +1960,138 @@ sub addEdgeRTask {
     };
     push( @$summary, $fgsea_task );
   } ## end if ( getValue( $def, "perform_fgsea"...))
+}
+
+sub addEdgeRTask {
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
+
+  if ( !defined $reduction ) {
+    $reduction = "umap";
+  }
+
+  my $sample_column = $def->{sample_column} ? $def->{sample_column} : $def->{final_object_sample_column} ? $def->{final_object_sample_column} : undef;
+  my $group_column  = $def->{group_column}  ? $def->{group_column}  : $def->{final_object_group_column}  ? $def->{final_object_group_column}  : undef;
+
+  my $rCodeDic = {
+    "email"                              => getValue( $def, "email" ),
+    "affiliation"                        => $def->{"affiliation"},
+    "task_name"                          => getValue( $def, "task_name" ),
+    "pvalue"                             => getValue( $def, "DE_pvalue" ),
+    "useRawPvalue"                       => getValue( $def, "DE_use_raw_pvalue" ),
+    "foldChange"                         => getValue( $def, "DE_fold_change" ),
+    "bBetweenCluster"                    => $bBetweenCluster,
+    "DE_by_cell"                         => $DE_by_cell,
+    "covariance_file"                    => $def->{covariance_file},
+    "sample_column"                      => $sample_column,
+    "group_column"                       => $group_column,
+    "reduction"                          => $reduction,
+    "discard_samples"                    => $def->{discard_samples},
+    "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison}
+  };
+
+  my $edgeRtaskname         = defined $celltype_task ? $celltype_task . "_edgeR" : $cluster_task . "_edgeR";
+  my $groups                = undef;
+  my $pairs                 = undef;
+  my $curClusterName        = undef;
+  my $curClusterDisplayName = undef;
+
+  my $edgeRscript = "../scRNA/edgeR.r";
+  my $edgeRmd     = "../scRNA/edgeR.rmd";
+
+  my $edgeR_suffix = ".edgeR_by_cell";
+  if ($bBetweenCluster) {
+    $edgeRtaskname                       = $edgeRtaskname . "_betweenCluster_byCell";
+    $curClusterName                      = getValue( $def, "DE_cluster_name" );
+    $curClusterDisplayName               = getValue( $def, "DE_cluster_display_name", $curClusterName );
+    $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
+    $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
+    $groups                              = getValue( $def, "DE_cluster_groups", {} );
+    $pairs                               = getValue( $def, "DE_cluster_pairs" );
+
+    if ($DE_by_cell) {
+      $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
+      $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
+      $edgeRtaskname                       = $edgeRtaskname . "_byCell";
+    }
+    else {
+      $rCodeDic->{"filter_min_cell_per_sample"}  = getValue( $def, "DE_by_sample_min_cell_per_sample" );
+      $rCodeDic->{"filter_min_count_per_sample"} = getValue( $def, "DE_by_sample_min_count_per_sample", 5 );
+      $edgeRtaskname                             = $edgeRtaskname . "_bySample";
+      $edgeRscript                               = "../scRNA/edgeR_pseudo.r";
+      $edgeR_suffix                              = ".edgeR_by_sample";
+    } ## end else [ if ($DE_by_cell) ]
+  } ## end if ($bBetweenCluster)
+  else {
+    #print Dumper(longmess());
+    #die;
+    if ($DE_by_celltype) {
+      $curClusterName = $celltype_name;
+      $edgeRtaskname  = $edgeRtaskname . "_inCelltype";
+    }
+    else {
+      $curClusterName = $cluster_name;
+      $edgeRtaskname  = $edgeRtaskname . "_inCluster";
+    }
+
+    if ($DE_by_cell) {
+      $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
+      $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
+      $edgeRtaskname                       = $edgeRtaskname . "_byCell";
+    }
+    else {
+      $rCodeDic->{"filter_min_cell_per_sample"}  = getValue( $def, "DE_by_sample_min_cell_per_sample" );
+      $rCodeDic->{"filter_min_count_per_sample"} = getValue( $def, "DE_by_sample_min_count_per_sample", 5 );
+      $edgeRtaskname                             = $edgeRtaskname . "_bySample";
+      $edgeRscript                               = "../scRNA/edgeR_pseudo.r";
+      $edgeR_suffix                              = ".edgeR_by_sample";
+    } ## end else [ if ($DE_by_cell) ]
+
+    $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
+
+    if ( !defined $def->{"group_column"} && !defined $def->{"final_object_group_column"} ) {
+      $groups = getValue( $def, "groups" );
+    }
+    $pairs = getValue( $def, "pairs" );
+  } ## end else [ if ($bBetweenCluster) ]
+  $rCodeDic->{"cluster_name"} = $curClusterName;
+  my $rmd_ext = "${edgeR_suffix}.html";
+
+  $config->{$edgeRtaskname} = {
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $edgeRtaskname,
+    rtemplate            => "../CQS/countTableVisFunctions.R,../scRNA/scRNA_func.r,${edgeRscript}",
+    rReportTemplate      => "$edgeRmd,reportFunctions.R",
+    rmd_ext              => $rmd_ext,
+    run_rmd_independent  => 1,
+    parameterSampleFile1 => $groups,
+    parameterSampleFile2 => $pairs,
+    parameterSampleFile3 => $rCodeDic,
+    output_file_ext      => ".edgeR.files.csv",
+    no_docker            => getValue( $def, "no_docker", 0 ),
+    sh_direct            => 1,
+    pbs                  => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "24",
+      "mem"      => getValue( $def, "seurat_mem" )
+    },
+  };
+
+  if ( !defined $config->{$cluster_task} && -e $cluster_task ) {
+    $config->{$edgeRtaskname}{parameterFile1} = $cluster_task;
+  }
+  else {
+    $config->{$edgeRtaskname}{parameterFile1_ref} = [ $cluster_task, ".final.rds" ];
+    if ( defined $celltype_task ) {
+      $config->{$edgeRtaskname}{parameterFile2_ref} = [ $celltype_task, $celltype_cluster_file ];
+    }
+  } ## end else [ if ( !defined $config->...)]
+  push( @$summary, $edgeRtaskname );
+
+  addPostDEAnalsyis( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction, $edgeRtaskname, $edgeR_suffix );
 
   return ($edgeRtaskname);
 } ## end sub addEdgeRTask
-
 
 sub addGLIMESTask {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $reduction ) = @_;
@@ -2090,7 +2113,8 @@ sub addGLIMESTask {
     "group_column"                       => $def->{group_column},
     "reduction"                          => $reduction,
     "discard_samples"                    => $def->{discard_samples},
-    "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison}
+    "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison},
+    "glmm_method"                        => getValue( $def, "DE_GLIME_glmm_method", "binomial" )
   };
 
   my $GLIMETaskname         = defined $celltype_task ? $celltype_task . "_GLIMES" : $cluster_task . "_GLIMES";
@@ -2100,7 +2124,7 @@ sub addGLIMESTask {
   my $curClusterDisplayName = undef;
 
   my $GLIMESRscript = "../scRNA/GLIMES.r";
-  my $GLIMESRmd     = "../scRNA/GLIMES.rmd";
+  my $GLIMESRmd     = "../scRNA/edgeR.rmd";
 
   my $GLIMES_suffix = ".GLIMES_by_cell";
   if ($bBetweenCluster) {
@@ -2141,14 +2165,14 @@ sub addGLIMESTask {
     perform    => 1,
     target_dir => $target_dir . "/" . getNextFolderIndex($def) . $GLIMETaskname,
     rtemplate  => "../CQS/countTableVisFunctions.R,../scRNA/scRNA_func.r,${GLIMESRscript}",
-    #rReportTemplate      => "$GLIMESRmd,reportFunctions.R",
+    rReportTemplate      => "$GLIMESRmd,reportFunctions.R",
     rmd_ext              => $rmd_ext,
     run_rmd_independent  => 1,
     parameterSampleFile1 => $groups,
     parameterSampleFile2 => $pairs,
     parameterSampleFile3 => $rCodeDic,
     output_file_ext      => ".GLIMES.files.csv",
-    no_docker            => getValue( $def, "no_docker", 0 ),
+    no_docker            => getValue( $def, ["no_docker", "GLIMES_no_docker"], 0 ),
     sh_direct            => 1,
     pbs                  => {
       "nodes"    => "1:ppn=1",
@@ -2168,9 +2192,10 @@ sub addGLIMESTask {
   } ## end else [ if ( !defined $config->...)]
   push( @$summary, $GLIMETaskname );
 
+  addPostDEAnalsyis( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, 1, $reduction, $GLIMETaskname, $GLIMES_suffix );
+
   return ($GLIMETaskname);
 } ## end sub addGLIMESTask
-
 
 sub addComparison {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $reduction ) = @_;
@@ -2197,23 +2222,28 @@ sub addComparison {
       if ( $DE_method eq "edgeR" ) {
         addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell, $reduction );
       }
+      elsif ( $DE_method eq "GLIMES" ) {
+        addGLIMESTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, 1, $reduction );
+      }
       else {
         addSeuratDETask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 1, 0, $DE_by_cell, $reduction );
       }
     } ## end if ( defined $def->{"DE_cluster_pairs"...})
 
-    for my $deByOption (@deByOptions) {
-      my $DE_by_celltype = $deByOption eq "DE_by_celltype";
-      if ( $DE_method eq "edgeR" ) {
-        addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
-      }
-      elsif ( $DE_method eq "GLIMES" ) {
-        addGLIMESTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $reduction );
-      }
-      else {
-        addSeuratDETask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
-      }
-    } ## end for my $deByOption (@deByOptions)
+    if ( defined $def->{"pairs"} ) {
+      for my $deByOption (@deByOptions) {
+        my $DE_by_celltype = $deByOption eq "DE_by_celltype";
+        if ( $DE_method eq "edgeR" ) {
+          addEdgeRTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
+        }
+        elsif ( $DE_method eq "GLIMES" ) {
+          addGLIMESTask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, 1, $reduction );
+        }
+        else {
+          addSeuratDETask( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, 0, $DE_by_celltype, $DE_by_cell, $reduction );
+        }
+      } ## end for my $deByOption (@deByOptions)
+    } ## end if ( defined $def->{"pairs"...})
   } ## end if ($perform_comparison)
 } ## end sub addComparison
 

@@ -2582,7 +2582,14 @@ get_group_colors_from_designdata<-function(designdata){
   return(groupColors)
 }
 
-get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell=TRUE, is_between_cluster=FALSE, log_cpm=NULL, group_colors=NULL){
+get_sig_gene_figure<-function(cell_obj, 
+                              sigout, 
+                              designdata, 
+                              sig_gene, 
+                              DE_by_cell=TRUE, 
+                              is_between_cluster=FALSE, 
+                              log_cpm=NULL, 
+                              group_colors=NULL){
   if(is.null(group_colors)){
     group_colors<-get_group_colors_from_designdata(designdata)
   }
@@ -2614,26 +2621,28 @@ get_sig_gene_figure<-function(cell_obj, sigout, designdata, sig_gene, DE_by_cell
   if(is_between_cluster){
     p0<-ggplot(geneexp, aes(x=Group, y=Gene, color=Group)) + 
       geom_violin() + 
-      geom_jitter(width = 0.2)
+      geom_jitter(width = 0.2) +
+      theme_bw3()
 
     if(length(unique(geneexp$Sample)) > 1){
-      p0 = p0 + facet_grid(rows=~Sample)
+      p0 = p0 + facet_grid(rows=~Sample, scale="free_x") + theme(strip.text.x = element_text(angle = 90))
     }
     p0 = p0 + 
-      theme_bw3() + 
       scale_color_manual(values = group_colors) +
       NoLegend() + 
       ylab("Gene Expression") +
-      theme(axis.title.x=element_blank())
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_text(angle=90, vjust=0.5, hjust=1))
     
-    p1<-MyDimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + 
-      NoLegend() + 
-      ggtitle("Cluster") + 
-      theme(plot.title = element_text(hjust=0.5))
+    # p1<-MyDimPlot(cell_obj, reduction = "umap", label=T, group.by="DisplayGroup") + 
+    #   NoLegend() + 
+    #   ggtitle("Cluster") + 
+    #   theme(plot.title = element_text(hjust=0.5))
     
-    p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T, raster=FALSE, pt.size=0.5)
-    p<-p0+p1+p2+plot_layout(design="AA
-BC")
+    p2<-MyFeaturePlot(object = cell_obj, features=as.character(sig_gene), order=T, raster=FALSE, pt.size=0.5, split.by="DisplayGroup") &
+      theme(aspect.ratio=1)
+    p<-p0+p2+plot_layout(design="AA
+BB")
     
   }else{
     p0<-ggplot(geneexp, aes(x=Sample, y=Gene, color=Group)) + 
@@ -3603,8 +3612,10 @@ save_volcano_plot<-function(edgeR_out_table,
                             comparisonTitle="",
                             width=7,
                             height=7,
-                            extensions=c("png", "pdf")){
+                            extensions=c("png", "pdf"),
+                            genes=rownames(edgeR_out_table)){
   library(EnhancedVolcano)  
+
   yname=bquote(-log[10](p~value))
   if(useRawPvalue == 1){
     pCutoffCol="PValue"
@@ -3612,7 +3623,7 @@ save_volcano_plot<-function(edgeR_out_table,
     pCutoffCol="FDR"
   }
   p<-EnhancedVolcano(edgeR_out_table,
-      lab = rownames(edgeR_out_table),
+      lab = genes,
       x = 'logFC',
       y = 'PValue',
       title = comparisonTitle,
