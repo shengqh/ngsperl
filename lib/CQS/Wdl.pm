@@ -94,6 +94,22 @@ sub set_json_path_value {
   return $json_dic;
 }
 
+sub read_file {
+  my ($file) = @_;
+  open(my $fh, '<', $file) or die "Cannot read $file";
+  local $/ = undef;
+  my $content = <$fh>;
+  close($fh);
+  return $content;
+}
+
+sub write_file {
+  my ($file, $content) = @_;
+  open(my $fh, '>', $file) or die "Cannot write $file";
+  print $fh $content;
+  close($fh);
+}
+
 sub perform {
   my ( $self, $config, $section ) = @_;
 
@@ -117,33 +133,7 @@ sub perform {
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
 
-  #softlink singularity_image_files to result folder
   my $singularity_option = "";
-  if(has_raw_files( $config, $section, "singularity_image_files" )){
-    my $singularity_image_files = get_raw_files( $config, $section, "singularity_image_files" ); 
-    for my $image_name ( sort keys %$singularity_image_files ) {
-      my $source_image=$singularity_image_files->{$image_name};
-      if( is_array($source_image) ) {
-        $source_image=${$source_image}[0];
-      }
-
-      $singularity_option="--singularity $source_image";
-
-      # print $image_name."\n";
-      # print $source_image."\n";
-      my $target_image = $result_dir."/".$image_name;
-      if (! -e $target_image) {
-        my $simgSoftlinkCommand;
-        if (-l $singularity_image_files->{$image_name}) { #softlink, copy
-            $simgSoftlinkCommand="cp -P ".$source_image." ".$target_image;
-        } else { #file, make softlink
-            $simgSoftlinkCommand="ln -s ".$source_image." ".$target_image;
-        }
-        print($simgSoftlinkCommand."\n");
-        system($simgSoftlinkCommand);
-      }
-    }
-  }
 
   my $raw_files = get_raw_files( $config, $section );
   
@@ -278,6 +268,21 @@ sub perform {
     my $cromwell_finalOutputs = $use_caper ? 0 : get_option($config, $section, "cromwell_finalOutputs", 1);
     my $final_dir = $cromwell_finalOutputs ? $cur_dir . "/cromwell_finalOutputs" : $cur_dir;
 
+    my $current_config_file = $cromwell_config_file;
+    my $config_name = basename($cromwell_config_file);
+    if($config_name =~ /.localdb.conf/){
+      my $db_folder = $result_dir . "/cromwell_db";
+      create_directory_or_die($db_folder);
+
+      my $new_config_name = $sample_name . ".localdb.conf";
+      my $new_config_file = $cur_dir . "/" . $new_config_name;
+      my $config_content = read_file($cromwell_config_file);
+      $config_content =~ s/__DBFOLDER__/$db_folder/g;
+      $config_content =~ s/__SAMPLENAME__/$sample_name/g;
+      write_file($new_config_file, $config_content);
+      $current_config_file = $new_config_file;
+    }
+
     my $expect_file = $expected->{$sample_name}[0];
 
     my $nohup_str = "";
@@ -303,7 +308,7 @@ fi
     $expect_file = undef;
     }else{
       print $sh "if [[ ! -s $expect_file ]]; then
-  $nohup_str\$MYCMD ./$pbs_name background_str
+  $nohup_str\$MYCMD ./$pbs_name $background_str
 fi
 
 ";
@@ -360,7 +365,7 @@ fi
     }
     #print("After deletion: " . Dumper($json_dic));
 
-    my $sample_input_file = $self->get_file( $cur_dir, $sample_name, ".inputs.json" );
+    my $sample_input_file = "$cur_dir/${sample_name}.inputs.json";
     open my $fh, ">", $sample_input_file;
     print $fh $json->encode($json_dic);
     close $fh;
@@ -408,7 +413,7 @@ caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metad
       my $db_url="$cur_dir/${sample_name}.db";
       
       print $pbs "
-java -Dconfig.file=$cromwell_config_file \\
+java -Dconfig.file=$current_config_file \\
   -jar $cromwell_jar \\
   run $wdl_file $option \\
   --inputs $input_file \\
