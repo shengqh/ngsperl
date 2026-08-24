@@ -30,10 +30,10 @@ def filterMutect(logger, fileName, filePath, outputFile, minNormalDepth, minTumo
       for item in items:
         passed = False
         if item.NormalDepth is None:
-          if item.TumorDepth >= minTumorDepth and item.TumorAltAlleleDepth >= minAltAlleleDepth and item.TumorAltAlleleFrequency >= minVariantAlleleFrequency:
+          if item.TumorDepth >= minTumorDepth and item.TumorAltAlleleDepth >= minAltAlleleDepth and item.TumorAltAlleleFrequency >= minAltAlleleFrequency:
             passed = True
         else:
-          if item.NormalDepth >= minNormalDepth and item.TumorDepth >= minTumorDepth and item.TumorAltAlleleDepth >= minAltAlleleDepth and item.TumorAltAlleleFrequency >= minVariantAlleleFrequency:
+          if item.NormalDepth >= minNormalDepth and item.TumorDepth >= minTumorDepth and item.TumorAltAlleleDepth >= minAltAlleleDepth and item.TumorAltAlleleFrequency >= minAltAlleleFrequency:
             passed = True
 
         if passed:
