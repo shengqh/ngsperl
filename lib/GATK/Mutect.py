@@ -1,6 +1,7 @@
 import gzip
 import os
 from collections import OrderedDict
+from scipy.stats import fisher_exact
 
 class MutectItem:
   def __init__(self, sampleName, line, normalIndex, tumorIndex):
@@ -33,11 +34,11 @@ class MutectItem:
     result = int(parts[DP_index])
     return(result)
 
-  def findAltAlleleDepth(self, parts, AD_index):
+  def findAlleleDepth(self, parts, AD_index):
     ##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
     ##The first value is the depth of the reference allele, and the second value is the depth of the alternate allele. 
     ad = parts[AD_index].split(',')
-    result = int(ad[1])
+    result = [int(ad[0]), int(ad[1])]
     return(result)
 
   def findAltAlleleFrequency(self, parts, AF_index):
@@ -58,11 +59,12 @@ class MutectItem:
       self.NormalDepth = self.findDepth(normalParts, DP_index)
 
     AD_index = formatParts.index("AD")
-    self.TumorAltAlleleDepth = self.findAltAlleleDepth(tumorParts, AD_index)
+    self.TumorRefAlleleDepth, self.TumorAltAlleleDepth = self.findAlleleDepth(tumorParts, AD_index)
 
     AF_index = formatParts.index("AF")
     self.TumorAltAlleleFrequency = self.findAltAlleleFrequency(tumorParts, AF_index)
     if self.NormalData != None:
+      self.NormalRefAlleleDepth, self.NormalAltAlleleDepth = self.findAlleleDepth(normalParts, AD_index)
       self.NormalAltAlleleFrequency = self.findAltAlleleFrequency(normalParts, AF_index)
     
     self.FORMAT = self.FORMAT
@@ -76,6 +78,16 @@ class MutectItem:
       self.INFO = lodParts[0]
     else:
       self.LOD = None
+
+  def getFisherPValue(self):
+    if self.NormalData is None:
+      return None
+
+    ref_alt_table = [[self.NormalRefAlleleDepth, self.NormalAltAlleleDepth],
+                     [self.TumorRefAlleleDepth, self.TumorAltAlleleDepth]]
+
+    _, p_value = fisher_exact(ref_alt_table)
+    return p_value
 
 class MutectResult:
   def clear(self):
