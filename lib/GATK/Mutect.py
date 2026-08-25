@@ -161,6 +161,7 @@ class MutectResult:
           tumorIndex = parts.index(self.TumorSampleName)
           if self.NormalSampleName != None:
             normalIndex = parts.index(self.NormalSampleName)
+          self.Comments.append(line.rstrip())
           logger.info("file=%s; tumor=%s; tumor_index=%d" % (os.path.basename(fileName), self.TumorSampleName, tumorIndex))
         else:
           item = MutectItem(fileName, line, normalIndex, tumorIndex)
