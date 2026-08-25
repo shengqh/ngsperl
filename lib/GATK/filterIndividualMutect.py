@@ -61,7 +61,7 @@ def filterMutect(logger, fileName, filePath, outputFile, minNormalDepth, minTumo
     os.remove(outputFile)
   os.rename(tmpFile, outputFile)
 
-  logger.info("Passed=%d, failed=%d, FisherTestFailed=%d" % (passedCount, failedCount, fisherTestCount))
+  logger.info("Passed=%d, TotalFailed=%d, FisherTestFailed=%d" % (passedCount, failedCount, fisherTestCount))
     
 def main():
   DEBUG=False
