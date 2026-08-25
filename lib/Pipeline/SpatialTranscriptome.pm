@@ -479,6 +479,18 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
     push( @$tasks, $signacx_task );
   } ## end if ( getValue( $def, "perform_SignacX"...))
 
+  my $celltypist_ref = undef;
+  if ( getValue( $def, "perform_CellTypist", 0 ) ) {
+    my $h5ad_task = "CellTypist_1_h5ad";
+    add_rds2h5ad( $config, $def, $summary, $target_dir, $h5ad_task, $source_def );
+    my $h5ad_ref = [ $h5ad_task, ".h5ad" ];
+
+    my $celltypist_task = "CellTypist_2_call";
+    my $cur_options     = { task_name => $def->{task_name}, };
+    add_CellTypist( $config, $def, $summary, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
+    $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
+  } ## end if ( getValue( $def, "perform_CellTypist"...))
+
   if ( getValue( $def, "perform_MEcell", 0 ) ) {
     my $MEcell_task     = "MEcell";
     my $MEcell_nthreads = getValue( $def, "MEcell_nthreads", 8 );
@@ -503,8 +515,8 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       output_other_ext => ".MEcell.mtx.gz",
       pbs              => {
         "nodes"    => "1:ppn=${MEcell_nthreads}",
-        "walltime" => "48",
-        "mem"      => "40gb"
+        "walltime" => getValue( $def, "MEcell_walltime", "48" ),
+        "mem"      => getValue( $def, "MEcell_mem",      "40gb" ),
       }
     };
     push( @$tasks, $MEcell_task );
@@ -633,22 +645,23 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         image_assay            => $source_image_assay,
         data_type              => getValue( $def, "data_type" ),
       },
-      parameterSampleFile3_ref => $MEcell_cluster_tasks,
-      parameterSampleFile4_ref => $azimuth_task,
-      parameterSampleFile5_ref => $rctd_polygons_task,
-      parameterSampleFile6_ref => $singleR_task,
-      parameterSampleFile7_ref => $signacx_task,
-      parameterSampleFile8_ref => $MEcell_umap_task,
-      parameterSampleFile9_ref => $VisiumHD_image_features_task,
-      parameterSampleFile10    => $source_image_assay_dict,
-      no_prefix                => 1,
-      sh_direct                => 0,
-      no_docker                => getValue( $def, "no_docker", 0 ),
-      docker_prefix            => "vis_",
-      output_to_same_folder    => 0,
-      output_ext               => ".MEcell_cluster.html",
-      output_other_ext         => ".${source_assay}.MEcell_clustered.rds",
-      pbs                      => {
+      parameterSampleFile3_ref  => $MEcell_cluster_tasks,
+      parameterSampleFile4_ref  => $azimuth_task,
+      parameterSampleFile5_ref  => $rctd_polygons_task,
+      parameterSampleFile6_ref  => $singleR_task,
+      parameterSampleFile7_ref  => $signacx_task,
+      parameterSampleFile8_ref  => $MEcell_umap_task,
+      parameterSampleFile9_ref  => $VisiumHD_image_features_task,
+      parameterSampleFile10     => $source_image_assay_dict,
+      parameterSampleFile11_ref => $celltypist_ref,
+      no_prefix                 => 1,
+      sh_direct                 => 0,
+      no_docker                 => getValue( $def, "no_docker", 0 ),
+      docker_prefix             => "vis_",
+      output_to_same_folder     => 0,
+      output_ext                => ".MEcell_cluster.html",
+      output_other_ext          => ".${source_assay}.MEcell_clustered.rds",
+      pbs                       => {
         "nodes"    => "1:ppn=1",
         "walltime" => "48",
         "mem"      => "40gb"
@@ -735,16 +748,16 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       if ( $def->{perform_dynamic_choose} ) {
         my $choose_task = "${subcluster_task}_choose";
         $config->{$choose_task} = {
-          class                    => "CQS::IndividualR",
-          target_dir               => "$target_dir/$choose_task",
-          perform                  => 1,
-          rtemplate                => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_MEcell_sub_cluster_choose.r",
-          rReportTemplate          => "../scRNA/spatial_MEcell_sub_cluster_choose.Rmd;reportFunctions.R",
-          run_rmd_independent      => 1,
-          rmd_ext                  => ".choose.html",
-          option                   => "",
-          parameterSampleFile1     => getValue( $def, "dynamic_subclusters_table" ),
-          parameterSampleFile2     => {
+          class                => "CQS::IndividualR",
+          target_dir           => "$target_dir/$choose_task",
+          perform              => 1,
+          rtemplate            => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_MEcell_sub_cluster_choose.r",
+          rReportTemplate      => "../scRNA/spatial_MEcell_sub_cluster_choose.Rmd;reportFunctions.R",
+          run_rmd_independent  => 1,
+          rmd_ext              => ".choose.html",
+          option               => "",
+          parameterSampleFile1 => getValue( $def, "dynamic_subclusters_table" ),
+          parameterSampleFile2 => {
             email                  => getValue( $def, "email" ),
             affiliation            => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
             assay                  => $source_assay,
@@ -762,7 +775,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
             image_assay            => $source_image_assay,
           },
           parameterSampleFile3_ref => [ $MEcell_cluster_report_task, ".rds" ],
-          parameterSampleFile4_ref => [ $subcluster_task, ".Leiden.subcluster.files.csv" ],
+          parameterSampleFile4_ref => [ $subcluster_task,            ".Leiden.subcluster.files.csv" ],
           parameterSampleFile5_ref => $MEcell_umap_task,
           no_prefix                => 1,
           sh_direct                => 0,
@@ -799,12 +812,12 @@ python3 $cell_crop_script \\
             parameterSampleFile3     => getValue( $def, "cell_geojson_files" ),
             parameterSampleFile2     => getValue( $def, "image_files" ),
             #parameterSampleFile4     => getValue( $def, "nucleus_geojson_files" ),
-            output_ext               => ".figures.csv",
-            docker_prefix            => "visiumhd_",
-            no_output                => 1,
-            output_to_same_folder    => 0,
-            sh_direct                => 0,
-            pbs                      => {
+            output_ext            => ".figures.csv",
+            docker_prefix         => "visiumhd_",
+            no_output             => 1,
+            output_to_same_folder => 0,
+            sh_direct             => 0,
+            pbs                   => {
               "nodes"    => "1:ppn=4",
               "walltime" => "10:00:00",
               "mem"      => "80gb"
