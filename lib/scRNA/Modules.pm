@@ -72,6 +72,8 @@ our %EXPORT_TAGS = (
 
         add_signacx
 
+        add_rds2h5ad
+
         add_CellTypist
         add_STCAT
 
