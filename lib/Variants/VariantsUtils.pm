@@ -50,36 +50,78 @@ sub add_combine_mutect {
 sub add_post_mutect {
   my ($config, $def, $target_dir, $tasks, $mutect_prefix, $mutect_index_dic, $mutect_index_key, $mutect_ref ) = @_;
 
-  my $combineVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
-  add_combine_mutect($config, $def, $tasks, $target_dir, $combineVariantsName, $mutect_ref);
+  my $filtered_task = undef;
 
-  my $filterVariantsName = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filterDepth";
-  $config->{$filterVariantsName} = {
-    class                 => "CQS::ProgramWrapper",
-    perform               => 1,
-    target_dir            => "${target_dir}/${filterVariantsName}",
-    option                => "",
-    interpretor           => "python3",
-    program               => "../GATK/filterMutect.py",
-    check_program         => 1,
-    parameterFile1_arg    => "-i",
-    parameterFile1_ref    => [ $combineVariantsName ],
-    output_to_same_folder => 1,
-    output_arg            => "-o",
-    output_file_ext       => ".filtered.vcf",
-    sh_direct             => 1,
-    pbs                   => {
-      "nodes"     => "1:ppn=1",
-      "walltime"  => "10",
-      "mem"       => "10gb"
-    },
-  };
-  push @$tasks, $filterVariantsName;
+  my $mutect2_individual_filtering = getValue( $def, "mutect2_individual_filtering", 0 );
+  if($mutect2_individual_filtering) {
+    my $filter_task = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filterDepth";
+    $config->{$filter_task} = {
+      class         => "CQS::ProgramWrapperOneToOne",
+      perform       => 1,
+      target_dir    => "${target_dir}/${filter_task}",
+      option        => "",
+      interpretor   => "python",
+      program       => "../GATK/filterIndividualMutect.py",
+      check_program => 1,
+      option        => " \\
+      --filter_fisher_test True \\
+      -n __NAME__ \\
+      -i __FILE__ \\
+      -o __NAME__.filtered.vcf 
+    ",
+      parameterSampleFile1_arg => "-i",
+      parameterSampleFile1_ref => $mutect_ref,
+      output_to_same_folder    => 1,
+      output_arg               => "-o",
+      output_file_prefix       => ".filtered.vcf",
+      output_file_ext          => ".filtered.vcf",
+      sh_direct                => 1,
+      pbs                      => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "10",
+        "mem"      => "10gb"
+      },
+    };
+    push @$tasks, $filter_task;
+
+    my $combine_task = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
+    add_combine_mutect($config, $def, $tasks, $target_dir, $combine_task, $filter_task);
+
+    $filtered_task = $combine_task;
+  }else{
+    my $combine_task = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_merge";
+    add_combine_mutect($config, $def, $tasks, $target_dir, $combine_task, $mutect_ref);
+
+    my $filter_task = $mutect_prefix . getNextIndex($mutect_index_dic, $mutect_index_key) . "_filterDepth";
+    $config->{$filter_task} = {
+      class                 => "CQS::ProgramWrapper",
+      perform               => 1,
+      target_dir            => "${target_dir}/${filter_task}",
+      option                => "",
+      interpretor           => "python3",
+      program               => "../GATK/filterMutect.py",
+      check_program         => 1,
+      parameterFile1_arg    => "-i",
+      parameterFile1_ref    => [ $combine_task ],
+      output_to_same_folder => 1,
+      output_arg            => "-o",
+      output_file_ext       => ".filtered.vcf",
+      sh_direct             => 1,
+      pbs                   => {
+        "nodes"     => "1:ppn=1",
+        "walltime"  => "10",
+        "mem"       => "10gb"
+      },
+    };
+    push @$tasks, $filter_task;
+
+    $filtered_task = $filter_task;
+  }
 
   if ( $def->{perform_annovar} ) {
-    my $annovar_name = addAnnovar( $config, $def, $tasks, $target_dir, $filterVariantsName, ".vcf\$", $mutect_prefix, $mutect_index_dic, $mutect_index_key );
+    my $annovar_task = addAnnovar( $config, $def, $tasks, $target_dir, $filtered_task, ".vcf\$", $mutect_prefix, $mutect_index_dic, $mutect_index_key );
     if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-      my $annovar_filter_name = addAnnovarFilter( $config, $def, $tasks, $target_dir, $annovar_name, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
+      my $annovar_filter_name = addAnnovarFilter( $config, $def, $tasks, $target_dir, $annovar_task, $mutect_prefix, $mutect_index_dic, $mutect_index_key);
 
       if ( defined $def->{annotation_genes} ) {
         addAnnovarFilterGeneannotation( $config, $def, $tasks, $target_dir, $annovar_filter_name );
