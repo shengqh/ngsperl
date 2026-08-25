@@ -86,7 +86,7 @@ sub perform {
     my $cur_dir = create_directory_or_die($result_dir . "/" . $sample_name);
 
     my $paramSampleFiles = {};
-    for my $myidx (1..10) {
+    for my $myidx (1..20) {
       my $cur_sample_name = $myidx == 1 ? $sample_name : undef;
       my $paramSampleFile = writeParameterSampleFile( $config, $section, $cur_dir, $myidx, $removeEmpty, $cur_sample_name );
       if (($paramSampleFile ne "") or ($myidx <= 3)){
@@ -109,7 +109,7 @@ sub perform {
       $rParameter = $rParameter . $file_key . "='$cur_file'\n";
     }
 
-    for my $index (1..10){
+    for my $index (1..20){
       my $key = "parameterFile" . $index;
       my $parameterFile = parse_param_file( $config, $section, $key, 0 );
       if ( !defined($parameterFile) && $index < 4 ) {
