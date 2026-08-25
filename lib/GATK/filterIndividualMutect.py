@@ -27,6 +27,8 @@ def filterMutect(logger, fileName, filePath, outputFile, minNormalDepth, minTumo
 
   tmpFile = outputFile + ".tmp.vcf"
   with open(tmpFile, "wt") as fout:
+    for comment in comments:
+      fout.write(comment + "\n")
     for items in mutect.ChromosomeItemMap.values():
       for item in items:
         passed = True
