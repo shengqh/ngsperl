@@ -54,7 +54,7 @@ def mergeMutect(logger, listFile, outputFile):
         if has_normal:
           fout.write('##FORMAT=<ID=ND,Number=1,Type=Integer,Description="Approximate normal sample read depth (reads with MQ=255 or with bad mates are filtered)">\n')
         fout.write("%s\n" % comment.replace("##INFO=", "##FORMAT="))
-      else:
+      elif not comment.startswith("#CHROM"):
         fout.write("%s\n" % comment)
     fout.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t%s\n" % "\t".join(fileNames))
 
