@@ -1,16 +1,17 @@
 rm(list=ls()) 
-outFile='Aorta_Progeria'
+outFile='GSE125449'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3='fileList3.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parFile1='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn/result/Aorta_Progeria.final.rds'
-parFile2='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_1_call/result/Aorta_Progeria.scDynamic.meta.rds'
-parFile3='/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/essential_genes/result/Aorta_Progeria.txt'
+parSampleFile8='fileList8.txt'
+parFile1='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_sct2_fastmnn/result/GSE125449.final.rds'
+parFile2='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_sct2_fastmnn_dr0.5_1_call/result/GSE125449.scDynamic.meta.rds'
+parFile3='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/essential_genes/result/GSE125449.txt'
 
 
-setwd('/nobackup/brown_lab/projects/20250513_Aorta_Progeria_scRNA_mouse/cellbender_nd_seurat_fastmnn_dr0.5_2_subcluster/result')
+setwd('/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_sct2_fastmnn_dr0.5_2_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -148,6 +149,17 @@ if("Azimuth_column" %in% names(myoptions)){
   bHasAzimuth<-TRUE
 }else if("Azimuth" %in% colnames(obj@meta.data)){
   bHasAzimuth<-TRUE
+}
+
+bHasCelltypist<-FALSE
+if("Celltypist_column" %in% names(myoptions)){
+  meta$Celltypist = meta[[myoptions$Celltypist_column]]
+  bHasCelltypist<-TRUE
+}else if(exists('parSampleFile8')){
+  meta = fill_meta_info_list(parSampleFile8, meta, "majority_voting", "Celltypist")
+  bHasCelltypist<-TRUE
+}else if("Celltypist" %in% colnames(obj@meta.data)){
+  bHasCelltypist<-TRUE
 }
 
 stopifnot(all(colnames(obj) == rownames(meta)))
@@ -397,10 +409,6 @@ layer4map<-split(tiers$Layer4, tiers$Celltype.name)
 meta = obj@meta.data
 curprefix = prefix
 
-clusters_prefix = paste0(assay, "_snn_res.", format(resolutions, nsmall = 2))
-clusters=paste0(assay, "_snn_res.", resolutions)
-names(clusters_prefix) = clusters
-
 meta[[previous_layer]]<-factor_by_count(meta[[previous_layer]])
 previous_celltypes<-levels(meta[[previous_layer]])
 writeLines(previous_celltypes, paste0(outFile, ".cell_types.txt"))
@@ -542,6 +550,18 @@ for(pct in previous_celltypes){
     filelist = check_cell_type(subobj, "Azimuth", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
     validation_columns = c(validation_columns, "Azimuth")
   }
+
+  if(bHasCelltypist){
+    filelist = check_cell_type(subobj, "Celltypist", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
+    validation_columns = c(validation_columns, "Celltypist")
+  }
+
+  # after subclustering, the default assay may be changed, we need to use current assay for subobj to get cluster names.
+  cur_assay = DefaultAssay(subobj)
+
+  clusters_prefix = paste0(cur_assay, "_snn_res.", format(resolutions, nsmall = 2))
+  clusters=paste0(cur_assay, "_snn_res.", resolutions)
+  names(clusters_prefix) = clusters
 
   cluster = clusters[10]
   markers_map = list()
@@ -714,3 +734,4 @@ rm(obj)
 cat("final memory used:", lobstr_mem_used(), "\n")
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+

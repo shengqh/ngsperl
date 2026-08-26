@@ -2371,7 +2371,7 @@ sub addSubDynamicCluster {
 
 
 sub addSubCluster {
-  my ( $config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $rmd_ext, $signacX_ref, $singleR_ref, $azimuth_ref ) = @_;
+  my ( $config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $rmd_ext, $signacX_ref, $singleR_ref, $azimuth_ref, $celltypist_ref ) = @_;
 
   my $by_integration;
   my $integration_by_harmony;
@@ -2455,6 +2455,7 @@ sub addSubCluster {
     parameterSampleFile5_ref => $singleR_ref,
     parameterSampleFile6     => $def->{dynamic_bubble_files},
     parameterSampleFile7_ref => $azimuth_ref,
+    parameterSampleFile8_ref => $celltypist_ref,
     output_file_ext          => ".meta.rds,.files.csv",
     sh_direct                => 1,
     pbs                      => {
