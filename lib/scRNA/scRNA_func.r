@@ -2284,6 +2284,7 @@ sub_cluster<-function(subobj,
     redo_harmony=TRUE
   }
 
+  cur_assay = assay
   if(redo_harmony){
     curreduction = "harmony";
     if(!("batch" %in% colnames(subobj))){
@@ -2293,12 +2294,35 @@ sub_cluster<-function(subobj,
     if (length(unique(subobj@meta.data$batch)) == 1){
       cat(key, "use old harmony result\n")
     }else{
-      cat(key, "redo harmony\n")
-      subobj <- RunHarmony(object = subobj,
-                        assay.use = assay,
-                        dims.use = cur_pca_dims,
-                        group.by.vars = "batch",
-                        do_pca=TRUE)    
+      # redo fastmnn on RNA assay. Redo sctranform on small cluster may cause problem. 
+      # So we will use the RNA assay for subclustering fastmnn.
+      DefaultAssay(subobj) <- "RNA"
+      cur_assay = "RNA"
+
+      harmony_rds = paste0(detail_prefix, ".harmony.rds")
+      if(file.exists(harmony_rds)){
+        cat(key, "redo Harmony - load cached Harmony result ...\n")
+        subobj@reductions = readRDS(harmony_rds)
+      }else{
+        cat(key, "redo normalization ...\n")
+        subobj <- do_normalization( subobj, 
+                                  selection.method="vst", 
+                                  nfeatures=2000, 
+                                  vars.to.regress=vars.to.regress, 
+                                  scale.all=FALSE, 
+                                  essential_genes=essential_genes,
+                                  ignore_variable_genes=ignore_variable_genes)
+
+        cat(key, "redo harmony ...\n")
+        subobj <- RunHarmony( object = subobj,
+                              assay.use = cur_assay,
+                              dims.use = cur_pca_dims,
+                              group.by.vars = "batch",
+                              do_pca=TRUE)
+
+        cat(key, "save new harmony result ...\n")
+        saveRDS(subobj@reductions, harmony_rds)
+      }
     }
     if(!("harmony" %in% names(subobj@reductions))){
       curreduction = "pca";
@@ -2312,22 +2336,14 @@ sub_cluster<-function(subobj,
     }
   }else{
     if(curreduction == "pca"){
-      #https://github.com/satijalab/seurat/issues/5244
-      if (by_sctransform) {
-        cat(key, "use old sctransform result\n")
-        #due to very limited cell numbers in small cluster, it may cause problem to redo sctransform at individual sample level, 
-        #so we will keep the old data structure
-        #subobj<-do_sctransform(subobj, vars.to.regress=vars.to.regress)
-      }else{
-        cat(key, "redo normalization\n")
-        subobj<-do_normalization( subobj, 
-                                  selection.method="vst", 
-                                  nfeatures=2000, 
-                                  vars.to.regress=vars.to.regress, 
-                                  scale.all=FALSE, 
-                                  essential_genes=essential_genes,
-                                  ignore_variable_genes=ignore_variable_genes)
-      }
+      cat(key, "redo normalization ...\n")
+      subobj <- do_normalization( subobj, 
+                                selection.method="vst", 
+                                nfeatures=2000, 
+                                vars.to.regress=vars.to.regress, 
+                                scale.all=FALSE, 
+                                essential_genes=essential_genes,
+                                ignore_variable_genes=ignore_variable_genes)
 
       cat(key, "RunPCA\n")
       subobj<-RunPCA(subobj, npcs=cur_npcs)
@@ -2335,6 +2351,11 @@ sub_cluster<-function(subobj,
     
     if(curreduction == "fastmnn"){
       if(redo_fastmnn){
+        # redo fastmnn on RNA assay. Redo sctranform on small cluster may cause problem. 
+        # So we will use the RNA assay for subclustering fastmnn.
+        DefaultAssay(subobj) <- "RNA"
+        cur_assay = "RNA"
+
         fastmnn_rds = paste0(detail_prefix, ".fastmnn.rds")
         if(file.exists(fastmnn_rds)){
           cat(key, "redo FastMNN - load cached FastMNN result ...\n")
@@ -2345,48 +2366,40 @@ sub_cluster<-function(subobj,
             subobj@meta.data$batch = subobj@meta.data$orig.ident
           }
 
-          if(assay == "RNA") {
-            #Based on the following Seurat v5 integration tutorial, we need to split the RNA assay by batch first,
-            #and then run the NormalizeData, FindVariableFeatures and RunPCA before integration. 
-            #If we use sctranform before, we will not redo the sctranform.
-            #https://satijalab.org/seurat/articles/seurat5_integration
-            #When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
-            cat(key, "split RNA by batch ...\n")
-            subobj[["RNA"]] <- split(subobj[["RNA"]], f = subobj@meta.data$batch)
-
-            cat(key, "NormalizeData ...\n")
-            subobj <- NormalizeData(subobj)
-
-            cat(key, "FindVariableFeatures ... \n")
-            subobj = FindVariableFeatures(subobj, selection.method = "vst", nfeatures = 2000, verbose = FALSE)
-          }
+          cat(key, "redo normalization ...\n")
+          subobj<-do_normalization( subobj, 
+                                    selection.method="vst", 
+                                    nfeatures=2000, 
+                                    vars.to.regress=vars.to.regress, 
+                                    scale.all=FALSE, 
+                                    essential_genes=essential_genes,
+                                    ignore_variable_genes=ignore_variable_genes)
 
           subobj = do_PCA_Integration(subobj, 
-                                      assay, 
-                                      by_sctransform, 
+                                      cur_assay, 
+                                      by_sctransform=FALSE, 
                                       method="FastMNNIntegration", 
                                       new.reduction=curreduction, 
                                       orig.reduction="pca",
                                       thread=thread,
                                       detail_prefix=detail_prefix)
 
-          if(assay == "RNA") {
-            cat(key, "JoinLayers ... \n")
-            DefaultAssay(subobj) <- "RNA"
-            subobj <- JoinLayers(subobj)
-          }
+          cat(key, "JoinLayers ... \n")
+          DefaultAssay(subobj) <- "RNA"
+          subobj <- JoinLayers(subobj)
 
-          cat(key, "save new fastmnn result\n")
+          cat(key, "save new fastmnn result ...\n")
           saveRDS(subobj@reductions, fastmnn_rds)
         }
       }
     }
   }
-  cat("curreduction =", curreduction, "\n")
+  cat(key, "cur_assay =", cur_assay, "\n")
+  cat(key, "curreduction =", curreduction, "\n")
 
   cat(key, "FindNeighbors by", curreduction, "\n")
   subobj<-FindNeighbors(object=subobj, 
-                        assay=assay,
+                        assay=cur_assay,
                         reduction=curreduction, 
                         k.param=k_n_neighbors, 
                         dims=cur_pca_dims, 
