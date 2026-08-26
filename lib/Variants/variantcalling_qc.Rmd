@@ -157,8 +157,6 @@ print_table(all_fdr_stats, row.names = F)
 
 ```{r}
 data_fdr <- all_fdr_stats
-if (!is.factor(data_fdr$Sample)) 
-    data_fdr$Sample <- factor(data_fdr$Sample)
 data_fdr$Sample <- factor(data_fdr$Sample, levels = data_fdr$Sample[order(data_fdr$FDR, decreasing = TRUE)])
 p0 <- ggplot(data_fdr, aes(x = Sample, y = FDR, fill = Sample,
         text = paste0("Sample: ", Sample, "<br>FDR: ", round(FDR, 4)))) +
@@ -198,7 +196,7 @@ for(i in seq_along(sample_names)){
 - FNR: False negative rate
 
 ```{r}
-print_table(all_filter_stats, row.names = F)
+print_table(data.frame(all_filter_stats), byDT=TRUE, row.names = F)
 ```
 
 ## Mutect2 Filter Statistics - FP by Filter
