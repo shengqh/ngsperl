@@ -232,8 +232,40 @@ sub getConfig {
   my $methylkitdiffannovar_task      = undef;
   my $MethylKitDiffAnnovarGenes_task = undef;
   my $webgestalt_task                = undef;
+  my $dnmtoolsdiff_task              = undef;
 
   if ( defined $def->{pairs} ) {
+    if ( getValue( $def, "perform_dnmtools_diff", 0 ) ) {
+      $dnmtoolsdiff_task = "DNMToolsDiff";
+      $config->{$dnmtoolsdiff_task} = {
+        class            => "Methylation::DNMToolsDiff",
+        perform          => 1,
+        target_dir       => "${target_dir}/" . getNextFolderIndex($def) . "DNMToolsDiff",
+        option           => "",
+        method           => getValue( $def, "dnmtoolsdiff_method", "radmeth" ),
+        chr_size_file    => $chr_size_file,
+        source_ref       => "pairs",
+        groups_ref       => "groups",
+        methfile_ref     => [ "DNMTools", ".cpg.meth.gz\$" ],
+        hmrfile_ref      => [ "DNMTools", ".hmr\$" ],
+        dnmtools_command => getValue( $def, "dnmtools_command", "dnmtools" ),
+        radmeth_factor   => getValue( $def, "dnmtoolsdiff_radmeth_factor", "case" ),
+        radadjust_bins   => getValue( $def, [ "dnmtoolsdiff_radadjust_bins", "dnmtoolsdiff_radjust_bins" ], "1:200:1" ),
+        FDR              => getValue( $def, "dnmtoolsdiff_FDR", 0.05 ),
+        radmerge_p       => getValue( $def, "dnmtoolsdiff_radmerge_p", getValue( $def, "dnmtoolsdiff_FDR", 0.05 ) ),
+        radmeth_option   => getValue( $def, "dnmtoolsdiff_radmeth_option", "" ),
+        radadjust_option => getValue( $def, [ "dnmtoolsdiff_radadjust_option", "dnmtoolsdiff_radjust_option" ], "" ),
+        radmerge_option  => getValue( $def, "dnmtoolsdiff_radmerge_option", "" ),
+        docker_prefix    => "dnmtools_",
+        pbs              => {
+          "nodes"    => "1:ppn=" . $thread,
+          "walltime" => getValue( $def, "DNMToolsDiff_walltime", "24" ),
+          "mem"      => getValue( $def, "DNMToolsDiff_mem",      "80gb" )
+        },
+      };
+      push( @$tasks, $dnmtoolsdiff_task );
+    }
+
     my $task_map = add_MethylDiffAnalysis( $config, $def, $tasks, $target_dir, $methylkitcorr_task );
     $methylkitdiff_task             = $task_map->{methylkitdiff_task};
     $methylkitdiffannovar_task      = $task_map->{methylkitdiffannovar_task};
@@ -294,6 +326,9 @@ sub getConfig {
   }
   if ( ( defined $methylkitdiffannovar_task ) && ( defined $config->{$methylkitdiffannovar_task} ) ) {
     push( @copy_files, $methylkitdiffannovar_task, ".annovar.final.tsv\$" );
+  }
+  if ( ( defined $dnmtoolsdiff_task ) && ( defined $config->{$dnmtoolsdiff_task} ) ) {
+    push( @copy_files, $dnmtoolsdiff_task, ".radmeth.adjusted\$|.radmeth.significant\$|.radmeth.dmr\$|.radmeth.dmr.bb\$|.methdiff\$|.DMR.filtered\$|.dmcpgs\$" );
   }
   # if ( defined $webgestalt_task ) {
   #   push( @copy_files, $webgestalt_task, "_geneontology_Biological_Process\$" );
