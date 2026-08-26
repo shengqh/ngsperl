@@ -1,0 +1,359 @@
+---
+title: "Variant Calling QC"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  rmdformats::readthedown:
+    toc_depth: 4
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(
+  echo=TRUE, 
+  include=TRUE, 
+  warning=FALSE, 
+  message=FALSE, 
+  results="asis"
+)
+
+library(DT)
+library(data.table)
+library(ggplot2)
+library(vcfR)
+library(plotly)
+
+source('reportFunctions.R')
+```
+
+```{r}
+filelist <- read.table("fileList1.txt", header = F, stringsAsFactors = F)
+sample_names <- filelist$V2
+
+vcf_files <- filelist$V1
+filter_stats_files <- paste0(filelist$V1, ".filtering.stats")
+
+filterdepth_file <- read.table("fileList2.txt", header = F, stringsAsFactors = F)$V1[1]
+filteraf_file <- read.table("fileList3.txt", header = F, stringsAsFactors = F)$V1[1]
+
+sample_count <- length(sample_names)
+```
+
+# Input files
+
+```{r}
+input <- data.frame(Sample_Names = sample_names, 
+    mutect2_Filter_Stats_Files = filter_stats_files, mutect2_VCF_Files = vcf_files)
+
+print_table(input, row.names=FALSE)
+```
+
+```{r}
+# Collect data for all samples
+all_fdr_stats <- list()
+all_filter_stats <- list()
+all_filter_step <- list()
+all_ti_tv_ratios <- data.frame(Sample = character(), TI_TV_Ratio = numeric(), stringsAsFactors = FALSE)
+all_snp_types <- data.frame(SNP_Type = character(), Count = integer(), Sample = character(), Percentage = numeric(), stringsAsFactors = FALSE)
+all_maf_data <- data.frame(Minor_AF = numeric(), Sample = character(), stringsAsFactors = FALSE)
+
+# Load files once
+filterdepth <- read.vcfR(filterdepth_file, convertNA = T, verbose = F)
+gt <- extract.gt(filterdepth)
+filter_af <- fread(filteraf_file, data.table = F, skip = 3435)
+
+i=1
+for (i in 1:length(sample_names)){
+    # Global FDR
+    fdr_stats <- data.frame(Sample = sample_names[i], FDR = NA)
+    stats_lines <- readLines(filter_stats_files[i])
+    fdr_line <- stats_lines[grep("fdr=", stats_lines)]
+    fdr_stats[1, "FDR"] <- as.numeric(gsub("#<METADATA>fdr=", "", fdr_line))
+    all_fdr_stats[[i]] <- fdr_stats
+    
+    # Filter Statistics (FP, FDR, FN, FNR)
+    data_start <- which(!grepl("^(#|\\s*$)", stats_lines))[1]
+    f1.1 <- fread(filter_stats_files[i], skip = data_start - 1, header = TRUE, data.table = FALSE)
+    f1.1$Sample <- sample_names[i]
+    all_filter_stats[[i]] <- f1.1
+    
+    # vcf 
+    vcf <- read.vcfR(vcf_files[i], convertNA = T, verbose = F)
+    vcf@gt <- vcf@gt[, 1:2]
+    
+    # Variants removed by pipeline filters
+    fd <- sum(table(gt[,sample_names[i]]))
+    af <- sum(table(gsub("\\:.*", "", filter_af[,sample_names[i]]))[-1])
+    
+    filter_step <- data.frame(Sample = sample_names[i], Step = c("Depth", "Frequency_0.001"),
+        Count = c(fd, af))
+    all_filter_step[[i]] <- filter_step
+    
+    # SNP Types and Ti/Tv ratio
+    filter_pass <- filter_af[-grep("\\.\\/\\.", filter_af[,sample_names[i]]),]
+    if (nrow(filter_pass) == 0) {
+        all_ti_tv_ratios <- rbind(all_ti_tv_ratios, data.frame(Sample = sample_names[i], TI_TV_Ratio = NA_real_, stringsAsFactors = FALSE))
+        all_maf_data <- rbind(all_maf_data, data.frame(Minor_AF = NA_real_, Sample = sample_names[i], stringsAsFactors = FALSE))
+    } else {
+        filter_pass_snps <- paste0(filter_pass[,4], ">", filter_pass[,5])
+        filter_pass_snps <- filter_pass_snps[filter_pass[,4] %in% c("A", "C", "G", "T") & filter_pass[,5] %in% c("A", "C", "G", "T")]
+
+        filter_pass_snps_df <- as.data.frame(table(filter_pass_snps))
+        filter_pass_snps_df$Sample <- sample_names[i]
+        colnames(filter_pass_snps_df) <- c("SNP_Type", "Count", "Sample")
+        filter_pass_snps_df$Percentage <- (filter_pass_snps_df$Count / sum(filter_pass_snps_df$Count)) * 100
+        all_snp_types <- rbind(all_snp_types, filter_pass_snps_df)
+
+        # Transition/transversion ratio
+        ti_count <- sum((table(filter_pass_snps)[c("A>G", "G>A", "C>T", "T>C")]), na.rm = T)
+        tv_count <- sum((table(filter_pass_snps)[c("A>C", "C>A", "A>T", "T>A", "C>G", "G>C", "G>T", "T>G")]), na.rm=T)
+        ti_tv_ratio <- ti_count / tv_count
+        all_ti_tv_ratios <- rbind(all_ti_tv_ratios, data.frame(Sample = sample_names[i], TI_TV_Ratio = ti_tv_ratio, stringsAsFactors = FALSE))
+
+        # Minor Allele Frequency Distribution
+        filter_pass_af <- do.call(rbind,strsplit(filter_pass[,sample_names[i]], ":"))[,2]
+        filter_pass_af_minor <- data.frame(Minor_AF = as.numeric(gsub(".*,", "", filter_pass_af)), Sample = sample_names[i])
+        all_maf_data <- rbind(all_maf_data, filter_pass_af_minor)
+    }
+}
+# Combine all lists into dataframes
+# Combine all lists into dataframes
+all_fdr_stats <- rbindlist(all_fdr_stats, fill=TRUE)
+all_filter_stats <- rbindlist(all_filter_stats, fill=TRUE)
+all_filter_step <- rbindlist(all_filter_step, fill=TRUE)
+all_filter_step_long <- all_filter_step
+
+sample_x_axis_theme <- if (sample_count > 30) {
+    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+} else {
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# Reshape filter_step table: rows are Step, columns are samples with Count
+all_filter_step <- dcast(all_filter_step, Step ~ Sample, value.var = "Count", fun.aggregate = sum)
+colnames(all_filter_step)[-1] <- paste0(colnames(all_filter_step)[-1], "_Count")
+
+# Reshape snp_types table: rows are SNP_Type, columns are samples with Count and Percentage
+# Ensure `all_snp_types` is a data.table for data.table::dcast
+setDT(all_snp_types)
+snp_types_count <- dcast(all_snp_types, SNP_Type ~ Sample, value.var = "Count", fun.aggregate = sum)
+colnames(snp_types_count)[-1] <- paste0(colnames(snp_types_count)[-1], "_Count")
+
+snp_types_percentage <- dcast(all_snp_types, SNP_Type ~ Sample, value.var = "Percentage", fun.aggregate = mean)
+colnames(snp_types_percentage)[-1] <- paste0(colnames(snp_types_percentage)[-1], "_Percentage")
+```
+
+# Mutect2 Global FDR
+
+The FDR is the ratio of expected false positives to the total number of variants passing the filters. A lower FDR indicates higher confidence in the variant calls.
+
+```{r}
+print_table(all_fdr_stats, row.names = F)
+```
+
+## Mutect2 Global FDR Barplot
+
+```{r}
+data_fdr <- all_fdr_stats
+if (!is.factor(data_fdr$Sample)) 
+    data_fdr$Sample <- factor(data_fdr$Sample)
+data_fdr$Sample <- factor(data_fdr$Sample, levels = data_fdr$Sample[order(data_fdr$FDR, decreasing = TRUE)])
+p0 <- ggplot(data_fdr, aes(x = Sample, y = FDR, fill = Sample,
+        text = paste0("Sample: ", Sample, "<br>FDR: ", round(FDR, 4)))) +
+    geom_col(show.legend = FALSE) +
+    labs(x = "Sample", y = "FDR") +
+    theme_minimal() +
+    sample_x_axis_theme
+
+ggplotly(p0, tooltip = "text")
+```
+
+# Per-sample Beta-binomial and Binomial Clusters
+
+<details><summary>Click to expand</summary>
+
+```{r}
+for(i in seq_along(sample_names)){
+    cat("## ", sample_names[i], "\n\n")
+    stats_lines <- readLines(filter_stats_files[i], warn = FALSE)
+    matches <- grep("Background beta-binomial|High-AF beta-binomial|Binomial cluster", stats_lines, value = TRUE)
+    if(length(matches) == 0){
+        cat("No matches found\n\n")
+    } else {
+        cat("```\n")
+        cat(paste(matches, collapse = "\n"))
+        cat("\n```\n\n")
+    }
+}
+```
+</details>
+
+# Mutect2 Filter Statistics
+
+- FP: False positives
+- FDR: False discovery rate
+- FN: False negatives
+- FNR: False negative rate
+
+```{r}
+print_table(all_filter_stats, row.names = F)
+```
+
+## Mutect2 Filter Statistics - FP by Filter
+
+```{r}
+all_filter_stats_long <- melt(all_filter_stats, id.vars = c("Sample", "filter"), measure.vars = c("FP", "FN"),
+    variable.name = "Metric", value.name = "Count")
+
+data_fp <- subset(all_filter_stats_long, Metric == "FP")
+data_fp$Sample <- factor(data_fp$Sample, levels = unique(data_fp$Sample[order(data_fp$Count, decreasing = TRUE)]))
+
+p_fp <- ggplot(data_fp, aes(x = Sample, y = Count, fill = Sample,
+        text = paste0("Sample: ", Sample, "<br>Filter: ", filter, "<br>FP: ", round(Count, 2)))) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~ filter, scales = "free_y", ncol = 3) +
+    labs(x = "Sample", y = "FP") +
+    theme_minimal() +
+    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), strip.text = element_text(size = 10))
+
+ggplotly(p_fp, tooltip = "text")
+```
+
+## Mutect2 Filter Statistics - FN by Filter
+
+```{r}
+data_fn <- subset(all_filter_stats_long, Metric == "FN")
+data_fn$Sample <- factor(data_fn$Sample, levels = unique(data_fn$Sample[order(data_fn$Count, decreasing = TRUE)]))
+
+p_fn <- ggplot(data_fn, aes(x = Sample, y = Count, fill = Sample,
+        text = paste0("Sample: ", Sample, "<br>Filter: ", filter, "<br>FN: ", round(Count, 2)))) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~ filter, scales = "free_y", ncol = 3) +
+    labs(x = "Sample", y = "FN") +
+    theme_minimal() +
+    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), strip.text = element_text(size = 10))
+
+ggplotly(p_fn, tooltip = "text")
+```
+
+# Variants Passing Pipeline Filters
+
+- Allele count: minNormalDepth 8, minTumorDepth 10, minMinorAlleleDepth 3
+- Minor allele frequency: exonic variants with MAF < 0.001 in population databases TopMed, ExAC, gnomAD, 1000G
+
+```{r}
+# Display with Step as row names
+filter_step_display <- as.data.frame(all_filter_step)
+rownames(filter_step_display) <- filter_step_display$Step
+filter_step_display$Step <- NULL
+sd=data.frame(t(filter_step_display)) |>
+    dplyr::rename(`Variant Count` = 1, `MAF < 0.001 Variant Count` = 2)
+print_table(sd, row.names = T)
+```
+
+## Number of variants passing allele count filter
+
+```{r}
+data_depth <- subset(all_filter_step_long, Step == "Depth")
+data_depth$Sample <- factor(data_depth$Sample, levels = data_depth$Sample[order(data_depth$Count, decreasing = TRUE)])
+p1 <- ggplot(data_depth, aes(x=Sample, y=Count, fill=Sample,
+        text = paste0("Sample: ", Sample, "<br>Count: ", Count))) +
+    geom_col(show.legend = FALSE) +
+    labs(x = "Sample", y = "Number of variants") +
+    theme_minimal() +
+    sample_x_axis_theme
+ggplotly(p1, tooltip = "text")
+```
+
+## Number of variants passing minor allele frequency filter
+
+```{r}
+data_freq <- subset(all_filter_step_long, Step == "Frequency_0.001")
+data_freq$Sample <- factor(data_freq$Sample, levels = data_freq$Sample[order(data_freq$Count, decreasing = TRUE)])
+p2 <- ggplot(data_freq, aes(x=Sample, y=Count, fill=Sample,
+        text = paste0("Sample: ", Sample, "<br>Count: ", Count))) +
+    geom_col(show.legend = FALSE) +
+    labs(x = "Sample", y = "Number of variants") +
+    theme_minimal() +
+    sample_x_axis_theme
+ggplotly(p2, tooltip = "text")
+```
+
+# SNP Types
+
+The distribution of SNP types among the PASS variants. Transitions (A <-> G and C <-> T) are more common than transversions (A <-> T and C <-> G) in the human genome.
+
+## SNP Types - Count
+
+```{r}
+snp_count_display <- as.data.frame(snp_types_count)
+rownames(snp_count_display) <- snp_count_display$SNP_Type
+snp_count_display$SNP_Type <- NULL
+print_table(snp_count_display, row.names = T)
+```
+
+## SNP Types - Percentage
+
+```{r}
+snp_pct_display <- as.data.frame(snp_types_percentage)
+rownames(snp_pct_display) <- snp_pct_display$SNP_Type
+snp_pct_display$SNP_Type <- NULL
+print_table(snp_pct_display, row.names = T)
+```
+
+## SNP Types - Percentage Stacked Barplot
+
+```{r}
+p3 <- ggplot(all_snp_types, aes(x=Sample, y=Percentage, fill=SNP_Type,
+        text = paste0("Sample: ", Sample, "<br>SNP Type: ", SNP_Type, "<br>Percentage: ", round(Percentage, 2), "%"))) +
+    geom_col(position = "stack") +
+    scale_y_continuous(labels = function(x) paste0(x, "%")) +
+    labs(x = "Sample", y = "Percentage", fill = "SNP Type") +
+    theme_minimal() +
+    sample_x_axis_theme
+ggplotly(p3, tooltip = "text")
+```
+
+# Transition/Transversion Ratio
+
+The transition/transversion (Ti/Tv) ratio in human genome is typically 2.
+
+```{r}
+print_table(all_ti_tv_ratios, row.names = F)
+```
+
+## Transition/Transversion Ratio - Barplot
+
+```{r}
+data_titv <- all_ti_tv_ratios
+if (!is.factor(data_titv$Sample)) 
+    data_titv$Sample <- factor(data_titv$Sample)
+data_titv$Sample <- factor(data_titv$Sample, levels = data_titv$Sample[order(data_titv$TI_TV_Ratio, decreasing = TRUE)])
+p4 <- ggplot(data_titv, aes(x=Sample, y=TI_TV_Ratio, fill=Sample,
+        text = paste0("Sample: ", Sample, "<br>Ti/Tv Ratio: ", TI_TV_Ratio))) +
+    geom_col(show.legend = FALSE) +
+    labs(y = "Ti/Tv Ratio") +
+    theme_minimal() +
+    sample_x_axis_theme + 
+    theme(axis.title.x = element_blank())
+ggplotly(p4, tooltip = "text")
+```
+
+# Minor Allele Frequency Distribution
+
+The distribution of minor allele frequencies among the PASS variants across all samples.
+
+```{r}
+maf_density_data <- do.call(rbind, lapply(split(all_maf_data[!is.na(all_maf_data$Minor_AF), ], all_maf_data$Sample[!is.na(all_maf_data$Minor_AF)]), function(df) {
+    dens <- density(df$Minor_AF, na.rm = TRUE)
+    data.frame(Sample = df$Sample[1], Minor_AF = dens$x, Density = dens$y, stringsAsFactors = FALSE)
+}))
+p5 <- plot_ly(maf_density_data, x = ~Minor_AF, y = ~Density, color = ~Sample, colors = "Set1",
+        type = "scatter", mode = "lines",
+        text = ~paste0("Sample: ", Sample, "<br>Minor_AF: ", round(Minor_AF, 4), "<br>Density: ", round(Density, 6)),
+        hoverinfo = "text") %>%
+    layout(xaxis = list(title = "Minor_AF"), yaxis = list(title = "Density"))
+htmltools::tagList(p5)
+```
