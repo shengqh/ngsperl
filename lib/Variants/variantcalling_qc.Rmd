@@ -145,7 +145,8 @@ all_ti_tv_ratios$Filter=factor(all_ti_tv_ratios$Filter, levels=filter_level)
 sample_x_axis_theme <- if (sample_count > 30) {
     theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 } else {
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+          axis.title.x = element_blank())
 }
 
 # Reshape filter_step table: rows are Step, columns are samples with Count
@@ -170,9 +171,10 @@ data_fdr$Sample <- factor(data_fdr$Sample, levels = data_fdr$Sample[order(data_f
 p0 <- ggplot(data_fdr, aes(x = Sample, y = FDR, fill = Sample,
         text = paste0("Sample: ", Sample, "<br>FDR: ", round(FDR, 4)))) +
     geom_col(show.legend = FALSE) +
-    labs(x = "Sample", y = "FDR") +
-    theme_minimal() +
+    labs(y = "FDR") +
+    theme_bw() +
     sample_x_axis_theme
+
 
 ggplotly(p0, tooltip = "text")
 ```
@@ -223,7 +225,9 @@ p_fp <- ggplot(data_fp, aes(x = Sample, y = Count, fill = Sample,
     facet_wrap(~ filter, scales = "free_y", ncol = 3) +
     labs(x = "Sample", y = "FP") +
     theme_minimal() +
-    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), strip.text = element_text(size = 10))
+    theme(  axis.text.x = element_blank(), 
+            axis.ticks.x = element_blank(), 
+            strip.text = element_text(size = 10))
 
 ggplotly(p_fp, tooltip = "text")
 ```
@@ -234,13 +238,14 @@ ggplotly(p_fp, tooltip = "text")
 data_fn <- subset(all_filter_stats_long, Metric == "FN")
 data_fn$Sample <- factor(data_fn$Sample, levels = unique(data_fn$Sample[order(data_fn$Count, decreasing = TRUE)]))
 
-p_fn <- ggplot(data_fn, aes(x = Sample, y = Count, fill = Sample,
-        text = paste0("Sample: ", Sample, "<br>Filter: ", filter, "<br>FN: ", round(Count, 2)))) +
+p_fn <- ggplot(data_fn, aes(x = Sample, y = Count, fill = Sample)) +
     geom_col(show.legend = FALSE) +
     facet_wrap(~ filter, scales = "free_y", ncol = 3) +
     labs(x = "Sample", y = "FN") +
     theme_minimal() +
-    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), strip.text = element_text(size = 10))
+    theme(  axis.text.x = element_blank(), 
+            axis.ticks.x = element_blank(), 
+            strip.text = element_text(size = 10))
 
 ggplotly(p_fn, tooltip = "text")
 ```
@@ -283,9 +288,8 @@ for(filter_name in filter_names){
         labs(y = "Number of variants") +
         ggtitle(paste0("Filter: ", filter_name)) +
         theme_bw() + 
-        theme(axis.title.x = element_blank(),
-            plot.title = element_text(hjust = 0.5, size=10),
-            strip.background = element_blank()) +
+        theme(  plot.title = element_text(hjust = 0.5, size=10),
+                strip.background = element_blank()) +
         sample_x_axis_theme
 
     cur_prefix = paste0("filter_", gsub("[<> ]", "_", filter_name))
@@ -310,9 +314,8 @@ for(filter_name in filter_names){
         labs(y = "Number of variants") +
         ggtitle(paste0("Filter: ", filter_name)) +
         theme_bw() + 
-        theme(axis.title.x = element_blank(),
-            plot.title = element_text(hjust = 0.5, size=10),
-            strip.background = element_blank()) +
+        theme(  plot.title = element_text(hjust = 0.5, size=10),
+                strip.background = element_blank()) +
         sample_x_axis_theme
     cur_count_png = paste0(cur_prefix, ".snp_types_count.png")
     ggsave(cur_count_png, plot = g, width = max(4, n_col * 2) + 2, height = max(4, n_row * 2), units = "in", dpi = 300, bg = "white")
@@ -332,9 +335,8 @@ for(filter_name in filter_names){
         labs(y = "Percentage of variants") +
         ggtitle(paste0("Filter: ", filter_name)) +
         theme_bw() + 
-        theme(axis.title.x = element_blank(),
-            plot.title = element_text(hjust = 0.5, size=10),
-            strip.background = element_blank()) +
+        theme(  plot.title = element_text(hjust = 0.5, size=10),
+                strip.background = element_blank()) +
         sample_x_axis_theme
     cur_percentage_png = paste0(cur_prefix, ".snp_types_percentage.png")
     ggsave(cur_percentage_png, plot = g, width = max(4, n_col * 2) + 2, height = max(4, n_row * 2), units = "in", dpi = 300, bg = "white")
@@ -348,8 +350,7 @@ for(filter_name in filter_names){
         scale_y_continuous(labels = function(x) paste0(x, "%")) +
         labs(y = "Percentage of variants", fill = "SNP Type") +
         theme_bw() +
-        theme(axis.title.x = element_blank(),
-            plot.title = element_text(hjust = 0.5, size=10)) +
+        theme(plot.title = element_text(hjust = 0.5, size=10)) +
         sample_x_axis_theme
     cur_stacked_percentage_png = paste0(cur_prefix, ".snp_types_stacked_percentage.png")
     ggsave(cur_stacked_percentage_png, plot = g, width = max(4, n_samples * 0.5) + 1, height = 4, units = "in", dpi = 300, bg = "white")
@@ -379,9 +380,7 @@ g <- ggplot(all_ti_tv_ratios, aes(x=Sample, y=TI_TV_Ratio)) +
     facet_wrap(Filter~., ncol=1) +
     labs(y = "Transition/Transversion Ratio") +
     theme_bw() +
-    theme(  axis.title.x = element_blank(),
-            axis.text.x = element_text(face="bold"),
-            plot.title = element_blank(),
+    theme(  plot.title = element_blank(),
             strip.background = element_blank(),
             strip.text = element_text(face="bold")) +
     sample_x_axis_theme
@@ -410,8 +409,11 @@ for(filter_name in filter_names) {
     g <- ggplot(af_density_data, aes(x = Minor_AF, y = Density, color = Sample)) +
         geom_line() +
         ggtitle(paste0("Filter: ", filter_name)) +
-        labs(x = "Minor_AF", y = "Density") +
-        theme_bw()
+        labs(x = "Allele fractions of alternate alleles", y = "Density") +
+        theme_bw() + 
+        theme(plot.title = element_text(hjust = 0.5),
+            strip.background = element_blank(),
+            strip.text = element_text(size=10))
     cur_af_plot_png = paste0("af_density_", cur_prefix, ".png")
     ggsave(cur_af_plot_png, plot = g, width = 5, height = 3, units = "in", dpi = 300, bg = "white")
 
