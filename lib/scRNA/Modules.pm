@@ -1139,6 +1139,7 @@ sub add_celltype_validation {
     parameterSampleFile7_ref => $azimuth_ref,
     parameterSampleFile8_ref => $celltypist_ref,
     parameterSampleFile9_ref => $STCAT_ref,
+    parameterSampleFile10    => $def->{annotation_files},
     output_file_ext          => $rmd_ext,
     output_other_ext         => "",
     docker_prefix            => "scdynamic_",
@@ -3855,6 +3856,7 @@ sub add_individual_qc_tasks {
     parameterSampleFile7_ref => $doublet_finder_ref,
     parameterSampleFile8_ref => $azimuth_ref,
     parameterSampleFile9_ref => $celltypist_ref,
+    parameterSampleFile10    => $def->{annotation_files},
     output_file_ext          => ".${prefix}qc.html",
     sh_direct                => 1,
     pbs                      => {

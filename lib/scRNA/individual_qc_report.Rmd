@@ -70,6 +70,13 @@ if(has_celltypist){
   celltypist_map<-read_file_map('fileList9.txt')
   cell_types<-c(cell_types, "CellTypist")
 }
+
+has_annotation<-file.exists('fileList10.txt')
+if(has_annotation){
+  annotation_df<-read.table('fileList10.txt', sep="\t", stringsAsFactors = F)
+  annotation_names<-unique(annotation_df$V3)
+  cell_types<-c(cell_types, annotation_names)
+}
 ```
 
 # Sample summary

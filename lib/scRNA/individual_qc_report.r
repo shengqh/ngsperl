@@ -1,6 +1,7 @@
-rm(list=ls()) 
-outFile='P14586'
+rm(list=ls())
+outFile='CombinedPTC'
 parSampleFile1='fileList1.txt'
+parSampleFile10='fileList10.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
 parSampleFile5='fileList5.txt'
@@ -10,7 +11,7 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/shengq2/20260427_14586_HW/cellbender_nd_raw_qc_sct2_report/result')
+setwd('/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20260212_12904_VisiumHD_cellsegment/20260819_big_data/20260819_T02_scRNA/raw_qc_report/result')
 
 ### Parameter setting end ###
 
@@ -78,6 +79,13 @@ if(has_celltypist){
   validation_columns<-c(validation_columns, "CellTypist")
 }
 
+has_annotation<-exists('parSampleFile10')
+if(has_annotation){
+  annotation_df<-read.table(parSampleFile10, sep="\t", stringsAsFactors = F)
+  annotation_names<-unique(annotation_df$V3)
+  validation_columns<-c(validation_columns, annotation_names)
+}
+
 draw_figure<-function(sample_prefix, obj, cur_validation_columns, cur_cell_types){
   cur_meta = obj@meta.data
   if(any(cur_validation_columns %in% colnames(cur_meta))){
@@ -92,7 +100,9 @@ draw_figure<-function(sample_prefix, obj, cur_validation_columns, cur_cell_types
 
       if("umap" %in% names(major_obj@reductions)){
         umap_png = paste0(sample_prefix, ".", ct_name, ".umap.png")
-        g=get_dim_plot_labelby(major_obj, label.by = ct_name_count, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
+        g=get_dim_plot_labelby(major_obj, label.by = ct_name_count, reduction="umap", pt.size=0.1) + 
+          ggtitle(ct_name) +
+          theme(legend.title=element_blank(), plot.title=element_text(hjust=0.5))
         ggsave(umap_png, g, width=8, height=4, units="in", dpi=300, bg="white")
         cat("Saved ", umap_png, "\n")
       }
@@ -135,8 +145,8 @@ draw_figure<-function(sample_prefix, obj, cur_validation_columns, cur_cell_types
       theme(strip.text.y.right = element_text(angle = 0, hjust = 0),
             strip.text.x.top = element_text(angle = 90, hjust = 0))
 
-    height = max(800, length(unique(alltbl$Var1)) * 150) + 500
-    width = max(1000, length(unique(alltbl$Var2)) * 50) + 1000
+    height = max(800, length(unique(alltbl$Var1)) * 160) + 500
+    width = max(1000, length(unique(alltbl$Var2)) * 40) + 1000
 
     ggsave(paste0(sample_prefix, ".validation.png"), width=width, height=height, units="px", dpi=300, bg="white")
   }
@@ -262,6 +272,18 @@ for(sample_name in sample_names){
       }
       g<-g1+g2+plot_layout(design="ABBB")
       ggsave(paste0(sample_prefix, ".decontX.png"), width=4400, height=1600, dpi=300, units="px", bg="white")
+    }
+  }
+
+  if(has_annotation) {
+    annotation_name = annotation_names[1]
+    for(annotation_name in annotation_names) {
+      annotation_file = annotation_df$V1[annotation_df$V3 == annotation_name & annotation_df$V2 == sample_name]
+      if(file.exists(annotation_file)){
+        annotation_meta = read.csv(annotation_file, row.names=1)
+        cur_meta = fill_meta_info(sample_name, annotation_meta, cur_meta, annotation_name, annotation_name, is_character = TRUE)
+        cur_cell_types = c(cur_cell_types, annotation_name)
+      }
     }
   }
 
