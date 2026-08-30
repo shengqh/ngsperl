@@ -4,6 +4,7 @@ package CQS::SmallRNACount;
 use strict;
 use warnings;
 use File::Basename;
+use POSIX qw(ceil);
 use CQS::PBS;
 use CQS::ConfigUtils;
 use CQS::SystemUtils;
@@ -19,6 +20,7 @@ sub new {
   my $self = $class->SUPER::new();
   $self->{_name}   = __PACKAGE__;
   $self->{_suffix} = "_sc";
+  $self->{_docker_prefix} = "smallrna_count_";
   bless $self, $class;
   return $self;
 }
@@ -26,7 +28,12 @@ sub new {
 sub perform {
   my ( $self, $config, $section ) = @_;
 
-  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster ) = $self->init_parameter( $config, $section );
+  my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory, $init_command, $sh_log ) = $self->init_parameter( $config, $section );
+
+  my ($soft_memory, $is_mb) = getMemoryPerThread($memory, 1.1);
+  $soft_memory = ceil($soft_memory);
+
+  my $cqstools = get_option($config, $section, "cqstools", "cqstools");
 
   my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
 
@@ -111,18 +118,24 @@ sub perform {
     my $log_desc = $cluster->get_log_description($log);
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
-    print $pbs "cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
+    print $pbs "
+
+echo export MONO_ENV_OPTIONS='--gc=sgen' 
+export MONO_ENV_OPTIONS='--gc=sgen' 
+
+echo export MONO_DISABLE_AIO=1
+export MONO_DISABLE_AIO=1
+
+echo export MONO_THREADS_SUSPEND=preemptive
+export MONO_THREADS_SUSPEND=preemptive
+
+echo export MONO_GC_PARAMS='minor=simple-par,major=marksweep,max-heap-size=${soft_memory}g'
+export MONO_GC_PARAMS='minor=simple-par,major=marksweep,max-heap-size=${soft_memory}g'
+
+echo $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
+$cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
 ";
-#     if ( $option !~ /noCategory/ ) {
-#       print $pbs "
-# count=`ls -1 *.position 2>/dev/null | wc -l`
-# if [[ \$count != 0 ]]; then 
-#   for positionFile in *.position; do
-#     R --vanilla -f $r_script --args \$positionFile
-#   done    
-# fi
-# ";
-#     }
+
     $self->close_pbs( $pbs, $pbs_file );
   }
   close $sh;
@@ -132,8 +145,6 @@ sub perform {
   }
 
   print "!!!shell file $shfile created, you can run this shell file to submit all " . $self->{_name} . " tasks.\n";
-
-  #`qsub $pbs_file`;
 }
 
 sub result {
@@ -156,9 +167,6 @@ sub result {
     my @result_files = ();
     my $countFile    = "${cur_dir}/${sample_name}.count";
     push( @result_files, $countFile );
-    # if ( $option !~ /noCategory/ ) {
-    #   push( @result_files, "${cur_dir}/${sample_name}.tRNA.position" );
-    # }
     push( @result_files, "${countFile}.mapped.xml" );
     push( @result_files, "${cur_dir}/${sample_name}.info" );
 
