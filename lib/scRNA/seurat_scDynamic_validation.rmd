@@ -97,13 +97,15 @@ include_graphics(umap_png)
 cat("\n\n## Curated marker genes\n\n")
 include_graphics(dot_png)
 
-cat("\n\n## Heatmap of top 10 marker genes\n\n")
+if(file.exists(scaled_heatmap_png)){
+  cat("\n\n## Heatmap of top 10 marker genes\n\n")
 
-cat("\n\n### Scaled expression\n\n")
-include_graphics(scaled_heatmap_png)
+  cat("\n\n### Scaled expression\n\n")
+  include_graphics(scaled_heatmap_png)
 
-cat("\n\n## Normalized expression\n\n")
-include_graphics(normalized_heatmap_png)
+  cat("\n\n### Normalized expression\n\n")
+  include_graphics(normalized_heatmap_png)
+}
 
 cat("\n\n## QC figures\n\n")
 qc_png=paste0(detail_prefix, ".qc.box.png")
