@@ -1665,10 +1665,9 @@ sub addSeuratDETask {
 } ## end sub addSeuratDETask
 
 sub addPostDEAnalsyis {
-  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction, $edgeRtaskname, $rmd_ext, $edgeR_suffix, $curClusterName ) = @_;
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction, $edgeRtaskname, $edgeR_suffix, $curClusterName ) = @_;
 
   my $vistaskname = $edgeRtaskname . "_vis";
-  my $vis_rmd_txt = $rmd_ext;
   $config->{$vistaskname} = {
     class                => "CQS::UniqueR",
     perform              => 1,
@@ -2091,14 +2090,14 @@ sub addEdgeRTask {
   } ## end else [ if ( !defined $config->...)]
   push( @$summary, $edgeRtaskname );
 
-  addPostDEAnalsyis( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction, $edgeRtaskname, $edgeR_suffix );
+  addPostDEAnalsyis( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction, $edgeRtaskname, $edgeR_suffix, $curClusterName );
 
   return ($edgeRtaskname);
 } ## end sub addEdgeRTask
 
 sub addGLIMESTask {
-  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $reduction ) = @_;
-
+  my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
+  
   if ( !defined $reduction ) {
     $reduction = "umap";
   }
@@ -2195,7 +2194,7 @@ sub addGLIMESTask {
   } ## end else [ if ( !defined $config->...)]
   push( @$summary, $GLIMETaskname );
 
-  addPostDEAnalsyis( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, 1, $reduction, $GLIMETaskname, $GLIMES_suffix );
+  addPostDEAnalsyis( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, 1, $reduction, $GLIMETaskname, $GLIMES_suffix, $curClusterName );
 
   return ($GLIMETaskname);
 } ## end sub addGLIMESTask
