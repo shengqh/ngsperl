@@ -46,8 +46,8 @@ is_between_cluster = is_one(myoptions$bBetweenCluster)
 
 outFile<-myoptions$task_name
 folder_prefix = ifelse( is_one(myoptions$DE_by_cell), 
-                    paste0(outFile, ".edgeR_by_cell/"), 
-                    paste0(outFile, ".edgeR_by_sample/"))
+                    paste0(outFile, ".", tool_name, "_by_cell/"), 
+                    paste0(outFile, ".", tool_name, "_by_sample/"))
 file_prefix= paste0(folder_prefix, outFile, ".")
 
 if(length(readLines("fileList1.txt")) > 1){
@@ -81,9 +81,9 @@ if(has_category){
   comp_def = comp_def[!duplicated(comp_def$Comparison),]
 }
 
-edgeR_files <- read.csv(paste0(outFile, ".edgeR.files.csv")) %>% 
+de_files <- read.csv(paste0(outFile, ".", tool_name, ".files.csv")) %>% 
   dplyr::arrange(desc(row_number()))
-comparisons<-unique(edgeR_files$comparison)
+comparisons<-unique(de_files$comparison)
 
 num_cell_file = paste0(file_prefix, "num_cell.csv")
 if(file.exists(num_cell_file)){
@@ -94,7 +94,7 @@ if(file.exists(num_cell_file)){
 ```
 
 ---
-title: "`r tool_name`differential expression analysis"
+title: "`r tool_name` differential expression analysis"
 author:
 - name: `r myoptions$email`
   affiliation: `r myoptions$affiliation`
@@ -121,13 +121,13 @@ print_table(comp_def, row.names=FALSE)
 ```{r, echo=FALSE}
 resFile<-"comp.Rmd"
 
-in_cluster_rmd<-function(edgeR_files, comparisons){
+in_cluster_rmd<-function(de_files, comparisons){
   result<-""
 
   comp=comparisons[1]
   for(comp in comparisons){
     result<-paste0(result, "\n# ", comp, "\n\n")
-    comp_files<-subset(edgeR_files, comparison == comp)
+    comp_files<-subset(de_files, comparison == comp)
 
     cts = as.character(comp_files$cellType)
     ct<-cts[1]
@@ -219,10 +219,19 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
           }
         }
 
-        top_gene_png<-paste0(cur_prefix, ct_comp_name, ".top_1_gene.png")
-        if(file.exists(top_gene_png)){
-          result<-paste0(result,"\n### Top 1 gene plot\n\n")
-          result<-paste0(result, getFigure(top_gene_png))
+        top_gene_dotplot = paste0(cur_prefix, ct_comp_name, ".top_dotplot.png")
+        if(file.exists(top_gene_dotplot)){
+          result<-paste0(result,"\n### Top gene dotplot\n\n")
+          result<-paste0(result, getFigure(top_gene_dotplot))
+        }      
+
+        top_gene_figures = paste0(cur_prefix, ct_comp_name, ".top_", c(1:5), "_gene.png")
+        top_gene_figures = top_gene_figures[file.exists(top_gene_figures)]
+        if(length(top_gene_figures) > 0){
+          result<-paste0(result,"\n### Top ", length(top_gene_figures), " gene plot\n\n")
+          for(top_gene_png in top_gene_figures){
+            result<-paste0(result, getFigure(top_gene_png))
+          }
         }
       }
     }
@@ -231,12 +240,12 @@ in_cluster_rmd<-function(edgeR_files, comparisons){
   return(result)
 }
 
-between_cluster_rmd<-function(edgeR_files, comparisons, outFile){
+between_cluster_rmd<-function(de_files, comparisons, outFile){
   result<-""
 
   cts = comparisons
 
-  sig_file_map=unlist(split(edgeR_files$sigFile, edgeR_files$comparison))
+  sig_file_map=unlist(split(de_files$sigFile, de_files$comparison))
 
   sig_list=list()
 
@@ -265,7 +274,7 @@ between_cluster_rmd<-function(edgeR_files, comparisons, outFile){
   ct = cts[1]
   for(ct in cts){
     result<-paste0(result, "\n# ", ct, "\n\n")
-    ct_files<-subset(edgeR_files, comparison == ct)
+    ct_files<-subset(de_files, comparison == ct)
     
     design_file=ct_files$designFile[1]
     design_data=read.csv(design_file)
@@ -309,11 +318,20 @@ between_cluster_rmd<-function(edgeR_files, comparisons, outFile){
         }
       }
 
-      top_gene_png<-gsub(".sig.csv", ".top_1_gene.png", sig_file)
-      if(file.exists(top_gene_png)){
-        result<-paste0(result,"\n### Top 1 gene plot\n\n")
-        result<-paste0(result, getFigure(top_gene_png))
-      }      
+      top_gene_dotplot = gsub(".sig.csv", ".top_dotplot.png", sig_file)
+      if(file.exists(top_gene_dotplot)){
+        result<-paste0(result,"\n### Top gene dotplot\n\n")
+        result<-paste0(result, getFigure(top_gene_dotplot))
+      }
+
+      top_gene_figures = paste0(gsub(".sig.csv", "", sig_file), ".top_", c(1:5), "_gene.png")
+      top_gene_figures = top_gene_figures[file.exists(top_gene_figures)]
+      if(length(top_gene_figures) > 0){
+        result<-paste0(result,"\n### Top ", length(top_gene_figures), " gene plot\n\n")
+        for(top_gene_png in top_gene_figures){
+          result<-paste0(result, getFigure(top_gene_png))
+        }
+      }
     }
   }
 
@@ -321,9 +339,9 @@ between_cluster_rmd<-function(edgeR_files, comparisons, outFile){
 }
 
 if(is_between_cluster){
-  cat(between_cluster_rmd(edgeR_files, comparisons, outFile), file=resFile)
+  cat(between_cluster_rmd(de_files, comparisons, outFile), file=resFile)
 }else{
-  cat(in_cluster_rmd(edgeR_files, comparisons), file=resFile)
+  cat(in_cluster_rmd(de_files, comparisons), file=resFile)
 }
 
 ```

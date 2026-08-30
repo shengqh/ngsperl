@@ -394,9 +394,7 @@ for(idx in c(1:nrow(designMatrix))){
   write.csv(sigout, file=sigFile, quote=F)
 
   if(nrow(sigout) > 0){
-    sig_gene=rownames(sigout)[1]
-    g<-get_sig_gene_figure(de_obj, sigout, designdata, sig_gene, DE_by_cell=TRUE, is_between_cluster=bBetweenCluster, log_cpm=NULL)
-    ggsave(paste0(file_prefix, ".top_1_gene.png"),  g, width=3000, height=2500, units="px", dpi=300)
+    save_top_gene_figures(de_obj, sigout, designdata, bBetweenCluster, file_prefix)
   }
   
   siggenes<-data.frame(gene=rownames(sigout), stringsAsFactors = F)

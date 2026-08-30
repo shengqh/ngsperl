@@ -4358,3 +4358,59 @@ draw_qc_box_plot <- function(meta, cluster_column, file_path) {
   
   ggsave(file_path, width=width, height=height, units="in", dpi=300, bg="white")
 }
+
+save_top_gene_figures <- function(de_obj, sigout, designdata, bBetweenCluster, file_prefix){
+  de_obj@meta.data$SampleGroup=paste0(de_obj@meta.data$Sample, "_", de_obj@meta.data$DisplayGroup)
+  nsamplegroup=length(unique(de_obj@meta.data$SampleGroup))
+
+  v_gene_count=min(5, nrow(sigout)) 
+  vi=1
+  for(vi in c(1:v_gene_count)) {
+    sig_gene=sigout$genes[vi]
+    sigout_df = sigout |> dplyr::filter(genes==sig_gene)
+    sigout_df = sigout_df[1,,drop=FALSE]
+    rownames(sigout_df) = sig_gene
+    g<-get_sig_gene_figure( cell_obj=de_obj, 
+                            sigout=sigout_df, 
+                            designdata=designdata,
+                            sig_gene=sig_gene, 
+                            DE_by_cell=TRUE, 
+                            is_between_cluster=bBetweenCluster, 
+                            log_cpm=NULL) 
+    width = max(8, nsamplegroup * 0.25)
+    ggsave(paste0(file_prefix, ".top_", vi, "_gene.png"),  g, width=width, height=12, units="in", dpi=300)
+  }
+
+  group_samplegroup=de_obj@meta.data |> dplyr::select(Group, DisplayGroup, SampleGroup) |> dplyr::distinct()
+
+  v_gene_count=min(10, nrow(sigout)) 
+  g_dot=DotPlot_scCustom( de_obj, sigout$genes[1:v_gene_count], group.by="SampleGroup") + 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          axis.text.y = element_blank())
+
+  g_dot$data = g_dot$data |> dplyr::left_join(group_samplegroup, by=c("id"="SampleGroup"))
+
+  # add color bar at the right of the plot as annotation
+  annot_df = g_dot$data |> dplyr::select(id, DisplayGroup) |> dplyr::distinct() 
+  
+  group_display = group_samplegroup |> 
+    dplyr::select(Group, DisplayGroup) |> 
+    dplyr::distinct() |>
+    dplyr::mutate(GroupColor=ifelse(Group == 'control', "lightblue", "red"))
+  group_colors=split(group_display$GroupColor, group_display$DisplayGroup)
+
+  g_annot = ggplot(annot_df, aes(x=1, y=id, fill=DisplayGroup)) +
+    geom_tile() +
+    scale_fill_manual(values=group_colors) +
+    theme_void() +
+    theme(axis.text.y = element_text(hjust=1),
+          legend.key.size = unit(5, "mm"),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12)) +
+    labs(fill="Group")
+
+  g = g_annot + g_dot + patchwork::plot_layout(width = c(1, 20), guides = "collect")
+
+  height=max(4, nsamplegroup * 0.2)
+  ggsave(paste0(file_prefix, ".top_", "dotplot.png"), g, width=12, height=height, units="in", dpi=300)
+}

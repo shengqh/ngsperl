@@ -339,7 +339,7 @@ for(idx in c(1:nrow(designMatrix))){
   de_obj = subset(de_obj, cells=designdata$Cell)
   stopifnot(colnames(de_obj) == designdata$Cell)
 
-  de_obj@meta.data$Group = designdata$Group
+  de_obj@meta.data$Group = factor(designdata$Group, levels=c("control", "sample"))
   de_obj@meta.data$Sample = designdata$Sample
   de_obj@meta.data$DisplayGroup = designdata$DisplayGroup
 
@@ -446,18 +446,7 @@ for(idx in c(1:nrow(designMatrix))){
   sigout = glmm_df |> dplyr::filter(DEGs == TRUE)
 
   if(nrow(sigout) > 0) {
-    sig_gene=sigout$genes[1]
-    sigout_df = sigout |> dplyr::filter(genes==sig_gene)
-    sigout_df = sigout_df[1,,drop=FALSE]
-    rownames(sigout_df) = sig_gene
-    g<-get_sig_gene_figure( cell_obj=de_obj, 
-                            sigout=sigout_df, 
-                            designdata=designdata,
-                            sig_gene=sig_gene, 
-                            DE_by_cell=TRUE, 
-                            is_between_cluster=bBetweenCluster, 
-                            log_cpm=NULL) 
-    ggsave(paste0(file_prefix, ".top_1_gene.png"),  g, width=10, height=9, units="in", dpi=300)
+    save_top_gene_figures(de_obj, sigout, designdata, bBetweenCluster, file_prefix)
   }
   
   siggenes<-data.frame(gene=sigout$genes, stringsAsFactors = F)
