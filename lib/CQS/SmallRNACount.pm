@@ -33,7 +33,7 @@ sub perform {
   my ($soft_memory, $is_mb) = getMemoryPerThread($memory, 1.1);
   $soft_memory = ceil($soft_memory);
 
-  my $cqstools = get_option($config, $section, "cqstools", "cqstools");
+  my $smallrna_count = get_option($config, $section, "smallrna_count", "cqstools smallrna_count");
 
   my $coordinate_file = get_param_file( $config->{$section}{coordinate_file}, "coordinate_file", 1 );
 
@@ -120,20 +120,9 @@ sub perform {
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $final_xml_file );
     print $pbs "
 
-echo export MONO_ENV_OPTIONS='--gc=sgen' 
-export MONO_ENV_OPTIONS='--gc=sgen' 
+echo $smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
 
-echo export MONO_DISABLE_AIO=1
-export MONO_DISABLE_AIO=1
-
-echo export MONO_THREADS_SUSPEND=preemptive
-export MONO_THREADS_SUSPEND=preemptive
-
-echo export MONO_GC_PARAMS='minor=simple-par,major=marksweep,max-heap-size=${soft_memory}g'
-export MONO_GC_PARAMS='minor=simple-par,major=marksweep,max-heap-size=${soft_memory}g'
-
-echo $cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
-$cqstools smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
+$smallrna_count $option -i $bam_file -g $coordinate_file $seqcountFile $fastqFile $exclude $cca -o $final_file
 ";
 
     $self->close_pbs( $pbs, $pbs_file );

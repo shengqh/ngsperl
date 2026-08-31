@@ -521,10 +521,11 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
         source_ref      => $bamSource,
         fastq_files_ref => $host_identical_ref,
         seqcount_ref    => $identical_count_ref,
-        cqstools        => $def->{cqstools},
+        smallrna_count  => $def->{smallrna_count},
         coordinate_file => $def->{coordinate},
         fasta_file      => $def->{coordinate_fasta},
         sh_direct       => 1,
+        no_docker       => getValue($def, "smallrna_count_no_docker", 0),
         cluster         => $cluster,
         pbs             => {
           "nodes"     => "1:ppn=1",
