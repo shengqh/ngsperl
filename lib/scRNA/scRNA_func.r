@@ -3111,6 +3111,10 @@ iterate_celltype<-function(obj,
       next
     }
     
+    if(length(cells) < 20){#too few cells for PCA
+      next
+    }
+
     subobj<-subset(obj, cells=cells)
 
     subobj[["oumap"]] = subobj[["umap"]]
