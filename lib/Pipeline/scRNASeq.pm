@@ -743,50 +743,54 @@ sub getScRNASeqConfig {
 
         $def->{$dynamicKey} = 0;
 
-        my $scDynamic_task;
+        if(!getValue($def, "skip_dynamic_cluster", 0)){
+          my $scDynamic_task;
 
-        my $by_individual_sample = 0;
-        my $by_column            = undef;
-        my $by_harmony;
+          my $by_individual_sample = 0;
+          my $by_column            = undef;
+          my $by_harmony;
 
-        if ( getValue( $def, "dynamic_by_harmony", 0 ) ) {
-          $by_harmony     = 1;
-          $scDynamic_task = $dynamicKey . get_next_index( $def, $dynamicKey ) . "_call_harmony";
-        }
-        else {
-          $by_harmony     = 0;
-          $scDynamic_task = $dynamicKey . get_next_index( $def, $dynamicKey ) . "_call";
-        }
-        addDynamicCluster( $config, $def, $tasks, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column, $by_harmony );
+          if ( getValue( $def, "dynamic_by_harmony", 0 ) ) {
+            $by_harmony     = 1;
+            $scDynamic_task = $dynamicKey . get_next_index( $def, $dynamicKey ) . "_call_harmony";
+          }
+          else {
+            $by_harmony     = 0;
+            $scDynamic_task = $dynamicKey . get_next_index( $def, $dynamicKey ) . "_call";
+          }
+          addDynamicCluster( $config, $def, $tasks, $target_dir, $scDynamic_task, $seurat_task, $essential_gene_task, $reduction, $by_individual_sample, $by_column, $by_harmony );
 
-        $meta_ref = [ $scDynamic_task, ".meta.rds" ];
-        my $call_files_ref = [ $scDynamic_task, ".iter_png.csv" ];
+          $meta_ref = [ $scDynamic_task, ".meta.rds" ];
+          my $call_files_ref = [ $scDynamic_task, ".iter_png.csv" ];
 
-        if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref or defined $decontX_ref or defined $azimuth_ref or defined $celltypist_ref or defined $STCAT_ref ) {
-          my $validation_task = $scDynamic_task . "_validation";
-          add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, undef, $celltypist_ref, $STCAT_ref );
-        }
+          if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref or defined $decontX_ref or defined $azimuth_ref or defined $celltypist_ref or defined $STCAT_ref ) {
+            my $validation_task = $scDynamic_task . "_validation";
+            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, undef, $celltypist_ref, $STCAT_ref );
+          }
 
-        if ( defined $def->{bubble_files} ) {
-          add_bubble_files( $config, $def, $tasks, $target_dir, $scDynamic_task . "_bubble_files", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_bubbles.html" );
-        }
+          if ( defined $def->{bubble_files} ) {
+            add_bubble_files( $config, $def, $tasks, $target_dir, $scDynamic_task . "_bubble_files", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_bubbles.html" );
+          }
 
-        if ( defined $def->{bubble_plots} ) {
-          #add_bubble_plots($config, $def, $tasks, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters", ".dynamic_iter1_dot.html" );
-          add_bubble_plots( $config, $def, $tasks, $target_dir, $scDynamic_task . "_bubblemap", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_dot.html" );
-        }
+          if ( defined $def->{bubble_plots} ) {
+            #add_bubble_plots($config, $def, $tasks, $target_dir, $scDynamic_task . "_bubblemap_iter1", $seurat_task, $meta_ref, "iter1", "iter1_clusters", ".dynamic_iter1_dot.html" );
+            add_bubble_plots( $config, $def, $tasks, $target_dir, $scDynamic_task . "_bubblemap", $seurat_task, $meta_ref, "layer4", "layer4_clusters", ".dynamic_layer4_dot.html" );
+          }
 
-        if ( getValue( $def, "perform_individual_dynamic_cluster", 0 ) ) {
-          my $individual_scDynamic_task = $raw_dynamicKey . "_individual";
-          addDynamicCluster( $config, $def, $tasks, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1 );
+          if ( getValue( $def, "perform_individual_dynamic_cluster", 0 ) ) {
+            my $individual_scDynamic_task = $raw_dynamicKey . "_individual";
+            addDynamicCluster( $config, $def, $tasks, $target_dir, $individual_scDynamic_task, $seurat_task, $essential_gene_task, "pca", 1 );
 
-          my $clustree_task = $individual_scDynamic_task . "_clustree";
-          add_clustree_rmd( $config, $def, $tasks, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task );
-        } ## end if ( getValue( $def, "perform_individual_dynamic_cluster"...))
+            my $clustree_task = $individual_scDynamic_task . "_clustree";
+            add_clustree_rmd( $config, $def, $tasks, $target_dir, $clustree_task, $individual_scDynamic_task, $scDynamic_task );
+          } ## end if ( getValue( $def, "perform_individual_dynamic_cluster"...))
 
-        if ( getValue( $def, "perform_sub_dynamic_cluster" ) ) {
-          my $sub_scDynamic_task = $scDynamic_task . "_sub";
-          addSubDynamicCluster( $config, $def, $tasks, $target_dir, $sub_scDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, 0 );
+          if ( getValue( $def, "perform_sub_dynamic_cluster" ) ) {
+            my $sub_scDynamic_task = $scDynamic_task . "_sub";
+            addSubDynamicCluster( $config, $def, $tasks, $target_dir, $sub_scDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, 0 );
+          }
+        }else{
+
         }
 
         if ( getValue( $def, "perform_dynamic_subcluster" ) ) {

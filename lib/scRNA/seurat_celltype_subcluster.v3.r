@@ -163,6 +163,12 @@ if("Celltypist_column" %in% names(myoptions)){
 }
 
 stopifnot(all(colnames(obj) == rownames(meta)))
+
+if(previous_layer == "Unassigned") {
+  meta$Unassigned = "Unassigned"
+  meta$Unassigned_clusters = "1"
+}
+
 obj@meta.data = meta
 
 if(!previous_layer %in% colnames(obj@meta.data)){
