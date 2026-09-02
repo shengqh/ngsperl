@@ -548,21 +548,21 @@ for(pct in previous_celltypes){
   curprefix<-paste0(tmp_folder, prefix, ".", celltype_to_filename(pct))
 
   subumap = "subumap"
-  subobj = sub_cluster( subobj, 
-                        assay, 
-                        by_sctransform, 
-                        by_harmony, 
-                        redo_harmony, 
-                        curreduction, 
-                        k_n_neighbors,
-                        u_n_neighbors,
-                        random.seed,
-                        resolutions,
-                        cur_npcs, 
-                        cur_pca_dims,
-                        vars.to.regress, 
-                        essential_genes, 
-                        key,
+  subobj = sub_cluster( subobj=subobj,
+                        assay=assay,
+                        by_sctransform=by_sctransform, 
+                        by_harmony=NULL, 
+                        redo_harmony=NULL, 
+                        curreduction=curreduction, 
+                        k_n_neighbors=k_n_neighbors,
+                        u_n_neighbors=u_n_neighbors,
+                        random.seed=random.seed,
+                        resolutions=resolutions,
+                        cur_npcs=cur_npcs, 
+                        cur_pca_dims=cur_pca_dims,
+                        vars.to.regress=vars.to.regress,
+                        essential_genes=essential_genes, 
+                        key=key,
                         do_umap = TRUE,
                         reduction.name = subumap,
                         redo_fastmnn = redo_fastmnn,
@@ -595,10 +595,20 @@ for(pct in previous_celltypes){
   for(cluster in clusters){
     cat("  ", cluster, "\n")
 
-    subobj <- reset_seurat_clusters(subobj, cluster)
+    ct = table(subobj@meta.data[[cluster]])
+    if(any(ct < 10)){ # if any cell type has less than 10 cells, we remove those clusters
+      ct = ct[ct >= 10]
+      cur_cells = rownames(subobj@meta.data)[subobj@meta.data[[cluster]] %in% names(ct)]
+      cur_subobj = subset(subobj, cells=cur_cells)
+    }else{
+      cur_subobj = subobj
+      cur_cells = cells
+    }
 
-    Idents(subobj)<-cluster
-    if(length(unique(Idents(subobj))) == 1){#only 1 cluster
+    cur_subobj <- reset_seurat_clusters(cur_subobj, cluster)
+
+    Idents(cur_subobj)<-cluster
+    if(length(unique(Idents(cur_subobj))) == 1){#only 1 cluster
       cat("    only one cluster, pass\n")
       next
     }
@@ -607,7 +617,7 @@ for(pct in previous_celltypes){
     cur_resolution=gsub(".+_snn_res.", "", cluster)
     
     cat(key, "Find marker genes\n")
-    markers=FindAllMarkers(subobj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
+    markers=FindAllMarkers(cur_subobj, assay="RNA", only.pos=TRUE, min.pct=min.pct, logfc.threshold=logfc.threshold)
     markers=markers[markers$p_val_adj < 0.05,]
     
     if(nrow(markers) < 2){
@@ -623,8 +633,8 @@ for(pct in previous_celltypes){
     top10genes<-unique(top10$gene)
     
     #using global normalized data for cell type annotation
-    subobj2<-subset(obj, cells=cells)
-    subobj2@meta.data <- subobj@meta.data
+    subobj2<-subset(obj, cells=cur_cells)
+    subobj2@meta.data <- cur_subobj@meta.data
 
     cat(key, "Cell type annotation\n")
     data.norm=get_seurat_average_expression(subobj2, cluster)
@@ -642,7 +652,7 @@ for(pct in previous_celltypes){
     seurat_cur_layer<-"seurat_celltype"
     cur_layer="cur_layer"
     
-    oldcluster<-unlist(subobj[[cluster]][[1]])
+    oldcluster<-unlist(cur_subobj[[cluster]][[1]])
     newct<-layer_ids[oldcluster]
     cts<-data.frame("seurat_clusters"=oldcluster, cur_layer=newct)
     cts[,seurat_cur_layer] = paste0(cts$seurat_clusters, ": ", cts[,cur_layer])
@@ -654,17 +664,17 @@ for(pct in previous_celltypes){
     ct<-unique(ct)
     ct<-ct[order(ct$seurat_clusters),]
     
-    subobj<-AddMetaData(subobj, cts$seurat_clusters, col.name = "seurat_clusters")
-    subobj<-AddMetaData(subobj, cts[,cur_layer], col.name = cur_layer)
-    subobj<-AddMetaData(subobj, factor(cts[,seurat_cur_layer], levels=ct[,seurat_cur_layer]), col.name = seurat_cur_layer)
-    subobj<-AddMetaData(subobj, factor(cts$display_layer, levels=ct$display_layer), col.name = "display_layer")
+    cur_subobj<-AddMetaData(cur_subobj, cts$seurat_clusters, col.name = "seurat_clusters")
+    cur_subobj<-AddMetaData(cur_subobj, cts[,cur_layer], col.name = cur_layer)
+    cur_subobj<-AddMetaData(cur_subobj, factor(cts[,seurat_cur_layer], levels=ct[,seurat_cur_layer]), col.name = seurat_cur_layer)
+    cur_subobj<-AddMetaData(cur_subobj, factor(cts$display_layer, levels=ct$display_layer), col.name = "display_layer")
     
     meta_rds = paste0(cluster_prefix, ".meta.rds")
-    saveRDS(subobj@meta.data, meta_rds)
+    saveRDS(cur_subobj@meta.data, meta_rds)
 
     bar_file=paste0(cluster_prefix, ".bar.png")
     g<-get_barplot(
-      ct_meta=subobj@meta.data, 
+      ct_meta=cur_subobj@meta.data, 
       bar_file=bar_file,
       cluster_name="display_layer", 
       validation_columns=validation_columns,
@@ -674,14 +684,14 @@ for(pct in previous_celltypes){
 
     cat("draw umap file\n")
     g0<-MyDimPlot(obj, label=F, cells.highlight=cells, order = TRUE) + ggtitle(pct) + scale_color_discrete(type=c("gray", "red"), labels = c("others", pct))
-    g1<-MyDimPlot(subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
-    if(length(unique(subobj$orig.ident)) > 10){
+    g1<-MyDimPlot(cur_subobj, reduction=subumap, group.by = "orig.ident", label=F) + ggtitle(paste0(pct, ": sample"))
+    if(length(unique(cur_subobj$orig.ident)) > 10){
       g1<-g1+NoLegend()
     }
 
-    g2<-MyDimPlot(subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) 
-    g3<-MyDimPlot(subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + ggtitle(paste0("new umap: res", cur_resolution))
-    if(length(unique(subobj$seurat_clusters)) < 20){
+    g2<-MyDimPlot(cur_subobj, reduction="umap", group.by = "seurat_clusters", label=T) + ggtitle(paste0("old umap: res", cur_resolution)) 
+    g3<-MyDimPlot(cur_subobj, reduction=subumap, group.by = "seurat_clusters", label=T) + ggtitle(paste0("new umap: res", cur_resolution))
+    if(length(unique(cur_subobj$seurat_clusters)) < 20){
       g2<-g2 + scale_color_discrete(labels = ct$display_layer)
       g3<-g3 + scale_color_discrete(labels = ct$display_layer)
     }
@@ -691,17 +701,17 @@ for(pct in previous_celltypes){
     rm(g, g0, g1, g2, g3)
 
     cat("draw marker gene heatmap file\n")
-    subobj<-myScaleData(subobj, top10genes, "RNA")
-    if(ncol(subobj) > 5000){
-      subsampled <- subobj[, sample(colnames(subobj), size=5000, replace=F)]
+    cur_subobj<-myScaleData(cur_subobj, top10genes, "RNA")
+    if(ncol(cur_subobj) > 5000){
+      subsampled <- cur_subobj[, sample(colnames(cur_subobj), size=5000, replace=F)]
       gh<-DoHeatmap(subsampled, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
       rm(subsampled)
     }else{
-      gh<-DoHeatmap(subobj, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
+      gh<-DoHeatmap(cur_subobj, assay="RNA", features = top10genes, group.by = seurat_cur_layer, angle = 90) + NoLegend()
     }
     
     heatmap_file = paste0(cluster_prefix, ".top10.heatmap.png")
-    width<-max(3000, min(10000, length(unique(subobj$seurat_clusters)) * 150 + 1000))
+    width<-max(3000, min(10000, length(unique(cur_subobj$seurat_clusters)) * 150 + 1000))
     height<-max(3000, min(10000, length(top10genes) * 60 + 1000))
     ggsave(heatmap_file, gh, width=width, height=height, dpi=300, units="px", bg="white")
     rm(gh)
@@ -709,10 +719,10 @@ for(pct in previous_celltypes){
     cur_df = data.frame("file"=c(markers_file, meta_rds, bar_file, umap_file, heatmap_file, reductions_rds), "type"=c("markers", "meta", "bar", "umap", "heatmap", "reductions"), "resolution"=cur_resolution, "celltype"=pct)
 
     if(has_bubblemap){
-      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
+      g<-get_sub_bubble_plot(obj, "dot", cur_subobj, "seurat_celltype", bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(cluster_prefix, ".dot.png")
-      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
+      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(cur_subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
       rm(g)
 
       cur_df<-rbind(cur_df, c(dot_file, "dot", cur_resolution, pct))
@@ -720,10 +730,10 @@ for(pct in previous_celltypes){
 
     if(pct %in% names(bubble_file_map)){
       cur_bubblemap_file = bubble_file_map[[pct]]
-      g<-get_sub_bubble_plot(obj, "dot", subobj, "seurat_celltype", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
+      g<-get_sub_bubble_plot(obj, "dot", cur_subobj, "seurat_celltype", cur_bubblemap_file, add_num_cell=TRUE, species=myoptions$species)
 
       dot_file = paste0(cluster_prefix, ".dot_celltype_specific.png")
-      ggsave(dot_file, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
+      ggsave(dot_file, width=get_dot_width(g), height=get_dot_height(cur_subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
       rm(g)
 
       cur_df<-rbind(cur_df, c(dot_file, "dot_celltype_specific", cur_resolution, pct))
@@ -732,7 +742,7 @@ for(pct in previous_celltypes){
     if(has_antibody_bubblemap){
       g<-get_sub_bubble_plot(obj, 
         "dot", 
-        subobj, 
+        cur_subobj, 
         "seurat_celltype", 
         antibody_bubblemap_file, 
         assay="ADT",
@@ -740,7 +750,7 @@ for(pct in previous_celltypes){
         species=NULL)
 
       dot_file = paste0(cluster_prefix, ".antibody.dot.png")
-      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
+      ggsave(dot_file, g, width=get_dot_width(g), height=get_dot_height(cur_subobj, "seurat_celltype"), dpi=300, units="px", bg="white")
       rm(g)
 
       cur_df<-rbind(cur_df, c(dot_file, "antibody_dot", cur_resolution, pct))
@@ -752,9 +762,9 @@ for(pct in previous_celltypes){
   cat("after", pct, ", memory used:", lobstr_mem_used(), "\n")
 
   if(output_individual_object){
-    saveRDS(subobj, paste0(curprefix, ".", pct, ".obj.rds"))
+    saveRDS(cur_subobj, paste0(curprefix, ".", pct, ".obj.rds"))
   }
-  rm(subobj)
+  rm(cur_subobj)
 }
 
 rm(obj)
