@@ -2273,71 +2273,31 @@ sub_cluster<-function(subobj,
                      thread=1,
                      detail_prefix=NULL,
                      ignore_variable_genes=NULL,
-                     algorithm=4){
+                     algorithm=4,
+                     redo_integration=FALSE,
+                     integration_by_method_v5="FastMNNIntegration"){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
     cur_npcs = n_half_cell
     cur_pca_dims=1:cur_npcs
   }
 
-  if(by_harmony & !("harmony" %in% names(subobj@reductions))){
-    redo_harmony=TRUE
-  }
-
-  cur_assay = assay
-  if(redo_harmony){
-    curreduction = "harmony";
-    if(!("batch" %in% colnames(subobj))){
-      subobj@meta.data$batch = subobj@meta.data$orig.ident
-    }
-
-    if (length(unique(subobj@meta.data$batch)) == 1){
-      cat(key, "use old harmony result\n")
-    }else{
-      # redo fastmnn on RNA assay. Redo sctranform on small cluster may cause problem. 
-      # So we will use the RNA assay for subclustering fastmnn.
-      DefaultAssay(subobj) <- "RNA"
-      cur_assay = "RNA"
-
-      harmony_rds = paste0(detail_prefix, ".harmony.rds")
-      if(file.exists(harmony_rds)){
-        cat(key, "redo Harmony - load cached Harmony result ...\n")
-        subobj@reductions = readRDS(harmony_rds)
-      }else{
-        cat(key, "redo normalization ...\n")
-        subobj <- do_normalization( subobj, 
-                                  selection.method="vst", 
-                                  nfeatures=2000, 
-                                  vars.to.regress=vars.to.regress, 
-                                  scale.all=FALSE, 
-                                  essential_genes=essential_genes,
-                                  ignore_variable_genes=ignore_variable_genes)
-
-        cat(key, "redo harmony ...\n")
-        subobj <- RunHarmony( object = subobj,
-                              assay.use = cur_assay,
-                              dims.use = cur_pca_dims,
-                              group.by.vars = "batch",
-                              do_pca=TRUE)
-
-        cat(key, "save new harmony result ...\n")
-        saveRDS(subobj@reductions, harmony_rds)
-      }
-    }
-    if(!("harmony" %in% names(subobj@reductions))){
-      curreduction = "pca";
-      cat(key, "no harmony, use PCA.\n")
-    }
-  }else if (by_harmony) {
-    cat(key, "use old harmony result\n")
-    if(!("harmony" %in% names(subobj@reductions))){
-      curreduction = "pca";
-      cat(key, "no harmony, use PCA.\n")
-    }
-  }else{
-    if(curreduction == "pca"){
-      cat(key, "redo normalization ...\n")
-      subobj <- do_normalization( subobj, 
+  if(redo_integration){
+    curreduction=tolower(gsub("Integration", "", integration_by_method_v5))
+    subobj <- do_integration_v5(outFile=detail_prefix,
+                                obj=subobj,
+                                by_sctransform=by_sctransform,
+                                cur_assay=cur_assay,
+                                method=integration_by_method_v5,
+                                reduction=curreduction,
+                                thread=thread,
+                                detail_prefix=detail_prefix,
+                                ignore_variable_genes=ignore_variable_genes)
+  }else if(curreduction == "pca"){
+    cat(key, "redo normalization ...\n")
+    cur_assay="RNA"
+    DefaultAssay(subobj) <- cur_assay
+    subobj <- do_normalization( subobj, 
                                 selection.method="vst", 
                                 nfeatures=2000, 
                                 vars.to.regress=vars.to.regress, 
@@ -2345,54 +2305,8 @@ sub_cluster<-function(subobj,
                                 essential_genes=essential_genes,
                                 ignore_variable_genes=ignore_variable_genes)
 
-      cat(key, "RunPCA\n")
-      subobj<-RunPCA(subobj, npcs=cur_npcs)
-    }
-    
-    if(curreduction == "fastmnn"){
-      if(redo_fastmnn){
-        # redo fastmnn on RNA assay. Redo sctranform on small cluster may cause problem. 
-        # So we will use the RNA assay for subclustering fastmnn.
-        DefaultAssay(subobj) <- "RNA"
-        cur_assay = "RNA"
-
-        fastmnn_rds = paste0(detail_prefix, ".fastmnn.rds")
-        if(file.exists(fastmnn_rds)){
-          cat(key, "redo FastMNN - load cached FastMNN result ...\n")
-          subobj@reductions = readRDS(fastmnn_rds)
-        }else{
-          cat(key, "redo FastMNN ...\n")
-          if(!("batch" %in% colnames(subobj))){
-            subobj@meta.data$batch = subobj@meta.data$orig.ident
-          }
-
-          cat(key, "redo normalization ...\n")
-          subobj<-do_normalization( subobj, 
-                                    selection.method="vst", 
-                                    nfeatures=2000, 
-                                    vars.to.regress=vars.to.regress, 
-                                    scale.all=FALSE, 
-                                    essential_genes=essential_genes,
-                                    ignore_variable_genes=ignore_variable_genes)
-
-          subobj = do_PCA_Integration(subobj, 
-                                      cur_assay, 
-                                      by_sctransform=FALSE, 
-                                      method="FastMNNIntegration", 
-                                      new.reduction=curreduction, 
-                                      orig.reduction="pca",
-                                      thread=thread,
-                                      detail_prefix=detail_prefix)
-
-          cat(key, "JoinLayers ... \n")
-          DefaultAssay(subobj) <- "RNA"
-          subobj <- JoinLayers(subobj)
-
-          cat(key, "save new fastmnn result ...\n")
-          saveRDS(subobj@reductions, fastmnn_rds)
-        }
-      }
-    }
+    cat(key, "RunPCA\n")
+    subobj<-RunPCA(subobj, npcs=cur_npcs)
   }
   cat(key, "cur_assay =", cur_assay, "\n")
   cat(key, "curreduction =", curreduction, "\n")
@@ -2860,8 +2774,7 @@ fill_meta_info<-function(sample_name, source_meta, target_meta, source_columns, 
   return(target_meta)
 }
 
-fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns, target_column, is_character=TRUE){
-  source_map<-read_file_map(source_meta_file_list)
+fill_meta_by_source_map<-function(source_map, target_meta, source_columns, target_column, is_character=TRUE){
   cur_name=names(source_map)[1]
   for(cur_name in names(source_map)){
     source_meta_file=source_map[cur_name]
@@ -2873,6 +2786,11 @@ fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns
     target_meta=fill_meta_info(cur_name, source_meta, target_meta, source_columns, target_column, is_character)
   }
   return(target_meta)
+}
+
+fill_meta_info_list<-function(source_meta_file_list, target_meta, source_columns, target_column, is_character=TRUE){
+  source_map<-read_file_map(source_meta_file_list)
+  return(fill_meta_by_source_map(source_map, target_meta, source_columns, target_column, is_character))
 }
 
 # back compatible wrapper
@@ -3163,7 +3081,7 @@ iterate_celltype<-function(obj,
                             assay =  assay, 
                             by_sctransform = by_sctransform, 
                             by_harmony = by_harmony, 
-                            redo_harmony = by_harmony,
+                            redo_harmony = redo_harmony,
                             curreduction = curreduction, 
                             k_n_neighbors = k_n_neighbors,
                             u_n_neighbors = u_n_neighbors,
@@ -3175,7 +3093,8 @@ iterate_celltype<-function(obj,
                             essential_genes = essential_genes,
                             key = key,
                             detail_prefix = curprefix,
-                            ignore_variable_genes = ignore_variable_genes)
+                            ignore_variable_genes = ignore_variable_genes,
+                            redo_integration = redo_integration)
     }
     subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
     
@@ -4417,4 +4336,101 @@ save_top_gene_figures <- function(de_obj, sigout, designdata, bBetweenCluster, f
 
   height=max(4, nsamplegroup * 0.2)
   ggsave(paste0(file_prefix, ".top_", "dotplot.png"), g, width=12, height=height, units="in", dpi=300)
+}
+
+do_integration_v5 <- function(outFile, 
+                              obj, 
+                              by_sctransform, 
+                              cur_assay, 
+                              method, 
+                              reduction, 
+                              thread, 
+                              detail_prefix, 
+                              ignore_variable_genes){
+  integrated_obj_file<-paste0(outFile, ".integrated.rds")
+  if(!file.exists(integrated_obj_file)){
+    normalized_obj_file<-paste0(outFile, ".normalized.rds")
+    if(!file.exists(normalized_obj_file)){
+      #integration would be done on the RNA assay
+      DefaultAssay(obj) <- "RNA"
+
+      # In order to perform integration, we need to split the object by batch, no matter through SCTransform or not.
+      # When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
+      cat("Split RNA assay ...\n")
+      obj[["RNA"]] <- split(obj[["RNA"]], f = obj$batch)
+
+      if(by_sctransform){
+        cat("SCTransform ...\n")
+        obj <- SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
+        DefaultAssay(obj) <- "SCT"
+
+        cat("JoinLayers of RNA assay ... \n")
+        obj <- JoinLayers(obj, assay="RNA")
+      }else{
+        cat("NormalizeData/FindVariableFeatures ...\n")
+        obj <- NormalizeData(obj)
+
+        cat("FindVariableFeatures ... \n")
+        obj <- FindVariableFeatures(obj)
+
+        cat("ScaleData ... \n")
+        obj <- ScaleData(obj, verbose = FALSE)
+      }
+
+      cat("Saving normalized object to file:", normalized_obj_file, "\n")
+      saveRDS(obj, normalized_obj_file)
+    }else{
+      cat("Reading normalized object from file:", normalized_obj_file, "\n")
+      obj<-readRDS(normalized_obj_file)
+    }
+
+    if(length(ignore_variable_genes) > 0){
+      VariableFeatures(obj) <- setdiff(VariableFeatures(obj), ignore_variable_genes)
+    }
+
+    obj = do_PCA_Integration( obj, 
+                              cur_assay, 
+                              by_sctransform, 
+                              method=method, 
+                              new.reduction=reduction, 
+                              orig.reduction="pca",
+                              thread=thread,
+                              detail_prefix=detail_prefix)
+
+    if(!by_sctransform){
+      cat("JoinLayers of", cur_assay, "assay ... \n")
+      obj <- JoinLayers(obj, assay=cur_assay)
+    }
+
+    cat("FindNeighbors ... \n")
+    obj <- FindNeighbors( obj, 
+                          dims = 1:30, 
+                          assay=cur_assay, 
+                          reduction = reduction)
+
+    cat("RunUMAP ... \n")
+    obj <- RunUMAP( obj, 
+                    assay = cur_assay,
+                    reduction = reduction, 
+                    dims = 1:30)    
+    
+    # No matter scTransform or not, we need to normalize the object in order to get average expression later.
+    if (cur_assay != "RNA") {
+      cat("Normalizing data ...\n")
+      obj <- NormalizeData(obj, assay="RNA")
+      cat("Normalizing data done.\n")
+    }
+
+    if("ADT" %in% names(obj)){
+      obj <- NormalizeData(obj, normalization.method = "CLR", margin = 2, assay = "ADT")
+    }
+    cat("Saving integrated object to file:", integrated_obj_file, "\n")
+    saveRDS(obj, integrated_obj_file)
+
+    unlink(normalized_obj_file)
+  }else{
+    cat("Reading integrated object from file:", integrated_obj_file, "\n")
+    obj<-readRDS(integrated_obj_file)
+  }
+  return(obj)
 }

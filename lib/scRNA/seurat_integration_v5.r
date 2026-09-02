@@ -85,97 +85,25 @@ cat("preprocessing_rawobj done.\n")
 obj<-finalList$rawobj
 finalList<-finalList[names(finalList) != "rawobj"]
 
-integrated_obj_file<-paste0(outFile, ".integrated.rds")
-if(!file.exists(integrated_obj_file)){
-  normalized_obj_file<-paste0(outFile, ".normalized.rds")
-  if(!file.exists(normalized_obj_file)){
-    if(has_batch_file){
-      cat("Setting batch ...\n")
-      poolmap = get_batch_samples(parSampleFile2, unique(obj$sample))
-      obj@meta.data$batch <- unlist(poolmap[obj$sample])
-    }else if(!("batch" %in% colnames(obj@meta.data))){
-      obj@meta.data$batch <- obj$sample
-    }
-
-    #integration would be done on the RNA assay
-    DefaultAssay(obj) <- "RNA"
-
-    # In order to perform integration, we need to split the object by batch, no matter through SCTransform or not.
-    # When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
-    cat("Split RNA assay ...\n")
-    obj[["RNA"]] <- split(obj[["RNA"]], f = obj$batch)
-
-    if(by_sctransform){
-      cat("SCTransform ...\n")
-      obj <- SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
-      DefaultAssay(obj) <- "SCT"
-
-      cat("JoinLayers of RNA assay ... \n")
-      obj <- JoinLayers(obj, assay="RNA")
-    }else{
-      cat("NormalizeData/FindVariableFeatures ...\n")
-      obj <- NormalizeData(obj)
-
-      cat("FindVariableFeatures ... \n")
-      obj <- FindVariableFeatures(obj)
-
-      cat("ScaleData ... \n")
-      obj <- ScaleData(obj, verbose = FALSE)
-    }
-
-    cat("Saving normalized object to file:", normalized_obj_file, "\n")
-    saveRDS(obj, normalized_obj_file)
-  }else{
-    cat("Reading normalized object from file:", normalized_obj_file, "\n")
-    obj<-readRDS(normalized_obj_file)
-  }
-
-  if(length(ignore_variable_genes) > 0){
-    VariableFeatures(obj) <- setdiff(VariableFeatures(obj), ignore_variable_genes)
-  }
-
-  obj = do_PCA_Integration( obj, 
-                            cur_assay, 
-                            by_sctransform, 
-                            method=method, 
-                            new.reduction=reduction, 
-                            orig.reduction="pca",
-                            thread=thread,
-                            detail_prefix=detail_prefix)
-
-  if(!by_sctransform){
-    cat("JoinLayers of", cur_assay, "assay ... \n")
-    obj <- JoinLayers(obj, assay=cur_assay)
-  }
-
-  cat("FindNeighbors ... \n")
-  obj <- FindNeighbors( obj, 
-                        dims = 1:30, 
-                        assay=cur_assay, 
-                        reduction = reduction)
-
-  cat("RunUMAP ... \n")
-  obj <- RunUMAP( obj, 
-                  assay = cur_assay,
-                  reduction = reduction, 
-                  dims = 1:30)    
-  
-  # No matter scTransform or not, we need to normalize the object in order to get average expression later.
-  cat("Normalizing data ...\n")
-  obj <- NormalizeData(obj, assay="RNA")
-  cat("Normalizing data done.\n")
-
-  if("ADT" %in% names(obj)){
-    obj <- NormalizeData(obj, normalization.method = "CLR", margin = 2, assay = "ADT")
-  }
-  cat("Saving integrated object to file:", integrated_obj_file, "\n")
-  saveRDS(obj, integrated_obj_file)
-
-  unlink(normalized_obj_file)
-}else{
-  cat("Reading integrated object from file:", integrated_obj_file, "\n")
-  obj<-readRDS(integrated_obj_file)
+if(has_batch_file){
+  cat("Setting batch ...\n")
+  poolmap = get_batch_samples(parSampleFile2, unique(obj$sample))
+  obj@meta.data$batch <- unlist(poolmap[obj$sample])
+}else if(!("batch" %in% colnames(obj@meta.data))){
+  obj@meta.data$batch <- obj$sample
 }
+
+obj <- do_integration_v5(
+  outFile=outFile,
+  obj=obj,
+  by_sctransform=by_sctransform,
+  cur_assay=cur_assay,
+  method=method,
+  reduction=reduction,
+  thread=thread,
+  detail_prefix=detail_prefix,
+  ignore_variable_genes=ignore_variable_genes
+)
 
 DefaultAssay(obj)<-cur_assay
 finalList$obj<-obj

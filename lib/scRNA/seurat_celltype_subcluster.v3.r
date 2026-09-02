@@ -43,6 +43,7 @@ by_sctransform<-is_one(myoptions$by_sctransform)
 reduction<-myoptions$reduction
 
 redo_integration<-is_one(myoptions$redo_integration, 0)
+integration_by_method_v5<-myoptions$integration_by_method_v5
 
 assay=ifelse(by_sctransform, "SCT", "RNA")
 
@@ -566,7 +567,11 @@ for(pct in previous_celltypes){
                         reduction.name = subumap,
                         redo_fastmnn = redo_fastmnn,
                         thread=thread,
-                        detail_prefix=curprefix)
+                        detail_prefix=curprefix,
+                        ignore_variable_genes=NULL,
+                        algorithm=4,
+                        redo_integration=redo_integration,
+                        integration_by_method_v5=integration_by_method_v5)
   
   cat("saving reductions ...\n")
   reductions_rds = paste0(curprefix, ".reductions.rds")
