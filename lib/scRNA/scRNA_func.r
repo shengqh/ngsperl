@@ -2287,7 +2287,7 @@ sub_cluster<-function(subobj,
     subobj <- do_integration_v5(outFile=detail_prefix,
                                 obj=subobj,
                                 by_sctransform=by_sctransform,
-                                cur_assay=cur_assay,
+                                cur_assay=assay,
                                 method=integration_by_method_v5,
                                 reduction=curreduction,
                                 thread=thread,
@@ -2295,8 +2295,8 @@ sub_cluster<-function(subobj,
                                 ignore_variable_genes=ignore_variable_genes)
   }else if(curreduction == "pca"){
     cat(key, "redo normalization ...\n")
-    cur_assay="RNA"
-    DefaultAssay(subobj) <- cur_assay
+    assay="RNA"
+    DefaultAssay(subobj) <- assay
     subobj <- do_normalization( subobj, 
                                 selection.method="vst", 
                                 nfeatures=2000, 
@@ -2308,12 +2308,12 @@ sub_cluster<-function(subobj,
     cat(key, "RunPCA\n")
     subobj<-RunPCA(subobj, npcs=cur_npcs)
   }
-  cat(key, "cur_assay =", cur_assay, "\n")
+  cat(key, "assay =", assay, "\n")
   cat(key, "curreduction =", curreduction, "\n")
 
   cat(key, "FindNeighbors by", curreduction, "\n")
   subobj<-FindNeighbors(object=subobj, 
-                        assay=cur_assay,
+                        assay=assay,
                         reduction=curreduction, 
                         k.param=k_n_neighbors, 
                         dims=cur_pca_dims, 
