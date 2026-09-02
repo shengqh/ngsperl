@@ -128,30 +128,24 @@ sub initializeScRNASeqDefaultOptions {
   initDefaultValue( $def, "by_sctransform",     0 );
   initDefaultValue( $def, "use_sctransform_v2", 1 );
 
-  initDefaultValue( $def, "integration_by_harmony", 0 );
-
   initDefaultValue( $def, "by_integration", 0 );
   if ( $def->{"by_integration"} ) {
-    if ( !defined $def->{integration_by_method} ) {
+    if ( !defined $def->{integration_by_method_v5} ) {
       if ( getValue( $def, "integration_by_fastmnn", 0 ) ) {
-        $def->{integration_by_method} = "fastmnn";
+        $def->{integration_by_method_v5} = "FastmnnIntegration";
       }
       elsif ( getValue( $def, "integration_by_harmony", 1 ) ) {
-        $def->{integration_by_method} = "harmony";
+        $def->{integration_by_method_v5} = "HarmonyIntegration";
       }
       else {
-        $def->{integration_by_method} = "seurat";
+        getValue( $def, "integration_by_method_v5" );
       }
     } ## end if ( !defined $def->{integration_by_method...})
 
-    $def->{integration_by_fastmnn} = $def->{integration_by_method} eq "fastmnn";
-    $def->{integration_by_harmony} = $def->{integration_by_method} eq "harmony";
+    delete $def->{integration_by_fastmnn};
+    delete $def->{integration_by_harmony};
   } ## end if ( $def->{"by_integration"...})
-  else {
-    $def->{integration_by_fastmnn} = 0;
-    $def->{integration_by_harmony} = 0;
-  }
-  initDefaultValue( $def, "subcluster_redo_harmony", 0 );
+  initDefaultValue($def, "subcluster_redo_integration", $def->{"by_integration"});
 
   my $pca_dims = $def->{by_sctransform} ? 30 : 20;
   #my $pca_dims = 50;
@@ -789,12 +783,10 @@ sub getScRNASeqConfig {
             my $sub_scDynamic_task = $scDynamic_task . "_sub";
             addSubDynamicCluster( $config, $def, $tasks, $target_dir, $sub_scDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, 0 );
           }
-        }else{
-
         }
 
         if ( getValue( $def, "perform_dynamic_subcluster" ) ) {
-          my $subcluster_task = $dynamicKey . get_next_index( $def, $dynamicKey ) . "_subcluster" . ( getValue( $def, "subcluster_redo_harmony" ) ? "_rh" : "" );
+          my $subcluster_task = $dynamicKey . get_next_index( $def, $dynamicKey ) . "_subcluster" . ( getValue( $def, "subcluster_redo_integration" ) ? "_ri" : "" );
 
           my $cur_options = {
             reduction        => $reduction,

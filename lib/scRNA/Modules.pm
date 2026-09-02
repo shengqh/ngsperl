@@ -2376,36 +2376,27 @@ sub addSubDynamicCluster {
 sub addSubCluster {
   my ( $config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $rmd_ext, $signacX_ref, $singleR_ref, $azimuth_ref, $celltypist_ref ) = @_;
 
-  my $integration_by_harmony;
-  my $subcluster_redo_harmony;
-  my $subcluster_redo_fastmnn = 0;
-  if ( defined $def->{"subcluster_by_harmony"} ) {
+  my $redo_integration = 0;
+  my $integration_by_method_v5 = "";
+  if (getValue($def, "subcluster_redo_integration", 0)) {
+    $redo_integration = 1;
+    $integration_by_method_v5 = getValue($def, "subcluster_integration_by_method_v5", getValue($def, "integration_by_method_v5"));
+  } elsif ( defined $def->{"subcluster_by_harmony"} ) {
     if ( $def->{"subcluster_by_harmony"} ) {
-      $integration_by_harmony = 1;
-      if ( getValue( $def, "subcluster_redo_harmony", 0 ) ) {
-        $subcluster_redo_harmony = 1;
-      }
-      else {
-        $subcluster_redo_harmony = !getValue( $def, "integration_by_harmony" );
-      }
-
-      if ( !( $subcluster_task =~ /_rh/ ) ) {
-        $subcluster_task = $subcluster_task . "_rh";
-      }
       $cur_options->{reduction} = "harmony";
+      if ( getValue( $def, "subcluster_redo_harmony", 0 ) ) {
+        $redo_integration = 1;
+        $integration_by_method_v5 = "HarmonyIntegration";
+      }
     } ## end if ( $def->{"subcluster_by_harmony"...})
-    else {
-      $integration_by_harmony  = 0;
-      $subcluster_redo_harmony = 0;
+  } elsif ( defined $def->{"subcluster_redo_fastmnn"} ) {
+    if ( $def->{"subcluster_redo_fastmnn"} ) {
+      $redo_integration = 1;
+      $integration_by_method_v5 = "FastMNNIntegration";
     }
-  } ## end if ( defined $def->{"subcluster_by_harmony"...})
-  else {
-    $integration_by_harmony  = getValue( $def, "integration_by_harmony" );
-    $subcluster_redo_harmony = getValue( $def, "subcluster_redo_harmony", 0 );
-    $subcluster_redo_fastmnn = getValue( $def, "subcluster_redo_fastmnn", 0 );
   }
 
-  my $subcluster_thread = $subcluster_redo_fastmnn ? 8 : 1;
+  my $subcluster_thread = $redo_integration ? 8 : 1;
 
   $config->{$subcluster_task} = {
     class                => "CQS::UniqueR",
@@ -2439,7 +2430,7 @@ sub addSubCluster {
         summary_layer_file          => $def->{summary_layer_file},
         celltype_layer              => "layer4",
         output_layer                => "cell_type",
-        redo_integration            => getValue( $def, "subcluster_redo_integration",         0 ),
+        redo_integration            => $redo_integration,
         integration_by_method_v5    => getValue( $def, "subcluster_integration_by_method_v5", getValue( $def, "subcluster_by_integration", 0 ) ? undef : "" ),
         best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
         resolutions                 => getValue( $def, "subcluster_resolutions", "" ),
