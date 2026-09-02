@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='GSE125449'
+outFile='CombinedPTC'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
-parSampleFile3='fileList3.txt'
+parSampleFile3=''
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parSampleFile8='fileList8.txt'
-parFile1='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_sct2_fastmnn/result/GSE125449.final.rds'
-parFile2='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_sct2_fastmnn_dr0.5_1_call/result/GSE125449.scDynamic.meta.rds'
-parFile3='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/essential_genes/result/GSE125449.txt'
+parSampleFile9='fileList9.txt'
+parFile1='/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20260212_12904_VisiumHD_cellsegment/20260819_big_data/20260819_T02_scRNA/seurat_rpca/result/CombinedPTC.final.rds'
+parFile2=''
+parFile3='/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20260212_12904_VisiumHD_cellsegment/20260819_big_data/20260819_T02_scRNA/essential_genes/result/CombinedPTC.txt'
 
 
-setwd('/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_sct2_fastmnn_dr0.5_2_subcluster/result')
+setwd('/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20260212_12904_VisiumHD_cellsegment/20260819_big_data/20260819_T02_scRNA/seurat_rpca_dr0.5_1_subcluster/result')
 
 ### Parameter setting end ###
 
@@ -40,11 +40,9 @@ options_table<-read.table(parSampleFile1, sep="\t", header=F, stringsAsFactors =
 myoptions<-split(options_table$V1, options_table$V2)
 
 by_sctransform<-is_one(myoptions$by_sctransform)
-by_integration<-is_one(myoptions$by_integration)
 reduction<-myoptions$reduction
-by_harmony<-reduction=="harmony"
-redo_harmony<-is_one(myoptions$redo_harmony, 0)
-redo_fastmnn<-is_one(myoptions$redo_fastmnn, 0)
+
+redo_integration<-is_one(myoptions$redo_integration, 0)
 
 assay=ifelse(by_sctransform, "SCT", "RNA")
 
@@ -118,6 +116,8 @@ if(parFile2 != ""){
   meta<-obj@meta.data
 }
 
+all_annotation_names=c()
+
 bHasSignacX<-FALSE
 if("SignacX_column" %in% names(myoptions)){
   meta$SignacX = meta[[myoptions$SignacX_column]]
@@ -127,6 +127,9 @@ if("SignacX_column" %in% names(myoptions)){
   bHasSignacX<-TRUE
 }else if("SignacX" %in% colnames(obj@meta.data)){
   bHasSignacX<-TRUE
+}
+if(bHasSignacX){
+  all_annotation_names=c(all_annotation_names, "SignacX")
 }
 
 bHasSingleR<-FALSE
@@ -139,6 +142,9 @@ if("SingleR_column" %in% names(myoptions)){
 }else if("SingleR" %in% colnames(obj@meta.data)){
   bHasSingleR<-TRUE
 }
+if(bHasSingleR){
+  all_annotation_names=c(all_annotation_names, "SingleR")
+}
 
 bHasAzimuth<-FALSE
 if("Azimuth_column" %in% names(myoptions)){
@@ -149,6 +155,9 @@ if("Azimuth_column" %in% names(myoptions)){
   bHasAzimuth<-TRUE
 }else if("Azimuth" %in% colnames(obj@meta.data)){
   bHasAzimuth<-TRUE
+}
+if(bHasAzimuth){
+  all_annotation_names=c(all_annotation_names, "Azimuth")
 }
 
 bHasCelltypist<-FALSE
@@ -161,6 +170,28 @@ if("Celltypist_column" %in% names(myoptions)){
 }else if("Celltypist" %in% colnames(obj@meta.data)){
   bHasCelltypist<-TRUE
 }
+if(bHasCelltypist){
+  all_annotation_names=c(all_annotation_names, "Celltypist")
+}
+
+has_annotation<-exists('parSampleFile9')
+if(has_annotation){
+  annotation_df<-read.table(parSampleFile9, sep="\t", stringsAsFactors = F)
+  annotation_names<-unique(annotation_df$V3)
+
+  annotation_name = annotation_names[1]
+  for(annotation_name in annotation_names) {
+    cur_df = annotation_df |> dplyr::filter(V3 == annotation_name) |> dplyr::select(-V3)
+    source_map=unlist(split(cur_df$V1, cur_df$V2))
+    meta = fill_meta_by_source_map( source_map=source_map, 
+                                    target_meta=meta, 
+                                    source_columns=annotation_name, 
+                                    target_column=annotation_name, 
+                                    is_character=TRUE)
+  }
+  all_annotation_names=c(all_annotation_names, annotation_names)
+}
+cat("All annotation names: ", paste(all_annotation_names, collapse=", "), "\n")
 
 stopifnot(all(colnames(obj) == rownames(meta)))
 
@@ -542,25 +573,10 @@ for(pct in previous_celltypes){
   saveRDS(subobj@reductions, reductions_rds)
 
   validation_columns=c("orig.ident")
-  if(bHasSignacX){
-    filelist = check_cell_type(subobj, "SignacX", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
-    validation_columns = c(validation_columns, "SignacX")
+  for(annotation in all_annotation_names){
+    filelist = check_cell_type(subobj, annotation, filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
   }
-
-  if(bHasSingleR){
-    filelist = check_cell_type(subobj, "SingleR", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
-    validation_columns = c(validation_columns, "SingleR")
-  }
-
-  if(bHasAzimuth){
-    filelist = check_cell_type(subobj, "Azimuth", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
-    validation_columns = c(validation_columns, "Azimuth")
-  }
-
-  if(bHasCelltypist){
-    filelist = check_cell_type(subobj, "Celltypist", filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
-    validation_columns = c(validation_columns, "Celltypist")
-  }
+  validation_columns = c(validation_columns, all_annotation_names)
 
   # after subclustering, the default assay may be changed, we need to use current assay for subobj to get cluster names.
   cur_assay = DefaultAssay(subobj)
@@ -740,4 +756,3 @@ rm(obj)
 cat("final memory used:", lobstr_mem_used(), "\n")
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
-
