@@ -331,9 +331,9 @@ sub add_seurat {
       species                   => getValue( $def, "species" ),
       resolution                => getValue( $def, "resolution" ),
       pca_dims                  => getValue( $def, "pca_dims" ),
-      by_integration            => $by_integration,
       by_sctransform            => getValue( $def, "by_sctransform" ),
       use_sctransform_v2        => $use_sctransform_v2,
+      by_integration            => $by_integration,
       integration_by_method_v5  => $def->{"integration_by_method_v5"},
       reduction                 => $reduction,
       batch_for_integration     => getValue( $def, "batch_for_integration" ),
@@ -1962,7 +1962,8 @@ sub addPostDEAnalsyis {
     };
     push( @$summary, $fgsea_task );
   } ## end if ( getValue( $def, "perform_fgsea"...))
-}
+} ## end sub addPostDEAnalsyis
+
 
 sub addEdgeRTask {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
@@ -2095,9 +2096,10 @@ sub addEdgeRTask {
   return ($edgeRtaskname);
 } ## end sub addEdgeRTask
 
+
 sub addGLIMESTask {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
-  
+
   if ( !defined $reduction ) {
     $reduction = "umap";
   }
@@ -2163,10 +2165,10 @@ sub addGLIMESTask {
   my $rmd_ext = "${GLIMES_suffix}.html";
 
   $config->{$GLIMETaskname} = {
-    class      => "CQS::UniqueR",
-    perform    => 1,
-    target_dir => $target_dir . "/" . getNextFolderIndex($def) . $GLIMETaskname,
-    rtemplate  => "../CQS/countTableVisFunctions.R,../scRNA/scRNA_func.r,${GLIMESRscript}",
+    class                => "CQS::UniqueR",
+    perform              => 1,
+    target_dir           => $target_dir . "/" . getNextFolderIndex($def) . $GLIMETaskname,
+    rtemplate            => "../CQS/countTableVisFunctions.R,../scRNA/scRNA_func.r,${GLIMESRscript}",
     rReportTemplate      => "$GLIMESRmd,reportFunctions.R",
     rmd_ext              => $rmd_ext,
     run_rmd_independent  => 1,
@@ -2174,7 +2176,7 @@ sub addGLIMESTask {
     parameterSampleFile2 => $pairs,
     parameterSampleFile3 => $rCodeDic,
     output_file_ext      => ".GLIMES.files.csv",
-    no_docker            => getValue( $def, ["no_docker", "GLIMES_no_docker"], 0 ),
+    no_docker            => getValue( $def, [ "no_docker", "GLIMES_no_docker" ], 0 ),
     sh_direct            => 1,
     pbs                  => {
       "nodes"    => "1:ppn=1",
@@ -2198,6 +2200,7 @@ sub addGLIMESTask {
 
   return ($GLIMETaskname);
 } ## end sub addGLIMESTask
+
 
 sub addComparison {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $reduction ) = @_;
@@ -2373,13 +2376,11 @@ sub addSubDynamicCluster {
 sub addSubCluster {
   my ( $config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $rmd_ext, $signacX_ref, $singleR_ref, $azimuth_ref, $celltypist_ref ) = @_;
 
-  my $by_integration;
   my $integration_by_harmony;
   my $subcluster_redo_harmony;
   my $subcluster_redo_fastmnn = 0;
   if ( defined $def->{"subcluster_by_harmony"} ) {
     if ( $def->{"subcluster_by_harmony"} ) {
-      $by_integration         = 1;
       $integration_by_harmony = 1;
       if ( getValue( $def, "subcluster_redo_harmony", 0 ) ) {
         $subcluster_redo_harmony = 1;
@@ -2394,17 +2395,15 @@ sub addSubCluster {
       $cur_options->{reduction} = "harmony";
     } ## end if ( $def->{"subcluster_by_harmony"...})
     else {
-      $by_integration          = getValue( $def, "by_integration" );
       $integration_by_harmony  = 0;
       $subcluster_redo_harmony = 0;
     }
   } ## end if ( defined $def->{"subcluster_by_harmony"...})
   else {
-    $by_integration          = getValue( $def, "by_integration" );
     $integration_by_harmony  = getValue( $def, "integration_by_harmony" );
     $subcluster_redo_harmony = getValue( $def, "subcluster_redo_harmony", 0 );
     $subcluster_redo_fastmnn = getValue( $def, "subcluster_redo_fastmnn", 0 );
-  } ## end else [ if ( defined $def->{"subcluster_by_harmony"...})]
+  }
 
   my $subcluster_thread = $subcluster_redo_fastmnn ? 8 : 1;
 
@@ -2424,18 +2423,14 @@ sub addSubCluster {
       { task_name                   => getValue( $def, "task_name" ),
         pca_dims                    => getValue( $def, "pca_dims" ),
         by_sctransform              => getValue( $def, "by_sctransform" ),
-        by_integration              => $by_integration,
         regress_by_percent_mt       => getValue( $def, "regress_by_percent_mt" ),
         species                     => getValue( $def, "species" ),
         db_markers_file             => getValue( $def, "markers_file" ),
         curated_markers_file        => getValue( $def, "curated_markers_file", "" ),
         annotate_tcell              => getValue( $def, "annotate_tcell",       0 ),
         remove_subtype              => "",    #use all subtypes
-                                              #remove_subtype        => getValue( $def, "remove_subtype", ""),
         HLA_panglao5_file           => getValue( $def, "HLA_panglao5_file",  "" ),
         tcell_markers_file          => getValue( $def, "tcell_markers_file", "" ),
-        redo_harmony                => $subcluster_redo_harmony,
-        redo_fastmnn                => $subcluster_redo_fastmnn,
         bubblemap_file              => $def->{bubblemap_file},
         antibody_bubblemap_file     => $def->{antibody_bubblemap_file},
         bubblemap_width             => $def->{bubblemap_width},
@@ -2444,6 +2439,8 @@ sub addSubCluster {
         summary_layer_file          => $def->{summary_layer_file},
         celltype_layer              => "layer4",
         output_layer                => "cell_type",
+        redo_integration            => getValue( $def, "subcluster_redo_integration",         0 ),
+        integration_by_method_v5    => getValue( $def, "subcluster_integration_by_method_v5", getValue( $def, "subcluster_by_integration", 0 ) ? undef : "" ),
         best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
         resolutions                 => getValue( $def, "subcluster_resolutions", "" ),
         thread                      => $subcluster_thread
@@ -2456,6 +2453,7 @@ sub addSubCluster {
     parameterSampleFile6     => $def->{dynamic_bubble_files},
     parameterSampleFile7_ref => $azimuth_ref,
     parameterSampleFile8_ref => $celltypist_ref,
+    parameterSampleFile9     => $def->{annotation_files},
     output_file_ext          => ".meta.rds,.files.csv",
     sh_direct                => 1,
     pbs                      => {
