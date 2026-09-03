@@ -1,15 +1,15 @@
-rm(list=ls()) 
-outFile='WHY11498'
+rm(list=ls())
+outFile='CW14817'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile4='fileList4.txt'
-parFile1='/nobackup/h_cqs/shengq2/temp/20250415_spatial_scRNA_analysis/seurat_merge/result/WHY11498.final.rds'
+parFile1='/data/wanjalla_lab/projects/20260902_14817_Visium_Complexes_scRNA/seurat_merge/result/CW14817.final.rds'
 parFile2=''
-parFile3='/nobackup/h_cqs/shengq2/temp/20250415_spatial_scRNA_analysis/essential_genes/result/WHY11498.txt'
+parFile3='/data/wanjalla_lab/projects/20260902_14817_Visium_Complexes_scRNA/essential_genes/result/CW14817.txt'
 
 
-setwd('/nobackup/h_cqs/shengq2/temp/20250415_spatial_scRNA_analysis/seurat_merge_dr0.5_1_call/result')
+setwd('/data/wanjalla_lab/projects/20260902_14817_Visium_Complexes_scRNA/seurat_merge_dr0.2_1_call/result')
 
 ### Parameter setting end ###
 
@@ -50,17 +50,18 @@ annotate_tcell<-is_one(myoptions$annotate_tcell)
 HLA_panglao5_file<-myoptions$HLA_panglao5_file
 tcell_markers_file<-myoptions$tcell_markers_file
 assay=ifelse(by_sctransform, "SCT", "RNA")
-by_harmony<-reduction=="harmony"
 regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
-redo_harmony<-is_one(myoptions$redo_harmony, 0)
 resolution=as.numeric(myoptions$dynamic_by_one_resolution)
 curated_markers_file=myoptions$curated_markers_file
 by_individual_sample=is_one(myoptions$by_individual_sample)
+by_integration=is_one(myoptions$by_integration, 0)
+integration_by_method_v5=myoptions$integration_by_method_v5
 
-reduction=myoptions$reduction
+by_harmony=by_integration & integration_by_method_v5=="HarmonyIntegration"
 
 if(by_individual_sample){
   by_harmony<-FALSE
+  by_integration<-FALSE
 }
 
 layer=ifelse(is.null(myoptions$layer), "Layer4", myoptions$layer)
@@ -180,7 +181,6 @@ if(0){
   cur_layermap = layer2map
 }
 
-
 if(by_individual_sample){
   if("harmony" %in% names(obj@reductions)){
     obj@reductions["harmony"]<-NULL
@@ -261,14 +261,16 @@ if(by_individual_sample){
                             resolution = resolution, 
                             random.seed = random.seed, 
                             by_sctransform = by_sctransform, 
-                            by_harmony = 0, 
+                            by_harmony = by_harmony, 
                             prefix = sample, 
                             vars.to.regress = vars.to.regress, 
                             bubblemap_file = bubblemap_file, 
                             essential_genes = NULL,
                             by_individual_sample = 1,
                             species = species,
-                            reduction=reduction)
+                            reduction=reduction,
+                            by_integration=by_integration,
+                            integration_by_method_v5=integration_by_method_v5)
 
     result_list<-c(result_list, res_list$html)
     all_ct_counts<-rbind(all_ct_counts, res_list$ct_count)
@@ -310,6 +312,8 @@ if(by_individual_sample){
                           essential_genes = NULL,
                           by_individual_sample = 0,
                           species = species,
-                          reduction=reduction);
+                          reduction=reduction,
+                          by_integration=by_integration,
+                          integration_by_method_v5=integration_by_method_v5);
 }
 

@@ -1664,6 +1664,7 @@ sub addSeuratDETask {
   push( @$summary, $DEtaskname );
 } ## end sub addSeuratDETask
 
+
 sub addPostDEAnalsyis {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction, $edgeRtaskname, $edgeR_suffix, $curClusterName ) = @_;
 
@@ -2261,6 +2262,27 @@ sub addDynamicCluster {
   my $rReportTemplate = $by_individual_sample ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_summary.rmd;../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R" : "../scRNA/seurat_scDynamic_one_layer_one_resolution.rmd;reportFunctions.R";
   my $rscript         = $by_harmony           ? "../scRNA/seurat_scDynamic_one_layer_one_resolution_harmony.r"                                                                            : "../scRNA/seurat_scDynamic_one_layer_one_resolution.r";
 
+  my $redo_integration         = 0;
+  my $integration_by_method_v5 = "";
+  if ( getValue( $def, "subcluster_redo_integration", 0 ) ) {
+    $redo_integration         = 1;
+    $integration_by_method_v5 = getValue( $def, "subcluster_integration_by_method_v5", getValue( $def, "integration_by_method_v5" ) );
+  }
+  elsif ( defined $def->{"subcluster_by_harmony"} ) {
+    if ( $def->{"subcluster_by_harmony"} ) {
+      if ( getValue( $def, "subcluster_redo_harmony", 0 ) ) {
+        $redo_integration         = 1;
+        $integration_by_method_v5 = "HarmonyIntegration";
+      }
+    } ## end if ( $def->{"subcluster_by_harmony"...})
+  } ## end elsif ( defined $def->{"subcluster_by_harmony"...})
+  elsif ( defined $def->{"subcluster_redo_fastmnn"} ) {
+    if ( $def->{"subcluster_redo_fastmnn"} ) {
+      $redo_integration         = 1;
+      $integration_by_method_v5 = "FastMNNIntegration";
+    }
+  } ## end elsif ( defined $def->{"subcluster_redo_fastmnn"...})
+
   $config->{$scDynamic_task} = {
     class                => "CQS::UniqueR",
     perform              => 1,
@@ -2291,8 +2313,9 @@ sub addDynamicCluster {
       summary_layer_file          => $def->{summary_layer_file},
       best_resolution_min_markers => getValue( $def, "best_resolution_min_markers" ),
       dynamic_by_one_resolution   => getValue( $def, "dynamic_by_one_resolution", 0.2 ),
-      redo_harmony                => getValue( $def, "subcluster_redo_harmony",   0 ),
-      layer                       => getValue( $def, "dynamic_layer",             "Layer4" ),
+      redo_integration            => $redo_integration,
+      integration_by_method_v5    => $integration_by_method_v5,
+      layer                       => getValue( $def, "dynamic_layer", "Layer4" ),
       reduction                   => $reduction,
       by_individual_sample        => $by_individual_sample,
       by_column                   => $by_column,
@@ -2376,25 +2399,27 @@ sub addSubDynamicCluster {
 sub addSubCluster {
   my ( $config, $def, $summary, $target_dir, $subcluster_task, $obj_ref, $meta_ref, $essential_gene_task, $cur_options, $rename_map, $rmd_ext, $signacX_ref, $singleR_ref, $azimuth_ref, $celltypist_ref ) = @_;
 
-  my $redo_integration = 0;
+  my $redo_integration         = 0;
   my $integration_by_method_v5 = "";
-  if (getValue($def, "subcluster_redo_integration", 0)) {
-    $redo_integration = 1;
-    $integration_by_method_v5 = getValue($def, "subcluster_integration_by_method_v5", getValue($def, "integration_by_method_v5"));
-  } elsif ( defined $def->{"subcluster_by_harmony"} ) {
+  if ( getValue( $def, "subcluster_redo_integration", 0 ) ) {
+    $redo_integration         = 1;
+    $integration_by_method_v5 = getValue( $def, "subcluster_integration_by_method_v5", getValue( $def, "integration_by_method_v5" ) );
+  }
+  elsif ( defined $def->{"subcluster_by_harmony"} ) {
     if ( $def->{"subcluster_by_harmony"} ) {
       $cur_options->{reduction} = "harmony";
       if ( getValue( $def, "subcluster_redo_harmony", 0 ) ) {
-        $redo_integration = 1;
+        $redo_integration         = 1;
         $integration_by_method_v5 = "HarmonyIntegration";
       }
     } ## end if ( $def->{"subcluster_by_harmony"...})
-  } elsif ( defined $def->{"subcluster_redo_fastmnn"} ) {
+  } ## end elsif ( defined $def->{"subcluster_by_harmony"...})
+  elsif ( defined $def->{"subcluster_redo_fastmnn"} ) {
     if ( $def->{"subcluster_redo_fastmnn"} ) {
-      $redo_integration = 1;
+      $redo_integration         = 1;
       $integration_by_method_v5 = "FastMNNIntegration";
     }
-  }
+  } ## end elsif ( defined $def->{"subcluster_redo_fastmnn"...})
 
   my $subcluster_thread = $redo_integration ? 8 : 1;
 

@@ -3009,7 +3009,9 @@ iterate_celltype<-function(obj,
                            species="Hs",
                            reduction="pca",
                            ignore_variable_genes=NULL,
-                           cluster_algorithm=4){
+                           cluster_algorithm=4,
+                           by_integration=FALSE,
+                           integration_by_method_v5=""){
   meta = obj@meta.data
   
   assay=ifelse(by_sctransform, "SCT", "RNA")
@@ -3049,40 +3051,18 @@ iterate_celltype<-function(obj,
     DefaultAssay(subobj)<-assay
 
     if(pct == "Unassigned") {
-      #for iteration 1, all cells are unassigned, unless harmony has already been performed in integration, we will use "pca" for clustering
-      if(reduction != "pca"){
-        curreduction=reduction
-      }else{
-        curreduction="pca"
-        if(by_harmony){
-          if("harmony" %in% names(subobj@reductions)){
-            curreduction="harmony"
-          }
-        }
-      }
-
-      cat(key, "FindNeighbors by", curreduction, "\n")
-      subobj<-FindNeighbors(object=subobj, reduction=curreduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
+      cat(key, "FindNeighbors by", reduction, "\n")
+      subobj<-FindNeighbors(object=subobj, reduction=reduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
 
       cat(key, "FindClusters\n")
       subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolution, verbose=FALSE, algorithm=cluster_algorithm)
     }else{      
-      if(reduction != "pca"){
-        curreduction=reduction
-      }else{
-        curreduction="pca"
-        if(by_harmony){
-          if("harmony" %in% names(subobj@reductions)){
-            curreduction="harmony"
-          }
-        }
-      }
       subobj = sub_cluster(subobj = subobj, 
                             assay =  assay, 
                             by_sctransform = by_sctransform, 
                             by_harmony = by_harmony, 
-                            redo_harmony = redo_harmony,
-                            curreduction = curreduction, 
+                            redo_harmony = FALSE,
+                            curreduction = reduction, 
                             k_n_neighbors = k_n_neighbors,
                             u_n_neighbors = u_n_neighbors,
                             random.seed = random.seed,
@@ -3094,7 +3074,8 @@ iterate_celltype<-function(obj,
                             key = key,
                             detail_prefix = curprefix,
                             ignore_variable_genes = ignore_variable_genes,
-                            redo_integration = redo_integration)
+                            redo_integration = FALSE,
+                            integration_by_method_v5 = "")
     }
     subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
     
@@ -3198,7 +3179,9 @@ layer_cluster_celltype<-function(obj,
                                  essential_genes,
                                  species,
                                  reduction="pca",
-                                 ignore_variable_genes=NULL){
+                                 ignore_variable_genes=NULL,
+                                 by_integration=FALSE,
+                                 integration_by_method_v5=""){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -3239,11 +3222,11 @@ layer_cluster_celltype<-function(obj,
 
       cat("  Call iterate_celltype ...\n")
 
-      cur_by_harmony = by_harmony
+      cur_by_integration = by_integration
       if(iter == 1){
         if(length(previous_celltypes)==1){
           if(previous_celltypes[1] == "Unassigned"){
-            cur_by_harmony=FALSE
+            cur_by_integration=FALSE
           }
         }
       }
@@ -3265,7 +3248,9 @@ layer_cluster_celltype<-function(obj,
                             essential_genes,
                             species=species,
                             reduction=reduction,
-                            ignore_variable_genes=ignore_variable_genes)
+                            ignore_variable_genes=ignore_variable_genes,
+                            by_integration=cur_by_integration,
+                            integration_by_method_v5=integration_by_method_v5)
 
       all_cur_cts<-lst$all_cur_cts
 
@@ -3350,7 +3335,9 @@ do_analysis<-function(tmp_folder,
                       init_layer="layer0",
                       final_layer="layer4",
                       reduction="pca",
-                      ignore_variable_genes=NULL) {
+                      ignore_variable_genes=NULL,
+                      by_integration=FALSE,
+                      integration_by_method_v5="") {
   tmp_prefix=file.path(tmp_folder, prefix)
   cur_prefix=file.path(cur_folder, prefix)
 
@@ -3376,7 +3363,9 @@ do_analysis<-function(tmp_folder,
                                     essential_genes = essential_genes,
                                     species=species,
                                     reduction=reduction,
-                                    ignore_variable_genes=ignore_variable_genes)
+                                    ignore_variable_genes=ignore_variable_genes,
+                                    by_integration=FALSE,
+                                    integration_by_method_v5="")
   obj=reslist1$obj
   files=reslist1$files
   rm(reslist1)
