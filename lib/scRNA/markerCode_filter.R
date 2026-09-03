@@ -484,7 +484,7 @@ preprocess<-function( SampleInfo,
     npcs=min(50, ndim)
     subobj <- RunPCA(subobj, assay=assay, features = var.genes, npcs=npcs)
     subobj <- FindNeighbors(subobj, dims = 1:ndim)
-    subobj <- FindClusters(subobj, resolution = resolution, algorithm = 4) # use leiden algorithm
+    subobj <- FindClusters(subobj, resolution = resolution, algorithm = 4, random.seed=20260902) # use leiden algorithm
 
     #For leiden algorithm, the cluster number would be 1-based, we will convert it to 0-based
     subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
@@ -566,36 +566,39 @@ preprocess<-function( SampleInfo,
           subobj <- PrepSCTFindMarkers(subobj)
         }
         subobj.markers <- FindAllMarkers(subobj, assay=cur_assay, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.5)
-        subobj@misc$markers<-subobj.markers
-        
-        if('avg_log2FC' %in% colnames(subobj.markers)){
-          top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
-        }else{
-          top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
-        }
-        #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
-        top10gene<-unique(top10$gene)
-        if (length(top10gene)>200) {
-          genesize=5
-        } else {
-          if (length(top10gene)>100) {
-            genesize=6
-          }  else {
-            genesize=7
-          } 
-        }
-        
-        subobj<-myScaleData(subobj, top10gene, cur_assay)
-        
-        #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
-        #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
-        g<-MyDoHeatMap(subobj, assay=cur_assay, features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
-        ggsave(paste0(cur_prefix, ".heatmap.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white",
-          limitsize = FALSE)
+        write.csv(subobj.markers, paste0(cur_prefix, ".markers.csv"), row.names = FALSE, quote = FALSE)
+        if(nrow(subobj.markers) > 1){
+          subobj@misc$markers<-subobj.markers
+          
+          if('avg_log2FC' %in% colnames(subobj.markers)){
+            top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
+          }else{
+            top10 <- subobj.markers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_logFC)
+          }
+          #cat("\n\n### ", "Fig.7 Marker genes scaled expression in each cluster\n\n")
+          top10gene<-unique(top10$gene)
+          if (length(top10gene)>200) {
+            genesize=5
+          } else {
+            if (length(top10gene)>100) {
+              genesize=6
+            }  else {
+              genesize=7
+            } 
+          }
+          
+          subobj<-myScaleData(subobj, top10gene, cur_assay)
+          
+          #print(DoHeatmap(SCLC, features = top10$gene)+ theme(axis.text.y = element_text(size = genesize)) )
+          #cat("\n\n### Fig.7 Marker genes expression in each cluster\n\n")
+          g<-MyDoHeatMap(subobj, assay=cur_assay, features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
+          ggsave(paste0(cur_prefix, ".heatmap.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white",
+            limitsize = FALSE)
 
-        g<-MyDoHeatMap(subobj, assay=cur_assay, slot="data", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
-        ggsave(paste0(cur_prefix, ".heatmap.data.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white",
-          limitsize = FALSE)
+          g<-MyDoHeatMap(subobj, assay=cur_assay, slot="data", features = top10gene)+ theme(axis.text.y = element_text(size = genesize))
+          ggsave(paste0(cur_prefix, ".heatmap.data.png"), g, width=get_heatmap_width(length(unique(subobj$seurat_cell_type))), height=get_heatmap_height(length(top10gene)), units="px", dpi=300, bg="white",
+            limitsize = FALSE)
+        }
 
         # subobj@misc$Qcluster <- EvalCluster(subobj)
         # ViewQcluster(SCLC)
