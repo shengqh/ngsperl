@@ -585,6 +585,77 @@ run_cluster<-function(object, pca_dims, resolution, random.seed, reduction="pca"
   return(list(object=object, markers=markers))
 }
 
+ORA_celltype_cell<-function(cell_exp_data,cellType,weight){
+  cat("scale cell expression data...\n")
+  #ORA_celltype scales the whole expression matrix, so the per cell (column)
+  #center/scale factors have to be computed on ALL genes, before the matrix is
+  #reduced to the marker genes. Computing them after the subset would center on
+  #the marker genes only and give different CTA scores.
+  #scale() would coerce a sparse matrix to dense, so the factors are computed
+  #directly and applied to the CTA score instead.
+  nallgenes=nrow(cell_exp_data)
+  cell_sum<-Matrix::colSums(cell_exp_data)
+  cell_sqsum<-Matrix::colSums(cell_exp_data * cell_exp_data)
+  cell_mean<-cell_sum / nallgenes
+  cell_var<-(cell_sqsum - nallgenes * cell_mean * cell_mean) / (nallgenes - 1)
+  cell_var[cell_var < 0]<-0
+  cell_sd<-sqrt(cell_var)
+  #zero variance cell gives NaN in scale(), keep the same behavior
+  cell_sd[cell_sd == 0]<-NA
+
+  #keep common genes only
+  common_genes=intersect(rownames(cell_exp_data), names(weight))
+  cell_exp_data=cell_exp_data[common_genes, , drop=FALSE]
+  weight=weight[common_genes]
+
+  ngenes=nrow(cell_exp_data)
+  ncells=ncol(cell_exp_data)
+  genenames<-rownames(cell_exp_data)
+
+  cat("build cell type weight matrix ...\n")
+  ct_row<-integer(0)
+  ct_col<-integer(0)
+  ct_val<-numeric(0)
+  ct_num<-integer(length(cellType))
+  for (i in 1:length(cellType)){
+    ss<-which(names(weight) %in% cellType[[i]])
+    ct_num[i]<-length(ss)
+    if(length(ss) > 0){
+      ct_row<-c(ct_row, rep.int(i, length(ss)))
+      ct_col<-c(ct_col, ss)
+      ct_val<-c(ct_val, unname(weight[ss]))
+    }
+  }
+  #cellType x gene weight matrix, so that all CTA scores can be obtained by one
+  #sparse matrix product instead of a cell by cellType double loop
+  ct_weight<-Matrix::sparseMatrix(i=ct_row, j=ct_col, x=ct_val, dims=c(length(cellType), ngenes))
+  rownames(ct_weight)=names(cellType)
+  colnames(ct_weight)=rownames(cell_exp_data)
+
+  cat("calculate CTA ...\n")
+  stopifnot(all(colnames(ct_weight) == rownames(cell_exp_data)))
+  #sum(z * w) = (sum(x * w) - mean * sum(w)) / sd
+  CTA_result<-as.matrix(ct_weight %*% cell_exp_data)
+  CTA_result<-CTA_result - outer(Matrix::rowSums(ct_weight), cell_mean)
+  CTA_result<-CTA_result / rep(cell_sd, each=length(cellType))
+  CTA_result<-CTA_result / (ct_num ^ (1/3))
+  rownames(CTA_result)<-names(cellType)
+  colnames(CTA_result)<-colnames(cell_exp_data)
+
+  max_cta_ind<- apply(CTA_result,2,function(x){which.max(x)[1]})
+  max_cta<-apply(CTA_result,2,max,na.rm=T)
+
+  max_cta_df=data.frame(cell=colnames(CTA_result), 
+                        celltype=rownames(CTA_result)[unlist(max_cta_ind)],
+                        cta_score=max_cta,
+                        stringsAsFactors = F)
+  max_cta_df$cta_score[is.na(max_cta_df$celltype)]<-0
+  max_cta_df$celltype[is.na(max_cta_df$celltype)]<-"Unknown"
+  
+  return(max_cta_df)
+}
+
+
 ORA_celltype<-function(medianexp,cellType,weight){
   ORA_result<-matrix(NA, nrow=length(cellType),ncol=dim(medianexp)[2])
   CTA_result<-matrix(0,nrow=length(cellType),ncol=dim(medianexp)[2])

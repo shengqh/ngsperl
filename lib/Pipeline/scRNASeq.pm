@@ -140,12 +140,12 @@ sub initializeScRNASeqDefaultOptions {
       else {
         getValue( $def, "integration_by_method_v5" );
       }
-    } ## end if ( !defined $def->{integration_by_method...})
+    } ## end if ( !defined $def->{integration_by_method_v5...})
 
     delete $def->{integration_by_fastmnn};
     delete $def->{integration_by_harmony};
   } ## end if ( $def->{"by_integration"...})
-  initDefaultValue($def, "subcluster_redo_integration", $def->{"by_integration"});
+  initDefaultValue( $def, "subcluster_redo_integration", $def->{"by_integration"} );
 
   my $pca_dims = $def->{by_sctransform} ? 30 : 20;
   #my $pca_dims = 50;
@@ -226,7 +226,7 @@ sub initializeScRNASeqDefaultOptions {
     $def->{bubblemap_height} = $def->{bubblemap_height_in} * 300;
   }
 
-  initDefaultValue( $def, "perform_sccomp",           0 );
+  initDefaultValue( $def, "perform_sccomp", 0 );
 
   initDefaultValue( $def, "perform_individual_dynamic_qc", 0 );
   initDefaultValue( $def, "perform_scDblFinder",           0 );
@@ -253,7 +253,7 @@ sub getScRNASeqConfig {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   $config->{h5ad_files} = $def->{h5ad_files} if defined $def->{h5ad_files};
-  
+
   my $tasks = [ @$individual, @$summary ];
 
   undef $individual;
@@ -315,15 +315,16 @@ sub getScRNASeqConfig {
   if ( $filter_config_file eq "" ) {
     $filter_config_file = undef;
   }
-  my $sctk_ref           = undef;
-  my $signacX_ref        = undef;
-  my $singleR_ref        = undef;
-  my $azimuth_ref        = undef;
-  my $decontX_ref        = undef;
-  my $doublet_finder_ref = undef;
-
+  my $signacX_ref    = undef;
+  my $singleR_ref    = undef;
+  my $azimuth_ref    = undef;
   my $celltypist_ref = undef;
   my $STCAT_ref      = undef;
+  my $PanglaoDB_ref  = undef;
+
+  my $decontX_ref        = undef;
+  my $sctk_ref           = undef;
+  my $doublet_finder_ref = undef;
 
   my $obj_task             = undef;
   my $obj_ref              = undef;
@@ -378,12 +379,11 @@ sub getScRNASeqConfig {
     my $raw_individual_qc_task = undef;
     my $qc_report_task         = undef;
 
-    my $perform_sctk          = getValue( $def, "perform_sctk",          0 ) & !$perform_subcluster_analysis;
-    my $remove_doublets       = getValue( $def, "remove_doublets",       0 ) & !$perform_subcluster_analysis;
-    my $perform_individual_qc = getValue( $def, "perform_individual_qc", 1 ) & !$perform_subcluster_analysis;
+    my $perform_sctk                  = getValue( $def, "perform_sctk",                  0 ) & !$perform_subcluster_analysis;
+    my $remove_doublets               = getValue( $def, "remove_doublets",               0 ) & !$perform_subcluster_analysis;
+    my $perform_individual_qc         = getValue( $def, "perform_individual_qc",         1 ) & !$perform_subcluster_analysis;
     my $perform_individual_dynamic_qc = getValue( $def, "perform_individual_dynamic_qc", 0 ) & !$perform_subcluster_analysis;
-    my $perform_scDblFinder           = getValue( $def, "perform_scDblFinder", 0 ) & !$perform_subcluster_analysis;
-
+    my $perform_scDblFinder           = getValue( $def, "perform_scDblFinder",           0 ) & !$perform_subcluster_analysis;
 
     my $decontX_task       = undef;
     my $decontX_counts_ref = undef;
@@ -418,7 +418,7 @@ sub getScRNASeqConfig {
         $prefix = "cellbender_";
       }
 
-      if ( $perform_decontX_after_cellbender ) {
+      if ($perform_decontX_after_cellbender) {
         my $decontX_after_cellbender_task = $prefix . "decontX";
         add_decontX( $config, $def, $tasks, $target_dir, $decontX_after_cellbender_task, $files_def, $raw_files_def, {}, 1 );
         $decontX_ref        = [ $decontX_after_cellbender_task, ".meta.rds" ];
@@ -429,20 +429,20 @@ sub getScRNASeqConfig {
           $files_def = $decontX_counts_ref;
           $prefix    = "cellbender_decontX_";
         }
-      } ## end if ( $def->{perform_decontX_after_cellbender...})
+      } ## end if ($perform_decontX_after_cellbender)
     } ## end if ($perform_cellbender)
 
     my $raw_individual_dynamic_qc_task = undef;
-    if ( $perform_individual_dynamic_qc ) {
+    if ($perform_individual_dynamic_qc) {
       my $sct_str = get_sct_str($def);
       $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
       if ( !defined $config->{$raw_individual_dynamic_qc_task} ) {
         add_individual_dynamic_qc( $config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task );
       }
-    } ## end if ( $def->{"perform_individual_dynamic_qc"...})
+    } ## end if ($perform_individual_dynamic_qc)
 
     my $scDblFinder_task = undef;
-    if ( $perform_scDblFinder ) {
+    if ($perform_scDblFinder) {
       my $cluster_ref    = undef;
       my $cluster_column = undef;
 
@@ -457,7 +457,7 @@ sub getScRNASeqConfig {
 
       add_scDblFinder( $config, $def, $tasks, $target_dir, $scDblFinder_task, $files_def, $cluster_ref, $cluster_column );
       $doublet_finder_ref = $scDblFinder_task;
-    } ## end if ( getValue( $def, "perform_scDblFinder"...))
+    } ## end if ($perform_scDblFinder)
 
     if ($perform_sctk) {
       my $sctk_task = $prefix . "sctk";
@@ -493,16 +493,24 @@ sub getScRNASeqConfig {
     } ## end if ($remove_doublets)
 
     if ($perform_individual_qc) {
-      ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref, $celltypist_ref ) = add_individual_qc_tasks( $config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, undef, $decontX_ref );
-    }
+      my $annotation_dic = undef;
+      ( $raw_individual_qc_task, $qc_report_task, $annotation_dic ) = add_individual_qc_tasks( $config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, undef, $decontX_ref );
+      $signacX_ref    = $annotation_dic->{"signacX"};
+      $singleR_ref    = $annotation_dic->{"singleR"};
+      $azimuth_ref    = $annotation_dic->{"azimuth"};
+      $decontX_ref    = $annotation_dic->{"decontX"};
+      $STCAT_ref      = $annotation_dic->{"STCAT"};
+      $celltypist_ref = $annotation_dic->{"celltypist"};
+      $PanglaoDB_ref  = $annotation_dic->{"PanglaoDB"};
+    } ## end if ($perform_individual_qc)
 
-    if ( $perform_individual_dynamic_qc ) {
+    if ($perform_individual_dynamic_qc) {
       my $sct_str                        = get_sct_str($def);
       my $raw_individual_dynamic_qc_task = "${prefix}raw_dynamic_qc${sct_str}";
       if ( !defined $config->{$raw_individual_dynamic_qc_task} ) {
         add_individual_dynamic_qc( $config, $def, $tasks, $target_dir, $raw_individual_dynamic_qc_task, $filter_config_file, $files_def, $essential_gene_task );
       }
-    } ## end if ( $perform_individual_dynamic_qc )
+    } ## end if ($perform_individual_dynamic_qc)
 
     my $files        = $def->{files};
     my $hto_file_ref = "files";
@@ -618,7 +626,7 @@ sub getScRNASeqConfig {
     } ## end if ($perform_clonotype_analysis)
 
     my $perform_scRNABatchQC = getValue( $def, "perform_scRNABatchQC", 0 ) & !$perform_subcluster_analysis;
-    if ( $perform_scRNABatchQC ) {
+    if ($perform_scRNABatchQC) {
       add_scRNABatchQC( $config, $def, $tasks, $target_dir );
     }
 
@@ -635,7 +643,7 @@ sub getScRNASeqConfig {
         $reduction        = getValue( $def, "rawdata_from_object_reduction", "pca" );
         $obj_ref          = $seurat_task;
         $localization_ref = $seurat_task;
-        $h5ad_ref        = "h5ad_files";
+        $h5ad_ref         = "h5ad_files";
       } ## end if ( getValue( $def, "rawdata_from_object"...))
       else {
         if ( getValue( $def, "rawdata_from_qc", 0 ) ) {
@@ -706,7 +714,7 @@ sub getScRNASeqConfig {
       if ( !defined $celltypist_ref ) {
         if ( getValue( $def, "perform_CellTypist", 0 ) ) {
           my $celltypist_task = $seurat_task . "_CellTypist";
-          my $cur_options  = {
+          my $cur_options     = {
             task_name => $def->{task_name},
             reduction => $reduction,
           };
@@ -715,10 +723,22 @@ sub getScRNASeqConfig {
         } ## end if ( getValue( $def, "perform_CellTypist"...))
       } ## end if ( !defined $celltypist_ref)
 
+      if ( !defined $PanglaoDB_ref ) {
+        if ( getValue( $def, "perform_PanglaoDB", 0 ) ) {
+          my $PanglaoDB_task = $seurat_task . "_PanglaoDB";
+          my $cur_options  = {
+            task_name => $def->{task_name},
+            reduction => $reduction,
+          };
+          add_PanglaoDB( $config, $def, $tasks, $target_dir, $PanglaoDB_task, $obj_ref, $cur_options );
+          $PanglaoDB_ref = [ $PanglaoDB_task, ".meta.rds" ];
+        } ## end if ( getValue( $def, "perform_PanglaoDB"...))
+      } ## end if ( !defined $PanglaoDB_ref)
+
       if ( !defined $STCAT_ref ) {
         if ( getValue( $def, "perform_STCAT", 0 ) ) {
-          my $STCAT_task = $seurat_task . "_STCAT";
-          my $cur_options  = {
+          my $STCAT_task  = $seurat_task . "_STCAT";
+          my $cur_options = {
             task_name => $def->{task_name},
             reduction => $reduction,
           };
@@ -737,7 +757,7 @@ sub getScRNASeqConfig {
 
         $def->{$dynamicKey} = 0;
 
-        if(!getValue($def, "skip_dynamic_cluster", 0)){
+        if ( !getValue( $def, "skip_dynamic_cluster", 0 ) ) {
           my $scDynamic_task;
 
           my $by_individual_sample = 0;
@@ -783,7 +803,7 @@ sub getScRNASeqConfig {
             my $sub_scDynamic_task = $scDynamic_task . "_sub";
             addSubDynamicCluster( $config, $def, $tasks, $target_dir, $sub_scDynamic_task, $seurat_task, $meta_ref, $essential_gene_task, $reduction, 0 );
           }
-        }
+        } ## end if ( !getValue( $def, ...))
 
         if ( getValue( $def, "perform_dynamic_subcluster" ) ) {
           my $subcluster_task = $dynamicKey . get_next_index( $def, $dynamicKey ) . "_subcluster" . ( getValue( $def, "subcluster_redo_integration" ) ? "_ri" : "" );
@@ -835,8 +855,8 @@ sub getScRNASeqConfig {
 
               my $silhouette_path = getValue( $def, "silhouette_path", "silhouette" );
 
-              my $silhouette_reductions = ['fastmnn']; # ['fastmnn', 'pca']
-              for my $reduction ( @$silhouette_reductions ) {
+              my $silhouette_reductions = ['fastmnn'];    # ['fastmnn', 'pca']
+              for my $reduction (@$silhouette_reductions) {
                 my $silhouette_task = $choose_task . "_silhouette_" . $reduction;
                 $config->{$silhouette_task} = {
                   class                => "CQS::UniqueR",
@@ -863,7 +883,7 @@ sub getScRNASeqConfig {
                 };
 
                 push( @$tasks, $silhouette_task );
-              } ## end for my $reduction ( 'fastmnn'...)
+              } ## end for my $reduction (@$silhouette_reductions)
             } ## end if ( getValue( $def, "perform_choose_cluster_silhouette"...))
 
             # if(defined $df_task){

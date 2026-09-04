@@ -72,6 +72,8 @@ our %EXPORT_TAGS = (
 
         add_signacx
 
+        add_PanglaoDB_cell
+
         add_rds2h5ad
 
         add_CellTypist
@@ -1020,6 +1022,55 @@ rm -rf .config
 
   push( @$tasks, $stcat_task );
 } ## end sub add_STCAT
+
+
+sub add_PanglaoDB_cell {
+  my ( $config, $def, $tasks, $target_dir, $PanglaoDB_task, $obj_ref, $cur_options, $by_individual_sample ) = @_;
+
+  if ( !defined $by_individual_sample ) {
+    $by_individual_sample = 0;
+  }
+
+  my $target_folder = $target_dir . "/" . $PanglaoDB_task;
+  my $class         = $by_individual_sample ? "CQS::IndividualR" : "CQS::UniqueR";
+  $config->{$PanglaoDB_task} = {
+    class                    => $class,
+    perform                  => 1,
+    target_dir               => $target_folder,
+    init_command             => "",
+    rtemplate                => "reportFunctions.R,../scRNA/scRNA_func.r,../scRNA/PanglaoDB.r",
+    parameterSampleFile1_ref => $obj_ref,
+    parameterSampleFile2     => merge_hash_left_precedent(
+      $cur_options,
+      { species             => getValue( $def, "species" ),
+        pca_dims            => getValue( $def, "pca_dims" ),
+        bubblemap_file      => $def->{bubblemap_file},
+        by_sctransform      => getValue( $def, "by_sctransform" ),
+        nFeature_cutoff_min => getValue( $def, "nFeature_cutoff_min" ),
+        nCount_cutoff       => getValue( $def, "nCount_cutoff" ),
+        bubblemap_width     => $def->{"bubblemap_width"},
+        bubblemap_height    => $def->{"bubblemap_height"},
+        species              => getValue( $def, "species" ),
+        db_markers_file      => getValue( $def, "markers_file" ),
+        curated_markers_file => getValue( $def, "curated_markers_file", "" ),
+        annotate_tcell       => getValue( $def, "annotate_tcell",       0 ),
+        remove_subtype       => getValue( $def, "remove_subtype",       "" ),
+        HLA_panglao5_file    => getValue( $def, "HLA_panglao5_file",    "" ),
+      }
+    ),
+    output_file_ext => ".PanglaoDB.png;.PanglaoDB.rds;.meta.rds",
+    post_command    => "rm -rf .cache",
+    #no_docker => 1,
+    sh_direct => 0,
+    pbs       => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => getValue( $def, "PanglaoDB_walltime", "10" ),
+      "mem"      => getValue( $def, "PanglaoDB_mem",      $by_individual_sample ? "40g" : getValue( $def, "seurat_mem" ) ),
+    },
+  };
+
+  push( @$tasks, $PanglaoDB_task );
+} ## end sub add_PanglaoDB_cell
 
 
 sub add_decontX {
@@ -3828,6 +3879,18 @@ sub add_individual_qc_tasks {
     $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
   } ## end if ( getValue( $def, "perform_CellTypist"...))
 
+  my $PanglaoDB_ref = undef;
+  if ( getValue( $def, "perform_PanglaoDB", 0 ) ) {
+    my $PanglaoDB_task = $raw_individual_qc_task . "_PanglaoDB";
+    my $cur_options  = {
+      task_name => $def->{task_name},
+      reduction => $reduction,
+    };
+    add_PanglaoDB_cell( $config, $def, $summary, $target_dir, $PanglaoDB_task, $raw_individual_qc_task, $cur_options, 1 );
+    $PanglaoDB_ref = [ $PanglaoDB_task, ".meta.rds" ];
+  } ## end if ( getValue( $def, "perform_PanglaoDB"...))
+
+
   if ( !defined $decontX_ref ) {
     if ( getValue( $def, "perform_decontX", 0 ) && !getValue( $def, "remove_decontX", 0 ) ) {
       my $decontX_task = $raw_individual_qc_task . "_decontX";
@@ -3870,6 +3933,7 @@ sub add_individual_qc_tasks {
     parameterSampleFile8_ref => $azimuth_ref,
     parameterSampleFile9_ref => $celltypist_ref,
     parameterSampleFile10    => $def->{annotation_files},
+    parameterSampleFile11_ref=> $PanglaoDB_ref,
     output_file_ext          => ".${prefix}qc.html",
     sh_direct                => 1,
     pbs                      => {
@@ -3881,7 +3945,16 @@ sub add_individual_qc_tasks {
 
   push( @$summary, $qc_report_task );
 
-  return ( $raw_individual_qc_task, $qc_report_task, $signacX_ref, $singleR_ref, $azimuth_ref, $decontX_ref, $celltypist_ref );
+  my $annotation_dic = {
+    "signacX"    => $signacX_ref,
+    "singleR"    => $singleR_ref,
+    "azimuth"    => $azimuth_ref,
+    "decontX"    => $decontX_ref,
+    "celltypist" => $celltypist_ref,
+    "PanglaoDB"  => $PanglaoDB_ref,
+  };
+
+  return ( $raw_individual_qc_task, $qc_report_task, $annotation_dic );
 } ## end sub add_individual_qc_tasks
 
 
