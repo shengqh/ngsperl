@@ -1226,6 +1226,9 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
       my @visual_source       = ();
       my @visual_source_reads = ();
 
+      #global
+      addDEseq2( $config, $def, $tasks, "AllSmallRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", $task_name . ".count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
+
       #miRNA
       addDEseq2( $config, $def, $tasks, "miRNA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.count\$" ], $host_genome_dir, $DE_min_median_read_smallRNA, $libraryFile, $libraryKey );
       addDEseq2( $config, $def, $tasks, "miRNA_NTA", [ "bowtie1_genome_1mm_NTA_smallRNA_table", ".miRNA.NTA.count\$" ],
