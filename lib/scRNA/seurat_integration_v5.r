@@ -95,7 +95,7 @@ if(has_batch_file){
 
 obj <- do_integration_v5(
   outFile=outFile,
-  obj=obj,
+  subobj=obj,
   by_sctransform=by_sctransform,
   cur_assay=cur_assay,
   method=method,
