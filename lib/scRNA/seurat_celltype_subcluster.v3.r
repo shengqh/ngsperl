@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='CombinedPTC'
+outFile='GSE125449'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
-parSampleFile9='fileList9.txt'
-parFile1='/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20260212_12904_VisiumHD_cellsegment/20260819_big_data/20260819_T02_scRNA/seurat_rpca/result/CombinedPTC.final.rds'
-parFile2=''
-parFile3='/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20260212_12904_VisiumHD_cellsegment/20260819_big_data/20260819_T02_scRNA/essential_genes/result/CombinedPTC.txt'
+parSampleFile8='fileList8.txt'
+parFile1='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_rpca/result/GSE125449.final.rds'
+parFile2='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_rpca_dr0.5_1_call/result/GSE125449.scDynamic.meta.rds'
+parFile3='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/essential_genes/result/GSE125449.txt'
 
 
-setwd('/nobackup/h_vivian_weiss_lab/12904_RB_VisiumHD/20260212_12904_VisiumHD_cellsegment/20260819_big_data/20260819_T02_scRNA/seurat_rpca_dr0.5_1_subcluster/result')
+setwd('/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_rpca_dr0.5_2_subcluster_ri/result')
 
 ### Parameter setting end ###
 
@@ -59,6 +59,10 @@ regress_by_percent_mt<-is_one(myoptions$regress_by_percent_mt)
 
 output_individual_object<-is_one(myoptions$output_individual_object)
 save_intermediate_object<-is_one(myoptions$save_intermediate_object)
+
+cluster_algorithm=to_numeric(myoptions$cluster_algorithm, 4)
+
+k.weight=to_numeric(myoptions$k.weight, 40)
 
 min_markers<-20
 
@@ -569,9 +573,10 @@ for(pct in previous_celltypes){
                         thread=thread,
                         detail_prefix=curprefix,
                         ignore_variable_genes=NULL,
-                        algorithm=4,
+                        cluster_algorithm=cluster_algorithm,
                         redo_integration=redo_integration,
-                        integration_by_method_v5=integration_by_method_v5)
+                        integration_by_method_v5=integration_by_method_v5,
+                        k.weight=k.weight)
   
   cat("saving reductions ...\n")
   reductions_rds = paste0(curprefix, ".reductions.rds")
@@ -590,7 +595,7 @@ for(pct in previous_celltypes){
   clusters=paste0(cur_assay, "_snn_res.", resolutions)
   names(clusters_prefix) = clusters
 
-  cluster = clusters[10]
+  cluster = clusters[14]
   markers_map = list()
   for(cluster in clusters){
     cat("  ", cluster, "\n")
@@ -637,7 +642,8 @@ for(pct in previous_celltypes){
     subobj2@meta.data <- cur_subobj@meta.data
 
     cat(key, "Cell type annotation\n")
-    data.norm=get_seurat_average_expression(subobj2, cluster)
+    data.norm=get_seurat_average_expression(SCLC=subobj2, 
+                                            cluster_name=cluster)
 
     predict_celltype<-ORA_celltype(data.norm,cell_activity_database$cellType,cell_activity_database$weight)
     saveRDS(predict_celltype, paste0(cluster_prefix, ".cta.rds"))
