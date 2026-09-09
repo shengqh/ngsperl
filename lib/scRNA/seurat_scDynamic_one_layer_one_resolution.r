@@ -56,6 +56,7 @@ curated_markers_file=myoptions$curated_markers_file
 by_individual_sample=is_one(myoptions$by_individual_sample)
 by_integration=is_one(myoptions$by_integration, 0)
 integration_by_method_v5=myoptions$integration_by_method_v5
+cluster_algorithm=as.numeric(myoptions$cluster_algorithm)
 
 by_harmony=by_integration & integration_by_method_v5=="HarmonyIntegration"
 
@@ -251,7 +252,8 @@ if(by_individual_sample){
                           cur_npcs = npcs, 
                           cur_pca_dims = c(1:npcs),
                           vars.to.regress = vars.to.regress,
-                          essential_genes = NULL)    
+                          essential_genes = NULL,
+                          cluster_algorithm = cluster_algorithm)    
 
     res_list = do_analysis( tmp_folder = tmp_folder,
                             cur_folder = cur_folder,
@@ -270,7 +272,8 @@ if(by_individual_sample){
                             species = species,
                             reduction=reduction,
                             by_integration=by_integration,
-                            integration_by_method_v5=integration_by_method_v5)
+                            integration_by_method_v5=integration_by_method_v5,
+                            cluster_algorithm = cluster_algorithm)
 
     result_list<-c(result_list, res_list$html)
     all_ct_counts<-rbind(all_ct_counts, res_list$ct_count)
@@ -314,6 +317,7 @@ if(by_individual_sample){
                           species = species,
                           reduction=reduction,
                           by_integration=by_integration,
-                          integration_by_method_v5=integration_by_method_v5);
+                          integration_by_method_v5=integration_by_method_v5,
+                          cluster_algorithm = cluster_algorithm);
 }
 
