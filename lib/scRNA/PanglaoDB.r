@@ -42,7 +42,7 @@ ctdef<-init_celltype_markers(panglao5_file = myoptions$db_markers_file,
                              species = myoptions$species,
                              curated_markers_file = myoptions$curated_markers_file,
                              HLA_panglao5_file = myoptions$HLA_panglao5_file,
-                             layer="Layer4",
+                             layer = "Layer4",
                              remove_subtype_str = "",
                              combined_celltype_file = NULL)
 
@@ -53,15 +53,28 @@ cell_activity_database<-ctdef$cell_activity_database
 cat("Cell type annotation by PanglaoDB in cell level ...\n")
 data.norm=GetAssayData(obj, assay = "RNA", layer="data")
 
-max_cta_df<-ORA_celltype_cell(cell_exp_data=data.norm,
+max_cta_df<-CTA_celltype_cell(cell_exp_data=data.norm,
                               cellType=cell_activity_database$cellType,
                               weight=cell_activity_database$weight)
 
 stopifnot(all(colnames(obj) == max_cta_df$cell))
+meta = obj@meta.data
 
-obj@meta.data$PanglaoDB = max_cta_df$celltype
-obj@meta.data$PanglaoDB_cta_score = max_cta_df$cta_score
+meta$PanglaoDB_cta_raw = max_cta_df$celltype
+meta$PanglaoDB_cta_score = max_cta_df$cta_score
+
+meta=meta |> 
+  tibble::rownames_to_column("Cell_barcode") |>
+  dplyr::left_join(tiers, by=c("PanglaoDB_cta_raw"="Celltype.name")) |>
+  tibble::column_to_rownames("Cell_barcode")
+
+layer1=c("Epithelial cells", "Neural cell", "Muscle cell")
+meta = meta |>
+  dplyr::mutate(PanglaoDB = ifelse(Layer1 %in% layer1, Layer1, Layer2))
+
 ct_name="PanglaoDB"
+
+obj@meta.data=meta
 
 saveRDS(obj@meta.data, paste0(outFile, ".meta.rds"))
 
@@ -76,6 +89,48 @@ if("umap" %in% names(major_obj@reductions)){
   g=get_dim_plot_labelby(major_obj, label.by = ct_name_count, reduction="umap", pt.size=0.1) + theme(plot.title=element_blank())
   ggsave(paste0(outFile, ".PanglaoDB.qc_umap.png"), g, width=6, height=4, units="in", dpi=300, bg="white")
 }
+
+marker_genes = cell_activity_database$cellType[unique(major_obj@meta.data$PanglaoDB_cta_raw)]
+marker_gene_df = df <- stack(marker_genes) |>
+  dplyr::rename("gene"="values", "celltype"="ind") |>
+  dplyr::left_join(tiers, by=c("celltype"="Celltype.name")) |>
+  dplyr::select(Layer2, gene) |>
+  dplyr::distinct() |>
+  dplyr::filter(gene %in% row.names(obj))
+
+gene_groups=split(marker_gene_df$gene, marker_gene_df$Layer2)
+g=get_dot_plot(obj=major_obj, group.by=ct_name, gene_groups=gene_groups)
+
+# keep the gene with pct.exp > 5% and avg.exp.scaled > 0.1
+# then for each gene, keep the top cell type
+# then for each cell type, keep the top 5 genes
+gdata = g$data |>
+  dplyr::mutate(id=as.character(id), feature.groups=as.character(feature.groups)) |>
+  dplyr::filter(id == feature.groups) |>
+  dplyr::filter(pct.exp > 5) |>
+  dplyr::filter(avg.exp.scaled > 0.1) |>
+  dplyr::select(id, features.plot, avg.exp) |>
+  dplyr::group_by(features.plot) |>  
+  dplyr::top_n(1, avg.exp) |>
+  dplyr::ungroup() |>
+  dplyr::group_by(id) |>
+  dplyr::top_n(5, avg.exp) |>
+  dplyr::ungroup()
+
+gene_groups=split(gdata$features.plot, gdata$id)
+saveRDS(gene_groups, paste0(outFile, ".PanglaoDB.markers.rds"))
+
+g=get_dot_plot( major_obj, 
+                "PanglaoDB", 
+                gene_groups, 
+                assay="RNA", 
+                rotate.title=TRUE, 
+                use_blue_yellow_red=TRUE, 
+                dot.scale=4)
+
+dot_height=get_dot_height_num(length(gene_groups))
+dot_width=get_dot_width(g)
+ggsave(paste0(outFile, ".PanglaoDB.markers.dot.png"), g, width=dot_width, height=dot_height, units="px", dpi=300, bg="white")
 
 if(has_bubblemap){
   g<-get_bubble_plot(
