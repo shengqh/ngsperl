@@ -86,6 +86,12 @@ if(has_annotation){
   validation_columns<-c(validation_columns, annotation_names)
 }
 
+has_PanglaoDB<-exists('parSampleFile11')
+if(has_PanglaoDB){
+  panglaoDB_map<-read_file_map(parSampleFile11)
+  validation_columns<-c(validation_columns, "PanglaoDB")
+}
+
 draw_figure<-function(sample_prefix, obj, cur_validation_columns, cur_cell_types){
   cur_meta = obj@meta.data
   if(any(cur_validation_columns %in% colnames(cur_meta))){
@@ -125,6 +131,21 @@ draw_figure<-function(sample_prefix, obj, cur_validation_columns, cur_cell_types
         ggsave(dot_png, g, width=bubblemap_width, height=bubblemap_height, units=bubblemap_unit, dpi=300, bg="white")
         cat("Saved ", dot_png, "\n")
       }
+
+      if(ct_name == "PanglaoDB"){
+        marker_dot_png = paste0(sample_prefix, ".", ct_name, ".markers.dot.png")
+        g<-get_dot_plot( major_obj, 
+                        "PanglaoDB", 
+                        panglaoDB_gene_groups, 
+                        assay="RNA", 
+                        rotate.title=TRUE, 
+                        use_blue_yellow_red=TRUE, 
+                        dot.scale=4)
+        dot_height=get_dot_height_num(length(panglaoDB_gene_groups))
+        dot_width=get_dot_width(g)
+        ggsave(marker_dot_png, g, width=dot_width, height=dot_height, units="px", dpi=300, bg="white")
+        cat("Saved ", marker_dot_png, "\n")
+      }
     }
 
     for(col_name in cur_validation_columns){
@@ -136,19 +157,14 @@ draw_figure<-function(sample_prefix, obj, cur_validation_columns, cur_cell_types
       alltbl<-rbind(alltbl, tbl)
     }
 
-    levels(alltbl$Var1)<-levels(cur_meta$seurat_cell_type)
-
-    g<-ggplot(alltbl, aes(Var2, Freq, fill=Var2)) + 
-      geom_bar(width=0.5, stat = "identity") + 
-      facet_grid(Var1~Category, scales = "free", space='free_x') + 
-      theme_bw3(TRUE) + ylab("No. cell") + xlab("") + NoLegend() + 
-      theme(strip.text.y.right = element_text(angle = 0, hjust = 0),
-            strip.text.x.top = element_text(angle = 90, hjust = 0))
-
-    height = max(800, length(unique(alltbl$Var1)) * 160) + 500
-    width = max(1000, length(unique(alltbl$Var2)) * 40) + 1000
-
-    ggsave(paste0(sample_prefix, ".validation.png"), width=width, height=height, units="px", dpi=300, bg="white")
+    valid_columns = intersect(cur_validation_columns, colnames(cur_meta))
+    bar_file=paste0(sample_prefix, ".validation.png")
+    g<-get_barplot( ct_meta=cur_meta, 
+                    bar_file=bar_file,
+                    cluster_name="seurat_cell_type", 
+                    validation_columns=valid_columns,
+                    calc_height_per_cluster=200, 
+                    calc_width_per_cell=50)
   }
 }
 
@@ -284,6 +300,17 @@ for(sample_name in sample_names){
         cur_meta = fill_meta_info(sample_name, annotation_meta, cur_meta, annotation_name, annotation_name, is_character = TRUE)
         cur_cell_types = c(cur_cell_types, annotation_name)
       }
+    }
+  }
+
+  if(has_PanglaoDB){
+    panglaoDB_file = panglaoDB_map[[sample_name]]
+    if(file.exists(panglaoDB_file)){
+      panglaoDB_meta = readRDS(panglaoDB_file)
+      cur_meta = fill_meta_info(sample_name, panglaoDB_meta, cur_meta, "PanglaoDB", "PanglaoDB")
+      cur_cell_types = c(cur_cell_types, "PanglaoDB")
+      panglaoDB_marker_file = gsub(".meta.rds", ".PanglaoDB.markers.rds", panglaoDB_file)
+      panglaoDB_gene_groups = readRDS(panglaoDB_marker_file)
     }
   }
 

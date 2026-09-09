@@ -77,6 +77,13 @@ if(has_annotation){
   annotation_names<-unique(annotation_df$V3)
   cell_types<-c(cell_types, annotation_names)
 }
+
+has_PanglaoDB<-file.exists('fileList11.txt')
+if(has_PanglaoDB){
+  panglaoDB_map<-read_file_map('fileList11.txt')
+  cell_types<-c(cell_types, "PanglaoDB")
+}
+
 ```
 
 # Sample summary
@@ -133,7 +140,7 @@ figureRmd<-function(obj_map, samples_names){
     result = add_figure(result, paste0(sample_prefix, ".heatmap.png"), "\n## Heatmap of Scaled Expression\n\n")
     result = add_figure(result, paste0(sample_prefix, ".heatmap.data.png"), "\n## Heatmap of Normalized Expression\n\n")
 
-    result = paste0(result, "\n## Cell type annotation\n\n### panglaodb cluster cell type\n\n")
+    result = paste0(result, "\n## Cell type annotation\n\n### PanglaoDB_cluster cell type by cluster\n\n")
     umap_png = paste0(sample_prefix, ".qc7.png")
     result = add_figure(result, umap_png, paste0("\n#### UMAP\n\n"))
     dot_png = paste0(sample_prefix, ".bubble.png")
@@ -141,7 +148,9 @@ figureRmd<-function(obj_map, samples_names){
 
     for(ct_name in cell_types){
       if(ct_name == "cell_type"){
-        result = paste0(result, "\n### panglaodb cell type\n\n")
+        result = paste0(result, "\n### PanglaoDB_cluster by cell type\n\n")
+      }else if(ct_name == "PanglaoDB"){
+        result = paste0(result, "\n### PanglaoDB_cell\n\n")
       }else{
         result = paste0(result, "\n### ", ct_name, "\n\n")
       }
@@ -149,6 +158,11 @@ figureRmd<-function(obj_map, samples_names){
       result = add_figure(result, umap_png, paste0("\n#### UMAP\n\n"))
       dot_png = paste0(detail_folder, "/", cur_sample, ".", ct_name, ".dot.png")
       result = add_figure(result, dot_png, paste0("\n#### Curated marker genes \n\n"))
+      
+      if(ct_name == "PanglaoDB"){
+        marker_dot_png = paste0(detail_folder, "/", cur_sample, ".", ct_name, ".markers.dot.png")
+        result = add_figure(result, marker_dot_png, paste0("\n#### PanglaoDB marker genes \n\n"))
+      }
     }
 
     result = add_figure(result, paste0(detail_folder, "/", cur_sample, ".validation.png"), paste0("\n## Validation of ", cur_sample, "\n\n"))
