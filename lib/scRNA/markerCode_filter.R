@@ -273,7 +273,8 @@ preprocess<-function( SampleInfo,
                       use_sctransform_v2=0,
                       output_object=0,
                       vars.to.regress=c("percent.mt"),
-                      ignore_variable_genes=c()) {
+                      ignore_variable_genes=c(),
+                      cluster_algorithm=4) {
 
   by_sctransform_v2 = by_sctransform & use_sctransform_v2
 
@@ -484,10 +485,12 @@ preprocess<-function( SampleInfo,
     npcs=min(50, ndim)
     subobj <- RunPCA(subobj, assay=assay, features = var.genes, npcs=npcs)
     subobj <- FindNeighbors(subobj, dims = 1:ndim)
-    subobj <- FindClusters(subobj, resolution = resolution, algorithm = 4, random.seed=20260902) # use leiden algorithm
+    subobj <- FindClusters(subobj, resolution = resolution, algorithm = cluster_algorithm, random.seed=20260902) # use leiden algorithm
 
-    #For leiden algorithm, the cluster number would be 1-based, we will convert it to 0-based
-    subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
+    if(cluster_algorithm == 4) {
+      #For leiden algorithm, the cluster number would be 1-based, we will convert it to 0-based
+      subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
+    }
 
     n.neighbors=min(30, ndim-1)
     subobj <- RunUMAP(subobj, dims = 1:ndim, n.neighbors=n.neighbors)
