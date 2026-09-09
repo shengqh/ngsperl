@@ -578,14 +578,14 @@ run_cluster_only<-function(object, pca_dims, resolution, random.seed, reduction=
   return(object)
 }
 
-run_cluster<-function(object, pca_dims, resolution, random.seed, reduction="pca", min.pct = 0.5, logfc.threshold = 0.6){
-  object=run_cluster_only(object, pca_dims, resolution, random.seed, reduction)
+run_cluster<-function(object, pca_dims, resolution, random.seed, reduction="pca", min.pct = 0.5, logfc.threshold = 0.6, algorithm=4){
+  object=run_cluster_only(object, pca_dims, resolution, random.seed, reduction, algorithm=algorithm)
   markers <- FindAllMarkers(object, assay="RNA", only.pos = TRUE, min.pct = min.pct, logfc.threshold = logfc.threshold)
   markers <- markers[markers$p_val_adj < 0.05,]
   return(list(object=object, markers=markers))
 }
 
-ORA_celltype_cell<-function(cell_exp_data,cellType,weight){
+CTA_celltype_cell<-function(cell_exp_data,cellType,weight){
   cat("scale cell expression data...\n")
   #ORA_celltype scales the whole expression matrix, so the per cell (column)
   #center/scale factors have to be computed on ALL genes, before the matrix is
@@ -2256,7 +2256,9 @@ do_PCA_Integration<-function( subobj,
                               orig.reduction="pca",
                               thread=1,
                               detail_prefix=NULL,
-                              ignore_variable_genes=NULL) {
+                              ignore_variable_genes=NULL,
+                              ndims=30,
+                              k.weight=100) {
   if(length(ignore_variable_genes) > 0){
     vgenes=VariableFeatures(subobj)
     VariableFeatures(subobj) <- setdiff(vgenes, ignore_variable_genes)
@@ -2302,7 +2304,10 @@ do_PCA_Integration<-function( subobj,
       assay = assay,
       new.reduction = new.reduction,
       normalization.method = normalization_method,
-      verbose = T
+      verbose = T,
+      #for RPCA
+      dims=1:ndims,
+      k.weight=k.weight
     )
   }else{
     subobj <- IntegrateLayers(
@@ -2311,7 +2316,8 @@ do_PCA_Integration<-function( subobj,
       orig.reduction = orig.reduction,
       assay = assay,
       new.reduction = new.reduction,
-      verbose = T
+      verbose = T,
+      dims=1:ndims
     )
   }
 
@@ -2344,9 +2350,10 @@ sub_cluster<-function(subobj,
                      thread=1,
                      detail_prefix=NULL,
                      ignore_variable_genes=NULL,
-                     algorithm=4,
+                     cluster_algorithm=4,
                      redo_integration=FALSE,
-                     integration_by_method_v5="FastMNNIntegration"){
+                     integration_by_method_v5="FastMNNIntegration",
+                     k.weight=40){
   n_half_cell=round(ncol(subobj) / 2)
   if(cur_npcs >= n_half_cell){
     cur_npcs = n_half_cell
@@ -2356,14 +2363,15 @@ sub_cluster<-function(subobj,
   if(redo_integration){
     curreduction=tolower(gsub("Integration", "", integration_by_method_v5))
     subobj <- do_integration_v5(outFile=detail_prefix,
-                                obj=subobj,
+                                subobj=subobj,
                                 by_sctransform=by_sctransform,
                                 cur_assay=assay,
                                 method=integration_by_method_v5,
                                 reduction=curreduction,
                                 thread=thread,
                                 detail_prefix=detail_prefix,
-                                ignore_variable_genes=ignore_variable_genes)
+                                ignore_variable_genes=ignore_variable_genes,
+                                k.weight=k.weight)
   }else if(curreduction == "pca"){
     cat(key, "redo normalization ...\n")
     assay="RNA"
@@ -2395,7 +2403,7 @@ sub_cluster<-function(subobj,
                         random.seed=random.seed, 
                         resolution=resolutions, 
                         verbose=FALSE,
-                        algorithm=algorithm)
+                        algorithm=cluster_algorithm)
 
   if(do_umap){
     cat(key, "RunUMAP\n")
@@ -2957,8 +2965,8 @@ get_barplot<-function(
     cat_str_len=max(nchar(as.character(alltbl$Var1)))
     cur_label_width=max(400, cat_str_len * 25)
 
-    height = max(1000, length(unique(alltbl$Var1)) * calc_height_per_cluster + cur_label_height)
-    width = max(1000, length(unique(alltbl$Var2)) * calc_width_per_cell) + cur_label_width
+    height = max(1500, length(unique(alltbl$Var1)) * calc_height_per_cluster + cur_label_height)
+    width = max(1500, length(unique(alltbl$Var2)) * calc_width_per_cell) + cur_label_width
 
     ggsave(bar_file, g, width=width, height=height, dpi=300, units="px", bg="white", limitsize = FALSE)
   }
@@ -3123,10 +3131,18 @@ iterate_celltype<-function(obj,
 
     if(pct == "Unassigned") {
       cat(key, "FindNeighbors by", reduction, "\n")
-      subobj<-FindNeighbors(object=subobj, reduction=reduction, k.param=k_n_neighbors, dims=cur_pca_dims, verbose=FALSE)
+      subobj<-FindNeighbors(object=subobj, 
+                            reduction=reduction, 
+                            k.param=k_n_neighbors, 
+                            dims=cur_pca_dims, 
+                            verbose=FALSE)
 
       cat(key, "FindClusters\n")
-      subobj<-FindClusters(object=subobj, random.seed=random.seed, resolution=resolution, verbose=FALSE, algorithm=cluster_algorithm)
+      subobj<-FindClusters( object=subobj, 
+                            random.seed=random.seed, 
+                            resolution=resolution, 
+                            verbose=FALSE, 
+                            algorithm=cluster_algorithm)
     }else{      
       subobj = sub_cluster(subobj = subobj, 
                             assay =  assay, 
@@ -3145,10 +3161,13 @@ iterate_celltype<-function(obj,
                             key = key,
                             detail_prefix = curprefix,
                             ignore_variable_genes = ignore_variable_genes,
-                            redo_integration = FALSE,
-                            integration_by_method_v5 = "")
+                            redo_integration = redo_integration,
+                            integration_by_method_v5 = integration_by_method_v5,
+                            cluster_algorithm = cluster_algorithm)
     }
-    subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
+    if(cluster_algorithm == 4){
+      subobj <- reset_seurat_clusters(subobj, "seurat_clusters")
+    }
     
     cat(key, "Cell type annotation\n")
     cur_cts<-subobj[[previous_layer]]
@@ -3252,7 +3271,8 @@ layer_cluster_celltype<-function(obj,
                                  reduction="pca",
                                  ignore_variable_genes=NULL,
                                  by_integration=FALSE,
-                                 integration_by_method_v5=""){
+                                 integration_by_method_v5="",
+                                 cluster_algorithm=4){
   meta<-obj@meta.data
   
   previous_celltypes<-unique(meta[[previous_layer]])
@@ -3320,6 +3340,7 @@ layer_cluster_celltype<-function(obj,
                             species=species,
                             reduction=reduction,
                             ignore_variable_genes=ignore_variable_genes,
+                            cluster_algorithm=cluster_algorithm,
                             by_integration=cur_by_integration,
                             integration_by_method_v5=integration_by_method_v5)
 
@@ -3408,7 +3429,9 @@ do_analysis<-function(tmp_folder,
                       reduction="pca",
                       ignore_variable_genes=NULL,
                       by_integration=FALSE,
-                      integration_by_method_v5="") {
+                      integration_by_method_v5="",
+                      cluster_algorithm=4
+                      ) {
   tmp_prefix=file.path(tmp_folder, prefix)
   cur_prefix=file.path(cur_folder, prefix)
 
@@ -3435,8 +3458,9 @@ do_analysis<-function(tmp_folder,
                                     species=species,
                                     reduction=reduction,
                                     ignore_variable_genes=ignore_variable_genes,
-                                    by_integration=FALSE,
-                                    integration_by_method_v5="")
+                                    by_integration=by_integration,
+                                    integration_by_method_v5=integration_by_method_v5,
+                                    cluster_algorithm=cluster_algorithm)
   obj=reslist1$obj
   files=reslist1$files
   rm(reslist1)
@@ -4399,77 +4423,110 @@ save_top_gene_figures <- function(de_obj, sigout, designdata, bBetweenCluster, f
 }
 
 do_integration_v5 <- function(outFile, 
-                              obj, 
+                              subobj, 
                               by_sctransform, 
                               cur_assay, 
                               method, 
                               reduction, 
                               thread, 
                               detail_prefix, 
-                              ignore_variable_genes){
+                              ignore_variable_genes,
+                              k.weight=100){
   integrated_obj_file<-paste0(outFile, ".integrated.rds")
   if(!file.exists(integrated_obj_file)){
     normalized_obj_file<-paste0(outFile, ".normalized.rds")
     if(!file.exists(normalized_obj_file)){
       #integration would be done on the RNA assay
-      DefaultAssay(obj) <- "RNA"
+      DefaultAssay(subobj) <- "RNA"
 
       # In order to perform integration, we need to split the object by batch, no matter through SCTransform or not.
       # When using Seurat v5 assays, we can instead keep all the data in one object, but simply split the layers. 
       cat("Split RNA assay ...\n")
-      obj[["RNA"]] <- split(obj[["RNA"]], f = obj$batch)
+
+      cur_batch=subobj$batch
+
+      # in case some sample might have very limited cells which cause error in FindVariableFeatures,
+      # we will put those cells into fake "other" batch
+      min_cell=30
+      batch_tbl=table(subobj$batch)
+      low_batch_tbl=batch_tbl[batch_tbl < min_cell]
+      if(length(low_batch_tbl) > 0){
+        cat("Found batches with less than", min_cell, "cells. Merging into 'other' batch: ", paste(names(low_batch_tbl), collapse = ", "), ".\n")
+        cur_batch[cur_batch %in% names(low_batch_tbl)] <- "other"
+        batch_tbl=table(cur_batch)
+        low_batch_tbl=batch_tbl[batch_tbl < min_cell]
+        if(length(low_batch_tbl) > 0){
+          high_batch_tbl=batch_tbl[batch_tbl >= min_cell]
+          min_cell_batch = names(high_batch_tbl)[which.min(high_batch_tbl)]
+          cur_batch[cur_batch == "other"] <- min_cell_batch
+          cat("'other' still have with less than", min_cell, "cells. Merging into batch '", min_cell_batch, "'.\n")
+        }
+      }
+
+      subobj[["RNA"]] <- split(subobj[["RNA"]], f = cur_batch)
 
       if(by_sctransform){
         cat("SCTransform ...\n")
-        obj <- SCTransform(obj, method = "glmGamPoi", verbose = FALSE)
-        DefaultAssay(obj) <- "SCT"
+        subobj <- SCTransform(subobj, method = "glmGamPoi", verbose = FALSE)
+        DefaultAssay(subobj) <- "SCT"
 
         cat("JoinLayers of RNA assay ... \n")
-        obj <- JoinLayers(obj, assay="RNA")
+        subobj <- JoinLayers(subobj, assay="RNA")
       }else{
         cat("NormalizeData/FindVariableFeatures ...\n")
-        obj <- NormalizeData(obj)
+        subobj <- NormalizeData(subobj)
 
         cat("FindVariableFeatures ... \n")
-        obj <- FindVariableFeatures(obj)
+        subobj <- FindVariableFeatures(subobj)
 
         cat("ScaleData ... \n")
-        obj <- ScaleData(obj, verbose = FALSE)
+        subobj <- ScaleData(subobj, verbose = FALSE)
       }
 
       cat("Saving normalized object to file:", normalized_obj_file, "\n")
-      saveRDS(obj, normalized_obj_file)
+      saveRDS(subobj, normalized_obj_file)
     }else{
       cat("Reading normalized object from file:", normalized_obj_file, "\n")
-      obj<-readRDS(normalized_obj_file)
+      subobj<-readRDS(normalized_obj_file)
     }
 
     if(length(ignore_variable_genes) > 0){
-      VariableFeatures(obj) <- setdiff(VariableFeatures(obj), ignore_variable_genes)
+      VariableFeatures(subobj) <- setdiff(VariableFeatures(subobj), ignore_variable_genes)
     }
 
-    obj = do_PCA_Integration( obj, 
-                              cur_assay, 
-                              by_sctransform, 
+    min_cells_in_layers = min(sapply(subobj@assays$RNA@layers, ncol))
+    min_cells_in_layers=floor(min_cells_in_layers / 10) * 10
+
+    # dims should be less than the min number of cells
+    ndims = min(min_cells_in_layers, 30)
+
+    #k.weight should be less than anchor cells, we assume it has to be less than min number of cells - 10
+    cur_k_weight=min(min_cells_in_layers - 10, k.weight)
+
+    subobj = do_PCA_Integration( subobj=subobj, 
+                              assay=cur_assay, 
+                              by_sctransform=by_sctransform, 
                               method=method, 
                               new.reduction=reduction, 
                               orig.reduction="pca",
                               thread=thread,
-                              detail_prefix=detail_prefix)
+                              detail_prefix=detail_prefix,
+                              ndims=ndims,
+                              k.weight=cur_k_weight)
 
     if(!by_sctransform){
       cat("JoinLayers of", cur_assay, "assay ... \n")
-      obj <- JoinLayers(obj, assay=cur_assay)
+      subobj <- JoinLayers(subobj, assay=cur_assay)
     }
 
     cat("FindNeighbors ... \n")
-    obj <- FindNeighbors( obj, 
+    subobj <- FindNeighbors( subobj, 
                           dims = 1:30, 
                           assay=cur_assay, 
                           reduction = reduction)
 
     cat("RunUMAP ... \n")
-    obj <- RunUMAP( obj, 
+    subobj <- RunUMAP( subobj, 
                     assay = cur_assay,
                     reduction = reduction, 
                     dims = 1:30)    
@@ -4477,20 +4534,20 @@ do_integration_v5 <- function(outFile,
     # No matter scTransform or not, we need to normalize the object in order to get average expression later.
     if (cur_assay != "RNA") {
       cat("Normalizing data ...\n")
-      obj <- NormalizeData(obj, assay="RNA")
+      subobj <- NormalizeData(subobj, assay="RNA")
       cat("Normalizing data done.\n")
     }
 
-    if("ADT" %in% names(obj)){
-      obj <- NormalizeData(obj, normalization.method = "CLR", margin = 2, assay = "ADT")
+    if("ADT" %in% names(subobj)){
+      subobj <- NormalizeData(subobj, normalization.method = "CLR", margin = 2, assay = "ADT")
     }
     cat("Saving integrated object to file:", integrated_obj_file, "\n")
-    saveRDS(obj, integrated_obj_file)
+    saveRDS(subobj, integrated_obj_file)
 
     unlink(normalized_obj_file)
   }else{
     cat("Reading integrated object from file:", integrated_obj_file, "\n")
-    obj<-readRDS(integrated_obj_file)
+    subobj<-readRDS(integrated_obj_file)
   }
-  return(obj)
+  return(subobj)
 }
