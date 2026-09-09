@@ -18,6 +18,7 @@ library(sf)
 library(dplyr)
 library(Seurat)
 
+source("scRNA_func.r")
 source("Deconvolution_functions.R")
 source("reportFunctions.R")
 library(spacexr) # BiocManager::install("dmcable/spacexr")
@@ -54,7 +55,7 @@ data_dir <- fread(parSampleFile1, header=FALSE)$V1[1]
 log_msg(paste0("Loading spatial data from: ", data_dir), log_file = log_file)
 
 if(grepl("\\.rds$", tolower(data_dir))) {
-  spatial_so <- readRDS(data_dir)
+  spatial_so=read_object(obj_file=data_dir, sample_name=sample_name)
   DefaultAssay(spatial_so) <- assay
 } else {
   spatial_so <- Seurat::Load10X_Spatial(bin.size = bin.size, data.dir = data_dir, slice = 'slice1')
