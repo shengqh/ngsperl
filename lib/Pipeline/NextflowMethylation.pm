@@ -62,6 +62,7 @@ sub getNextflowMethylationConfig {
   my $igenomes_base    = getValue( $def, "igenomes_base" );
   my $genome           = getValue( $def, "genome" );
   my $aligner          = getValue( $def, "aligner" );
+  my $nextflow         = getValue( $def, "nextflow", "nextflow" );
   my $nextflow_config  = getValue( $def, "nextflow_config" );
   my $nextflow_main_nf = getValue( $def, "nextflow_main_nf" );
   my $sh_direct        = getValue( $def, "sh_direct" );
@@ -80,7 +81,7 @@ sub getNextflowMethylationConfig {
       class      => "CQS::ProgramWrapper",
       target_dir => $target_dir . "/$nextflow_methylseq_task",
       option     => "
-nextflow run $nextflow_main_nf \\
+$nextflow run $nextflow_main_nf \\
   -config $nextflow_config \\
   -profile singularity \\
   --input fileList1.list.csv \\
@@ -168,7 +169,7 @@ ln -s $nextflow_methylseq_bismark_dir/__NAME___1_val_1_bismark_bt2_pe.deduplicat
 echo 'sample,fastq_1,fastq_2,genome' > fileList1.list.csv
 echo '__NAME__,__FILE__,' >> fileList1.list.csv
 
-nextflow run $nextflow_main_nf \\
+$nextflow run $nextflow_main_nf \\
   -config $nextflow_config \\
   -profile singularity \\
   --input fileList1.list.csv \\
