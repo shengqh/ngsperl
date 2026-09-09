@@ -58,6 +58,8 @@ by_sctransform=is_one(myoptions$by_sctransform)
 use_sctransform_v2=is_one(myoptions$use_sctransform_v2)
 output_object=is_one(myoptions$output_object)
 
+cluster_algorithm=as.numeric(myoptions$cluster_algorithm)
+
 species=myoptions$species # Hs or Mm
 
 ignore_variable_genes=c()
@@ -130,7 +132,8 @@ for (i in 1:nrow(SampleInfos)) {
                     use_sctransform_v2 = use_sctransform_v2,
                     output_object = output_object,
                     vars.to.regress = vars.to.regress,
-                    ignore_variable_genes = ignore_variable_genes)
+                    ignore_variable_genes = ignore_variable_genes,
+                    cluster_algorithm = cluster_algorithm)
   
   object.list<-c(object.list, info)
 }
