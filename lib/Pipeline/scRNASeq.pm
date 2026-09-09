@@ -315,6 +315,9 @@ sub getScRNASeqConfig {
   if ( $filter_config_file eq "" ) {
     $filter_config_file = undef;
   }
+
+  my $annotation_dic = {};
+
   my $signacX_ref    = undef;
   my $singleR_ref    = undef;
   my $azimuth_ref    = undef;
@@ -493,12 +496,10 @@ sub getScRNASeqConfig {
     } ## end if ($remove_doublets)
 
     if ($perform_individual_qc) {
-      my $annotation_dic = undef;
-      ( $raw_individual_qc_task, $qc_report_task, $annotation_dic ) = add_individual_qc_tasks( $config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, undef, $decontX_ref );
+      ( $raw_individual_qc_task, $qc_report_task, $decontX_ref, $annotation_dic ) = add_individual_qc_tasks( $config, $def, $tasks, $target_dir, $project_name, $prefix, $filter_config_file, $files_def, $raw_files_def, $sctk_ref, undef, $decontX_ref );
       $signacX_ref    = $annotation_dic->{"signacX"};
       $singleR_ref    = $annotation_dic->{"singleR"};
       $azimuth_ref    = $annotation_dic->{"azimuth"};
-      $decontX_ref    = $annotation_dic->{"decontX"};
       $STCAT_ref      = $annotation_dic->{"STCAT"};
       $celltypist_ref = $annotation_dic->{"celltypist"};
       $PanglaoDB_ref  = $annotation_dic->{"PanglaoDB"};
@@ -684,6 +685,7 @@ sub getScRNASeqConfig {
           my $signacX_task = $seurat_task . "_SignacX";
           add_signacx( $config, $def, $tasks, $target_dir, $project_name, $signacX_task, $obj_ref, $reduction );
           $signacX_ref = [ $signacX_task, ".meta.rds" ];
+          $annotation_dic->{"signacX"} = $signacX_ref;
         }
       } ## end if ( !defined $signacX_ref)
 
@@ -696,6 +698,7 @@ sub getScRNASeqConfig {
           };
           add_singleR_cell( $config, $def, $tasks, $target_dir, $singleR_task, $obj_ref, $cur_options );
           $singleR_ref = [ $singleR_task, ".meta.rds" ];
+          $annotation_dic->{"singleR"} = $singleR_ref;
         } ## end if ( getValue( $def, "perform_SingleR"...))
       } ## end if ( !defined $singleR_ref)
 
@@ -708,6 +711,7 @@ sub getScRNASeqConfig {
           };
           add_azimuth( $config, $def, $tasks, $target_dir, $azimuth_task, $obj_ref, $cur_options );
           $azimuth_ref = [ $azimuth_task, ".meta.rds" ];
+          $annotation_dic->{"azimuth"} = $azimuth_ref;
         } ## end if ( getValue( $def, "perform_Azimuth"...))
       } ## end if ( !defined $azimuth_ref)
 
@@ -720,6 +724,7 @@ sub getScRNASeqConfig {
           };
           add_CellTypist( $config, $def, $tasks, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
           $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
+          $annotation_dic->{"celltypist"} = $celltypist_ref;
         } ## end if ( getValue( $def, "perform_CellTypist"...))
       } ## end if ( !defined $celltypist_ref)
 
@@ -732,6 +737,7 @@ sub getScRNASeqConfig {
           };
           add_PanglaoDB( $config, $def, $tasks, $target_dir, $PanglaoDB_task, $obj_ref, $cur_options );
           $PanglaoDB_ref = [ $PanglaoDB_task, ".meta.rds" ];
+          $annotation_dic->{"PanglaoDB"} = $PanglaoDB_ref;
         } ## end if ( getValue( $def, "perform_PanglaoDB"...))
       } ## end if ( !defined $PanglaoDB_ref)
 
@@ -744,6 +750,7 @@ sub getScRNASeqConfig {
           };
           add_STCAT( $config, $def, $tasks, $target_dir, $STCAT_task, $h5ad_ref, $cur_options );
           $STCAT_ref = [ $STCAT_task, ".meta.csv" ];
+          $annotation_dic->{"STCAT"} = $STCAT_ref;
         } ## end if ( getValue( $def, "perform_STCAT"...))
       } ## end if ( !defined $STCAT_ref)
 
@@ -777,9 +784,9 @@ sub getScRNASeqConfig {
           $meta_ref = [ $scDynamic_task, ".meta.rds" ];
           my $call_files_ref = [ $scDynamic_task, ".iter_png.csv" ];
 
-          if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref or defined $decontX_ref or defined $azimuth_ref or defined $celltypist_ref or defined $STCAT_ref ) {
+          if ( defined($sctk_ref) || defined($decontX_ref) || !%{$annotation_dic} ) {
             my $validation_task = $scDynamic_task . "_validation";
-            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, undef, $celltypist_ref, $STCAT_ref );
+            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, $call_files_ref, "layer4", ".dynamic_call_validation.html", 0, $sctk_ref, $decontX_ref, undef, $annotation_dic );
           }
 
           if ( defined $def->{bubble_files} ) {
@@ -846,9 +853,9 @@ sub getScRNASeqConfig {
             $obj_ref  = [ $choose_task, ".final.rds" ];
             $meta_ref = [ $choose_task, ".meta.rds" ];
 
-            if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref or defined $azimuth_ref or defined $celltypist_ref or defined $STCAT_ref ) {
+            if ( defined($sctk_ref) || defined($decontX_ref) || !%{$annotation_dic} ) {
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer, $celltypist_ref, $STCAT_ref );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $obj_ref, $meta_ref, undef, "seurat_cell_type", ".dynamic_choose_validation.html", 1, $sctk_ref, $decontX_ref,  $summary_layer, $annotation_dic );
             }
 
             if ( getValue( $def, "perform_choose_cluster_silhouette", 0 ) ) {
@@ -1030,9 +1037,9 @@ sub getScRNASeqConfig {
           }
           my $multires_celltype = $celltype_cluster . "_celltype_summary";
 
-          if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref ) {
+          if ( defined($sctk_ref) || defined($decontX_ref) || !%{$annotation_dic} ) {
             my $validation_task = $multires_task . "_validation";
-            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", 0, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, undef, $celltypist_ref, $STCAT_ref );
+            add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, $seurat_task, $meta_ref, undef, $celltype_cluster . "_celltype", ".multires_call_validation.html", 0, $sctk_ref, $decontX_ref, undef, $annotation_dic );
           }
 
           my $cur_options = {
@@ -1050,9 +1057,9 @@ sub getScRNASeqConfig {
             my $table       = getValue( $def, "multires_subclusters_table" );
             addSubClusterChoose( $config, $def, $tasks, $target_dir, $choose_task, $obj_ref, $meta_ref, $subcluster_task, $essential_gene_task, $cur_options, $table, ".multires_choose.html" );
 
-            if ( defined $sctk_ref or defined $signacX_ref or defined $singleR_ref ) {
+            if ( defined($sctk_ref) || defined($decontX_ref) || !%{$annotation_dic} ) {
               my $validation_task = $choose_task . "_validation";
-              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [ $choose_task, ".final.rds" ], [ $choose_task, "meta.rds" ], undef, "seurat_cell_type", ".multires_choose_validation.html", 1, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, "layer4", $celltypist_ref, $STCAT_ref );
+              add_celltype_validation( $config, $def, $tasks, $target_dir, $validation_task, [ $choose_task, ".final.rds" ], [ $choose_task, "meta.rds" ], undef, "seurat_cell_type", ".multires_choose_validation.html", 1, $sctk_ref, $decontX_ref, "layer4", $annotation_dic );
             }
 
             $celltype_task = $choose_task;
