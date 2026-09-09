@@ -127,6 +127,8 @@ our %EXPORT_TAGS = (
         add_miloR_miloDE
 
         add_sccomp
+
+        add_cell_crops
     )
   ]
 );
@@ -1042,14 +1044,14 @@ sub add_PanglaoDB_cell {
     parameterSampleFile1_ref => $obj_ref,
     parameterSampleFile2     => merge_hash_left_precedent(
       $cur_options,
-      { species             => getValue( $def, "species" ),
-        pca_dims            => getValue( $def, "pca_dims" ),
-        bubblemap_file      => $def->{bubblemap_file},
-        by_sctransform      => getValue( $def, "by_sctransform" ),
-        nFeature_cutoff_min => getValue( $def, "nFeature_cutoff_min" ),
-        nCount_cutoff       => getValue( $def, "nCount_cutoff" ),
-        bubblemap_width     => $def->{"bubblemap_width"},
-        bubblemap_height    => $def->{"bubblemap_height"},
+      { species              => getValue( $def, "species" ),
+        pca_dims             => getValue( $def, "pca_dims" ),
+        bubblemap_file       => $def->{bubblemap_file},
+        by_sctransform       => getValue( $def, "by_sctransform" ),
+        nFeature_cutoff_min  => getValue( $def, "nFeature_cutoff_min" ),
+        nCount_cutoff        => getValue( $def, "nCount_cutoff" ),
+        bubblemap_width      => $def->{"bubblemap_width"},
+        bubblemap_height     => $def->{"bubblemap_height"},
         species              => getValue( $def, "species" ),
         db_markers_file      => getValue( $def, "markers_file" ),
         curated_markers_file => getValue( $def, "curated_markers_file", "" ),
@@ -1149,7 +1151,7 @@ sub add_decontX {
 
 
 sub add_celltype_validation {
-  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $celltype_column, $rmd_ext, $is_choose, $signacX_ref, $singleR_ref, $sctk_ref, $decontX_ref, $azimuth_ref, $summary_layer, $celltypist_ref, $STCAT_ref ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $celltype_column, $rmd_ext, $is_choose, $sctk_ref, $decontX_ref, $summary_layer, $annotation_dic ) = @_;
 
   my $doublet_column = getValue( $def, "validation_doublet_column", getValue( $def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5" ) );
 
@@ -1182,20 +1184,21 @@ sub add_celltype_validation {
       bubblemap_height   => $def->{"bubblemap_height"},
       bubblemap_min_freq => getValue( $def, "bubblemap_min_freq", 0.01 ),
     },
-    parameterSampleFile2     => $def->{pool_sample_groups},
-    parameterSampleFile3_ref => $sctk_ref,
-    parameterSampleFile4_ref => $signacX_ref,
-    parameterSampleFile5_ref => $singleR_ref,
-    parameterSampleFile6_ref => $decontX_ref,
-    parameterSampleFile7_ref => $azimuth_ref,
-    parameterSampleFile8_ref => $celltypist_ref,
-    parameterSampleFile9_ref => $STCAT_ref,
-    parameterSampleFile10    => $def->{annotation_files},
-    output_file_ext          => $rmd_ext,
-    output_other_ext         => "",
-    docker_prefix            => "scdynamic_",
-    sh_direct                => 1,
-    pbs                      => {
+    parameterSampleFile2      => $def->{pool_sample_groups},
+    parameterSampleFile3_ref  => $sctk_ref,
+    parameterSampleFile4_ref  => $annotation_dic->{signacX_ref},
+    parameterSampleFile5_ref  => $annotation_dic->{singleR_ref},
+    parameterSampleFile6_ref  => $decontX_ref,
+    parameterSampleFile7_ref  => $annotation_dic->{azimuth_ref},
+    parameterSampleFile8_ref  => $annotation_dic->{celltypist_ref},
+    parameterSampleFile9_ref  => $annotation_dic->{STCAT_ref},
+    parameterSampleFile10     => $def->{annotation_files},
+    parameterSampleFile11_ref => $annotation_dic->{PanglaoDB_ref},
+    output_file_ext           => $rmd_ext,
+    output_other_ext          => "",
+    docker_prefix             => "scdynamic_",
+    sh_direct                 => 1,
+    pbs                       => {
       "nodes"    => "1:ppn=1",
       "walltime" => "12",
       "mem"      => getValue( $def, "seurat_mem" )
@@ -2370,6 +2373,7 @@ sub addDynamicCluster {
       reduction                   => $reduction,
       by_individual_sample        => $by_individual_sample,
       by_column                   => $by_column,
+      cluster_algorithm           => getValue( $def, "cluster_algorithm", 4 )
     },
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
@@ -2430,6 +2434,7 @@ sub addSubDynamicCluster {
       reduction                   => $reduction,
       by_individual_sample        => $by_individual_sample,
       by_column                   => $by_column,
+      cluster_algorithm           => getValue( $def, "cluster_algorithm", 4 )
     },
     parameterSampleFile2 => $def->{"subcluster_ignore_gene_files"},
     parameterSampleFile3 => $def->{"dynamic_layer_umap_min_dist"},
@@ -3235,7 +3240,8 @@ sub add_individual_qc {
       pca_dims              => getValue( $def, "pca_dims" ),
       ensembl_gene_map_file => $def->{"ensembl_gene_map_file"},
       output_object         => $output_object,
-      is_spatial_data       => getValue( $def, "is_spatial_data", 0 ),
+      is_spatial_data       => getValue( $def, "is_spatial_data",   0 ),
+      cluster_algorithm     => getValue( $def, "cluster_algorithm", 4 )
     },
     parameterFile1           => $qc_filter_config_file,
     output_file_ext          => "objectlist.rds",
@@ -3835,12 +3841,15 @@ sub add_individual_qc_tasks {
 
   my $reduction = "pca";
 
+  my $annotation_dic = {};
+
   my $signacX_ref = undef;
   if ( getValue( $def, "perform_SignacX", 0 ) ) {
     my $signacX_task = $raw_individual_qc_task . "_SignacX";
     add_signacx( $config, $def, $summary, $target_dir, $project_name, $signacX_task, $raw_individual_qc_task, $reduction, 1 );
     $signacX_ref = [ $signacX_task, ".meta.rds" ];
-  }
+    $annotation_dic->{signacX} = $signacX_ref;
+  } ## end if ( getValue( $def, "perform_SignacX"...))
 
   my $singleR_ref = undef;
   if ( getValue( $def, "perform_SingleR", 0 ) ) {
@@ -3851,6 +3860,7 @@ sub add_individual_qc_tasks {
     };
     add_singleR_cell( $config, $def, $summary, $target_dir, $singleR_task, $raw_individual_qc_task, $cur_options, 1 );
     $singleR_ref = [ $singleR_task, ".meta.rds" ];
+    $annotation_dic->{singleR} = $singleR_ref;
   } ## end if ( getValue( $def, "perform_SingleR"...))
 
   my $azimuth_ref = undef;
@@ -3862,6 +3872,7 @@ sub add_individual_qc_tasks {
     };
     add_azimuth( $config, $def, $summary, $target_dir, $azimuth_task, $raw_individual_qc_task, $cur_options, 1 );
     $azimuth_ref = [ $azimuth_task, ".meta.rds" ];
+    $annotation_dic->{azimuth} = $azimuth_ref;
   } ## end if ( getValue( $def, "perform_Azimuth"...))
 
   my $celltypist_ref = undef;
@@ -3877,19 +3888,52 @@ sub add_individual_qc_tasks {
     };
     add_CellTypist( $config, $def, $summary, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
     $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
+    $annotation_dic->{celltypist} = $celltypist_ref;
   } ## end if ( getValue( $def, "perform_CellTypist"...))
 
   my $PanglaoDB_ref = undef;
   if ( getValue( $def, "perform_PanglaoDB", 0 ) ) {
     my $PanglaoDB_task = $raw_individual_qc_task . "_PanglaoDB";
-    my $cur_options  = {
+    my $cur_options    = {
       task_name => $def->{task_name},
       reduction => $reduction,
     };
     add_PanglaoDB_cell( $config, $def, $summary, $target_dir, $PanglaoDB_task, $raw_individual_qc_task, $cur_options, 1 );
     $PanglaoDB_ref = [ $PanglaoDB_task, ".meta.rds" ];
+    $annotation_dic->{PanglaoDB} = $PanglaoDB_ref;
   } ## end if ( getValue( $def, "perform_PanglaoDB"...))
 
+  my $rctd_ref = undef;
+  if ( getValue( $def, "perform_RCTD", 0 ) ) {
+    my $RCTD_thread = getValue( $def, "RCTD_thread", 8 );
+    my $RCTD_assay = getValue( $def, "RCTD_assay" );
+    my $rctd_task   = "RCTD";
+    $config->{$rctd_task} = {
+      class                => "CQS::IndividualR",
+      target_dir           => "$target_dir/$rctd_task",
+      perform              => 1,
+      option               => "",
+      rtemplate            => "../scRNA/scRNA_func.r,reportFunctions.R,../scRNA/Deconvolution_functions.R,../scRNA/Deconvolution_RCTD_obj.r",
+      parameterSampleFile1 => getValue( $def, "RCTD_files" ),
+      parameterSampleFile2 => {
+        "assay"       => $RCTD_assay,
+        "RCTD_thread" => $RCTD_thread,
+        "email"       => getValue( $def, "email" ),
+        "affiliation" => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+      },
+      parameterFile1 => getValue( $def, "RCTD_reference" ),
+      sh_direct      => 0,
+      no_docker      => getValue( $def, "no_docker", 0 ),
+      output_ext     => ".${RCTD_assay}.RCTD.obj.rds",
+      pbs            => {
+        "nodes"    => "1:ppn=${RCTD_thread}",
+        "walltime" => "24",
+        "mem"      => "80gb"
+      }
+    };
+    push( @$summary, $rctd_task );
+    $rctd_ref = [ $rctd_task, ".RNA.RCTD.obj.rds" ];
+  } ## end if ( getValue( $def, "perform_RCTD"...))
 
   if ( !defined $decontX_ref ) {
     if ( getValue( $def, "perform_decontX", 0 ) && !getValue( $def, "remove_decontX", 0 ) ) {
@@ -3924,19 +3968,20 @@ sub add_individual_qc_tasks {
       bubblemap_height   => getValue( $def, "bubblemap_height", 1500 ),
       bubblemap_unit     => getValue( $def, "bubblemap_unit",   "px" ),
     },
-    parameterSampleFile2_ref => $raw_individual_qc_task,
-    parameterSampleFile3_ref => $sctk_ref,
-    parameterSampleFile4_ref => $signacX_ref,
-    parameterSampleFile5_ref => $singleR_ref,
-    parameterSampleFile6_ref => $decontX_ref,
-    parameterSampleFile7_ref => $doublet_finder_ref,
-    parameterSampleFile8_ref => $azimuth_ref,
-    parameterSampleFile9_ref => $celltypist_ref,
-    parameterSampleFile10    => $def->{annotation_files},
-    parameterSampleFile11_ref=> $PanglaoDB_ref,
-    output_file_ext          => ".${prefix}qc.html",
-    sh_direct                => 1,
-    pbs                      => {
+    parameterSampleFile2_ref  => $raw_individual_qc_task,
+    parameterSampleFile3_ref  => $sctk_ref,
+    parameterSampleFile4_ref  => $signacX_ref,
+    parameterSampleFile5_ref  => $singleR_ref,
+    parameterSampleFile6_ref  => $decontX_ref,
+    parameterSampleFile7_ref  => $doublet_finder_ref,
+    parameterSampleFile8_ref  => $azimuth_ref,
+    parameterSampleFile9_ref  => $celltypist_ref,
+    parameterSampleFile10     => $def->{annotation_files},
+    parameterSampleFile11_ref => $PanglaoDB_ref,
+    parameterSampleFile12_ref => $rctd_ref,
+    output_file_ext           => ".${prefix}qc.html",
+    sh_direct                 => 1,
+    pbs                       => {
       "nodes"    => "1:ppn=1",
       "walltime" => "10",
       "mem"      => getValue( $def, "seurat_mem", "40gb" )
@@ -3945,16 +3990,7 @@ sub add_individual_qc_tasks {
 
   push( @$summary, $qc_report_task );
 
-  my $annotation_dic = {
-    "signacX"    => $signacX_ref,
-    "singleR"    => $singleR_ref,
-    "azimuth"    => $azimuth_ref,
-    "decontX"    => $decontX_ref,
-    "celltypist" => $celltypist_ref,
-    "PanglaoDB"  => $PanglaoDB_ref,
-  };
-
-  return ( $raw_individual_qc_task, $qc_report_task, $annotation_dic );
+  return ( $raw_individual_qc_task, $qc_report_task, $decontX_ref, $annotation_dic );
 } ## end sub add_individual_qc_tasks
 
 
@@ -4671,5 +4707,42 @@ sub add_sccomp {
   push( @$tasks, $sccomp_task );
 } ## end sub add_sccomp
 
+sub add_cell_crops {
+  my ( $config, $def, $tasks, $target_dir, $cell_crops_task, $cellid_ref ) = @_;
+  my $cell_crop_script = dirname(__FILE__) . "/../scRNA/cell_image_crops_cellids.py";
+  my $cell_limit = getValue( $def, "cell_crop_limit", 50 );
+  $config->{$cell_crops_task} = {
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    target_dir    => "${target_dir}/$cell_crops_task",
+    program       => "",
+    check_program => 0,
+    option        => "
+python3 $cell_crop_script \\
+--cellid_csv '__FILE__' \\
+--dhsr_tiff '__FILE2__' \\
+--cell_geojson '__FILE3__' \\
+--output_prefix '__NAME__' \\
+--limit $cell_limit
+",
+    parameterSampleFile1_ref => $cellid_ref,
+    parameterSampleFile3     => getValue( $def, "cell_geojson_files" ),
+    parameterSampleFile2     => getValue( $def, "image_files" ),
+    #parameterSampleFile4     => getValue( $def, "nucleus_geojson_files" ),
+    output_ext            => ".figures.csv",
+    docker_prefix         => "visiumhd_",
+    no_output             => 1,
+    output_to_same_folder => 0,
+    sh_direct             => 0,
+    pbs                   => {
+      "nodes"    => "1:ppn=4",
+      "walltime" => "10:00:00",
+      "mem"      => "80gb"
+    },
+  };
+  push( @$tasks, $cell_crops_task );
+}
+
 1;
+
 
