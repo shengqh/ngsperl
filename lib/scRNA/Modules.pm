@@ -1153,6 +1153,9 @@ sub add_decontX {
 sub add_celltype_validation {
   my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $celltype_column, $rmd_ext, $is_choose, $sctk_ref, $decontX_ref, $summary_layer, $annotation_dic ) = @_;
 
+  print(Dumper($annotation_dic));
+  print($task_name);
+
   my $doublet_column = getValue( $def, "validation_doublet_column", getValue( $def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5" ) );
 
   my $rmd_file = "../scRNA/seurat_scDynamic_validation.rmd";
@@ -1186,14 +1189,14 @@ sub add_celltype_validation {
     },
     parameterSampleFile2      => $def->{pool_sample_groups},
     parameterSampleFile3_ref  => $sctk_ref,
-    parameterSampleFile4_ref  => $annotation_dic->{signacX_ref},
-    parameterSampleFile5_ref  => $annotation_dic->{singleR_ref},
+    parameterSampleFile4_ref  => $annotation_dic->{signacX},
+    parameterSampleFile5_ref  => $annotation_dic->{singleR},
     parameterSampleFile6_ref  => $decontX_ref,
-    parameterSampleFile7_ref  => $annotation_dic->{azimuth_ref},
-    parameterSampleFile8_ref  => $annotation_dic->{celltypist_ref},
-    parameterSampleFile9_ref  => $annotation_dic->{STCAT_ref},
+    parameterSampleFile7_ref  => $annotation_dic->{azimuth},
+    parameterSampleFile8_ref  => $annotation_dic->{celltypist},
+    parameterSampleFile9_ref  => $annotation_dic->{STCAT},
     parameterSampleFile10     => $def->{annotation_files},
-    parameterSampleFile11_ref => $annotation_dic->{PanglaoDB_ref},
+    parameterSampleFile11_ref => $annotation_dic->{PanglaoDB},
     output_file_ext           => $rmd_ext,
     output_other_ext          => "",
     docker_prefix             => "scdynamic_",
@@ -1204,6 +1207,8 @@ sub add_celltype_validation {
       "mem"      => getValue( $def, "seurat_mem" )
     },
   };
+
+  print(Dumper($config->{$task_name}));
   push( @$tasks, $task_name );
 } ## end sub add_celltype_validation
 
