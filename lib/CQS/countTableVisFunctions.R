@@ -1193,7 +1193,7 @@ draw_density_plot<-function(log2counts, prefix, outputFormat, width_inch=5, heig
                     plot=g)
 }
 
-drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=6, height_inch=4, point_size=3, label_size=2, scalePCs=TRUE, show_info=TRUE){
+drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, outputFormat, width_inch=6, height_inch=4, point_size=3, label_size=2, scalePCs=TRUE, show_info=TRUE, pca_title=NULL){
   genecount<-nrow(rldmatrix)
   if(genecount > 2){
     pca<-prcomp(t(rldmatrix))
@@ -1279,6 +1279,10 @@ drawPCA<-function(file_prefix, rldmatrix, showLabelInPCA, groups, groupColors, o
             axis.title=element_text(face="bold"),
             legend.text=element_text(size=12, face="bold"))
     
+    if(!is.null(pca_title)){
+      g<-g+ggtitle(pca_title) + theme(plot.title = element_text(hjust = 0.5, face="bold", size=14))
+    }
+
     if(!is.null(file_prefix)){
       save_ggplot2_plot(file_prefix=file_prefix,
                         outputFormat=outputFormat, 
