@@ -4167,15 +4167,20 @@ save_vis_png <-function(plots, file_prefix, cur_cell_type_colors, cur_cell_type_
   return(vis_png)
 }
 
-add_arrows <- function(plot, label_x = "UMAP 1", label_y = "UMAP 2", length = 0.15) {
+add_arrows <- function(plot, label_x = "UMAP 1", label_y = "UMAP 2", length = 0.15, text_x_start = NULL, text_y_start = NULL) {
   # 1. Extract the data and ranges from the existing plot
   gb <- ggplot_build(plot)
   xlims <- gb$layout$panel_params[[1]]$x.range
   ylims <- gb$layout$panel_params[[1]]$y.range
+
+  xdiff <- diff(xlims)
+  ydiff <- diff(ylims)
   
   # 2. Calculate arrow endpoints (based on a % of the total range)
-  arrow_x_end <- xlims[1] + (diff(xlims) * length)
-  arrow_y_end <- ylims[1] + (diff(ylims) * length)
+  arrow_x_end <- xlims[1] + xdiff * length
+  arrow_y_end <- ylims[1] + ydiff * length
+  text_x_start <- ifelse(!is.null(text_x_start), text_x_start, xlims[1] - xdiff * 0.07)  # Start a bit to the left to avoid overlap with the plot
+  text_y_start <- ifelse(!is.null(text_y_start), text_y_start, ylims[1] - ydiff * 0.01)  # Start a bit above the bottom to avoid overlap with the plot
   
   # 3. Add the layers
   plot +
@@ -4186,10 +4191,10 @@ add_arrows <- function(plot, label_x = "UMAP 1", label_y = "UMAP 2", length = 0.
     annotate("segment", x = xlims[1], xend = xlims[1], 
              y = ylims[1], yend = arrow_y_end,
              arrow = arrow(length = unit(0.2, "cm"), type = "closed"), color = "black") +
-    annotate("text", x = xlims[1] + (diff(xlims) * length/2), y = ylims[1], 
-             label = label_x, size = 3, vjust = 1.5) +
-    annotate("text", x = xlims[1] - 1.1, y = ylims[1] + (diff(ylims) * length/2), 
-             label = label_y, size = 3, angle = 90, vjust = 1.5) +
+    annotate("text", x = xlims[1] + (xdiff * length/2), y = text_y_start, 
+             label = label_x, size = 3, vjust = 1.5, fontface = "bold") +
+    annotate("text", x = text_x_start, y = ylims[1] + (ydiff * length/2), 
+             label = label_y, size = 3, angle = 90, vjust = 1.5, fontface = "bold") +
     theme(plot.margin = margin(10, 10, 10, 10)) # Add padding so arrows aren't cut off
 }
 
