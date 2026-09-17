@@ -259,6 +259,11 @@ sub perform {
   open( my $sh, ">$shfile" ) or die "Cannot create $shfile";
   print $sh get_run_command($sh_direct);
 
+  my $config_folder = $result_dir . "/cromwell-config";
+  create_directory_or_die($config_folder);
+
+  my $db_folder = $result_dir . "/cromwell-db";
+
   for my $sample_name ( sort keys %$raw_files ) {
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -267,15 +272,16 @@ sub perform {
     my $cur_dir = $output_to_same_folder ? $result_dir : create_directory_or_die( $result_dir . "/$sample_name" );
     my $cromwell_finalOutputs = $use_caper ? 0 : get_option($config, $section, "cromwell_finalOutputs", 1);
     my $final_dir = $cromwell_finalOutputs ? $cur_dir . "/cromwell_finalOutputs" : $cur_dir;
+    create_directory_or_die($final_dir);
 
     my $current_config_file = $cromwell_config_file;
     my $config_name = basename($cromwell_config_file);
     if($config_name =~ /.localdb.conf/){
-      my $db_folder = $result_dir . "/cromwell_db";
       create_directory_or_die($db_folder);
 
       my $new_config_name = $sample_name . ".localdb.conf";
-      my $new_config_file = $cur_dir . "/" . $new_config_name;
+      my $new_config_file = $config_folder . "/" . $new_config_name;
+
       my $config_content = read_file($cromwell_config_file);
       $config_content =~ s/__DBFOLDER__/$db_folder/g;
       $config_content =~ s/__SAMPLENAME__/$sample_name/g;
@@ -365,21 +371,12 @@ fi
     }
     #print("After deletion: " . Dumper($json_dic));
 
-    my $sample_input_file = "$cur_dir/${sample_name}.inputs.json";
+    my $sample_input_file = "$config_folder/${sample_name}.inputs.json";
     open my $fh, ">", $sample_input_file;
     print $fh $json->encode($json_dic);
     close $fh;
-    
-    my $input_file = basename($sample_input_file);
-    
+        
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $expect_file );
-
-    if( $self->{"_use_tmp_folder"}){
-      print $pbs "
-cp -P \$res_dir/*.simg .
-cp $sample_input_file $input_file
-";
-    }
 
     if($check_output_file_pattern ne ""){
       print $pbs "
@@ -405,20 +402,20 @@ source activate $caper_conda_env
 ";
       }
       print $pbs "
-caper run $wdl_file $option -i $input_file $singularity_option -m $cur_dir/metadata.json
+caper run $wdl_file $option -i $sample_input_file $singularity_option -m $final_dir/metadata.json
     
 ";
     }else{
       my $input_option_file = get_option_file( $config, $section, "input_option_file" );
-      my $db_url="$cur_dir/${sample_name}.db";
+      my $db_url="$db_folder/${sample_name}.db";
       
       print $pbs "
 java -Dconfig.file=$current_config_file \\
   -jar $cromwell_jar \\
   run $wdl_file $option \\
-  --inputs $input_file \\
+  --inputs $sample_input_file \\
   --options $input_option_file \\
-  --metadata-output ${sample_name}.metadata.json
+  --metadata-output $final_dir/${sample_name}.metadata.json
 ";
     }
 
@@ -432,11 +429,8 @@ fi
 ";
 
     if( $self->{"_use_tmp_folder"}){
-      print $pbs "
-rm -f *.simg $input_file
-";
       if(not $use_caper){
-      print $pbs "
+        print $pbs "
 rm -rf cromwell-executions
 ";
       }
