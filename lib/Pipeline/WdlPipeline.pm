@@ -31,6 +31,8 @@ our %EXPORT_TAGS = (
         addEncodeHic
 
         add_WGS_Wdl
+        add_VUMCStarFusionAndCountLocal
+        add_GATKSVPipelineSingleSample
     )
   ]
 );
@@ -313,7 +315,7 @@ sub addMutect2Wdl {
     pbs            => {
       "nodes"    => "1:ppn=" . getValue( $def, "Mutect2.nodes", "8" ),
       "walltime" => getValue( $def, "Mutect2.walltime", "24" ),
-      "mem"      => getValue( $def, "Mutect2.mem", "80gb" ),
+      "mem"      => getValue( $def, "Mutect2.mem",      "80gb" ),
     },
   };
 
@@ -1017,5 +1019,83 @@ sub add_WGS_Wdl {
 
   return ($config);
 } ## end sub add_WGS_Wdl
+
+
+sub add_VUMCStarFusionAndCountLocal {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $genome_local_folder, $source_ref ) = @_;
+
+  my $server_key    = getValue( $def, "wdl_key", "slurm" );
+  my $cpu           = $server_key eq "slurm" ? 1     : 16;
+  my $mem           = $server_key eq "slurm" ? "5gb" : "100gb";
+  my $wdl           = $def->{"wdl"};
+  my $server        = $wdl->{$server_key};
+  my $cram_pipeline = $server->{"VUMCStarFusionAndCountLocal"};
+  $config->{$task_name} = {
+    "class"                  => "CQS::Wdl",
+    "target_dir"             => "${target_dir}/$task_name",
+    "source_ref"             => $source_ref,
+    "cromwell_jar"           => $wdl->{"cromwell_jar"},
+    "input_option_file"      => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file"   => $server->{"cromwell_config_file"},
+    "wdl_file"               => $cram_pipeline->{"wdl_file"},
+    "input_json_file"        => $cram_pipeline->{"input_file"},
+    "output_file_ext"        => ".count.gz",
+    "use_filename_in_result" => 0,
+    "input_parameters"       => {
+      "VUMCStarFusionAndCountLocal.genome_local_folder" => $genome_local_folder,
+      "VUMCStarFusionAndCountLocal.sample_name"         => "SAMPLE_NAME",
+    },
+    "input_single" => {},
+    pbs            => {
+      "nodes"    => "1:ppn=$cpu",
+      "walltime" => "24",
+      "mem"      => $mem
+    },
+  };
+
+  push @$tasks, $task_name;
+
+  return ($config);
+} ## end sub add_VUMCStarFusionAndCountLocal
+
+
+sub add_GATKSVPipelineSingleSample {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $bam_or_cram_file_ref ) = @_;
+
+  my $server_key    = getValue( $def, "wdl_key", "slurm" );
+  my $cpu           = $server_key eq "slurm" ? 1     : 16;
+  my $mem           = $server_key eq "slurm" ? "5gb" : "100gb";
+  my $wdl           = $def->{"wdl"};
+  my $server        = $wdl->{$server_key};
+  my $cram_pipeline = $server->{"GATKSVPipelineSingleSample"};
+  $config->{$task_name} = {
+    "class"                  => "CQS::Wdl",
+    "target_dir"             => "${target_dir}/$task_name",
+    "source_ref"             => $bam_or_cram_file_ref,
+    "cromwell_jar"           => $wdl->{"cromwell_jar"},
+    "input_option_file"      => $wdl->{"cromwell_option_file"},
+    "cromwell_config_file"   => $server->{"cromwell_config_file"},
+    "wdl_file"               => $cram_pipeline->{"wdl_file"},
+    "input_json_file"        => $cram_pipeline->{"input_file"},
+    "output_file_ext"        => ".count",
+    "use_filename_in_result" => 1,
+    "input_parameters"       => {
+      "GATKSVPipelineSingleSample.sample_id"             => "SAMPLE_NAME",
+      "GATKSVPipelineSingleSample.bam_or_cram_file_ref"  => [ $bam_or_cram_file_ref, ".bam\$|.cram\$" ],
+      "GATKSVPipelineSingleSample.bam_or_cram_index_ref" => [ $bam_or_cram_file_ref, ".bai\$|.crai\$" ],
+      "GATKSVPipelineSingleSample.batch"                 => "SAMPLE_NAME",
+    },
+    "input_single" => {},
+    pbs            => {
+      "nodes"    => "1:ppn=$cpu",
+      "walltime" => "72",
+      "mem"      => $mem
+    },
+  };
+
+  push @$tasks, $task_name;
+
+  return ($config);
+} ## end sub add_GATKSVPipelineSingleSample
 
 1;
