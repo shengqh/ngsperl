@@ -282,6 +282,31 @@ check_md5<-function(filepath, expect_md5, return_md5=FALSE){
   }
 }
 
+check_md5_table<-function(md5_tbl, file_col="FILE", md5_col="MD5"){
+  md5_tbl$reason=""
+  for(i in 1:nrow(md5_tbl)){
+    filepath=md5_tbl[i, file_col]
+    expect_md5=md5_tbl[i, md5_col]
+    if(!file.exists(filepath)){
+      md5_tbl$reason[i]="File not exists"
+      next
+    }
+    md5=tools::md5sum(filepath)
+    md5_tbl[i, "ActualMD5"]=md5
+    if(expect_md5 == ""){
+      md5_tbl$reason[i]="No expected md5"
+    }else{
+      if(md5 != expect_md5){
+        md5_tbl$reason[i]=paste0("md5 not match")
+      }
+    }
+  }
+  if(any(md5_tbl$reason != "")){
+    print_table(md5_tbl[md5_tbl$reason != "", c(file_col, md5_col, "ActualMD5", "reason")], row.names=FALSE)
+    stop("md5 check failed")
+  }
+}
+
 theme_rotate_x_axis_label <- function() {
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 }
