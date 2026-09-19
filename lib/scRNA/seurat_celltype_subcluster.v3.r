@@ -1,17 +1,17 @@
 rm(list=ls()) 
-outFile='GSE125449'
+outFile='pig_pig_tissue'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
-parSampleFile3=''
+parSampleFile3='fileList3.txt'
 parSampleFile5='fileList5.txt'
 parSampleFile7='fileList7.txt'
 parSampleFile8='fileList8.txt'
-parFile1='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_rpca/result/GSE125449.final.rds'
-parFile2='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_rpca_dr0.5_1_call/result/GSE125449.scDynamic.meta.rds'
-parFile3='/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/essential_genes/result/GSE125449.txt'
+parFile1='/data/shaver_lab/projects/20260824_13667_pigpig_scRNAseq_tissue/cellbender_nd_seurat_sct2_fastmnn/result/pig_pig_tissue.final.rds'
+parFile2='/data/shaver_lab/projects/20260824_13667_pigpig_scRNAseq_tissue/cellbender_nd_seurat_sct2_fastmnn_dr0.5_1_call/result/pig_pig_tissue.scDynamic.meta.rds'
+parFile3='/data/shaver_lab/projects/20260824_13667_pigpig_scRNAseq_tissue/essential_genes/result/pig_pig_tissue.txt'
 
 
-setwd('/data/shaver_lab/projects/20260819_sc_meta/results/GSE125449_h5/GSE125449_Set1_individual_h5/seurat_rpca_dr0.5_2_subcluster_ri/result')
+setwd('/data/shaver_lab/projects/20260824_13667_pigpig_scRNAseq_tissue/cellbender_nd_seurat_sct2_fastmnn_dr0.5_2_subcluster_ri/result')
 
 ### Parameter setting end ###
 
@@ -478,7 +478,18 @@ get_bubblemap_file<-function(pct, bubble_file_map, bubblemap_file){
   }
 }
 
-check_cell_type<-function(subobj, ct_column, filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map){
+check_cell_type<-function(
+  subobj, 
+  ct_column, 
+  filelist, 
+  pct, 
+  curprefix, 
+  species, 
+  subumap, 
+  has_bubblemap, 
+  bubblemap_file, 
+  bubble_file_map)
+{
   stopifnot(ct_column %in% colnames(subobj@meta.data))
 
   sxobj=get_filtered_obj(subobj, ct_column)
@@ -530,7 +541,7 @@ allmarkers<-NULL
 allcts<-NULL
 cluster_index=0
 #previous_celltypes=rev(previous_celltypes)
-pct<-previous_celltypes[1]
+pct<-previous_celltypes[9]
 cat("memory used: ", lobstr_mem_used(), "\n")
 for(pct in previous_celltypes){
   key = paste0(previous_layer, ": ", pct, ":")
@@ -569,7 +580,7 @@ for(pct in previous_celltypes){
                         key=key,
                         do_umap = TRUE,
                         reduction.name = subumap,
-                        redo_fastmnn = redo_fastmnn,
+                        redo_fastmnn = FALSE,
                         thread=thread,
                         detail_prefix=curprefix,
                         ignore_variable_genes=NULL,
@@ -584,7 +595,18 @@ for(pct in previous_celltypes){
 
   validation_columns=c("orig.ident")
   for(annotation in all_annotation_names){
-    filelist = check_cell_type(subobj, annotation, filelist, pct, curprefix, species, subumap, has_bubblemap, bubblemap_file, bubble_file_map)
+    cat(key, "Check cell type annotation for ", annotation, "\n")
+    filelist = check_cell_type(
+      subobj=subobj,
+      ct_column=annotation,
+      filelist=filelist,
+      pct=pct,
+      curprefix=curprefix, 
+      species=species, 
+      subumap=subumap, 
+      has_bubblemap=has_bubblemap,
+      bubblemap_file=bubblemap_file,
+      bubble_file_map=bubble_file_map)
   }
   validation_columns = c(validation_columns, all_annotation_names)
 
@@ -777,3 +799,4 @@ rm(obj)
 cat("final memory used:", lobstr_mem_used(), "\n")
 
 write.csv(filelist, paste0(outFile, ".files.csv"))
+

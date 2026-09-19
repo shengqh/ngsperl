@@ -2394,6 +2394,7 @@ sub_cluster<-function(subobj,
                                 thread=thread,
                                 detail_prefix=detail_prefix,
                                 ignore_variable_genes=ignore_variable_genes,
+                                do_umap=FALSE,
                                 k.weight=k.weight)
   }else if(curreduction == "pca"){
     cat(key, "redo normalization ...\n")
@@ -2440,6 +2441,7 @@ sub_cluster<-function(subobj,
                     reduction.name=reduction.name)
   }
 
+  cat("sub_cluster done.\n")
   return(subobj)    
 }
 
@@ -4459,6 +4461,8 @@ do_integration_v5 <- function(outFile,
                               thread, 
                               detail_prefix, 
                               ignore_variable_genes,
+                              do_umap=TRUE,
+                              umap.name="umap",
                               k.weight=100){
   md5str=paste0(paste0(colnames(subobj), collapse = ""), by_sctransform, cur_assay, method, reduction, k.weight)
   md5value=substr(tools::md5sum(bytes=charToRaw(md5str)), 1, 8)
@@ -4532,16 +4536,16 @@ do_integration_v5 <- function(outFile,
       #k.weight should be less than anchor cells, we assume it has to be less than min number of cells - 10
       cur_k_weight=min(min_cells_in_layers - 10, k.weight)
 
-      subobj = do_PCA_Integration( subobj=subobj, 
-                                assay=cur_assay, 
-                                by_sctransform=by_sctransform, 
-                                method=method, 
-                                new.reduction=reduction, 
-                                orig.reduction="pca",
-                                thread=thread,
-                                detail_prefix=detail_prefix,
-                                ndims=ndims,
-                                k.weight=cur_k_weight)
+      subobj = do_PCA_Integration(subobj=subobj, 
+                                  assay=cur_assay, 
+                                  by_sctransform=by_sctransform, 
+                                  method=method, 
+                                  new.reduction=reduction, 
+                                  orig.reduction="pca",
+                                  thread=thread,
+                                  detail_prefix=detail_prefix,
+                                  ndims=ndims,
+                                  k.weight=cur_k_weight)
 
       if(!by_sctransform){
         cat("JoinLayers of", cur_assay, "assay ... \n")
@@ -4551,18 +4555,15 @@ do_integration_v5 <- function(outFile,
       cat("No batch found, skipping integration.\n")
     }
 
-    cat("FindNeighbors ... \n")
-    subobj <- FindNeighbors( subobj, 
-                          dims = 1:30, 
-                          assay=cur_assay, 
-                          reduction = reduction)
+    if(do_umap){
+      cat("RunUMAP ... \n")
+      subobj <- RunUMAP( subobj, 
+                      assay = cur_assay,
+                      reduction = reduction, 
+                      reduction.name = umap.name,
+                      dims = 1:30)    
+    }
 
-    cat("RunUMAP ... \n")
-    subobj <- RunUMAP( subobj, 
-                    assay = cur_assay,
-                    reduction = reduction, 
-                    dims = 1:30)    
-    
     # No matter scTransform or not, we need to normalize the object in order to get average expression later.
     if (cur_assay != "RNA") {
       cat("Normalizing data ...\n")
