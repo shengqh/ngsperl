@@ -280,6 +280,11 @@ sub perform {
     if(defined $rmd_file){
       my $rmd_command = "$rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='${task_name}${rmd_ext}')\"";
       print $pbs "
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \"Error, R script failed with exit code \$status\"
+  exit \$status
+fi
 
 $rmd_command
 
