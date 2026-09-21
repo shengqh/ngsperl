@@ -248,9 +248,27 @@ getFigure_width_height<-function(filepath, in_details=FALSE, fig.width=NULL, fig
   }
 }
 
+get_fig_alt<-function(filepath){
+  if(is.null(filepath)){
+    return("")
+  }
+  if(length(filepath) == 0){
+    return("")
+  }
+  if(file.exists(filepath)){
+    return(basename(filepath))
+  }else{
+    return("")
+  }
+}
+
 get_figure_description<-function(category, filepath, description){
-  return(paste0("```{r,echo=FALSE,results='asis', fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists('", filepath, "'))}\n",
+  if(!file.exists(filepath)){
+    return("")
+  }else{
+    return(paste0("```{r,echo=FALSE,results='asis', fig.alt=get_fig_alt('", filepath, "'), fig.align='center', fig.cap=figRef('", category, "', '",gsub("_", " ", description), "', trunk.eval=file.exists('", filepath, "'))}\n",
 "  check_and_include_graphics('", filepath, "')\n```\n"))
+  }
 }
 
 find_module_folder=function(files,pattern) {
