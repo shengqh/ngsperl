@@ -6,7 +6,6 @@ output:
     df_print: kable
 date: 'Compiled: `r format(Sys.Date(), "%B %d, %Y")`'
 ---
-***
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
