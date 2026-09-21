@@ -7,10 +7,9 @@ parSampleFile4='fileList4.txt'
 parFile1=''
 parFile2=''
 parFile3=''
-parFile4='/nobackup/shah_lab/shengq2/2024_Emeli_Mouse_IRI_cardiac_EVs/20251203_ECa6_ECa9_mm10//covariance.txt'
 
 
-setwd('/nobackup/shah_lab/shengq2/2024_Emeli_Mouse_IRI_cardiac_EVs/20251203_ECa6_ECa9_mm10/genetable/result')
+setwd('/nobackup/shah_lab/shengq2/20260918_Qiagen_RNAseq_Kits/genetable/result')
 
 ### Parameter setting end ###
 
@@ -372,11 +371,12 @@ for (i in 1:nrow(countTableFileAll)) {
 
     if("Feature_gene_biotype" %in% colnames(count)){
       if(length(unique(count$Feature_gene_biotype)) > 1){
+        #by number of reads
         bcounts = count %>% 
           dplyr::select(c("Feature_gene_biotype", colnames(validCountNum))) %>% 
-          aggregate(. ~ Feature_gene_biotype, data=., FUN=sum) %>%
+          aggregate(. ~ Feature_gene_biotype, FUN=sum) %>%
           tibble::column_to_rownames("Feature_gene_biotype")
-        write.csv(bcounts, paste0(cur_file_prefix, ".biotype_counts.csv"))
+        write.csv(bcounts, paste0(cur_file_prefix, ".biotype_read_counts.csv"))
 
         #convert bcounts to percentage table by column
         rownames(bcounts)[rownames(bcounts)==""] = "unknown"
@@ -389,17 +389,32 @@ for (i in 1:nrow(countTableFileAll)) {
         cat_perc = bperc[names(cats),]
         other_perc = colSums(bperc[!rownames(bperc) %in% names(cats),])
         tperc = rbind(cat_perc, "other"=other_perc)
-        write.csv(tperc, paste0(cur_file_prefix, ".biotype_perc.csv"))
+        write.csv(tperc, paste0(cur_file_prefix, ".biotype_read_perc.csv"))
 
         mperc = reshape2::melt(tperc) %>%
           dplyr::rename("Biotype" = "Var1", "Sample"="Var2", "Percentage" = "value")
-        mperc$Biotype = factor(mperc$Biotype, levels=rownames(tperc))
+        mperc$Biotype = factor(mperc$Biotype, levels=rev(rownames(tperc)))
         mperc$Sample = factor(mperc$Sample, levels=colnames(validCountNum))
 
-        g=ggplot(mperc, aes(x=Sample, y=Percentage, fill=Biotype)) + 
-          scale_fill_brewer(palette = "Set1") +
+        #draw read count bar plot
+        cat_counts = bcounts[names(cats),]
+        other_counts = colSums(bcounts[!rownames(bcounts) %in% names(cats),])
+        tcounts = rbind(cat_counts, "other"=other_counts)
+
+        mcounts = reshape2::melt(tcounts |> tibble::rownames_to_column(var="Biotype")) |>
+          dplyr::rename("Sample"="variable", "Counts" = "value")
+        mcounts$Biotype = factor(mcounts$Biotype, levels=rev(rownames(tcounts)))
+        mcounts$Sample = factor(mcounts$Sample, levels=colnames(validCountNum))
+
+        read_df=merge(mperc, mcounts, by=c("Biotype", "Sample"))
+        read_mf=reshape2::melt(read_df, id.vars=c("Biotype", "Sample"), measure.vars=c("Percentage", "Counts"))
+
+        g=ggplot(read_mf, aes(x=Sample, y=value, fill=Biotype)) + 
+          scale_fill_brewer(palette = "Set1", direction=-1) +
           geom_bar(stat="identity") + 
-          theme_classic() + 
+          facet_grid(variable~., scales="free_y") +
+          theme_bw3() + 
+          ylab("Reads") +
           theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
                 axis.text.y = element_text(size=11),
                 axis.title.y = element_text(size=11, face="bold"),
@@ -407,8 +422,65 @@ for (i in 1:nrow(countTableFileAll)) {
                 legend.title = element_text(size=11, face="bold"),
                 axis.title.x = element_blank())
 
-        width=min(max(7, 0.1 * ncol(validCountNum)) + 3, 50)
-        ggsave(paste0(cur_file_prefix, ".biotype_perc.png"), g, width=width, height=5, dpi=300)
+        width=min(max(6, 0.1 * ncol(validCountNum)) + 3, 50)
+        ggsave(paste0(cur_file_prefix, ".biotype_read.png"), g, width=width, height=6, dpi=300)        
+
+        #by number of genes
+        #draw gene percentage bar plot
+        gcounts = count |> 
+          dplyr::select(c("Feature_gene_biotype", colnames(validCountNum))) |>
+          dplyr::mutate(dplyr::across(dplyr::all_of(colnames(validCountNum)), ~as.integer(. > 0))) |>
+          aggregate(. ~ Feature_gene_biotype, FUN=sum) |>
+          tibble::column_to_rownames("Feature_gene_biotype")
+        write.csv(gcounts, paste0(cur_file_prefix, ".biotype_gene_counts.csv"))
+
+        #convert gcounts to percentage table by column
+        rownames(gcounts)[rownames(gcounts)==""] = "unknown"
+        gperc = t(t(gcounts) / colSums(gcounts) * 100)
+        gperc_max = apply(gperc, 1, max)
+        gperc_max = gperc_max[order(gperc_max, decreasing=T)]
+        
+        # get the top 7 + other for scale_fill_brewer
+        cats = gperc_max[1:7]
+        cat_perc = gperc[names(cats),]
+        other_perc = colSums(gperc[!rownames(gperc) %in% names(cats),])
+        tperc = rbind(cat_perc, "other"=other_perc)
+        write.csv(tperc, paste0(cur_file_prefix, ".biotype_gene_perc.csv"))
+
+        mperc = reshape2::melt(tperc) %>%
+          dplyr::rename("Biotype" = "Var1", "Sample"="Var2", "Percentage" = "value")
+        mperc$Biotype = factor(mperc$Biotype, levels=rev(rownames(tperc)))
+        mperc$Sample = factor(mperc$Sample, levels=colnames(validCountNum))
+
+        #draw gene count bar plot
+        cat_counts = gcounts[names(cats),]
+        other_counts = colSums(gcounts[!rownames(gcounts) %in% names(cats),])
+        tcounts = rbind(cat_counts, "other"=other_counts)
+        write.csv(tcounts, paste0(cur_file_prefix, ".biotype_gene_counts.csv"))
+
+        mcounts = reshape2::melt(tcounts |> tibble::rownames_to_column(var="Biotype")) |>
+          dplyr::rename("Sample"="variable", "Counts" = "value")
+        mcounts$Biotype = factor(mcounts$Biotype, levels=rev(rownames(tcounts)))
+        mcounts$Sample = factor(mcounts$Sample, levels=colnames(validCountNum))
+
+        gene_df=merge(mperc, mcounts, by=c("Biotype", "Sample"))
+        gene_df=reshape2::melt(gene_df, id.vars=c("Biotype", "Sample"), measure.vars=c("Percentage", "Counts"))
+
+        g=ggplot(gene_df, aes(x=Sample, y=value, fill=Biotype)) + 
+          scale_fill_brewer(palette = "Set1", direction=-1) +
+          geom_bar(stat="identity") + 
+          facet_grid(variable~., scales="free_y") +
+          theme_bw3() + 
+          ylab("Genes") +
+          theme(axis.text.x = element_text(angle=90, vjust=0.5, size=11, hjust=1, face="bold"),
+                axis.text.y = element_text(size=11),
+                axis.title.y = element_text(size=11, face="bold"),
+                legend.text = element_text(size=11, face="bold"),
+                legend.title = element_text(size=11, face="bold"),
+                axis.title.x = element_blank())
+
+        width=min(max(6, 0.1 * ncol(validCountNum)) + 3, 50)
+        ggsave(paste0(cur_file_prefix, ".biotype_gene.png"), g, width=width, height=6, dpi=300)    
       }
     }
     
