@@ -2160,6 +2160,9 @@ sub addEdgeRTask {
 sub addGLIMESTask {
   my ( $config, $def, $summary, $target_dir, $cluster_task, $celltype_task, $celltype_cluster_file, $celltype_name, $cluster_name, $bBetweenCluster, $DE_by_celltype, $DE_by_cell, $reduction ) = @_;
 
+  my $sample_column = $def->{sample_column} ? $def->{sample_column} : $def->{final_object_sample_column} ? $def->{final_object_sample_column} : undef;
+  my $group_column  = $def->{group_column}  ? $def->{group_column}  : $def->{final_object_group_column}  ? $def->{final_object_group_column}  : undef;
+
   if ( !defined $reduction ) {
     $reduction = "umap";
   }
@@ -2173,8 +2176,8 @@ sub addGLIMESTask {
     "foldChange"                         => getValue( $def, "DE_fold_change" ),
     "bBetweenCluster"                    => $bBetweenCluster,
     "covariance_file"                    => $def->{covariance_file},
-    "sample_column"                      => $def->{sample_column},
-    "group_column"                       => $def->{group_column},
+    "sample_column"                      => $sample_column,
+    "group_column"                       => $group_column,
     "reduction"                          => $reduction,
     "discard_samples"                    => $def->{discard_samples},
     "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison},
@@ -2216,7 +2219,7 @@ sub addGLIMESTask {
 
     $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
 
-    if ( !defined $def->{group_column} ) {
+    if ( !defined $group_column ) {
       $groups = getValue( $def, "groups" );
     }
     $pairs = getValue( $def, "pairs" );
@@ -2240,7 +2243,7 @@ sub addGLIMESTask {
     sh_direct            => 1,
     pbs                  => {
       "nodes"    => "1:ppn=1",
-      "walltime" => "24",
+      "walltime" => getValue( $def, "GLIMES_walltime", 24 ),
       "mem"      => getValue( $def, "seurat_mem" )
     },
   };
