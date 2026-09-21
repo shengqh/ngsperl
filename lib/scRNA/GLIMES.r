@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='monocytes'
-parSampleFile1='fileList1.txt'
+outFile='endothelial_lung'
+parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/wanjalla_lab/projects/20250420_P12891-P12795_10Flex_hg38_cellbender/20260821_PADI2/20260821_PADI2_01_analysis/monocyte_obj.rds'
+parFile1='/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260915_T07_paper_figures/20260921.EC_lung_iSGS_fastmnn.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20250420_P12891-P12795_10Flex_hg38_cellbender/20260821_PADI2/20260821_PADI2_02_DE/final_obj_GLIMES_betweenCluster_byCell/result')
+setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260921_T08_differnetial_expression/final_obj_GLIMES_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
@@ -46,6 +46,34 @@ glmm_method=myoptions$glmm_method
 
 if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
+}
+
+# For the comparison from manually created object file, 
+# we need to make sure the sample column and group column are set correctly in 
+# the meta.data of the Seurat object. The default sample column is "orig.ident", 
+# but if the user specifies a different sample column, we need to update it accordingly. 
+# Similarly, if a group column is specified, we need to check if it exists in the meta.data 
+# and create a sampleGroups file for downstream analysis.
+if(!is.null(myoptions$sample_column) & (myoptions$sample_column != "") & (myoptions$sample_column != "orig.ident")){
+  if(!myoptions$sample_column %in% colnames(obj@meta.data)){
+    stop(paste0("sample_column ", myoptions$sample_column, " not found in meta.data of ", parFile1))
+  }
+
+  obj@meta.data[["orig.ident"]] = obj@meta.data[[myoptions$sample_column]]
+}
+
+if(!is.null(myoptions$group_column) & (myoptions$group_column != "")){
+  if(!myoptions$group_column %in% colnames(obj@meta.data)){
+    stop(paste0("group_column ", myoptions$group_column, " not found in meta.data of ", parFile1))
+  }
+
+  sampleGroups = unique(obj@meta.data[,c("orig.ident", myoptions$group_column)]) %>%
+    dplyr::rename(Sample=orig.ident, Group=!!myoptions$group_column) %>%
+    tibble::remove_rownames() %>%
+    dplyr::arrange(Group, Sample)
+  
+  parSampleFile1="fileList1.txt"
+  write.table(sampleGroups, file=parSampleFile1, sep="\t", row.names=F, col.names=F, quote=F)
 }
 
 detail_folder = paste0(outFile, ".GLIMES_by_cell/")
@@ -92,6 +120,7 @@ for (comp in comparisonNames){
       control_names<-controlGroup
       sample_names<-sampleGroup
     }else{
+
       sampleGroups<-read.table(parSampleFile1, sep="\t", stringsAsFactors = F)
       colnames(sampleGroups)<-c("Sample","Group")
       
@@ -312,14 +341,18 @@ for(idx in c(1:nrow(designMatrix))){
     keep_rows = keep_rows | keep2
   }
   
+  before_filter=nrow(cells)
   cells<-cells[keep_rows,]
-  #remove cells with too few total reads after filtering and also change designdata and group
+  after_filter=nrow(cells)
+  cat(before_filter - after_filter, "genes removed with tpm >", filter_minTPM, "in less than ", filter_cellPercentage*100, "% of cells in either control or sample group.\n")
+
   cellTotalReads=colSums(cells)
   if (any(cellTotalReads<50)) {
     selectedCellsInd=which(cellTotalReads>=50)
     cells=cells[,selectedCellsInd]
     groups=groups[selectedCellsInd]
     designdata=designdata[selectedCellsInd,]
+    cat(sum(cellTotalReads<50), "cells removed with total reads less than 50 after filtering.\n")
   }
 
   variables=c()

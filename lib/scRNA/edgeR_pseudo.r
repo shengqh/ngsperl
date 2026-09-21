@@ -52,41 +52,68 @@ if(ncol(comparisons) == 3){
 
 comparisonNames<-unique(comparisons$Comparison)
 
-if(!exists('obj')){
-  cat("load object from ", parFile1, "\n")
-  obj<-read_object(parFile1, parFile2, cluster_name)
-  obj<-UpdateSeuratObject(obj)
-  if(!cluster_name %in% colnames(obj@meta.data)){
-    if(cluster_name == "bulk"){
-      obj=AddMetaData(obj, "bulk", col.name="bulk")
+cat("load object from ", parFile1, "\n")
+obj<-read_object(parFile1, parFile2, cluster_name)
+obj<-UpdateSeuratObject(obj)
+
+# For the comparison from manually created object file, 
+# we need to make sure the sample column and group column are set correctly in 
+# the meta.data of the Seurat object. The default sample column is "orig.ident", 
+# but if the user specifies a different sample column, we need to update it accordingly. 
+# Similarly, if a group column is specified, we need to check if it exists in the meta.data 
+# and create a sampleGroups file for downstream analysis.
+if(!is.null(myoptions$sample_column) & (myoptions$sample_column != "") & (myoptions$sample_column != "orig.ident")){
+  if(!myoptions$sample_column %in% colnames(obj@meta.data)){
+    stop(paste0("sample_column ", myoptions$sample_column, " not found in meta.data of ", parFile1))
+  }
+
+  obj@meta.data[["orig.ident"]] = obj@meta.data[[myoptions$sample_column]]
+}
+
+if(!is.null(myoptions$group_column) & (myoptions$group_column != "")){
+  if(!myoptions$group_column %in% colnames(obj@meta.data)){
+    stop(paste0("group_column ", myoptions$group_column, " not found in meta.data of ", parFile1))
+  }
+
+  sampleGroups = unique(obj@meta.data[,c("orig.ident", myoptions$group_column)]) %>%
+    dplyr::rename(Sample=orig.ident, Group=!!myoptions$group_column) %>%
+    tibble::remove_rownames() %>%
+    dplyr::arrange(Group, Sample)
+  
+  parSampleFile1="fileList1.txt"
+  write.table(sampleGroups, file=parSampleFile1, sep="\t", row.names=F, col.names=F, quote=F)
+}
+
+if(!cluster_name %in% colnames(obj@meta.data)){
+  if(cluster_name == "bulk"){
+    obj=AddMetaData(obj, "bulk", col.name="bulk")
+  }
+}
+if(!cluster_name %in% colnames(obj@meta.data)){
+  stop(paste0("cluster_name ", cluster_name, " not found in meta.data"))
+}
+
+if(any(exclude_cell_types_from_comparison != "")){
+  cat("discard_cell_types: ", paste0(exclude_cell_types_from_comparison, collapse=", "), "\n")
+  obj@meta.data[,"FAKE"] = obj@meta.data[,cluster_name]
+  obj = subset(obj, !(FAKE %in% exclude_cell_types_from_comparison))
+}
+
+obj@meta.data[,cluster_name]<-gsub("^\\s+", "", as.character(obj@meta.data[,cluster_name]))
+if(!is.null(myoptions$sample_column)){
+  if(myoptions$sample_column != ""){
+    if(!myoptions$sample_column %in% colnames(obj@meta.data)){
+      stop(paste0("sample_column ", myoptions$sample_column, " not found in meta.data"))
     }
+    
+    obj@meta.data$orig.ident = obj@meta.data[,myoptions$sample_column]
   }
-  if(!cluster_name %in% colnames(obj@meta.data)){
-    stop(paste0("cluster_name ", cluster_name, " not found in meta.data"))
-  }
+}
 
-  if(any(exclude_cell_types_from_comparison != "")){
-    cat("discard_cell_types: ", paste0(exclude_cell_types_from_comparison, collapse=", "), "\n")
-    obj@meta.data[,"FAKE"] = obj@meta.data[,cluster_name]
-    obj = subset(obj, !(FAKE %in% exclude_cell_types_from_comparison))
-  }
-
-  obj@meta.data[,cluster_name]<-gsub("^\\s+", "", as.character(obj@meta.data[,cluster_name]))
-  if(!is.null(myoptions$sample_column)){
-    if(myoptions$sample_column != ""){
-      if(!myoptions$sample_column %in% colnames(obj@meta.data)){
-        stop(paste0("sample_column ", myoptions$sample_column, " not found in meta.data"))
-      }
-      
-      obj@meta.data$orig.ident = obj@meta.data[,myoptions$sample_column]
-    }
-  }
-
-  if(length(discard_samples) > 0){
-    cat("discard_samples: ", paste0(discard_samples, collapse=", "), "\n")
-    discard_cells = colnames(obj)[obj@meta.data$orig.ident %in% discard_samples]
-    obj<-subset(obj, cells=discard_cells, invert=TRUE)
-  }
+if(length(discard_samples) > 0){
+  cat("discard_samples: ", paste0(discard_samples, collapse=", "), "\n")
+  discard_cells = colnames(obj)[obj@meta.data$orig.ident %in% discard_samples]
+  obj<-subset(obj, cells=discard_cells, invert=TRUE)
 }
 
 if(myoptions$reduction != "umap"){
