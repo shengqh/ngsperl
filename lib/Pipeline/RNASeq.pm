@@ -482,24 +482,11 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
             "mem"      => "40gb"
           },
         };
-        $config->{"featurecount_summary"} = {
-          class                    => "CQS::UniqueR",
-          perform                  => 1,
-          target_dir               => "${featureCountFolder}_summary",
-          option                   => "",
-          rtemplate                => "../Alignment/AlignmentUtils.r,../Alignment/STARFeatureCount.r",
-          output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
-          parameterSampleFile2_ref => [ "featurecount", ".count.summary" ],
-          sh_direct                => 1,
-          pbs                      => {
-            "nodes"    => "1:ppn=1",
-            "walltime" => "2",
-            "mem"      => "10gb"
-          },
-        };
 
         push @$tasks, "featurecount";
-        push @$tasks, "featurecount_summary";
+
+        add_alignment_summary( $config, $def, $tasks, $target_dir, "featurecount_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.chromosome.csv;.chromosome.png,.gene.count.csv,.gene.count.png", undef, [ "featurecount", ".count.summary" ], undef, undef, [ "featurecount", '^(?!.*\.chromosome\.count).*\.count$' ] );
+
         $count_table_ref   = [ "featurecount", ".count\$" ];
         $multiqc_depedents = "featurecount";
       } ## end if ( $def->{perform_counting...})
@@ -1683,6 +1670,12 @@ fi
       push( @report_files, "featurecount_summary",    ".FeatureCountSummary.csv.png\$" );
       push( @report_files, "featurecount_summary",    ".FeatureCountSummary.csv\$" );
       push( @report_names, "featureCounts_table_png", "featureCounts_table" );
+
+
+      push( @report_files, "featurecount_summary", ".gene.count.png\$" );
+      push( @report_files, "featurecount_summary", ".gene.count.csv\$" );
+      push( @report_names, "featureCounts_gene_png",    "featureCounts_gene_table" );
+
     }
 
     if ( defined $config->{genetable} ) {
