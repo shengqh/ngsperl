@@ -39,6 +39,9 @@ myoptiontbl = fread("fileList3.txt", header = FALSE) %>%
 myoptions<-read_file_map("fileList3.txt", do_unlist=FALSE)
 
 is_glimse = "glmm_method" %in% names(myoptions)
+if(is_glimse){
+  myoptions$DE_by_cell=1
+}
 
 tool_name = ifelse(is_glimse, "GLIMES", "edgeR")
 
@@ -174,7 +177,11 @@ in_cluster_rmd<-function(de_files, comparisons){
       cur_prefix = ifelse(de_by_cell, file_prefix, folder_prefix)
 
       if(!all(is.na(num_cell))){
-        ct_num_cell<-subset(num_cell, cell_type == ct)
+        if("cell_type" %in% colnames(num_cell)){
+          ct_num_cell<-subset(num_cell, cell_type == ct)
+        }else{
+          ct_num_cell<-subset(num_cell, cluster == ct)
+        }
         ct_cell_map<-split(ct_num_cell$num_cell, ct_num_cell$sample)
         if(all(design_data$Sample %in% names(ct_cell_map))){
           design_data$Num_of_cell<-ct_cell_map[design_data$Sample]
