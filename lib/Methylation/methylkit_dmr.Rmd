@@ -1,0 +1,120 @@
+---
+title: "methylKit tiling-window DMR analysis"
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+output:
+  rmdformats::readthedown:
+    toc_depth: 3
+    code_folding: hide
+    number_sections: true
+---
+
+```{css, echo=FALSE}
+#content {
+  max-width: 1600px;
+}
+```
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE,
+                      results = "asis", fig.width = 7, fig.height = 5)
+library(DT)
+library(ggplot2)
+library(knitr)
+library(data.table)
+
+find_one <- function(pattern) {
+  matches <- list.files(pattern = pattern, full.names = TRUE)
+  if (length(matches) != 1) stop("Expected one file matching ", pattern, "; found ", length(matches))
+  matches[[1]]
+}
+
+parameters <- fread(find_one("[.]methylkit[.]dmr[.]parameters[.]tsv$"), data.table = FALSE)
+samples <- fread(find_one("[.]methylkit[.]dmr[.]samples[.]tsv$"), data.table = FALSE)
+dmrs <- fread(find_one("[.]methylkit[.]dmrs[.]tsv$"), data.table = FALSE)
+annotated <- fread(find_one("[.]methylkit[.]dmr[.]annotated[.]tsv$"), data.table = FALSE)
+annotation_summary <- fread(find_one("[.]methylkit[.]dmr[.]annotation_summary[.]tsv$"), data.table = FALSE)
+chromosome_summary <- fread(find_one("[.]methylkit[.]dmr[.]chromosome_summary[.]tsv$"), data.table = FALSE)
+parameter_values <- setNames(as.character(parameters$value), parameters$parameter)
+comparison <- parameter_values[["comparison"]]
+```
+
+# Comparison
+
+```{r}
+cat("## ", comparison, "\n\n", sep = "")
+```
+
+The methylation calls were summarized in genomic tiling windows before differential testing. Positive methylation differences indicate higher methylation in the treatment group; negative values indicate higher methylation in the control group.
+
+```{r}
+overview <- data.frame(
+  Metric = c("Control group", "Treatment group", "Control samples", "Treatment samples",
+             "Tested regions", "Significant DMRs", "Hyper in treatment", "Hyper in control"),
+  Value = c(
+    parameter_values[["control_group"]],
+    parameter_values[["treatment_group"]],
+    sum(samples$role == "control"),
+    sum(samples$role == "treatment"),
+    parameter_values[["tested_regions"]],
+    parameter_values[["significant_dmrs"]],
+    if (nrow(dmrs) == 0) 0 else sum(dmrs$meth.diff > 0),
+    if (nrow(dmrs) == 0) 0 else sum(dmrs$meth.diff < 0)
+  ),
+  stringsAsFactors = FALSE
+)
+kable(overview, row.names = FALSE)
+```
+
+## Input samples
+
+```{r}
+DT::datatable(samples, rownames = FALSE, options = list(pageLength = 10, scrollX = TRUE))
+```
+
+# Differentially methylated regions
+
+```{r}
+if (nrow(annotated) == 0) {
+  cat("No regions passed the configured methylation-difference and significance thresholds.\n")
+} else {
+  DT::datatable(annotated, rownames = FALSE, filter = "top",
+                options = list(pageLength = 25, scrollX = TRUE))
+}
+```
+
+## Chromosome summary
+
+```{r}
+if (nrow(chromosome_summary) == 0) {
+  cat("No significant DMRs were available for a chromosome summary.\n")
+} else {
+  graph <- ggplot(chromosome_summary,
+                  aes(x = reorder(chromosome, count), y = count, fill = direction)) +
+    geom_col(position = "stack") +
+    coord_flip() +
+    labs(x = "Chromosome", y = "DMRs", fill = "Direction") +
+    theme_bw()
+  print(graph)
+}
+```
+
+# Genomic annotation
+
+The gene-context classification uses promoter, exon, intron, and intergenic precedence. CpG-island annotation classifies regions as CpG island, shore, or other; islands take precedence over shores when a window overlaps both.
+
+```{r, out.width='49%', fig.show='hold'}
+knitr::include_graphics(c(
+  find_one("[.]methylkit[.]dmr[.]annotation[.]png$"),
+  find_one("[.]methylkit[.]dmr[.]cpg_context[.]png$")
+))
+```
+
+```{r}
+kable(annotation_summary, digits = 2, row.names = FALSE)
+```
+
+# Analysis settings
+
+```{r}
+kable(parameters, row.names = FALSE)
+```

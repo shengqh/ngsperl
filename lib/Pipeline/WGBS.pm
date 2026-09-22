@@ -233,6 +233,7 @@ sub getConfig {
   my $MethylKitDiffAnnovarGenes_task = undef;
   my $webgestalt_task                = undef;
   my $dnmtoolsdiff_task              = undef;
+  my $methylkitdmr_task              = undef;
 
   if ( defined $def->{pairs} ) {
     if ( getValue( $def, "perform_dnmtools_diff", 0 ) ) {
@@ -271,6 +272,10 @@ sub getConfig {
     $methylkitdiffannovar_task      = $task_map->{methylkitdiffannovar_task};
     $MethylKitDiffAnnovarGenes_task = $task_map->{MethylKitDiffAnnovarGenes_task};
     $webgestalt_task                = $task_map->{webgestalt_task};
+
+    if ( getValue( $def, "perform_methylkit_dmr", 0 ) ) {
+      $methylkitdmr_task = add_MethylKitDMRAnalysis( $config, $def, $tasks, $target_dir, $methylkitprep_task );
+    }
 
     #  my $homer_task = "HOMER_DMR";
     #  $config->{$homer_task} = {
@@ -329,6 +334,9 @@ sub getConfig {
   }
   if ( ( defined $dnmtoolsdiff_task ) && ( defined $config->{$dnmtoolsdiff_task} ) ) {
     push( @copy_files, $dnmtoolsdiff_task, ".radmeth.adjusted\$|.radmeth.significant\$|.radmeth.dmr\$|.radmeth.dmr.bb\$|.methdiff\$|.DMR.filtered\$|.dmcpgs\$" );
+  }
+  if ( ( defined $methylkitdmr_task ) && ( defined $config->{$methylkitdmr_task} ) ) {
+    push( @copy_files, $methylkitdmr_task, ".methylkit.dmr" );
   }
   # if ( defined $webgestalt_task ) {
   #   push( @copy_files, $webgestalt_task, "_geneontology_Biological_Process\$" );

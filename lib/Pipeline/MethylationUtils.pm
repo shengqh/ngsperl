@@ -22,6 +22,7 @@ our %EXPORT_TAGS = (
         add_MethylKitCorr
         add_MethylAgeEstimation
         add_MethylDiffAnalysis
+        add_MethylKitDMRAnalysis
     )
   ]
 );
@@ -222,5 +223,75 @@ echo \"Annovar,v\$version\" > __NAME__.annovar.version
   };
   return ($task_map);
 } ## end sub add_MethylDiffAnalysis
+
+sub add_MethylKitDMRAnalysis {
+  my ( $config, $def, $tasks, $target_dir, $methylkitprep_task ) = @_;
+
+  my $gene_bed = getValue( $def, "methylKitDMR_gene_bed" );
+  die "Define methylKitDMR_gene_bed as a transcript BED file before enabling perform_methylkit_dmr.\n"
+    if !defined($gene_bed) || $gene_bed eq "";
+  die "methylKitDMR_gene_bed does not exist: $gene_bed\n" if !-e $gene_bed;
+
+  my $cpg_island_bed = getValue( $def, "methylKitDMR_cpg_island_bed" );
+  die "Define methylKitDMR_cpg_island_bed before enabling perform_methylkit_dmr.\n"
+    if !defined($cpg_island_bed) || $cpg_island_bed eq "";
+  die "methylKitDMR_cpg_island_bed does not exist: $cpg_island_bed\n" if !-e $cpg_island_bed;
+
+  my $ncore       = getValue( $def, "MethylKitDMR_ncore", getValue( $def, "MethylKitDiff_ncore", 8 ) );
+  my $test_method = getValue( $def, "methylKitDMR_test_method", getValue( $def, "methylDiff_test_method", "dss" ) );
+  my $task_name   = "MethylKitDMR";
+
+  $config->{$task_name} = {
+    class                     => "Methylation::MethylKitDMR",
+    perform                   => 1,
+    target_dir                => "${target_dir}/" . getNextFolderIndex($def) . $task_name,
+    docker_prefix             => "wgbs_r_",
+    rtemplate                 => "../Methylation/methylkit_dmr.R",
+    rReportTemplate           => "../Methylation/methylkit_dmr.Rmd;../CQS/reportFunctions.R",
+    run_rmd_independent       => 1,
+    out_report_at_root_folder => 0,
+    rmd_ext                   => ".methylkit.dmr.html",
+    source_ref                => "pairs",
+    parameterSampleFile2      => {
+      task_name      => getValue( $def, "task_name" ),
+      email          => getValue( $def, "email" ),
+      affiliation    => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
+      assembly       => getValue( $def, "genome" ),
+      pipeline       => "amp",
+      mincov         => getValue( $def, "methylKitDMR_mincov", 3 ),
+      high_cov_pct   => getValue( $def, "methylKitDMR_high_cov_pct", 99.99 ),
+      window_size    => getValue( $def, "methylKitDMR_window_size", 1000 ),
+      step_size      => getValue( $def, "methylKitDMR_step_size", 1000 ),
+      min_cpgs       => getValue( $def, "methylKitDMR_min_cpgs", 10 ),
+      min_per_group  => getValue( $def, "methylKitDMR_min_per_group", 0 ),
+      difference     => getValue( $def, "methylKitDMR_difference", getValue( $def, "methylDiff_difference", 25 ) ),
+      qvalue         => getValue( $def, "methylKitDMR_qvalue", getValue( $def, "methylDiff_qvalue", 0.01 ) ),
+      ncore          => $ncore,
+      overdispersion => getValue( $def, "methylKitDMR_overdispersion", getValue( $def, "methylDiff_overdispersion", "MN" ) ),
+      test_method    => $test_method,
+      adjust         => getValue( $def, "methylKitDMR_adjust", getValue( $def, "methylDiff_adjust", "BH" ) ),
+      use_raw_pvalue => getValue( $def, "methylKitDMR_use_raw_pvalue", getValue( $def, "use_raw_pvalue", 0 ) ),
+      promoter_up    => getValue( $def, "methylKitDMR_promoter_up", 1000 ),
+      promoter_down  => getValue( $def, "methylKitDMR_promoter_down", 1000 ),
+      shore_size     => getValue( $def, "methylKitDMR_shore_size", 2000 ),
+    },
+    parameterSampleFile3_ref => "pairs",
+    parameterSampleFile4_ref => "groups",
+    # Keep this at index 5: IndividualR filters fileList1 by comparison name.
+    parameterSampleFile5_ref => [ $methylkitprep_task, ".CpG.txt.gz\$" ],
+    parameterFile1           => $gene_bed,
+    parameterFile2           => $cpg_island_bed,
+    output_file_ext          => ".methylkit.dmrs.tsv;.methylkit.dmr.annotated.tsv;.methylkit.dmr.annotation_summary.tsv;.methylkit.dmr.chromosome_summary.tsv;.methylkit.dmr.parameters.tsv;.methylkit.dmr.samples.tsv;.methylkit.dmr.rds;.methylkit.dmr.annotation.png;.methylkit.dmr.cpg_context.png;.methylkit.dmr.html",
+    sh_direct                => 1,
+    pbs                      => {
+      "nodes"    => "1:ppn=" . $ncore,
+      "walltime" => getValue( $def, "MethylKitDMR_walltime", "24" ),
+      "mem"      => getValue( $def, "MethylKitDMR_mem", "80gb" )
+    },
+  };
+  push( @$tasks, $task_name );
+
+  return ($task_name);
+} ## end sub add_MethylKitDMRAnalysis
 
 1;
