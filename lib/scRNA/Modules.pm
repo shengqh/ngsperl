@@ -1153,7 +1153,7 @@ sub add_decontX {
 sub add_celltype_validation {
   my ( $config, $def, $tasks, $target_dir, $task_name, $object_ref, $meta_ref, $call_files_ref, $celltype_column, $rmd_ext, $is_choose, $sctk_ref, $decontX_ref, $summary_layer, $annotation_dic ) = @_;
 
-  print(Dumper($annotation_dic));
+  print( Dumper($annotation_dic) );
   print($task_name);
 
   my $doublet_column = getValue( $def, "validation_doublet_column", getValue( $def, "doublet_column", "doubletFinder_doublet_label_resolution_1.5" ) );
@@ -1208,7 +1208,7 @@ sub add_celltype_validation {
     },
   };
 
-  print(Dumper($config->{$task_name}));
+  print( Dumper( $config->{$task_name} ) );
   push( @$tasks, $task_name );
 } ## end sub add_celltype_validation
 
@@ -2181,7 +2181,10 @@ sub addGLIMESTask {
     "reduction"                          => $reduction,
     "discard_samples"                    => $def->{discard_samples},
     "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison},
-    "glmm_method"                        => getValue( $def, "DE_GLIME_glmm_method", "binomial" )
+    "glmm_method"                        => getValue( $def, "GLIMES_glmm_method",           "binomial" ),
+    # Default is 10% since GLIMES is designed for single cell, not like edgeR. Hope to keep more genes for DE analysis.
+    # cpm filter is not neccessary since in scRNA data, the cpm values are pretty higher.
+    "filter_cellPercentage"              => getValue( $def, "GLIMES_filter_cellPercentage", 0.1 )
   };
 
   my $GLIMETaskname         = defined $celltype_task ? $celltype_task . "_GLIMES" : $cluster_task . "_GLIMES";
@@ -2195,13 +2198,11 @@ sub addGLIMESTask {
 
   my $GLIMES_suffix = ".GLIMES_by_cell";
   if ($bBetweenCluster) {
-    $GLIMETaskname                       = $GLIMETaskname . "_betweenCluster_byCell";
-    $curClusterName                      = getValue( $def, "DE_cluster_name" );
-    $curClusterDisplayName               = getValue( $def, "DE_cluster_display_name", $curClusterName );
-    $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
-    $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
-    $groups                              = getValue( $def, "DE_cluster_groups", {} );
-    $pairs                               = getValue( $def, "DE_cluster_pairs" );
+    $GLIMETaskname         = $GLIMETaskname . "_betweenCluster_byCell";
+    $curClusterName        = getValue( $def, "DE_cluster_name" );
+    $curClusterDisplayName = getValue( $def, "DE_cluster_display_name", $curClusterName );
+    $groups                = getValue( $def, "DE_cluster_groups",       {} );
+    $pairs                 = getValue( $def, "DE_cluster_pairs" );
   } ## end if ($bBetweenCluster)
   else {
     if ($DE_by_celltype) {
@@ -2213,9 +2214,7 @@ sub addGLIMESTask {
       $GLIMETaskname  = $GLIMETaskname . "_inCluster";
     }
 
-    $rCodeDic->{"filter_minTPM"}         = getValue( $def, "DE_by_cell_filter_minTPM" );
-    $rCodeDic->{"filter_cellPercentage"} = getValue( $def, "DE_by_cell_filter_cellPercentage" );
-    $GLIMETaskname                       = $GLIMETaskname . "_byCell";
+    $GLIMETaskname = $GLIMETaskname . "_byCell";
 
     $rCodeDic->{DE_cluster_pattern} = getValue( $def, "DE_cluster_pattern", "*" );
 
@@ -3914,7 +3913,7 @@ sub add_individual_qc_tasks {
   my $rctd_ref = undef;
   if ( getValue( $def, "perform_RCTD", 0 ) ) {
     my $RCTD_thread = getValue( $def, "RCTD_thread", 8 );
-    my $RCTD_assay = getValue( $def, "RCTD_assay" );
+    my $RCTD_assay  = getValue( $def, "RCTD_assay" );
     my $rctd_task   = "RCTD";
     $config->{$rctd_task} = {
       class                => "CQS::IndividualR",
@@ -4715,10 +4714,11 @@ sub add_sccomp {
   push( @$tasks, $sccomp_task );
 } ## end sub add_sccomp
 
+
 sub add_cell_crops {
   my ( $config, $def, $tasks, $target_dir, $cell_crops_task, $cellid_ref ) = @_;
   my $cell_crop_script = dirname(__FILE__) . "/../scRNA/cell_image_crops_cellids.py";
-  my $cell_limit = getValue( $def, "cell_crop_limit", 50 );
+  my $cell_limit       = getValue( $def, "cell_crop_limit", 50 );
   $config->{$cell_crops_task} = {
     class         => "CQS::ProgramWrapperOneToOne",
     perform       => 1,
@@ -4749,8 +4749,7 @@ python3 $cell_crop_script \\
     },
   };
   push( @$tasks, $cell_crops_task );
-}
+} ## end sub add_cell_crops
 
 1;
-
 

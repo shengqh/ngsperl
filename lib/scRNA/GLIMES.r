@@ -20,6 +20,7 @@ library("Seurat")
 library("testit")
 library("GLIMES")
 library("EnhancedVolcano")
+library("SingleCellExperiment")
 
 MIN_NUM_CELL=10
 
@@ -37,7 +38,6 @@ options_table<-read.table(parSampleFile3, sep="\t", header=F, stringsAsFactors =
 myoptions<-split(options_table$V1, options_table$V2)
 bBetweenCluster<-ifelse(myoptions$bBetweenCluster == "0", FALSE, TRUE)
 filter_cellPercentage<-as.numeric(myoptions$filter_cellPercentage)
-filter_minTPM<-as.numeric(myoptions$filter_minTPM)
 pvalue<-as.numeric(myoptions$pvalue)
 foldChange<-as.numeric(myoptions$foldChange)
 useRawPvalue<-ifelse(myoptions$useRawPvalue == "0", FALSE, TRUE)
@@ -287,6 +287,7 @@ idx<-1
 for(idx in c(1:nrow(designMatrix))){
   prefix=designMatrix[idx, "prefix"]
   file_prefix = paste0(detail_prefix, ".", prefix)
+  dge_filename <-paste0(file_prefix, ".csv")
 
   cat("performing", prefix, "...\n")
 
@@ -316,40 +317,39 @@ for(idx in c(1:nrow(designMatrix))){
   #designdata is generated from corresponding de_obj, so the order of cells should be the same
   stopifnot(colnames(de_obj) == designdata$Cell)
 
-  cells<-as.matrix( MyGetAssayData(de_obj, "RNA", "counts"))
+  counts<-as.matrix( MyGetAssayData(de_obj, "RNA", "counts"))
 
   #filter genes with zero count
-  cells<-cells[rowSums(cells)>0,]
+  counts<-counts[rowSums(counts)>0,]
 
-  control_cells=cells[,designdata[designdata$Group=="control", "Cell"]]
-  sample_cells=cells[,designdata[designdata$Group=="sample", "Cell"]]
+  control_cells=counts[,designdata[designdata$Group=="control", "Cell"]]
+  sample_cells=counts[,designdata[designdata$Group=="sample", "Cell"]]
 
-  do_filter<-function(cur_cells, filter_cellPercentage, filter_minTPM, min_sample){
-    #filter genes by tpm
-    tpm = sweep(cur_cells, 2, colSums(cur_cells)/1e6, "/")
+  do_filter<-function(cur_cells, filter_cellPercentage){
+    #filter genes
     min_sample<-filter_cellPercentage * ncol(cur_cells)
-    keep_rows <- rowSums(tpm > filter_minTPM) >= min_sample
+    keep_rows <- rowSums(cur_cells > 0) >= min_sample
     return(keep_rows)
   }
-  filter_control=do_filter(control_cells, filter_cellPercentage, filter_minTPM, min_sample)
-  filter_sample=do_filter(sample_cells, filter_cellPercentage, filter_minTPM, min_sample)
+  filter_control=do_filter(control_cells, filter_cellPercentage)
+  filter_sample=do_filter(sample_cells, filter_cellPercentage)
   keep_rows = filter_control | filter_sample
   
   if(genes != ""){
     gene_list=unlist(strsplit(genes, ','))
-    keep2<-rownames(cells) %in% gene_list
+    keep2<-rownames(counts) %in% gene_list
     keep_rows = keep_rows | keep2
   }
   
-  before_filter=nrow(cells)
-  cells<-cells[keep_rows,]
-  after_filter=nrow(cells)
-  cat(before_filter - after_filter, "genes removed with tpm >", filter_minTPM, "in less than ", filter_cellPercentage*100, "% of cells in either control or sample group.\n")
+  before_filter=nrow(counts)
+  counts<-counts[keep_rows,]
+  after_filter=nrow(counts)
+  cat(before_filter - after_filter, "out of", before_filter, "genes removed which was detected in less than ", filter_cellPercentage*100, "% of cells in either control or sample group.\n")
 
-  cellTotalReads=colSums(cells)
+  cellTotalReads=colSums(counts)
   if (any(cellTotalReads<50)) {
     selectedCellsInd=which(cellTotalReads>=50)
-    cells=cells[,selectedCellsInd]
+    counts=counts[,selectedCellsInd]
     groups=groups[selectedCellsInd]
     designdata=designdata[selectedCellsInd,]
     cat(sum(cellTotalReads<50), "cells removed with total reads less than 50 after filtering.\n")
@@ -369,15 +369,18 @@ for(idx in c(1:nrow(designMatrix))){
   }
   variables = c(variables, "Group")
   
-  de_obj = subset(de_obj, cells=designdata$Cell)
+  de_obj = subset(de_obj, cells=colnames(counts))
   stopifnot(colnames(de_obj) == designdata$Cell)
 
   de_obj@meta.data$Group = factor(designdata$Group, levels=c("control", "sample"))
   de_obj@meta.data$Sample = designdata$Sample
   de_obj@meta.data$DisplayGroup = designdata$DisplayGroup
 
-  de_sce = as.SingleCellExperiment(de_obj)
-
+  de_sce = SingleCellExperiment(
+    assays = list(counts = counts),
+    colData = de_obj@meta.data
+  )
+  
   uniq_groups = unique(de_obj@meta.data |> dplyr::select(Group, Sample))
 
   if(any(table(uniq_groups$Group) == 1)){ # if there is group with only one sample, replicates should be all same.
@@ -415,7 +418,6 @@ for(idx in c(1:nrow(designMatrix))){
   glmm_df=glmm_df |>
     dplyr::mutate(PValue=pval, FDR=BH, logFC=log2FC) 
 
-  dge_filename <-paste0(file_prefix, ".csv")
   write.csv(glmm_df, file=dge_filename, quote=F, row.names=FALSE)
   #glmm_df=read.csv(dge_filename, stringsAsFactors = F)
 
@@ -426,11 +428,11 @@ for(idx in c(1:nrow(designMatrix))){
   write.csv(sigout, file=sigFile, quote=F)
 
   # filter extreme logFC values to avoid plotting issues
-  if(min(glmm_df$logFC) < -20){
-    glmm_df$logFC[glmm_df$logFC < -20] = min(glmm_df$logFC[glmm_df$logFC > -20])
+  if(min(glmm_df$logFC) < -10){
+    glmm_df$logFC[glmm_df$logFC < -10] = min(glmm_df$logFC[glmm_df$logFC > -10]) - 0.1
   }
-  if(min(glmm_df$logFC) > 20){
-    glmm_df$logFC[glmm_df$logFC > 20] = max(glmm_df$logFC[glmm_df$logFC < 20])
+  if(max(glmm_df$logFC) > 10){
+    glmm_df$logFC[glmm_df$logFC > 10] = max(glmm_df$logFC[glmm_df$logFC < 10]) + 0.1
   }
 
   cat("  volcano plot", "\n")
