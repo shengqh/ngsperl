@@ -48,7 +48,7 @@ de_list_file=file_tbl$V1[1]
 ---
 title: "FGSEA analysis of scRNA-seq DE results - `r task_name`"
 author:
-  email: "`r email`"
+- name: "`r email`"
   affiliation: "`r affiliation`"
 ---
 
@@ -77,11 +77,13 @@ print_table(de_files |> dplyr::select(prefix, gseaFile), row.names=F)
 ```{r}
 set.seed(20260125)
 
+prefix_list=de_files$prefix
+
 gsea_content=""
 gsea_files=NULL
-prefix=names(de_map)[1]
-for(prefix in names(de_map)){
-  gsea_content=paste0(gsea_content, "### ", prefix, "\n\n")
+prefix=prefix_list[1]
+for(prefix in prefix_list){
+  gsea_content=paste0(gsea_content, "\n### ", gsub("\\.", " ", prefix), "\n\n")
 
   gsea_file=de_map[[prefix]][1]
   gsea_rnk=fread(gsea_file) |> dplyr::rename(gene=V1, sigfvalue=V2)
@@ -104,10 +106,11 @@ for(prefix in names(de_map)){
                           minSize = 15,
                           maxSize = 500)
 
-  # Sort by NES
+  # Sort by padj
   fgsea_results <- fgsea_results |> 
+    dplyr::filter(!is.na(padj)) |>
     as.data.frame() |> 
-    dplyr::arrange(desc(NES)) |> 
+    dplyr::arrange(padj) |> 
     dplyr::mutate(core=sapply(leadingEdge, length),
                   negLog10Padj = -log10(padj),
                   leadingEdgeGenes = sapply(leadingEdge, function(genes) paste(genes, collapse = ":"))) |>
@@ -124,10 +127,10 @@ for(prefix in names(de_map)){
   # Display significant pathways
   sig_pathways <- fgsea_results |> dplyr::filter(padj < 0.05)
   if(nrow(sig_pathways) == 0){
-    gsea_content=paste0(gsea_content, "\nNo significant enriched hallmark geneset found\n")
+    gsea_content=paste0(gsea_content, "\n\nNo significant enriched hallmark geneset found\n\n")
     cur_df=data.frame(prefix=prefix, fgsea_file=fgsea_file, fgsea_png=NA)
   }else{
-    gsea_content=paste0(gsea_content, "\nThere are ", nrow(sig_pathways), " significant enriched hallmark genesets. We will show top 10 postively and top 10 negatively associated gene sets.\n")
+    gsea_content=paste0(gsea_content, "\n\nThere are ", nrow(sig_pathways), " significant enriched hallmark genesets. We will show top 10 postively and top 10 negatively associated gene sets.\n\n")
 
     pos_sig=sig_pathways |> dplyr::filter(NES > 0)
     neg_sig=sig_pathways |> dplyr::filter(NES < 0)
