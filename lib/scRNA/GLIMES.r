@@ -43,6 +43,7 @@ foldChange<-as.numeric(myoptions$foldChange)
 useRawPvalue<-ifelse(myoptions$useRawPvalue == "0", FALSE, TRUE)
 cluster_name=myoptions$cluster_name
 glmm_method=myoptions$glmm_method
+newcriteria=is_one(myoptions$newcriteria, defaultValue=FALSE)
 
 if(!exists('obj')){
   obj<-read_object(parFile1, parFile2, cluster_name)
@@ -403,14 +404,14 @@ for(idx in c(1:nrow(designMatrix))){
                                 log2mean = glmm_df$log2mean, 
                                 log2meandiff = glmm_df$log2meandiff, 
                                 log2FCcutoff = log2(1.2),
-                                newcriteria = T)
+                                newcriteria = newcriteria)
   }else{
     glmm_df$DEGs = identifyDEGs(adj_pval = glmm_df$BH, 
                                 log2FC = glmm_df$log2FC, 
                                 log2mean = glmm_df$log2mean, 
                                 log2meandiff = glmm_df$log2meandiff, 
                                 log2FCcutoff = log2(1.2),
-                                newcriteria = T)
+                                newcriteria = newcriteria)
   }
   glmm_df = glmm_df[order(glmm_df$pval, decreasing = F),]
 

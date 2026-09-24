@@ -41,6 +41,7 @@ myoptions<-read_file_map("fileList3.txt", do_unlist=FALSE)
 is_glimse = "glmm_method" %in% names(myoptions)
 if(is_glimse){
   myoptions$DE_by_cell=1
+  myoptions$newcriteria=is_one(myoptions$newcriteria, 0)
 }
 
 tool_name = ifelse(is_glimse, "GLIMES", "edgeR")
@@ -222,7 +223,9 @@ in_cluster_rmd<-function(de_files, comparisons){
           result<-paste0(result,"\n### Volcano plot\n\n")
           result<-paste0(result, getFigure(volcano_png))
           if(is_glimse){
-            result<-paste0(result,"\n<mark>Since GLIMES considers average log2 gene expression when determining significance, genes with low average expression levels may not be identified as differentially expressed, even if they have low p-values and large absolute fold changes.</mark>\n\n")
+            if(myoptions$newcriteria){
+              result<-paste0(result,"\n<mark>Since GLIMES considers average log2 gene expression when determining significance, genes with low average expression levels may not be identified as differentially expressed, even if they have low p-values and large absolute fold changes.</mark>\n\n")
+            }
           }
         }
 
@@ -321,7 +324,9 @@ between_cluster_rmd<-function(de_files, comparisons, outFile){
         result<-paste0(result,"\n### Volcano plot\n\n")
         result<-paste0(result, getFigure(volcano_png))
         if(is_glimse){
-          result<-paste0(result,"\n<mark>Since GLIMES considers average log2 gene expression when determining significance, genes with low average expression levels may not be identified as differentially expressed, even if they have low p-values and large absolute fold changes.</mark>\n\n")
+          if(myoptions$newcriteria){
+            result<-paste0(result,"\n<mark>Since GLIMES considers average log2 gene expression when determining significance, genes with low average expression levels may not be identified as differentially expressed, even if they have low p-values and large absolute fold changes.</mark>\n\n")
+          }
         }
       }
 
