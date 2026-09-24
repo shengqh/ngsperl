@@ -59,7 +59,7 @@ sub initializeRNASeqDefaultOptions {
   initDefaultValue( $def, "trimmomatic_option",  ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:50" );
 
   initDefaultValue( $def, "perform_fgsea", 1 );
-  initDefaultValue( $def, "perform_gsea", !$def->{perform_fgsea} );
+  initDefaultValue( $def, "perform_gsea",  !$def->{perform_fgsea} );
 
   #$def->{gsea_jar}        or die "Define gsea_jar at definition first";
   #$def->{gsea_db}         or die "Define gsea_db at definition first";
@@ -459,38 +459,38 @@ samtools flagstat __NAME__.dedup.bam > __NAME__.dedup.bam.flagstat
           push( @$tasks, $dedup_task );
         } ## end if ( $def->{perform_umitools...})
       } ## end else [ if ( $aligner eq "salmon")]
-
-      if ( $def->{perform_counting} ) {
-        my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
-        if ( $def->{additional_bam_files} ) {
-          push @$source_ref, "additional_bam_files";
-        }
-
-        my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "featurecount";
-        $config->{"featurecount"} = {
-          class         => "Count::FeatureCounts",
-          perform       => 1,
-          target_dir    => $featureCountFolder,
-          option        => getValue( $def, "featureCount_option", "-g gene_id -t exon" ),
-          source_ref    => $source_ref,
-          gff_file      => $transcript_gtf,
-          is_paired_end => is_paired_end($def),
-          sh_direct     => 0,
-          pbs           => {
-            "nodes"    => "1:ppn=1",
-            "walltime" => "23",
-            "mem"      => "40gb"
-          },
-        };
-
-        push @$tasks, "featurecount";
-
-        add_alignment_summary( $config, $def, $tasks, $target_dir, "featurecount_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.chromosome.csv;.chromosome.png,.gene.count.csv,.gene.count.png", undef, [ "featurecount", ".count.summary" ], undef, undef, [ "featurecount", '^(?!.*\.chromosome\.count).*\.count$' ] );
-
-        $count_table_ref   = [ "featurecount", ".count\$" ];
-        $multiqc_depedents = "featurecount";
-      } ## end if ( $def->{perform_counting...})
     } ## end if ( $def->{perform_mapping...})
+
+    if ( $def->{perform_counting} ) {
+      my $transcript_gtf = $def->{transcript_gtf} or die "Define transcript_gtf at definition first";
+      if ( $def->{additional_bam_files} ) {
+        push @$source_ref, "additional_bam_files";
+      }
+
+      my $featureCountFolder = $target_dir . "/" . getNextFolderIndex($def) . "featurecount";
+      $config->{"featurecount"} = {
+        class         => "Count::FeatureCounts",
+        perform       => 1,
+        target_dir    => $featureCountFolder,
+        option        => getValue( $def, "featureCount_option", "-g gene_id -t exon" ),
+        source_ref    => $source_ref,
+        gff_file      => $transcript_gtf,
+        is_paired_end => is_paired_end($def),
+        sh_direct     => 0,
+        pbs           => {
+          "nodes"    => "1:ppn=1",
+          "walltime" => "23",
+          "mem"      => "40gb"
+        },
+      };
+
+      push @$tasks, "featurecount";
+
+      add_alignment_summary( $config, $def, $tasks, $target_dir, "featurecount_summary", "../Alignment/AlignmentUtils.r;../Alignment/STARFeatureCount.r", ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png;.chromosome.csv;.chromosome.png,.gene.count.csv,.gene.count.png", undef, [ "featurecount", ".count.summary" ], undef, undef, [ "featurecount", '^(?!.*\.chromosome\.count).*\.count$' ] );
+
+      $count_table_ref   = [ "featurecount", ".count\$" ];
+      $multiqc_depedents = "featurecount";
+    } ## end if ( $def->{perform_counting...})
   } ## end else [ if ( $def->{perform_mapping...})]
 
   if ( $def->{perform_star_fusion} ) {
@@ -1671,12 +1671,11 @@ fi
       push( @report_files, "featurecount_summary",    ".FeatureCountSummary.csv\$" );
       push( @report_names, "featureCounts_table_png", "featureCounts_table" );
 
+      push( @report_files, "featurecount_summary",   ".gene.count.png\$" );
+      push( @report_files, "featurecount_summary",   ".gene.count.csv\$" );
+      push( @report_names, "featureCounts_gene_png", "featureCounts_gene_table" );
 
-      push( @report_files, "featurecount_summary", ".gene.count.png\$" );
-      push( @report_files, "featurecount_summary", ".gene.count.csv\$" );
-      push( @report_names, "featureCounts_gene_png",    "featureCounts_gene_table" );
-
-    }
+    } ## end if ( defined $config->...)
 
     if ( defined $config->{genetable} ) {
       push( @copy_files, "genetable", ".count\$", "genetable", ".fpkm.tsv" );
@@ -1735,7 +1734,7 @@ fi
 
     if ( ( defined $deseq2taskname ) && ( defined $config->{$deseq2taskname} ) ) {
       my $DE_batch_correction_method = getValue( $def, "DE_batch_correction_method", "none" );
-      my $suffix = getDeseq2Suffix( $config, $def, $deseq2taskname );
+      my $suffix                     = getDeseq2Suffix( $config, $def, $deseq2taskname );
 
       my $pairs = $config->{pairs};
 
@@ -1765,13 +1764,13 @@ fi
         push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_DESeq2-vsd-pca.png" );
         push( @report_names, "deseq2_" . $key . "_pca" );
 
-        if( $DE_batch_correction_method eq "svaseq") {
+        if ( $DE_batch_correction_method eq "svaseq" ) {
           push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_svaseq_DESeq2-vsd-heatmap.png" );
           push( @report_names, "deseq2_" . $key . "_heatmap_svaseq" );
 
           push( @report_files, $deseq2taskname, "/" . $key . $suffix . "_geneAll_svaseq_DESeq2-vsd-pca.png" );
           push( @report_names, "deseq2_" . $key . "_pca_svaseq" );
-        }
+        } ## end if ( $DE_batch_correction_method...)
       } ## end for my $key ( keys %$pairs)
       push( @copy_files, $deseq2taskname, "_DESeq2.csv" );
       push( @copy_files, $deseq2taskname, "_DESeq2_sig.csv" );
@@ -1786,7 +1785,7 @@ fi
       push( @copy_files, $webgestaltTaskName, "_pathway_KEGG\$" );
 
       if ( defined $linkTaskName && defined $config->{$linkTaskName} ) {
-        push( @copy_files, $linkTaskName, ".html\$" );
+        push( @copy_files,   $linkTaskName, ".html\$" );
         push( @report_files, $linkTaskName, ".rds" );
         push( @report_names, "WebGestalt_deseq2" );
       }
@@ -1845,11 +1844,11 @@ fi
       "featureCounts_UseMultiMappingReads" => [$fcMultiMapping],
       "top25cv_in_hca"                     => [ getValue( $def, "top25cv_in_hca" ) ? "TRUE" : "FALSE" ],
       "task_name"                          => $taskName,
-      "out.width"                          => getValue( $def, "report.out.width",    "80%" ),
-      "remove_chrM_genes"                  => getValue( $def, "remove_chrM_genes",   0 ),
-      "adapter"                            => getValue( $def, "adapter",             "" ),
-      "cutadapt_option"                    => getValue( $def, "cutadapt_option",     "" ),
-      "featureCount_option"                => getValue( $def, "featureCount_option", "" ),
+      "out.width"                          => getValue( $def, "report.out.width",           "80%" ),
+      "remove_chrM_genes"                  => getValue( $def, "remove_chrM_genes",          0 ),
+      "adapter"                            => getValue( $def, "adapter",                    "" ),
+      "cutadapt_option"                    => getValue( $def, "cutadapt_option",            "" ),
+      "featureCount_option"                => getValue( $def, "featureCount_option",        "" ),
       "DE_batch_correction_method"         => getValue( $def, "DE_batch_correction_method", "none" ),
     };
 
