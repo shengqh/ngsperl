@@ -208,14 +208,8 @@ interactions.
 
 ```{r}
 altered_pathway_png=paste0(file_prefix, ".altered_pathway.png")
-```
-
-```{r eval=!file.exists(altered_pathway_png)}
 gg1 <- rankNet(cur_cellchat, mode = "comparison", color.use=color_use, measure = "weight", sources.use = NULL, targets.use = NULL, stacked = T, do.stat = TRUE)
 ggsave(altered_pathway_png, gg1, width=6, height=14, units="in", dpi=300)
-```
-
-```{r}
 include_graphics(altered_pathway_png)
 ```
 
