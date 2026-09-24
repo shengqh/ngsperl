@@ -4415,7 +4415,7 @@ save_top_gene_figures <- function(de_obj, sigout, designdata, bBetweenCluster, f
                             is_between_cluster=bBetweenCluster, 
                             log_cpm=NULL) 
     width = max(8, nsamplegroup * 0.25)
-    ggsave(paste0(file_prefix, ".top_", vi, "_gene.png"),  g, width=width, height=12, units="in", dpi=300)
+    ggsave(paste0(file_prefix, ".top_", vi, "_gene.png"),  g, width=width, height=8, units="in", dpi=300)
   }
 
   group_samplegroup=de_obj@meta.data |> dplyr::select(Group, DisplayGroup, SampleGroup) |> dplyr::distinct()
@@ -4448,8 +4448,8 @@ save_top_gene_figures <- function(de_obj, sigout, designdata, bBetweenCluster, f
 
   g = g_annot + g_dot + patchwork::plot_layout(width = c(1, 20), guides = "collect")
 
-  height=max(4, nsamplegroup * 0.2)
-  ggsave(paste0(file_prefix, ".top_", "dotplot.png"), g, width=12, height=height, units="in", dpi=300)
+  height=max(5, nsamplegroup * 0.2 + 1)
+  ggsave(paste0(file_prefix, ".top_dotplot.png"), g, width=12, height=height, units="in", dpi=300)
 }
 
 do_integration_v5 <- function(outFile, 
