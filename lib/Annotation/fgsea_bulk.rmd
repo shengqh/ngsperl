@@ -89,7 +89,7 @@ de_map=split(de_files$gseaFile, de_files$comparison)
 ---
 title: "FGSEA - `r task_name`"
 author:
-  email: "`r email`"
+- name: "`r email`"
   affiliation: "`r affiliation`"
 ---
 
