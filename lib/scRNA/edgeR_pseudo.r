@@ -1,19 +1,19 @@
 rm(list=ls()) 
-outFile='Aorta_Progeria'
+outFile='endothelial_lung'
 parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/nobackup/brown_lab/projects/20260226_Aorta_Progeria_scRNA_mouse_no_ABE/20260305_refine_final_clusters/Aorta_Progeria.final.obj.rds'
+parFile1='/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260915_T07_paper_figures/20260921.EC_lung_iSGS_fastmnn.final.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/nobackup/brown_lab/projects/20260226_Aorta_Progeria_scRNA_mouse_no_ABE/20260309_DE_pseudobulk_celltype_mincount5/files_edgeR_inCluster_bySample/result')
+setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260921_T08_differnetial_expression/final_obj_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 source("countTableVisFunctions.R")
+source("scRNA_func.r")
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -41,6 +41,10 @@ if(class(myoptions$exclude_cell_types_from_comparison) == "character"){
 group_column=myoptions$group_column
 
 discard_samples=unlist(strsplit(myoptions$discard_samples, ','))
+discard_sample_pattern=myoptions$discard_sample_pattern
+if(is.null(discard_sample_pattern)){
+  discard_sample_pattern=""
+}
 
 comparisons<-read.table(parSampleFile2, sep="\t", stringsAsFactors = F, fill=TRUE, header=F)
 if(ncol(comparisons) == 3){
@@ -111,8 +115,15 @@ if(!is.null(myoptions$sample_column)){
 }
 
 if(length(discard_samples) > 0){
-  cat("discard_samples: ", paste0(discard_samples, collapse=", "), "\n")
   discard_cells = colnames(obj)[obj@meta.data$orig.ident %in% discard_samples]
+  cat("discarded", length(discard_cells), "cells from discard_samples:", paste0(discard_samples, collapse=", "), "\n")
+  obj<-subset(obj, cells=discard_cells, invert=TRUE)
+}
+
+
+if(discard_sample_pattern != ""){
+  discard_cells = colnames(obj)[grepl(discard_sample_pattern, obj@meta.data$orig.ident)]
+  cat("discarded", length(discard_cells), "cells by discard_sample_pattern:", discard_sample_pattern, "\n")
   obj<-subset(obj, cells=discard_cells, invert=TRUE)
 }
 
@@ -146,7 +157,7 @@ if(1){
   cat("get design matrix ...\n")
   designMatrix<-NULL
 
-  comp <-comparisonNames[2]
+  comp <-comparisonNames[1]
   for (comp in comparisonNames){
     comp_groups<-comparisons[comparisons$Comparison==comp,]
     comp_options = split(comp_groups$Value, comp_groups$Key)
@@ -449,3 +460,4 @@ for(idx in c(1:nrow(designMatrix))){
 }
 
 write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
+
