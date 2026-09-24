@@ -108,6 +108,10 @@ if("V3" %in% colnames(comparison_tbl)){
 ```
 
 ```{r}
+force=FALSE
+```
+
+```{r}
 comp_content=""
 comparisons=unique(comparison_tbl$comparison)
 for(cur_comp in comparisons){
