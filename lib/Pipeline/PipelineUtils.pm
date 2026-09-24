@@ -3992,8 +3992,8 @@ sub add_featurecount {
     sh_direct     => 0,
     pbs           => {
       "nodes"    => "1:ppn=1",
-      "walltime" => "23",
-      "mem"      => "40gb"
+      "walltime" => "2",
+      "mem"      => "5gb"
     },
   };
   $config->{"${task_name}_summary"} = {
