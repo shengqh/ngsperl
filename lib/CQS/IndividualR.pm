@@ -299,6 +299,11 @@ fi
         my $folder = $out_report_at_root_folder ? "../" : "";
         my $rmd_command = "$rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='$folder${sample_name}${rmd_ext}')\"";
         print $pbs "
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo \"Error, R script failed with exit code \$status\"
+  exit \$status
+fi
 
 $rmd_command
 
