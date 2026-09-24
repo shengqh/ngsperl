@@ -2049,6 +2049,7 @@ sub addEdgeRTask {
     "group_column"                       => $group_column,
     "reduction"                          => $reduction,
     "discard_samples"                    => $def->{discard_samples},
+    "discard_sample_pattern"             => $def->{discard_sample_pattern},
     "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison}
   };
 
@@ -2181,10 +2182,11 @@ sub addGLIMESTask {
     "reduction"                          => $reduction,
     "discard_samples"                    => $def->{discard_samples},
     "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison},
-    "glmm_method"                        => getValue( $def, "GLIMES_glmm_method",           "binomial" ),
-    # Default is 10% since GLIMES is designed for single cell, not like edgeR. Hope to keep more genes for DE analysis.
+    "glmm_method"                        => getValue( $def, "GLIMES_glmm_method", "binomial" ),
+    # Default is 5% since GLIMES is designed for single cell, not like edgeR. Hope to keep more genes for DE analysis.
     # cpm filter is not neccessary since in scRNA data, the cpm values are pretty higher.
-    "filter_cellPercentage"              => getValue( $def, "GLIMES_filter_cellPercentage", 0.1 )
+    "filter_cellPercentage" => getValue( $def, "GLIMES_filter_cellPercentage", 0.05 ),
+    "newcriteria"           => getValue( $def, "GLIMES_DE_use_newcriteria",    0 ),
   };
 
   my $GLIMETaskname         = defined $celltype_task ? $celltype_task . "_GLIMES" : $cluster_task . "_GLIMES";
