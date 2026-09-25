@@ -137,12 +137,15 @@ fi
 
     print $pbs "
 
+mkdir -p tmp
+export TMPDIR=./tmp
+
 $rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='${sample_name}${output_ext}')\"
 
 ";
 
     print $pbs "\n\n$post_command\n\n";
-    print $pbs "\n\nrm -rf .local .cache .java\n";
+    print $pbs "\n\nrm -rf .local .cache .java tmp\n";
 
     $self->close_pbs( $pbs, $pbs_file );
   }

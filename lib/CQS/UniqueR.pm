@@ -264,8 +264,13 @@ sub perform {
   }
 
   print $pbs "$init_command\n";
-  print $pbs $self->get_init_pbs($config, $section) . "\n";
-  
+  print $pbs $self->get_init_pbs($config, $section) . "
+
+mkdir -p tmp
+export TMPDIR=./tmp
+
+";
+
   my $rscript = get_option_include_general($config, $section, "Rscript", "Rscript");
 
   my $vanilla_option = $use_vanilla ? "--vanilla ":"";
@@ -303,7 +308,7 @@ $rmd_command
   }
 
   print $pbs "\n\n$post_command\n\n";
-  print $pbs "\n\nrm -rf .local .cache .java\n";
+  print $pbs "\n\nrm -rf .local .cache .java tmp\n";
   
   $self->close_pbs( $pbs, $pbs_file );
 }

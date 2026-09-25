@@ -64,7 +64,13 @@ sub perform {
   }
 
   print $final "
+
+mkdir -p tmp
+export TMPDIR=./tmp
+
 $rscript -e \"library(knitr);rmarkdown::render('$rfilename');\"
+
+rm -rf .local .cache .java tmp
 ";
 
   $self->close_pbs( $final, $final_pbs );
