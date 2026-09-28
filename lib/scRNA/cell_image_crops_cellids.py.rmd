@@ -5,7 +5,7 @@ output:
   rmdformats::readthedown:
     toc_depth: 3
     code_folding: hide
-    number_sections: false
+    number_sections: true
 params:
   report_csv: null
 ---
@@ -36,7 +36,10 @@ if (!nrow(report_df)) {
   stop("The report CSV has no rows.")
 }
 
-required_columns <- c("cell_group", "cell_id", "cell_image", "cell_width", "cell_height")
+required_columns <- c(
+  "cell_group", "cell_id", "cell_image", "cell_masked_image", "cell_width", "cell_height",
+  "nucleus_image", "nucleus_masked_image", "nucleus_width", "nucleus_height"
+)
 missing_columns <- setdiff(required_columns, colnames(report_df))
 if (length(missing_columns) > 0) {
   stop(sprintf(
@@ -46,26 +49,10 @@ if (length(missing_columns) > 0) {
 }
 
 image_specs <- list(
-  list(title = "Cell Images", image_col = "cell_image", width_col = "cell_width", height_col = "cell_height")
+  list(title = "Cell", image_col = "cell_image", width_col = "cell_width", height_col = "cell_height"),
+  list(title = "Masked cell", image_col = "cell_masked_image", width_col = "cell_width", height_col = "cell_height"),
+  list(title = "Masked nucleus", image_col = "nucleus_masked_image", width_col = "nucleus_width", height_col = "nucleus_height")
 )
-
-if ("nucleus_image" %in% colnames(report_df)) {
-  nucleus_required <- c("nucleus_width", "nucleus_height")
-  missing_nucleus <- setdiff(nucleus_required, colnames(report_df))
-  if (length(missing_nucleus) > 0) {
-    stop(sprintf(
-      "Missing required nucleus columns in report CSV: %s",
-      paste(missing_nucleus, collapse = ", ")
-    ))
-  }
-
-  image_specs[[length(image_specs) + 1]] <- list(
-    title = "Nucleus Images",
-    image_col = "nucleus_image",
-    width_col = "nucleus_width",
-    height_col = "nucleus_height"
-  )
-}
 
 format_cell_id <- function(cell_id) {
   if (is.na(cell_id)) {
@@ -101,7 +88,7 @@ if (!is.finite(max_dimension) || max_dimension <= 0) {
   max_dimension <- 1
 }
 
-scale_factor <- if (max_dimension > 180) 180 / max_dimension else 1
+scale_factor <- 1.5 * if (max_dimension > 180) 180 / max_dimension else 1
 
 render_card <- function(cell_group, cell_id, image_path, section_title, image_width, image_height) {
   resolved_path <- resolve_image_path(image_path)
@@ -153,8 +140,15 @@ p {
 
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(10, max-content);
-  gap: 12px;
+  grid-template-columns: repeat(4, max-content);
+  gap: 16px;
+  align-items: start;
+}
+
+.cell-images {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  gap: 8px;
   align-items: start;
 }
 
@@ -184,10 +178,11 @@ for (cell_group in sort(unique(report_df$cell_group))) {
 
   cat("#", cell_group, "\n\n")
   group_df = group_df[order(group_df$cell_id), , drop = FALSE]
-  for (spec in image_specs) {
-    cat('<div class="grid-wrapper"><div class="image-grid">')
-    for (row_idx in seq_len(nrow(group_df))) {
-      row <- group_df[row_idx, , drop = FALSE]
+  cat('<div class="grid-wrapper"><div class="image-grid">')
+  for (row_idx in seq_len(nrow(group_df))) {
+    row <- group_df[row_idx, , drop = FALSE]
+    cat('<div class="cell-images">')
+    for (spec in image_specs) {
       cat(
         render_card(
           cell_group = row[["cell_group"]][[1]],
@@ -199,8 +194,8 @@ for (cell_group in sort(unique(report_df$cell_group))) {
         )
       )
     }
-
-    cat('</div></div>')
+    cat('</div>')
   }
+  cat('</div></div>')
 }
 ```

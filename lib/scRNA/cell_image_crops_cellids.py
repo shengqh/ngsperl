@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 import tifffile
 from PIL import Image
+from affine import Affine
+from rasterio.features import geometry_mask
 
 np.random.seed(20260427)
 
@@ -63,23 +65,37 @@ def render_rmarkdown_report(output_df, output_prefix, template_rmd, rscript="Rsc
     return output_csv, output_html
 
 
-def extract_crop(gdf, cell_id, padding, full_image, save_file_path=""):
+def extract_crop(gdf, cell_id, padding, full_image, save_file_path="", save_masked_file_path=""):
     if not cell_id in gdf.cell_id.values:
         raise ValueError(f"Cell ID {cell_id} not found in the geojson data")
-        
-    idx = gdf.index[gdf.cell_id == cell_id][0]
-    minx, miny, maxx, maxy = gdf.geometry.bounds.values[idx]
+
+    geometry = gdf.loc[gdf.cell_id == cell_id, "geometry"].iloc[0]
+    minx, miny, maxx, maxy = geometry.bounds
 
     # Convert coordinates to pixel indices (adding padding)
     left, top = int(minx) - padding, int(miny) - padding
     right, bottom = int(maxx) + padding, int(maxy) + padding
+    crop_left, crop_top = max(0, left), max(0, top)
+    crop_right = min(full_image.shape[1], right)
+    crop_bottom = min(full_image.shape[0], bottom)
 
     # Crop the numpy array: image[y_range, x_range]
-    crop = full_image[max(0, top):bottom, max(0, left):right]
+    crop = full_image[crop_top:crop_bottom, crop_left:crop_right]
     crop_pil = Image.fromarray(crop).convert("RGB")
 
     if save_file_path:
         crop_pil.save(save_file_path)
+
+    if save_masked_file_path:
+        inside_geometry = geometry_mask(
+            [geometry],
+            out_shape=crop.shape[:2],
+            transform=Affine.translation(crop_left, crop_top),
+            invert=True,
+        )
+        masked_crop = np.asarray(crop_pil.convert("RGBA")).copy()
+        masked_crop[~inside_geometry, 3] = 0
+        Image.fromarray(masked_crop, mode="RGBA").save(save_masked_file_path)
 
     return crop_pil
 
@@ -93,7 +109,8 @@ def parse_args():
         help="Path to cell_segmentations.geojson")
     parser.add_argument(
         "--nucleus_geojson",
-        help="Path to nucleus_segmentations.geojson (optional)",
+        required=True,
+        help="Path to nucleus_segmentations.geojson",
     )
     parser.add_argument(
         "--dhsr_tiff", 
@@ -180,8 +197,9 @@ def main():
     logger.info("Reading image data...")
     full_image = tifffile.imread(args.dhsr_tiff)
 
-    # create folder args.output_prefix
-    os.makedirs(args.output_prefix, exist_ok=True)
+    output_dir = os.path.abspath(args.output_prefix)
+    output_name = os.path.basename(os.path.normpath(args.output_prefix))
+    os.makedirs(output_dir, exist_ok=True)
 
     selected_groups = []
     for group_name, group_df in cell_df.groupby("cell_group", sort=False):
@@ -202,22 +220,52 @@ def main():
         cellgroup = row["cell_group"]
         cellid = row["cell_id"]
 
-        cell_image_name = f"{args.output_prefix}/{args.output_prefix}_{cellid}.cell.padding_{args.padding}.png"
-        cell_image = extract_crop(cell_gdf, cellid, args.padding, full_image, save_file_path=cell_image_name)
+        cell_image_name = os.path.join(
+            output_dir,
+            f"{output_name}_{cellid}.cell.padding_{args.padding}.png",
+        )
+        cell_masked_image_name = os.path.join(
+            output_dir,
+            f"{output_name}_{cellid}.cell.masked.padding_{args.padding}.png",
+        )
+        cell_image = extract_crop(
+            cell_gdf,
+            cellid,
+            args.padding,
+            full_image,
+            save_file_path=cell_image_name,
+            save_masked_file_path=cell_masked_image_name,
+        )
 
         output_row = {
             "cell_group": cellgroup,
             "cell_id": cellid,
             "cell_image": cell_image_name,
+            "cell_masked_image": cell_masked_image_name,
             "cell_width": cell_image.size[0],
             "cell_height": cell_image.size[1],
         }
 
         if nucleus_gdf is not None:
-            nucleus_image_name = f"{args.output_prefix}_{cellid}.nucleus.padding_{args.padding}.png"
-            nucleus_image = extract_crop(nucleus_gdf, cellid, args.padding, full_image, save_file_path=nucleus_image_name)
+            nucleus_image_name = os.path.join(
+                output_dir,
+                f"{output_name}_{cellid}.nucleus.padding_{args.padding}.png",
+            )
+            nucleus_masked_image_name = os.path.join(
+                output_dir,
+                f"{output_name}_{cellid}.nucleus.masked.padding_{args.padding}.png",
+            )
+            nucleus_image = extract_crop(
+                nucleus_gdf,
+                cellid,
+                args.padding,
+                full_image,
+                save_file_path=nucleus_image_name,
+                save_masked_file_path=nucleus_masked_image_name,
+            )
             output_row.update({
                 "nucleus_image": nucleus_image_name,
+                "nucleus_masked_image": nucleus_masked_image_name,
                 "nucleus_width": nucleus_image.size[0],
                 "nucleus_height": nucleus_image.size[1],
             })

@@ -4732,14 +4732,15 @@ python3 $cell_crop_script \\
 --cellid_csv '__FILE__' \\
 --dhsr_tiff '__FILE2__' \\
 --cell_geojson '__FILE3__' \\
+--nucleus_geojson '__FILE4__' \\
 --output_prefix '__NAME__' \\
 --limit $cell_limit
 ",
     parameterSampleFile1_ref => $cellid_ref,
-    parameterSampleFile3     => getValue( $def, "cell_geojson_files" ),
     parameterSampleFile2     => getValue( $def, "image_files" ),
-    #parameterSampleFile4     => getValue( $def, "nucleus_geojson_files" ),
-    output_ext            => ".figures.csv",
+    parameterSampleFile3     => getValue( $def, "cell_geojson_files" ),
+    parameterSampleFile4     => getValue( $def, "nucleus_geojson_files" ),
+    output_ext            => ".image_report.html",
     docker_prefix         => "visiumhd_",
     no_output             => 1,
     output_to_same_folder => 0,
