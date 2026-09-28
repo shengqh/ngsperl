@@ -936,6 +936,35 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
   #   push( @$tasks, $singlet_task );
   # } ## end if ( $def->{perform_RCTD...})
 
+  if($def->{perform_distance_analysis}){
+    my $distance_task = "nucleus_distance_all";
+    my $nucleus_distance_script = dirname(__FILE__) . "/../scRNA/spatial_nucleus_distance_all.py";
+
+    $config->{$distance_task} = {
+      class         => "CQS::ProgramWrapper",
+      perform       => 1,
+      target_dir    => "${target_dir}/$distance_task",
+      program       => "",
+      check_program => 0,
+      option        => "
+python3 $nucleus_distance_script \\
+--file-map '__FILE__' \\
+--output-prefix __NAME__ 
+",
+      parameterSampleFile1 => getValue( $def, "nucleus_geojson_files" ),
+      output_ext           => ".distance.csv",
+      docker_prefix        => "visiumhd_",
+      no_output            => 1,
+      sh_direct            => 0,
+      pbs                  => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2:00:00",
+        "mem"      => "10gb"
+      },
+    };
+    push( @$tasks, $distance_task );
+  }
+
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
     perform    => 1,
