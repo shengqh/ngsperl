@@ -793,10 +793,10 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         push( @$tasks, $choose_task );
 
         if ( getValue( $def, "extract_visiumhd_cell_figures", 0 ) and $source_assay eq 'Spatial.Polygons' ) {
-          my $cellid_ref = [ $choose_task, ".final.cellids.csv" ];
-          my $cell_crops_task  = "${choose_task}_cell_figures";
+          my $cellid_ref      = [ $choose_task, ".final.cellids.csv" ];
+          my $cell_crops_task = "${choose_task}_cell_figures";
           add_cell_crops( $config, $def, $tasks, $target_dir, $cell_crops_task, $cellid_ref );
-        } ## end if ( getValue( $def, "extract_visiumhd_cell_figures"...))
+        }
 
       } ## end if ( $def->{perform_dynamic_choose...})
     } ## end if ( $def->{perform_subcluster...})
@@ -936,8 +936,8 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
   #   push( @$tasks, $singlet_task );
   # } ## end if ( $def->{perform_RCTD...})
 
-  if($def->{perform_distance_analysis}){
-    my $distance_task = "nucleus_distance_all";
+  if ( $def->{perform_distance_analysis} ) {
+    my $distance_task           = "nucleus_distance_all";
     my $nucleus_distance_script = dirname(__FILE__) . "/../scRNA/spatial_nucleus_distance_all.py";
 
     $config->{$distance_task} = {
@@ -963,7 +963,35 @@ python3 $nucleus_distance_script \\
       },
     };
     push( @$tasks, $distance_task );
-  }
+  } ## end if ( $def->{perform_distance_analysis...})
+
+  if ( $def->{perform_nucleus_to_cell_ratio} ) {
+    my $ratio_task                = "nucleus_to_cell_ratio";
+    my $nucleus_cell_ratio_script = dirname(__FILE__) . "/../scRNA/VisiumHD_nucleus_cell_ratio.py";
+    $config->{$ratio_task} = {
+      class         => "CQS::ProgramWrapper",
+      perform       => 1,
+      target_dir    => "${target_dir}/$ratio_task",
+      program       => "",
+      check_program => 0,
+      option        => "
+    python3 $nucleus_cell_ratio_script \\
+      --file-map '__FILE__' \\
+      --output-prefix __NAME__ 
+    ",
+      parameterSampleFile1 => getValue( $def, "nucleus_geojson_files" ),
+      output_ext           => ".all_cells.csv",
+      docker_prefix        => "visiumhd_",
+      no_output            => 1,
+      sh_direct            => 0,
+      pbs                  => {
+        "nodes"    => "1:ppn=1",
+        "walltime" => "2:00:00",
+        "mem"      => "10gb"
+      },
+    };
+    push( @$tasks, $ratio_task );
+  } ## end if ( $def->{perform_nucleus_to_cell_ratio...})
 
   $config->{sequencetask} = {
     class      => getSequenceTaskClassname($cluster),
