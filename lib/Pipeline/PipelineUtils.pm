@@ -116,6 +116,8 @@ our %EXPORT_TAGS = (
         writeAnnotationLocus_gff
         add_split_fastq_dynamic
         add_trimmomatic
+
+        add_BayesPrism_Deconvolution
     )
   ]
 );
@@ -4251,6 +4253,35 @@ echo v0.36 > __NAME__.trimmomatic.version
   }
 
 } ## end sub add_trimmomatic
+
+
+sub add_BayesPrism_Deconvolution {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $source_ref ) = @_;
+
+  $config->{$task_name} = {
+    class                    => "CQS::IndividualR",
+    perform                  => 1,
+    rCode                    => "",
+    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
+    option                   => "",
+    parameterSampleFile1_ref => $source_ref,
+    parameterSampleFile2     => {
+      "task_name"   => getValue( $def, "task_name" ),
+      "email"       => getValue( $def, "email" ),
+      "affiliation" => getValue( $def, "affiliation" ),
+    },
+    rtemplate       => "reportFunctions.R;../Deconvolution/BayesPrism.r",
+    output_file     => "",
+    output_file_ext => "_Fractions.csv",
+    pbs             => {
+      "nodes"    => "1:ppn=12",
+      "walltime" => "24",
+      "mem"      => "100gb"
+    },
+  };
+  push( @$tasks, $task_name );
+  return ($task_name);
+} ## end sub add_BayesPrism_Deconvolution
 
 1;
 
