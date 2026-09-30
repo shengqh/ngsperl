@@ -4272,7 +4272,7 @@ sub add_BayesPrism_Deconvolution {
     },
     rtemplate       => "reportFunctions.R;../Deconvolution/BayesPrism.r",
     output_file     => "",
-    output_file_ext => "_Fractions.csv",
+    output_file_ext => ".fractions.csv",
     pbs             => {
       "nodes"    => "1:ppn=12",
       "walltime" => "24",
