@@ -13,14 +13,15 @@ setwd('/nobackup/h_cqs/shengq2/test/20260929_RNAseq_Deconvolution/BayesPrism_Dec
 
 ### Parameter setting end ###
 
+source("reportFunctions.R")
 library(Seurat)
 #BiocManager::install("Danko-Lab/BayesPrism/BayesPrism")
 library(BayesPrism)
 library(logger)
 library(data.table)
 
-source("reportFunctions.R")
 
+# Select this sample's file-list entries, then organize values by their option names.
 file_tbl=fread(parSampleFile1, data.table=FALSE, header=FALSE) |>
     dplyr::filter(V3 == sample_name)
 
@@ -33,6 +34,7 @@ n_cores   <- 12                  # cores for run.prism()
 # (types x down_sample_size) cells x genes x 8 bytes - printed before it is built
 down_sample_size <- 5000
 pw_res    <- "."   # output directory
+exp.cells <- 5 # Remove excluded gene groups and genes expressed in too few reference cells.
 
 output_prefix = sample_name
 
@@ -41,8 +43,10 @@ cell_type_column = data_options$cell_type_column    # meta.data column holding t
 fn_bulk  = data_options$count_file
 gene_col = data_options$gene_column
 cols_rm  = data_options$discard_columns
+species = data_options$species
 
-log_info(paste0('>>> Reading bulk RNA-seq data: ', fn_bulk))
+# Read the bulk expression table and retain only numeric sample columns.
+log_info(paste0('Reading bulk RNA-seq data: ', fn_bulk))
 
 # the delimiter is sniffed from the header line rather than taken from the extension;
 # read.table's default (any whitespace) would turn a comma-separated file into one column
@@ -62,7 +66,7 @@ if (!gene_col %in% colnames(bulk.raw)) {
 # misspelled numeric annotation column would survive and be treated as a sample
 absent <- setdiff(cols_rm, colnames(bulk.raw))
 if (length(absent)) {
-    log_info(paste0(">>> cols_rm not present in this file (ignored): ", paste(absent, collapse = ", ")))
+    log_info(paste0("cols_rm not present in this file (ignored): ", paste(absent, collapse = ", ")))
 }
 bulk.raw <- bulk.raw[, setdiff(colnames(bulk.raw), cols_rm), drop = FALSE]
 
@@ -71,22 +75,25 @@ bulk.raw <- bulk.raw[, setdiff(colnames(bulk.raw), cols_rm), drop = FALSE]
 is_num  <- vapply(bulk.raw, is.numeric, logical(1))
 is_num[gene_col] <- FALSE
 dropped <- setdiff(colnames(bulk.raw)[!is_num], gene_col)
-if (length(dropped)) log_info(paste0(">>> dropping non-numeric columns: ", paste(dropped, collapse = ", ")))
+if (length(dropped)) log_info(paste0("dropping non-numeric columns: ", paste(dropped, collapse = ", ")))
 counts <- as.matrix(bulk.raw[, is_num, drop = FALSE])
+# Reject values incompatible with raw counts before aggregating by gene name.
 if (ncol(counts) < 2) stop("only ", ncol(counts), " numeric column(s) in ", fn_bulk)
 if (any(counts < 0, na.rm = TRUE)) stop(fn_bulk, ': negative values - not a count matrix')
 if (anyNA(counts)) stop(fn_bulk, ': ', sum(is.na(counts)), ' NA counts')
-if (any(counts != round(counts))) log_warn(paste0(">>> WARNING: non-integer values in ", fn_bulk,
+if (any(counts != round(counts))) log_warn(paste0("WARNING: non-integer values in ", fn_bulk,
                                                      " - check it is raw counts"))
 # genes without a name (failed conversion) are dropped; duplicated names are summed
 genes <- trimws(as.character(bulk.raw[[gene_col]]))
 keep  <- !is.na(genes) & nzchar(genes)
-if (any(!keep)) log_info(paste0(">>> dropping ", sum(!keep), " rows with no gene name"))
-log_info(paste0(">>> summing ", sum(duplicated(genes[keep])), " duplicated gene rows"))
+if (any(!keep)) log_info(paste0("dropping ", sum(!keep), " rows with no gene name"))
+log_info(paste0("summing ", sum(duplicated(genes[keep])), " duplicated gene rows"))
 bulk_matrix <- t(rowsum(counts[keep, , drop = FALSE], group = genes[keep]))
-log_info(paste0(">>> Bulk matrix: ", nrow(bulk_matrix), " samples x ", ncol(bulk_matrix), " genes"))
+# BayesPrism expects samples in rows and genes in columns.
+log_info(paste0("Bulk matrix: ", nrow(bulk_matrix), " samples x ", ncol(bulk_matrix), " genes"))
 
-log_info(">>> Preparing reference single-cell data ...")
+# Load the single-cell reference and confirm its metadata contains the requested labels.
+log_info("Preparing reference single-cell data ...")
 # ---- reference ----
 sc_object <- readRDS(fn_ref)
 if (!cell_type_column %in% colnames(sc_object@meta.data)) {
@@ -98,9 +105,10 @@ print(table(sc_object@meta.data[[cell_type_column]], useNA = 'ifany'))
 
 # set idents for downsampling
 Idents(sc_object) <- cell_type_column
-log_info(paste0(">>> Downsampling single-cell data to ", down_sample_size, " cells per type..."))
+log_info(paste0("Downsampling single-cell data to ", down_sample_size, " cells per type..."))
 sc_subset <- subset(sc_object, downsample = down_sample_size)
 log_info(paste("Cells after downsampling:", ncol(sc_subset)))
+print(table(sc_subset@meta.data[[cell_type_column]], useNA = 'ifany'))
 
 # Seurat 5: counts split into layers (counts.1, counts.2 ...) must be joined first,
 # or GetAssayData returns only one of them
@@ -108,24 +116,29 @@ if (inherits(sc_subset[[ref_assay]], 'Assay5') &&
     length(Layers(sc_subset[[ref_assay]], search = 'counts')) > 1) {
     sc_subset[[ref_assay]] <- JoinLayers(sc_subset[[ref_assay]])
 }
-log_info(sprintf(">>> dense reference: %d cells x %d genes, ~%.1f GB",
+log_info(sprintf("dense reference: %d cells x %d genes, ~%.1f GB",
                  ncol(sc_subset), nrow(sc_subset),
                  ncol(sc_subset) * nrow(sc_subset) * 8 / 1e9))
-sc_counts_sub <- t(as.matrix(GetAssayData(sc_subset, assay = ref_assay,
-                                            slot = "counts")))
+# Convert the counts assay from genes-by-cells to cells-by-genes for BayesPrism.
+sc_counts_sub <- t(as.matrix(GetAssayData(sc_subset, assay = ref_assay, layer = "counts")))
 current_labels    <- as.factor(sc_subset@meta.data[[cell_type_column]])
 cell_state_labels <- as.factor(sc_subset@meta.data[[cell_type_column]])
 rm(sc_subset); gc()
 
-# gene cleanup
+# Remove excluded gene groups and genes expressed in too few reference cells.
+if(species == "hs") {
+    gene.group = c("Rb","Mrp","other_Rb","chrM","MALAT1")
+}else{
+    gene.group = c("Rb","Mrp","other_Rb","chrM")
+}
 sc.dat.filtered <- cleanup.genes(input = sc_counts_sub,
-                                    input.type = "count.matrix",
-                                    species = "hs",
-                                    gene.group = c("Rb","Mrp","other_Rb","chrM","MALAT1"),
-                                    exp.cells = 5)
+                                 input.type = "count.matrix",
+                                 species = species,
+                                 gene.group = gene.group,
+                                 exp.cells = exp.cells)
 rm(sc_counts_sub); gc()
 
-# Intersect with Bulk
+# Restrict both matrices to the same genes, preserving the reference gene order.
 common_genes <- intersect(colnames(sc.dat.filtered), colnames(bulk_matrix))
 log_info(paste("Common genes found:", length(common_genes)))
 if (length(common_genes) < 100) stop("Too few common genes! Check formatting.")
@@ -133,7 +146,8 @@ if (length(common_genes) < 100) stop("Too few common genes! Check formatting.")
 sc.final   <- sc.dat.filtered[, common_genes]
 bulk.final <- bulk_matrix[, common_genes]
 
-log_info(">>> Creating Prism Object...")
+log_info("Creating Prism Object...")
+# Pair the aligned bulk mixture with the labeled single-cell reference.
 my.prism <- new.prism(
     reference = sc.final,
     mixture = bulk.final,
@@ -145,26 +159,28 @@ my.prism <- new.prism(
     outlier.fraction = 0.1
 )
 
-log_info(paste0(">>> Running Gibbs Sampler (Deconvolution) on ", n_cores, " cores..."))
+log_info(paste0("Running Gibbs Sampler (Deconvolution) on ", n_cores, " cores..."))
+# Estimate cell-type proportions for each bulk sample.
 bp.res <- run.prism(prism = my.prism, n.cores = n_cores)
 
-fn_rds <- paste0(output_prefix, "_BayesPrism_Object.rds")
-log_info(paste0(">>> Saving BayesPrism Object: ", fn_rds))
+fn_rds <- paste0(output_prefix, ".BayesPrism_Object.rds")
+log_info(paste0("Saving BayesPrism Object: ", fn_rds))
 saveRDS(bp.res, file = fn_rds)
 
-log_info(">>> Extracting Cell Type Fractions...")
+log_info("Extracting Cell Type Fractions...")
 theta <- get.fraction(bp = bp.res, which.theta = "final", state.or.type = "type")
-# sample ids that start with a digit come back as X1508AC1 if make.names() ran on the
-# bulk header upstream; the X is removed so the ids match the original ones
-theta_df <- data.frame(RNA.ID = sub("^X(?=[0-9])", "", rownames(theta), perl = TRUE),
+
+# Keep sample IDs as row names while making the fractions ready for CSV output.
+theta_df <- data.frame(RNA.ID = rownames(theta),
                         as.data.frame(theta), check.names = FALSE)
 
+# Flag samples whose estimated cell-type fractions do not approximately sum to one.
 rs <- rowSums(theta)
 if (any(abs(rs - 1) > 0.01)) warning(output_prefix, ': fractions do not sum to 1 (',
                                         paste(round(range(rs), 3), collapse = ' .. '), ')')
 
-fn_csv <- file.path(pw_res, paste0(output_prefix, "_Fractions.csv"))
+fn_csv <- file.path(pw_res, paste0(output_prefix, ".fractions.csv"))
+# Write one row per bulk sample and one column per estimated cell type.
 write.csv(theta_df, fn_csv, row.names = FALSE)
-log_info(paste0(">>> FINISHED: ", fn_csv, " (", nrow(theta_df), " samples x ",
+log_info(paste0("FINISHED: ", fn_csv, " (", nrow(theta_df), " samples x ",
         ncol(theta), " cell types)"))
-
