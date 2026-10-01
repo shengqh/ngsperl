@@ -81,7 +81,10 @@ fi
     # }
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file_1, "", 0, undef, 'sh' );
+    print $pbs "
+export NCBI_VDB_PREFETCH_USES_OUTPUT_TO_FILE=true
 
+";
     if ( $sample_file =~ /GSM/ ) {
       my $srr_file = GsmToSrr( $sample_file );
       if ($srr_file eq "") {

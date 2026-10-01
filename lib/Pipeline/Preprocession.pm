@@ -545,12 +545,14 @@ if [[ ! -s \${HOME}/.ncbi/user-settings.mkfg ]]; then
   cp $sratoolkit_setting_file \${HOME}/.ncbi
 fi
 
+export NCBI_VDB_PREFETCH_USES_OUTPUT_TO_FILE=true
+
 status=0
 
 if [[ -s __NAME__.sra ]]; then
   echo __NAME__.sra exist, no need to run prefetch again
 else
-  rm -f __NAME__.prefetch.failed __NAME__.prefetch.succeed 
+  rm -f __NAME__.prefetch.failed __NAME__.prefetch.succeed __NAME__.tmp.sra.lock 
 
   echo prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.tmp.sra --progress
   prefetch $prefetch_option $ngc_file_option __FILE__ --check-rs no -o __NAME__.tmp.sra --progress
@@ -636,6 +638,7 @@ rm -rf fasterq.tmp*
         cluster    => $def->{cluster},
         no_docker => $no_docker,
         docker_prefix => $docker_prefix,
+        docker_shell => "sh",
         output_ext => "_1.fastq.gz,_2.fastq.gz",
         output_to_same_folder => 0,
         no_output => 1,
