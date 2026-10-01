@@ -3,7 +3,6 @@ import argparse
 import sys
 import logging
 import os
-from asyncore import read
 
 #this bam2bed is specific designed for DNASeq without structure variation
 #filter paired-end data by criteria used in MACS2, https://groups.google.com/forum/#!topic/macs-announcement/Vh916L3tOOE

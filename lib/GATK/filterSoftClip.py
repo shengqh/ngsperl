@@ -3,7 +3,6 @@ import argparse
 import sys
 import logging
 import os
-from asyncore import read
 
 parser = argparse.ArgumentParser(description="Remove low quality or soft-clip reads from bam file.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)

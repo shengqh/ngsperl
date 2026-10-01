@@ -1,7 +1,6 @@
 import os
 import argparse
 import logging
-from asyncore import read
 from zipfile import ZipFile
 from Qiime2Utils import extract_file 
 
