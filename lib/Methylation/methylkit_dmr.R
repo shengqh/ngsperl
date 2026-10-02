@@ -1,3 +1,20 @@
+rm(list=ls()) 
+sample_name='Symptomatic_vs_Asymptomatic_civilians'
+outFile='Symptomatic_vs_Asymptomatic_civilians'
+parSampleFile1=''
+parSampleFile2='fileList2.txt'
+parSampleFile3='fileList3.txt'
+parSampleFile4='fileList4.txt'
+parSampleFile5='fileList5.txt'
+parFile1='/data/cqs/references/gencode/GRCh38.p13/gencode.v43.annotation.gtf'
+parFile2='/data/cqs/references/ucsc/hg38_cpg_islands.bed'
+parFile3=''
+
+
+setwd('/nobackup/h_cqs/ramirema/bradley_richmond/20260819_15116_AG_methylation_hg38/MethylKitDMR/result/Symptomatic_vs_Asymptomatic_civilians')
+
+### Parameter setting end ###
+
 suppressPackageStartupMessages({
   library(Cairo)
   library(GenomicRanges)
@@ -5,6 +22,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(methylKit)
   library(rtracklayer)
+  library(digest)
 })
 
 read_parameter_map <- function(filename) {
@@ -110,7 +128,7 @@ read_gene_features <- function(filename, promoter_up, promoter_down) {
   is_gff <- grepl("[.](gtf|gff|gff3)$", extension)
   if (!is_gff) return(read_bed12_gene_features(filename, promoter_up, promoter_down))
 
-  txdb <- GenomicFeatures::makeTxDbFromGFF(filename)
+  txdb <- txdbmaker::makeTxDbFromGFF(filename)
   tx <- GenomicFeatures::transcripts(txdb, columns = c("tx_id", "tx_name"))
   tx_name <- as.character(mcols(tx)$tx_name)
   tx_name[is.na(tx_name) | tx_name == ""] <- as.character(mcols(tx)$tx_id[is.na(tx_name) | tx_name == ""])
@@ -226,32 +244,42 @@ cat("Samples:", paste(samples, collapse = ", "), "\n")
 cat("Tiling windows:", window_size, "bp; step:", step_size,
     "bp; minimum CpGs:", min_cpgs, "\n")
 
-cpg_obj <- methRead(
-  location = as.list(input_map$file),
-  sample.id = as.list(samples),
-  assembly = assembly,
-  treatment = treatment,
-  context = "CpG",
-  mincov = mincov,
-  pipeline = pipeline
-)
-if (high_cov_pct > 0 && high_cov_pct < 100) {
-  cpg_obj <- filterByCoverage(cpg_obj, lo.count = mincov, lo.perc = NULL,
-                              hi.count = NULL, hi.perc = high_cov_pct)
-} else {
-  cpg_obj <- filterByCoverage(cpg_obj, lo.count = mincov, lo.perc = NULL,
-                              hi.count = NULL, hi.perc = NULL)
-}
-tiles <- tileMethylCounts(cpg_obj, win.size = as.integer(window_size),
-                          step.size = as.integer(step_size), cov.bases = as.integer(min_cpgs))
-rm(cpg_obj)
+md5_list=c(input_map$files, readLines(parSampleFile2))
+md5=digest(paste0(md5_list, collapse = ", "), algo = "md5")
+tiled_meth_rds=paste0(sample_name, ".methylkit.", md5, ".tiled_meth.rds")
+if(!file.exists(tiled_meth_rds)) {
+  cpg_obj <- methRead(
+    location = as.list(input_map$file),
+    sample.id = as.list(samples),
+    assembly = assembly,
+    treatment = treatment,
+    context = "CpG",
+    mincov = mincov,
+    pipeline = pipeline
+  )
 
-if (min_per_group > 0) {
-  tiled_meth <- unite(tiles, destrand = FALSE, min.per.group = as.integer(min_per_group))
-} else {
-  tiled_meth <- unite(tiles, destrand = FALSE)
+  if (high_cov_pct > 0 && high_cov_pct < 100) {
+    cpg_obj <- filterByCoverage(cpg_obj, lo.count = mincov, lo.perc = NULL,
+                                hi.count = NULL, hi.perc = high_cov_pct)
+  } else {
+    cpg_obj <- filterByCoverage(cpg_obj, lo.count = mincov, lo.perc = NULL,
+                                hi.count = NULL, hi.perc = NULL)
+  }
+  tiles <- tileMethylCounts(cpg_obj, win.size = as.integer(window_size),
+                            step.size = as.integer(step_size), cov.bases = as.integer(min_cpgs))
+  rm(cpg_obj)
+
+  if (min_per_group > 0) {
+    tiled_meth <- unite(tiles, destrand = FALSE, min.per.group = as.integer(min_per_group))
+  } else {
+    tiled_meth <- unite(tiles, destrand = FALSE)
+  }
+  rm(tiles)
+  saveRDS(tiled_meth, tiled_meth_rds)
+}else{
+  tiled_meth <- readRDS(tiled_meth_rds)
 }
-rm(tiles)
+
 if (nrow(getData(tiled_meth)) == 0) stop("No tiled regions passed coverage requirements for all required samples")
 
 if (test_method == "dss") {
@@ -371,5 +399,3 @@ plot_annotation(summary_table, "gene_context", paste0(prefix, ".annotation.png")
                 "DMR gene-context annotation")
 plot_annotation(summary_table, "cpg_context", paste0(prefix, ".cpg_context.png"),
                 "DMR CpG-island context")
-
-writeLines(capture.output(sessionInfo()), "sessionInfo.txt")
