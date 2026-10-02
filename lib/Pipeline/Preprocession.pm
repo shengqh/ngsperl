@@ -495,7 +495,7 @@ sub getPreprocessionConfig {
   } ## end if ( $run_cutadapt or ...)
 
   if ( $def->{sra_to_fastq} ) {
-    if ( $def->{sra_to_fastq_prefetch} | $def->{sra_to_fastq_prefetch_fasterqDump} ) {    #only support pairend
+    if ( $is_pairend && ($def->{sra_to_fastq_prefetch} || $def->{sra_to_fastq_prefetch_fasterqDump}) ) {    #only support pairend
                                                                                           #print("sra_to_fastq_with_prefetch\n");
       my $prefetch_option = getValue( $def, "prefetch_option", "--max-size u" );
       my $ngc_file        = getValue( $def, "ngc_file",        "" );
