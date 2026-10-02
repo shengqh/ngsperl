@@ -11,40 +11,44 @@ use File::Basename;
 use Data::Dumper;
 use List::MoreUtils qw(uniq);
 
+
 sub new {
   my ($class) = @_;
 
   my $self = {
-    _name          => __PACKAGE__,
-    _suffix        => "",
-    _task_prefix   => "",
-    _task_suffix   => "",
-    _pbskey        => "source",
-    _docker_prefix => "",
-    _can_use_docker => 1,
-    _forbid_tmp_folder  => 0,
-    _use_tmp_folder => 0,
+    _name                     => __PACKAGE__,
+    _suffix                   => "",
+    _task_prefix              => "",
+    _task_suffix              => "",
+    _pbskey                   => "source",
+    _docker_prefix            => "",
+    _can_use_docker           => 1,
+    _forbid_tmp_folder        => 0,
+    _use_tmp_folder           => 0,
     _localize_to_local_folder => 0,
-    _final_file_in_last => 1,
-    _docker_shell => "bash",
-    _use_gpu => 0,
+    _final_file_in_last       => 1,
+    _docker_shell             => "bash",
+    _use_gpu                  => 0,
   };
   bless $self, $class;
   return $self;
-}
+} ## end sub new
+
 
 sub init_docker_prefix {
-  my ($self, $package) = @_;
+  my ( $self, $package ) = @_;
   my $docker_prefix = $package;
   $docker_prefix =~ s/.+://g;
   $docker_prefix = $docker_prefix . "_";
   $self->{_docker_prefix} = $docker_prefix;
-}
+} ## end sub init_docker_prefix
+
 
 sub name {
   my ($self) = @_;
   return $self->{_name};
 }
+
 
 sub perform {
 }
@@ -58,30 +62,31 @@ sub get_absolute_final_file {
   @samples = sort { $b cmp $a } @samples;
 
   if ( not defined $sample ) {
-    $sample  = $samples[0];
+    $sample = $samples[0];
   }
 
-  if (not defined $expect->{$sample}){
-    $sample  = $samples[0];
+  if ( not defined $expect->{$sample} ) {
+    $sample = $samples[0];
   }
 
   my $final_files_ref = $expect->{$sample};
   my @final_files     = @$final_files_ref;
 
-  my @no_filelists = grep(!/.filelist$/, @final_files);
-  if(scalar(@no_filelists) == 0){
+  my @no_filelists = grep( !/.filelist$/, @final_files );
+  if ( scalar(@no_filelists) == 0 ) {
     die "Cannot find final file of $sample in section $section";
   }
 
-  my $result          = $self->{_final_file_in_last} ? $no_filelists[-1] :  $no_filelists[0];
+  my $result = $self->{_final_file_in_last} ? $no_filelists[-1] : $no_filelists[0];
 
   return ($result);
-}
+} ## end sub get_absolute_final_file
+
 
 sub get_final_file {
   my ( $self, $config, $section, $result_dir, $sample ) = @_;
 
-  my $result = $self->get_absolute_final_file($config, $section, $sample);
+  my $result = $self->get_absolute_final_file( $config, $section, $sample );
 
   if ( rindex( $result, $result_dir ) == 0 ) {
     $result = substr( $result, length($result_dir) );
@@ -89,16 +94,18 @@ sub get_final_file {
     if ( ( $firstChar eq '/' ) or ( $firstChar eq '\\' ) ) {
       $result = substr( $result, 1 );
     }
-  }
+  } ## end if ( rindex( $result, ...))
 
   return ($result);
-}
+} ## end sub get_final_file
+
 
 sub get_result_files {
   my ( $self, $config, $section, $result_dir, $sample_name ) = @_;
 
   die "Override get_result_files of " . $self->{_name} . " first.";
 }
+
 
 sub result {
   my ( $self, $config, $section, $pattern, $removeEmpty ) = @_;
@@ -107,22 +114,24 @@ sub result {
 
   my $result = {};
 
-  my $raw_files = get_raw_files($config, $section);
-  for my $sample_name (sort keys %$raw_files){
+  my $raw_files = get_raw_files( $config, $section );
+  for my $sample_name ( sort keys %$raw_files ) {
     if ( $self->acceptSample( $config, $section, $sample_name ) ) {
-      my $result_files = $self->get_result_files( $config, $section, $result_dir, $sample_name );
+      my $result_files   = $self->get_result_files( $config, $section, $result_dir, $sample_name );
       my $filtered_files = filter_array( $result_files, $pattern, 1 );
       $result->{$sample_name} = $filtered_files;
     }
-  }
+  } ## end for my $sample_name ( sort...)
 
   return $result;
-}
+} ## end sub result
+
 
 sub acceptSample {
   my ( $self, $config, $section, $sampleName ) = @_;
   return (1);
 }
+
 
 sub can_result_be_empty_file {
   my ( $self, $config, $section, $filename ) = @_;
@@ -131,7 +140,8 @@ sub can_result_be_empty_file {
     return $curSection->{can_result_be_empty_file};
   }
   return 0;
-}
+} ## end sub can_result_be_empty_file
+
 
 sub get_clear_map {
   my $self   = shift;
@@ -145,18 +155,20 @@ sub get_clear_map {
     else {
       $result->{$key} = undef;
     }
-  }
+  } ## end for my $key ( keys %$result)
   return $result;
-}
+} ## end sub get_clear_map
+
 
 sub get_pbs_key {
   my ( $self, $config, $section ) = @_;
   return $self->{_pbskey};
 }
 
+
 sub init_tmp_folder {
   my ( $self, $pbs, $result_dir ) = @_;
-  if( $self->{"_use_tmp_folder"}){
+  if ( $self->{"_use_tmp_folder"} ) {
     print $pbs "
 res_dir='$result_dir'
 tmp_dir=\$(mktemp -d -t ci-\$(date +\%Y-\%m-\%d-\%H-\%M-\%S)-XXXXXXXXXX)
@@ -175,15 +187,17 @@ df | grep /tmp
 cd \$tmp_dir
 
 ";
-    return(1);
-  }else{
-    return(0);
+    return (1);
+  } ## end if ( $self->{"_use_tmp_folder"...})
+  else {
+    return (0);
   }
-}
+} ## end sub init_tmp_folder
+
 
 sub clean_tmp_folder {
   my ( $self, $pbs ) = @_;
-  if( $self->{"_use_tmp_folder"}){
+  if ( $self->{"_use_tmp_folder"} ) {
     print $pbs "
 if [[ -d \$tmp_dir && \$tmp_dir != '/' ]]; then
   echo copy result from \$tmp_dir to \$res_dir
@@ -208,8 +222,9 @@ if [[ -d \$tmp_dir && \$tmp_dir != '/' ]]; then
   echo move file and clean tmp folder done.
 fi
 ";
-  }
-}
+  } ## end if ( $self->{"_use_tmp_folder"...})
+} ## end sub clean_tmp_folder
+
 
 sub get_pbs_files {
   my ( $self, $config, $section ) = @_;
@@ -230,10 +245,10 @@ sub get_pbs_files {
         $result->{$sample_name} = $self->get_pbs_filename( $pbs_dir, $sample_name );
       }
     }
-  }
+  } ## end else [ if ( $pbsKey eq "" ) ]
 
   return $result;
-}
+} ## end sub get_pbs_files
 
 #get pbs source map which indicates which sample name the pbs file comes from
 #for impute2 which generate multiple pbs files and multiple result files from 1 sample name,
@@ -247,7 +262,7 @@ sub get_pbs_source {
     $result->{ $pbsFiles->{$resKey} } = [$resKey];
   }
   return $result;
-}
+} ## end sub get_pbs_source
 
 #get result pbs map which indicates which pbs the result name related.
 #for bed file split which has 1 pbs and multiple result files, the multiple result names
@@ -285,15 +300,17 @@ sub get_dependent_pbs_map {
       }
 
       $result->{$refkey} = $curpbs;
-    }
-  }
+    } ## end for my $refkey ( keys %$refpbsmap)
+  } ## end for my $key ( keys %$task_section)
   return ($result);
-}
+} ## end sub get_dependent_pbs_map
+
 
 sub require {
   my $result = [];
   return $result;
 }
+
 
 sub get_name {
   my ( $self, $name, $extension, $hassuffix ) = @_;
@@ -310,7 +327,8 @@ sub get_name {
   else {
     return $self->{_task_prefix} . $name . $self->{_task_suffix} . $extension;
   }
-}
+} ## end sub get_name
+
 
 sub get_file {
   my ( $self, $dir, $name, $extension, $hassuffix ) = @_;
@@ -322,27 +340,32 @@ sub get_file {
   }
 
   return $dir . "/" . $self->get_name( $name, $extension, $hassuffix );
-}
+} ## end sub get_file
+
 
 sub pbs_name {
   my ( $self, $sample_name ) = @_;
   return $self->get_name( $sample_name, ".pbs" );
 }
 
+
 sub get_pbs_filename {
   my ( $self, $dir, $sample_name ) = @_;
   return $self->get_file( $dir, $sample_name, ".pbs" );
 }
+
 
 sub get_log_filename {
   my ( $self, $dir, $sample_name ) = @_;
   return $self->get_file( $dir, $sample_name, ".log" );
 }
 
+
 sub get_task_filename {
   my ( $self, $dir, $task_name ) = @_;
   return $self->get_file( $dir, $task_name, ".sh" );
 }
+
 
 sub do_get_docker_value {
   my ( $self, $keyName ) = @_;
@@ -356,7 +379,7 @@ sub do_get_docker_value {
       if ( defined $result ) {
         return ($result);
       }
-    }
+    } ## end if ( ( defined $self->...))
 
     if (  ( defined $self->{_config} )
       and ( defined $self->{_config}{general} )
@@ -366,35 +389,38 @@ sub do_get_docker_value {
       if ( defined $result ) {
         return ($result);
       }
-    }
-  }
+    } ## end if ( ( defined $self->...))
+  } ## end if ( defined $self->{_config...})
 
   return ($result);
+} ## end sub do_get_docker_value
+
+
+sub can_use_docker() {
+  my ($self) = @_;
+  return ( $self->{_can_use_docker} );
 }
 
-sub can_use_docker(){
-  my ($self) = @_;
-  return($self->{_can_use_docker});
-}
 
 sub using_docker {
   my ($self) = @_;
 
-  if (not $self->{_can_use_docker}){
-    return(0);
+  if ( not $self->{_can_use_docker} ) {
+    return (0);
   }
 
   my ( $docker_command, $docker_init ) = $self->get_docker_value();
   my $is_sequenceTask = ( $self->{_name} =~ /SequenceTask/ );
   return ( ( defined $docker_command ) and ( not $is_sequenceTask ) );
-}
+} ## end sub using_docker
+
 
 sub get_docker_value {
   my ( $self, $required ) = @_;
   my $command = undef;
   my $init    = undef;
 
-  if (not $self->{_can_use_docker}){
+  if ( not $self->{_can_use_docker} ) {
     return ( $command, $init );
   }
 
@@ -404,15 +430,17 @@ sub get_docker_value {
         return ( $command, $init );
       }
 
-      if (defined $self->{_config}{ $self->{_section} }{docker_prefix}) {
+      if ( defined $self->{_config}{ $self->{_section} }{docker_prefix} ) {
         $self->{_docker_prefix} = $self->{_config}{ $self->{_section} }{docker_prefix};
       }
 
-      if (defined $self->{_config}{ $self->{_section} }{docker_shell}) {
+      if ( defined $self->{_config}{ $self->{_section} }{docker_shell} ) {
         $self->{_docker_shell} = $self->{_config}{ $self->{_section} }{docker_shell};
       }
-    }
-  }
+    } ## end if ( defined $self->{_section...})
+  } ## end if ( defined $self->{_config...})
+
+  #print("get_docker_value, docker_shell=" . $self->{_docker_shell} . "\n");
 
   my $commandKey = $self->{_docker_prefix} . "docker_command";
   my $initKey    = $self->{_docker_prefix} . "docker_init";
@@ -437,48 +465,51 @@ sub get_docker_value {
   }
 
   return ( undef, undef );
-}
+} ## end sub get_docker_value
+
 
 sub localize_files {
-  my ($self, $pbs, $sample_files, $localized_files, $other_exts, $no_bai) = @_;
-  if($self->{_use_tmp_folder} || $self->{_localize_to_local_folder} ){
-    my $target_dir = $self->{_use_tmp_folder} ? '$res_dir/':'';
-    if($sample_files->[0] =~ /.bam$/){
-      if(!defined $no_bai){
+  my ( $self, $pbs, $sample_files, $localized_files, $other_exts, $no_bai ) = @_;
+  if ( $self->{_use_tmp_folder} || $self->{_localize_to_local_folder} ) {
+    my $target_dir = $self->{_use_tmp_folder} ? '$res_dir/' : '';
+    if ( $sample_files->[0] =~ /.bam$/ ) {
+      if ( !defined $no_bai ) {
         $no_bai = 0;
       }
-      if(!$no_bai){
-        if(defined $other_exts){
-          push(@$other_exts, ".bai");
-        }else{
+      if ( !$no_bai ) {
+        if ( defined $other_exts ) {
+          push( @$other_exts, ".bai" );
+        }
+        else {
           $other_exts = [".bai"];
         }
-      }
+      } ## end if ( !$no_bai )
       my @unique_words = uniq @$other_exts;
       $other_exts = \@unique_words;
-    }
+    } ## end if ( $sample_files->[0...])
 
-    if($sample_files->[0] =~ /.cram$/){
-      if(defined $other_exts){
-        push(@$other_exts, ".crai");
-      }else{
+    if ( $sample_files->[0] =~ /.cram$/ ) {
+      if ( defined $other_exts ) {
+        push( @$other_exts, ".crai" );
+      }
+      else {
         $other_exts = [".crai"];
       }
       my @unique_words = uniq @$other_exts;
       $other_exts = \@unique_words;
-    }
+    } ## end if ( $sample_files->[0...])
 
     my $result = [];
     print $pbs "
 echo localize start at `date`
 ";
-    for my $old_file (@$sample_files){
+    for my $old_file (@$sample_files) {
       my $new_file = basename($old_file);
 
-      push(@$result, $new_file);
-      push(@$localized_files, $new_file);
+      push( @$result,          $new_file );
+      push( @$localized_files, $new_file );
 
-      my $all_local_file = join(" ", @$localized_files);
+      my $all_local_file = join( " ", @$localized_files );
 
       print $pbs "
 echo $old_file      
@@ -507,13 +538,13 @@ if [[ \$status -ne 0 ]]; then
 fi
 ";
 
-      if(defined $other_exts){
-        for my $other_ext (@$other_exts){
-          my $old_ext_file = $old_file . $other_ext;
-          my $new_ext_file = $new_file . $other_ext;
-          my $before_local_file = join(" ", @$localized_files);
-          push(@$localized_files, $new_ext_file);
-          my $after_local_file = join(" ", @$localized_files);
+      if ( defined $other_exts ) {
+        for my $other_ext (@$other_exts) {
+          my $old_ext_file      = $old_file . $other_ext;
+          my $new_ext_file      = $new_file . $other_ext;
+          my $before_local_file = join( " ", @$localized_files );
+          push( @$localized_files, $new_ext_file );
+          my $after_local_file = join( " ", @$localized_files );
           print $pbs "
 if [[ ! -s $old_ext_file ]]; then
   echo file not exists: $old_ext_file
@@ -539,10 +570,10 @@ if [[ \$status -ne 0 ]]; then
   exit 1
 fi
 ";
-        }
-      }
-    }
-      print $pbs "
+        } ## end for my $other_ext (@$other_exts)
+      } ## end if ( defined $other_exts)
+    } ## end for my $old_file (@$sample_files)
+    print $pbs "
 ls *
 echo localize end at `date`
 
@@ -550,25 +581,29 @@ echo /tmp space:
 df | grep /tmp
 
 ";
-    return($result);
-  }else{
-    return($sample_files);
+    return ($result);
+  } ## end if ( $self->{_use_tmp_folder...})
+  else {
+    return ($sample_files);
   }
-}
+} ## end sub localize_files
+
 
 sub localize_files_in_tmp_folder {
-  return( localize_files(@_)); 
+  return ( localize_files(@_) );
 }
 
+
 sub clean_temp_files {
-  my ($self, $pbs, $temp_files) = @_;
-  if(scalar(@$temp_files) > 0){
-    my $rmstr = join(" ",  @$temp_files);
+  my ( $self, $pbs, $temp_files ) = @_;
+  if ( scalar(@$temp_files) > 0 ) {
+    my $rmstr = join( " ", @$temp_files );
     print $pbs "
 rm $rmstr
 ";
-  }
-}
+  } ## end if ( scalar(@$temp_files...))
+} ## end sub clean_temp_files
+
 
 sub open_pbs {
   my ( $self, $pbs_file, $pbs_desc, $log_desc, $path_file, $result_dir, $final_file, $init_command, $can_result_be_empty_file, $input_file, $sh_command, $pbs_index ) = @_;
@@ -577,13 +612,19 @@ sub open_pbs {
     $init_command = "";
   }
 
-  if(!defined $sh_command){
-    if(defined $self->{_docker_shell}){
+  # call get_docker_value to initialize docker associated key/values.
+  my ( $docker_command, $docker_init ) = $self->get_docker_value();
+
+  if ( !defined $sh_command ) {
+    if ( defined $self->{_docker_shell} ) {
       $sh_command = $self->{_docker_shell};
-    }else{
+    }
+    else {
       $sh_command = "bash";
     }
-  }
+  } ## end if ( !defined $sh_command)
+
+  #print("open_pbs, docker_shell=" . $self->{_docker_shell} . "\n");
 
   my $module_name = $self->{_name};
 
@@ -602,9 +643,9 @@ $init_command
 ";
   if ( defined $final_file ) {
     my $checkFile = $can_result_be_empty_file ? "-e" : "-s";
-    if (is_array($final_file)){
+    if ( is_array($final_file) ) {
       my @final_files = @$final_file;
-      if(scalar(@final_files) > 1){
+      if ( scalar(@final_files) > 1 ) {
         my $final_files_1 = $final_files[0];
         my $final_files_2 = $final_files[1];
 
@@ -617,12 +658,13 @@ if [[ !(1 -eq \$1) ]]; then
   fi
 fi
 ";
-      }else{
+      } ## end if ( scalar(@final_files...))
+      else {
         $final_file = $final_files[0];
       }
-    }
-    
-    if(!is_array($final_file)){
+    } ## end if ( is_array($final_file...))
+
+    if ( !is_array($final_file) ) {
       my $delete_file = ( $final_file =~ /^\// ) ? $final_file : "${result_dir}/${final_file}";
 
       print $pbs "
@@ -633,8 +675,8 @@ if [[ !(1 -eq \$1) ]]; then
   fi
 fi
 ";
-    }
-  }
+    } ## end if ( !is_array($final_file...))
+  } ## end if ( defined $final_file)
 
   if ( defined $input_file ) {
     print $pbs "
@@ -643,7 +685,7 @@ if [[ ! -s $input_file ]]; then
   exit 1
 fi
 ";
-  }
+  } ## end if ( defined $input_file)
 
   print $pbs "
 echo ${module_name}_start=`date`
@@ -651,7 +693,6 @@ echo working in $result_dir ...
  
 ";
 
-  my ( $docker_command, $docker_init ) = $self->get_docker_value();
   my $is_sequenceTask = ( $module_name =~ /SequenceTask/ );
   if (  ( defined $docker_command )
     and ( ( not $is_sequenceTask ) or ( $pbs_file =~ /report/ ) ) )
@@ -662,29 +703,29 @@ echo working in $result_dir ...
 
     my $sing = "singularity exec";
 
-    if (substr($docker_command, 0, length($sing)) eq $sing) {
-      my $other = substr($docker_command, length($sing));
-      if($self->{_use_gpu}){
+    if ( substr( $docker_command, 0, length($sing) ) eq $sing ) {
+      my $other = substr( $docker_command, length($sing) );
+      if ( $self->{_use_gpu} ) {
         $sing = $sing . " --nv";
         my $num_gpus = $self->{_num_gpus};
-        if($num_gpus > 1){
-          my $use_gpu_index = ($pbs_index - 1) % $num_gpus;
+        if ( $num_gpus > 1 ) {
+          my $use_gpu_index = ( $pbs_index - 1 ) % $num_gpus;
           $sing = "CUDA_VISIBLE_DEVICES=" . $use_gpu_index . " " . $sing;
         }
-      }
+      } ## end if ( $self->{_use_gpu})
 
       my $additional = "";
-      if($docker_command !~ / -H /) {
+      if ( $docker_command !~ / -H / ) {
         $additional = " -H $result_dir ";
       }
-      if ($docker_command !~ / -B /) {
+      if ( $docker_command !~ / -B / ) {
         $additional = $additional . " -B `pwd` -B /home ";
       }
       $docker_command = $sing . $additional . $other;
-    }
+    } ## end if ( substr( $docker_command...))
     #print("docker_command=" . $docker_command . "\n");
 
-    my $sh_file = $pbs_file . ".sh";
+    my $sh_file      = $pbs_file . ".sh";
     my $sh_base_file = basename($sh_file);
 
     print $pbs "
@@ -710,7 +751,7 @@ exit \$exitcode
     close $pbs;
     open( $pbs, ">$sh_file" ) or die $!;
 
-    if(!$self->init_tmp_folder($pbs, $result_dir)){
+    if ( !$self->init_tmp_folder( $pbs, $result_dir ) ) {
       print $pbs "
 cd '$result_dir'
 ";
@@ -721,12 +762,14 @@ set -o pipefail
 $docker_init
 ";
 
-  }else{
-    $self->init_tmp_folder($pbs, $result_dir);
+  } ## end if ( ( defined $docker_command...))
+  else {
+    $self->init_tmp_folder( $pbs, $result_dir );
   }
 
   return $pbs;
-}
+} ## end sub open_pbs
+
 
 sub close_pbs {
   my ( $self, $pbs, $pbs_file ) = @_;
@@ -748,14 +791,15 @@ echo ${module_name}_end=`date`
 exit \$exitcode
  
 ";
-  }
+  } ## end if ( not defined $docker_command)
 
   close $pbs;
 
   chmod 0755, $pbs_file;
 
   print "$pbs_file created. \n";
-}
+} ## end sub close_pbs
+
 
 sub get_java_option {
   my ( $self, $config, $section, $memory ) = @_;
@@ -764,44 +808,51 @@ sub get_java_option {
     $result = "-Xmx${memory}";
   }
   return ($result);
-}
+} ## end sub get_java_option
+
 
 sub init_parameter {
   my ( $self, $config, $section, $create_directory ) = @_;
 
-  $self->{_use_gpu} = get_option( $config, $section, "use_gpu", 0 );
-  $self->{_num_gpus} = get_option( $config, $section, "num_gpus", 1 );
-  $self->{_docker_prefix} = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
-  $self->{_task_prefix} = get_option( $config, $section, "prefix", "" );
-  $self->{_task_suffix} = get_option( $config, $section, "suffix", "" );
-  $self->{_localize_to_local_folder} = $config->{general}{localize_to_local_folder} || get_option( $config, $section, "localize_to_local_folder", $self->{_localize_to_local_folder});
-  if($self->{_localize_to_local_folder} ){
-    $self->{_use_tmp_folder} = 0;  
-  }elsif($self->{_forbid_tmp_folder}){
+  $self->{_use_gpu}                  = get_option( $config, $section, "use_gpu",       0 );
+  $self->{_num_gpus}                 = get_option( $config, $section, "num_gpus",      1 );
+  $self->{_docker_prefix}            = get_option( $config, $section, "docker_prefix", $self->{_docker_prefix} );
+  $self->{_task_prefix}              = get_option( $config, $section, "prefix",        "" );
+  $self->{_task_suffix}              = get_option( $config, $section, "suffix",        "" );
+  $self->{_localize_to_local_folder} = $config->{general}{localize_to_local_folder} || get_option( $config, $section, "localize_to_local_folder", $self->{_localize_to_local_folder} );
+  if ( $self->{_localize_to_local_folder} ) {
     $self->{_use_tmp_folder} = 0;
-  }elsif(defined $config->{$section}{"use_tmp_folder"}){
+  }
+  elsif ( $self->{_forbid_tmp_folder} ) {
+    $self->{_use_tmp_folder} = 0;
+  }
+  elsif ( defined $config->{$section}{"use_tmp_folder"} ) {
     $self->{_use_tmp_folder} = $config->{$section}{"use_tmp_folder"};
-  }elsif(defined $config->{general}{use_tmp_folder}){
-    $self->{_use_tmp_folder} = $config->{general}{"use_tmp_folder"};  
-  }elsif(should_use_tmp_folder($config->{$section}{target_dir})){
+  }
+  elsif ( defined $config->{general}{use_tmp_folder} ) {
+    $self->{_use_tmp_folder} = $config->{general}{"use_tmp_folder"};
+  }
+  elsif ( should_use_tmp_folder( $config->{$section}{target_dir} ) ) {
     $self->{_use_tmp_folder} = get_option( $config, $section, "use_tmp_folder", $self->{_use_tmp_folder} );
-  }else{
-    $self->{_use_tmp_folder} = 0;  
+  }
+  else {
+    $self->{_use_tmp_folder} = 0;
   }
 
   #print("target_dir=" . $config->{$section}{target_dir} . "\n");
   #print("_use_tmp_folder=" . $self->{_use_tmp_folder} . "\n");
 
-  if ($self->{_task_suffix} ne ""){
+  if ( $self->{_task_suffix} ne "" ) {
     $self->{_suffix} = "";
   }
 
-  return (get_parameter( $config, $section, $create_directory ));
-}
+  return ( get_parameter( $config, $section, $create_directory ) );
+} ## end sub init_parameter
+
 
 sub get_expect_result_for_perform {
   my ( $self, $config, $section ) = @_;
-  return ($self->result( $config, $section, "(?<!version)\$" ));
+  return ( $self->result( $config, $section, "(?<!version)\$" ) );
 }
 
 1;
