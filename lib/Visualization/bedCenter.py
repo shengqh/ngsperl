@@ -3,7 +3,6 @@ import argparse
 import sys
 import logging
 import os
-from asyncore import read
 
 def centerPeaks(sourceBed, window, targetBed):
   tmpfile = targetBed + ".tmp"
