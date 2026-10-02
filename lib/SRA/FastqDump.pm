@@ -187,7 +187,8 @@ if [[ -s ${sample_file}.sra ]]; then
         }else{
           print $pbs "    mv ${sample_file}.fastq.gz ${sample_name}.fastq.gz \n";
         }
-        print $pbs "  fi
+        print $pbs "    rm -f ${sample_file}.sra
+  fi
 fi
 ";
       }
