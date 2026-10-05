@@ -2326,6 +2326,7 @@ sub do_add_gene_locus {
     class                => "CQS::UniqueR",
     perform              => 1,
     target_dir           => $target_dir . '/' . $task_name,
+    #rtemplate            => "../Annotation/get_gene_locus.r",
     rtemplate            => "../Annotation/getGeneLocus.r",
     parameterSampleFile1 => {
       task_name => getValue( $def, "task_name" ),
@@ -2499,6 +2500,9 @@ sub addStarFeaturecount {
   my $star_featurecount_walltime = getValue( $def, "star_featurecount_walltime", 48 );
   my $star_memory                = getValue( $def, "star_memory",                60 );
   my $star_option                = $def->{star_option};
+  my $featureCount_option        = getValue( $def, [ "featureCount_option", "featureCounts_option" ], "" );
+
+  print("featureCount_option=$featureCount_option\n");
 
   if ( not defined $suffix ) {
     $suffix = "";
@@ -2517,7 +2521,7 @@ sub addStarFeaturecount {
     output_sort_by_coordinate    => 1,
     use_tmp_folder               => $def->{star_use_tmp_folder},
     output_to_same_folder        => $def->{output_bam_to_same_folder},
-    featureCount_option          => getValue( $def, "featureCount_option" ),
+    featureCount_option          => $featureCount_option,
     star_location                => $def->{star_location},
     gff_file                     => $transcript_gtf,
     is_paired_end                => is_paired_end($def),

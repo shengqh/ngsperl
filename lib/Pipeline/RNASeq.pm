@@ -74,7 +74,7 @@ sub initializeRNASeqDefaultOptions {
     initDefaultValue( $def, "trim_base_quality_after_adapter_trim", 0 );
   } ## end if ( $def->{perform_cutadapt...})
 
-  initDefaultValue( $def, "featureCount_option",        "-g gene_id -t exon" );
+  initDefaultValue( $def, "featureCount_option",        getValue( $def, "featureCounts_option", "-g gene_id -t exon" ) );
   initDefaultValue( $def, "aligner",                    "star" );
   initDefaultValue( $def, "star_option",                "--twopassMode Basic --outSAMmapqUnique 60 --outSAMprimaryFlag AllBestScore" );
   initDefaultValue( $def, "use_pearson_in_hca",         1 );

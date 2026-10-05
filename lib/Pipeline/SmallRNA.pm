@@ -2071,7 +2071,7 @@ fi
       push(@$tasks, $gene_bam_task);
 
       my $feature_count_task = "${gene_bam_task}_count";
-      $def->{"featureCounts_option"} = getValue($def, "featureCounts_option", "-g gene_name -t exon");
+      $def->{"featureCount_option"} = getValue($def, ["featureCount_option", "featureCounts_option"], "-g gene_name -t exon");
       add_featurecount($config, $def, $tasks, $intermediate_dir, $feature_count_task, [$gene_bam_task, '.bam$'], getValue($def, "custom_group_gtf"), 1);
 
       my $gene_table_task = "bowtie1_${nonhostGroup}_pm_gene_table";
