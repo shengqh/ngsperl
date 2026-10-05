@@ -6,7 +6,6 @@ import pysam
 import numpy as np
 import pickle 
 from collections import OrderedDict
-from asyncore import read
 
 class Item(object):
   def __init__(self, chrom, start, end, category, name, strand):

@@ -3,7 +3,6 @@ import argparse
 import sys
 import logging
 import os
-from asyncore import read
 
 parser = argparse.ArgumentParser(description="Build insert size distribution in SAM/BAM file.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
