@@ -3,7 +3,6 @@ import argparse
 import sys
 import logging
 import os
-from asyncore import read
 from Bio import SeqIO
 
 def getNumberOfMismatch(read):

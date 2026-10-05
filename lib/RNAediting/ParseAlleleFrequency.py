@@ -6,7 +6,6 @@ import os
 
 from itertools import groupby
 from Bio import SeqIO
-from asyncore import read
 
 DEBUG=False
 NOT_DEBUG=not DEBUG

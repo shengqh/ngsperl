@@ -3,7 +3,6 @@ import argparse
 import sys
 import logging
 import os
-from asyncore import read
 
 parser = argparse.ArgumentParser(description="Convert fai to bed",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)

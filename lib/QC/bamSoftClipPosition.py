@@ -3,7 +3,6 @@ import argparse
 import sys
 import logging
 import os
-from asyncore import read
 
 parser = argparse.ArgumentParser(description="Build soft clip position distribution in BAM file.",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
