@@ -40,6 +40,7 @@ sub perform {
   my $is_restricted_data = get_option($config, $section, "is_restricted_data" , 0);
   my $prefetch_option = get_option($config, $section, "prefetch_option", "");
 
+  #print("ispaired=$ispaired\n");
   if($ispaired){
     $option = $option . " --split-3 ";
   }
@@ -66,10 +67,6 @@ sub perform {
   \$MYCMD ./$pbs_name 
 fi
 ";
-
-    if( -s $pbs_file ){
-      next;
-    }
 
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $current_dir, $final_file, "", 0, undef, 'sh' );
     print $pbs "
