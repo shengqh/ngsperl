@@ -338,23 +338,36 @@ include_graphics(role_heatmap_incoming_png)
 
 ```{r}
 all_celltypes <- levels(cur_list[[1]]@meta$labels)
+ct="28: Ciliated cells"
 ct=all_celltypes[1]
 ct_rmd=paste0(cur_comp, ".signaling_changes.rmd")
 con <- file(ct_rmd, open = "w")
 for (ct in all_celltypes){
-  ct_filename <- gsub("[ :]", "_", ct)
+  #print(ct)
+  ct_filename <- celltype_to_filename(ct)
   ct_png=paste0(file_prefix, ".signaling_changes.", ct_filename, ".png")
   ct_csv=paste0(file_prefix, ".signaling_changes.", ct_filename, ".csv")
+  writeLines(paste0("\n### ", ct, "\n\n"), con)
+
   if(!file.exists(ct_png)){
-    g = netAnalysis_signalingChanges_scatter(cur_cellchat, idents.use = ct, color.use=c("grey10", color_use)) + 
-      theme(aspect.ratio=1) +
-      ggtitle(paste0(ct, "(", case_group, " vs. ", ctrl_group, ")"))
+    g <- tryCatch({
+      netAnalysis_signalingChanges_scatter(cur_cellchat, idents.use = ct, color.use=c("grey10", color_use)) + 
+        theme(aspect.ratio=1) +
+        ggtitle(paste0(ct, "(", case_group, " vs. ", ctrl_group, ")"))
+    }, error = function(e) {
+      writeLines(paste0("Skipping cell type ", ct, " due to signaling changes plot error: ", conditionMessage(e)))
+      NULL
+    })
+
+    if (is.null(g)) {
+      next
+    }
+
     ggsave(ct_png, g, width=6, height=4, units="in", dpi=300)
 
     gdata=g$data
     write.csv(gdata, ct_csv, row.names=TRUE)
   }
-  writeLines(paste0("\n### ", ct, "\n\n"), con)
   writeLines(getFigure(ct_png), con)
 
   writeLines(getPagedTable(ct_csv, row.names=1), con)
@@ -420,7 +433,7 @@ source_ct=all_celltypes[1]
 bubble_rmd=paste0(cur_comp, ".bubble_plot.rmd")
 con <- file(bubble_rmd, open = "w")
 for (source_ct in all_celltypes){
-  ct_filename <- gsub("[ :]", "_", source_ct)
+  ct_filename <- celltype_to_filename(source_ct)
 
   writeLines(paste0("\n### ", source_ct, "\n\n"), con)
 

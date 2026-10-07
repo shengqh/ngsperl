@@ -88,6 +88,7 @@ if(all(grepl("^\\d+:", cts))){
   for(i in 1:length(object_list)){
     object_list[[i]]@meta$labels=factor(object_list[[i]]@meta$labels, levels=reorder_cts)
   }
+  cts=reorder_cts
 }
 ```
 
