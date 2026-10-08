@@ -82,13 +82,13 @@ reorder_seurat_cluster_cell_type=function(cts){
   df=df[order(df$num), ]
   return(df$ct)
 }
-cts=levels(object_list[[1]]@meta$labels)
-if(all(grepl("^\\d+:", cts))){
-  reorder_cts=reorder_seurat_cluster_cell_type(cts)
+
+all_cts=unique(unlist(lapply(object_list, function(obj){ levels(obj@meta$labels) })))
+if(all(grepl("^\\d+:", all_cts))){
+  all_cts=reorder_seurat_cluster_cell_type(all_cts)
   for(i in 1:length(object_list)){
-    object_list[[i]]@meta$labels=factor(object_list[[i]]@meta$labels, levels=reorder_cts)
+    object_list[[i]]@meta$labels=factor(as.character(object_list[[i]]@meta$labels), levels=all_cts)
   }
-  cts=reorder_cts
 }
 ```
 
