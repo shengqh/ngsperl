@@ -192,11 +192,12 @@ interaction_heatmap_png=paste0(file_prefix, ".interaction_heatmap.png")
 ```
 
 ```{r eval=!file.exists(interaction_heatmap_png)}
+heatmap_height=max(5, length(common_types) * 0.2 + 3)
 gg1 <- netVisual_heatmap(cur_cellchat)
 gg2 <- netVisual_heatmap(cur_cellchat, measure = "weight")
 g = gg1 + gg2
 
-png(interaction_heatmap_png, width=10, height=5, units="in", res=300, bg="white")
+png(interaction_heatmap_png, width=10, height=heatmap_height, units="in", res=300, bg="white")
 print(g)
 ignored=dev.off()
 ```
