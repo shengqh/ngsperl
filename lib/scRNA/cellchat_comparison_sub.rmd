@@ -1,5 +1,5 @@
 ```{r eval=FALSE, include=FALSE}
-cur_comp="HGPS_vs_WT"
+cur_comp='X10C_6hrXC_vs_X10C_Baseline'
 ```
 
 # Comparison: `r cur_comp`
@@ -18,6 +18,9 @@ common_types <- intersect(
   ctrl_celltypes,
   case_celltypes
 )
+
+# keep the order of the cell types
+common_types=all_cts[all_cts %in% common_types]
 
 has_changed=FALSE
 if(!all(ctrl_celltypes %in% common_types)) {
@@ -61,17 +64,18 @@ file_prefix=paste0("details/", cur_comp)
 ## Number of cells in each cell type
 
 ```{r}
-ctrl_df=as.data.frame(table(as.character(ctrl_obj@meta$labels))) |>
+ctrl_df=as.data.frame(table(ctrl_obj@meta$labels)) |>
   dplyr::rename(Cell_type=1, Ctrl=2)
 colnames(ctrl_df)[2]=ctrl_group
 
-case_df=as.data.frame(table(as.character(case_obj@meta$labels))) |>
+case_df=as.data.frame(table(case_obj@meta$labels)) |>
   dplyr::rename(Cell_type=1, Case=2)
 colnames(case_df)[2]=case_group
 
 cell_type_df=merge(ctrl_df, case_df, by="Cell_type", all=TRUE)
+cell_type_df$Cell_type=factor(cell_type_df$Cell_type, levels=common_types)
+cell_type_df=cell_type_df[order(cell_type_df$Cell_type), ]
 cell_type_df[is.na(cell_type_df)] <- 0 
-cell_type_df=cell_type_df[order(rowSums(cell_type_df[, c(ctrl_group, case_group)]), decreasing = TRUE),]
 print_table(cell_type_df, byDT=FALSE, row.names=FALSE)
 ```
 
@@ -337,12 +341,11 @@ include_graphics(role_heatmap_incoming_png)
 ## Signaling changes in cells types
 
 ```{r}
-all_celltypes <- levels(cur_list[[1]]@meta$labels)
 ct="28: Ciliated cells"
-ct=all_celltypes[1]
+ct=common_types[1]
 ct_rmd=paste0(cur_comp, ".signaling_changes.rmd")
 con <- file(ct_rmd, open = "w")
-for (ct in all_celltypes){
+for (ct in common_types){
   #print(ct)
   ct_filename <- celltype_to_filename(ct)
   ct_png=paste0(file_prefix, ".signaling_changes.", ct_filename, ".png")
@@ -355,7 +358,7 @@ for (ct in all_celltypes){
         theme(aspect.ratio=1) +
         ggtitle(paste0(ct, "(", case_group, " vs. ", ctrl_group, ")"))
     }, error = function(e) {
-      writeLines(paste0("Skipping cell type ", ct, " due to signaling changes plot error: ", conditionMessage(e)))
+      writeLines(paste0("Skipping cell type ", ct, " due to signaling changes plot error: ", conditionMessage(e)), con)
       NULL
     })
 
@@ -429,10 +432,10 @@ The bubble plot shows the overall signaling changes between these cell types.
 The p value refers to the significant communication probabilities, not comparison between the groups.   
 
 ```{r}
-source_ct=all_celltypes[1]
+source_ct=common_types[1]
 bubble_rmd=paste0(cur_comp, ".bubble_plot.rmd")
 con <- file(bubble_rmd, open = "w")
-for (source_ct in all_celltypes){
+for (source_ct in common_types){
   ct_filename <- celltype_to_filename(source_ct)
 
   writeLines(paste0("\n### ", source_ct, "\n\n"), con)
@@ -466,9 +469,12 @@ for (source_ct in all_celltypes){
         dpi = 300,
         limitsize = FALSE
       )
-      writeLines("\n#### Increased\n\n", con)
-      writeLines(getFigure(bubble_png), con)
     }    
+  }
+
+  if(file.exists(bubble_png)){
+    writeLines("\n#### Increased\n\n", con)
+    writeLines(getFigure(bubble_png), con)
   }
 
   bubble_png=paste0(file_prefix, ".bubble.", ct_filename, ".down_in_", case_group, ".png")
@@ -491,9 +497,12 @@ for (source_ct in all_celltypes){
       num_names=length(unique(g$data$interaction_name_2))
       height = min(50, num_names*0.1+5)
       ggsave(bubble_png, g, width=9, height=height, units="in", dpi=300, limitsize = FALSE)
-      writeLines("\n#### Decreased\n\n", con)
-      writeLines(getFigure(bubble_png), con)
     }
+  }
+
+  if(file.exists(bubble_png)){
+    writeLines("\n#### Increased\n\n", con)
+    writeLines(getFigure(bubble_png), con)
   }
 }
 close(con)
