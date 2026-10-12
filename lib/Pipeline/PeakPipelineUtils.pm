@@ -397,12 +397,14 @@ rm -f __NAME__.tag.bam
 
 
 sub add_homer_mergePeaks {
-  my ( $config, $def, $tasks, $target_dir, $homer_mergePeaks_task, $peak_ref, $dependent_task ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $homer_mergePeaks_task, $peak_ref, $dependent_task, $do_zcat ) = @_;
 
   my $rename_1_py             = dirname(__FILE__) . "/../Homer/rename_find_peaks_path.py";
   my $rename_2_py             = dirname(__FILE__) . "/../Homer/rename_annotate_peaks_path.py";
   my $homer_genome            = getValue( $def, "homer_genome" );
   my $homer_mergePeaks_option = getValue( $def, "homer_mergePeaks_option", "-d given" );
+
+  my $cat_command = $do_zcat ? "zcat" : "cat";
 
   $config->{$homer_mergePeaks_task} = {
     class         => "CQS::ProgramWrapper",
@@ -417,7 +419,7 @@ names=(__SAMPLE_NAMES__)
 files=(__FILE__)
 
 for i in \${!files[\@]}; do
-  zcat \${files[\$i]} > \${names[\$i]}.narrowPeaks
+  $cat_command \${files[\$i]} > \${names[\$i]}.narrowPeaks
 done
 
 rm -f __NAME__.mergePeaks.failed __NAME__.mergePeaks.succeed
@@ -484,6 +486,8 @@ sub add_homer_annotatePeaks {
   my $rename_2_py  = dirname(__FILE__) . "/../Homer/rename_annotate_peaks_path.py";
   my $homer_genome = getValue( $def, "homer_genome" );
 
+  my $gtf = getValue( $def, "gtf" );
+
   $config->{$homer_annotatePeaks_task} = {
     class         => "CQS::ProgramWrapper",
     perform       => 1,
@@ -492,19 +496,33 @@ sub add_homer_annotatePeaks {
     check_program => 0,
     option        => "
 
-rm -f __NAME__.annotatePeaks.failed __NAME__.annotatePeaks.succeed
+rm -f __NAME__.annotatePeaks.*.failed __NAME__.annotatePeaks.*.succeed
 
 echo annotatePeaks_raw=`date`
 annotatePeaks.pl __parameterFile1__ \\
-  $homer_genome -raw -d \\
+  $homer_genome \\
+  -raw \\
+  -d \\
   __FILE__ > __NAME__.raw.count
 
 status=\$?
 if [[ \$status -ne 0 ]]; then
-  mv __NAME__.raw.count __NAME__.annotatePeaks.failed
+  mv __NAME__.raw.count __NAME__.annotatePeaks.raw.failed
 else
-  touch __NAME__.annotatePeaks.succeed
+  touch __NAME__.annotatePeaks.raw.succeed
   python $rename_2_py __NAME__.raw.count
+fi
+
+echo annotatePeaks_gtf=`date`
+annotatePeaks.pl __parameterFile1__ \\
+  $homer_genome \\
+  -gtf $gtf > __NAME__.gtf.txt
+
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  mv __NAME__.gtf.txt __NAME__.annotatePeaks.gtf.failed
+else
+  touch __NAME__.annotatePeaks.gtf.succeed
 fi
 
 ",
@@ -513,7 +531,7 @@ fi
     source_name_join_delimiter => " \\\n  ",
     source_type                => "array",
     parameterFile1_ref         => $mergePeaks_ref,
-    output_file_ext            => ".raw.count",
+    output_file_ext            => ".raw.count,.gtf.txt",
     output_to_result_dir       => 1,
     output_to_same_folder      => 1,
     no_output                  => 1,
