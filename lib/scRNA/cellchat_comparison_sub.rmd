@@ -285,7 +285,7 @@ role_heatmap_outgoing_png=paste0(file_prefix, ".role_heatmap_outgoing.png")
 
 ```{r eval=!file.exists(role_heatmap_outgoing_png)}
 height=30
-width=5
+width=max(5, length(common_types) * 0.2 + 2)
 ht_opt$message = FALSE
 pathway.union <- union(cur_list[[1]]@netP$pathways, cur_list[[2]]@netP$pathways)
 ht1 = netAnalysis_signalingRole_heatmap(object = cur_list[[1]], 
@@ -433,6 +433,8 @@ The bubble plot shows the overall signaling changes between these cell types.
 The p value refers to the significant communication probabilities, not comparison between the groups.   
 
 ```{r}
+bubble_width <- max(9, (length(common_types)-1) * 0.3 + 3)
+
 source_ct=common_types[1]
 bubble_rmd=paste0(cur_comp, ".bubble_plot.rmd")
 con <- file(bubble_rmd, open = "w")
@@ -464,7 +466,7 @@ for (source_ct in common_types){
       ggsave(
         bubble_png,
         g,
-        width = 9,
+        width = bubble_width,
         height = height,
         units = "in",
         dpi = 300,
@@ -497,7 +499,14 @@ for (source_ct in common_types){
     if (!is.null(g)) {
       num_names=length(unique(g$data$interaction_name_2))
       height = min(50, num_names*0.1+5)
-      ggsave(bubble_png, g, width=9, height=height, units="in", dpi=300, limitsize = FALSE)
+      ggsave(
+        bubble_png, 
+        g, 
+        width=bubble_width, 
+        height=height, 
+        units="in", 
+        dpi=300, 
+        limitsize = FALSE)
     }
   }
 
