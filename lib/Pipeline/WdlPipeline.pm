@@ -698,7 +698,7 @@ sub addEncodeATACseq {
   }
 
   my $input_parameters_is_vector = {};
-  if ( defined $def->{replicates} ) {
+  if ( !getValue( $def, "perform_encode_individually" ) && defined $def->{replicates} ) {
     my $replicates = $def->{replicates};
     $config->{$task}{"source"} = $replicates;
     $config->{$task}{"input_parameters"}{"atac.true_rep_only"} = getValue( $def, "atac.true_rep_only", "true" );

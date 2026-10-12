@@ -49,6 +49,8 @@ sub initializeDefaultOptions {
     $def->{merge_fastq} = 1;
   }
 
+  initDefaultValue( $def, "perform_encode_individually", 0 );
+
   if ( !defined $def->{"treatments"} ) {
     my $files  = getValue( $def, "files" );
     my $groups = {};
@@ -68,6 +70,8 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_diffbind", 0 );
   initDefaultValue( $def, "perform_homer",    0 );
 
+  initDefaultValue( $def, "top25cv_in_hca", 0 );
+
   return $def;
 } ## end sub initializeDefaultOptions
 
@@ -85,26 +89,32 @@ sub getConfig {
 
   my $tasks = [ @$individual, @$summary ];
 
-  $def->{replicates} = $config->{groups};
+  if ( getValue( $def, "perform_encode_individually" ) ) {
+    my $files      = getValue( $def, "files" );
+    my $replicates = {};
+    for my $sample_name ( sort keys %$files ) {
+      $replicates->{$sample_name} = [$sample_name];
+    }
+    $def->{"replicates"} = $replicates;
+  } ## end if ( getValue( $def, "perform_encode_individually"...))
+  else {
+    $def->{replicates} = $config->{groups};
+  }
 
   $def->{adapter} = "";
 
   my $croo_task     = addEncodeATACseq( $config, $def, $tasks, $target_dir, $source_ref, "encode_atacseq" );
   my $is_paired_end = is_paired_end($def);
 
+  my $croo_bam_ref;
+  my $croo_peak_ref;
+  my $croo_tagdir_ref;
+
   $config->{croo_bam} = {
     class         => "Encode::FindBamTask",
     source_ref    => [$croo_task],
-    replicates    => $def->{groups},
+    replicates    => $def->{replicates},
     files_ref     => $untrimed_ref,
-    has_cutadapt  => getValue( $def, "perform_cutadapt" ),
-    is_paired_end => $is_paired_end,
-  };
-
-  $config->{croo_peak} = {
-    class         => "Encode::FindPeakTask",
-    source_ref    => [$croo_task],
-    replicates    => $def->{groups},
     has_cutadapt  => getValue( $def, "perform_cutadapt" ),
     is_paired_end => $is_paired_end,
   };
@@ -139,8 +149,8 @@ makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format 
 #__OUTPUT__ __FILE2__
 ",
       source_ref               => ["croo_bam"],
-      output_file_ext          => ".NFR_filtered.bam,.NFR_filtered.tn5.tagAlign.gz",
-      parameterSampleFile2_ref => $croo_task,                                          #make sure dependent on croo task.
+      output_file_ext          => ".NFR_filtered.bam,.NFR_filtered_peaks.narrowPeak,.NFR_filtered.tagdir,.NFR_filtered.tn5.tagAlign.gz",
+      parameterSampleFile2_ref => $croo_task,                                                                                              #make sure dependent on croo task.
       output_to_result_dir     => 1,
       output_to_same_folder    => 0,
       sh_direct                => 0,
@@ -151,29 +161,91 @@ makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format 
       }
     };
     push( @$tasks, $nfr_task );
+
+    $croo_bam_ref    = [ $nfr_task, ".NFR_filtered.bam" ];
+    $croo_peak_ref   = [ $nfr_task, ".NFR_filtered_peaks.narrowPeak" ];
+    $croo_tagdir_ref = [ $nfr_task, ".NFR_filtered.tagdir" ];
   } ## end if ( $def->{perform_NFR_filter...})
+  else {
+
+    $config->{croo_peak} = {
+      class         => "Encode::FindPeakTask",
+      source_ref    => [$croo_task],
+      replicates    => $def->{replicates},
+      has_cutadapt  => getValue( $def, "perform_cutadapt" ),
+      is_paired_end => $is_paired_end,
+    };
+
+    $croo_bam_ref    = "croo_bam";
+    $croo_peak_ref   = "croo_peak";
+    $croo_tagdir_ref = undef;
+  } ## end else [ if ( $def->{perform_NFR_filter...})]
 
   if ( $def->{perform_diffbind} ) {
     my $bindName = $croo_task . "_diffbind";
-    addDiffbind( $config, $def, $tasks, $target_dir, $bindName, "croo_bam", "croo_peak" );
+    addDiffbind( $config, $def, $tasks, $target_dir, $bindName, $croo_bam_ref, $croo_peak_ref );
     if ( getValue( $def, "perform_homer" ) ) {
       my $diffbind_homer = addHomerAnnotation( $config, $def, $tasks, $target_dir, $bindName, ".sig.bed" );
     }
   } ## end if ( $def->{perform_diffbind...})
 
   if ( $def->{perform_homer_analysis} ) {
-    my $homer_tagdirectories_task = "homer_1_tagdirectories";
-    add_homer_makeTagDirectory( $config, $def, $tasks, $target_dir, $homer_tagdirectories_task, "croo_bam", $croo_task );
+    my $homer_tagdirectories_task;
+    my $do_zcat = 1;
+    if ( defined $croo_tagdir_ref ) {
+      $homer_tagdirectories_task = $croo_tagdir_ref;
+      $do_zcat                   = 0;
+    }
+    else {
+      $homer_tagdirectories_task = "homer_0_tagdirectories";
+      add_homer_makeTagDirectory( $config, $def, $tasks, $target_dir, $homer_tagdirectories_task, $croo_bam_ref, $croo_task );
+    }
 
-    my $homer_mergePeaks_task = "homer_2_mergePeaks";
-    add_homer_mergePeaks( $config, $def, $tasks, $target_dir, $homer_mergePeaks_task, "croo_peak", $croo_task );
+    my $homer_mergePeaks_task = "homer_1_mergePeaks";
+    add_homer_mergePeaks( $config, $def, $tasks, $target_dir, $homer_mergePeaks_task, $croo_peak_ref, $croo_task, $do_zcat );
 
-    my $homer_annotatePeaks_task = "homer_3_annotatePeaks";
+    my $homer_annotatePeaks_task = "homer_2_annotatePeaks";
     add_homer_annotatePeaks( $config, $def, $tasks, $target_dir, $homer_annotatePeaks_task, $homer_tagdirectories_task, $homer_mergePeaks_task );
 
     if ( defined $def->{pairs} ) {
-      my $deseq2taskname = addDEseq2( $config, $def, $tasks, "homer_peaks_raw_count", [ "homer_3_annotatePeaks", ".raw.count" ], $def->{target_dir}, $def->{DE_min_median_read} );
-    }
+      my $homer_differential_accessibility_method = getValue( $def, "homer_differential_accessibility_method", "edgeR" );
+      if ( $homer_differential_accessibility_method eq "edgeR" ) {
+        my $edgeR_task = "homer_3_edgeR";
+        $config->{$edgeR_task} = {
+          class                => "CQS::UniqueRmd",
+          perform              => 1,
+          target_dir           => $target_dir . "/$edgeR_task",
+          report_rmd_file      => "../Comparison/Differential_accessibility_report.Rmd",
+          additional_rmd_files => "../CQS/reportFunctions.R;../Comparison/Differential_accessibility_report_sub.Rmd",
+          option               => "",
+          parameterSampleFile1 => {
+            task_name                 => getValue( $def, "task_name" ),
+            email                     => getValue( $def, "email" ),
+            affiliation               => $def->{"affiliation"},
+            min_count_per_sample      => getValue( $def, "edgeR_min_count_per_sample",      20 ),
+            min_proportion_of_samples => getValue( $def, "edgeR_min_proportion_of_samples", 0.7 ),
+          },
+          parameterSampleFile2_ref => [ $homer_annotatePeaks_task, ".raw.count" ],
+          parameterSampleFile3_ref => [ $homer_annotatePeaks_task, ".gtf.txt" ],
+          parameterSampleFile4_ref => "groups",
+          parameterSampleFile5_ref => "pairs",
+          parameterSampleFile6_ref => $croo_peak_ref,
+          output_file_ext          => ".edgeR.html",
+          output_other_ext         => ".edgeR.rds",
+          docker_prefix            => "edgeR_",
+          can_result_be_empty_file => 0,
+          sh_direct                => 1,
+          pbs                      => {
+            "nodes"    => "1:ppn=1",
+            "walltime" => "2",
+            "mem"      => "10gb"
+          },
+        };
+      } ## end if ( $homer_differential_accessibility_method...)
+      if ( $homer_differential_accessibility_method eq "DEseq2" ) {
+        my $deseq2taskname = addDEseq2( $config, $def, $tasks, "homer_peaks_raw_count", [ $homer_annotatePeaks_task, ".raw.count" ], $def->{target_dir}, $def->{DE_min_median_read} );
+      }
+    } ## end if ( defined $def->{pairs...})
 
   } ## end if ( $def->{perform_homer_analysis...})
 
