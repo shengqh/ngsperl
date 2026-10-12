@@ -1,0 +1,128 @@
+# `r comparison`
+
+```{r eval=FALSE, include=FALSE}
+comparison='Ang_vs_Veh'
+```
+
+```{r}
+prefix=comparison
+```
+
+## MDS
+
+```{r}
+cur_groups=pairs_tbl$Group[pairs_tbl$Comparison==comparison]
+cur_design=groups_tbl |> dplyr::filter(Group %in% cur_groups)
+cur_design$Group=factor(cur_design$Group, levels=cur_groups)
+comparison_data=ceiling(counts[,cur_design$Sample])
+
+group_colors=c("blue", "red")
+names(group_colors)<-cur_groups
+sample_colors=group_colors[cur_design$Group]
+names(sample_colors)=cur_design$Sample
+
+dge=DGEList(comparison_data, design = ~1)
+keep <- filterByExpr(dge, min.count = min_count_per_sample, min.prop = min_proportion_of_samples)
+dge <- dge[keep,,keep.lib.sizes=FALSE]
+   
+dge<-calcNormFactors(dge,method = "TMM")
+
+mds <- plotMDS(dge, plot=FALSE)
+toplot <- data.frame(Dim1 = mds$x, Dim2 = mds$y, Sample = cur_design$Sample, Group = cur_design$Group)
+g<-ggplot(toplot, aes(Dim1, Dim2)) + 
+  geom_point(aes(colour = Group)) + 
+  geom_text_repel(aes(label=Sample), hjust=0, vjust=0) +
+  theme_bw3() + 
+  theme(aspect.ratio=1) +
+  xlab(paste0("Leading logFC dim 1 (", round(mds$var.explained[1] * 10000)/100, "%)")) + 
+  ylab(paste0("Leading logFC dim 2 (", round(mds$var.explained[2] * 10000)/100, "%)")) +
+  scale_color_manual(values=group_colors)
+mds_png=paste0(prefix, ".mds.png")
+ggsave(mds_png, g, width=6, height=5, units="in", dpi=300, bg="white")
+include_graphics(mds_png)
+```
+
+## Differential Accessibility Peaks
+
+```{r}
+treatment = cur_design$Group
+y <- DGEList(counts=comparison_data,group=treatment)
+keep <- filterByExpr(y, min.count = min_count_per_sample, min.prop = min_proportion_of_samples)
+y <- y[keep,,keep.lib.sizes=FALSE]
+y<-calcNormFactors(y,method = "TMM")
+design <- model.matrix(~treatment)
+fit <- glmQLFit(y,design)
+qlf <- glmQLFTest(fit,coef=2)
+```
+
+```{r}
+homer_res = as.data.frame(topTags(qlf, n = nrow(y$counts)))
+homer_res = homer_res[order(homer_res$FDR),,drop=FALSE]
+
+cat(paste0("\n- Significant DE peaks: ", length(which(homer_res$FDR<0.05)), "\n"))
+cat(paste0("- Significant UP in ", cur_groups[2], " DE peaks: ", length(which(homer_res$FDR<0.05 & homer_res$logFC>0)), "\n"))
+cat(paste0("- Significant DOWN in ", cur_groups[2], " DE peaks: ", length(which(homer_res$FDR<0.05 & homer_res$logFC<0)), "\n\n"))
+
+to_print = signif(homer_res, digits = 4)
+to_print$Closest_gene_homerAnno = paste0(anno_peaks$`Gene Name`[match(row.names(to_print), anno_peaks$Peak_ID)], "|",anno_peaks$`Nearest Ensembl`[match(row.names(to_print), anno_peaks$Peak_ID)])
+to_print$Closest_gene_gencodeAnno = paste0(gencode_anno$`Gene Name`[match(row.names(to_print), gencode_anno$Peak_ID)], "|", gencode_anno$`Nearest Unigene`[match(row.names(to_print), gencode_anno$Peak_ID)])
+to_print$SimpGene_gencode = unlist(lapply(strsplit(to_print$Closest_gene_gencodeAnno, split = "\\|"), "[[",1))
+to_print$SimpGene_homer = unlist(lapply(strsplit(to_print$Closest_gene_homerAnno, split = "\\|"), "[[",1))
+to_print$Coord = paste0(anno_peaks$Chr[match(row.names(to_print), anno_peaks$Peak_ID)], ":", anno_peaks$Start[match(row.names(to_print), anno_peaks$Peak_ID)], "-", anno_peaks$End[match(row.names(to_print), anno_peaks$Peak_ID)])
+
+all_de_csv=paste0(prefix, ".all_de.csv")
+write.csv(to_print, all_de_csv, quote = F)
+
+sig_de=to_print[which(to_print$FDR<0.05),]
+sig_de_csv=paste0(prefix, ".significant_de.csv")
+write.csv(sig_de, sig_de_csv, quote = F)
+
+print_table(sig_de[,c(1:5,8,9,10)], byDT=TRUE, row.names=TRUE)
+```
+
+## Volcano Plot
+
+```{r}
+g=EnhancedVolcano(to_print,
+                lab = to_print$SimpGene_gencode,
+                x = "logFC",
+                y = "PValue",
+                pCutoff = 0.05,
+                pCutoffCol = "FDR",
+                FCcutoff = NA,
+                title = comparison,
+                subtitle = NULL) + 
+  theme(plot.title = element_text(hjust = 0.5))
+volcano_png=paste0(prefix, ".volcano.png")
+ggsave( volcano_png, g, height = 7, width = 7, units="in", dpi = 300, bg="white")
+include_graphics(volcano_png)
+```
+
+## logCPM of top 5 peaks
+
+```{r}
+cpms <- as.data.frame(cpm(y, log=TRUE))
+cpms$Peak_ID = row.names(cpms)
+cpms = cpms[cpms$Peak_ID %in% rownames(sig_de),,drop=FALSE]
+cpms = cpms[c(1:min(5, nrow(cpms))),,drop=FALSE]
+cpms_long = reshape2::melt(cpms, id.vars = "Peak_ID", value.name = "logCPM", variable.name = "Sample")
+cpms_long = merge(cpms_long, cur_design, by = "Sample")
+
+g = ggplot(cpms_long, aes(x = Group, y = logCPM, fill = Group, color = Group)) +
+  geom_violin() +
+  geom_point() +
+  facet_grid(Peak_ID~., scale = "free_y") +
+  ylab("logCPM") + xlab("") +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        legend.position = "none",
+        panel.background = element_rect(colour = "black", fill = "white"), 
+        strip.background = element_rect(fill = "black", colour = "black"), 
+        strip.text = element_text(color = "white")) +
+  scale_color_manual(values = c("turquoise4", "purple1")) +
+  scale_fill_manual(values = c(alpha("turquoise4", 0.5), alpha("purple1", 0.5)))
+
+cpm_png=paste0(prefix, ".logcpm.png")
+ggsave(cpm_png, g, height = 10, width = 3, units="in", dpi = 300, bg="white")
+include_graphics(cpm_png)
+```
