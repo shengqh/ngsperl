@@ -764,8 +764,7 @@ for(countfile_index in c(1:length(countfiles))){
       colnames(sv_matrix) = paste0("SV", seq_len(ncol(sv_matrix)))
       rownames(sv_matrix) = colnames(norm_counts)
 
-      sv_sample_tbl = cbind(designData, sv_matrix[colnames(dds), , drop = FALSE]) |>
-        dplyr::select(Sample, starts_with("SV"), Condition)
+      sv_sample_tbl = cbind(designData, sv_matrix[colnames(dds), , drop = FALSE]) 
       write.table(sv_sample_tbl, file = paste0(designFile, ".svaseq"), sep = "\t", quote = FALSE, row.names = FALSE)
 
       cat("\nRemove batch effect from data using svaseq surrogate variables using limma::removeBatchEffect for visualization.\n")
@@ -985,7 +984,8 @@ for(countfile_index in c(1:length(countfiles))){
 
     #different expression analysis
     if (is.null(designFormula)) {
-      designFormula=as.formula(paste0("~",paste0(c(colnames(designData)[-c(1:2)],"Condition"),collapse="+")))
+      covariates=colnames(designData)[!colnames(designData) %in% c("Condition", "Sample")]
+      designFormula=as.formula(paste0("~",paste0(c(covariates,"Condition"),collapse="+")))
     }
     
     cat(paste0("", designFormula), "\n")
