@@ -118,7 +118,6 @@ sub perform {
   my ( $task_name, $path_file, $pbs_desc, $target_dir, $log_dir, $pbs_dir, $result_dir, $option, $sh_direct, $cluster, $thread, $memory ) = $self->init_parameter( $config, $section );
 
   my $cromwell_config_file = get_option_file($config, $section, "cromwell_config_file");
-  my $cromwell_jar = get_option_file($config, $section, "cromwell_jar");
  
   my $wdl_file = get_option_file( $config, $section, "wdl_file");
 
@@ -130,6 +129,8 @@ sub perform {
 
   my $use_caper = get_option( $config, $section, "use_caper", 0 );
   my $caper_conda_env = get_option( $config, $section, "caper_conda_env", "" );
+
+  my $java_module = get_option( $config, $section, "java_module", "" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
 
@@ -378,6 +379,12 @@ fi
         
     my $pbs = $self->open_pbs( $pbs_file, $pbs_desc, $log_desc, $path_file, $cur_dir, $expect_file );
 
+    if($java_module ne ""){
+      print $pbs "
+module load $java_module
+";
+    }
+
     if($check_output_file_pattern ne ""){
       print $pbs "
 if [[ 1 -eq \$1 ]]; then
@@ -396,16 +403,44 @@ fi
 rm -f $final_dir/${sample_name}.failed
 ";
     if($use_caper){
+      my $cromwell_jar = get_option_file($config, $section, "cromwell_jar", "");
+      my $womtool_jar = get_option_file($config, $section, "womtool_jar", "");
+
+      my $jar_option = "";
+      if ($cromwell_jar ne ""){
+        $jar_option = $jar_option . " --cromwell $cromwell_jar";
+      }
+      if ($womtool_jar ne ""){
+        $jar_option = $jar_option . " --womtool $womtool_jar";
+      }
+
       if($caper_conda_env ne ""){
         print $pbs "
+if [[ -v VIRTUAL_ENV ]]; then
+  echo 'Deactivating UV venv \$VIRTUAL_ENV ...'
+  deactivate
+fi
+
+if [[ -v CONDA_PREFIX ]]; then
+  echo 'Deactivating conda venv \$CONDA_PREFIX ...'
+  conda deactivate
+fi
+
+echo 'Activating conda env $caper_conda_env ...'
 source activate $caper_conda_env
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo 'Activating conda env $caper_conda_env failed'
+fi
+
 ";
       }
-      print $pbs "
-caper run $wdl_file $option -i $sample_input_file $singularity_option -m $final_dir/metadata.json
+      print $pbs ($caper_conda_env ne "" ? "$caper_conda_env/bin/caper" : "caper") . " run $wdl_file $option $jar_option -i $sample_input_file $singularity_option -m $final_dir/metadata.json
     
 ";
     }else{
+      my $cromwell_jar = get_option_file($config, $section, "cromwell_jar");
+
       my $input_option_file = get_option_file( $config, $section, "input_option_file" );
       my $db_url="$db_folder/${sample_name}.db";
       

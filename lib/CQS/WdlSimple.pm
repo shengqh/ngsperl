@@ -43,6 +43,7 @@ sub perform {
   my $check_output_file_pattern = get_option( $config, $section, "check_output_file_pattern", "" );
 
   my $use_caper = get_option( $config, $section, "use_caper", 0 );
+  my $caper_conda_env = get_option( $config, $section, "caper_conda_env", "" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder", 1);
 
@@ -137,12 +138,35 @@ fi
       if ($womtool_jar ne ""){
         $jar_option = $jar_option . " --womtool $womtool_jar";
       }
-      print $pbs "
-caper run $wdl_file $option $jar_option -i $input_file $singularity_option -m $cur_dir/metadata.json
+
+      if($caper_conda_env ne ""){
+        print $pbs "
+if [[ -v VIRTUAL_ENV ]]; then
+  echo 'Deactivating UV venv \$VIRTUAL_ENV ...'
+  deactivate
+fi
+
+if [[ -v CONDA_PREFIX ]]; then
+  echo 'Deactivating conda venv \$CONDA_PREFIX ...'
+  conda deactivate
+fi
+
+echo 'Activating conda env $caper_conda_env ...'
+source activate $caper_conda_env
+status=\$?
+if [[ \$status -ne 0 ]]; then
+  echo 'Activating conda env $caper_conda_env failed'
+fi
+
+";
+      }
+
+      print $pbs ($caper_conda_env ne "" ? "$caper_conda_env/bin/caper" : "caper") . " run $wdl_file $option $jar_option -i $input_file $singularity_option -m $cur_dir/metadata.json
     
 ";
     }else{
-      my $cromwell_jar = get_option_file($config, $section, "cromwell_jar", "");
+      my $cromwell_jar = get_option_file($config, $section, "cromwell_jar");
+      
       my $cromwell_config_file = get_option_file($config, $section, "cromwell_config_file");
       my $input_option_file = get_option_file( $config, $section, "input_option_file" );
 

@@ -655,7 +655,8 @@ sub addEncodeATACseq {
     #"option" => "--no-build-singularity",
     "option"               => $encode_option,
     "target_dir"           => "${target_dir}/${task_folder}",
-    "cromwell_jar"         => $wdl->{"cromwell_jar"},
+    "cromwell_jar"         => getValue($def, "cromwell_jar"),
+    "womtool_jar"          => getValue($def, "womtool_jar"),
     "input_option_file"    => $wdl->{"cromwell_option_file"},
     "cromwell_config_file" => $server->{"cromwell_config_file"},
     "wdl_file"             => $pipeline->{"wdl_file"},
@@ -680,6 +681,7 @@ sub addEncodeATACseq {
     output_file_ext           => "atac/",
     use_caper                 => 1,
     caper_conda_env           => $def->{caper_conda_env},
+    java_module               => $def->{java_module},
     sh_direct                 => $sh_direct,
     fastq_ref                 => $files_ref,
     pbs                       => {
@@ -742,7 +744,7 @@ sub addEncodeATACseq {
     } ## end while ( $pick_index < $max_len)
 
     $config->{$task}{input_parameters_is_vector} = $input_parameters_is_vector;
-  } ## end if ( defined $def->{replicates...})
+  } ## end if ( !getValue( $def, ...))
   else {
     $config->{$task}{source_ref} = $files_ref;
     my $fastq_1 = "fastq_1";
@@ -760,7 +762,7 @@ sub addEncodeATACseq {
     };
     $config->{$task}{input_parameters}{"atac.fastqs_rep1_R1_ref"} = [$fastq_1];
     $config->{$task}{input_parameters}{"atac.fastqs_rep1_R2_ref"} = [$fastq_2];
-  } ## end else [ if ( defined $def->{replicates...})]
+  } ## end else [ if ( !getValue( $def, ...))]
 
   push @$tasks, $task;
 
