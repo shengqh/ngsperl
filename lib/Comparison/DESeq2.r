@@ -756,7 +756,7 @@ for(countfile_index in c(1:length(countfiles))){
       # Larger number of SV may cause iteration error: 
       # Iteration (out of 5 ):Error in density.default(x, adjust = adj) : 'x' contains missing values
       # 20261014: use default "be" method instead of "leek"
-      n_sv = min(5, sva::num.sv(norm_counts, mod, method = "be", seed=20261014))
+      n_sv = max(1, min(5, sva::num.sv(norm_counts, mod, method = "be", seed=20261014)))
 
       cat("Use", n_sv, "surrogate variable(s) from svaseq.\n")
       sv_obj = sva::svaseq(norm_counts, mod, mod0, n.sv = n_sv)
