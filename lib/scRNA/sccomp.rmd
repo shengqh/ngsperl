@@ -208,9 +208,25 @@ for(comp_name in names(complist)){
 
   plots = plot(sccomp_result)
 
-  g = plots$credible_intervals_1D + theme(axis.title.y=element_blank())
+  g = plots$credible_intervals_1D + 
+    annotate("text", x=-Inf, y=Inf, label=paste0(groups[1], " high"),
+             hjust=0, vjust=-0.5, size=3, fontface="bold") +
+    annotate("text", x=Inf, y=Inf, label=paste0(groups[2], " high"),
+             hjust=1, vjust=-0.5, size=3, fontface="bold") +
+    coord_cartesian(clip="off") +
+    theme(axis.title.y=element_blank(),
+          axis.text.y=element_text(size=8, face="bold"),
+          plot.title = element_blank(),
+          plot.margin = margin(t=25, r=10, b=10, l=10))
+
+  g$data = g$data |>
+    dplyr::arrange(effect, decreasing=TRUE)
+  g$data$cell_group = factor(g$data$cell_group, levels=g$data$cell_group)
+  g$data$y_var = factor(g$data$y_var, levels=g$data$y_var)
   credible_intervals_1D_png = paste0(prefix, ".", comp_file, ".credible_intervals_1D.contrast.png")
-  ggsave(credible_intervals_1D_png, g, width=8, height=4, units="in", dpi=300, bg="white")
+
+  height=max(3, nrow(g$data) * 0.2 + 1)
+  ggsave(credible_intervals_1D_png, g, width=5, height=height, units="in", dpi=300, bg="white")
 
   comp_content=paste(comp_content, getFigure(credible_intervals_1D_png))
 }
