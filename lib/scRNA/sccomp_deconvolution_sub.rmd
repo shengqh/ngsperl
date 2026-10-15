@@ -1,0 +1,133 @@
+```{r eval=FALSE, include=FALSE}
+cur_estiate=all_estimate
+cur_prefix=paste0(prefix, ".notRemovingOutliers")
+```
+
+## Test result table
+
+```{r results='hide'}
+all_sccomp_result = cur_estiate |>
+  sccomp_test()
+
+all_test_rds = paste0(cur_prefix, ".all.test.rds")
+saveRDS(all_sccomp_result, file=all_test_rds)
+
+# full table. the columns read most often:
+#   parameter   the comparison (e.g. conditionB = B vs the reference)
+#   c_effect    composition effect on the logit scale; > 0 = higher share in that level
+#   c_lower / c_upper   credible interval of c_effect
+#   c_pH0       posterior probability of no effect
+#   c_FDR       false discovery rate across the cell groups of this comparison
+res_flat <- all_sccomp_result |> 
+  select(where(~ !is.list(.x)))           # drop the nested columns
+
+effects <- res_flat |>
+    filter(!grepl('Intercept', parameter)) |>
+    select(cell_group, parameter, c_lower, c_effect, c_upper, c_pH0, c_FDR)
+write.csv(effects, paste0(cur_prefix, ".all.effects.csv"), row.names = FALSE)
+```
+
+```{r}
+print_table(effects, byDT=TRUE, row.names=FALSE)
+```
+
+## Boxplot crossing all groups
+
+```{r results="hide"}
+g = all_sccomp_result |> 
+  sccomp_boxplot(factor = "type", remove_unwanted_effects=TRUE) +
+  theme(legend.position="right")  
+```
+
+```{r}
+box_png = paste0(cur_prefix, ".all.boxplot.png")
+ggsave(box_png, g, width=8, height=6, units="in", dpi=300, bg="white")
+include_graphics(box_png)
+```
+
+The significant differences of comparisons are shown in the following credible intervals plot.
+
+```{r, results="hide"}
+comp_tbl=fread("fileList4.txt", header=FALSE, data.table=FALSE) |>
+  dplyr::filter(V2 != "covariates" & V2 != "covariances")
+
+if(ncol(comp_tbl) == 3) { # v3 is comparison, v2 is useless
+  comp_tbl = comp_tbl |> 
+    dplyr::select(-V2) |>
+    dplyr::rename(V2=V3)
+}
+
+res <- comp_tbl |>
+  dplyr::group_by(V2) |>
+  dplyr::summarise(values = list(V1)) 
+
+complist <- setNames(res$values, res$V2)            # convert to named list
+
+comp_name= names(complist)[1]
+comp_content=""
+for(comp_name in names(complist)){
+  comp_content=paste0(comp_content, "\n## Comparison:", comp_name, "\n\n")
+
+  comp_file=gsub(" ", "_", comp_name)
+  groups=complist[[comp_name]]
+
+  if(groups[[1]] == condition_control){
+    contrast=paste0("type", groups[2])
+  }else{
+    contrast=paste0("type", groups[2], "-type", groups[1])
+  }
+
+  sccomp_result = cur_estiate |>
+                  sccomp_test(contrasts= c(contrast))
+
+  saveRDS(sccomp_result, file=paste0(cur_prefix, ".", comp_file, ".test.rds"))
+
+  pchange <- sccomp_proportional_fold_change(
+    cur_estiate,
+    formula_composition = ~ type,
+    from = groups[1], # from is control group
+    to = groups[2] # to is treatment group
+  ) |> as.data.frame()
+                    
+  vis_res = sccomp_result |> 
+    dplyr::select(cell_group, c_lower, c_effect, c_upper, c_pH0, c_FDR) |>
+    as.data.frame() |>
+    dplyr::left_join(pchange, by=c("cell_group")) |>
+    dplyr::select(cell_group, everything()) |>
+    dplyr::arrange(proportion_fold_change, decreasing=TRUE)
+  
+  result_csv=paste0(cur_prefix, ".", comp_file, ".effects.csv")
+  write.csv(vis_res, result_csv, row.names=FALSE)
+
+  comp_content=paste(comp_content, getPagedTable(result_csv))
+
+  plots = plot(sccomp_result)
+
+  g = plots$credible_intervals_1D + 
+    annotate("text", x=-Inf, y=Inf, label=paste0(groups[1], " high"),
+             hjust=0, vjust=-0.5, size=3, fontface="bold") +
+    annotate("text", x=Inf, y=Inf, label=paste0(groups[2], " high"),
+             hjust=1, vjust=-0.5, size=3, fontface="bold") +
+    coord_cartesian(clip="off") +
+    theme(axis.title.y=element_blank(),
+          axis.text.y=element_text(size=8, face="bold"),
+          plot.title = element_blank(),
+          plot.margin = margin(t=25, r=10, b=10, l=10))
+
+  g$data = g$data |>
+    dplyr::arrange(effect, decreasing=TRUE)
+  g$data$cell_group = factor(g$data$cell_group, levels=g$data$cell_group)
+  g$data$y_var = factor(g$data$y_var, levels=g$data$y_var)
+  credible_intervals_1D_png = paste0(cur_prefix, ".", comp_file, ".credible_intervals_1D.png")
+
+  height=max(3, nrow(g$data) * 0.2 + 1)
+  ggsave(credible_intervals_1D_png, g, width=5, height=height, units="in", dpi=300, bg="white")
+
+  comp_content=paste(comp_content, getFigure(credible_intervals_1D_png))
+}
+comp_rmd=paste0(cur_prefix, ".comp.rmd")
+writeLines(comp_content, comp_rmd)
+```
+
+```{r child=comp_rmd}
+```
