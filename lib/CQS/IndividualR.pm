@@ -285,7 +285,7 @@ fi
     print $pbs $self->get_init_pbs($config, $section) . "
 
 mkdir -p tmp
-export TMPDIR=./tmp
+export TMPDIR=\$(pwd)/tmp
 
 ";
     

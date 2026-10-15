@@ -138,7 +138,7 @@ fi
     print $pbs "
 
 mkdir -p tmp
-export TMPDIR=./tmp
+export TMPDIR=\$(pwd)/tmp
 
 $rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='${sample_name}${output_ext}')\"
 

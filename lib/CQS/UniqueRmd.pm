@@ -66,7 +66,7 @@ sub perform {
   print $final "
 
 mkdir -p tmp
-export TMPDIR=./tmp
+export TMPDIR=\$(pwd)/tmp
 
 $rscript -e \"library(knitr);rmarkdown::render('$rfilename');\"
 
