@@ -4307,7 +4307,8 @@ sub add_sccomp_of_deconvolution {
     },
     parameterSampleFile3     => getValue($def, "meta_files"),
     parameterSampleFile4     => getValue($def, "pairs"),
-    rReportTemplate => "../scRNA/sccomp_deconvolution.rmd;../scRNA/sccomp_deconvolution_sub.rmd;../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
+    rReportTemplate => "../scRNA/sccomp_deconvolution.rmd",
+    additional_rmd_files     => "../scRNA/sccomp_sub.rmd;../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
     output_ext      => ".sccomp_deconvolution.html",
     pbs             => {
       "nodes"    => "1:ppn=1",

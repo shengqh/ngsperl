@@ -140,7 +140,7 @@ cur_estiate=all_estimate
 cur_prefix=paste0(prefix, ".notRemovingOutliers")
 ```
 
-```{r child="sccomp_deconvolution_sub.rmd"}
+```{r child="sccomp_sub.rmd"}
 ```
 
 # With removing outliers
@@ -153,7 +153,7 @@ cur_estiate = all_estimate |>
 cur_prefix=paste0(prefix, ".removingOutliers")
 ```
 
-```{r child="sccomp_deconvolution_sub.rmd"}
+```{r child="sccomp_sub.rmd"}
 ```
 
 # Session Info
