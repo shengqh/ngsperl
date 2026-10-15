@@ -477,7 +477,7 @@ summary_tableby = function(dat, formula, test=F, total=T, digits=1, digits.p=2, 
   summary(result, title = "", width = 3, pfootnote = TRUE)  
 }
 
-to_numeric<-function(value, defaultValue){
+to_string<-function(value, defaultValue){
   if(is.null(value)){
     return(defaultValue)
   }
@@ -487,7 +487,12 @@ to_numeric<-function(value, defaultValue){
   if(value == ""){
     return(defaultValue)
   }
-  return(as.numeric(value))
+  return(value)
+}
+
+to_numeric<-function(value, defaultValue){
+  res_value=to_string(value, defaultValue)
+  return(as.numeric(res_value))
 }
 
 to_filename<-function(pct){
