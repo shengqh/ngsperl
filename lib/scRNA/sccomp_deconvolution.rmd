@@ -1,0 +1,229 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  rmdformats::readthedown:
+    toc_depth: 3
+    number_sections: true
+---
+```{r eval=FALSE, include=FALSE}
+setwd('/nobackup/h_cqs/maureen_gannon_projects/20261001_GSE77896_BulkRNA_mmu_test/BayesPrism_Deconvolution_sccomp/result/GSE77896_Gannon_mm10')
+```
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo=FALSE,  
+                      message=FALSE, 
+                      warning=FALSE, 
+                      results = 'asis', 
+                      fig.width=7, 
+                      fig.height = 7,
+                      tidy = TRUE, 
+                      tidy.opts = list(comment = FALSE))
+```
+
+```{css, echo=FALSE}
+#content{
+    max-width:1920px;
+}
+
+.main-container {
+  max-width: 1920px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+```
+
+```{r data, echo = FALSE}
+source("reportFunctions.R")
+source("scRNA_func.r")
+
+options(future.globals.maxSize = 600000 * 1024^2)
+options(future.seed = TRUE)
+
+myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
+cell_group_column=myoptions$cell_group_column
+cache_stan_model_dir=myoptions$sccomp_stan_models_cache_dir
+
+if(is.null(cache_stan_model_dir)){
+  cache_stan_model_dir <- "~/.sccomp_models"
+  dir.create(cache_stan_model_dir, recursive = TRUE, showWarnings=FALSE)
+}
+
+affiliation=get_affiliation(myoptions)
+
+prefix = paste0(myoptions$task_name, ".sccomp")
+```
+
+---
+title: `r myoptions$task_name` - Cell composition comparison
+author:
+- name: `r myoptions$email`
+  affiliation: `r affiliation`
+---
+
+```{r}
+library(dplyr)
+library(sccomp)
+
+# sccomp_boxplot will call internal function which will check the cache directory, 
+# so we need to set the cache directory before calling sccomp_boxplot.
+utils::assignInNamespace("sccomp_stan_models_cache_dir", cache_stan_model_dir, ns="sccomp")
+
+# BayesPrism fractions: RNA.ID + one column per cell type (what 10 reads)
+prop_table=fread("fileList1.txt", header=FALSE)
+fraction_name=prop_table$V2[1]
+fraction_file=prop_table$V1[1]
+prefix=fraction_name
+
+meta_table=fread("fileList3.txt", header=FALSE) |>
+  dplyr::filter(V3 == fraction_name) |>
+  dplyr::select(-V3) 
+meta_options=split(meta_table$V1, meta_table$V2)
+sample_col=meta_options$sample_col
+condition_col=meta_options$condition_col
+meta=fread(meta_options$filepath, header=TRUE, data.table=FALSE)
+stopifnot(all(c(sample_col, condition_col) %in% colnames(meta)))
+```
+
+# Overview boxplot
+
+We performed sccomp analysis to compare cell type compositions across different conditions.
+
+```{r, echo=FALSE}
+prop_wide <- fread(fraction_file, data.table=FALSE)
+stopifnot(all(prop_wide$RNA.ID %in% meta[[sample_col]]))
+print_table(prop_wide, byDT=TRUE, row.names=FALSE)
+```
+
+```{r results='hide'}
+prop_long = prop_wide |>
+  tidyr::pivot_longer(cols=-RNA.ID, names_to="cell_group", values_to="abundance") |>
+  dplyr::left_join(meta, by=setNames(sample_col, "RNA.ID")) |>
+  dplyr::rename(
+    sample=RNA.ID,
+    type=!!sym(condition_col)
+  ) |>
+  as.data.frame() 
+
+all_estimate = sccomp_estimate( 
+  prop_long,
+  formula_composition = ~0 + type, # we want to use contrasts, so no intercept
+  formula_variability = ~1,
+  sample = "sample", 
+  cell_group = "cell_group",
+  abundance  = "abundance",
+  bimodal_mean_variability_association = FALSE,
+  verbose = FALSE,
+  cache_stan_model = normalizePath(cache_stan_model_dir)
+) 
+
+no_outlier_estimate = all_estimate |>
+                  sccomp_remove_outliers(max_sampling_iterations = 2000, 
+                  verbose=FALSE)
+
+all_sccomp_result = no_outlier_estimate |>
+                sccomp_test()
+
+all_test_rds = paste0(prefix, ".all.test.rds")
+saveRDS(all_sccomp_result, file=all_test_rds)
+
+g = all_sccomp_result |> 
+  sccomp_boxplot(factor = "type", remove_unwanted_effects=TRUE) +
+  theme(legend.position="right")  
+```
+
+```{r}
+box_png = paste0(prefix, ".boxplot.png")
+ggsave(box_png, g, width=8, height=6, units="in", dpi=300, bg="white")
+include_graphics(box_png)
+```
+
+The significant differences of comparisons are shown in the following credible intervals plot.
+
+```{r, results="hide"}
+comp_tbl=fread("fileList4.txt", header=FALSE, data.table=FALSE) |>
+  dplyr::filter(V2 != "covariates" & V2 != "covariances")
+
+if(ncol(comp_tbl) == 3) { # v3 is comparison, v2 is useless
+  comp_tbl = comp_tbl |> 
+    dplyr::select(-V2) |>
+    dplyr::rename(V2=V3)
+}
+
+res <- comp_tbl |>
+  dplyr::group_by(V2) |>
+  dplyr::summarise(values = list(V1)) 
+
+complist <- setNames(res$values, res$V2)            # convert to named list
+
+comp_name= names(complist)[1]
+comp_content=""
+for(comp_name in names(complist)){
+  comp_content=paste0(comp_content, "\n# ", comp_name, "\n\n")
+
+  comp_file=gsub(" ", "_", comp_name)
+  groups=complist[[comp_name]]
+
+  contrast=paste0("type", groups[2], "-type", groups[1])
+
+  sccomp_result = no_outlier_estimate |>
+                  sccomp_test(contrasts= c(contrast))
+
+  saveRDS(sccomp_result, file=paste0(prefix, ".", comp_file, ".sccomp.rds"))
+
+  pchange <- sccomp_proportional_fold_change(
+    no_outlier_estimate,
+    formula_composition = ~ type,
+    from = groups[1], # from is control group
+    to = groups[2] # to is treatment group
+  ) |> as.data.frame()
+                    
+  vis_res = sccomp_result |> 
+    dplyr::select(cell_group, c_lower, c_effect, c_upper, c_pH0, c_FDR) |>
+    as.data.frame() |>
+    dplyr::left_join(pchange, by=c("cell_group")) |>
+    dplyr::select(cell_group, everything()) |>
+    dplyr::arrange(proportion_fold_change, decreasing=TRUE)
+  
+  result_csv=paste0(prefix, ".", comp_file, ".result.csv")
+  write.csv(vis_res, result_csv, row.names=FALSE)
+
+  comp_content=paste(comp_content, getPagedTable(result_csv))
+
+  plots = plot(sccomp_result)
+
+  g = plots$credible_intervals_1D + 
+    annotate("text", x=-Inf, y=Inf, label=paste0(groups[1], " high"),
+             hjust=0, vjust=-0.5, size=3, fontface="bold") +
+    annotate("text", x=Inf, y=Inf, label=paste0(groups[2], " high"),
+             hjust=1, vjust=-0.5, size=3, fontface="bold") +
+    coord_cartesian(clip="off") +
+    theme(axis.title.y=element_blank(),
+          axis.text.y=element_text(size=8, face="bold"),
+          plot.title = element_blank(),
+          plot.margin = margin(t=25, r=10, b=10, l=10))
+
+  g$data = g$data |>
+    dplyr::arrange(effect, decreasing=TRUE)
+  g$data$cell_group = factor(g$data$cell_group, levels=g$data$cell_group)
+  g$data$y_var = factor(g$data$y_var, levels=g$data$y_var)
+  credible_intervals_1D_png = paste0(prefix, ".", comp_file, ".credible_intervals_1D.contrast.png")
+
+  height=max(3, nrow(g$data) * 0.2 + 1)
+  ggsave(credible_intervals_1D_png, g, width=5, height=height, units="in", dpi=300, bg="white")
+
+  comp_content=paste(comp_content, getFigure(credible_intervals_1D_png))
+}
+comp_rmd="comp.rmd"
+writeLines(comp_content, comp_rmd)
+```
+
+```{r child=comp_rmd}
+```
+
+# Session Info
+
+```{r}
+package_tbl=get_packages_table()
+print_table(package_tbl, byDT=TRUE, row.names=FALSE)
+```

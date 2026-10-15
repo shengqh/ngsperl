@@ -118,6 +118,7 @@ our %EXPORT_TAGS = (
         add_trimmomatic
 
         add_BayesPrism_Deconvolution
+        add_sccomp_of_deconvolution
     )
   ]
 );
@@ -2323,9 +2324,9 @@ sub do_add_gene_locus {
 
   $genes_str =~ s/\s+/,/g;
   $config->{$task_name} = {
-    class                => "CQS::UniqueR",
-    perform              => 1,
-    target_dir           => $target_dir . '/' . $task_name,
+    class      => "CQS::UniqueR",
+    perform    => 1,
+    target_dir => $target_dir . '/' . $task_name,
     #rtemplate            => "../Annotation/get_gene_locus.r",
     rtemplate            => "../Annotation/getGeneLocus.r",
     parameterSampleFile1 => {
@@ -4286,6 +4287,37 @@ sub add_BayesPrism_Deconvolution {
   push( @$tasks, $task_name );
   return ($task_name);
 } ## end sub add_BayesPrism_Deconvolution
+
+
+sub add_sccomp_of_deconvolution {
+  my ( $config, $def, $tasks, $target_dir, $task_name, $source_ref ) = @_;
+
+  $config->{$task_name} = {
+    class                    => "CQS::IndividualRmd",
+    perform                  => 1,
+    rCode                    => "",
+    target_dir               => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
+    option                   => "",
+    parameterSampleFile1_ref => $source_ref,
+    parameterSampleFile2     => {
+      "task_name"   => getValue( $def, "task_name" ),
+      "email"       => getValue( $def, "email" ),
+      "affiliation" => getValue( $def, "affiliation" ),
+      "sccomp_stan_models_cache_dir" => getValue( $def, "sccomp_stan_models_cache_dir" ),
+    },
+    parameterSampleFile3     => getValue($def, "meta_files"),
+    parameterSampleFile4     => getValue($def, "pairs"),
+    rReportTemplate => "../scRNA/sccomp_deconvolution.rmd,../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
+    output_ext      => ".sccomp_deconvolution.html",
+    pbs             => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "24",
+      "mem"      => "20gb"
+    },
+  };
+  push( @$tasks, $task_name );
+  return ($task_name);
+} ## end sub add_Deconvolution_sccomp
 
 1;
 
