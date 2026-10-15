@@ -118,6 +118,8 @@ print_table(meta, byDT=TRUE, row.names=FALSE)
 ```{r results='hide'}
 # This rmd only work if the sccomp was installed locally, otherwise, 
 # the stan model will be failed to compile due to the lack of permission to write in the cache directory of sccomp package.
+inference_method <- 'hmc' #more accurate
+cores = 4
 
 all_estimate = sccomp_estimate( 
   meta,
@@ -127,6 +129,8 @@ all_estimate = sccomp_estimate(
   cell_group = "cell_group",
   abundance  = "count",
   bimodal_mean_variability_association = TRUE,
+  inference_method = inference_method,
+  cores = cores,
   verbose = FALSE
 ) 
 
