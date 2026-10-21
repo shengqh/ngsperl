@@ -476,7 +476,7 @@ for (source_ct in common_types){
   }
 
   if(file.exists(bubble_png)){
-    writeLines("\n#### Increased\n\n", con)
+    writeLines(paste0("\n#### Increased in ", case_group, "\n\n"), con)
     writeLines(getFigure(bubble_png), con)
   }
 
@@ -511,7 +511,7 @@ for (source_ct in common_types){
   }
 
   if(file.exists(bubble_png)){
-    writeLines("\n#### Increased\n\n", con)
+    writeLines(paste0("\n#### Decreased in ", case_group, "\n\n"), con)
     writeLines(getFigure(bubble_png), con)
   }
 }
