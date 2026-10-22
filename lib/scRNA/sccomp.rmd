@@ -41,6 +41,14 @@ myoptions<-read_file_map("fileList2.txt", do_unlist=FALSE)
 cell_group_column=myoptions$cell_group_column
 cache_stan_model_dir=myoptions$sccomp_stan_models_cache_dir
 
+inference_method=to_string(myoptions$inference_method, 'hmc') #hmc is more accurate
+cores = to_numeric(myoptions$cores, 4)
+
+if(is.null(cache_stan_model_dir)){
+  cache_stan_model_dir <- "~/.sccomp_models"
+  dir.create(cache_stan_model_dir, recursive = TRUE, showWarnings=FALSE)
+}
+
 affiliation=get_affiliation(myoptions)
 
 prefix = paste0(myoptions$task_name, ".sccomp")
@@ -116,129 +124,48 @@ print_table(meta, byDT=TRUE, row.names=FALSE)
 ```
 
 ```{r results='hide'}
-# This rmd only work if the sccomp was installed locally, otherwise, 
-# the stan model will be failed to compile due to the lack of permission to write in the cache directory of sccomp package.
-inference_method <- 'hmc' #more accurate
-cores = 4
-
 all_estimate = sccomp_estimate( 
   meta,
-  formula_composition = ~0 + type, # we want to use contrasts, so no intercept
-  formula_variability = ~1,
+  formula_composition = ~type, # we want to use contrasts, so no intercept
   sample = "sample", 
   cell_group = "cell_group",
   abundance  = "count",
   bimodal_mean_variability_association = TRUE,
   inference_method = inference_method,
   cores = cores,
-  verbose = FALSE
+  verbose = FALSE,
+  cache_stan_model = normalizePath(cache_stan_model_dir)
 ) 
-
-no_outlier_estimate = all_estimate |>
-                  sccomp_remove_outliers(max_sampling_iterations = 2000, 
-                  verbose=FALSE)
-
-all_sccomp_result = no_outlier_estimate |>
-                sccomp_test()
-
-all_test_rds = paste0(prefix, ".all.test.rds")
-saveRDS(all_sccomp_result, file=all_test_rds)
-
-g = all_sccomp_result |> 
-  sccomp_boxplot(factor = "type", remove_unwanted_effects=TRUE) +
-  theme(legend.position="right")  
 ```
+
+# About removing outliers
+
+sccomp can identify outliers probabilistically and exclude them from the estimation. 
+However, it might not work for this project. Here, we provide the result with and without 
+removing outliers. Please look at the result and decide which one represents your experimental 
+design.
+
+# Without removing outliers
 
 ```{r}
-box_png = paste0(prefix, ".boxplot.png")
-ggsave(box_png, g, width=8, height=6, units="in", dpi=300, bg="white")
-include_graphics(box_png)
+cur_estiate=all_estimate
+cur_prefix=paste0(prefix, ".notRemovingOutliers")
 ```
 
-The significant differences of comparisons are shown in the following credible intervals plot.
-
-```{r, results="hide"}
-comp_tbl=fread("fileList4.txt", header=FALSE, data.table=FALSE) |>
-  dplyr::filter(V2 != "covariates" & V2 != "covariances")
-
-if(ncol(comp_tbl) == 3) { # v3 is comparison, v2 is useless
-  comp_tbl = comp_tbl |> 
-    dplyr::select(-V2) |>
-    dplyr::rename(V2=V3)
-}
-
-res <- comp_tbl |>
-  dplyr::group_by(V2) |>
-  dplyr::summarise(values = list(V1)) 
-
-complist <- setNames(res$values, res$V2)            # convert to named list
-
-comp_name= names(complist)[1]
-comp_content=""
-for(comp_name in names(complist)){
-  comp_content=paste0(comp_content, "\n# ", comp_name, "\n\n")
-
-  comp_file=gsub(" ", "_", comp_name)
-  groups=complist[[comp_name]]
-
-  contrast=paste0("type", groups[2], "-type", groups[1])
-
-  sccomp_result = no_outlier_estimate |>
-                  sccomp_test(contrasts= c(contrast))
-
-  saveRDS(sccomp_result, file=paste0(prefix, ".", comp_file, ".sccomp.rds"))
-
-  pchange <- sccomp_proportional_fold_change(
-    no_outlier_estimate,
-    formula_composition = ~ type,
-    from = groups[1],
-    to = groups[2]
-  ) |> as.data.frame()
-                    
-  vis_res = sccomp_result |> 
-    dplyr::select(cell_group, c_lower, c_effect, c_upper, c_pH0, c_FDR) |>
-    as.data.frame() |>
-    dplyr::left_join(pchange, by=c("cell_group")) |>
-    dplyr::left_join(cg_map, by=c("cell_group")) |>
-    dplyr::select(-cell_group) |>
-    dplyr::rename(cell_group=old_cell_group) |>
-    dplyr::select(cell_group, everything()) |>
-    dplyr::arrange(cell_group)
-  
-  result_csv=paste0(prefix, ".", comp_file, ".result.csv")
-  write.csv(vis_res, result_csv, row.names=FALSE)
-
-  comp_content=paste(comp_content, getPagedTable(result_csv))
-
-  plots = plot(sccomp_result)
-
-  g = plots$credible_intervals_1D + 
-    annotate("text", x=-Inf, y=Inf, label=paste0(groups[1], " high"),
-             hjust=0, vjust=-0.5, size=3, fontface="bold") +
-    annotate("text", x=Inf, y=Inf, label=paste0(groups[2], " high"),
-             hjust=1, vjust=-0.5, size=3, fontface="bold") +
-    coord_cartesian(clip="off") +
-    theme(axis.title.y=element_blank(),
-          axis.text.y=element_text(size=8, face="bold"),
-          plot.title = element_blank(),
-          plot.margin = margin(t=25, r=10, b=10, l=10))
-
-  g$data = g$data |>
-    dplyr::arrange(effect, decreasing=TRUE)
-  g$data$cell_group = factor(g$data$cell_group, levels=g$data$cell_group)
-  g$data$y_var = factor(g$data$y_var, levels=g$data$y_var)
-  credible_intervals_1D_png = paste0(prefix, ".", comp_file, ".credible_intervals_1D.contrast.png")
-
-  height=max(3, nrow(g$data) * 0.2 + 1)
-  ggsave(credible_intervals_1D_png, g, width=5, height=height, units="in", dpi=300, bg="white")
-
-  comp_content=paste(comp_content, getFigure(credible_intervals_1D_png))
-}
-comp_rmd="comp.rmd"
-writeLines(comp_content, comp_rmd)
+```{r child="sccomp_sub.rmd"}
 ```
 
-```{r child=comp_rmd}
+# With removing outliers
+
+After running sccomp_estimate, we will run sccomp_remove_outliers before sccomp_test.
+
+```{r results="hide"}
+cur_estiate = all_estimate |>
+  sccomp_remove_outliers(max_sampling_iterations = 2000, verbose=FALSE)
+cur_prefix=paste0(prefix, ".removingOutliers")
+```
+
+```{r child="sccomp_sub.rmd"}
 ```
 
 # Session Info
