@@ -1,4 +1,10 @@
 ```{r}
+if(!exists('ident')){
+  ident="##"
+}
+```
+
+```{r}
 load_install<-function(library_name, library_sources=library_name){
   if(!require(library_name, character.only = T)){
     BiocManager::install(library_sources, ask=FALSE)
@@ -74,6 +80,22 @@ if (!exists("selectedTissues")){
 if (!exists("show_row_names")){
   show_row_names=length(target_genes) < 100
 }
+if(!exists("view_indidivual_tissue_specificify")){
+  view_indidivual_tissue_specificify=TRUE
+}
+if(!exists("view_tissue_gene_expression")){
+  view_tissue_gene_expression=TRUE
+}
+if(!exists("view_gene_table")){
+  view_gene_table=TRUE
+}
+if(!exists("horizontalHeatmap")){
+  horizontalHeatmap=FALSE
+}
+
+if(!exists("enriched_list")) {
+  enriched_list=list()
+}
 
 load_protein_atlas_file<-function(proteinAtlasDatabaseFile, target_genes, background_genes, selectedProteinsLabels){
   cat("\n\n### Check target/background genes\n\n")
@@ -87,7 +109,7 @@ load_protein_atlas_file<-function(proteinAtlasDatabaseFile, target_genes, backgr
   proteinDatabaseAll = proteinDatabaseAll[!duplicated(proteinDatabaseAll$Gene), ]
 
   if(basename(proteinAtlasDatabaseFile) == "proteinatlas.tsv.zip"){
-    cat("\nDatafile downloaded from https://www.proteinatlas.org/about/download, 'proteinatlas.tsv.zip'\n\n- Protein Atlas version 23.0\n- Release date: 2023.06.19\n\n")
+    cat("\nDatafile downloaded from https://www.proteinatlas.org/about/download, 'proteinatlas.tsv.zip'\n\n- Protein Atlas version ", proteinAtlasVersion, "\n\n")
   }
 
   #print("Mapping selected proteins to database:")
@@ -122,7 +144,7 @@ load_protein_atlas_file<-function(proteinAtlasDatabaseFile, target_genes, backgr
 ```
 
 ```{r, error=FALSE, warning=FALSE}
-cat("\n\n## Tissue/Secretory specificity \n\n")
+cat("\n\n", ident, "# Tissue/Secretory specificity \n\n")
 
 cat("https://www.proteinatlas.org/humanproteome/tissue/tissue+specific\n\n**Defining Tissue-specific Genes**\n\nTissue-specific genes are defined using the algorithm from the HPA (Uhlén et al. 2015), and can be grouped as follows:\n\n- **Tissue Enriched**: At least four-fold higher mRNA level in a particular tissue compared to any other tissue.\n- **Group Enriched**: At least four-fold higher average mRNA level in a group of 2-5 tissues compared to any other tissue.\n- **Tissue Enhanced**: At least four-fold higher mRNA level in a particular tissue compared to the average level in all other tissues.\n\n")
 
@@ -145,17 +167,22 @@ allColumnNames = c(
   "Single.cell.expression.cluster"
 )
 
+if(exists("targetColumnNames")){
+  allColumnNames = intersect(allColumnNames, targetColumnNames)
+}
+
 gene_df = proteinDatabaseSelectedProteins |>
   dplyr::select(all_of(c("GeneSymbol", allColumnNames)))
 
-print_table(gene_df, byDT=TRUE, row.names=FALSE)
+# if(view_gene_table){
+#   print_table(gene_df, byDT=TRUE, row.names=FALSE)
+# }
 
-all_df = NULL
 rmd=""  
 maxCategory=10
-columnName="Tissue.expression.cluster"
+columnName="RNA.tissue.specificity"
 for (columnName in allColumnNames) {
-  rmd<-paste0(rmd, "\n\n### ", columnName, "\n\n")
+  rmd<-paste0(rmd, "\n\n", ident, "## ", gsub(".", " ", columnName), "\n\n")
   
   temp = summarizeCategoricalDataFromProteinDatabase( proteinDatabaseSelectedProteins,
                                                       proteinDatabaseUniverse,
@@ -163,6 +190,9 @@ for (columnName in allColumnNames) {
                                                       columnName = columnName)
 
   dataForPlot = temp[[1]]
+
+  enriched_list[[prefix]][[columnName]]=dataForPlot
+
   fontsize=ifelse(nrow(dataForPlot) > 20, 8, 12)
   p1=myggpie(data.frame(dataForPlot),
     y = "n",
@@ -196,10 +226,10 @@ tissue_specificity_rmd=paste0(prefix, ".tissue_specificity.rmd")
 writeLines(rmd, tissue_specificity_rmd)
 ```
 
-```{r child=tissue_specificity_rmd}
+```{r child=tissue_specificity_rmd, eval=view_indidivual_tissue_specificify}
 ```
 
-```{r, error=FALSE, warning=FALSE}
+```{r, error=FALSE, warning=FALSE, eval=view_tissue_gene_expression}
 cat("\n\n### Expression of selected proteins in tissues from Protein Atlas by TissueEnrich\n\n")
 cat("https://pubmed.ncbi.nlm.nih.gov/30346488/\n\n")
 
@@ -235,10 +265,14 @@ if(any(data_sd==0)){
 annotationCol=RColorBrewer::brewer.pal("Set1",n=3)
 
 selectedProteinsCategory=split(proteinDatabaseSelectedProteins[["Secreted.Category"]], proteinDatabaseSelectedProteins[["GeneSymbol"]])
-targetGeneSecretome=unlist(selectedProteinsCategory[row.names(dataForPlot)])
+targetGeneSecretome=unlist(lapply(selectedProteinsCategory[row.names(dataForPlot)], function(x) x[1]))
 col = list(Secretome = c( "Secreted" = annotationCol[1],
                           "Membrane" = annotationCol[2],
                           "Intracellular" = annotationCol[3]))
+
+if(!cluster_rows){
+  targetGeneSecretome=targetGeneSecretome[order(targetGeneSecretome)]
+}
 
 if (horizontalHeatmap) { #make horizontal heatmap and NOT show trees
   ha = columnAnnotation(Secretome= targetGeneSecretome,col=col)
@@ -248,12 +282,10 @@ if (horizontalHeatmap) { #make horizontal heatmap and NOT show trees
 
 tdf=as.matrix(log2(dataForPlot+1))
 tdf=calc_z_scores(exp_mat=tdf)
-
-#col_fun = colorRamp2(c(min(tdf), 0, max(tdf)), c("blue", "white", "red"))
+tdf=tdf[names(targetGeneSecretome),,drop=FALSE]
 
 tissue_heatmap_png=paste0(prefix, ".tissue_heatmap.png")
-
-if (exists("horizontalHeatmap") & horizontalHeatmap) { #make horizontal heatmap and NOT show trees
+if (horizontalHeatmap) { #make horizontal heatmap and NOT show trees
   ht_size = draw_heatmap_png( filepath=tissue_heatmap_png, 
                               htdata=as.matrix(tdf), 
                               name="z score of\nLog2(TPM+1)", 
@@ -262,7 +294,7 @@ if (exists("horizontalHeatmap") & horizontalHeatmap) { #make horizontal heatmap 
                               save_rds=TRUE,
                               #col = col_fun,
                               column_names_rot = 45,
-                              cluster_rows=TRUE,
+                              cluster_rows=cluster_rows,
                               cluster_columns =TRUE,
                               show_column_dend =FALSE,
                               show_row_dend =FALSE,
@@ -275,17 +307,16 @@ if (exists("horizontalHeatmap") & horizontalHeatmap) { #make horizontal heatmap 
                               show_column_names=TRUE,
                               save_rds=TRUE,
                               #col = col_fun,
-                              cluster_rows=TRUE,
+                              cluster_rows=cluster_rows,
                               cluster_columns =TRUE,
+                              show_column_dend =FALSE,
+                              show_row_dend =FALSE,
                               right_annotation = ha)
 }
-```
-
-```{r fig.width=ht_size[1], fig.height=ht_size[2]}
 include_graphics(tissue_heatmap_png)
 ```
   
-```{r, fig.width=6, fig.height=4}  
+```{r}  
 gs<-GeneSet(geneIds=unique(proteinDatabaseSelectedProteins$GeneSymbol),
             organism="Homo Sapiens",
             geneIdType=SymbolIdentifier())
@@ -299,12 +330,52 @@ if (!is.null(proteinDatabaseUniverse)) {
 } else {
   TissueEnrichOutput<-teEnrichment(inputGenes = gs)
 }
+```
 
+### Enrichment type distribution
+
+```{r}
+TissueEnrichProteinsAll=NULL
+for (i in seq_along(TissueEnrichOutput[[3]])) {
+  if(0%in%dim(TissueEnrichOutput[[3]][[i]])){
+    next(i)
+  }
+  temp=data.frame(assay(TissueEnrichOutput[[3]][[i]]),
+                  Tissue=names(TissueEnrichOutput[[3]])[i])
+  TissueEnrichProteinsAll=rbind(TissueEnrichProteinsAll,
+                                temp)
+}
+dataForPlot=pivot_wider(TissueEnrichProteinsAll,
+                        names_from = Tissue,
+                        values_from = Group)
+tissueOrder=names(sort(table(TissueEnrichProteinsAll$Tissue),
+                        decreasing = TRUE))
+dataForPlot=dataForPlot[,tissueOrder]
+
+dataForPlot=dataForPlot[ do.call(order, dataForPlot), ]
+
+knitr::kable(unique(TissueEnrichProteinsAll[,c("Gene","Group")]) %>% group_by(Group) %>% summarise(Count=n()),
+            caption = "Number of Proteins with Enriched/Enhanced tissue expression")
+
+#define colors of categical data in ComplexHeatmap
+col_fun = structure( RColorBrewer::brewer.pal(3,"Set1"), 
+                      names=c("Tissue-Enriched","Tissue-Enhanced", "Group-Enriched" ))
+te_type_png=paste0(prefix, ".te_type.png")
+png(te_type_png, width = 8, height = 4, units="in", res = 300)
+Heatmap(dataForPlot,col=col_fun,name = "Type")
+ignored=dev.off()
+include_graphics(te_type_png)
+```
+
+### Tissues enriched
+
+```{r}
 seEnrichmentOutput<-TissueEnrichOutput[[1]]
 enrichmentOutput<-setNames(data.frame(assay(seEnrichmentOutput),
                                       row.names = rowData(seEnrichmentOutput)[,1]), 
                             colData(seEnrichmentOutput)[,1])
 enrichmentOutput$Tissue<-row.names(enrichmentOutput)
+enriched_list[[prefix]][['tissues_enriched']] = enrichmentOutput
 
 enriched = enrichmentOutput |>
   dplyr::filter(Log10PValue > 0)
@@ -329,43 +400,7 @@ if(nrow(enriched) > 0){
   ggsave(teEnrichment_png, p, width = 6, height = 4, units = "in", dpi = 300, bg = "white")
   rm(p)
   include_graphics(teEnrichment_png)
+}else{
+  cat("\nNo tissues enriched\n\n")
 }
-```
-
-```{r}
-type_width=8
-type_height=4
-```
-
-```{r, fig.width=type_width, fig.height=type_height}
-TissueEnrichProteinsAll=NULL
-for (i in seq_along(TissueEnrichOutput[[3]])) {
-  if(0%in%dim(TissueEnrichOutput[[3]][[i]])){
-    next(i)
-  }
-  temp=data.frame(assay(TissueEnrichOutput[[3]][[i]]),
-                  Tissue=names(TissueEnrichOutput[[3]])[i])
-  TissueEnrichProteinsAll=rbind(TissueEnrichProteinsAll,
-                                temp)
-}
-dataForPlot=pivot_wider(TissueEnrichProteinsAll,
-                        names_from = Tissue,
-                        values_from = Group)
-tissueOrder=names(sort(table(TissueEnrichProteinsAll$Tissue),
-                        decreasing = TRUE))
-dataForPlot=dataForPlot[,tissueOrder]
-
-dataForPlot=dataForPlot[ do.call(order, dataForPlot), ]
-
-knitr::kable(unique(TissueEnrichProteinsAll[,c("Gene","Group")]) %>% group_by(Group) %>% summarise(Count=n()),
-              caption = "Number of Proteins with Enriched/Enhanced tissue expression")
-
-#define colors of categical data in ComplexHeatmap
-col_fun = structure( RColorBrewer::brewer.pal(3,"Set1"), 
-                      names=c("Tissue-Enriched","Tissue-Enhanced", "Group-Enriched" ))
-te_type_png=paste0(prefix, ".te_type.png")
-png(te_type_png, width = type_width, height = type_height, units="in", res = 300)
-Heatmap(dataForPlot,col=col_fun,name = "Tissue Enrichment Type")
-ignored=dev.off()
-include_graphics(te_type_png)
 ```

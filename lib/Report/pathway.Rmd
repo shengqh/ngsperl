@@ -2,9 +2,12 @@
 if(!exists('title_prefix')){
   title_prefix=""
 }
+if(!exists('ident')){
+  ident="##"
+}
 ```
 
-## `r title_prefix` Pathway Analysis
+`r paste(ident, title_prefix)` Pathway Analysis
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
 load_install<-function(library_name, library_sources=library_name){
@@ -27,7 +30,7 @@ if(!exists("lib_folder")){
 source(paste0(lib_folder, "/CQS/reportFunctions.R"))
 source(paste0(lib_folder, "/Report/enrichmentByClusterProfiler.R"))
 
-writeLines(target_genes, paste0(prefix,"_target_genes.txt"))
+writeLines(target_genes, paste0(prefix,".target_genes.txt"))
 ```
 
 ```{r}
@@ -59,6 +62,10 @@ stopifnot(exists("pathway_analysis_sets"))
 stopifnot(exists("fromType"))
 stopifnot(exists("pathway_toType"))
 
+if(!exists("enriched_list")) {
+  enriched_list=list()
+}
+
 has_background_genes = !all(is.null(background_genes))
 ```
 
@@ -77,7 +84,11 @@ res<-do_pathway(genes=target_genes,
                 fromType=fromType,
                 toType=pathway_toType,
                 OrgDb=OrgDb)
-saveRDS(res, paste0(prefix,"_pathway.rds"))     
+
+
+enriched_list[[prefix]][['pathways']] = res
+
+saveRDS(res, paste0(prefix,".pathway.rds"))     
 ```
 
 ```{r}
@@ -94,7 +105,7 @@ for(pname in pathway_analysis_sets){
     pathway_height=pathway_height,
     plot_type="dot")
 
-  rmd=paste0(rmd, "\n\n### ", pname, "\n\n")
+  rmd=paste0(rmd, "\n\n", ident, "# ", pname, "\n\n")
   if(nrow(lst$res_tbl) == 0){
     rmd=paste0(rmd, "No enriched pathways found.\n\n")
   }else{
@@ -107,8 +118,8 @@ for(pname in pathway_analysis_sets){
     }
   }
 }
-writeLines(rmd, paste0(prefix,"_pathway.rmd"))
+writeLines(rmd, paste0(prefix,".pathway.rmd"))
 ```
 
-```{r child=paste0(prefix,"_pathway.rmd")}
+```{r child=paste0(prefix,".pathway.rmd")}
 ```
