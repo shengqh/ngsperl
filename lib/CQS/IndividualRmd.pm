@@ -12,6 +12,7 @@ use CQS::FileUtils;
 use CQS::NGSCommon;
 use CQS::ProgramWrapperOneToOne;
 use CQS::StringUtils;
+use CQS::RmdUtils;
 use File::Spec;
 use File::Copy;
 
@@ -55,7 +56,8 @@ sub perform {
   my $init_command = get_option($config, $section, "init_command", "");
   my $post_command = get_option($config, $section, "post_command", "");
   
-  my $output_ext = get_option( $config, $section, "output_ext", ".html" );
+  my $output_file_ext = get_output_ext( $config, $section, ".html" );
+  (my $rmd_ext = $output_file_ext) =~ s/.html/.rmd/g;
 
   my $use_vanilla = get_option( $config, $section, "use_vanilla", 1 );
 
@@ -87,27 +89,10 @@ sub perform {
       }
     }
 
-    my $final_file = "$cur_dir/${sample_name}${output_ext}";
+    my $final_file = "$cur_dir/${sample_name}${output_file_ext}";
 
-    my $rmd_file = undef;
-    my $rReportTemplates = get_option( $config, $section, "rReportTemplate");
-    my @rReportTemplates = split( ",|;", $rReportTemplates );
-    for my $rtemplate (@rReportTemplates){
-      my $is_absolute = File::Spec->file_name_is_absolute($rtemplate);
-      if ( !$is_absolute ) {
-        $rtemplate = dirname(__FILE__) . "/$rtemplate";
-      }
-      if ( !( -e $rtemplate ) ) {
-        die("rmd template $rtemplate defined but not exists!");
-      }
-
-      my $remote_r = $cur_dir . "/" . basename($rtemplate);
-      copy($rtemplate, $remote_r);
-
-      if(!defined $rmd_file){
-        $rmd_file = basename($rtemplate);
-      }
-    }
+    my $rfilename = $sample_name . $rmd_ext;
+    my $rmd_file = build_rmd_file($config, $section, $result_dir, $rfilename);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
@@ -140,7 +125,7 @@ fi
 mkdir -p tmp
 export TMPDIR=\$(pwd)/tmp
 
-$rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rmd_file',output_file='${sample_name}${output_ext}')\"
+$rscript $vanilla_option -e \"library('rmarkdown');rmarkdown::render('$rfilename')\"
 
 ";
 

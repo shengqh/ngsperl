@@ -40,10 +40,7 @@ sub perform {
   $self->{_suffix} = get_option( $config, $section, "suffix", $self->{_suffix} );
 
   my $output_file_ext = get_output_ext( $config, $section, ".html" );
-
-  my $rmd_ext = $output_file_ext;
-  $rmd_ext =~ s/.html/.rmd/g;
-  #print("rmd_ext=" . $rmd_ext . "\n");
+  (my $rmd_ext = $output_file_ext) =~ s/.html/.rmd/g;
 
   my $rfilename = ${task_name}. $rmd_ext;
   my $rfile     = build_rmd_file($config, $section, $result_dir, $rfilename);
