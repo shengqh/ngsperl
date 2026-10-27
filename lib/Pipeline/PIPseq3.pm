@@ -25,17 +25,19 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+
 sub initializeDefaultOptions {
   my $def = shift;
 
   fix_task_name($def);
 
-  initDefaultValue( $def, "emailType", "FAIL" );
-  initDefaultValue( $def, "cluster",   "slurm" );
-  initDefaultValue( $def, "perform_preprocessing",   0 );
+  initDefaultValue( $def, "emailType",             "FAIL" );
+  initDefaultValue( $def, "cluster",               "slurm" );
+  initDefaultValue( $def, "perform_preprocessing", 0 );
 
   return $def;
-}
+} ## end sub initializeDefaultOptions
+
 
 sub getConfig {
   my ($def) = @_;
@@ -49,21 +51,21 @@ sub getConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
-  push(@$individual, @$summary);
+  push( @$individual, @$summary );
   $summary = $individual;
 
   my $target_dir = $def->{target_dir};
 
-  my $pipseeker_command = getValue($def, "pipseeker_command");
-  my $pipseeker_chemistry = getValue($def, "pipseeker_chemistry");
-  my $pipseeker_star_index = getValue($def, "pipseeker_star_index");
-  my $singularity_option = getValue($def, "singularity_option", "");
+  my $pipseeker_command    = getValue( $def, "pipseeker_command" );
+  my $pipseeker_chemistry  = getValue( $def, "pipseeker_chemistry" );
+  my $pipseeker_star_index = getValue( $def, "pipseeker_star_index" );
+  my $singularity_option   = getValue( $def, "singularity_option", "" );
 
   my $pipseeker = "pipseeker";
   $config->{$pipseeker} = {
-    class => "CQS::ProgramWrapperOneToMany",
+    class      => "CQS::ProgramWrapperOneToMany",
     target_dir => "${target_dir}/${pipseeker}",
-    option => "
+    option     => "
 
 
 IFS=, read -r var1 var2 <<< __FILE__
@@ -76,26 +78,25 @@ $pipseeker_command full --chemistry $pipseeker_chemistry --fastq \${DIR}/\${FILE
 
 #__OUTPUT__
 ",
-    interpretor => "",
-    program => "",
-    check_program => 0,
-    source_arg => "--fastq",
-    source_ref => $untrimed_ref,
+    interpretor           => "",
+    program               => "",
+    check_program         => 0,
+    source_arg            => "--fastq",
+    source_ref            => $untrimed_ref,
     output_to_same_folder => 0,
-    output_arg => "--output-path",
-    samplename_in_result => 0,
-    samplename_in_result => 0,
-    output_file_prefix => "",
-    output_file_ext => "filtered_matrix/sensitivity__ITER_",
-    iteration => 5,
+    output_arg            => "--output-path",
+    samplename_in_result  => 0,
+    samplename_in_result  => 0,
+    output_file_ext       => "filtered_matrix/sensitivity__ITER_",
+    iteration             => 5,
     iteration_fill_length => 1,
-    use_tmp_folder => 0,
-    sh_direct => 0,
-    no_docker => 1,
-    pbs => {
-      "nodes" => "1:ppn=8",
+    use_tmp_folder        => 0,
+    sh_direct             => 0,
+    no_docker             => 1,
+    pbs                   => {
+      "nodes"    => "1:ppn=8",
       "walltime" => "96",
-      "mem" => "100gb"
+      "mem"      => "100gb"
     },
   };
 
@@ -103,9 +104,9 @@ $pipseeker_command full --chemistry $pipseeker_chemistry --fastq \${DIR}/\${FILE
 
   my $pipseeker_qc = "qc";
 
-  if(getValue($def, "perform_individual_qc", 0)){
-    my $qc_pattern = getValue($def, "qc_pattern", "sensitivity_[12345]");
-    add_individual_qc_tasks($config, $def, $summary, $target_dir, $task_name, "", undef, [$count_task_name, $qc_pattern], undef, undef);
+  if ( getValue( $def, "perform_individual_qc", 0 ) ) {
+    my $qc_pattern = getValue( $def, "qc_pattern", "sensitivity_[12345]" );
+    add_individual_qc_tasks( $config, $def, $summary, $target_dir, $task_name, "", undef, [ $count_task_name, $qc_pattern ], undef, undef );
   }
 
   $config->{sequencetask} = {
@@ -113,20 +114,19 @@ $pipseeker_command full --chemistry $pipseeker_chemistry --fastq \${DIR}/\${FILE
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
-    source     => {
-      step1 => $summary,
-    },
-    sh_direct => 0,
-    cluster   => $cluster,
-    pbs       => {
-      "nodes"     => "1:ppn=" . getValue($def, "max_thread", 8),
-      "walltime"  => getValue($def, "sequencetask_run_time", 48), 
-      "mem"       => "40gb"
+    source     => { step1 => $summary, },
+    sh_direct  => 0,
+    cluster    => $cluster,
+    pbs        => {
+      "nodes"    => "1:ppn=" . getValue( $def, "max_thread", 8 ),
+      "walltime" => getValue( $def, "sequencetask_run_time", 48 ),
+      "mem"      => "40gb"
     },
   };
 
   return ($config);
-}
+} ## end sub getConfig
+
 
 sub performPIPseq3 {
   my ( $def, $perform ) = @_;
@@ -143,6 +143,6 @@ sub performPIPseq3 {
   }
 
   return $config;
-}
+} ## end sub performPIPseq3
 
 1;

@@ -153,11 +153,14 @@ python3 $image_features_script \\
 
     my $qc_task = "VisiumHD_qc";
     $config->{$qc_task} = {
-      class           => "CQS::IndividualRmd",
-      target_dir      => "$target_dir/$qc_task",
-      perform         => 1,
-      rReportTemplate => "../scRNA/VisiumHD_qc.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_plotting_functions.R",
-      option          => "
+      class                => "CQS::IndividualRmd",
+      target_dir           => "$target_dir/$qc_task",
+      perform              => 1,
+      report_rmd_file      => "../scRNA/VisiumHD_qc.Rmd",
+      additional_rmd_files => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_plotting_functions.R",
+      output_ext           => ".$bin_size_label.html",
+      output_other_ext     => ".$bin_size_label.rds",
+      option               => "
 
 Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd', output_file='__OUTPUT__')\"
 
@@ -176,9 +179,6 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
       sh_direct             => 0,
       no_docker             => getValue( $def, "no_docker", 0 ),
       output_to_same_folder => 0,
-      output_file_prefix    => ".$bin_size_label.html",
-      output_ext            => ".$bin_size_label.html",
-      output_other_ext      => ".$bin_size_label.rds",
       pbs                   => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
@@ -215,11 +215,14 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
 
     my $filter_task = "VisiumHD_filter_cellonly";
     $config->{$filter_task} = {
-      class           => "CQS::IndividualRmd",
-      target_dir      => "$target_dir/$filter_task",
-      perform         => 1,
-      rReportTemplate => "../scRNA/VisiumHD_filter.Rmd;reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_plotting_functions.R",
-      option          => "
+      class                => "CQS::IndividualRmd",
+      target_dir           => "$target_dir/$filter_task",
+      perform              => 1,
+      report_rmd_file      => "../scRNA/VisiumHD_filter.Rmd",
+      additional_rmd_files => "reportFunctions.R;../scRNA/scRNA_func.r;../scRNA/spatial_plotting_functions.R",
+      output_ext           => ".filtered.html",
+      output_other_ext     => ".filtered.rds",
+      option               => "
 
 Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.Rmd', output_file='__OUTPUT__')\"
 
@@ -237,9 +240,6 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       sh_direct             => 0,
       no_docker             => getValue( $def, "no_docker", 0 ),
       output_to_same_folder => 0,
-      output_file_prefix    => ".filtered.html",
-      output_ext            => ".filtered.html",
-      output_other_ext      => ".filtered.rds",
       pbs                   => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
@@ -327,16 +327,17 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       target_dir               => "$target_dir/$vis_task",
       perform                  => 1,
       option                   => "",
-      rReportTemplate          => "../scRNA/Deconvolution_RCTD_visualization.rmd,../scRNA/scRNA_func.r;../CQS/reportFunctions.R;../scRNA/Deconvolution_functions.R",
+      report_rmd_file          => "../scRNA/Deconvolution_RCTD_visualization.Rmd",
+      additional_rmd_files     => "../scRNA/scRNA_func.r;../CQS/reportFunctions.R;../scRNA/Deconvolution_functions.R",
+      output_ext               => ".RCTD_visualization.html",
       parameterSampleFile1_ref => [ $rctd_tasks->{$source_assay}, ".RCTD.obj.rds" ],
       parameterSampleFile2     => {
         email       => getValue( $def, "email" ),
         affiliation => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
       },
-      output_ext => ".RCTD_visualization.html",
-      sh_direct  => 0,
-      no_docker  => getValue( $def, "no_docker", 0 ),
-      pbs        => {
+      sh_direct => 0,
+      no_docker => getValue( $def, "no_docker", 0 ),
+      pbs       => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
         "mem"      => "40gb"
@@ -624,7 +625,10 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       class                    => "CQS::IndividualRmd",
       target_dir               => "$target_dir/$MEcell_cluster_report_task",
       perform                  => 1,
-      rReportTemplate          => "../scRNA/spatial_MEcell_cluster.rmd;reportFunctions.R;../scRNA/scRNA_func.r",
+      report_rmd_file          => "../scRNA/spatial_MEcell_cluster.rmd",
+      additional_rmd_files     => "../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
+      output_ext               => ".MEcell_cluster.html",
+      output_other_ext         => ".${source_assay}.MEcell_clustered.rds",
       option                   => "",
       parameterSampleFile1_ref => [ $MEcell_task, ".rds" ],
       parameterSampleFile2     => {
@@ -659,8 +663,6 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       no_docker                 => getValue( $def, "no_docker", 0 ),
       docker_prefix             => "vis_",
       output_to_same_folder     => 0,
-      output_ext                => ".MEcell_cluster.html",
-      output_other_ext          => ".${source_assay}.MEcell_clustered.rds",
       pbs                       => {
         "nodes"    => "1:ppn=1",
         "walltime" => "48",

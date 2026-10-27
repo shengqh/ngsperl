@@ -197,7 +197,8 @@ sub getMixRNASeqConfig {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "star_summary",
     option                   => "",
     rtemplate                => "../Alignment/STARFeatureCount.r",
-    output_file_ext          => ".STARSummary.csv;.STARSummary.csv.png",
+    output_file_ext          => ".STARSummary.csv",
+    output_other_ext         => ".STARSummary.csv.png",
     parameterSampleFile1_ref => [ "star", "_Log.final.out" ],
     sh_direct                => 1,
     pbs                      => {
@@ -269,7 +270,8 @@ sub getMixRNASeqConfig {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . "featureCountSummary",
     option                   => "",
     rtemplate                => "../Alignment/STARFeatureCount.r",
-    output_file_ext          => ".FeatureCountSummary.csv;.FeatureCountSummary.csv.png",
+    output_file_ext          => ".FeatureCountSummary.csv",
+    output_other_ext          => ".FeatureCountSummary.csv.png",
     parameterSampleFile2_ref => [ "featureCount", ".count.summary" ],
     sh_direct                => 1,
     pbs                      => {
@@ -304,7 +306,8 @@ sub getMixRNASeqConfig {
     target_dir               => $target_dir . "/" . getNextFolderIndex($def) . $bar_vis_task,
     option                   => "",
     rtemplate                => "countTableVisFunctions.R,mixGenomeVis.r",
-    output_file_ext          => ".Reads.csv;.bar.png",
+    output_file_ext          => ".Reads.csv",
+    output_other_ext         => ".bar.png",
     parameterFile1_ref => [ "gene_table", ".count" ],
     parameterSampleFile1 => {
       host_prefix => getValue($def, "host_prefix")

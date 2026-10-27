@@ -16,31 +16,36 @@ use Hash::Merge qw( merge );
 require Exporter;
 our @ISA = qw(Exporter);
 
-our %EXPORT_TAGS = ( 'all' => [qw(
-  initializeWGSDefaultOptions
-  performWGS 
-  performWGSTask 
-  add_bam_recalibration
-  add_recalibrated_bam_to_gvcf
-  add_bam_to_gvcf 
-  add_gvcf_to_genotype
-  add_gvcf_to_genotype_scatter 
-  add_hard_filter_and_left_trim
-  add_merge
-  add_hard_filter_and_merge)] );
+our %EXPORT_TAGS = (
+  'all' => [
+    qw(
+        initializeWGSDefaultOptions
+        performWGS
+        performWGSTask
+        add_bam_recalibration
+        add_recalibrated_bam_to_gvcf
+        add_bam_to_gvcf
+        add_gvcf_to_genotype
+        add_gvcf_to_genotype_scatter
+        add_hard_filter_and_left_trim
+        add_merge
+        add_hard_filter_and_merge)
+  ]
+);
 
 our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+
 sub initializeWGSDefaultOptions {
   my $def = shift;
 
   #check files
-  getValue($def, "ref_fasta");
-  getValue($def, "dbsnp");
-  getValue($def, "interval_list_file");
-  getValue($def, "known_indels_sites_VCFs");
+  getValue( $def, "ref_fasta" );
+  getValue( $def, "dbsnp" );
+  getValue( $def, "interval_list_file" );
+  getValue( $def, "known_indels_sites_VCFs" );
 
   #start from FASTQ
   initDefaultValue( $def, "perform_preprocessing", 1 );
@@ -51,17 +56,17 @@ sub initializeWGSDefaultOptions {
 
   initDefaultValue( $def, "gatk_prefix", "gatk4_" );
 
-  initDefaultValue( $def, "perform_replace_read_group", 0);
-  initDefaultValue( $def, "replace_read_group_by_gatk4", 0);
-  
-  initDefaultValue( $def, "perform_mark_duplicates", 1);
+  initDefaultValue( $def, "perform_replace_read_group",  0 );
+  initDefaultValue( $def, "replace_read_group_by_gatk4", 0 );
 
-  initDefaultValue( $def, "perform_gvcf_to_genotype", 1);
+  initDefaultValue( $def, "perform_mark_duplicates", 1 );
 
-  initDefaultValue( $def, "perform_filter_and_merge", 1);
+  initDefaultValue( $def, "perform_gvcf_to_genotype", 1 );
+
+  initDefaultValue( $def, "perform_filter_and_merge", 1 );
 
   initDefaultValue( $def, "callvariants_vqsr_mode", 1 );
-  
+
   initDefaultValue( $def, "max_thread", 8 );
   initDefaultValue( $def, "subdir",     0 );
 
@@ -74,48 +79,42 @@ sub initializeWGSDefaultOptions {
 
   initDefaultValue( $def, "mark_duplicates_use_tmp_folder", 0 );
 
-  if(defined $def->{"ref_fasta_dict"} && (! defined $def->{"chromosome_names"})){
-    my $dictFile = getValue($def, "ref_fasta_dict");
-    my $primary_chromosome_only = getValue($def, "primary_chromosome_only", 1);
-    my $chromosomes = readChromosomeFromDictFile($dictFile, $primary_chromosome_only);
-    initDefaultValue( $def, "chromosome_names" , join(",", @$chromosomes));
-  }
+  if ( defined $def->{"ref_fasta_dict"} && ( !defined $def->{"chromosome_names"} ) ) {
+    my $dictFile                = getValue( $def, "ref_fasta_dict" );
+    my $primary_chromosome_only = getValue( $def, "primary_chromosome_only", 1 );
+    my $chromosomes             = readChromosomeFromDictFile( $dictFile, $primary_chromosome_only );
+    initDefaultValue( $def, "chromosome_names", join( ",", @$chromosomes ) );
+  } ## end if ( defined $def->{"ref_fasta_dict"...})
 
   initDefaultValue( $def, "filter_variants_by_allele_frequency",            1 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_percentage", 0.9 );
   initDefaultValue( $def, "filter_variants_by_allele_frequency_maf",        0.3 );
   initDefaultValue( $def, "filter_variants_fq_equal_1",                     0 );
 
-  initDefaultValue( $def, "perform_cnv_gatk4_cohort", 1 );
-  initDefaultValue( $def, "gatk4_cnv_by_scatter",     1 );
-  initDefaultValue( $def, "gatk4_cnv_scatter_count",  100 );
+  initDefaultValue( $def, "perform_cnv_gatk4_cohort",  1 );
+  initDefaultValue( $def, "gatk4_cnv_by_scatter",      1 );
+  initDefaultValue( $def, "gatk4_cnv_scatter_count",   100 );
   initDefaultValue( $def, "perform_cnv_gatk4_somatic", 0 );
 
-  initDefaultValue( $def, "recalibration_annotation_values", ["QD", 
-  "MQRankSum",
-  "ReadPosRankSum",
-  "FS",
-  "MQ",
-  "SOR",
-  "DP"]);
+  initDefaultValue( $def, "recalibration_annotation_values", [ "QD", "MQRankSum", "ReadPosRankSum", "FS", "MQ", "SOR", "DP" ] );
 
-  initDefaultValue( $def, "snp_recalibration_tranche_values", ["100.0", "99.95", "99.9", "99.8", "99.6", "99.5", "99.4", "99.3", "99.0", "98.0", "97.0", "90.0" ]);
-  initDefaultValue( $def, "snp_recalibration_annotation_values", ["QD", "MQRankSum", "ReadPosRankSum", "FS", "MQ", "SOR", "DP"]);
-  initDefaultValue( $def, "indel_recalibration_tranche_values", ["100.0", "99.95", "99.9", "99.5", "99.0", "97.0", "96.0", "95.0", "94.0", "93.5", "93.0", "92.0", "91.0", "90.0"]);
-  initDefaultValue( $def, "indel_recalibration_annotation_values",  ["FS", "ReadPosRankSum", "MQRankSum", "QD", "SOR", "DP"]);
-  initDefaultValue( $def, "snp_filter_level", 99.7 );
-  initDefaultValue( $def, "indel_filter_level", 99.7 );
-  initDefaultValue( $def, "SNP_VQSR_downsampleFactor", 10 );
+  initDefaultValue( $def, "snp_recalibration_tranche_values",      [ "100.0", "99.95",          "99.9",           "99.8", "99.6", "99.5", "99.4", "99.3", "99.0", "98.0", "97.0", "90.0" ] );
+  initDefaultValue( $def, "snp_recalibration_annotation_values",   [ "QD",    "MQRankSum",      "ReadPosRankSum", "FS",   "MQ",   "SOR",  "DP" ] );
+  initDefaultValue( $def, "indel_recalibration_tranche_values",    [ "100.0", "99.95",          "99.9",           "99.5", "99.0", "97.0", "96.0", "95.0", "94.0", "93.5", "93.0", "92.0", "91.0", "90.0" ] );
+  initDefaultValue( $def, "indel_recalibration_annotation_values", [ "FS",    "ReadPosRankSum", "MQRankSum",      "QD",   "SOR",  "DP" ] );
+  initDefaultValue( $def, "snp_filter_level",                      99.7 );
+  initDefaultValue( $def, "indel_filter_level",                    99.7 );
+  initDefaultValue( $def, "SNP_VQSR_downsampleFactor",             10 );
 
   initDefaultValue( $def, "perform_muTect",       0 );
   initDefaultValue( $def, "perform_muTect2indel", 0 );
 
-  initDefaultValue( $def, "perform_annovar",      1 );
-  initDefaultValue( $def, "maximum_freq_values",  "0.05,0.01" );
+  initDefaultValue( $def, "perform_annovar",     1 );
+  initDefaultValue( $def, "maximum_freq_values", "0.05,0.01" );
 
-  initDefaultValue( $def, "perform_cnv",          1 );
-  initDefaultValue( $def, "perform_vep",          0 );
-  initDefaultValue( $def, "perform_IBS",          0 );
+  initDefaultValue( $def, "perform_cnv", 1 );
+  initDefaultValue( $def, "perform_vep", 0 );
+  initDefaultValue( $def, "perform_IBS", 0 );
 
   if ( $def->{perform_muTect} || $def->{perform_muTect2indel} ) {
     if ( defined $def->{mills} ) {
@@ -125,141 +124,143 @@ sub initializeWGSDefaultOptions {
     else {
       initDefaultValue( $def, "indel_realignment", 0 );
     }
-  }
+  } ## end if ( $def->{perform_muTect...})
 
   initDefaultValue( $def, "remove_duplicate", 1 );
-  initDefaultValue( $def, "perform_multiqc", 0 );
+  initDefaultValue( $def, "perform_multiqc",  0 );
 
   my $default_onco_options = {
-    "picture_width" => "0",
-    "picture_height" => "0",
+    "picture_width"     => "0",
+    "picture_height"    => "0",
     "sampleNamePattern" => ".",
-    "BACKGROUND_color" => "lightgray",
-    "MISSENSE_color" => "darkgreen",
-    "MISSENSE_height" => 0.75,
-    "TRUNC_color" => "red",
-    "TRUNC_height" => 0.5, 
-    "DUP_color" => "brown", 
-    "DUP_height" => 0.25,
-    "DEL_color" => "blue",
-    "DEL_height" => 0.25,
-    "MANUAL_order" => 0,
+    "BACKGROUND_color"  => "lightgray",
+    "MISSENSE_color"    => "darkgreen",
+    "MISSENSE_height"   => 0.75,
+    "TRUNC_color"       => "red",
+    "TRUNC_height"      => 0.5,
+    "DUP_color"         => "brown",
+    "DUP_height"        => 0.25,
+    "DEL_color"         => "blue",
+    "DEL_height"        => 0.25,
+    "MANUAL_order"      => 0,
   };
 
-  if (defined $def->{onco_options}) {
-    $def->{onco_options} = merge_hash_left_precedent($def->{onco_options}, $default_onco_options);
-  }else{
+  if ( defined $def->{onco_options} ) {
+    $def->{onco_options} = merge_hash_left_precedent( $def->{onco_options}, $default_onco_options );
+  }
+  else {
     $def->{onco_options} = $default_onco_options;
   }
 
-  my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
-  if($perform_split_fastq) {#[ 0, "by_dynamic", "by_file", "by_scatter"],
-    if ($perform_split_fastq eq "by_dynamic"){ 
-      initDefaultValue($def, "split_fastq_min_file_size_gb", 10); #only the file with file size larger than this number would be splitted
-      initDefaultValue($def, "split_fastq_trunk_file_size_gb", 5); #the splitted file will be smaller than this file size
-    }elsif($perform_split_fastq eq "by_scatter"){ 
-      initDefaultValue($def, "aligner_scatter_count", 10); #split data into equal number of small files
-    }elsif($perform_split_fastq eq "by_file"){ 
+  my $perform_split_fastq = getValue( $def, "perform_split_fastq", 0 );
+  if ($perform_split_fastq) {    #[ 0, "by_dynamic", "by_file", "by_scatter"],
+    if ( $perform_split_fastq eq "by_dynamic" ) {
+      initDefaultValue( $def, "split_fastq_min_file_size_gb",   10 );    #only the file with file size larger than this number would be splitted
+      initDefaultValue( $def, "split_fastq_trunk_file_size_gb", 5 );     #the splitted file will be smaller than this file size
+    }
+    elsif ( $perform_split_fastq eq "by_scatter" ) {
+      initDefaultValue( $def, "aligner_scatter_count", 10 );             #split data into equal number of small files
+    }
+    elsif ( $perform_split_fastq eq "by_file" ) {
       #nothing need to be set
-    }else{
+    }
+    else {
       die 'wrong perform_split_fastq value, it should be one of [ 0, "by_dynamic", "by_file", "by_scatter"]';
     }
-  }
+  } ## end if ($perform_split_fastq)
 
   return $def;
-}
+} ## end sub initializeWGSDefaultOptions
+
 
 sub add_bam_recalibration {
-  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $to_cram = getValue($def, "GatherSortedBamFiles_cram", 0);
+  my $to_cram = getValue( $def, "GatherSortedBamFiles_cram", 0 );
 
-  my $BaseRecalibratorScatter_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_BaseRecalibratorScatter";
-  my $GatherBQSRReports_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GatherBQSRReports";
-  my $ApplyBQSRScatter_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_ApplyBQSRScatter";
-  my $GatherSortedBamFiles_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GatherSortedBamFiles";
+  my $BaseRecalibratorScatter_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_BaseRecalibratorScatter";
+  my $GatherBQSRReports_task       = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_GatherBQSRReports";
+  my $ApplyBQSRScatter_task        = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_ApplyBQSRScatter";
+  my $GatherSortedBamFiles_task    = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_GatherSortedBamFiles";
 
   my $bam_recalibration = {
     "$BaseRecalibratorScatter_task" => {
-      class             => "GATK4::BaseRecalibratorScatter",
-      perform           => 1,
-      target_dir        => "${target_dir}/$BaseRecalibratorScatter_task",
-      option            => "",
-      source_ref        => $source,
-      fasta_file        => $def->{ref_fasta},
-      dbsnp_vcf         => $def->{dbsnp},
-      known_indels_sites_VCFs => getValue($def, "known_indels_sites_VCFs"),
-      sh_direct         => 0,
-      pbs               => {
+      class                   => "GATK4::BaseRecalibratorScatter",
+      perform                 => 1,
+      target_dir              => "${target_dir}/$BaseRecalibratorScatter_task",
+      option                  => "",
+      source_ref              => $source,
+      fasta_file              => $def->{ref_fasta},
+      dbsnp_vcf               => $def->{dbsnp},
+      known_indels_sites_VCFs => getValue( $def, "known_indels_sites_VCFs" ),
+      sh_direct               => 0,
+      pbs                     => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
         "mem"      => "40gb"
       },
     },
     "$GatherBQSRReports_task" => {
-      class                 => "GATK4::GatherBQSRReports",
-      perform               => 1,
-      target_dir            => "${target_dir}/$GatherBQSRReports_task",
-      option                => "",
-      gather_name_ref       => $source,
-      source_ref            => "$BaseRecalibratorScatter_task",
-      sh_direct             => 0,
-      pbs                   => {
+      class           => "GATK4::GatherBQSRReports",
+      perform         => 1,
+      target_dir      => "${target_dir}/$GatherBQSRReports_task",
+      option          => "",
+      gather_name_ref => $source,
+      source_ref      => "$BaseRecalibratorScatter_task",
+      sh_direct       => 0,
+      pbs             => {
         "nodes"    => "1:ppn=1",
         "walltime" => "2",
         "mem"      => "5gb"
       },
     },
     "$ApplyBQSRScatter_task" => {
-      class             => "GATK4::ApplyBQSRScatter",
-      perform           => 1,
-      target_dir        => "${target_dir}/$ApplyBQSRScatter_task",
-      option            => "",
-      source_ref        => $source,
-      fasta_file        => $def->{ref_fasta},
+      class                 => "GATK4::ApplyBQSRScatter",
+      perform               => 1,
+      target_dir            => "${target_dir}/$ApplyBQSRScatter_task",
+      option                => "",
+      source_ref            => $source,
+      fasta_file            => $def->{ref_fasta},
       bqsr_report_files_ref => "$GatherBQSRReports_task",
-      sh_direct         => 0,
-      pbs               => {
+      sh_direct             => 0,
+      pbs                   => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
         "mem"      => "40gb"
       },
     },
     "$GatherSortedBamFiles_task" => {
-      class                 => "GATK4::GatherSortedBamFiles",
-      perform               => 1,
-      target_dir            => "${target_dir}/$GatherSortedBamFiles_task",
-      option                => "",
-      gather_name_ref       => $source,
-      source_ref            => ["$ApplyBQSRScatter_task"],
-      ref_fasta => getValue($def, "ref_fasta"),
-      sh_direct             => 0,
-      pbs                   => {
+      class           => "GATK4::GatherSortedBamFiles",
+      perform         => 1,
+      target_dir      => "${target_dir}/$GatherSortedBamFiles_task",
+      option          => "",
+      gather_name_ref => $source,
+      source_ref      => ["$ApplyBQSRScatter_task"],
+      ref_fasta       => getValue( $def, "ref_fasta" ),
+      sh_direct       => 0,
+      pbs             => {
         "nodes"    => "1:ppn=8",
         "walltime" => "24",
         "mem"      => "80gb"
       },
     },
   };
-  my @newtasks = ("$BaseRecalibratorScatter_task", 
-      "$GatherBQSRReports_task", 
-      "$ApplyBQSRScatter_task", 
-      "$GatherSortedBamFiles_task");
+  my @newtasks = ( "$BaseRecalibratorScatter_task", "$GatherBQSRReports_task", "$ApplyBQSRScatter_task", "$GatherSortedBamFiles_task" );
 
-  push(@$tasks, @newtasks);
+  push( @$tasks, @newtasks );
   my $bam_task = "$GatherSortedBamFiles_task";
 
-  if($to_cram){
-    my $BamToCram = "$gatk_prefix" . getNextIndex($def, $gatk_index_snv) . "_BamToCram";
-    my $ref_fasta = getValue($def, "ref_fasta");
+  if ($to_cram) {
+    my $BamToCram = "$gatk_prefix" . getNextIndex( $def, $gatk_index_snv ) . "_BamToCram";
+    my $ref_fasta = getValue( $def, "ref_fasta" );
     $config->{$BamToCram} = {
-      class              => "CQS::ProgramWrapperOneToOne",
-      perform            => 1,
-      target_dir => "${target_dir}/$BamToCram",
-      program => "",
+      class         => "CQS::ProgramWrapperOneToOne",
+      perform       => 1,
+      target_dir    => "${target_dir}/$BamToCram",
+      program       => "",
       check_program => 0,
-      source_ref => "$GatherSortedBamFiles_task",
-      option => "
+      source_ref    => "$GatherSortedBamFiles_task",
+      option        => "
 echo bam_to_cram=`date`
 samtools view -C \\
   --reference $ref_fasta \\
@@ -280,69 +281,70 @@ else
 fi
 ",
       output_file_prefix => ".cram",
-      output_file_ext => ".cram",
-      output_by_file => 0,
-      use_tmp_folder => 0,
+      output_file_ext    => ".cram",
+      output_by_file     => 0,
+      use_tmp_folder     => 0,
       sh_direct          => 0,
       pbs                => {
-        "nodes"     => "1:ppn=16",
-        "walltime"  => "24",
-        "mem"       => "40gb"
+        "nodes"    => "1:ppn=16",
+        "walltime" => "24",
+        "mem"      => "40gb"
       },
     };
-    push(@$tasks, $BamToCram);
+    push( @$tasks, $BamToCram );
 
     $bam_task = $BamToCram;
-  }
+  } ## end if ($to_cram)
 
-  foreach my $task (@newtasks){
+  foreach my $task (@newtasks) {
     $config->{$task} = $bam_recalibration->{$task};
   }
 
   return $bam_task;
-}
+} ## end sub add_bam_recalibration
+
 
 sub add_recalibrated_bam_to_gvcf {
-  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $HaplotypeCallerScatter_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_HaplotypeCallerScatter";
-  my $GatherVcfs_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GatherVcfs";
-  
+  my $HaplotypeCallerScatter_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_HaplotypeCallerScatter";
+  my $GatherVcfs_task             = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_GatherVcfs";
+
   my $bam_to_gvcf = {
     "$HaplotypeCallerScatter_task" => {
-      class             => "GATK4::HaplotypeCallerScatter",
-      perform           => 1,
-      target_dir        => "${target_dir}/$HaplotypeCallerScatter_task",
+      class      => "GATK4::HaplotypeCallerScatter",
+      perform    => 1,
+      target_dir => "${target_dir}/$HaplotypeCallerScatter_task",
       #https://github.com/gatk-workflows/gatk4-germline-snps-indels/blob/master/haplotypecaller-gvcf-gatk4.wdl
-      option            => "\\
+      option => "\\
   -contamination 0 \\
   -G StandardAnnotation -G StandardHCAnnotation -G AS_StandardAnnotation \\
   -GQB 10 -GQB 20 -GQB 30 -GQB 40 -GQB 50 -GQB 60 -GQB 70 -GQB 80 -GQB 90 \\
   --soft-clip-low-quality-ends true \\
   --dont-use-soft-clipped-bases true",
-      source_ref        => $source,
-      java_option       => "",
-      fasta_file        => $def->{ref_fasta},
-      extension         => ".g.vcf.gz",
-      blacklist_file    => $def->{blacklist_file},
-      gvcf              => 1,
-      sh_direct         => 0,
-      pbs               => {
+      source_ref     => $source,
+      java_option    => "",
+      fasta_file     => $def->{ref_fasta},
+      extension      => ".g.vcf.gz",
+      blacklist_file => $def->{blacklist_file},
+      gvcf           => 1,
+      sh_direct      => 0,
+      pbs            => {
         "nodes"    => "1:ppn=8",
         "walltime" => "4",
         "mem"      => "40gb"
       },
     },
     "$GatherVcfs_task" => {
-      class                 => "GATK4::GatherVcfs",
-      perform               => 1,
-      target_dir            => "${target_dir}/$GatherVcfs_task",
-      option                => "",
-      gather_name_ref       => $source,
-      source_ref            => ["$HaplotypeCallerScatter_task"],
-      extension             => ".g.vcf.gz",
-      sh_direct             => 0,
-      pbs                   => {
+      class           => "GATK4::GatherVcfs",
+      perform         => 1,
+      target_dir      => "${target_dir}/$GatherVcfs_task",
+      option          => "",
+      gather_name_ref => $source,
+      source_ref      => ["$HaplotypeCallerScatter_task"],
+      extension       => ".g.vcf.gz",
+      sh_direct       => 0,
+      pbs             => {
         "nodes"    => "1:ppn=1",
         "walltime" => "4",
         "mem"      => "10gb"
@@ -350,56 +352,58 @@ sub add_recalibrated_bam_to_gvcf {
     },
   };
 
-  my @newtasks = ("$HaplotypeCallerScatter_task", "$GatherVcfs_task");
+  my @newtasks = ( "$HaplotypeCallerScatter_task", "$GatherVcfs_task" );
 
-  push(@$tasks, @newtasks);
+  push( @$tasks, @newtasks );
 
-  foreach my $task (@newtasks){
+  foreach my $task (@newtasks) {
     $config->{$task} = $bam_to_gvcf->{$task};
   }
 
   return "$GatherVcfs_task";
-}
+} ## end sub add_recalibrated_bam_to_gvcf
+
 
 sub add_bam_to_gvcf {
-  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
-  my $bam_recalibration_section = add_bam_recalibration($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source);
-  my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_recalibration_section);
-  return($gvcf_section);
-}
+  my ( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+  my $bam_recalibration_section = add_bam_recalibration( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source );
+  my $gvcf_section              = add_recalibrated_bam_to_gvcf( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_recalibration_section );
+  return ($gvcf_section);
+} ## end sub add_bam_to_gvcf
+
 
 sub add_gvcf_to_genotype_scatter {
-  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $GenomicsDBImportScatter_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenomicsDBImportScatter";
-  my $GenotypeGVCFsScatter_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenotypeGVCFsScatter";
+  my $GenomicsDBImportScatter_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_GenomicsDBImportScatter";
+  my $GenotypeGVCFsScatter_task    = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_GenotypeGVCFsScatter";
 
   my $gvcf_to_genotype = {
     "$GenomicsDBImportScatter_task" => {
-      class             => "GATK4::GenomicsDBImportScatter",
-      perform           => 1,
-      target_dir        => "${target_dir}/$GenomicsDBImportScatter_task",
-      option            => "",
-      source_ref        => $source,
-      java_option       => "",
-      sh_direct         => 0,
-      pbs               => {
+      class       => "GATK4::GenomicsDBImportScatter",
+      perform     => 1,
+      target_dir  => "${target_dir}/$GenomicsDBImportScatter_task",
+      option      => "",
+      source_ref  => $source,
+      java_option => "",
+      sh_direct   => 0,
+      pbs         => {
         "nodes"    => "1:ppn=6",
         "walltime" => "24",
         "mem"      => "40gb"
       },
     },
     "$GenotypeGVCFsScatter_task" => {
-      class             => "GATK4::GenotypeGVCFsScatter",
-      perform           => 1,
-      target_dir        => "${target_dir}/$GenotypeGVCFsScatter_task",
-      option            => "",
-      source_ref        => ["$GenomicsDBImportScatter_task"],
-      fasta_file        => $def->{ref_fasta},
-      dbsnp_vcf         => $def->{dbsnp},
-      java_option       => "",
-      sh_direct         => 0,
-      pbs               => {
+      class       => "GATK4::GenotypeGVCFsScatter",
+      perform     => 1,
+      target_dir  => "${target_dir}/$GenotypeGVCFsScatter_task",
+      option      => "",
+      source_ref  => ["$GenomicsDBImportScatter_task"],
+      fasta_file  => $def->{ref_fasta},
+      dbsnp_vcf   => $def->{dbsnp},
+      java_option => "",
+      sh_direct   => 0,
+      pbs         => {
         "nodes"    => "1:ppn=4",
         "walltime" => "4",
         "mem"      => "40gb"
@@ -407,48 +411,49 @@ sub add_gvcf_to_genotype_scatter {
     }
   };
 
-  my @newtasks = ("$GenomicsDBImportScatter_task", "$GenotypeGVCFsScatter_task");
+  my @newtasks = ( "$GenomicsDBImportScatter_task", "$GenotypeGVCFsScatter_task" );
 
-  push(@$tasks, @newtasks);
+  push( @$tasks, @newtasks );
 
-  foreach my $task (@newtasks){
+  foreach my $task (@newtasks) {
     $config->{$task} = $gvcf_to_genotype->{$task};
   }
 
   return "$GenotypeGVCFsScatter_task";
-}
+} ## end sub add_gvcf_to_genotype_scatter
+
 
 sub add_gvcf_to_genotype {
-  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source, $interval_key ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source, $interval_key ) = @_;
 
   my $gvcf_to_genotype = {
     GenomicsDBImport => {
-      class             => "GATK4::GenomicsDBImport",
-      perform           => 1,
-      target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenomicsDBImport",
-      option            => "",
-      source_ref        => $source,
-      target_intervals_file => getValue($def, $interval_key),
-      java_option       => "",
-      sh_direct         => 0,
-      pbs               => {
+      class                 => "GATK4::GenomicsDBImport",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_GenomicsDBImport",
+      option                => "",
+      source_ref            => $source,
+      target_intervals_file => getValue( $def, $interval_key ),
+      java_option           => "",
+      sh_direct             => 0,
+      pbs                   => {
         "nodes"    => "1:ppn=4",
         "walltime" => "24",
         "mem"      => "40gb"
       },
     },
     GenotypeGVCFs => {
-      class             => "GATK4::GenotypeGVCFs",
-      perform           => 1,
-      target_dir        => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_GenotypeGVCFs",
-      option            => "",
-      source_ref        => ["GenomicsDBImport"],
-      fasta_file        => $def->{ref_fasta},
-      dbsnp_vcf         => $def->{dbsnp},
-      target_intervals_file => getValue($def, $interval_key),
-      java_option       => "",
-      sh_direct         => 0,
-      pbs               => {
+      class                 => "GATK4::GenotypeGVCFs",
+      perform               => 1,
+      target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_GenotypeGVCFs",
+      option                => "",
+      source_ref            => ["GenomicsDBImport"],
+      fasta_file            => $def->{ref_fasta},
+      dbsnp_vcf             => $def->{dbsnp},
+      target_intervals_file => getValue( $def, $interval_key ),
+      java_option           => "",
+      sh_direct             => 0,
+      pbs                   => {
         "nodes"    => "1:ppn=4",
         "walltime" => "24",
         "mem"      => "40gb"
@@ -456,50 +461,51 @@ sub add_gvcf_to_genotype {
     }
   };
 
-  my @newtasks = ("GenomicsDBImport", "GenotypeGVCFs");
+  my @newtasks = ( "GenomicsDBImport", "GenotypeGVCFs" );
 
-  push(@$tasks, @newtasks);
+  push( @$tasks, @newtasks );
 
-  foreach my $task (@newtasks){
+  foreach my $task (@newtasks) {
     $config->{$task} = $gvcf_to_genotype->{$task};
   }
 
   return "GenotypeGVCFs";
-}
+} ## end sub add_gvcf_to_genotype
+
 
 sub add_hard_filter_and_left_trim {
-  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $VariantFilterHard_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_VariantFilterHard";
-  my $LeftTrim_task = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_LeftTrim";
-  
+  my $VariantFilterHard_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_VariantFilterHard";
+  my $LeftTrim_task          = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_LeftTrim";
+
   my $filter = {
-    "$VariantFilterHard_task"  => {
-      class                 => "GATK4::VariantFilterHard",
-      perform               => 1,
-      target_dir            => "${target_dir}/$VariantFilterHard_task",
-      source_ref            => $source,
-      option                => "",
-      docker_prefix         => "gatk4_",
-      is_sample_size_small  => 1,
-      sh_direct             => 1,
-      pbs                   => {
+    "$VariantFilterHard_task" => {
+      class                => "GATK4::VariantFilterHard",
+      perform              => 1,
+      target_dir           => "${target_dir}/$VariantFilterHard_task",
+      source_ref           => $source,
+      option               => "",
+      docker_prefix        => "gatk4_",
+      is_sample_size_small => 1,
+      sh_direct            => 1,
+      pbs                  => {
         "nodes"    => "1:ppn=1",
         "walltime" => "24",
         "mem"      => "40gb"
       },
     },
-    "$LeftTrim_task"  => {
-      class                 => "GATK4::LeftTrim",
-      perform               => 1,
-      target_dir            => "${target_dir}/$LeftTrim_task",
-      source_ref            => ["$VariantFilterHard_task"],
-      option                => "",
-      docker_prefix         => "cqs_",
-      fasta_file            => $def->{ref_fasta},
-      extension             => ".indels.snp.hardfilter.pass.norm.nospan.vcf.gz",
-      sh_direct             => 0,
-      pbs                   => {
+    "$LeftTrim_task" => {
+      class         => "GATK4::LeftTrim",
+      perform       => 1,
+      target_dir    => "${target_dir}/$LeftTrim_task",
+      source_ref    => ["$VariantFilterHard_task"],
+      option        => "",
+      docker_prefix => "cqs_",
+      fasta_file    => $def->{ref_fasta},
+      extension     => ".indels.snp.hardfilter.pass.norm.nospan.vcf.gz",
+      sh_direct     => 0,
+      pbs           => {
         "nodes"    => "1:ppn=1",
         "walltime" => "2",
         "mem"      => "10gb"
@@ -507,50 +513,53 @@ sub add_hard_filter_and_left_trim {
     },
   };
 
-  my @newtasks = ("$VariantFilterHard_task", "$LeftTrim_task");
+  my @newtasks = ( "$VariantFilterHard_task", "$LeftTrim_task" );
 
-  push(@$tasks, @newtasks);
+  push( @$tasks, @newtasks );
 
-  foreach my $task (@newtasks){
+  foreach my $task (@newtasks) {
     $config->{$task} = $filter->{$task};
   }
 
   return "$LeftTrim_task";
-}
+} ## end sub add_hard_filter_and_left_trim
+
 
 sub add_merge {
-  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $task_name = $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_MergeVcfs";
+  my $task_name = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_MergeVcfs";
   $config->{$task_name} = {
-    class                 => "GATK4::MergeVcfs",
-    perform               => 1,
-    target_dir            => "${target_dir}/$task_name",
-    option                => "",
-    source_ref            => $source,
-    extension             => ".vcf.gz",
-    docker_prefix         => "gatk4_",
-    sh_direct             => 0,
-    pbs                   => {
+    class         => "GATK4::MergeVcfs",
+    perform       => 1,
+    target_dir    => "${target_dir}/$task_name",
+    option        => "",
+    source_ref    => $source,
+    extension     => ".vcf.gz",
+    docker_prefix => "gatk4_",
+    sh_direct     => 0,
+    pbs           => {
       "nodes"    => "1:ppn=1",
       "walltime" => "4",
       "mem"      => "10gb"
     },
   };
 
-  push(@$tasks, $task_name);
+  push( @$tasks, $task_name );
 
   return $task_name;
-}
+} ## end sub add_merge
+
 
 sub add_hard_filter_and_merge {
-  my ($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
+  my ( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source ) = @_;
 
-  my $filter = add_hard_filter_and_left_trim($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source);
-  my $merge = add_merge($config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $filter);
+  my $filter = add_hard_filter_and_left_trim( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $source );
+  my $merge  = add_merge( $config, $def, $tasks, $target_dir, $gatk_prefix, $gatk_index_snv, $filter );
 
   return $merge;
-}
+} ## end sub add_hard_filter_and_merge
+
 
 sub getConfig {
   my ($def) = @_;
@@ -562,52 +571,55 @@ sub getConfig {
   $def = initializeWGSDefaultOptions($def);
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
-  #merge summary and individual 
+  #merge summary and individual
   push @$individual, @$summary;
   $summary = $individual;
 
-  if(defined $def->{annotation_genes}){
-    addGeneLocus($config, $def, $summary, $target_dir);
+  if ( defined $def->{annotation_genes} ) {
+    addGeneLocus( $config, $def, $summary, $target_dir );
   }
 
-  $config->{general}{interval_list_file} = getValue($def, "interval_list_file");
+  $config->{general}{interval_list_file} = getValue( $def, "interval_list_file" );
 
-  my $gatk_prefix = getValue($def, "gatk_prefix");
-  my $gatk_index_snv = "SNV_index";
-  my $callvariants_vqsr_mode = getValue($def, "callvariants_vqsr_mode");
+  my $gatk_prefix            = getValue( $def, "gatk_prefix" );
+  my $gatk_index_snv         = "SNV_index";
+  my $callvariants_vqsr_mode = getValue( $def, "callvariants_vqsr_mode" );
 
   my $bam_section = undef;
-  if (getValue($def, "is_input_bam", 0)){
+  if ( getValue( $def, "is_input_bam", 0 ) ) {
     $bam_section = $def->{files};
-  }elsif(defined $def->{bam_file_section}){
+  }
+  elsif ( defined $def->{bam_file_section} ) {
     $bam_section = $def->{bam_file_section};
-  }else{
-    my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
+  }
+  else {
+    my $perform_split_fastq = getValue( $def, "perform_split_fastq", 0 );
 
     my $bam_ref;
     my $bam_task;
-    if ($perform_split_fastq){
-      my ($bam_ref, $bam_task) = add_BWA_and_summary_scatter($config, $def, $individual, $target_dir, $source_ref);
+    if ($perform_split_fastq) {
+      my ( $bam_ref, $bam_task ) = add_BWA_and_summary_scatter( $config, $def, $individual, $target_dir, $source_ref );
       $bam_section = $bam_ref;
-    } else {
+    }
+    else {
       my $bam_task = "bwa_wgs";
-      add_BWA_WGS($config, $def, $individual, $target_dir, $bam_task, $source_ref);
+      add_BWA_WGS( $config, $def, $individual, $target_dir, $bam_task, $source_ref );
       $bam_section = [ $bam_task, ".bam\$" ];
     }
-  }
+  } ## end else [ if ( getValue( $def, "is_input_bam"...))]
 
-  my $ref_fasta = getValue($def, "ref_fasta");
+  my $ref_fasta = getValue( $def, "ref_fasta" );
 
   my $merged_vcf_section = undef;
-  if (getValue($def, "is_input_vcf", 0)){
+  if ( getValue( $def, "is_input_vcf", 0 ) ) {
     $merged_vcf_section = "files";
 
-    if(getValue($def, "filter_input_vcf", 1)){
+    if ( getValue( $def, "filter_input_vcf", 1 ) ) {
       $config->{filter_input_vcf} = {
-        class                 => "CQS::ProgramWrapperOneToOne",
-        perform               => 1,
-        target_dir            => "${target_dir}/". $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_filter_input_vcf",
-        option                => "
+        class      => "CQS::ProgramWrapperOneToOne",
+        perform    => 1,
+        target_dir => "${target_dir}/" . $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_filter_input_vcf",
+        option     => "
 rm -f __OUTPUT__.failed
 
 gatk --java-options '-Xmx60g' SelectVariants \\
@@ -642,33 +654,34 @@ fi
         },
       };
       $config->{LeftTrim} = {
-        class                 => "GATK4::LeftTrim",
-        perform               => 1,
-        target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_LeftTrim",
-        source_ref            => "filter_input_vcf",
-        option                => "",
-        docker_prefix         => "cqs_",
-        fasta_file            => $ref_fasta,
-        extension             => ".pass.norm.nospan.vcf.gz",
-        sh_direct             => 0,
-        pbs                   => {
+        class         => "GATK4::LeftTrim",
+        perform       => 1,
+        target_dir    => "${target_dir}/" . $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_LeftTrim",
+        source_ref    => "filter_input_vcf",
+        option        => "",
+        docker_prefix => "cqs_",
+        fasta_file    => $ref_fasta,
+        extension     => ".pass.norm.nospan.vcf.gz",
+        sh_direct     => 0,
+        pbs           => {
           "nodes"    => "1:ppn=1",
           "walltime" => "10",
           "mem"      => "40gb"
         },
       };
       $merged_vcf_section = "LeftTrim";
-    }
-  }else{
-    my $perform_replace_read_group = getValue($def, "perform_replace_read_group", 0);
+    } ## end if ( getValue( $def, "filter_input_vcf"...))
+  } ## end if ( getValue( $def, "is_input_vcf"...))
+  else {
+    my $perform_replace_read_group = getValue( $def, "perform_replace_read_group", 0 );
     if ($perform_replace_read_group) {
 
-      if ($def->{replace_read_group_by_gatk4}){
+      if ( $def->{replace_read_group_by_gatk4} ) {
         $config->{replace_read_group} = {
-          class                 => "CQS::ProgramWrapperOneToOne",
-          perform               => 1,
-          target_dir            => "${target_dir}/". $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_replace_read_group",
-          option                => "AddOrReplaceReadGroups --CREATE_INDEX true --TMP_DIR tmp -I __FILE__ -O __NAME__.tmp.bam \\
+          class      => "CQS::ProgramWrapperOneToOne",
+          perform    => 1,
+          target_dir => "${target_dir}/" . $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_replace_read_group",
+          option     => "AddOrReplaceReadGroups --CREATE_INDEX true --TMP_DIR tmp -I __FILE__ -O __NAME__.tmp.bam \\
     -ID 1 \\
     -LB __NAME__ \\
     -PL ILLUMINA \\
@@ -699,12 +712,13 @@ fi
             "mem"      => "40gb"
           },
         };
-      }else{
+      } ## end if ( $def->{replace_read_group_by_gatk4...})
+      else {
         $config->{replace_read_group} = {
           class                 => "CQS::ProgramWrapperOneToOne",
           perform               => 1,
-          target_dir            => "${target_dir}/". $gatk_prefix . getNextIndex($def, $gatk_index_snv) . "_replace_read_group",
-          option                => getValue($def, "replace_read_group_option"),
+          target_dir            => "${target_dir}/" . $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_replace_read_group",
+          option                => getValue( $def, "replace_read_group_option" ),
           interpretor           => "python3",
           program               => "../Format/replace_rg.py",
           docker_prefix         => "cqs_",
@@ -723,52 +737,52 @@ fi
             "mem"      => "40gb"
           },
         };
-      }
+      } ## end else [ if ( $def->{replace_read_group_by_gatk4...})]
       $bam_section = "replace_read_group";
-      push(@$summary, $bam_section);
-    }
+      push( @$summary, $bam_section );
+    } ## end if ($perform_replace_read_group)
 
-    my $perform_mark_duplicates = getValue($def, "perform_mark_duplicates", 1);
+    my $perform_mark_duplicates = getValue( $def, "perform_mark_duplicates", 1 );
     if ($perform_mark_duplicates) {
-      if(!defined $config->{bwa_02_markduplicates}){
-        my $perform_split_fastq = getValue($def, "perform_split_fastq", 0);
+      if ( !defined $config->{bwa_02_markduplicates} ) {
+        my $perform_split_fastq = getValue( $def, "perform_split_fastq", 0 );
         #if perform_split_fastq, markduplicates might be added with split_fastq tasks.
         my $markduplicates = "markduplicates";
-        addMarkduplicates($config, $def, $summary, $target_dir, $markduplicates, $bam_section);
+        addMarkduplicates( $config, $def, $summary, $target_dir, $markduplicates, $bam_section );
         $bam_section = "markduplicates";
-      }
-    }
+      } ## end if ( !defined $config->...)
+    } ## end if ($perform_mark_duplicates)
 
-    my $bam_recalibration_section = add_bam_recalibration($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
-    
-    my $gvcf_section = add_recalibrated_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_recalibration_section);
+    my $bam_recalibration_section = add_bam_recalibration( $config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section );
 
-    if($def->{perform_extract_bam}){
-      my $extract_bam_locus = getValue($def, "extract_bam_locus");
-      my $extract_bam_task = "extract_bam_locus" . getValue($def, "extract_bam_locus_suffix", "");
-      add_extract_bam_locus($config, $def, $individual, $target_dir, $extract_bam_task, $extract_bam_locus, $bam_recalibration_section );
+    my $gvcf_section = add_recalibrated_bam_to_gvcf( $config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_recalibration_section );
+
+    if ( $def->{perform_extract_bam} ) {
+      my $extract_bam_locus = getValue( $def, "extract_bam_locus" );
+      my $extract_bam_task  = "extract_bam_locus" . getValue( $def, "extract_bam_locus_suffix", "" );
+      add_extract_bam_locus( $config, $def, $individual, $target_dir, $extract_bam_task, $extract_bam_locus, $bam_recalibration_section );
     }
 
     #my $gvcf_section = add_bam_to_gvcf($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $bam_section);
 
     if ( $def->{perform_cnv_gatk4_cohort} ) {
-      my $cnv_prefix = getValue($def, "cnv_prefix", "");
-      my $cnvMap = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $bam_recalibration_section, $cnv_prefix, $individual, $summary, $summary, $summary, $summary, $summary );
+      my $cnv_prefix = getValue( $def, "cnv_prefix", "" );
+      my $cnvMap     = addGATK4CNVGermlineCohortAnalysis( $config, $def, $target_dir, $bam_recalibration_section, $cnv_prefix, $individual, $summary, $summary, $summary, $summary, $summary );
     }
 
-    if ($def->{perform_gvcf_to_genotype}) {
-      my $genotypeGVCFs_section = add_gvcf_to_genotype_scatter($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_section);
+    if ( $def->{perform_gvcf_to_genotype} ) {
+      my $genotypeGVCFs_section = add_gvcf_to_genotype_scatter( $config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $gvcf_section );
 
-      if ($def->{perform_filter_and_merge}) {
-        if ($callvariants_vqsr_mode){
+      if ( $def->{perform_filter_and_merge} ) {
+        if ($callvariants_vqsr_mode) {
           #stop("not implemented");
-          
-          my $HardFilterAndMakeSitesOnlyVcf_task = $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_HardFilterAndMakeSitesOnlyVcf";
+
+          my $HardFilterAndMakeSitesOnlyVcf_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_HardFilterAndMakeSitesOnlyVcf";
           $config->{$HardFilterAndMakeSitesOnlyVcf_task} = {
-            class                 => "CQS::ProgramWrapperOneToOne",
-            perform               => 1,
-            target_dir            => "${target_dir}/$HardFilterAndMakeSitesOnlyVcf_task",
-            option                => "
+            class      => "CQS::ProgramWrapperOneToOne",
+            perform    => 1,
+            target_dir => "${target_dir}/$HardFilterAndMakeSitesOnlyVcf_task",
+            option     => "
 echo VariantFiltration ...
 gatk --java-options \"-Xms10g -Xmx18g\" \\
   VariantFiltration \\
@@ -803,33 +817,32 @@ else
   rm -f __NAME__.variant_filtered.vcf.gz.succeed __NAME__.variant_filtered.vcf.gz __NAME__.variant_filtered.vcf.gz.tbi
 fi
 ",
-            interpretor           => "",
-            program               => "",
-            docker_prefix         => "gatk4_",
-            check_program         => 0,
-            source_arg            => "",
-            source_ref            => $genotypeGVCFs_section,
+            interpretor                  => "",
+            program                      => "",
+            docker_prefix                => "gatk4_",
+            check_program                => 0,
+            source_arg                   => "",
+            source_ref                   => $genotypeGVCFs_section,
             other_localization_ext_array => [".tbi"],
-            source_join_delimiter => " ",
-            output_to_same_folder => 1,
-            output_arg            => "-O",
-            output_file_prefix    => "",
-            output_file_ext       => ".variant_filtered.vcf.gz",
-            output_other_ext      => ".variant_filtered.sites_only.vcf.gz",
-            sh_direct             => 0,
-            pbs                   => {
+            source_join_delimiter        => " ",
+            output_to_same_folder        => 1,
+            output_arg                   => "-O",
+            output_file_ext              => ".variant_filtered.vcf.gz",
+            output_other_ext             => ".variant_filtered.sites_only.vcf.gz",
+            sh_direct                    => 0,
+            pbs                          => {
               "nodes"    => "1:ppn=1",
               "walltime" => "24",
               "mem"      => "20gb"
             },
           };
 
-          my $SitesOnlyGatherVcf_task = $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_SitesOnlyGatherVcf";
+          my $SitesOnlyGatherVcf_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_SitesOnlyGatherVcf";
           $config->{$SitesOnlyGatherVcf_task} = {
-            class                 => "CQS::ProgramWrapper",
-            perform               => 1,
-            target_dir            => "${target_dir}/$SitesOnlyGatherVcf_task",
-            option                => "
+            class      => "CQS::ProgramWrapper",
+            perform    => 1,
+            target_dir => "${target_dir}/$SitesOnlyGatherVcf_task",
+            option     => "
 # --ignore-safety-checks makes a big performance difference so we include it in our invocation.
 # This argument disables expensive checks that the file headers contain the same set of
 # genotyped samples and that files are in order by position of first record.
@@ -862,7 +875,6 @@ fi
             source_ref            => [ $HardFilterAndMakeSitesOnlyVcf_task, ".sites_only.vcf.gz" ],
             source_join_delimiter => " \\\n  --input ",
             output_arg            => "--output",
-            output_file_prefix    => "",
             output_file_ext       => ".sites_only.vcf.gz",
             sh_direct             => 0,
             pbs                   => {
@@ -872,24 +884,24 @@ fi
             },
           };
 
-          my $mills_resource_vcf = getValue($def, "mills");
-          my $dbsnp_resource_vcf = getValue($def, "dbsnp");
-          my $axiomPoly_resource_vcf = getValue($def, "axiomPoly");
+          my $mills_resource_vcf     = getValue( $def, "mills" );
+          my $dbsnp_resource_vcf     = getValue( $def, "dbsnp" );
+          my $axiomPoly_resource_vcf = getValue( $def, "axiomPoly" );
 
-          my $indel_tranche = getValue($def, "indel_recalibration_tranche_values");
-          my $indel_tranche_str = join(" -tranche ", @$indel_tranche);
+          my $indel_tranche     = getValue( $def, "indel_recalibration_tranche_values" );
+          my $indel_tranche_str = join( " -tranche ", @$indel_tranche );
 
-          my $indel_anno = getValue($def, "indel_recalibration_annotation_values");
-          my $indel_anno_str = join(" -an ", @$indel_anno);
+          my $indel_anno     = getValue( $def, "indel_recalibration_annotation_values" );
+          my $indel_anno_str = join( " -an ", @$indel_anno );
 
-          my $indel_max_gaussians = getValue($def, "indel_max_gaussians", 4);
+          my $indel_max_gaussians = getValue( $def, "indel_max_gaussians", 4 );
 
-          my $IndelsVariantRecalibrator_task = $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_IndelsVariantRecalibrator";
+          my $IndelsVariantRecalibrator_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_IndelsVariantRecalibrator";
           $config->{$IndelsVariantRecalibrator_task} = {
-            class                 => "CQS::ProgramWrapperOneToOne",
-            perform               => 1,
-            target_dir            => "${target_dir}/$IndelsVariantRecalibrator_task",
-            option                => "
+            class      => "CQS::ProgramWrapperOneToOne",
+            perform    => 1,
+            target_dir => "${target_dir}/$IndelsVariantRecalibrator_task",
+            option     => "
 gatk --java-options \"-Xms24g -Xms25g\" \\
   VariantRecalibrator \\
   -AS \\
@@ -916,45 +928,44 @@ else
   rm -f __NAME__.indels.recal.vcf.gz.succeed __NAME__.tmp.indels.recal.vcf.gz __NAME__.tmp.indels.recal.vcf.gz.tbi
 fi
 ",
-            interpretor           => "",
-            program               => "",
-            docker_prefix         => "gatk4_",
-            check_program         => 0,
-            source_arg            => "-V",
-            source_ref            => $SitesOnlyGatherVcf_task,
-            output_arg            => "-O",
-            output_file_prefix    => "",
-            output_file_ext       => ".indels.recal.vcf.gz",
-            output_other_ext      => ".indels.tranches",
-            output_to_same_folder => 1,
-            no_output             => 1,
+            interpretor                  => "",
+            program                      => "",
+            docker_prefix                => "gatk4_",
+            check_program                => 0,
+            source_arg                   => "-V",
+            source_ref                   => $SitesOnlyGatherVcf_task,
+            output_arg                   => "-O",
+            output_file_ext              => ".indels.recal.vcf.gz",
+            output_other_ext             => ".indels.tranches",
+            output_to_same_folder        => 1,
+            no_output                    => 1,
             other_localization_ext_array => [".tbi"],
-            sh_direct             => 0,
-            pbs                   => {
+            sh_direct                    => 0,
+            pbs                          => {
               "nodes"    => "1:ppn=2",
               "walltime" => "12",
               "mem"      => "26gb"
             },
           };
 
-          my $hapmap_resource_vcf = getValue($def, "hapmap");
-          my $omni_resource_vcf = getValue($def, "omni");
-          my $one_thousand_genomes_resource_vcf = getValue($def, "g1000");
+          my $hapmap_resource_vcf               = getValue( $def, "hapmap" );
+          my $omni_resource_vcf                 = getValue( $def, "omni" );
+          my $one_thousand_genomes_resource_vcf = getValue( $def, "g1000" );
 
-          my $snp_tranche = getValue($def, "snp_recalibration_tranche_values");
-          my $snp_tranche_str = join(" -tranche ", @$snp_tranche);
+          my $snp_tranche     = getValue( $def, "snp_recalibration_tranche_values" );
+          my $snp_tranche_str = join( " -tranche ", @$snp_tranche );
 
-          my $snp_anno = getValue($def, "snp_recalibration_annotation_values");
-          my $snp_anno_str = join(" -an ", @$snp_anno);
+          my $snp_anno     = getValue( $def, "snp_recalibration_annotation_values" );
+          my $snp_anno_str = join( " -an ", @$snp_anno );
 
-          my $snp_max_gaussians = getValue($def, "snp_max_gaussians", 6);
+          my $snp_max_gaussians = getValue( $def, "snp_max_gaussians", 6 );
 
-          my $SNPsVariantRecalibrator_task = $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_SNPsVariantRecalibratorClassic";
+          my $SNPsVariantRecalibrator_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_SNPsVariantRecalibratorClassic";
           $config->{$SNPsVariantRecalibrator_task} = {
-            class                 => "CQS::ProgramWrapperOneToOne",
-            perform               => 1,
-            target_dir            => "${target_dir}/$SNPsVariantRecalibrator_task",
-            option                => "
+            class      => "CQS::ProgramWrapperOneToOne",
+            perform    => 1,
+            target_dir => "${target_dir}/$SNPsVariantRecalibrator_task",
+            option     => "
 gatk --java-options \"-Xmx24g -Xms24g\" \\
   VariantRecalibrator \\
   -AS \\
@@ -982,35 +993,34 @@ else
   rm -f __NAME__.snps.recal.vcf.gz.succeed __NAME__.tmp.snps.recal.vcf.gz __NAME__.tmp.snps.recal.vcf.gz.tbi
 fi
 ",
-            interpretor           => "",
-            program               => "",
-            docker_prefix         => "gatk4_",
-            check_program         => 0,
-            source_arg            => "-V",
-            source_ref            => $SitesOnlyGatherVcf_task,
-            output_arg            => "-O",
-            output_file_prefix    => "",
-            output_file_ext => ".snps.recal.vcf.gz",
-            output_other_ext      => ".snps.tranches",
-            output_to_same_folder => 1,
-            no_output => 1,
+            interpretor                  => "",
+            program                      => "",
+            docker_prefix                => "gatk4_",
+            check_program                => 0,
+            source_arg                   => "-V",
+            source_ref                   => $SitesOnlyGatherVcf_task,
+            output_arg                   => "-O",
+            output_file_ext              => ".snps.recal.vcf.gz",
+            output_other_ext             => ".snps.tranches",
+            output_to_same_folder        => 1,
+            no_output                    => 1,
             other_localization_ext_array => [".tbi"],
-            sh_direct             => 0,
-            pbs                   => {
+            sh_direct                    => 0,
+            pbs                          => {
               "nodes"    => "1:ppn=2",
               "walltime" => "12",
               "mem"      => "26gb"
             },
           };
 
-          my $indel_filter_level = getValue($def, "indel_filter_level", "99.7");
-          my $snp_filter_level = getValue($def, "snp_filter_level", "99.7");
-          my $ApplyRecalibration_task = $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_ApplyRecalibration";
+          my $indel_filter_level      = getValue( $def, "indel_filter_level", "99.7" );
+          my $snp_filter_level        = getValue( $def, "snp_filter_level",   "99.7" );
+          my $ApplyRecalibration_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_ApplyRecalibration";
           $config->{$ApplyRecalibration_task} = {
-            class                 => "CQS::ProgramWrapperOneToOne",
-            perform               => 1,
-            target_dir            => "${target_dir}/$ApplyRecalibration_task",
-            option                => "
+            class      => "CQS::ProgramWrapperOneToOne",
+            perform    => 1,
+            target_dir => "${target_dir}/$ApplyRecalibration_task",
+            option     => "
 gatk --java-options \"-Xms5000m -Xmx6500m\" \\
   ApplyVQSR \\
   -AS \\
@@ -1054,35 +1064,34 @@ else
   rm -f __NAME__.indel.recalibrated.vcf.gz.succeed __NAME__.indel.recalibrated.vcf.gz __NAME__.indel.recalibrated.vcf.gz.tbi
 fi
 ",
-            interpretor           => "",
-            program               => "",
-            docker_prefix         => "gatk4_",
-            check_program         => 0,
-            source_arg            => "-V",
-            source_ref            => [ $HardFilterAndMakeSitesOnlyVcf_task, ".variant_filtered.vcf.gz" ],
-            parameterFile1_ref    => [ $IndelsVariantRecalibrator_task, ".indels.recal.vcf.gz" ],           
-            parameterFile2_ref    => [ $IndelsVariantRecalibrator_task, ".indels.tranches" ],
-            parameterFile3_ref    => [ $SNPsVariantRecalibrator_task, ".snps.recal.vcf.gz" ],           
-            parameterFile4_ref    => [ $SNPsVariantRecalibrator_task, ".snps.tranches" ],
-            output_arg            => "-O",
-            output_file_prefix    => "",
-            output_file_ext            => ".filtered.vcf.gz",
-            output_to_same_folder => 1,
+            interpretor                  => "",
+            program                      => "",
+            docker_prefix                => "gatk4_",
+            check_program                => 0,
+            source_arg                   => "-V",
+            source_ref                   => [ $HardFilterAndMakeSitesOnlyVcf_task, ".variant_filtered.vcf.gz" ],
+            parameterFile1_ref           => [ $IndelsVariantRecalibrator_task,     ".indels.recal.vcf.gz" ],
+            parameterFile2_ref           => [ $IndelsVariantRecalibrator_task,     ".indels.tranches" ],
+            parameterFile3_ref           => [ $SNPsVariantRecalibrator_task,       ".snps.recal.vcf.gz" ],
+            parameterFile4_ref           => [ $SNPsVariantRecalibrator_task,       ".snps.tranches" ],
+            output_arg                   => "-O",
+            output_file_ext              => ".filtered.vcf.gz",
+            output_to_same_folder        => 1,
             other_localization_ext_array => [".tbi"],
-            sh_direct             => 0,
-            pbs                   => {
+            sh_direct                    => 0,
+            pbs                          => {
               "nodes"    => "1:ppn=1",
               "walltime" => "24",
               "mem"      => "7gb"
             },
           };
 
-          my $FinalGatherVcf_task = $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_FinalGatherVcf";
+          my $FinalGatherVcf_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_FinalGatherVcf";
           $config->{$FinalGatherVcf_task} = {
-            class                 => "CQS::ProgramWrapper",
-            perform               => 1,
-            target_dir            => "${target_dir}/$FinalGatherVcf_task",
-            option                => "
+            class      => "CQS::ProgramWrapper",
+            perform    => 1,
+            target_dir => "${target_dir}/$FinalGatherVcf_task",
+            option     => "
 set -euo pipefail
 
 # --ignore-safety-checks makes a big performance difference so we include it in our invocation.
@@ -1115,7 +1124,6 @@ fi
             source_ref            => [ $ApplyRecalibration_task, ".filtered.vcf.gz" ],
             source_join_delimiter => " \\\n  --input ",
             output_arg            => "--output",
-            output_file_prefix    => "",
             output_file_ext       => ".vcf.gz",
             sh_direct             => 0,
             pbs                   => {
@@ -1125,14 +1133,14 @@ fi
             },
           };
 
-          my $ref_fasta_dict = getValue($def, "ref_fasta_dict");
-          my $eval_interval_list = getValue($def, "eval_interval_list");
-          my $CollectMetricsOnFullVcf_task = $gatk_prefix .  getNextIndex($def, $gatk_index_snv) . "_CollectMetricsOnFullVcf";
+          my $ref_fasta_dict               = getValue( $def, "ref_fasta_dict" );
+          my $eval_interval_list           = getValue( $def, "eval_interval_list" );
+          my $CollectMetricsOnFullVcf_task = $gatk_prefix . getNextIndex( $def, $gatk_index_snv ) . "_CollectMetricsOnFullVcf";
           $config->{$CollectMetricsOnFullVcf_task} = {
-            class                 => "CQS::ProgramWrapperOneToOne",
-            perform               => 1,
-            target_dir            => "${target_dir}/$CollectMetricsOnFullVcf_task",
-            option                => "
+            class      => "CQS::ProgramWrapperOneToOne",
+            perform    => 1,
+            target_dir => "${target_dir}/$CollectMetricsOnFullVcf_task",
+            option     => "
 set -euo pipefail
 
 gatk --java-options \"-Xms6000m -Xmx7000m\" \\
@@ -1160,8 +1168,8 @@ fi
             source_arg            => "--INPUT",
             source_ref            => [ $FinalGatherVcf_task, ".vcf.gz" ],
             output_arg            => "--OUTPUT",
-            output_file_prefix    => "",
-            output_file_ext       => ".variant_calling_detail_metrics;.variant_calling_summary_metrics",
+            output_file_ext       => ".variant_calling_detail_metrics",
+            output_other_ext      => ".variant_calling_summary_metrics",
             sh_direct             => 0,
             output_to_same_folder => 1,
             pbs                   => {
@@ -1170,48 +1178,48 @@ fi
               "mem"      => "10gb"
             },
           };
-          push @$summary, ($HardFilterAndMakeSitesOnlyVcf_task, $SitesOnlyGatherVcf_task, $IndelsVariantRecalibrator_task, $SNPsVariantRecalibrator_task, $ApplyRecalibration_task, $FinalGatherVcf_task, $CollectMetricsOnFullVcf_task);
+          push @$summary, ( $HardFilterAndMakeSitesOnlyVcf_task, $SitesOnlyGatherVcf_task, $IndelsVariantRecalibrator_task, $SNPsVariantRecalibrator_task, $ApplyRecalibration_task, $FinalGatherVcf_task, $CollectMetricsOnFullVcf_task );
 
           $merged_vcf_section = $FinalGatherVcf_task;
-        } else {
-          $merged_vcf_section = add_hard_filter_and_merge($config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section);
+        } ## end if ($callvariants_vqsr_mode)
+        else {
+          $merged_vcf_section = add_hard_filter_and_merge( $config, $def, $summary, $target_dir, $gatk_prefix, $gatk_index_snv, $genotypeGVCFs_section );
         }
-      }
-    }
-  }
+      } ## end if ( $def->{perform_filter_and_merge...})
+    } ## end if ( $def->{perform_gvcf_to_genotype...})
+  } ## end else [ if ( getValue( $def, "is_input_vcf"...))]
 
-  if(defined $merged_vcf_section){
-    my $annovar_name = addAnnovar($config, $def, $summary, $target_dir, $merged_vcf_section, '.gz$', $gatk_prefix, $def, $gatk_index_snv );
+  if ( defined $merged_vcf_section ) {
+    my $annovar_name = addAnnovar( $config, $def, $summary, $target_dir, $merged_vcf_section, '.gz$', $gatk_prefix, $def, $gatk_index_snv );
 
     if ( $def->{annovar_param} =~ /exac/ || $def->{annovar_param} =~ /1000g/ || $def->{annovar_param} =~ /gnomad/ ) {
-      my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $def, $gatk_index_snv);
+      my $annovar_filter_name = addAnnovarFilter( $config, $def, $summary, $target_dir, $annovar_name, $gatk_prefix, $def, $gatk_index_snv );
 
       if ( defined $def->{annotation_genes} ) {
         my $annovar_filter_geneannotation_name = addAnnovarFilterGeneannotation( $config, $def, $summary, $target_dir, $annovar_filter_name );
       }
 
-      my $mafreport = addAnnovarMafReport($config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $def, $gatk_index_snv);
-    }
-  }
+      my $mafreport = addAnnovarMafReport( $config, $def, $summary, $target_dir, $annovar_filter_name, $gatk_prefix, $def, $gatk_index_snv );
+    } ## end if ( $def->{annovar_param...})
+  } ## end if ( defined $merged_vcf_section)
 
   $config->{sequencetask} = {
-    class => "CQS::SequenceTaskSlurmSlim",
-    perform => 1,
-    target_dir            => "${target_dir}/sequencetask",
-    option                => "",
-    source                => {
-      processing => $summary,
-    },
-    sh_direct             => 1,
-    pbs                   => {
+    class      => "CQS::SequenceTaskSlurmSlim",
+    perform    => 1,
+    target_dir => "${target_dir}/sequencetask",
+    option     => "",
+    source     => { processing => $summary, },
+    sh_direct  => 1,
+    pbs        => {
       "nodes"    => "1:ppn=8",
       "walltime" => "24",
       "mem"      => "40gb"
     },
   };
 
-  return($config);
-};
+  return ($config);
+} ## end sub getConfig
+
 
 sub performWGS {
   my ( $def, $perform ) = @_;
@@ -1228,7 +1236,8 @@ sub performWGS {
   }
 
   return $config;
-}
+} ## end sub performWGS
+
 
 sub performWGSTask {
   my ( $def, $task ) = @_;
@@ -1237,6 +1246,6 @@ sub performWGSTask {
   performTask( $config, $task );
 
   return $config;
-}
+} ## end sub performWGSTask
 
 1;

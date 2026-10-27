@@ -294,9 +294,9 @@ python3 $python_script -i fileList1.txt -o ${task_name}.FastQC
     rtemplate                => "../QC/fastQCSummary.r",
     rReportTemplate          => "../QC/fastQCSummary.Rmd;reportFunctions.R;countTableVisFunctions.R",
     run_rmd_independent      => 1,
-    rmd_ext                  => ".FastQC.html",
     option                   => "",
-    output_file_ext          => ".FastQC.summary.tsv,.FastQC.summary.tsv.png,.FastQC.reads.tsv,.FastQC.reads.tsv.png,.FastQC.baseQuality.tsv,.FastQC.baseQuality.tsv.png,.FastQC.sequenceGC.tsv,.FastQC.sequenceGC.tsv.png,.FastQC.adapter.tsv,.FastQC.adapter.tsv.png,.FastQC.overrepresented.tsv",
+    output_file_ext          => ".FastQC.html",
+    output_other_ext         => ".FastQC.summary.tsv,.FastQC.summary.tsv.png,.FastQC.reads.tsv,.FastQC.reads.tsv.png,.FastQC.baseQuality.tsv,.FastQC.baseQuality.tsv.png,.FastQC.sequenceGC.tsv,.FastQC.sequenceGC.tsv.png,.FastQC.adapter.tsv,.FastQC.adapter.tsv.png,.FastQC.overrepresented.tsv",
     docker_prefix            => "report_",
     can_result_be_empty_file => 0,
     parameterSampleFile1_ref => [ $fastqcTask, "data.txt" ],
@@ -1579,7 +1579,8 @@ sub addFilterMafAndReport {
     parameterSampleFile1_ref => [ $mutect2call, ".maf" ],
     parameterFile1           => $def->{family_info_file},
     rCode                    => $rCode,
-    output_file_ext          => ".filter.allSamples.maf;.filter.allSamples.maf.report.html.RData",
+    output_file_ext          => ".filter.allSamples.maf",
+    output_other_ext         => ".filter.allSamples.maf.report.html.RData",
     docker_prefix            => "mafreport_",
     sh_direct                => 0,
     pbs                      => {
@@ -1638,7 +1639,8 @@ sub addAllelicCountsForClonalAnalysis {
     parameterFile3_ref         => [ $cnvFile,    ".seg\$" ],
     output_to_result_directory => 1,
     output_file                => "",
-    output_file_ext            => ".pyCloneVIInputList.txt;.sciCloneInputList.txt",
+    output_file_ext            => ".pyCloneVIInputList.txt",
+    output_other_ext           => ".sciCloneInputList.txt",
     rCode                      => $rCode,
     sh_direct                  => 1,
     'pbs'                      => {
@@ -1790,7 +1792,6 @@ mothur $mothurPipelineCodeFileOut
     source_arg            => "",
     output_arg            => "",
     output_to_folder      => 1,
-    output_file_prefix    => "",
     output_file_ext       => ".trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.shared",
     output_other_ext      => ".trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.opti_mcc.0.03.cons.taxonomy",
     sh_direct             => 0,
@@ -1971,7 +1972,6 @@ sub addGATK4CNVGermlineCohortAnalysis {
       source_arg            => "-i",
       output_to_same_folder => 1,
       output_arg            => "-o",
-      output_file_prefix    => "",
       output_file_ext       => "._ITER_.interval_list",
       iteration_arg         => "-n",
       iteration             => $def->{gatk4_cnv_scatter_count},
@@ -2813,7 +2813,6 @@ fi
     source_join_delimiter => ",",
     output_to_same_folder => 1,
     output_arg            => "-o",
-    output_file_prefix    => "",
     output_file_ext       => "._ITER_.1.fastq.gz",
     output_other_ext      => "._ITER_.2.fastq.gz",
     zfill_iter_in_result  => 1,
@@ -2857,7 +2856,6 @@ sub add_split_fastq {
     parameterSampleFile2     => $def->{"total_reads"},
     output_to_same_folder    => 1,
     output_arg               => "-o",
-    output_file_prefix       => "",
     output_file_ext          => "._ITER_.1.fastq.gz",
     output_other_ext         => "._ITER_.2.fastq.gz",
     iteration_arg            => "--trunk",
@@ -3307,9 +3305,7 @@ sub addBamsnap {
     output_to_same_folder    => 1,
     output_arg               => "-o",
     output_to_folder         => 0,
-    output_file_prefix       => "",
     output_file_ext          => ".txt",
-    output_other_ext         => "",
     sh_direct                => 1,
     can_result_be_empty_file => 1,
     pbs                      => {
@@ -3355,9 +3351,7 @@ sub addGeneCoverage {
     output_to_same_folder    => 1,
     output_arg               => "-o",
     output_to_folder         => 1,
-    output_file_prefix       => "",
     output_file_ext          => ".coverage.png",
-    output_other_ext         => "",
     use_tmp_folder           => 0,
     sh_direct                => 1,
     pbs                      => {
@@ -3394,9 +3388,7 @@ sub addLocusCoverage {
     output_to_same_folder    => 1,
     output_arg               => "-o",
     output_to_folder         => 1,
-    output_file_prefix       => "",
     output_file_ext          => ".coverage.png",
-    output_other_ext         => "",
     use_tmp_folder           => 0,
     sh_direct                => 1,
     pbs                      => {
@@ -3435,9 +3427,7 @@ sub addBamsnapLocus {
     output_to_same_folder                    => 1,
     output_arg                               => "-out",
     output_to_folder                         => 1,
-    output_file_prefix                       => "",
     output_file_ext                          => ".png",
-    output_other_ext                         => "",
     use_tmp_folder                           => 0,
     sh_direct                                => 1,
     pbs                                      => {
@@ -3860,7 +3850,8 @@ sub add_fgsea {
     report_rmd_file      => "../Annotation/fgsea_bulk.rmd",
     additional_rmd_files => "../CQS/reportFunctions.R",
     suffix               => ".fgsea",
-    output_file_ext      => ".fgsea.html,.version,.fgsea.files.csv",
+    output_file_ext      => ".fgsea.html",
+    output_other_ext     => ".version,.fgsea.files.csv",
     parameterSampleFile1 => {
       "email"               => getValue( $def, "email" ),
       "affiliation"         => $def->{"affiliation"},
@@ -4295,22 +4286,21 @@ sub add_sccomp_of_deconvolution {
   $config->{$task_name} = {
     class                    => "CQS::IndividualRmd",
     perform                  => 1,
-    rCode                    => "",
     target_dir               => "${target_dir}/" . getNextFolderIndex($def) . ${task_name},
+    report_rmd_file          => "../scRNA/sccomp_deconvolution.rmd",
+    additional_rmd_files     => "../scRNA/sccomp_sub.rmd;../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
+    output_ext               => ".sccomp_deconvolution.html",
     option                   => "",
     parameterSampleFile1_ref => $source_ref,
     parameterSampleFile2     => {
-      "task_name"   => getValue( $def, "task_name" ),
-      "email"       => getValue( $def, "email" ),
-      "affiliation" => getValue( $def, "affiliation" ),
+      "task_name"                    => getValue( $def, "task_name" ),
+      "email"                        => getValue( $def, "email" ),
+      "affiliation"                  => getValue( $def, "affiliation" ),
       "sccomp_stan_models_cache_dir" => getValue( $def, "sccomp_stan_models_cache_dir" ),
     },
-    parameterSampleFile3     => getValue($def, "meta_files"),
-    parameterSampleFile4     => getValue($def, "pairs"),
-    rReportTemplate => "../scRNA/sccomp_deconvolution.rmd",
-    additional_rmd_files     => "../scRNA/sccomp_sub.rmd;../scRNA/scRNA_func.r;../CQS/reportFunctions.R",
-    output_ext      => ".sccomp_deconvolution.html",
-    pbs             => {
+    parameterSampleFile3 => getValue( $def, "meta_files" ),
+    parameterSampleFile4 => getValue( $def, "pairs" ),
+    pbs                  => {
       "nodes"    => "1:ppn=1",
       "walltime" => "24",
       "mem"      => "20gb"
@@ -4318,7 +4308,7 @@ sub add_sccomp_of_deconvolution {
   };
   push( @$tasks, $task_name );
   return ($task_name);
-} ## end sub add_Deconvolution_sccomp
+} ## end sub add_sccomp_of_deconvolution
 
 1;
 

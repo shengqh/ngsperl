@@ -85,7 +85,8 @@ makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format 
 #__OUTPUT__
 ",
     source_ref               => [ "files" ],
-    output_file_ext          => ".NFR_filtered.bam,.NFR_filtered.tn5.tagAlign.gz",
+    output_file_ext          => ".NFR_filtered.bam",
+    output_other_ext         => ".NFR_filtered.tn5.tagAlign.gz",
     output_to_result_dir     => 1,
     output_to_same_folder => 0,
     sh_direct                => 0,

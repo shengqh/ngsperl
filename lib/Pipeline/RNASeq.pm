@@ -1229,7 +1229,6 @@ export NUMEXPR_MAX_THREADS=12
       source_arg            => "-i",
       output_to_same_folder => 1,
       output_arg            => "-o",
-      output_file_prefix    => "",
       output_file_ext       => ".txt",
       sh_direct             => 0,
       pbs                   => {

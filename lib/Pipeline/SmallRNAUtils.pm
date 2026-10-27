@@ -704,7 +704,6 @@ sub add_absolute_chromosome_count {
     output_to_same_folder => 1,
     output_arg            => "-o",
     output_to_folder      => 1,
-    output_file_prefix    => "",
     output_file_ext       => ".count,.count.obj",
     sh_direct    => 1,
     pbs          => {

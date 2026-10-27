@@ -65,7 +65,7 @@ sub perform {
   my $iteration_arg = get_option( $config, $section, "iteration_arg", "" );
 
   my $output_to_same_folder = get_option( $config, $section, "output_to_same_folder" );
-  my $output_file_prefix    = get_option( $config, $section, "output_file_prefix" );
+  my $output_file_prefix    = get_option( $config, $section, "output_file_prefix", "" );
   my $output_arg      = get_option( $config, $section, "output_arg" );
 
   my ( $parameterSampleFile1, $parameterSampleFile1arg, $parameterSampleFile1JoinDelimiter ) = get_parameter_sample_files( $config, $section, "source" );

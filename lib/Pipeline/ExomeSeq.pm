@@ -481,7 +481,6 @@ sub getConfig {
           source_join_delimiter => ",",
           output_to_same_folder => 1,
           output_arg            => "-o",
-          output_file_prefix    => "",
           output_file_ext       => "._ITER_.1.fastq.gz",
           output_other_ext      => "._ITER_.2.fastq.gz",
           iteration_arg         => "--trunk",
@@ -932,7 +931,6 @@ rm __NAME__.bam __NAME__.bam.bai
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => "_roi.txt.gz",
       sh_direct             => 0,
       pbs                   => {
@@ -1525,7 +1523,6 @@ fi
         output_to_same_folder => 1,
         output_arg            => "",
         no_output => 1,
-        output_file_prefix    => "",
         output_file_ext       => ".ffpe_filtered.vcf.gz",
         sh_direct             => 0,
         docker_prefix         => "gatk4140_",
@@ -1601,7 +1598,6 @@ rm -rf __NAME__.sites.snp.tmp.vcf.gz*
         output_to_same_folder => 1,
         output_arg            => "",
         no_output => 1,
-        output_file_prefix    => "",
         output_file_ext       => ".sites.snp.vcf.gz",
         sh_direct             => 0,
         docker_prefix         => "gatk4_",
@@ -1646,7 +1642,6 @@ rm -rf __NAME__.sites.snp.tmp.vcf.gz*
         output_to_same_folder => 1,
         output_arg            => "",
         no_output => 1,
-        output_file_prefix    => "",
         output_file_ext       => ".sites.snp.vcf.gz",
         sh_direct             => 0,
         docker_prefix         => "gatk4_",
@@ -1692,7 +1687,6 @@ fi
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".snp_pileup.gz",
       sh_direct             => 0,
       no_docker => 1,
@@ -1722,7 +1716,6 @@ fi
       },
       output_to_same_folder => 0,
       no_output => 1,
-      output_file_prefix => "",
       output_file_ext => ".txt",
       sh_direct => 0,
       no_docker => 1,
@@ -1836,7 +1829,6 @@ gatk --java-options \"-Xmx40g\" CollectReadCounts  \\
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".counts.hdf5",
       sh_direct             => 0,
       pbs                   => {
@@ -1884,7 +1876,6 @@ gatk --java-options \"-Xmx40g\" CreateReadCountPanelOfNormals \\
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".pon.hdf5",
       sh_direct             => 0,
       pbs                   => {
@@ -1919,7 +1910,6 @@ gatk --java-options \"-Xmx40g\" DenoiseReadCounts \\
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".standardizedCR.tsv;.denoisedCR.tsv",
       sh_direct             => 0,
       pbs                   => {
@@ -1958,7 +1948,6 @@ gatk --java-options \"-Xmx40g\" PlotDenoisedCopyRatios \\
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".counts.hdf5",
       sh_direct             => 1,
       pbs                   => {
@@ -1999,7 +1988,6 @@ gatk --java-options \"-Xmx40g\" CollectAllelicCounts \\
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".allelicCounts.tsv",
       sh_direct             => 0,
       pbs                   => {
@@ -2032,7 +2020,6 @@ gatk --java-options \"-Xmx40g\" ModelSegments \\
       output_to_same_folder => 0,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".cr.seg;.modelFinal.seg",
       sh_direct             => 0,
       pbs                   => {
@@ -2064,7 +2051,6 @@ gatk --java-options \"-Xmx10g\" CallCopyRatioSegments \\
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".called.seg",
       sh_direct             => 0,
       pbs                   => {
@@ -2102,7 +2088,6 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
       output_to_same_folder => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".counts.hdf5",
       sh_direct             => 1,
       pbs                   => {
@@ -2130,7 +2115,6 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
   #     output_to_same_folder => 0,
   #     output_arg            => "",
   #     no_output => 1,
-  #     output_file_prefix    => "",
   #     output_file_ext       => ".modelFinal.seg",
   #     sh_direct             => 0,
   #     pbs                   => {
@@ -2355,7 +2339,6 @@ gatk --java-options \"-Xmx40g\" PlotModeledSegments \\
       output_to_same_folder => 0,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".vcf.gz",
       output_other_ext => ".gvcf.gz",
       sh_direct             => 0,
@@ -2402,7 +2385,6 @@ rm -rf GLnexus.DB
       no_prefix => 1,
       output_arg            => "",
       no_output => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".deepvariant.vcf.gz",
       sh_direct             => 0,
       pbs                   => {

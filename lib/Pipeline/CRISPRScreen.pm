@@ -112,9 +112,7 @@ sub getConfig {
     output_to_same_folder => 0,
     output_arg            => "-n",
     output_to_folder      => 1,
-    output_file_prefix    => "",
     output_file_ext       => ".count.txt",
-    output_other_ext      => "",
     sh_direct             => 0,
     pbs                   => {
       "nodes"     => "1:ppn=8",
@@ -188,9 +186,7 @@ sub getConfig {
       parameterFile2_arg    => "--cnv-norm",
       output_arg            => "-n",
       output_to_folder      => 1,
-      output_file_prefix    => "",
       output_file_ext       => ".count.txt",
-      output_other_ext      => "",
       sh_direct             => 1,
       pbs                   => {
         "nodes"     => "1:ppn=8",

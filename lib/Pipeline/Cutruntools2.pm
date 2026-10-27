@@ -24,17 +24,19 @@ our @EXPORT = ( @{ $EXPORT_TAGS{'all'} } );
 
 our $VERSION = '0.01';
 
+
 sub initializeDefaultOptions {
   my $def = shift;
 
   fix_task_name($def);
 
-  initDefaultValue( $def, "emailType", "FAIL" );
-  initDefaultValue( $def, "cluster",   "slurm" );
-  initDefaultValue( $def, "perform_preprocessing",   0 );
+  initDefaultValue( $def, "emailType",             "FAIL" );
+  initDefaultValue( $def, "cluster",               "slurm" );
+  initDefaultValue( $def, "perform_preprocessing", 0 );
 
   return $def;
-}
+} ## end sub initializeDefaultOptions
+
 
 sub getConfig {
   my ($def) = @_;
@@ -48,42 +50,43 @@ sub getConfig {
 
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
-  my $tasks = [@$individual, @$summary];
+  my $tasks = [ @$individual, @$summary ];
 
   my $target_dir = $def->{target_dir};
 
-  my $bt2idx = getValue($def, "cutruntools2_bt2idx");
-  my $genome_sequence = getValue($def, "fasta_file");
+  my $bt2idx          = getValue( $def, "cutruntools2_bt2idx" );
+  my $genome_sequence = getValue( $def, "fasta_file" );
 
-  my $config_json = getValue($def, "cutruntools2-bulk-config");
-  my $adaptor_type = getValue($def, "cutruntools2_adaptor_type");
-  my $organism_build = getValue($def, "cutruntools2_organism_build");
-  my $fastq_sequence_length = getValue($def, "cutruntools2_fastq_sequence_length");
-  
-  my $spike_in_bt2idx = getValue($def, "cutruntools2_spike_in_bt2idx", "");
-  my $spike_in_sequence = getValue($def, "cutruntools2_spike_in_sequence", "");
-  my $spike_in = getValue($def, "cutruntools2_spike_in", "FALSE");
-  my $spike_in_norm = getValue($def, "cutruntools2_spike_in_norm", "FALSE");
+  my $config_json           = getValue( $def, "cutruntools2-bulk-config" );
+  my $adaptor_type          = getValue( $def, "cutruntools2_adaptor_type" );
+  my $organism_build        = getValue( $def, "cutruntools2_organism_build" );
+  my $fastq_sequence_length = getValue( $def, "cutruntools2_fastq_sequence_length" );
 
-  my $dup_peak_calling = getValue($def, "cutruntools2_dup_peak_calling", "TRUE");
-  my $peak_caller = getValue($def, "cutruntools2_peak_caller", "SEACR");
+  my $spike_in_bt2idx   = getValue( $def, "cutruntools2_spike_in_bt2idx",   "" );
+  my $spike_in_sequence = getValue( $def, "cutruntools2_spike_in_sequence", "" );
+  my $spike_in          = getValue( $def, "cutruntools2_spike_in",          "FALSE" );
+  my $spike_in_norm     = getValue( $def, "cutruntools2_spike_in_norm",     "FALSE" );
+
+  my $dup_peak_calling = getValue( $def, "cutruntools2_dup_peak_calling", "TRUE" );
+  my $peak_caller      = getValue( $def, "cutruntools2_peak_caller",      "SEACR" );
 
   my $rm_bam_folder;
   my $final_bam_file;
-  if($dup_peak_calling eq "TRUE"){
-    $rm_bam_folder = "__NAME__/aligned/dedup.120bp/";
+  if ( $dup_peak_calling eq "TRUE" ) {
+    $rm_bam_folder  = "__NAME__/aligned/dedup.120bp/";
     $final_bam_file = "__NAME__/aligned/dup.marked.120bp/__NAME__.bam";
-  }else{
-    $rm_bam_folder = "__NAME__/aligned/dup.marked.120bp/";
+  }
+  else {
+    $rm_bam_folder  = "__NAME__/aligned/dup.marked.120bp/";
     $final_bam_file = "__NAME__/aligned/dedup.120bp/__NAME__.bam";
   }
 
   my $cutruntools2 = "cutruntools2";
   $config->{$cutruntools2} = {
-    class                 => "CQS::ProgramWrapperOneToOne",
-    perform               => 1,
-    target_dir            => "${target_dir}/${cutruntools2}",
-    option                => "
+    class      => "CQS::ProgramWrapperOneToOne",
+    perform    => 1,
+    target_dir => "${target_dir}/${cutruntools2}",
+    option     => "
 IN='__FILE__'
 arrIN=(\${IN//,/ })
 r1=\${arrIN[0]}
@@ -139,30 +142,31 @@ rm -rf __NAME__/trimmed __NAME__/aligned/__NAME__.bam __NAME__/aligned/dedup __N
     source_ref            => $untrimed_ref,
     output_to_same_folder => 1,
     output_arg            => "-o",
-    output_file_ext    => "__NAME__/trimmed2/__NAME___1.paired.fastq.gz,__NAME__/trimmed2/__NAME___2.paired.fastq.gz,$final_bam_file",
+    output_file_ext       => $final_bam_file,
+    output_other_ext      => "__NAME__/trimmed2/__NAME___1.paired.fastq.gz,__NAME__/trimmed2/__NAME___2.paired.fastq.gz",
     use_tmp_folder        => 0,
     sh_direct             => 0,
-    docker_prefix => "cutruntools2_",
+    docker_prefix         => "cutruntools2_",
     pbs                   => {
-      "nodes"     => "1:ppn=8",
-      "walltime"  => "24",
-      "mem"       => "40gb"
+      "nodes"    => "1:ppn=8",
+      "walltime" => "24",
+      "mem"      => "40gb"
     },
   };
   push @$tasks, ($cutruntools2);
 
-  if ($def->{perform_bamplot}){
+  if ( $def->{perform_bamplot} ) {
     defined $def->{dataset_name} or die "Define dataset_name for bamplot first!";
     if ( not defined $def->{bamplot_gff} ) {
       defined $def->{gene_names} or die "Define gene_names for bamplot first, seperate by blank space!";
       defined $def->{add_chr}    or die "Define add_chr for bamplot first, check your genome sequence!";
     }
-    add_bamplot($config, $def, $tasks, $target_dir,  [$cutruntools2, ".bam"]);
-  }
+    add_bamplot( $config, $def, $tasks, $target_dir, [ $cutruntools2, ".bam" ] );
+  } ## end if ( $def->{perform_bamplot...})
 
-  if($def->{perform_fastqc}){
+  if ( $def->{perform_fastqc} ) {
     my $fastqcTask = "${cutruntools2}_fastqc";
-    addFastQC( $config, $def, $tasks, $tasks, $fastqcTask, [$cutruntools2, ".fastq.gz"], $target_dir );
+    addFastQC( $config, $def, $tasks, $tasks, $fastqcTask, [ $cutruntools2, ".fastq.gz" ], $target_dir );
   }
 
   $config->{sequencetask} = {
@@ -170,20 +174,19 @@ rm -rf __NAME__/trimmed __NAME__/aligned/__NAME__.bam __NAME__/aligned/dedup __N
     perform    => 1,
     target_dir => "${target_dir}/sequencetask",
     option     => "",
-    source     => {
-      tasks => $tasks,
-    },
-    sh_direct => 0,
-    cluster   => $cluster,
-    pbs       => {
-      "nodes"     => "1:ppn=" . $def->{max_thread},
-      "walltime"  => $def->{sequencetask_run_time},
-      "mem"       => "40gb"
+    source     => { tasks => $tasks, },
+    sh_direct  => 0,
+    cluster    => $cluster,
+    pbs        => {
+      "nodes"    => "1:ppn=" . $def->{max_thread},
+      "walltime" => $def->{sequencetask_run_time},
+      "mem"      => "40gb"
     },
   };
 
   return ($config);
-}
+} ## end sub getConfig
+
 
 sub performCutruntools2 {
   my ( $def, $perform ) = @_;
@@ -200,6 +203,6 @@ sub performCutruntools2 {
   }
 
   return $config;
-}
+} ## end sub performCutruntools2
 
 1;

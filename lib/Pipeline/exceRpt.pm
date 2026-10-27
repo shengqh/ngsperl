@@ -116,9 +116,7 @@ singularity run \\
     source_join_delimiter => "",
     output_to_same_folder => 0,
     output_arg            => "",
-    output_file_prefix    => "",
     output_file_ext       => "__NAME__/__FILE____NAME__/EXOGENOUS_rRNA/unaligned.fq.gz",
-    output_other_ext      => "",
     no_output             => 1, #no output defined in command
     no_docker             => 1,
     sh_direct             => 0,

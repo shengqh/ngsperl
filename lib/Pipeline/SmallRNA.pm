@@ -1536,9 +1536,7 @@ mv __NAME__.filtered.txt __NAME__.fixed.txt
           source_ref            => [ "bowtie1_genome_unmapped_reads", "_clipped_identical.short.fastq.dupcount" ],
           source_arg            => "-i",
           output_arg            => "-o",
-          output_file_prefix    => "",
           output_file_ext       => ".count.txt",
-          output_other_ext      => "",
           sh_direct             => 1,
           pbs                   => {
             "nodes"     => "1:ppn=1",

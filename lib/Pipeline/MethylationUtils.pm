@@ -42,8 +42,8 @@ sub add_MethylKitCorr {
     rtemplate                => "../Methylation/methylkit_corr.R",
     rReportTemplate          => "../Methylation/methylkit_corr.Rmd;../CQS/reportFunctions.R;../CQS/countTableVisFunctions.R",
     run_rmd_independent      => 1,
-    rmd_ext                  => ".methylation.corr.html",
-    output_file_ext          => ".methylation.corr.html;.methylKit.version;.filtered.cpg.meth.rds;.CpG.bvalue_hist.png;.CpG.all.PCA.png;.CpG.top10000.PCA.png;.CpG.euclidean_distance.all.MDS.png;.CpG.euclidean_distance.top10000.MDS.png;.CpG.pearson_corr.all.MDS.png;.CpG.pearson_corr.top10000.MDS.png",
+    output_file_ext          => ".methylation.corr.html",
+    output_other_ext         => ".methylKit.version;.filtered.cpg.meth.rds;.CpG.bvalue_hist.png;.CpG.all.PCA.png;.CpG.top10000.PCA.png;.CpG.euclidean_distance.all.MDS.png;.CpG.euclidean_distance.top10000.MDS.png;.CpG.pearson_corr.all.MDS.png;.CpG.pearson_corr.top10000.MDS.png",
     parameterSampleFile1_ref => $methylkitprep_ref,
     parameterSampleFile2     => {
       task_name        => getValue( $def, "task_name" ),
@@ -177,7 +177,8 @@ echo \"Annovar,v\$version\" > __NAME__.annovar.version
 
 ",
     docker_prefix         => "annovar_",
-    output_file_ext       => ".dmcpgs.annovar.final.tsv;.annovar.version",
+    output_file_ext       => ".dmcpgs.annovar.final.tsv",
+    output_other_ext      => ".annovar.version",
     source_ref            => [ $methylkitdiff_task, ".dmcpgs.tsv\$" ],
     output_to_same_folder => 1,
     no_output             => 1,
@@ -281,7 +282,8 @@ sub add_MethylKitDMRAnalysis {
     parameterSampleFile5_ref => [ $methylkitprep_task, ".CpG.txt.gz\$" ],
     parameterFile1           => $gene_bed,
     parameterFile2           => $cpg_island_bed,
-    output_file_ext          => ".methylkit.dmrs.tsv;.methylkit.dmr.annotated.tsv;.methylkit.dmr.annotation_summary.tsv;.methylkit.dmr.chromosome_summary.tsv;.methylkit.dmr.parameters.tsv;.methylkit.dmr.samples.tsv;.methylkit.dmr.rds;.methylkit.dmr.annotation.png;.methylkit.dmr.cpg_context.png;.methylkit.dmr.html",
+    output_file_ext          => ".methylkit.dmrs.tsv",
+    output_other_ext          => ".methylkit.dmr.annotated.tsv;.methylkit.dmr.annotation_summary.tsv;.methylkit.dmr.chromosome_summary.tsv;.methylkit.dmr.parameters.tsv;.methylkit.dmr.samples.tsv;.methylkit.dmr.rds;.methylkit.dmr.annotation.png;.methylkit.dmr.cpg_context.png;.methylkit.dmr.html",
     sh_direct                => 1,
     pbs                      => {
       "nodes"    => "1:ppn=" . $ncore,

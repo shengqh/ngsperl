@@ -149,7 +149,8 @@ makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format 
 #__OUTPUT__ __FILE2__
 ",
       source_ref               => ["croo_bam"],
-      output_file_ext          => ".NFR_filtered.bam,.NFR_filtered_peaks.narrowPeak,.NFR_filtered.tagdir,.NFR_filtered.tn5.tagAlign.gz",
+      output_file_ext          => ".NFR_filtered.bam",
+      output_other_ext          => ".NFR_filtered_peaks.narrowPeak,.NFR_filtered.tagdir,.NFR_filtered.tn5.tagAlign.gz",
       parameterSampleFile2_ref => $croo_task,                                                                                              #make sure dependent on croo task.
       output_to_result_dir     => 1,
       output_to_same_folder    => 0,
