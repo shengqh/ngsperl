@@ -160,12 +160,16 @@ print_table_from_file<-function(filepath, row.names=1, caption=NULL, description
   output_table(tbl, caption, description)
 }
 
-print_table<-function(tbl, byDT=FALSE, row.names=TRUE, round_value=0, ...){
+print_table<-function(tbl, byDT=FALSE, row.names=TRUE, round_value=0, DT_in_loop=FALSE, ...){
   if(round_value > 0){
     tbl <- tbl %>% dplyr::mutate(dplyr::across(dplyr::where(is.numeric), round, round_value))
   }
   if(byDT){
-    DT::datatable(tbl, rownames = row.names, extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv"), ...))
+    if(DT_in_loop) {
+      print(htmltools::tagList(DT::datatable(tbl, rownames = row.names, extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv"), ...))))
+    }else{
+      DT::datatable(tbl, rownames = row.names, extensions = "Buttons", options = list(dom = "Bfrtip", buttons = c("excel", "csv"), ...))
+    }
   }else{
     print(knitr::kable(tbl, row.names = row.names, ...))
   }
