@@ -92,7 +92,7 @@ sub perform {
     my $final_file = "$cur_dir/${sample_name}${output_file_ext}";
 
     my $rfilename = $sample_name . $rmd_ext;
-    my $rmd_file = build_rmd_file($config, $section, $result_dir, $rfilename);
+    my $rmd_file = build_rmd_file($config, $section, $cur_dir, $rfilename);
 
     my $pbs_file = $self->get_pbs_filename( $pbs_dir, $sample_name );
     my $pbs_name = basename($pbs_file);
