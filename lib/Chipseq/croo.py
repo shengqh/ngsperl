@@ -34,7 +34,7 @@ if len(metafiles) > 1:
 elif len(metafiles) == 0:
   raise Exception("No metadata.json found: %s" % args.input)
 
-cmd = "%s --method copy --out-dir %s %s" % (args.croo, args.output, metafiles[0])
+cmd = "%s --method copy --out-def-json %s --out-dir %s %s" % (args.croo, args.out_def_json, args.output, metafiles[0])
 logger.info(cmd)
 os.system(cmd)
 
