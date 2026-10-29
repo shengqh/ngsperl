@@ -242,6 +242,7 @@ makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format 
             "mem"      => "10gb"
           },
         };
+        push( @$tasks, $edgeR_task );
       } ## end if ( $homer_differential_accessibility_method...)
       if ( $homer_differential_accessibility_method eq "DEseq2" ) {
         my $deseq2taskname = addDEseq2( $config, $def, $tasks, "homer_peaks_raw_count", [ $homer_annotatePeaks_task, ".raw.count" ], $def->{target_dir}, $def->{DE_min_median_read} );
