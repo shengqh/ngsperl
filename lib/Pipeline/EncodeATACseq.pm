@@ -60,7 +60,7 @@ sub initializeDefaultOptions {
     $def->{"treatments"} = $groups;
   } ## end if ( !defined $def->{"treatments"...})
 
-  initDefaultValue( $def, "perform_croo_qc", 0 );
+  initDefaultValue( $def, "perform_croo_qc", 1 );
 
   initDefaultValue( $def, "perform_report", 0 );
   initDefaultValue( $def, "encode_option",  "" );
@@ -71,6 +71,12 @@ sub initializeDefaultOptions {
   initDefaultValue( $def, "perform_homer",    0 );
 
   initDefaultValue( $def, "top25cv_in_hca", 0 );
+
+
+  initDefaultValue( $def, "perform_homer_motifs", 0 );
+  if ( getValue( $def, "perform_homer_motifs" ) ) {
+    initDefaultValue( $def, "homer_option", "" );
+  }
 
   return $def;
 } ## end sub initializeDefaultOptions
@@ -250,6 +256,10 @@ makeTagDirectory __NAME__.NFR_filtered.tagdir __NAME__.NFR_filtered.bam -format 
     } ## end if ( defined $def->{pairs...})
 
   } ## end if ( $def->{perform_homer_analysis...})
+
+  if ( getValue( $def, "perform_homer_motifs" ) ) {
+    addHomerMotif( $config, $def, $tasks, $target_dir, $croo_peak_ref, undef );
+  }
 
   addSequenceTask( $config, $def, $tasks, $target_dir, $summary );
 
