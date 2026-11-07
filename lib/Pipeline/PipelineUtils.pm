@@ -870,15 +870,19 @@ sub getBatchGroups {
 } ## end sub getBatchGroups
 
 
-sub addHomerMotif {
+sub addHomerMotif_old {
   my ( $config, $def, $summary, $target_dir, $callName, $callFilePattern ) = @_;
-  my $homerName = $callName . "_homer_motifs";
+
+  my $call_ref  = defined $callFilePattern ? [ $callName, $callFilePattern ] : $callName;
+  my $call_task = is_array($callName)      ? $callName->[0]                  : $callName;
+
+  my $homerName = $call_task . "_homer_motifs";
   $config->{$homerName} = {
     class        => "Homer::FindMotifs",
     option       => getValue( $def, "homer_option" ),
     perform      => 1,
     target_dir   => $target_dir . "/" . getNextFolderIndex($def) . $homerName,
-    source_ref   => [ $callName, $callFilePattern ],
+    source_ref   => $call_ref,
     homer_genome => getValue( $def, "homer_genome" ),
     sh_direct    => 1,
     pbs          => {
@@ -887,6 +891,42 @@ sub addHomerMotif {
       "nodes"     => "1:ppn=1",
       "walltime"  => "2",
       "mem"       => "10gb"
+    },
+  };
+  push @$summary, ($homerName);
+  return $homerName;
+} ## end sub addHomerMotif_old
+
+
+sub addHomerMotif {
+  my ( $config, $def, $summary, $target_dir, $callName, $callFilePattern ) = @_;
+
+  my $call_ref     = defined $callFilePattern ? [ $callName, $callFilePattern ] : $callName;
+  my $call_task    = is_array($callName)      ? $callName->[0]                  : $callName;
+  my $homer_genome = getValue( $def, "homer_genome" );
+  my $homer_option = getValue( $def, "homer_option" );
+
+  my $homerName = $call_task . "_homer_motifs";
+  $config->{$homerName} = {
+    class         => "CQS::ProgramWrapperOneToOne",
+    perform       => 1,
+    target_dir    => $target_dir . "/" . getNextFolderIndex($def) . $homerName,
+    source_ref    => $call_ref,
+    program       => "",
+    check_program => 0,
+    option        => "
+findMotifsGenome.pl __FILE__ $homer_genome ./ $homer_option
+
+mv homers.html __NAME__.homers.html
+",
+    sh_direct             => 0,
+    output_to_same_folder => 0,
+    no_output             => 1,
+    output_file_ext       => ".homers.html",
+    pbs                   => {
+      "nodes"    => "1:ppn=1",
+      "walltime" => "12",
+      "mem"      => "10gb"
     },
   };
   push @$summary, ($homerName);
