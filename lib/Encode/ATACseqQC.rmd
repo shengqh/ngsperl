@@ -3,7 +3,7 @@ title: "ENCODE ATACseq QC Report"
 date: "`r format(Sys.Date(), '%m/%d/%Y')`"
 output: 
   rmdformats::readthedown:
-    toc_depth: 2
+    toc_depth: 3
     code_folding: hide    
     number_sections: yes
 ---
@@ -106,19 +106,251 @@ for(sample_name in sample_names){
 ## general
 
 ```{r}
-print_table(general_tbl) 
+print_table(general_tbl, byDT=TRUE) 
 ```
 
 ```{r}
+add_reads_perc_barplot<-function(cur_tbl, outFile, gname, reads_row, perc_row="", round_num=1, title=paste0(gname, " : ", reads_row), margin_l=10){
+  view_tbl=cur_tbl[c(reads_row, perc_row),,drop=FALSE] |> t() |> data.frame()
+  g=ggplot(view_tbl) +
+    geom_bar(aes(x=rownames(view_tbl), y=!!sym(reads_row), fill=rownames(view_tbl)), stat="identity") +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
+    labs(x=NULL, y=NULL, title=title) +
+    theme_classic() +
+    theme(legend.position = "none",
+        axis.text.x = element_text(angle=45, hjust=1, vjust=1),
+        plot.title = element_text(hjust = 0.5, size=12, face="bold"),
+        plot.margin = margin(t = 12, r = 5, b = 5, l = margin_l))
+
+  if(perc_row != ""){
+    g=g+geom_text(aes(x=rownames(view_tbl), y=!!sym(reads_row), label=paste0(round(!!sym(perc_row), round_num), "%")), vjust=-0.5, size=3)
+  }
+
+  bar_png=paste0(outFile, ".", gname, ".", reads_row, ".png")
+  ggsave(bar_png, g, width=max(4.5, nrow(view_tbl)*0.3+1), height=3, units="in", dpi=300)
+  add_img(bar_png, width_inch=10)
+}
+
+add_category_barplot<-function(cur_tbl, outFile, gname, value_row, category_row){
+  view_tbl=cur_tbl[c(value_row, category_row),,drop=FALSE] |> t() |> data.frame() |>
+    dplyr::mutate(!!sym(value_row):=as.numeric(!!sym(value_row)))
+  g=ggplot(view_tbl) +
+    geom_bar(aes(x=rownames(view_tbl), y=!!sym(value_row), fill=!!sym(category_row)), stat="identity") +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
+    labs(x=NULL, y=NULL, title=paste0(gname, " : ", value_row)) +
+    theme_classic() +
+    theme(legend.position = "bottom",
+        axis.text.x = element_text(angle=45, hjust=1, vjust=1),
+        plot.title = element_text(hjust = 0.5, size=12, face="bold"),
+        plot.margin = margin(t = 12, r = 5, b = 5, l = 10))
+
+  bar_png=paste0(outFile, ".", gname, ".", value_row, ".png")
+  ggsave(bar_png, g, width=max(4.5, nrow(view_tbl)*0.3+1), height=3, units="in", dpi=300)
+  add_img(bar_png, width_inch=10)
+}
+
+key_tbl=data.frame(Sample=character(), Metrix=character(), Value=numeric())
+
+cname=names(all_tbls)[2]
 for(cname in names(all_tbls)){
   cat("\n\n## ", cname, "\n\n<br>\n\n")
+
+  if(cname == "peak_enrich") {
+    cat("\n* FRiP: Fraction of reads in peaks. Peak enrichment is a measure of how well the ATAC-seq experiment captured open chromatin regions. Higher values indicate better enrichment and higher quality data.\n\n")
+  }
+
   cur_tbls = all_tbls[[cname]]
+  gname=names(cur_tbls)[1]
   for(gname in names(cur_tbls)){
     cat("\n\n### ", gname, "\n\n")
-    print_table(cur_tbls[[gname]])
+    cur_tbl=cur_tbls[[gname]]
+    print_table(cur_tbl)
+
+    if(gname == "samstat") {
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "mapped_reads", "pct_mapped_reads")
+    }
+
+    if(gname == "dup") {
+      add_reads_perc_barplot(cur_tbl, outFile, gname,"paired_duplicate_reads", "pct_duplicate_reads")
+    }
+
+    if(gname == "frac_mito") {
+      add_reads_perc_barplot(cur_tbl, outFile, gname,"mito_reads", "frac_mito_reads", round_num=2)
+    }    
+
+    if(gname == "nodup_samstat") {
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "total_reads")
+    }        
+
+    if(gname == "frag_len_stat") {
+      cat("\n* Non-Redundant Fraction (NRF) – Number of distinct uniquely mapping reads (i.e. after removing duplicates) / Total number of reads.\n\n")
+      add_category_barplot(cur_tbl, outFile, gname, "frac_reads_in_nfr", "frac_reads_in_nfr_qc_pass")
+
+      cat("* A mononucleosome peak must be present in the fragment length distribution. These are reads that span a single nucleosome, so they are longer than 147 bp but shorter than 147*2 bp. Good ATAC-seq datasets have reads that span nucleosomes (which allows for calling nucleosome positions in addition to open regions of chromatin).\n\n")
+      add_category_barplot(cur_tbl, outFile, gname, "nfr_over_mono_nuc_reads", "nfr_over_mono_nuc_reads_qc_pass")
+    }
+
+    if(gname == "frac_reads_in_annot") {
+      cat("\n|Name|Metric|Definition/Notes|\n|---|---|---|\n")
+      cat("|fri_dhs|fraction_of_reads_in_universal_DHS_regions|Fraction of reads overlapping ENCODE-defined DNase hypersensitive sites (open chromatin regions). Higher values indicate signal concentrated in regulatory DNA.|\n")
+      cat("|fri_blacklist|fraction_of_reads_in_blacklist_regions|Fraction of reads overlapping ENCODE blacklist regions. Lower is better because these are known problematic genomic regions that produce artificial signal.|\n")
+      cat("|fri_prom|fraction_of_reads_in_promoter_regions|Fraction of reads falling in promoter annotations (typically around transcription start sites).|\n")
+      cat("|fri_enh|fraction_of_reads_in_enhancer_regions|Fraction of reads overlapping enhancer annotations.|\n\n")
+      mdata=reshape2::melt(cur_tbl |> tibble::rownames_to_column('region'), id.vars='region', variable.name='sample', value.name='frac')
+      g=ggplot(mdata, aes(x=sample, y=frac, fill=region)) +
+        geom_bar(stat="identity") +
+        scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
+        labs(x=NULL, y=NULL, title=paste0(gname)) +
+        theme_classic() +
+        theme(legend.position = "bottom",
+            axis.text.x = element_text(angle=45, hjust=1, vjust=1),
+            plot.title = element_text(hjust = 0.5, size=12, face="bold"),
+            plot.margin = margin(t = 12, r = 5, b = 5, l = 10))
+
+      bar_png=paste0(outFile, ".", gname, ".png")
+      ggsave(bar_png, g, width=max(4.5, ncol(cur_tbl)*0.3+1), height=3, units="in", dpi=300)
+      add_img(bar_png, width_inch=10)
+    }    
+
+    if(gname == "lib_complexity") {
+      cat("\n|Metric|Definition/Notes|\n|---|---|---|\n")
+      cat("|lib_complexity.NRF|Non-reduandant fraction. Measure of library complexity, i.e. degree of duplicates. Ideally >0.9|\n")
+      cat("|lib_complexity.PBC1|PCR bottlenecking coefficient 1. Measure of library complexity. Ideally >0.9|\n")
+      cat("|lib_complexity.PBC2|PCR bottlenecking coefficient 2. Measure of library complexity. Ideally >3|\n")
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "NRF", "", round_num=2)
+
+      if(all(grepl("_rep1$", colnames(cur_tbl)))) {
+        colnames(cur_tbl) = gsub("_rep1$", "", colnames(cur_tbl))
+      }
+      key_tbl = rbind(key_tbl, data.frame(Sample=colnames(cur_tbl), Metrix=rep("NRF", ncol(cur_tbl)), Value=unlist(cur_tbl["NRF", ])))
+    }
+
+    if(gname == "num_peaks") {
+      cat("\n* Number of peaks called in each replicate. Higher is generally better, but depends on the biological context.\n\n")
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "num_peaks")
+
+      if(all(grepl("_rep1$", colnames(cur_tbl)))) {
+        colnames(cur_tbl) = gsub("_rep1$", "", colnames(cur_tbl))
+      }
+      key_tbl = rbind(key_tbl, data.frame(Sample=colnames(cur_tbl), Metrix=rep("num_peaks", ncol(cur_tbl)), Value=unlist(cur_tbl["num_peaks", ])))
+    }
+
+    if(gname == "peak_region_size") {
+      cat("\n* IDR: Irreproducible Discovery Rate. A measure of the reproducibility of peak calls across biological replicates.\n")
+      cat("* idr_opt: Optimal IDR threshold for peak calling.\n")
+      idr_tbl=cur_tbl |> dplyr::select(dplyr::contains("idr_opt")) |> t() |> data.frame()
+      rownames(idr_tbl) = gsub("_idr_opt", "", rownames(idr_tbl))
+
+      idr_tbl$sample=factor(rownames(idr_tbl), levels=rownames(idr_tbl))
+      g=ggplot(idr_tbl, aes(x=sample)) +
+        geom_boxplot(
+          aes(ymin=min_size, lower=X25_pct, middle=X50_pct, upper=X75_pct, ymax=max_size),
+          stat="identity") +
+        labs(x=NULL, y="Peak size (bp)", title="idr_opt peak size distribution") +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle=45, hjust=1, vjust=1),
+            plot.title = element_text(hjust = 0.5, size=12, face="bold"))
+
+      box_png=paste0(outFile, ".", gname, ".idr_opt.boxplot.png")
+      ggsave(box_png, g, width=max(4.5, nrow(idr_tbl)*0.5+1), height=3.5, units="in", dpi=300)
+      add_img(box_png, width_inch=10)
+    }
+
+    if(gname == "tss_enrich") {
+      cat("\n* Transcription start site (TSS) enrichment values are dependent on the reference files used; cutoff values for high quality data are listed in the table below. \n\n")
+      cat("|Annotation used|Value|Resulting Data Status|\n|---|---|---|\n")
+      cat("|hg19 Refseq TSS annotation|< 6|Concerning|\n")
+      cat("| |6 - 10|Acceptable|\n")
+      cat("| |> 10|Ideal|\n")
+      cat("|GRCh38 Refseq TSS annotation|< 5|Concerning|\n")
+      cat("| |5 - 7|Acceptable|\n")
+      cat("| |> 7|Ideal|\n")
+      cat("|mm9 GENCODE TSS annotation|< 5|Concerning|\n")
+      cat("| |5 - 7|Acceptable|\n")
+      cat("| |> 7|Ideal|\n")
+      cat("|mm10 Refseq TSS annotation|< 10|Concerning|\n")
+      cat("| |10 -15|Acceptable|\n")
+      cat("| |> 15|Ideal|\n\n")
+      cat("https://www.encodeproject.org/atac-seq/#standards\n")
+
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "tss_enrich")
+
+      if(all(grepl("_rep1$", colnames(cur_tbl)))) {
+        colnames(cur_tbl) = gsub("_rep1$", "", colnames(cur_tbl))
+      }
+      key_tbl = rbind(key_tbl, data.frame(Sample=colnames(cur_tbl), Metrix=rep("tss_enrich", ncol(cur_tbl)), Value=unlist(cur_tbl["tss_enrich", ])))
+    }
+
+    if(gname == "jsd") {
+      cat("* Synthetic Jensen-Shannon Distance (syn_jsd)\n\n")
+      cat("The synthetic Jensen-Shannon distance (syn_jsd) measures how different the observed ATAC-seq read distribution is from a random background distribution.\n\n")
+      cat("- Higher syn_jsd values indicate stronger enrichment of reads in accessible chromatin regions and generally better data quality.\n")
+      cat("- Lower syn_jsd values indicate a read distribution that is closer to random, suggesting weaker signal and lower enrichment.\n")
+      cat("Therefore, larger syn_jsd values are typically associated with higher-quality ATAC-seq libraries.")
+
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "syn_jsd")
+
+      if(all(grepl("_rep1$", colnames(cur_tbl)))) {
+        colnames(cur_tbl) = gsub("_rep1$", "", colnames(cur_tbl))
+      }
+      key_tbl = rbind(key_tbl, data.frame(Sample=colnames(cur_tbl), Metrix=rep("syn_jsd", ncol(cur_tbl)), Value=unlist(cur_tbl["syn_jsd", ])))
+    }
+
+    if(gname == "macs2") {
+      cat("* frip: Replicate-level FRiP in raw MACS2 peaks\n\n")
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "frip")
+    }
+    
+    if(gname == "overlap") {
+      cat("* frip: Replicate-level FRiP in the overlap_reproducibility peak set\n\n")
+      if(all(grepl("_rep1-pr1_vs_rep1-pr2", colnames(cur_tbl)))) {
+        colnames(cur_tbl) = gsub("_rep1-pr1_vs_rep1-pr2", "", colnames(cur_tbl))
+      }
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "frip", title=paste0(gname, ": frip (rep1-pr1 vs rep1-pr2)"))
+    }
+    
+    if(gname == "idr") {
+      cat("* frip: Replicate-level FRiP in the IDR peak set. IDR: Irreproducible Discovery Rate. Among all three FPiP values (macs2, overlap, idr), idr is most important for assessing the reproducibility of the ATAC-seq data.\n\n")
+      if(all(grepl("_rep1-pr1_vs_rep1-pr2", colnames(cur_tbl)))) {
+        colnames(cur_tbl) = gsub("_rep1-pr1_vs_rep1-pr2", "", colnames(cur_tbl))
+      }
+      add_reads_perc_barplot(cur_tbl, outFile, gname, "frip", title=paste0(gname, ": frip (rep1-pr1 vs rep1-pr2)"))
+
+      if(all(grepl("_rep1$", colnames(cur_tbl)))) {
+        colnames(cur_tbl) = gsub("_rep1$", "", colnames(cur_tbl))
+      }
+      key_tbl = rbind(key_tbl, data.frame(Sample=colnames(cur_tbl), Metrix=rep("IDR_FRiP", ncol(cur_tbl)), Value=unlist(cur_tbl["frip", ])))
+    }
   }
 }
 ```
+
+# <mark>Key QC Metrics</mark>
+
+```{r}
+levels=c("num_peaks", "NRF", "tss_enrich", "syn_jsd", "IDR_FRiP")
+common_levels=levels[levels %in% unique(key_tbl$Metrix)]
+key_tbl$Metrix=factor(key_tbl$Metrix, levels=common_levels)
+g=ggplot(key_tbl, aes(x=Sample, y=Value)) +
+  geom_bar(stat="identity") +
+  facet_grid(Metrix~., scales="free_y") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.12))) +
+  labs(x=NULL, y=NULL, title="Key QC Metrics") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+      axis.text.x = element_text(angle=45, hjust=1, vjust=1),
+      plot.title = element_text(hjust = 0.5, size=12, face="bold"),
+      plot.margin = margin(t = 12, r = 5, b = 5, l = 10))
+Qc_key_png=paste0(outFile, ".key_metrics.png")
+ggsave(Qc_key_png, g, width=max(5, length(unique(key_tbl$Sample))*0.3+1), height=1*length(levels) + 1, units="in", dpi=300)
+add_img(Qc_key_png, width_inch=10)
+```
+
+- num_peaks: Number of peaks called in each replicate. Higher is generally better, but depends on the biological context.
+- NRF: Non-redundant fraction. Measure of library complexity, i.e. degree of duplicates. Ideally >0.9.
+- tss_enrich: Transcription start site (TSS) enrichment. Higher is better, ideally >10 for hg19 and >7 for GRCh38.
+- syn_jsd: Synthetic Jensen-Shannon distance. Higher values indicate stronger enrichment of reads in accessible chromatin regions and generally better data quality.
+- IDR_FRiP: Fraction of reads in peaks (FRiP) in the IDR peak set. IDR: Irreproducible Discovery Rate. Higher values indicate better reproducibility of peak calls across replicates.
 
 ```{r}
 result = "# Individual Samples \n\n"
