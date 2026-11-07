@@ -16,6 +16,7 @@ load_install("tools")
 load_install("scales")
 load_install("ggplot2")
 load_install("patchwork")
+load_install("grr", "cran/grr") # it is required for Matrix.utils
 load_install("Matrix.utils", "cvarrichio/Matrix.utils")
 load_install("parallel")
 load_install("data.table")
