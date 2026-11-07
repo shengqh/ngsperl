@@ -77,6 +77,13 @@ sig_de=to_print[which(to_print$FDR<0.05),]
 sig_de_csv=paste0(prefix, ".significant_de.csv")
 write.csv(sig_de, sig_de_csv, quote = F)
 
+coord=data.frame("chr"=gsub("(.*):.*-.*", "\\1", sig_de$Coord),
+                 "start"=as.numeric(gsub(".*:(.*)-.*", "\\1", sig_de$Coord)),
+                 "end"=as.numeric(gsub(".*:.*-(.*)", "\\1", sig_de$Coord)),
+                  "peak_id"=row.names(sig_de)
+                 )
+write.table(coord, paste0(prefix, ".significant_de.coord.bed"), sep="\t", quote=FALSE, row.names=FALSE, col.names=FALSE)
+
 print_table(sig_de[,c(1:5,8,9,10)], byDT=TRUE, row.names=TRUE)
 ```
 
