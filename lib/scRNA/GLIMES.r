@@ -1,19 +1,19 @@
 rm(list=ls()) 
-outFile='endothelial_lung'
+outFile='complex'
 parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260915_T07_paper_figures/20260921.EC_lung_iSGS_fastmnn.final.rds'
+parFile1='/data/wanjalla_lab/projects/20261111_complex_annet_de/T01_preparee_obj/AK6383.complex.all_samples.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260921_T08_differnetial_expression/final_obj_GLIMES_inCluster_byCell/result')
+setwd('/data/wanjalla_lab/projects/20261111_complex_annet_de/T02_edgeR_all_samples/final_obj_GLIMES_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 source("countTableVisFunctions.R")
+source("scRNA_func.r")
 library("ggplot2")
 library("ggpubr")
 library("Seurat")
@@ -136,13 +136,19 @@ for (comp in comparisonNames){
   }
   
   if("covariances" %in% names(comp_options)){
-    covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T)
-    assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
-    for(col_name in comp_options$covariances){
-      colmap = unlist(split(covariances_tbl[,col_name], covariances_tbl$Sample))
-      obj<-AddMetaData(obj, colmap[obj$orig.ident], col.name = col_name )
-    }
     covariances=comp_options$covariances
+    if(!all(covariances %in% colnames(meta))){
+      if(myoptions$covariance_file == ""){
+        stop(paste0("covariances ", paste(covariances, collapse = ","), " not found in meta.data of ", parFile1))
+      }else{
+        covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T)
+        assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
+        for(col_name in comp_options$covariances){
+          colmap = unlist(split(covariances_tbl[,col_name], covariances_tbl$Sample))
+          obj<-AddMetaData(obj, colmap[obj$orig.ident], col.name = col_name )
+        }
+      }
+    }
   }else{
     covariances=NULL
   }
@@ -505,3 +511,4 @@ for(idx in c(1:nrow(designMatrix))){
 
 cat("all done\n")
 write.csv(result, file=paste0(outFile, ".GLIMES.files.csv"), quote=F)
+
