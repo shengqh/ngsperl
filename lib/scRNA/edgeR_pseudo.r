@@ -1,19 +1,19 @@
 rm(list=ls()) 
-outFile='endothelial_lung'
+outFile='complex_ss_samples'
 parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260915_T07_paper_figures/20260921.EC_lung_iSGS_fastmnn.final.rds'
+parFile1='/data/wanjalla_lab/projects/20261111_complex_annet_de/T01_preparee_obj/AK6383.complex.ss_samples.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260921_T08_differnetial_expression/final_obj_edgeR_inCluster_bySample/result')
+setwd('/data/wanjalla_lab/projects/20261111_complex_annet_de/T02_edgeR_ss_samples/final_obj_edgeR_inCluster_bySample/result')
 
 ### Parameter setting end ###
 
-source("countTableVisFunctions.R")
 source("scRNA_func.r")
+source("countTableVisFunctions.R")
 library(edgeR)
 library(ggplot2)
 library(ggpubr)
@@ -52,6 +52,11 @@ if(ncol(comparisons) == 3){
 }else{
   colnames(comparisons)<-c("Value", "Comparison")
   comparisons$Key = "groups"
+}
+
+tee_file <-function(message, file, append=TRUE){
+  cat(message, "\n")
+  cat(message, "\n", file=file, append=append)
 }
 
 comparisonNames<-unique(comparisons$Comparison)
@@ -138,140 +143,146 @@ if(!dir.exists(detail_folder)){
 
 detail_prefix = paste0(detail_folder, outFile)
 
-if(1){
-  meta<-obj@meta.data
-  mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
-  colnames(mt)<-c("cell_type", "sample", "num_cell")
-  write.csv(mt, paste0(detail_prefix, ".num_cell.csv"), row.names=F)
+meta<-obj@meta.data
+mt<-data.frame(table(meta[,cluster_name], meta$orig.ident))
+colnames(mt)<-c("cell_type", "sample", "num_cell")
+write.csv(mt, paste0(detail_prefix, ".num_cell.csv"), row.names=F)
 
-  cat("get count table ...\n")
-  sample_count_df<-get_seurat_sum_count(obj = obj, 
-                                        cluster_name = cluster_name, 
-                                        min_cell_per_sample = min_cell_per_sample,
-                                        target_folder = detail_folder)
+cat("get count table ...\n")
+sample_count_df<-get_seurat_sum_count(obj = obj, 
+                                      cluster_name = cluster_name, 
+                                      min_cell_per_sample = min_cell_per_sample,
+                                      target_folder = detail_folder)
 
-  cts<-sample_count_df$cluster
-  cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
-  cts_file_map<-unlist(split(sample_count_df$pseudo_file, sample_count_df$cluster))
+cts<-sample_count_df$cluster
+cts_name_map<-unlist(split(sample_count_df$prefix, sample_count_df$cluster))
+cts_file_map<-unlist(split(sample_count_df$pseudo_file, sample_count_df$cluster))
 
-  cat("get design matrix ...\n")
-  designMatrix<-NULL
+cat("get design matrix ...\n")
+designMatrix<-NULL
+allCompMatrix<-NULL
 
-  comp <-comparisonNames[1]
-  for (comp in comparisonNames){
-    comp_groups<-comparisons[comparisons$Comparison==comp,]
-    comp_options = split(comp_groups$Value, comp_groups$Key)
-    
-    if("groups" %in% names(comp_options)){
-      if(!is.null(myoptions$group_column) & (myoptions$group_column != "")){
-        if(!myoptions$group_column %in% colnames(obj@meta.data)){
-          stop(paste0("group_column ", myoptions$group_column, " not found in meta.data of ", parFile1))
-        }
-
-        sampleGroups = unique(obj@meta.data[,c("orig.ident", myoptions$group_column)]) %>%
-          dplyr::rename(Sample=orig.ident, Group=!!myoptions$group_column) %>%
-          tibble::remove_rownames() %>%
-          dplyr::arrange(Group, Sample)
-        write.table(sampleGroups, file="fileList1.txt", sep="\t", row.names=F, col.names=F, quote=F)
-      }else{
-        sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
-        colnames(sampleGroups)<-c("Sample","Group")
-      }
-      groups<-comp_options$groups
-      if(!all(groups %in% unique(sampleGroups$Group))){
-        stop(paste0("Not all groups in comparison (", paste0(groups, collapse=", "), ") found in sample group (", paste0(unique(sampleGroups$Group), collapse=", "), ")"))
+comp <-comparisonNames[1]
+for (comp in comparisonNames){
+  comp_groups<-comparisons[comparisons$Comparison==comp,]
+  comp_options = split(comp_groups$Value, comp_groups$Key)
+  
+  if("groups" %in% names(comp_options)){
+    if(!is.null(myoptions$group_column) & (myoptions$group_column != "")){
+      if(!myoptions$group_column %in% colnames(obj@meta.data)){
+        stop(paste0("group_column ", myoptions$group_column, " not found in meta.data of ", parFile1))
       }
 
-      controlGroup<-groups[1]
-      sampleGroup<-groups[2]
-      
-      control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
-      sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
+      sampleGroups = unique(obj@meta.data[,c("orig.ident", myoptions$group_column)]) %>%
+        dplyr::rename(Sample=orig.ident, Group=!!myoptions$group_column) %>%
+        tibble::remove_rownames() %>%
+        dplyr::arrange(Group, Sample)
+      write.table(sampleGroups, file="fileList1.txt", sep="\t", row.names=F, col.names=F, quote=F)
     }else{
-      control_names<-as.numeric(comp_options$control_clusters)
-      controlGroup<-ifelse("control_name" %in% names(comp_options), comp_options$control_name, paste("Cluster", paste(control_names, collapse = "_"), sep="_"))
-      sample_names<-as.numeric(comp_options$sample_clusters)
-      sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
+      sampleGroups<-read.table(parSampleFile1, stringsAsFactors = F)
+      colnames(sampleGroups)<-c("Sample","Group")
+    }
+    groups<-comp_options$groups
+    if(!all(groups %in% unique(sampleGroups$Group))){
+      stop(paste0("Not all groups in comparison (", paste0(groups, collapse=", "), ") found in sample group (", paste0(unique(sampleGroups$Group), collapse=", "), ")"))
     }
 
-    if("covariances" %in% names(comp_options)){
-      cat("Should use covariates instead of covariances in comparison design, converted.\n")
-      comp_options[["covariates"]] = comp_options[["covariances"]]
-      comp_options = comp_options[names(comp_options) != "covariances"]
-    }
+    controlGroup<-groups[1]
+    sampleGroup<-groups[2]
     
-    if("covariant" %in% names(comp_options)){
-      cat("Should use covariates instead of covariant in comparison design, converted.\n")
-      comp_options[["covariates"]] = comp_options[["covariant"]]
-      comp_options = comp_options[names(comp_options) != "covariant"]
-    }
-    
-    if("covariates" %in% names(comp_options)){
-      cat("Find covariates in comparison ", comp, ":", paste0(comp_options$covariates, collapse=", "), "\n")
-      if(file.exists(myoptions$covariance_file)){
-        covariate_tbl<-data.frame(fread(myoptions$covariance_file, stringsAsFactors = F, header=T), row.names=1)
-        assert(all(comp_options$covariates %in% colnames(covariate_tbl)))
-        covariates=comp_options$covariates
-      }else{
-        assert(all(comp_options$covariates %in% colnames(obj@meta.data)))
-        covariate_tbl<-unique(obj@meta.data[,c("orig.ident", comp_options$covariates)])
-        rownames(covariate_tbl)<-covariate_tbl$orig.ident
-        covariates=comp_options$covariates
-      }
-    }else{
-      covariates=NULL
-    }
-
-    other_names=setdiff(names(comp_options), c("groups", "covariates"))
-    if(length(other_names) > 0){
-      stop("Unknown options in comparison ", comp, ": ", paste0(other_names, collapse=", "), "\n")
-    }
-
-    idx<-1
-    for (idx in c(1:length(cts))){
-      ct<-cts[idx]
-      prefix<-paste0(detail_folder, cts_name_map[ct], ".", comp)
-      cts_file<-cts_file_map[ct]
-      
-      counts<-read.csv(cts_file, row.names = 1)
-      cts_control_names<-intersect(control_names, colnames(counts))
-      cts_sample_names<-intersect(sample_names, colnames(counts))
-      
-      if (length(cts_control_names) < 2){
-        writeLines(paste0("There were no enough controls: ", paste0(cts_control_names, collapse=",")), paste0(prefix, ".error"))
-        next
-      }
-      
-      if (length(cts_sample_names) < 2){
-        writeLines(paste0("There were no enough samples: ", paste0(cts_sample_names, collapse=",")), paste0(prefix, ".error"))
-        next
-      }
-      
-      design_data<-data.frame("Group"=c(rep("control", length(cts_control_names)), rep("sample", length(cts_sample_names))),
-                              "Sample"=c(cts_control_names,cts_sample_names),
-                              "DisplayGroup"=c(rep(controlGroup, length(cts_control_names)), rep(sampleGroup, length(cts_sample_names))))
-      if(!is.null(covariates)){
-        for(cov_name in covariates){
-          design_data[,cov_name] = unlist(covariate_tbl[design_data$Sample, cov_name])
-        }
-      }
-
-      design_file<-paste0(prefix, ".design")
-      write.csv(design_data, file=design_file, row.names=F, quote=F)
-      
-      curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, count_file=cts_file, design=design_file, stringsAsFactors = F)
-      if (is.null(designMatrix)){
-        designMatrix = curdf
-      }else{
-        designMatrix = rbind(designMatrix, curdf)
-      }
-    }
+    control_names<-sampleGroups$Sample[sampleGroups$Group==controlGroup]
+    sample_names<-sampleGroups$Sample[sampleGroups$Group==sampleGroup]
+  }else{
+    control_names<-as.numeric(comp_options$control_clusters)
+    controlGroup<-ifelse("control_name" %in% names(comp_options), comp_options$control_name, paste("Cluster", paste(control_names, collapse = "_"), sep="_"))
+    sample_names<-as.numeric(comp_options$sample_clusters)
+    sampleGroup<-ifelse("sample_name" %in% names(comp_options), comp_options$sample_name, paste("Cluster", paste(sample_names, collapse = "_"), sep="_"))
   }
 
-  saveRDS(designMatrix, paste0(detail_prefix, ".designMatrix.rds"))
-}else{
-  designMatrix=readRDS(paste0(detail_prefix, ".designMatrix.rds"))
+  if("covariances" %in% names(comp_options)){
+    cat("Should use covariates instead of covariances in comparison design, converted.\n")
+    comp_options[["covariates"]] = comp_options[["covariances"]]
+    comp_options = comp_options[names(comp_options) != "covariances"]
+  }
+  
+  if("covariant" %in% names(comp_options)){
+    cat("Should use covariates instead of covariant in comparison design, converted.\n")
+    comp_options[["covariates"]] = comp_options[["covariant"]]
+    comp_options = comp_options[names(comp_options) != "covariant"]
+  }
+  
+  if("covariates" %in% names(comp_options)){
+    cat("Find covariates in comparison ", comp, ":", paste0(comp_options$covariates, collapse=", "), "\n")
+    if(file.exists(myoptions$covariance_file)){
+      covariate_tbl<-data.frame(fread(myoptions$covariance_file, stringsAsFactors = F, header=T), row.names=1)
+      assert(all(comp_options$covariates %in% colnames(covariate_tbl)))
+      covariates=comp_options$covariates
+    }else{
+      assert(all(comp_options$covariates %in% colnames(obj@meta.data)))
+      covariate_tbl<-unique(obj@meta.data[,c("orig.ident", comp_options$covariates)])
+      rownames(covariate_tbl)<-covariate_tbl$orig.ident
+      covariates=comp_options$covariates
+    }
+  }else{
+    covariates=NULL
+  }
+
+  other_names=setdiff(names(comp_options), c("groups", "covariates"))
+  if(length(other_names) > 0){
+    stop("Unknown options in comparison ", comp, ": ", paste0(other_names, collapse=", "), "\n")
+  }
+
+  idx<-1
+  for (idx in c(1:length(cts))){
+    ct<-cts[idx]
+    prefix<-paste0(detail_folder, cts_name_map[ct], ".", comp)
+    allCompMatrix=rbind(allCompMatrix, data.frame(prefix=prefix, cellType=ct, comparison=comp, stringsAsFactors = F))
+
+    error_file = paste0(prefix, ".error")
+    if(file.exists(error_file)){
+      unlink(error_file)
+    }
+
+    cts_file<-cts_file_map[ct]
+    
+    counts<-read.csv(cts_file, row.names = 1)
+    cts_control_names<-intersect(control_names, colnames(counts))
+    cts_sample_names<-intersect(sample_names, colnames(counts))
+    
+    if (length(cts_control_names) < 2){
+      tee_file(paste0("We need at least 2 control samples with min ", min_cell_per_sample, " cells. Now we have only ", length(cts_control_names), " : ", paste0(cts_control_names, collapse=",")), file=error_file)
+      next
+    }
+    
+    if (length(cts_sample_names) < 2){
+      tee_file(paste0("We need at least 2 case samples with min ", min_cell_per_sample, " cells. Now we have only ", length(cts_sample_names), " : ", paste0(cts_sample_names, collapse=",")), file=error_file)
+      next
+    }
+    
+    design_data<-data.frame("Group"=c(rep("control", length(cts_control_names)), rep("sample", length(cts_sample_names))),
+                            "Sample"=c(cts_control_names,cts_sample_names),
+                            "DisplayGroup"=c(rep(controlGroup, length(cts_control_names)), rep(sampleGroup, length(cts_sample_names))))
+    if(!is.null(covariates)){
+      for(cov_name in covariates){
+        design_data[,cov_name] = unlist(covariate_tbl[design_data$Sample, cov_name])
+      }
+    }
+
+    design_file<-paste0(prefix, ".design")
+    write.csv(design_data, file=design_file, row.names=F, quote=F)
+    
+    curdf<-data.frame(prefix=prefix, cellType=ct, comparison=comp, count_file=cts_file, design=design_file, error_file=error_file, stringsAsFactors = F)
+    if (is.null(designMatrix)){
+      designMatrix = curdf
+    }else{
+      designMatrix = rbind(designMatrix, curdf)
+    }
+  }
 }
+
+saveRDS(designMatrix, paste0(detail_prefix, ".designMatrix.rds"))
+
+saveRDS(allCompMatrix, paste0(outFile, ".allCompMatrix.rds"))
 
 drawHCA<-function(prefix, top_mat, design_data, group_colors, usePearsonInHCA=FALSE){
   mat_scaled = t(scale(t(top_mat)))
@@ -297,6 +308,19 @@ drawHCA<-function(prefix, top_mat, design_data, group_colors, usePearsonInHCA=FA
                     show_row_dend=FALSE)
 }
 
+if(is.null(designMatrix) || nrow(designMatrix) == 0){
+  result<-data.frame(prefix=character(),
+                    cellType=character(),
+                    comparison=character(),
+                    count_file=character(),
+                    design=character(),
+                    error_file=character(),
+                    stringsAsFactors=FALSE)
+
+  write.csv(result, file=paste0(outFile, ".edgeR.files.csv"), quote=F)
+  stop("No valid comparison available for DE analysis.")
+}
+
 meta<-obj@meta.data
 
 result<-NULL
@@ -307,6 +331,7 @@ for(idx in c(1:nrow(designMatrix))){
   cellType=designMatrix[idx, "cellType"]
   comp=designMatrix[idx, "comparison"]
   count_file=designMatrix[idx,"count_file"]
+  error_file=designMatrix[idx,"error_file"]
 
   design_data<-read.csv(design_file, stringsAsFactors = F)
 
@@ -387,6 +412,7 @@ for(idx in c(1:nrow(designMatrix))){
     }
 
     if(length(covariates) == 0){
+      write("estimateDisp failed", file = error_file, append = TRUE)
       stop("estimateDisp failed")
     }
 
@@ -394,6 +420,7 @@ for(idx in c(1:nrow(designMatrix))){
     cat("  redo estimateDisp without covariates\n")
     design_data = design_data[,colnames(design_data) %in% c("Group", "Sample", "DisplayGroup")]
     write.csv(design_data, design_file, row.names=FALSE)
+    tee_file(paste0("estimateDisp failed, redo without covariates"), file=error_file)    
   }
   
   saveRDS(dge, paste0(prefix, ".dge.rds"))

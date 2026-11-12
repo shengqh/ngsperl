@@ -56,11 +56,12 @@ file_prefix= paste0(folder_prefix, outFile, ".")
 
 if(length(readLines("fileList1.txt")) > 1){
   group_def<-read.table("fileList1.txt", sep="\t", header=F, stringsAsFactors = F)
-  group_def <- group_def %>% 
-      group_by(V2) %>% 
-      mutate(Samples = paste0(V1, collapse = ",")) 
-  group_def<-group_def[,c("V2", "Samples")]
-  group_def<-group_def[!duplicated(group_def),]
+  group_def <- group_def |> 
+      dplyr::group_by(V2) |>
+      dplyr::mutate(Samples = paste0(V1, collapse = ",")) |>
+      dplyr::select(V2, Samples) |>
+      dplyr::ungroup() |>
+      dplyr::distinct()
   if(is_between_cluster){
     colnames(group_def)<-c("Group", "Cluster")
   }else{
@@ -87,7 +88,6 @@ if(has_category){
 
 de_files <- read.csv(paste0(outFile, ".", tool_name, ".files.csv")) %>% 
   dplyr::arrange(desc(row_number()))
-comparisons<-unique(de_files$comparison)
 
 num_cell_file = paste0(file_prefix, "num_cell.csv")
 if(file.exists(num_cell_file)){
@@ -95,6 +95,9 @@ if(file.exists(num_cell_file)){
 }else{
   num_cell<-NA
 }
+
+designMatrix=readRDS(paste0(outFile, ".allCompMatrix.rds"))
+comparisons<-unique(designMatrix$comparison)
 ```
 
 ---
@@ -107,7 +110,7 @@ author:
 # Parameters
 
 ```{r, echo=FALSE}
-print_table(myoptiontbl, row.names=FALSE)
+print_table(myoptiontbl, byDT=TRUE, row.names=FALSE)
 ```
 
 ```{r, echo=FALSE, eval=!is.null(group_def)}
@@ -121,29 +124,20 @@ print_table(group_def, row.names=FALSE)
 print_table(comp_def, row.names=FALSE)
 ```
 
-
-```{r, echo=FALSE}
-resFile<-"comp.Rmd"
-
-in_cluster_rmd<-function(de_files, comparisons){
-  result<-""
-
+```{r}
+if(!is_between_cluster){
   comp=comparisons[1]
   for(comp in comparisons){
-    result<-paste0(result, "\n# ", comp, "\n\n")
+    cat("\n#", comp, "\n\n")
+    designs<-subset(designMatrix, comparison == comp)
     comp_files<-subset(de_files, comparison == comp)
 
-    cts = as.character(comp_files$cellType)
+    cts = as.character(designs$cellType)
     ct<-cts[1]
 
     sig_file_map=unlist(split(comp_files$sigFile, comp_files$cellType))
 
-    sig_list=list()
-    for(ct in cts){
-      sig_file=sig_file_map[ct]
-      sig_data<-read.csv(sig_file, row.names=1)
-      sig_list[[ct]] = sig_data
-    }
+    sig_list=lapply(sig_file_map, function(x) read.csv(x, row.names=1))
 
     nums=lapply(sig_list, function(x){
       n=nrow(x)
@@ -154,15 +148,26 @@ in_cluster_rmd<-function(de_files, comparisons){
     nums_df<-do.call(rbind, nums)
     colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
 
-    result<-paste0(result, "\n## Number of DE genes\n\n")
+    cat("\n## Number of DE genes\n\n")
     num_sig_file = paste0(file_prefix, comp, ".num_sig.csv")
     write.csv(nums_df, num_sig_file)
-
-    result<-paste0(result, getTable(num_sig_file))
+    print_table(nums_df, row.names=TRUE)
 
     ct = cts[1]
     for(ct in cts){
-      result<-paste0(result, "\n## ", ct, "\n\n")
+      cat("\n## ", ct, "\n\n")
+      file_prefix=designs$prefix[designs$cellType == ct]
+      error_file=paste0(file_prefix, ".error")
+      if(file.exists(error_file)){
+        errors=readLines(error_file)
+        errors=paste0(errors, collapse="\n")
+        cat("\n### DE warning\n\n<mark>", errors, "</mark>\n\n")
+      }
+
+      if(!ct %in% comp_files$cellType){
+        next
+      }
+
       ct_files<-subset(comp_files, cellType == ct)
 
       ct_comp_name = paste0(celltype_to_filename(ct), ".", comp)
@@ -189,72 +194,70 @@ in_cluster_rmd<-function(de_files, comparisons){
         }
       }
 
-      result<-paste0(result,"\n### Design table\n\n")
-      result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
+      cat("\n### Design table\n\n")
+      print_table(design_data, row.names = F)
 
       mds_png<-paste0(cur_prefix, ct_comp_name, ".mds.png")
       if(file.exists(mds_png)){
-        result<-paste0(result,"\n### Multidimensional scaling plot\n\nPlot samples on a two-dimensional scatterplot so that distances on the plot approximate the expression differences between the samples.\n\n")
-        result<-paste0(result, getFigure(mds_png))
+        cat("\n### Multidimensional scaling plot\n\nPlot samples on a two-dimensional scatterplot so that distances on the plot approximate the expression differences between the samples.\n\n")
+        add_img(mds_png, width_inch=10)
       }
 
       pca_png<-paste0(cur_prefix, ct_comp_name, ".pca.png")
       if(file.exists(pca_png)){
-        result<-paste0(result,"\n### PCA plot\n\n")
-        result<-paste0(result, getFigure(pca_png))
+        cat("\n### PCA plot\n\n")
+        add_img(pca_png, width_inch=10)
       }
 
       heatmap_png<-paste0(cur_prefix, ct_comp_name, ".log_cpm.heatmap.png")
       if(file.exists(heatmap_png)){
-        result<-paste0(result,"\n### heatmap plot\n\n")
-        result<-paste0(result, getFigure(heatmap_png))
+        cat("\n### heatmap plot\n\n")
+        add_img(heatmap_png, width_inch=10)
       }
 
       sig_file=sig_file_map[[ct]]
-      sig_data=read.csv(sig_file, header=T)
+      sig_data=read.csv(sig_file, header=T, row.names=1)
       if(nrow(sig_data) == 0){
-        result<-paste0(result,"\n### No significantly differential expressed genes\n\n")
+        cat("\n### No significantly differential expressed genes\n\n")
       }else{
-        result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
-        result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
+        cat("\n### Significantly differential expressed genes\n\n")
+        print_table(sig_data, byDT=TRUE, DT_in_loop = TRUE, escape=TRUE, digits=3, nsmall=2)
 
         volcano_png<-paste0(cur_prefix, ct_comp_name, ".volcano.png")
         if(file.exists(volcano_png)){
-          result<-paste0(result,"\n### Volcano plot\n\n")
-          result<-paste0(result, getFigure(volcano_png))
+          cat("\n### Volcano plot\n\n")
+          add_img(volcano_png, width_inch=10)
           if(is_glimse){
             if(myoptions$newcriteria){
-              result<-paste0(result,"\n<mark>Since GLIMES considers average log2 gene expression when determining significance, genes with low average expression levels may not be identified as differentially expressed, even if they have low p-values and large absolute fold changes.</mark>\n\n")
+              cat("\n<mark>Since GLIMES considers average log2 gene expression when determining significance, genes with low average expression levels may not be identified as differentially expressed, even if they have low p-values and large absolute fold changes.</mark>\n\n")
             }
           }
         }
 
         top_gene_dotplot = paste0(cur_prefix, ct_comp_name, ".top_dotplot.png")
         if(file.exists(top_gene_dotplot)){
-          result<-paste0(result,"\n### Top gene dotplot\n\n")
-          result<-paste0(result, getFigure(top_gene_dotplot))
+          cat("\n### Top gene dotplot\n\n")
+          add_img(top_gene_dotplot, width_inch=10)
         }      
 
         top_gene_figures = paste0(cur_prefix, ct_comp_name, ".top_", c(1:5), "_gene.png")
         top_gene_figures = top_gene_figures[file.exists(top_gene_figures)]
         if(length(top_gene_figures) > 0){
-          result<-paste0(result,"\n### Top ", length(top_gene_figures), " gene plot\n\n")
+          cat("\n### Top ", length(top_gene_figures), " gene plot\n\n")
           for(top_gene_png in top_gene_figures){
-            result<-paste0(result, getFigure(top_gene_png))
+            add_img(top_gene_png, width_inch=10)
           }
         }
       }
     }
   }
-
-  return(result)
 }
+```
 
-between_cluster_rmd<-function(de_files, comparisons, outFile){
-  result<-""
 
+```{r}
+if(is_between_cluster){
   cts = comparisons
-
   sig_file_map=unlist(split(de_files$sigFile, de_files$comparison))
 
   sig_list=list()
@@ -275,15 +278,15 @@ between_cluster_rmd<-function(de_files, comparisons, outFile){
   nums_df<-do.call(rbind, nums)
   colnames(nums_df)<-c("num_sig_gene", "num_up_regulated", "num_down_regulated")
 
-  result<-paste0(result, "\n# Number of DE genes\n\n")
+  cat("\n# Number of DE genes\n\n")
   num_sig_file = paste0(outFile, ".num_sig.csv")
   write.csv(nums_df, num_sig_file)
 
-  result<-paste0(result, getTable(num_sig_file))
+  print_table(nums_df, row.names=TRUE)
 
   ct = cts[1]
   for(ct in cts){
-    result<-paste0(result, "\n# ", ct, "\n\n")
+    cat("\n#", ct, "\n\n")
     ct_files<-subset(de_files, comparison == ct)
     
     design_file=ct_files$designFile[1]
@@ -308,55 +311,43 @@ between_cluster_rmd<-function(de_files, comparisons, outFile){
       }
     }
 
-    result<-paste0(result,"\n## design table\n\n")
-    result<-paste0(result, kable_styling(kable(design_data, row.names = F)))
+    cat("\n## design table\n\n")
+    print_table(design_data, row.names = F)
 
     sig_file=sig_file_map[[ct]]
-    sig_data=read.csv(sig_file, header=T)
+    sig_data=read.csv(sig_file, header=T, row.names=1)
     if(nrow(sig_data) == 0){
-      result<-paste0(result,"\n### No significantly differential expressed genes\n\n")
+      cat("\n### No significantly differential expressed genes\n\n")
     }else{
-      result<-paste0(result,"\n### Significantly differential expressed genes\n\n")
-      result<-paste0(result, getPagedTable(sig_file, row.names=1, escape=TRUE, digits=3, nsmall=2))
+      cat("\n### Significantly differential expressed genes\n\n")
+      print_table(sig_data, byDT=TRUE, row.names=TRUE, DT_in_loop=TRUE)
 
       volcano_png<-gsub(".sig.csv", ".volcano.png", sig_file)
       if(file.exists(volcano_png)){
-        result<-paste0(result,"\n### Volcano plot\n\n")
-        result<-paste0(result, getFigure(volcano_png))
+        cat("\n### Volcano plot\n\n")
+        add_img(volcano_png, width_inch=10)
         if(is_glimse){
           if(myoptions$newcriteria){
-            result<-paste0(result,"\n<mark>Since GLIMES considers average log2 gene expression when determining significance, genes with low average expression levels may not be identified as differentially expressed, even if they have low p-values and large absolute fold changes.</mark>\n\n")
+            cat("\n<mark>Since GLIMES considers average log2 gene expression when determining significance, genes with low average expression levels may not be identified as differentially expressed, even if they have low p-values and large absolute fold changes.</mark>\n\n")
           }
         }
       }
 
       top_gene_dotplot = gsub(".sig.csv", ".top_dotplot.png", sig_file)
       if(file.exists(top_gene_dotplot)){
-        result<-paste0(result,"\n### Top gene dotplot\n\n")
-        result<-paste0(result, getFigure(top_gene_dotplot))
+        cat("\n### Top gene dotplot\n\n")
+        add_img(top_gene_dotplot, width_inch=10)
       }
 
       top_gene_figures = paste0(gsub(".sig.csv", "", sig_file), ".top_", c(1:5), "_gene.png")
       top_gene_figures = top_gene_figures[file.exists(top_gene_figures)]
       if(length(top_gene_figures) > 0){
-        result<-paste0(result,"\n### Top ", length(top_gene_figures), " gene plot\n\n")
+        cat("\n### Top ", length(top_gene_figures), " gene plot\n\n")
         for(top_gene_png in top_gene_figures){
-          result<-paste0(result, getFigure(top_gene_png))
+          add_img(top_gene_png, width_inch=10)
         }
       }
     }
   }
-
-  return(result)
 }
-
-if(is_between_cluster){
-  cat(between_cluster_rmd(de_files, comparisons, outFile), file=resFile)
-}else{
-  cat(in_cluster_rmd(de_files, comparisons), file=resFile)
-}
-
-```
-
-```{r, child=resFile} 
 ```
