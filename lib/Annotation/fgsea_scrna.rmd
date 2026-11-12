@@ -79,14 +79,14 @@ set.seed(20260125)
 
 prefix_list=de_files$prefix
 
-gsea_content=""
 gsea_files=NULL
 prefix=prefix_list[1]
 for(prefix in prefix_list){
-  gsea_content=paste0(gsea_content, "\n### ", gsub("\\.", " ", prefix), "\n\n")
+  cat("\n### ", gsub("\\.", " ", prefix), "\n\n")
 
   gsea_file=de_map[[prefix]][1]
-  gsea_rnk=fread(gsea_file) |> dplyr::rename(gene=V1, sigfvalue=V2)
+  gsea_rnk=fread(gsea_file) |> dplyr::rename(gene=V1, sigfvalue=V2) |>
+    dplyr::filter(!is.na(sigfvalue))
 
   if(any(duplicated(gsea_rnk$gene))){
     #keep the one with the largest absolute sigfvalue
@@ -104,7 +104,9 @@ for(prefix in prefix_list){
   fgsea_results <- fgsea( pathways = hallmark_list, 
                           stats = ranks,
                           minSize = 15,
-                          maxSize = 500)
+                          maxSize = 500,
+                          # Positron cannot fork R, so avoid the default multicore backend
+                          BPPARAM = BiocParallel::SerialParam())
 
   # Sort by padj
   fgsea_results <- fgsea_results |> 
@@ -122,15 +124,15 @@ for(prefix in prefix_list){
   fgsea_file <- paste0(prefix, ".fgsea_hallmark.csv")
   write.csv(fgsea_results, file = fgsea_file, quote = FALSE, row.names = FALSE)
 
-  gsea_content=paste0(gsea_content, getPagedTable(fgsea_file), "\n\n")
+  print_table(fgsea_results, byDT=TRUE, row.names=FALSE, DT_in_loop=TRUE)
 
   # Display significant pathways
   sig_pathways <- fgsea_results |> dplyr::filter(padj < 0.05)
   if(nrow(sig_pathways) == 0){
-    gsea_content=paste0(gsea_content, "\n\nNo significant enriched hallmark geneset found\n\n")
+    cat("\n\nNo significant enriched hallmark geneset found\n\n")
     cur_df=data.frame(prefix=prefix, fgsea_file=fgsea_file, fgsea_png=NA)
   }else{
-    gsea_content=paste0(gsea_content, "\n\nThere are ", nrow(sig_pathways), " significant enriched hallmark genesets. We will show top 10 postively and top 10 negatively associated gene sets.\n\n")
+    cat("\n\nThere are ", nrow(sig_pathways), " significant enriched hallmark genesets. We will show top 10 postively and top 10 negatively associated gene sets.\n\n")
 
     pos_sig=sig_pathways |> dplyr::filter(NES > 0)
     neg_sig=sig_pathways |> dplyr::filter(NES < 0)
@@ -145,27 +147,22 @@ for(prefix in prefix_list){
       geom_vline(xintercept=0) + 
       theme_bw() + 
       xlab("Normalized enrichment score") +
+            guides(color=guide_colorbar(title=expression(-log[10](padj)), barheight=grid::unit(2, "cm"))) +
       theme(axis.title.y=element_blank())
 
     height=max(1000, 3000/40*nrow(final))
     ncharmax=max(nchar(as.character(final$NAME)))
-    width=max(2000, ncharmax * 20 + 1000)
+    width=max(1800, ncharmax * 20 + 1000)
 
     fgsea_png <- paste0(prefix, ".fgsea_hallmark.png")
     ggsave(fgsea_png, g, width=width, height=height, units="px", dpi=300, bg="white")
-    gsea_content=paste0(gsea_content, getFigure(fgsea_png), "\n\n")
+    add_img(fgsea_png, width_inch=10)
 
     cur_df=data.frame(prefix=prefix, fgsea_file=fgsea_file, fgsea_png=fgsea_png)
   }
   gsea_files=rbind(gsea_files, cur_df)
 }
 write.csv(gsea_files, file=paste0(task_name, ".fgsea.files.csv"), quote=FALSE, row.names=FALSE)
-
-fgsea_rmd="fgsea_results.rmd"
-writeLines(gsea_content, con=fgsea_rmd)
-```
-
-```{r child=fgsea_rmd}
 ```
 
 # fgsea and msigdbr version
