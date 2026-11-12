@@ -2179,7 +2179,7 @@ sub addGLIMESTask {
     "reduction"                          => $reduction,
     "discard_samples"                    => $def->{discard_samples},
     "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison},
-    "glmm_method"                        => getValue( $def, "GLIMES_glmm_method", "binomial" ),
+    "glmm_method"                        => getValue( $def, "GLIMES_glmm_method", "poisson" ),
     # Default is 5% since GLIMES is designed for single cell, not like edgeR. Hope to keep more genes for DE analysis.
     # cpm filter is not neccessary since in scRNA data, the cpm values are pretty higher.
     "filter_cellPercentage" => getValue( $def, "GLIMES_filter_cellPercentage", 0.05 ),
