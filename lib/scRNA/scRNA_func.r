@@ -1402,6 +1402,10 @@ get_seurat_average_expression <- function(
 
     groups <- factor(SCLC@meta.data[[cluster_name]])
 
+    if(length(unique(groups)) == 1) {
+      return(get_seurat_average_expression_old(SCLC, cluster_name, assay))
+    }
+
     design <- Matrix::sparse.model.matrix(~0 + groups)
     colnames(design) <- levels(groups)
 
