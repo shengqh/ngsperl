@@ -77,6 +77,8 @@ sub getSpatialTranscriptome {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   my $tasks = [ @$individual, @$summary ];
+  undef $individual;
+  undef $summary;
 
   my $target_dir = getValue( $def, "target_dir" );
 
@@ -483,12 +485,12 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
   my $celltypist_ref = undef;
   if ( getValue( $def, "perform_CellTypist", 0 ) ) {
     my $h5ad_task = "CellTypist_1_h5ad";
-    add_rds2h5ad( $config, $def, $summary, $target_dir, $h5ad_task, $source_def );
+    add_rds2h5ad( $config, $def, $tasks, $target_dir, $h5ad_task, $source_def );
     my $h5ad_ref = [ $h5ad_task, ".h5ad" ];
 
     my $celltypist_task = "CellTypist_2_call";
     my $cur_options     = { task_name => $def->{task_name}, };
-    add_CellTypist( $config, $def, $summary, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
+    add_CellTypist( $config, $def, $tasks, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
     $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
   } ## end if ( getValue( $def, "perform_CellTypist"...))
 

@@ -54,6 +54,8 @@ sub getDragenMethylationConfig {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   my $tasks = [ @$individual, @$summary ];
+  undef $individual;
+  undef $summary;
 
   my $target_dir = $def->{target_dir};
 

@@ -255,7 +255,6 @@ sub getScRNASeqConfig {
   $config->{h5ad_files} = $def->{h5ad_files} if defined $def->{h5ad_files};
 
   my $tasks = [ @$individual, @$summary ];
-
   undef $individual;
   undef $summary;
 
