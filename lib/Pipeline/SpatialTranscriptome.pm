@@ -215,7 +215,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
     };
     push( @$tasks, $qc_summary_task );
 
-    my $filter_task = "VisiumHD_filter_cellonly";
+    my $filter_task = "VisiumHD_qc_filter_cellonly";
     $config->{$filter_task} = {
       class                => "CQS::IndividualRmd",
       target_dir           => "$target_dir/$filter_task",
