@@ -964,6 +964,7 @@ rm -rf .celltypist .config
     docker_prefix            => "celltypist_",
     no_docker                => getValue( $def, "celltypist_no_docker", 0 ),
     sh_direct                => $use_gpu ? 1 : getValue( $def, "celltypist_sh_direct", 0 ),
+    use_gpu                  => $use_gpu,
     no_output                => 1,
     pbs                      => {
       "nodes"    => "1:ppn=1",
