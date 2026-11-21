@@ -926,6 +926,9 @@ sub add_CellTypist {
     die "CellTypist model file $model_file does not exist.";
   }
 
+  my $use_gpu = getValue($def, "CellTypist_use_gpu", 0);
+  my $use_gpu_option = $use_gpu ? "--use_gpu" : "";
+
   my $target_folder = $target_dir . "/" . $celltypist_task;
   my $script        = dirname(__FILE__) . "/../scRNA/run_celltypist.py";
   $config->{$celltypist_task} = {
@@ -938,7 +941,7 @@ sub add_CellTypist {
     option        => "
 python $script \\
   --model_file $model_file \\
-  --majority_voting \\
+  --majority_voting $use_gpu_option \\
   --input __FILE__ \\
   --output_prefix __NAME__
 
@@ -960,7 +963,7 @@ rm -rf .celltypist .config
     post_command             => "rm -rf .cache",
     docker_prefix            => "celltypist_",
     no_docker                => getValue( $def, "celltypist_no_docker", 0 ),
-    sh_direct                => getValue( $def, "celltypist_sh_direct", 0 ),
+    sh_direct                => $use_gpu ? 1 : getValue( $def, "celltypist_sh_direct", 0 ),
     no_output                => 1,
     pbs                      => {
       "nodes"    => "1:ppn=1",
@@ -3822,7 +3825,7 @@ sub add_rds2h5ad {
     parameterSampleFile1_ref => $rds_ref,
     output_file_ext          => ".h5ad",
     sh_direct                => 1,
-    no_docker                => getValue( $def, "rds2h5ad_no_docker", 1 ),
+    no_docker                => getValue( $def, "rds2h5ad_no_docker", 0 ),
     pbs                      => {
       "nodes"    => "1:ppn=1",
       "walltime" => "6",
