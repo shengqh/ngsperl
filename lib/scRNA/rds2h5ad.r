@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='Control_1'
-outFile='Control_1'
+sample_name='MTC16'
+outFile='MTC16'
 parSampleFile1='fileList1.txt'
 parSampleFile2=''
 parSampleFile3=''
@@ -9,15 +9,15 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/shengq2/20260427_14586_HW/cellbender_nd_raw_qc_sct2_h5ad/result/Control_1')
+setwd('/nobackup/h_cqs/wenda_ye_projects/20261120_MTC_UAB_TDMI/CellTypist_1_h5ad/result/MTC16')
 
 ### Parameter setting end ###
 
 source("scRNA_func.r")
-
 library(Seurat)
 library(SingleCellExperiment)
-load_install("zellkonverter")
+library(rhdf5)
+library(anndataR)
 
 if(!exists("sample_name")) {
   sample_name <- outFile
@@ -32,7 +32,11 @@ cat("Convert to SingleCellExperiment ...\n")
 sce <- as.SingleCellExperiment(obj)
 
 cat("Save to h5ad file ...\n")
-writeH5AD(sce, paste0(sample_name, ".h5ad"))
+hd5ad_file <- paste0(sample_name, ".h5ad")
+if(file.exists(hd5ad_file)) {
+  unlink(hd5ad_file)
+  cat("Warning: h5ad file already exists. Overwriting:", hd5ad_file, "\n")
+}
+write_h5ad(sce, paste0(sample_name, ".h5ad"))
 
 cat("Done.\n")
-
