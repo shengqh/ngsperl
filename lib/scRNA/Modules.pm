@@ -1059,12 +1059,13 @@ sub add_PanglaoDB_cell {
         annotate_tcell       => getValue( $def, "annotate_tcell",       0 ),
         remove_subtype       => getValue( $def, "remove_subtype",       "" ),
         HLA_panglao5_file    => getValue( $def, "HLA_panglao5_file",    "" ),
+        assay                => getValue($def, "PanglaoDB_assay", "RNA"),
       }
     ),
     output_file_ext => ".PanglaoDB.png;.PanglaoDB.rds;.meta.rds",
     post_command    => "rm -rf .cache",
     #no_docker => 1,
-    sh_direct => 0,
+    sh_direct => getValue( $def, "sh_direct", 0 ),
     pbs       => {
       "nodes"    => "1:ppn=1",
       "walltime" => getValue( $def, "PanglaoDB_walltime", "10" ),

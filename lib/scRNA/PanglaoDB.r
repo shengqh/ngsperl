@@ -1,6 +1,6 @@
 rm(list=ls()) 
-sample_name='S01_CD3'
-outFile='S01_CD3'
+sample_name='MTC4'
+outFile='MTC4'
 parSampleFile1='fileList1.txt'
 parSampleFile2='fileList2.txt'
 parSampleFile3=''
@@ -9,12 +9,12 @@ parFile2=''
 parFile3=''
 
 
-setwd('/data/wanjalla_lab/projects/20260902_14817_Visium_Complexes_scRNA/raw_qc_PanglaoDB/result/S01_CD3')
+setwd('/nobackup/h_cqs/wenda_ye_projects/20261120_MTC_UAB_TDMI/PanglaoDB_cell/result/MTC4')
 
 ### Parameter setting end ###
 
-source("scRNA_func.r")
 source("reportFunctions.R")
+source("scRNA_func.r")
 library(Seurat)
 library(SeuratData)
 library(patchwork)
@@ -34,6 +34,8 @@ bubblemap_width=to_numeric(myoptions$bubblemap_width, 3000)
 bubblemap_height=to_numeric(myoptions$bubblemap_height, 1500)
 bubblemap_unit=ifelse(bubblemap_width > 50, "px", "in")
 
+assay=ifelse(!is.null(myoptions$assay), myoptions$assay, "RNA")
+
 if(!exists("obj")){
   obj=read_object_from_file_list(parSampleFile1)
 }
@@ -51,7 +53,10 @@ tiers = ctdef$tiers
 cell_activity_database<-ctdef$cell_activity_database
 
 cat("Cell type annotation by PanglaoDB in cell level ...\n")
-data.norm=GetAssayData(obj, assay = "RNA", layer="data")
+if(!("data" %in% names(obj[[assay]]@layers))){
+  obj = NormalizeData(obj, assay=assay)
+}
+data.norm=GetAssayData(obj, assay=assay, layer="data")
 
 max_cta_df<-CTA_celltype_cell(cell_exp_data=data.norm,
                               cellType=cell_activity_database$cellType,
@@ -99,7 +104,10 @@ marker_gene_df = df <- stack(marker_genes) |>
   dplyr::filter(gene %in% row.names(obj))
 
 gene_groups=split(marker_gene_df$gene, marker_gene_df$Layer2)
-g=get_dot_plot(obj=major_obj, group.by=ct_name, gene_groups=gene_groups)
+g=get_dot_plot(obj=major_obj, 
+  group.by=ct_name, 
+  gene_groups=gene_groups,
+  assay=assay)
 
 # keep the gene with pct.exp > 5% and avg.exp.scaled > 0.1
 # then for each gene, keep the top cell type
@@ -120,13 +128,13 @@ gdata = g$data |>
 gene_groups=split(gdata$features.plot, gdata$id)
 saveRDS(gene_groups, paste0(outFile, ".PanglaoDB.markers.rds"))
 
-g=get_dot_plot( major_obj, 
-                "PanglaoDB", 
-                gene_groups, 
-                assay="RNA", 
-                rotate.title=TRUE, 
-                use_blue_yellow_red=TRUE, 
-                dot.scale=4)
+g=get_dot_plot( obj=major_obj, 
+  group.by="PanglaoDB", 
+  gene_groups=gene_groups, 
+  assay=assay, 
+  rotate.title=TRUE, 
+  use_blue_yellow_red=TRUE, 
+  dot.scale=4)
 
 dot_height=get_dot_height_num(length(gene_groups))
 dot_width=get_dot_width(g)
@@ -138,7 +146,7 @@ if(has_bubblemap){
     cur_res=NA, 
     cur_celltype=ct_name_count, 
     bubblemap_file, 
-    assay="RNA", 
+    assay=assay, 
     species=myoptions$species,
     dot.scale=4)
   ggsave(paste0(outFile, ".PanglaoDB.dot.png"), g, width=bubblemap_width, height=bubblemap_height, units=bubblemap_unit, dpi=300, bg="white")
@@ -149,4 +157,3 @@ rm(major_obj)
 if(dir.exists(".local")){
   unlink(".local", recursive=TRUE)
 }
-
