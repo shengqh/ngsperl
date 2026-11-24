@@ -420,7 +420,7 @@ for(cur_res in resolutions){
   ggsave(ct_individual_png, g, width=ncol * 2.8, height=nrow * 2.8 + 0.3, units="in", dpi=300, bg="white")
 
   cat("\n## Image dim plot of each cluster\n\n")
-  add_img(ct_individual_png, width_inch=18)
+  add_img(ct_individual_png, width_inch=min(18, ncol * 6))
 
   g<-get_bubble_plot( obj = filtered_obj, 
                       group.by = cluster_cell_type_count_col, 
