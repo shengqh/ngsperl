@@ -962,8 +962,8 @@ rm -rf .celltypist .config
     output_file_ext          => ".meta.csv",
     post_command             => "rm -rf .cache",
     docker_prefix            => "celltypist_",
-    no_docker                => getValue( $def, "celltypist_no_docker", 0 ),
-    sh_direct                => $use_gpu ? 1 : getValue( $def, "celltypist_sh_direct", 0 ),
+    no_docker                => getValue( $def, "celltypist_no_docker", getValue( $def, "no_docker", 0 ) ),
+    sh_direct                => $use_gpu ? 1 : getValue( $def, "celltypist_sh_direct", getValue( $def, "sh_direct", 0 ) ),
     use_gpu                  => $use_gpu,
     no_output                => 1,
     pbs                      => {
