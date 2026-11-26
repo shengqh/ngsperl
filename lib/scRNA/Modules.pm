@@ -926,6 +926,9 @@ sub add_CellTypist {
     die "CellTypist model file $model_file does not exist.";
   }
 
+  my $use_gpu = getValue($def, "CellTypist_use_gpu", 0);
+  my $use_gpu_option = $use_gpu ? "--use_gpu" : "";
+
   my $target_folder = $target_dir . "/" . $celltypist_task;
   my $script        = dirname(__FILE__) . "/../scRNA/run_celltypist.py";
   $config->{$celltypist_task} = {
@@ -938,7 +941,7 @@ sub add_CellTypist {
     option        => "
 python $script \\
   --model_file $model_file \\
-  --majority_voting \\
+  --majority_voting $use_gpu_option \\
   --input __FILE__ \\
   --output_prefix __NAME__
 
@@ -959,8 +962,9 @@ rm -rf .celltypist .config
     output_file_ext          => ".meta.csv",
     post_command             => "rm -rf .cache",
     docker_prefix            => "celltypist_",
-    no_docker                => getValue( $def, "celltypist_no_docker", 0 ),
-    sh_direct                => getValue( $def, "celltypist_sh_direct", 0 ),
+    no_docker                => getValue( $def, "celltypist_no_docker", getValue( $def, "no_docker", 0 ) ),
+    sh_direct                => $use_gpu ? 1 : getValue( $def, "celltypist_sh_direct", getValue( $def, "sh_direct", 0 ) ),
+    use_gpu                  => $use_gpu,
     no_output                => 1,
     pbs                      => {
       "nodes"    => "1:ppn=1",
@@ -1055,12 +1059,13 @@ sub add_PanglaoDB_cell {
         annotate_tcell       => getValue( $def, "annotate_tcell",       0 ),
         remove_subtype       => getValue( $def, "remove_subtype",       "" ),
         HLA_panglao5_file    => getValue( $def, "HLA_panglao5_file",    "" ),
+        assay                => getValue($def, "PanglaoDB_assay", "RNA"),
       }
     ),
     output_file_ext => ".PanglaoDB.png;.PanglaoDB.rds;.meta.rds",
     post_command    => "rm -rf .cache",
     #no_docker => 1,
-    sh_direct => 0,
+    sh_direct => getValue( $def, "sh_direct", 0 ),
     pbs       => {
       "nodes"    => "1:ppn=1",
       "walltime" => getValue( $def, "PanglaoDB_walltime", "10" ),
@@ -2179,7 +2184,7 @@ sub addGLIMESTask {
     "reduction"                          => $reduction,
     "discard_samples"                    => $def->{discard_samples},
     "exclude_cell_types_from_comparison" => $def->{exclude_cell_types_from_comparison},
-    "glmm_method"                        => getValue( $def, "GLIMES_glmm_method", "binomial" ),
+    "glmm_method"                        => getValue( $def, "GLIMES_glmm_method", "poisson" ),
     # Default is 5% since GLIMES is designed for single cell, not like edgeR. Hope to keep more genes for DE analysis.
     # cpm filter is not neccessary since in scRNA data, the cpm values are pretty higher.
     "filter_cellPercentage" => getValue( $def, "GLIMES_filter_cellPercentage", 0.05 ),
@@ -3822,7 +3827,7 @@ sub add_rds2h5ad {
     parameterSampleFile1_ref => $rds_ref,
     output_file_ext          => ".h5ad",
     sh_direct                => 1,
-    no_docker                => getValue( $def, "rds2h5ad_no_docker", 1 ),
+    no_docker                => getValue( $def, "rds2h5ad_no_docker", 0 ),
     pbs                      => {
       "nodes"    => "1:ppn=1",
       "walltime" => "6",

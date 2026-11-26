@@ -10,7 +10,11 @@ if(!exists("perform_gtex")) perform_gtex=TRUE
 if(!exists("perform_tabula")) perform_tabula=TRUE
 
 if(perform_tau) stopifnot(exists("tau_file"))
-if(perform_gtex) stopifnot(exists("gtex_file"))
+if(perform_gtex) {
+  stopifnot(exists("gtex_file"))
+  stopifnot(exists("gtex_url"))
+  stopifnot(exists("gtex_version"))
+}
 if(perform_tabula) stopifnot(exists("tabula_file"))
 
 if(!exists("top_ident")){
@@ -100,14 +104,16 @@ cat(paste0("\n<mark>Among the ", length(all_genes), " genes in ", all_genes_labe
 
 ```{r, eval=perform_gtex}
 cat(paste0("\n", top_ident, " Read protein atlas GTEx gene expression file\n\n"))
-cat("\nThe file was downloaded from https://www.proteinatlas.org/download/tsv/rna_tissue_gtex.tsv.zip. (v24.0)\n\n")
+cat(paste0("\nThe file was downloaded from ", gtex_url, " (", gtex_version, ").\n\n"))
 
 gtex=fread(gtex_file)
 colnames(gtex)[2]="Gene_name"
 print_table(head(gtex), row.names=FALSE)
 
 gtex_mat=reshape2::acast(gtex, Gene_name~Tissue, fun.aggregate=sum, value.var="nTPM")
-gtex_mat=gtex_mat[rowSums(gtex_mat)>0, ]
+
+# We should not filter the genes here, otherwise, the overlap between GTEx and the all/target genes might be underestimated.
+#gtex_mat=gtex_mat[rowSums(gtex_mat)>0, ]
 
 cat(paste0("\n", top_ident, "# Overlap between GTEx genes and ", all_genes_label, " genes\n\n"))
 
@@ -122,6 +128,11 @@ include_graphics(venn_png)
 
 gtex_overlap= intersect(rownames(gtex_mat), unique(all_genes))
 cat(paste0("\n<mark>Among the ", length(all_genes), " proteins identified in the physical functional proteome, ", length(gtex_overlap), " were found to overlap with the GTEx dataset, which comprises ", nrow(gtex_mat), " genes.</mark>\n\n"))
+```
+
+```{r}
+missed=setdiff(unique(all_genes), rownames(gtex_mat))
+cat(paste0("\n<mark>The proteins identified in the physical functional proteome but not found in the GTEx dataset:", paste0(missed, collapse=", "), ".</mark>\n\n"))
 ```
 
 ```{r eval=perform_tabula}

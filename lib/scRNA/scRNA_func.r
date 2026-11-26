@@ -1402,6 +1402,10 @@ get_seurat_average_expression <- function(
 
     groups <- factor(SCLC@meta.data[[cluster_name]])
 
+    if(length(unique(groups)) == 1) {
+      return(get_seurat_average_expression_old(SCLC, cluster_name, assay))
+    }
+
     design <- Matrix::sparse.model.matrix(~0 + groups)
     colnames(design) <- levels(groups)
 
@@ -4105,7 +4109,7 @@ get_colors <- function(current_cell_types) {
   return(current_cell_type_colors)
 }
 
-get_image_dim_plot <- function(obj, assay, group.by, colors, fov_name=NULL, title=assay) {
+get_image_dim_plot <- function(obj, assay, group.by, colors, fov_name=NULL, title=assay, flip_rotate_tissue_image=TRUE) {
   is_polygons = grepl("Polygons", assay)
   if(grepl("Polygons", assay)) {
     fov_name <- "slice1.polygons"
@@ -4120,6 +4124,10 @@ get_image_dim_plot <- function(obj, assay, group.by, colors, fov_name=NULL, titl
       warning(paste0("fov_name is required for assay ", assay,". Otherwise all fov will be plotted"))
     }
     title <- assay
+    adjust_func <- NULL
+  }
+
+  if(!flip_rotate_tissue_image){
     adjust_func <- NULL
   }
 

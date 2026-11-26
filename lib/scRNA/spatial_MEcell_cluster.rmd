@@ -69,6 +69,8 @@ if(file.exists("fileList10.txt")) {
   image_slide=NULL
 }
 
+flip_rotate_tissue_image=is_one(myoptions$flip_rotate_tissue_image)
+
 detail_folder="details"
 if(!dir.exists(detail_folder)){
   dir.create(detail_folder)
@@ -109,7 +111,7 @@ predict_celltypes<-function(filtered_obj, assay, cluster, cluster_cell_type, cel
 
 # Load Seurat object
 
-Load data from `r rds_file` and perform MEcell clustering at resolutions: `r resolutions_str` using algorithm: `r algorithm_name`.
+Load data from `r rds_file` and perform MEcell clustering at resolutions: `r paste0(resolutions, collapse=", ")` using algorithm: `r algorithm_name`.
 
 ```{r}
 if(!file.exists(rds_file)){
@@ -146,6 +148,8 @@ for(cfile in cluster_files){
     obj@meta.data[[cur_col]] = factor_by_count(cmeta[[cur_col]])
   }
 }
+
+validation_columns = c()
 ```
 
 ```{r}
@@ -159,6 +163,8 @@ if(hasAzimuth){
 
   obj@meta.data[["Azimuth"]]="Unassigned"
   obj@meta.data[rownames(azimuth_meta), "Azimuth"] = azimuth_meta$Azimuth_finest
+
+  validation_columns = c(validation_columns, "Azimuth")
 }
 ```
 
@@ -173,6 +179,8 @@ if(hasRCTD){
   #obj@meta.data[["RCTD1_first_type"]] = rctd_obj@meta.data[["RCTD1_first_type"]]
   obj@meta.data[["RCTD1"]] = rctd_obj@meta.data[row.names(obj@meta.data),"RCTD1_spot_class"]
   obj@meta.data[["RCTD1_first_type"]] = rctd_obj@meta.data[row.names(obj@meta.data),"RCTD1_first_type"]
+
+  validation_columns = c(validation_columns, "RCTD1", "RCTD1_first_type")
 }
 ```
 
@@ -184,8 +192,11 @@ if(hasSingleR){
   singleR_meta=readRDS(singleR_file)
   stopifnot(all(rownames(singleR_meta) == rownames(obj@meta.data)))
   obj@meta.data[["SingleR"]] = singleR_meta[["SingleR_major_labels"]]
+
+  validation_columns = c(validation_columns, "SingleR")
 }
 ```
+
 ```{r}
 hasSignacX=file.exists('fileList7.txt')
 if(hasSignacX){
@@ -195,6 +206,36 @@ if(hasSignacX){
   #stopifnot(all(rownames(signacX_meta) == rownames(obj@meta.data)))
   #obj@meta.data[["SignacX"]] = signacX_meta[["CellStates"]]
   obj@meta.data[["SignacX"]] = signacX_meta[row.names(obj@meta.data),"CellStates"]
+
+  validation_columns = c(validation_columns, "SignacX")
+}
+```
+
+```{r}
+hasCellTypist=file.exists('fileList11.txt')
+if(hasCellTypist){
+  celltypist_column = myoptions$CellTypist_column
+
+  celltypist_file_map=read_file_map("fileList11.txt", do_unlist=FALSE)
+  celltypist_file=celltypist_file_map[[sample_name]]
+  celltypist_meta = read.csv(celltypist_file, row.names=1)
+  obj@meta.data = fill_meta_info(sample_name, celltypist_meta, obj@meta.data, celltypist_column, "CellTypist")
+
+  validation_columns = c(validation_columns, "CellTypist")
+}
+```
+
+```{r}
+has_PanglaoDB=file.exists('fileList12.txt')
+if(has_PanglaoDB){
+  panglao_column = "PanglaoDB"
+  
+  panglao_file_map=read_file_map("fileList12.txt", do_unlist=FALSE)
+  panglao_file=panglao_file_map[[sample_name]]
+  panglao_meta = readRDS(panglao_file)
+  obj@meta.data = fill_meta_info(sample_name, panglao_meta, obj@meta.data, panglao_column, "PanglaoDB")
+
+  validation_columns = c(validation_columns, "PanglaoDB")
 }
 ```
 
@@ -250,45 +291,38 @@ if(hasImageFeatures){
 
 ```{r}
 if(!bMiss){
-  cat("\n# Save object\n")
-  saveRDS(obj, paste0(sample_name, ".", assay, ".MEcell_clustered.rds"))
+  rds_file = paste0(sample_name, ".", assay, ".MEcell_clustered.rds")
+  cat("\n# Save object\n\n Object with annotations will be saved to ", rds_file, "\n\n")
+  saveRDS(obj, rds_file)
 }
 ```
 
 ```{r}
-tissue_image = ImageDimPlot (object = obj) + 
-              ggtitle(paste0("Tissue : ", sample_name)) +
-              theme(legend.position = "none",
-                    plot.title = element_text(hjust = 0.5),
-                    panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
-```
-
-```{r}
-validation_columns = c()
-if(hasRCTD){
-  validation_columns = c(validation_columns, "RCTD1", "RCTD1_first_type")
-}
-if(hasAzimuth){
-  validation_columns = c(validation_columns, "Azimuth")
-}
-if(hasSingleR){
-  validation_columns = c(validation_columns, "SingleR")
-}
-if(hasSignacX){
-  validation_columns = c(validation_columns, "SignacX")
+nCount_col=paste0("nCount_", assay)
+if (dataType!="CosMx") {
+  tissue_image = SpatialDimPlot(obj, images = "slice1.polygons", alpha = 0) + 
+    ggtitle(paste0("Tissue : ", sample_name)) + 
+    theme(legend.position = "none",
+          plot.title = element_text(hjust = 0.5),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
+}else{
+  tissue_image = ImageDimPlot (object = obj) + 
+    ggtitle(paste0("Tissue : ", sample_name)) +
+    theme(legend.position = "none",
+          plot.title = element_text(hjust = 0.5),
+          panel.border = element_rect(colour = "black", fill=NA, linewidth=1))
 }
 ```
 
 ```{r}
-cluster_content=""
-
 cur_res=resolutions[1]
 for(cur_res in resolutions){
-  cluster_content=paste0(cluster_content, "\n# Resolution ", cur_res, "\n\n")
+  cat("\n# Resolution ", cur_res, "\n\n")
   cluster_col = paste0("MEcell_res.", cur_res)
 
   if(!(cluster_col %in% colnames(obj@meta.data))){
     # no such cluster column, which means no clustering done at this resolution, ignore
+    cat("Warning: No such cluster column: ", cluster_col, ". This resolution might not finished, will be ignored now.\n")
     next
   }
 
@@ -318,11 +352,13 @@ for(cur_res in resolutions){
   plots <- list("Tissue Image" = tissue_image)
 
   plots[['ImageDimPlot']] = get_image_dim_plot( obj=filtered_obj, 
-                                                assay=assay, 
-                                                group.by=cluster_cell_type_count_col, 
-                                                colors=cluster_colors, 
-                                                fov_name=image_slide,
-                                                title=title)
+    assay=assay, 
+    group.by=cluster_cell_type_count_col, 
+    colors=cluster_colors, 
+    fov_name=image_slide,
+    title=title,
+    flip_rotate_tissue_image=flip_rotate_tissue_image) + 
+    ggtitle(label = paste0(assay, ": coordinates"))
 
   pt.size.factor = ifelse(grepl("Polygons", assay), 0.5, 12)
 
@@ -331,26 +367,35 @@ for(cur_res in resolutions){
                                               cols = cluster_colors, 
                                               image.alpha = 0.1,
                                               pt.size.factor = pt.size.factor) + 
-    ggtitle(label = title) + 
+    ggtitle(label = paste0(assay, ": Tissue/coordinates")) + 
     theme(plot.title = element_text(hjust = 0.5), 
           panel.border = element_rect(colour = "black", fill=NA, linewidth=1))  
   }
    
-  cluster_png = save_vis_png(plots, file_prefix, cluster_colors, cluster_cell_type_count_col, assay)
+  cluster_png = save_vis_png(
+    plots=plots, 
+    file_prefix=file_prefix, 
+    cur_cell_type_colors=cluster_colors, 
+    cur_cell_type_col=cluster_cell_type_count_col, 
+    image_type=assay, 
+    legend_ncol=NULL, 
+    legend_title=FALSE)
 
-  cluster_content=paste0(cluster_content, "\n## Spatial clusters\n\n")
-  cluster_content=paste0(cluster_content, getFigure(cluster_png))
+  cat("\n## Spatial clusters\n\n")
+  add_img(cluster_png, width_inch=18)
 
   if(hasUMAP) {
     scolors=cluster_colors
     names(scolors)=levels(filtered_obj@meta.data[[cluster_col]])
     g = get_dim_plot(filtered_obj, reduction='umap', group.by=cluster_col, label.by=cluster_cell_type_count_col, scolors=scolors) + 
-      ggtitle("UMAP") + theme(plot.title = element_text(hjust = 0.5))
+      ggtitle("UMAP") + 
+      theme(plot.title = element_text(hjust = 0.5),
+            legend.title=element_blank())
     umap_png = paste0(file_prefix, ".umap.png")    
     width=ifelse(length(cluster_colors) > 17, 12, 9)
     ggsave(umap_png, g, width=width, height=6, units="in", dpi=300, bg="white")
-    cluster_content=paste0(cluster_content, "\n## UMAP\n\n")
-    cluster_content=paste0(cluster_content, getFigure(umap_png))
+    cat("\n## UMAP\n\n")
+    add_img(umap_png, width_inch=14)
   }
 
   g = ImageDimPlot( object = filtered_obj, 
@@ -365,15 +410,17 @@ for(cur_res in resolutions){
           panel.border = element_rect(colour = "black", fill=NA, linewidth=1),
           legend.position = "none",
           strip.background = element_rect(fill="white"))
-  g = adjust_ImagePlot_Polygons(g)
+  if(flip_rotate_tissue_image) {
+    g = adjust_ImagePlot_Polygons(g)
+  }
   ncol = ifelse(length(cluster_colors) <= 3, length(cluster_colors), ceiling(sqrt(length(cluster_colors))))
   nrow = ceiling(length(cluster_colors) / ncol)
   
   ct_individual_png = paste0(file_prefix, ".ct_individual.png")
   ggsave(ct_individual_png, g, width=ncol * 2.8, height=nrow * 2.8 + 0.3, units="in", dpi=300, bg="white")
 
-  cluster_content=paste0(cluster_content, "\n## Image dim plot of each cluster\n\n")
-  cluster_content=paste0(cluster_content, getFigure(ct_individual_png))
+  cat("\n## Image dim plot of each cluster\n\n")
+  add_img(ct_individual_png, width_inch=min(18, ncol * 6))
 
   g<-get_bubble_plot( obj = filtered_obj, 
                       group.by = cluster_cell_type_count_col, 
@@ -384,8 +431,8 @@ for(cur_res in resolutions){
   bubblemap_png = paste0(file_prefix, ".dot.png")
   ggsave(bubblemap_png, g, width=bubblemap_width_in, height=max(4, length(cluster_colors) * 0.3 + 2), units="in", dpi=300, bg="white", limitsize = FALSE)
 
-  cluster_content=paste0(cluster_content, "\n## Marker genes\n\n")
-  cluster_content=paste0(cluster_content, getFigure(bubblemap_png))
+  cat("\n## Marker genes\n\n")
+  add_img(bubblemap_png, width_inch=18)
 
   if(length(validation_columns) > 0){
     bar_file= paste0(file_prefix, ".", assay, ".MEcell_res.", cur_res, ".validation_barplot.png")
@@ -396,8 +443,8 @@ for(cur_res in resolutions){
                     calc_height_per_cluster=200, 
                     calc_width_per_cell=50)
 
-    cluster_content=paste0(cluster_content, "\n## Validation barplot\n\n")
-    cluster_content=paste0(cluster_content, getFigure(bar_file))
+    cat("\n## Validation barplot\n\n")
+    add_img(bar_file, width_inch=18)
   }
 
   gd = FetchData(filtered_obj, c(cluster_cell_type_count_col, paste0("nCount_", assay)))
@@ -410,8 +457,8 @@ for(cur_res in resolutions){
   vln_png = paste0(file_prefix, ".vln.png")
   ggsave(vln_png, g, width=max(5, length(cluster_colors) * 0.4 + 2), height=4, units="in", dpi=300, bg="white", limitsize = FALSE)
 
-  cluster_content=paste0(cluster_content, "\n## Violin plots of nCount\n\n")
-  cluster_content=paste0(cluster_content, getFigure(vln_png))
+  cat("\n## Violin plots of nCount\n\n")
+  add_img(vln_png, width_inch=18)
 
   if(hasImageFeatures){
     obj_image_df=filtered_obj@meta.data |>
@@ -440,8 +487,8 @@ for(cur_res in resolutions){
     feature_png = paste0(file_prefix, ".image_features.png")
     ggsave(feature_png, g, width=max(5, length(cluster_colors) * 0.8 + 2), height=8, units="in", dpi=300, bg="white", limitsize = FALSE)
 
-    cluster_content=paste0(cluster_content, "\n## Box plots of image features\n\n")
-    cluster_content=paste0(cluster_content, getFigure(feature_png))
+    cat("\n## Box plots of image features\n\n")
+    add_img(feature_png, width_inch=18)
   }
 
   markers_rds = paste0(file_prefix, ".markers.rds")
@@ -457,7 +504,7 @@ for(cur_res in resolutions){
     saveRDS(markers, markers_rds)
   }
   if(nrow(markers) == 0){
-    cluster_content=paste0(cluster_content, "\n## No marker genes found\n\n")
+    cat("\n## No marker genes found\n\n")
     next
   }
 
@@ -477,16 +524,9 @@ for(cur_res in resolutions){
   height<-max(3, length(top5$gene) * 0.2)
   ggsave(heatmap_png, g, width=width, height=height, units="in", dpi=300, bg="white", limitsize = FALSE)
 
-  cluster_content=paste0(cluster_content, "\n## Heatmap of top 5 markers per cluster\n\n")
-  cluster_content=paste0(cluster_content, getFigure(heatmap_png))
-
+  cat("\n## Heatmap of top 5 markers per cluster\n\n")
+  add_img(heatmap_png, width_inch=18)
 }
-
-cluster_rmd="cluster.rmd"
-writeLines(cluster_content, cluster_rmd)
-```
-
-```{r child=cluster_rmd}
 ```
 
 # Session Info

@@ -1,14 +1,14 @@
 rm(list=ls()) 
-outFile='endothelial_lung'
+outFile='complex_sr_samples'
 parSampleFile1=''
 parSampleFile2='fileList2.txt'
 parSampleFile3='fileList3.txt'
-parFile1='/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260915_T07_paper_figures/20260921.EC_lung_iSGS_fastmnn.final.rds'
+parFile1='/data/wanjalla_lab/projects/20261111_complex_annet_de/T01_preparee_obj/AK6383.complex.sr_samples.rds'
 parFile2=''
 parFile3=''
 
 
-setwd('/data/h_gelbard_lab/projects/20241217_endothelial_isgs_lung/20260921_T08_differnetial_expression/final_obj_GLIMES_inCluster_byCell/result')
+setwd('/data/wanjalla_lab/projects/20261111_complex_annet_de/T02_edgeR_sr_samples/final_obj_GLIMES_inCluster_byCell/result')
 
 ### Parameter setting end ###
 
@@ -107,6 +107,8 @@ comp <-comparisonNames[1]
 cat("start to generate design files\n")
 designFailed<-data.frame("comp"=character(), "celltype"=character(), "reason"=character())
 designMatrix<-NULL
+allCompMatrix<-NULL
+
 for (comp in comparisonNames){
   cat(comp, "\n")
   comp_groups<-comparisons[comparisons$Comparison==comp,]
@@ -136,15 +138,30 @@ for (comp in comparisonNames){
   }
   
   if("covariances" %in% names(comp_options)){
-    covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T)
-    assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
-    for(col_name in comp_options$covariances){
-      colmap = unlist(split(covariances_tbl[,col_name], covariances_tbl$Sample))
-      obj<-AddMetaData(obj, colmap[obj$orig.ident], col.name = col_name )
-    }
     covariances=comp_options$covariances
+    if(!all(covariances %in% colnames(meta))){
+      if(myoptions$covariance_file == ""){
+        stop(paste0("covariances ", paste(covariances, collapse = ","), " not found in meta.data of ", parFile1))
+      }else{
+        covariances_tbl<-read.table(myoptions$covariance_file, sep="\t", stringsAsFactors = F, header=T)
+        assert(all(comp_options$covariances %in% colnames(covariances_tbl)))
+        for(col_name in comp_options$covariances){
+          colmap = unlist(split(covariances_tbl[,col_name], covariances_tbl$Sample))
+          obj<-AddMetaData(obj, colmap[obj$orig.ident], col.name = col_name )
+        }
+      }
+    }
   }else{
     covariances=NULL
+  }
+  
+  if("replicates" %in% names(comp_options)){
+    replicates=comp_options$replicates
+    if(!(replicates %in% colnames(meta))){
+      stop(paste0("replicates ", paste(replicates, collapse = ","), " not found in meta.data of ", parFile1))
+    }
+  }else{
+    replicates=NULL
   }
 
   if(bBetweenCluster){
@@ -197,13 +214,15 @@ for (comp in comparisonNames){
     
     prefixList<-get_valid_path(cts)
 
-    idx<-5
+    idx<-1
     for (idx in c(1:length(cts))){
       ct = cts[idx]
       cat("  ", as.character(ct), "\n")
       prefix = paste0(prefixList[idx], ".", comp)
       ct_file_prefix = paste0(detail_prefix, ".", prefix)
       
+      allCompMatrix=rbind(allCompMatrix, data.frame(prefix=prefix, cellType=ct, comparison=comp, stringsAsFactors = F))
+
       clusterCt<-clusterDf[clusterDf[,cluster_name] == ct,]
       de_obj<-subset(obj, cells=rownames(clusterCt))
       clusterCt$sample=de_obj$orig.ident
@@ -253,8 +272,12 @@ for (comp in comparisonNames){
         for(cov_name in covariances){
           designdata[,cov_name] = unlist(de_obj@meta.data[,cov_name])
         }
+        assert(all(covariances %in% colnames(designdata)))
       }
-      assert(all(covariances %in% colnames(designdata)))
+      if(!is.null(replicates)){
+        designdata[,replicates] = unlist(de_obj@meta.data[,replicates])
+        assert(replicates %in% colnames(designdata))
+      }
 
       designfile<-paste0(ct_file_prefix, ".design")
       write.csv(designdata, file=designfile, row.names=F, quote=F)
@@ -278,9 +301,9 @@ if(nrow(designFailed) > 0){
   write.csv(designFailed, paste0(detail_prefix, ".design_failed.csv"), row.names=F)
 }
 
-design_matrix_file=paste0(detail_prefix, ".design_matrix.csv")
-write.csv(designMatrix, file=design_matrix_file, row.names=F)
-designMatrix=read.csv(design_matrix_file, stringsAsFactors = F)
+saveRDS(designMatrix, paste0(detail_prefix, ".designMatrix.rds"))
+
+saveRDS(allCompMatrix, paste0(outFile, ".allCompMatrix.rds"))
 
 cat("start to perform GLIMES\n")
 result<-NULL
@@ -377,52 +400,47 @@ for(idx in c(1:nrow(designMatrix))){
   de_obj@meta.data$Sample = designdata$Sample
   de_obj@meta.data$DisplayGroup = designdata$DisplayGroup
 
+  uniq_groups = unique(de_obj@meta.data |> dplyr::select(Group, Sample))
+
+  if(any(table(uniq_groups$Group) == 1)){ # if there is group with only one sample, replicates should be all same.
+    de_obj@meta.data$OneSample = "OneSample"
+    replicates="OneSample"
+  }else if(is.null(replicates)){
+    replicates="Sample"
+  }
+
   de_sce = SingleCellExperiment(
     assays = list(counts = counts),
     colData = de_obj@meta.data
   )
-  
-  uniq_groups = unique(de_obj@meta.data |> dplyr::select(Group, Sample))
-
-  if(any(table(uniq_groups$Group) == 1)){ # if there is group with only one sample, replicates should be all same.
-    replicates = ct_col
-  }else{
-    replicates = "Sample"
-  }
   
   if(glmm_method == "binomial"){
     cat("Using binomial GLMM for DE analysis\n")
     glmm_df = binomial_glmm_DE(sce = de_sce, comparison = "Group", replicates = replicates, other_fixed=covariances)
   }else{
     cat("Using poisson GLMM for DE analysis\n")
-    glmm_df = poisson_glmm_DE(sce = de_sce, comparison = "Group", replicates = "Sample", other_fixed=covariances)
+    glmm_df = poisson_glmm_DE(sce = de_sce, comparison = "Group", replicates = replicates, other_fixed=covariances)
   }
 
+  glmm_df=glmm_df |>
+    dplyr::filter(!is.na(pval)) |>
+    dplyr::arrange(pval)
+
   if(useRawPvalue){
-    glmm_df$DEGs = identifyDEGs(adj_pval = glmm_df$pval, 
-                                log2FC = glmm_df$log2FC, 
-                                log2mean = glmm_df$log2mean, 
-                                log2meandiff = glmm_df$log2meandiff, 
-                                log2FCcutoff = log2(1.2),
-                                newcriteria = newcriteria)
+    cat("  using raw p-value for DEGs filtering\n")
+    pvals=glmm_df$pval
   }else{
-    glmm_df$DEGs = identifyDEGs(adj_pval = glmm_df$BH, 
-                                log2FC = glmm_df$log2FC, 
-                                log2mean = glmm_df$log2mean, 
-                                log2meandiff = glmm_df$log2meandiff, 
-                                log2FCcutoff = log2(1.2),
-                                newcriteria = newcriteria)
+    cat("  using FDR for DEGs filtering\n")
+    pvals=glmm_df$BH
   }
-  glmm_df = glmm_df[order(glmm_df$pval, decreasing = F),]
+  glmm_df$DEGs = pvals < pvalue & abs(glmm_df$log2FC) > log2(foldChange)
 
   #change to edgeR compatible column names
   glmm_df=glmm_df |>
-    dplyr::mutate(PValue=pval, FDR=BH, logFC=log2FC) 
+    dplyr::rename(PValue=pval, FDR=BH, logFC=log2FC) 
 
   write.csv(glmm_df, file=dge_filename, quote=F, row.names=FALSE)
   #glmm_df=read.csv(dge_filename, stringsAsFactors = F)
-
-  glmm_df <- glmm_df |> dplyr::filter(!is.na(PValue))
 
   sigout = glmm_df |> dplyr::filter(DEGs == TRUE)
   sigFile<-paste0(file_prefix, ".sig.csv")
@@ -450,6 +468,7 @@ for(idx in c(1:nrow(designMatrix))){
   genes[!glmm_df$DEGs] = ""
 
   yname=bquote(-log[10](p~value))
+  xname=bquote(log[2](fold~change))
 
   g = EnhancedVolcano(
     glmm_df,
@@ -464,21 +483,13 @@ for(idx in c(1:nrow(designMatrix))){
     labSize = 3.0,
     colAlpha = 1,
     subtitle = NULL
-  ) + ylab(yname) + theme(plot.title = element_text(hjust = 0.5))
+  ) + ylab(yname) + xlab(xname) + theme(plot.title = element_text(hjust = 0.5))
 
   for(extension in c("png", "pdf")){
     volcano_file=paste0(file_prefix, ".volcano.", extension)
     ggsave(volcano_file, g, width=7, height=7, units="in", dpi=300, bg="white")
   }
   
-  # save_volcano_plot(edgeR_out_table=glmm_df, 
-  #                   prefix=file_prefix, 
-  #                   useRawPvalue=useRawPvalue, 
-  #                   pvalue=pvalue, 
-  #                   foldChange=foldChange, 
-  #                   comparisonTitle=ifelse(cellType=="", comp_str, paste0(cellType, " : ", comp_str)),
-  #                   genes=glmm_df$genes)
-
   sigout = glmm_df |> dplyr::filter(DEGs == TRUE)
 
   if(nrow(sigout) > 0) {
@@ -505,3 +516,5 @@ for(idx in c(1:nrow(designMatrix))){
 
 cat("all done\n")
 write.csv(result, file=paste0(outFile, ".GLIMES.files.csv"), quote=F)
+
+

@@ -23,6 +23,11 @@ def build_parser():
     action="store_true",
     help="Enable CellTypist majority voting refinement in addition to raw predictions",
   )
+  parser.add_argument(
+    "--use_gpu",
+    action="store_true",
+    help="Use GPU (requires cuML) for CellTypist prediction and majority voting",
+  )
   return parser
 
 
@@ -67,12 +72,22 @@ def get_output_paths(output_prefix):
   return output_file, log_file
 
 
+
 def celltypist_predict(args, output_file, logger):
   logger.info("reading input %s", args.input)
   adata = sc.read_h5ad(args.input)
 
+  if adata.X is None:
+    if "counts" in adata.layers:
+      adata.X = adata.layers["counts"].copy()
+    elif "data" in adata.layers:
+      adata.X = adata.layers["data"].copy()
+    else:
+      raise ValueError("No usable expression matrix found")
+
   # 1. Store raw counts in .layers if you haven't already (good practice)
-  adata.layers["counts"] = adata.X.copy()
+  if "counts" not in adata.layers:
+    adata.layers["counts"] = adata.X.copy()
 
   # 2. Normalize each cell to 10,000 counts
   sc.pp.normalize_total(adata, target_sum=1e4)
@@ -80,8 +95,22 @@ def celltypist_predict(args, output_file, logger):
   # 3. Logarithmize the data (log(x+1))
   sc.pp.log1p(adata)
 
-  logger.info(f"run celltypist using model {args.model_file} with majority_voting={args.majority_voting} ...")
-  predictions = celltypist.annotate(adata, model = args.model_file, majority_voting = args.majority_voting)
+  use_gpu = args.use_gpu
+  try:
+    import cuml
+    import cupy
+
+    logger.info(
+      f"cuML {cuml.__version__} detected"
+    )
+  except ImportError:
+    logger.warning(
+        "cuML/CuPy unavailable, falling back to CPU"
+    )
+    use_gpu = False
+
+  logger.info(f"run celltypist using model {args.model_file} with majority_voting={args.majority_voting}, use_gpu={use_gpu} ...")
+  predictions = celltypist.annotate(adata, model = args.model_file, majority_voting = args.majority_voting, use_GPU = use_gpu)
   
   prediction_df = predictions.predicted_labels.copy()
   if getattr(prediction_df, "ndim", 1) == 1:

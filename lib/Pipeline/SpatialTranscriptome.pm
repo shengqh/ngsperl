@@ -57,6 +57,11 @@ sub initializeSpatialTranscriptomeDefaultOptions {
 
   initDefaultValue( $def, "MEcell_resolutions", [ 0.02, 0.04, 0.06, 0.08, 0.1, 0.2, 0.3, 0.4, 0.5 ] );
 
+  # looks like seurat v6 fixed the problem of the image flip and rotation, we don't need to flip and rotate the image anymore. But we still keep this option for user to flip and rotate the image if they want.
+  initDefaultValue( $def, "flip_rotate_tissue_image", 0);
+
+  #initDefaultValue($def, "nFeature_cutoff", getValue( $def, "nFeature_cutoff_min" ));
+
   return $def;
 } ## end sub initializeSpatialTranscriptomeDefaultOptions
 
@@ -77,6 +82,8 @@ sub getSpatialTranscriptome {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   my $tasks = [ @$individual, @$summary ];
+  undef $individual;
+  undef $summary;
 
   my $target_dir = getValue( $def, "target_dir" );
 
@@ -172,7 +179,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
         "Mtpattern"       => "^MT-|^Mt-|^mt-",
         "bin_size"        => $bin_size,
         "nCount_cutoff"   => getValue( $def, "nCount_cutoff" ),
-        "nFeature_cutoff" => getValue( $def, "nFeature_cutoff" ),
+        "nFeature_cutoff" => getValue( $def, "nFeature_cutoff_min" ),
         "mt_cutoff"       => getValue( $def, "mt_cutoff" ),
       },
       no_prefix             => 1,
@@ -213,7 +220,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_qc.Rmd'
     };
     push( @$tasks, $qc_summary_task );
 
-    my $filter_task = "VisiumHD_filter_cellonly";
+    my $filter_task = "VisiumHD_qc_filter_cellonly";
     $config->{$filter_task} = {
       class                => "CQS::IndividualRmd",
       target_dir           => "$target_dir/$filter_task",
@@ -232,7 +239,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         "email"           => getValue( $def, "email" ),
         "affiliation"     => getValue( $def, "affiliation", "CQS/Biostatistics, VUMC" ),
         "nCount_cutoff"   => getValue( $def, "nCount_cutoff" ),
-        "nFeature_cutoff" => getValue( $def, "nFeature_cutoff" ),
+        "nFeature_cutoff" => getValue( $def, "nFeature_cutoff_min" ),
         "mt_cutoff"       => getValue( $def, "mt_cutoff" ),
         "bin_size"        => "Spatial.Polygons",
       },
@@ -483,14 +490,26 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
   my $celltypist_ref = undef;
   if ( getValue( $def, "perform_CellTypist", 0 ) ) {
     my $h5ad_task = "CellTypist_1_h5ad";
-    add_rds2h5ad( $config, $def, $summary, $target_dir, $h5ad_task, $source_def );
+    add_rds2h5ad( $config, $def, $tasks, $target_dir, $h5ad_task, $source_def );
     my $h5ad_ref = [ $h5ad_task, ".h5ad" ];
 
     my $celltypist_task = "CellTypist_2_call";
     my $cur_options     = { task_name => $def->{task_name}, };
-    add_CellTypist( $config, $def, $summary, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
+    add_CellTypist( $config, $def, $tasks, $target_dir, $celltypist_task, $h5ad_ref, $cur_options );
     $celltypist_ref = [ $celltypist_task, ".meta.csv" ];
   } ## end if ( getValue( $def, "perform_CellTypist"...))
+
+
+  my $PanglaoDB_ref = undef;
+  if ( getValue( $def, "perform_PanglaoDB", 0 ) ) {
+    my $PanglaoDB_task = "PanglaoDB_cell";
+    my $cur_options  = {
+      task_name => $def->{task_name},
+      reduction => getValue( $def, "reduction", "pca" ),
+    };
+    add_PanglaoDB_cell( $config, $def, $tasks, $target_dir, $PanglaoDB_task, $source_def, $cur_options, 1 );
+    $PanglaoDB_ref = [ $PanglaoDB_task, ".meta.rds" ];
+  } ## end if ( getValue( $def, "perform_PanglaoDB"...))
 
   if ( getValue( $def, "perform_MEcell", 0 ) ) {
     my $MEcell_task     = "MEcell";
@@ -605,7 +624,7 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         parameterSampleFile4_ref => $rctd_polygons_task,
         parameterSampleFile5     => $source_image_assay_dict,
         no_prefix                => 1,
-        sh_direct                => 0,
+        sh_direct                => getValue( $def, "sh_direct", 0 ),
         no_docker                => getValue( $def, "no_docker", 0 ),
         output_to_same_folder    => 0,
         output_ext               => ".$source_assay.MEcell.res.$cur_resolution.$cluster_algorithm_name.meta.rds",
@@ -642,10 +661,12 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
         HLA_panglao5_file      => getValue( $def, "HLA_panglao5_file" ),
         bubblemap_file         => getValue( $def, "bubblemap_file" ),
         bubblemap_width_in     => getValue( $def, "bubblemap_width_in", 8 ),
+        flip_rotate_tissue_image => getValue( $def, "flip_rotate_tissue_image"),
         MEcell_resolutions     => $MEcell_resolutions,
         species                => getValue( $def, "species" ),
         cluster_algorithm      => $cluster_algorithm,
         cluster_algorithm_name => $cluster_algorithm_name,
+        CellTypist_column      => getValue( $def, "CellTypist_column", "majority_voting" ),
         image_assay            => $source_image_assay,
         data_type              => getValue( $def, "data_type" ),
       },
@@ -658,8 +679,9 @@ Rscript --vanilla  -e \"library('rmarkdown');rmarkdown::render('VisiumHD_filter.
       parameterSampleFile9_ref  => $VisiumHD_image_features_task,
       parameterSampleFile10     => $source_image_assay_dict,
       parameterSampleFile11_ref => $celltypist_ref,
+      parameterSampleFile12_ref => $PanglaoDB_ref,
       no_prefix                 => 1,
-      sh_direct                 => 0,
+      sh_direct                 => getValue( $def, "sh_direct", 0 ),
       no_docker                 => getValue( $def, "no_docker", 0 ),
       docker_prefix             => "vis_",
       output_to_same_folder     => 0,

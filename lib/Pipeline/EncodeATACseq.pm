@@ -94,6 +94,8 @@ sub getConfig {
   my ( $config, $individual, $summary, $source_ref, $preprocessing_dir, $untrimed_ref, $cluster ) = getPreprocessionConfig($def);
 
   my $tasks = [ @$individual, @$summary ];
+  undef $individual;
+  undef $summary;
 
   if ( getValue( $def, "perform_encode_individually" ) ) {
     my $files      = getValue( $def, "files" );
